@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -33,6 +32,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -40,32 +40,27 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 /**
  * Manages the location of the current active Master for the RegionServer.
  * <p>
- * Listens for ZooKeeper events related to the master address. The node
- * <code>/master</code> will contain the address of the current master.
- * This listener is interested in
- * <code>NodeDeleted</code> and <code>NodeCreated</code> events on
- * <code>/master</code>.
+ * Listens for ZooKeeper events related to the master address. The node <code>/master</code> will
+ * contain the address of the current master. This listener is interested in
+ * <code>NodeDeleted</code> and <code>NodeCreated</code> events on <code>/master</code>.
  * <p>
  * Utilizes {@link ZKNodeTracker} for zk interactions.
  * <p>
  * You can get the current master via {@link #getMasterAddress()} or via
- * {@link #getMasterAddress(ZKWatcher)} if you do not have a running
- * instance of this Tracker in your context.
+ * {@link #getMasterAddress(ZKWatcher)} if you do not have a running instance of this Tracker in
+ * your context.
  * <p>
- * This class also includes utility for interacting with the master znode, for
- * writing and reading the znode content.
+ * This class also includes utility for interacting with the master znode, for writing and reading
+ * the znode content.
  */
 @InterfaceAudience.Private
 public class MasterAddressTracker extends ZKNodeTracker {
   /**
-   * Construct a master address listener with the specified
-   * <code>zookeeper</code> reference.
+   * Construct a master address listener with the specified <code>zookeeper</code> reference.
    * <p>
-   * This constructor does not trigger any actions, you must call methods
-   * explicitly.  Normally you will just want to execute {@link #start()} to
-   * begin tracking of the master address.
-   *
-   * @param watcher zk reference and watcher
+   * This constructor does not trigger any actions, you must call methods explicitly. Normally you
+   * will just want to execute {@link #start()} to begin tracking of the master address.
+   * @param watcher   zk reference and watcher
    * @param abortable abortable in case of fatal error
    */
   public MasterAddressTracker(ZKWatcher watcher, Abortable abortable) {
@@ -73,8 +68,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Get the address of the current master if one is available.  Returns null
-   * if no current master.
+   * Get the address of the current master if one is available. Returns null if no current master.
    * @return Server name or null if timed out.
    */
   public ServerName getMasterAddress() {
@@ -82,8 +76,8 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Get the info port of the current master of one is available.
-   * Return 0 if no current master or zookeeper is unavailable
+   * Get the info port of the current master of one is available. Return 0 if no current master or
+   * zookeeper is unavailable
    * @return info port or 0 if timed out
    */
   public int getMasterInfoPort() {
@@ -98,15 +92,16 @@ public class MasterAddressTracker extends ZKNodeTracker {
       return 0;
     }
   }
+
   /**
-   * Get the info port of the backup master if it is available.
-   * Return 0 if no backup master or zookeeper is unavailable
+   * Get the info port of the backup master if it is available. Return 0 if no backup master or
+   * zookeeper is unavailable
    * @param sn server name of backup master
    * @return info port or 0 if timed out or exceptions
    */
   public int getBackupMasterInfoPort(final ServerName sn) {
-    String backupZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().backupMasterAddressesZNode,
-      sn.toString());
+    String backupZNode =
+      ZNodePaths.joinZNode(watcher.getZNodePaths().backupMasterAddressesZNode, sn.toString());
     try {
       byte[] data = ZKUtil.getData(watcher, backupZNode);
       final ZooKeeperProtos.Master backup = parse(data);
@@ -121,10 +116,8 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Get the address of the current master if one is available.  Returns null
-   * if no current master. If refresh is set, try to load the data from ZK again,
-   * otherwise, cached data will be used.
-   *
+   * Get the address of the current master if one is available. Returns null if no current master.
+   * If refresh is set, try to load the data from ZK again, otherwise, cached data will be used.
    * @param refresh whether to refresh the data by calling ZK directly.
    * @return Server name or null if timed out.
    */
@@ -138,25 +131,23 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Get master address.
-   * Use this instead of {@link #getMasterAddress()} if you do not have an
+   * Get master address. Use this instead of {@link #getMasterAddress()} if you do not have an
    * instance of this tracker in your context.
    * @param zkw ZKWatcher to use
-   * @return ServerName stored in the the master address znode or null if no
-   *         znode present.
+   * @return ServerName stored in the the master address znode or null if no znode present.
    * @throws KeeperException if a ZooKeeper operation fails
-   * @throws IOException if the address of the ZooKeeper master cannot be retrieved
+   * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
    */
   public static ServerName getMasterAddress(final ZKWatcher zkw)
-          throws KeeperException, IOException {
-    byte [] data;
+    throws KeeperException, IOException {
+    byte[] data;
     try {
       data = ZKUtil.getData(zkw, zkw.getZNodePaths().masterAddressZNode);
     } catch (InterruptedException e) {
       throw new InterruptedIOException();
     }
     // TODO javadoc claims we return null in this case. :/
-    if (data == null){
+    if (data == null) {
       throw new IOException("Can't get master address from ZooKeeper; znode data == null");
     }
     try {
@@ -169,15 +160,13 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Get master info port.
-   * Use this instead of {@link #getMasterInfoPort()} if you do not have an
+   * Get master info port. Use this instead of {@link #getMasterInfoPort()} if you do not have an
    * instance of this tracker in your context.
    * @param zkw ZKWatcher to use
-   * @return master info port in the the master address znode or null if no
-   *         znode present.
-   *         // TODO can't return null for 'int' return type. non-static verison returns 0
+   * @return master info port in the the master address znode or null if no znode present. // TODO
+   *         can't return null for 'int' return type. non-static verison returns 0
    * @throws KeeperException if a ZooKeeper operation fails
-   * @throws IOException if the address of the ZooKeeper master cannot be retrieved
+   * @throws IOException     if the address of the ZooKeeper master cannot be retrieved
    */
   public static int getMasterInfoPort(final ZKWatcher zkw) throws KeeperException, IOException {
     byte[] data;
@@ -200,19 +189,17 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
-   * Set master address into the <code>master</code> znode or into the backup
-   * subdirectory of backup masters; switch off the passed in <code>znode</code>
-   * path.
-   * @param zkw The ZKWatcher to use.
-   * @param znode Where to create the znode; could be at the top level or it
-   *              could be under backup masters
+   * Set master address into the <code>master</code> znode or into the backup subdirectory of backup
+   * masters; switch off the passed in <code>znode</code> path.
+   * @param zkw    The ZKWatcher to use.
+   * @param znode  Where to create the znode; could be at the top level or it could be under backup
+   *               masters
    * @param master ServerName of the current master must not be null.
    * @return true if node created, false if not; a watch is set in both cases
    * @throws KeeperException if a ZooKeeper operation fails
    */
-  public static boolean setMasterAddress(final ZKWatcher zkw,
-      final String znode, final ServerName master, int infoPort)
-    throws KeeperException {
+  public static boolean setMasterAddress(final ZKWatcher zkw, final String znode,
+    final ServerName master, int infoPort) throws KeeperException {
     return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master, infoPort));
   }
 
@@ -226,8 +213,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
 
   /**
    * @param sn must not be null
-   * @return Content of the master znode as a serialized pb with the pb
-   *         magic as prefix.
+   * @return Content of the master znode as a serialized pb with the pb magic as prefix.
    */
   static byte[] toByteArray(final ServerName sn, int infoPort) {
     ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
@@ -257,13 +243,14 @@ public class MasterAddressTracker extends ZKNodeTracker {
       throw new DeserializationException(e);
     }
   }
+
   /**
    * delete the master znode if its content is same as the parameter
-   * @param zkw must not be null
+   * @param zkw     must not be null
    * @param content must not be null
    */
   public static boolean deleteIfEquals(ZKWatcher zkw, final String content) {
-    if (content == null){
+    if (content == null) {
       throw new IllegalArgumentException("Content must not be null");
     }
 
@@ -294,13 +281,13 @@ public class MasterAddressTracker extends ZKNodeTracker {
    * @return List of backup masters.
    * @throws InterruptedIOException if there is any issue fetching the required data from Zookeeper.
    */
-  public static List<ServerName> getBackupMastersAndRenewWatch(
-      ZKWatcher zkw) throws InterruptedIOException {
+  public static List<ServerName> getBackupMastersAndRenewWatch(ZKWatcher zkw)
+    throws InterruptedIOException {
     // Build Set of backup masters from ZK nodes
     List<String> backupMasterStrings = null;
     try {
       backupMasterStrings = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
-          zkw.getZNodePaths().backupMasterAddressesZNode);
+        zkw.getZNodePaths().backupMasterAddressesZNode);
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to list backup servers"), e);
     }
@@ -308,12 +295,12 @@ public class MasterAddressTracker extends ZKNodeTracker {
     List<ServerName> backupMasters = Collections.emptyList();
     if (backupMasterStrings != null && !backupMasterStrings.isEmpty()) {
       backupMasters = new ArrayList<>(backupMasterStrings.size());
-      for (String s: backupMasterStrings) {
+      for (String s : backupMasterStrings) {
         try {
-          byte [] bytes;
+          byte[] bytes;
           try {
-            bytes = ZKUtil.getData(zkw, ZNodePaths.joinZNode(
-                zkw.getZNodePaths().backupMasterAddressesZNode, s));
+            bytes = ZKUtil.getData(zkw,
+              ZNodePaths.joinZNode(zkw.getZNodePaths().backupMasterAddressesZNode, s));
           } catch (InterruptedException e) {
             throw new InterruptedIOException();
           }
@@ -328,8 +315,7 @@ public class MasterAddressTracker extends ZKNodeTracker {
             backupMasters.add(sn);
           }
         } catch (KeeperException e) {
-          LOG.warn(zkw.prefix("Unable to get information about " +
-              "backup servers"), e);
+          LOG.warn(zkw.prefix("Unable to get information about " + "backup servers"), e);
         }
       }
       backupMasters.sort(Comparator.comparing(ServerName::getServerName));

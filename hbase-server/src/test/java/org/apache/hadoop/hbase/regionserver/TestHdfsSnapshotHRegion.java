@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestHdfsSnapshotHRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHdfsSnapshotHRegion.class);
+    HBaseClassTestRule.forClass(TestHdfsSnapshotHRegion.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String SNAPSHOT_NAME = "foo_snapshot";
@@ -52,7 +52,6 @@ public class TestHdfsSnapshotHRegion {
   public static final byte[] FAMILY = Bytes.toBytes("f1");
   private DFSClient client;
   private String baseDir;
-
 
   @Before
   public void setUp() throws Exception {
@@ -79,8 +78,8 @@ public class TestHdfsSnapshotHRegion {
   @Test
   public void testOpeningReadOnlyRegionBasic() throws Exception {
     String snapshotDir = client.createSnapshot(baseDir, SNAPSHOT_NAME);
-    RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(
-        table.getName()).getAllRegionLocations().stream().findFirst().get().getRegion();
+    RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(table.getName())
+      .getAllRegionLocations().stream().findFirst().get().getRegion();
     Path tableDir = CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME);
     HRegion snapshottedRegion = openSnapshotRegion(firstRegion, tableDir);
     Assert.assertNotNull(snapshottedRegion);
@@ -90,33 +89,28 @@ public class TestHdfsSnapshotHRegion {
   @Test
   public void testSnapshottingWithTmpSplitsAndMergeDirectoriesPresent() throws Exception {
     // lets get a region and create those directories and make sure we ignore them
-    RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(
-        table.getName()).getAllRegionLocations().stream().findFirst().get().getRegion();
+    RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(table.getName())
+      .getAllRegionLocations().stream().findFirst().get().getRegion();
     String encodedName = firstRegion.getEncodedName();
     Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLE_NAME);
     Path regionDirectoryPath = new Path(tableDir, encodedName);
-    TEST_UTIL.getTestFileSystem().create(
-        new Path(regionDirectoryPath, HRegionFileSystem.REGION_TEMP_DIR));
-    TEST_UTIL.getTestFileSystem().create(
-        new Path(regionDirectoryPath, HRegionFileSystem.REGION_SPLITS_DIR));
-    TEST_UTIL.getTestFileSystem().create(
-        new Path(regionDirectoryPath, HRegionFileSystem.REGION_MERGES_DIR));
+    TEST_UTIL.getTestFileSystem()
+      .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_TEMP_DIR));
+    TEST_UTIL.getTestFileSystem()
+      .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_SPLITS_DIR));
+    TEST_UTIL.getTestFileSystem()
+      .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_MERGES_DIR));
     // now snapshot
     String snapshotDir = client.createSnapshot(baseDir, "foo_snapshot");
     // everything should still open just fine
-    HRegion snapshottedRegion = openSnapshotRegion(firstRegion,
-      CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME));
+    HRegion snapshottedRegion =
+      openSnapshotRegion(firstRegion, CommonFSUtils.getTableDir(new Path(snapshotDir), TABLE_NAME));
     Assert.assertNotNull(snapshottedRegion); // no errors and the region should open
     snapshottedRegion.close();
   }
 
   private HRegion openSnapshotRegion(RegionInfo firstRegion, Path tableDir) throws IOException {
-    return HRegion.openReadOnlyFileSystemHRegion(
-        TEST_UTIL.getConfiguration(),
-        TEST_UTIL.getTestFileSystem(),
-        tableDir,
-        firstRegion,
-        table.getDescriptor()
-    );
+    return HRegion.openReadOnlyFileSystemHRegion(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), tableDir, firstRegion, table.getDescriptor());
   }
 }

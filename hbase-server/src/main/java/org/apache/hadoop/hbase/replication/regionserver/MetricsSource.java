@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.HashMap;
@@ -53,14 +52,12 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Constructor used to register the metrics
-   *
    * @param id Name of the source this class is monitoring
    */
   public MetricsSource(String id) {
     this.id = id;
-    singleSourceSource =
-        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-            .getSource(id);
+    singleSourceSource = CompatibilitySingletonFactory
+      .getInstance(MetricsReplicationSourceFactory.class).getSource(id);
     globalSourceSource = CompatibilitySingletonFactory
       .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     singleSourceSourceByTable = new HashMap<>();
@@ -68,13 +65,13 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Constructor for injecting custom (or test) MetricsReplicationSourceSources
-   * @param id Name of the source this class is monitoring
+   * @param id                 Name of the source this class is monitoring
    * @param singleSourceSource Class to monitor id-scoped metrics
    * @param globalSourceSource Class to monitor global-scoped metrics
    */
   public MetricsSource(String id, MetricsReplicationSourceSource singleSourceSource,
-                       MetricsReplicationGlobalSourceSource globalSourceSource,
-                       Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
+    MetricsReplicationGlobalSourceSource globalSourceSource,
+    Map<String, MetricsReplicationTableSource> singleSourceSourceByTable) {
     this.id = id;
     this.singleSourceSource = singleSourceSource;
     this.globalSourceSource = globalSourceSource;
@@ -84,7 +81,7 @@ public class MetricsSource implements BaseSource {
   /**
    * Set the age of the last edit that was shipped
    * @param timestamp target write time of the edit
-   * @param walGroup which group we are setting
+   * @param walGroup  which group we are setting
    */
   public void setAgeOfLastShippedOp(long timestamp, String walGroup) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
@@ -96,7 +93,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Update the table level replication metrics per table
-   *
    * @param walEntries List of pairs of WAL entry and it's size
    */
   public void updateTableLevelMetrics(List<Pair<Entry, Long>> walEntries) {
@@ -109,9 +105,8 @@ public class MetricsSource implements BaseSource {
 
       // get the replication metrics source for table at the run time
       MetricsReplicationTableSource tableSource = this.getSingleSourceSourceByTable()
-        .computeIfAbsent(tableName,
-          t -> CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
-            .getTableSource(t));
+        .computeIfAbsent(tableName, t -> CompatibilitySingletonFactory
+          .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t));
       tableSource.setLastShippedAge(age);
       tableSource.incrShippedBytes(entrySize);
     }
@@ -124,16 +119,15 @@ public class MetricsSource implements BaseSource {
    */
   public void setAgeOfLastShippedOpByTable(long timestamp, String tableName) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
-    this.getSingleSourceSourceByTable().computeIfAbsent(
-        tableName, t -> CompatibilitySingletonFactory
-            .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t))
-            .setLastShippedAge(age);
+    this.getSingleSourceSourceByTable()
+      .computeIfAbsent(tableName, t -> CompatibilitySingletonFactory
+        .getInstance(MetricsReplicationSourceFactory.class).getTableSource(t))
+      .setLastShippedAge(age);
   }
 
   /**
    * get age of last shipped op of given wal group. If the walGroup is null, return 0
-   * @param walGroup which group we are getting
-   * @return age
+   * @param walGroup which group we are getting n
    */
   public long getAgeOfLastShippedOp(String walGroup) {
     return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
@@ -186,7 +180,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Add on the the number of log edits read
-   *
    * @param delta the number of log edits read.
    */
   private void incrLogEditsRead(long delta) {
@@ -201,7 +194,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Add on the number of log edits filtered
-   *
    * @param delta the number filtered.
    */
   public void incrLogEditsFiltered(long delta) {
@@ -216,7 +208,6 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Convience method to apply changes to metrics do to shipping a batch of logs.
-   *
    * @param batchSize the size of the batch that was shipped to sinks.
    */
   public void shipBatch(long batchSize, int sizeInBytes) {
@@ -233,17 +224,16 @@ public class MetricsSource implements BaseSource {
   /**
    * Convenience method to update metrics when batch of operations has failed.
    */
-  public void incrementFailedBatches(){
+  public void incrementFailedBatches() {
     singleSourceSource.incrFailedBatches();
     globalSourceSource.incrFailedBatches();
   }
-
 
   /**
    * Gets the number of edits not eligible for replication this source queue logs so far.
    * @return logEditsFiltered non-replicable edits filtered from this queue logs.
    */
-  public long getEditsFiltered(){
+  public long getEditsFiltered() {
     return this.singleSourceSource.getEditsFiltered();
   }
 
@@ -251,7 +241,7 @@ public class MetricsSource implements BaseSource {
    * Gets the number of edits eligible for replication read from this source queue logs so far.
    * @return replicableEdits total number of replicable edits read from this queue logs.
    */
-  public long getReplicableEdits(){
+  public long getReplicableEdits() {
     return this.singleSourceSource.getWALEditsRead() - this.singleSourceSource.getEditsFiltered();
   }
 
@@ -265,9 +255,8 @@ public class MetricsSource implements BaseSource {
 
   /**
    * Convience method to apply changes to metrics do to shipping a batch of logs.
-   *
    * @param batchSize the size of the batch that was shipped to sinks.
-   * @param hfiles total number of hfiles shipped to sinks.
+   * @param hfiles    total number of hfiles shipped to sinks.
    */
   public void shipBatch(long batchSize, int sizeInBytes, long hfiles) {
     shipBatch(batchSize, sizeInBytes);
@@ -294,25 +283,22 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get AgeOfLastShippedOp
-   * @return AgeOfLastShippedOp
+   * Get AgeOfLastShippedOp n
    */
   public Long getAgeOfLastShippedOp() {
     return singleSourceSource.getLastShippedAge();
   }
 
   /**
-   * Get the sizeOfLogQueue
-   * @return sizeOfLogQueue
+   * Get the sizeOfLogQueue n
    */
   public int getSizeOfLogQueue() {
     return singleSourceSource.getSizeOfLogQueue();
   }
 
   /**
-   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
-   * @return lastTimestampForAge
-   * @deprecated Since 2.0.0. Removed in 3.0.0.
+   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one n
+   * * @deprecated Since 2.0.0. Removed in 3.0.0.
    * @see #getTimestampOfLastShippedOp()
    */
   @Deprecated
@@ -320,18 +306,15 @@ public class MetricsSource implements BaseSource {
     return getTimestampOfLastShippedOp();
   }
 
-
   /**
-   * Get the value of uncleanlyClosedWAL counter
-   * @return uncleanlyClosedWAL
+   * Get the value of uncleanlyClosedWAL counter n
    */
   public long getUncleanlyClosedWALs() {
     return singleSourceSource.getUncleanlyClosedWALs();
   }
 
   /**
-   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
-   * @return lastTimestampForAge
+   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one n
    */
   public long getTimestampOfLastShippedOp() {
     long lastTimestamp = 0L;
@@ -352,9 +335,9 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * TimeStamp of next edit targeted for replication. Used for calculating lag,
-   * as if this timestamp is greater than timestamp of last shipped, it means there's
-   * at least one edit pending replication.
+   * TimeStamp of next edit targeted for replication. Used for calculating lag, as if this timestamp
+   * is greater than timestamp of last shipped, it means there's at least one edit pending
+   * replication.
    * @param timeStampNextToReplicate timestamp of next edit in the queue that should be replicated.
    */
   public void setTimeStampNextToReplicate(long timeStampNextToReplicate) {
@@ -362,9 +345,9 @@ public class MetricsSource implements BaseSource {
   }
 
   public long getReplicationDelay() {
-    if(getTimestampOfLastShippedOp()>=timeStampNextToReplicate){
+    if (getTimestampOfLastShippedOp() >= timeStampNextToReplicate) {
       return 0;
-    }else{
+    } else {
       return EnvironmentEdgeManager.currentTime() - timeStampNextToReplicate;
     }
   }
@@ -378,8 +361,7 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get the slave peer ID
-   * @return peerID
+   * Get the slave peer ID n
    */
   public String getPeerID() {
     return id;
@@ -440,8 +422,8 @@ public class MetricsSource implements BaseSource {
   }
 
   /*
-   Sets the age of oldest log file just for source.
-  */
+   * Sets the age of oldest log file just for source.
+   */
   public void setOldestWalAge(long age) {
     singleSourceSource.setOldestWalAge(age);
   }
@@ -525,8 +507,7 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
-   * @return
+   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication. n
    */
   public long getWALReaderEditsBufferUsage() {
     return globalSourceSource.getWALReaderEditsBufferBytes();

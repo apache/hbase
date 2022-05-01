@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWriter>
-    extends Compactor<T> {
+  extends Compactor<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiOutputCompactor.class);
 
@@ -47,20 +47,19 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   protected final void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
-    final FileDetails fd, final boolean shouldDropBehind,
-    Consumer<Path> writerCreationTracker) {
+    final FileDetails fd, final boolean shouldDropBehind, Consumer<Path> writerCreationTracker) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
-        return AbstractMultiOutputCompactor.this
-          .createWriter(fd, shouldDropBehind,  writerCreationTracker);
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
+          writerCreationTracker);
       }
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
         throws IOException {
-        return AbstractMultiOutputCompactor.this
-          .createWriter(fd, shouldDropBehind, fileStoragePolicy, writerCreationTracker);
+        return AbstractMultiOutputCompactor.this.createWriter(fd, shouldDropBehind,
+          fileStoragePolicy, writerCreationTracker);
       }
     };
     // Prepare multi-writer, and perform the compaction using scanner and writer.

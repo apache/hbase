@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,10 +61,10 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelReplicationWithExpAsString.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelReplicationWithExpAsString.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestVisibilityLabelReplicationWithExpAsString.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestVisibilityLabelReplicationWithExpAsString.class);
 
   @Override
   @Before
@@ -76,10 +76,10 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     expected[3] = 3;
     expectedVisString[0] = "(\"public\"&\"secret\"&\"topsecret\")|(\"confidential\"&\"topsecret\")";
     expectedVisString[1] = "(\"private\"&\"public\")|(\"private\"&\"topsecret\")|"
-        + "(\"confidential\"&\"public\")|(\"confidential\"&\"topsecret\")";
+      + "(\"confidential\"&\"public\")|(\"confidential\"&\"topsecret\")";
     expectedVisString[2] = "(!\"topsecret\"&\"secret\")|(!\"topsecret\"&\"confidential\")";
-    expectedVisString[3] = "(\"secret\"&\"" + COPYRIGHT + "\\\"" + ACCENT + "\\\\" + SECRET
-        + "\\\"" + "\u0027&\\\\" + "\")";
+    expectedVisString[3] = "(\"secret\"&\"" + COPYRIGHT + "\\\"" + ACCENT + "\\\\" + SECRET + "\\\""
+      + "\u0027&\\\\" + "\")";
     // setup configuration
     conf = HBaseConfiguration.create();
     conf.setInt("hfile.format.version", 3);
@@ -97,19 +97,18 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        VisibilityReplication.class.getName());
-    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        SimpleCP.class.getName());
+      VisibilityReplication.class.getName());
+    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY, SimpleCP.class.getName());
     // Have to reset conf1 in case zk cluster location different
     // than default
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-            ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");
     conf.set("hbase.superuser", User.getCurrent().getShortName());
     SUPERUSER = User.createUserForTesting(conf, User.getCurrent().getShortName(),
-        new String[] { "supergroup" });
-    User.createUserForTesting(conf,
-        User.getCurrent().getShortName(), new String[] { "supergroup" });
+      new String[] { "supergroup" });
+    User.createUserForTesting(conf, User.getCurrent().getShortName(),
+      new String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniZKCluster();
@@ -124,7 +123,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf1.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-            TestCoprocessorForTagsAtSink.class.getName());
+      TestCoprocessorForTagsAtSink.class.getName());
     setVisibilityLabelServiceImpl(conf1, ExpAsStringVisibilityLabelServiceImpl.class);
     TEST_UTIL1 = new HBaseTestingUtility(conf1);
     TEST_UTIL1.setZkCluster(miniZK);
@@ -147,7 +146,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     try (Admin hBaseAdmin = TEST_UTIL.getAdmin()) {
       hBaseAdmin.createTable(table);
     }
-    try (Admin hBaseAdmin1 = TEST_UTIL1.getAdmin()){
+    try (Admin hBaseAdmin1 = TEST_UTIL1.getAdmin()) {
       hBaseAdmin1.createTable(table);
     }
     addLabels();
@@ -156,20 +155,19 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
   }
 
   protected static void setVisibilityLabelServiceImpl(Configuration conf, Class clazz) {
-    conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS,
-        clazz, VisibilityLabelService.class);
+    conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS, clazz,
+      VisibilityLabelService.class);
   }
 
   @Override
   protected void verifyGet(final byte[] row, final String visString, final int expected,
-      final boolean nullExpected, final String... auths) throws IOException,
-      InterruptedException {
+    final boolean nullExpected, final String... auths) throws IOException, InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
 
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf1);
-             Table table2 = connection.getTable(TABLE_NAME)) {
+          Table table2 = connection.getTable(TABLE_NAME)) {
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -185,8 +183,8 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
           assertArrayEquals(CellUtil.cloneRow(current), row);
           assertEquals(expected, TestCoprocessorForTagsAtSink.tags.size());
           boolean foundNonVisTag = false;
-          for(Tag t : TestCoprocessorForTagsAtSink.tags) {
-            if(t.getType() == NON_VIS_TAG_TYPE) {
+          for (Tag t : TestCoprocessorForTagsAtSink.tags) {
+            if (t.getType() == NON_VIS_TAG_TYPE) {
               assertEquals(TEMP, Bytes.toString(Tag.cloneValue(t)));
               foundNonVisTag = true;
               break;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,8 +71,10 @@ public abstract class ModifyStoreFileTrackerProcedure
   }
 
   private void checkDstSFT(String dstSFT) throws DoNotRetryIOException {
-    if (MigrationStoreFileTracker.class
-      .isAssignableFrom(StoreFileTrackerFactory.getTrackerClass(dstSFT))) {
+    if (
+      MigrationStoreFileTracker.class
+        .isAssignableFrom(StoreFileTrackerFactory.getTrackerClass(dstSFT))
+    ) {
       throw new DoNotRetryIOException("Do not need to transfer to " + dstSFT);
     }
   }
@@ -88,7 +90,9 @@ public abstract class ModifyStoreFileTrackerProcedure
   }
 
   private enum StoreFileTrackerState {
-    NEED_FINISH_PREVIOUS_MIGRATION_FIRST, NEED_START_MIGRATION, NEED_FINISH_MIGRATION,
+    NEED_FINISH_PREVIOUS_MIGRATION_FIRST,
+    NEED_START_MIGRATION,
+    NEED_FINISH_MIGRATION,
     ALREADY_FINISHED
   }
 

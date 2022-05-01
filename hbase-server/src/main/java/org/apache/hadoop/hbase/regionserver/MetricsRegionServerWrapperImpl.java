@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,8 +54,7 @@ import org.slf4j.LoggerFactory;
  * Impl for exposing HRegionServer Information through Hadoop's metrics 2 system.
  */
 @InterfaceAudience.Private
-class MetricsRegionServerWrapperImpl
-    implements MetricsRegionServerWrapper {
+class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionServerWrapperImpl.class);
 
@@ -117,8 +115,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
-  protected final Map<String, ArrayList<Long>>
-      requestsCountCache = new ConcurrentHashMap<String, ArrayList<Long>>();
+  protected final Map<String, ArrayList<Long>> requestsCountCache =
+    new ConcurrentHashMap<String, ArrayList<Long>>();
 
   private ScheduledExecutorService executor;
   private Runnable runnable;
@@ -159,10 +157,8 @@ class MetricsRegionServerWrapperImpl
     this.cacheStats = this.blockCache != null ? this.blockCache.getStats() : null;
     if (this.cacheStats != null) {
       if (this.cacheStats instanceof CombinedBlockCache.CombinedCacheStats) {
-        l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getLruCacheStats();
-        l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getBucketCacheStats();
+        l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getLruCacheStats();
+        l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getBucketCacheStats();
       } else {
         l1Stats = this.cacheStats;
       }
@@ -242,7 +238,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
+    // The thread could be zero. if so assume there is no queue.
     if (this.regionServer.compactSplitThread == null) {
       return 0;
     }
@@ -251,7 +247,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getSmallCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
+    // The thread could be zero. if so assume there is no queue.
     if (this.regionServer.compactSplitThread == null) {
       return 0;
     }
@@ -260,7 +256,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getLargeCompactionQueueSize() {
-    //The thread could be zero.  if so assume there is no queue.
+    // The thread could be zero. if so assume there is no queue.
     if (this.regionServer.compactSplitThread == null) {
       return 0;
     }
@@ -269,7 +265,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getFlushQueueSize() {
-    //If there is no flusher there should be no queue.
+    // If there is no flusher there should be no queue.
     if (this.regionServer.getMemStoreFlusher() == null) {
       return 0;
     }
@@ -389,7 +385,8 @@ class MetricsRegionServerWrapperImpl
     return this.l2Stats != null ? this.l2Stats.getMissRatio() : 0.0;
   }
 
-  @Override public void forceRecompute() {
+  @Override
+  public void forceRecompute() {
     this.runnable.run();
   }
 
@@ -448,7 +445,8 @@ class MetricsRegionServerWrapperImpl
     return storeFileSize;
   }
 
-  @Override public double getRequestsPerSecond() {
+  @Override
+  public double getRequestsPerSecond() {
     return requestsPerSecond;
   }
 
@@ -656,9 +654,9 @@ class MetricsRegionServerWrapperImpl
   }
 
   /**
-   * This is the runnable that will be executed on the executor every PERIOD number of seconds
-   * It will take metrics/numbers from all of the regions and use them to compute point in
-   * time metrics.
+   * This is the runnable that will be executed on the executor every PERIOD number of seconds It
+   * will take metrics/numbers from all of the regions and use them to compute point in time
+   * metrics.
    */
   public class RegionServerMetricsWrapperRunnable implements Runnable {
 
@@ -667,17 +665,16 @@ class MetricsRegionServerWrapperImpl
     @Override
     synchronized public void run() {
       try {
-        HDFSBlocksDistribution hdfsBlocksDistribution =
-            new HDFSBlocksDistribution();
+        HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
         HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
-            new HDFSBlocksDistribution();
+          new HDFSBlocksDistribution();
 
         long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
         long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
         long tempReadRequestsCount = 0, tempFilteredReadRequestsCount = 0,
-          tempWriteRequestsCount = 0;
+            tempWriteRequestsCount = 0;
         long tempCheckAndMutateChecksFailed = 0;
         long tempCheckAndMutateChecksPassed = 0;
         long tempStorefileIndexSize = 0;
@@ -725,9 +722,9 @@ class MetricsRegionServerWrapperImpl
             writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
             totalReadRequestsDelta += readRequestsDelta;
             totalWriteRequestsDelta += writeRequestsDelta;
-            //Update cache for our next comparision
-            requestsCountCache.get(encodedRegionName).set(0,currentReadRequestsCount);
-            requestsCountCache.get(encodedRegionName).set(1,currentWriteRequestsCount);
+            // Update cache for our next comparision
+            requestsCountCache.get(encodedRegionName).set(0, currentReadRequestsCount);
+            requestsCountCache.get(encodedRegionName).set(1, currentWriteRequestsCount);
           } else {
             // List[0] -> readRequestCount
             // List[1] -> writeRequestCount
@@ -754,14 +751,18 @@ class MetricsRegionServerWrapperImpl
             tempStoreFileSize += store.getStorefilesSize();
 
             OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
-            if (storeMaxStoreFileAge.isPresent() &&
-                storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+            if (
+              storeMaxStoreFileAge.isPresent()
+                && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
+            ) {
               tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
             }
 
             OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
-            if (storeMinStoreFileAge.isPresent() &&
-                storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+            if (
+              storeMinStoreFileAge.isPresent()
+                && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
+            ) {
               tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
             }
 
@@ -772,7 +773,7 @@ class MetricsRegionServerWrapperImpl
             OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
             if (storeAvgStoreFileAge.isPresent()) {
               avgAgeNumerator =
-                  (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
+                (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
             }
 
             tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
@@ -805,14 +806,14 @@ class MetricsRegionServerWrapperImpl
           }
           regionCount++;
         }
-        float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
-            regionServer.getServerName().getHostname());
+        float localityIndex =
+          hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
         tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
 
         float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
-            .getBlockLocalityIndex(regionServer.getServerName().getHostname());
-        tempPercentFileLocalSecondaryRegions = Double.
-            isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
+          .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+        tempPercentFileLocalSecondaryRegions =
+          Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
 
         // Compute the number of requests per second
         long currentTime = EnvironmentEdgeManager.currentTime();
@@ -824,11 +825,11 @@ class MetricsRegionServerWrapperImpl
         }
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          requestsPerSecond = (totalReadRequestsDelta + totalWriteRequestsDelta) /
-              ((currentTime - lastRan) / 1000.0);
+          requestsPerSecond =
+            (totalReadRequestsDelta + totalWriteRequestsDelta) / ((currentTime - lastRan) / 1000.0);
 
-          double readRequestsRatePerMilliSecond = (double)totalReadRequestsDelta / period;
-          double writeRequestsRatePerMilliSecond = (double)totalWriteRequestsDelta / period;
+          double readRequestsRatePerMilliSecond = (double) totalReadRequestsDelta / period;
+          double writeRequestsRatePerMilliSecond = (double) totalWriteRequestsDelta / period;
 
           readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
           writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
@@ -837,10 +838,10 @@ class MetricsRegionServerWrapperImpl
 
         final WALProvider provider = regionServer.getWalFactory().getWALProvider();
         final WALProvider metaProvider = regionServer.getWalFactory().getMetaWALProvider();
-        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
-            (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
-        walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
-          (metaProvider == null ? 0 : metaProvider.getLogFileSize());
+        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles())
+          + (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
+        walFileSize = (provider == null ? 0 : provider.getLogFileSize())
+          + (metaProvider == null ? 0 : metaProvider.getLogFileSize());
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
@@ -858,7 +859,7 @@ class MetricsRegionServerWrapperImpl
           avgStoreFileAge = avgAgeNumerator / numHFiles;
         }
 
-        numReferenceFiles= tempNumReferenceFiles;
+        numReferenceFiles = tempNumReferenceFiles;
         readRequestsCount = tempReadRequestsCount;
         filteredReadRequestsCount = tempFilteredReadRequestsCount;
         writeRequestsCount = tempWriteRequestsCount;
@@ -903,17 +904,19 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getHedgedReadOps() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadOps();
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOps();
   }
 
   @Override
   public long getHedgedReadWins() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadWins();
   }
 
   @Override
   public long getHedgedReadOpsInCurThread() {
-    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
+    return this.dfsHedgedReadMetrics == null
+      ? 0
+      : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
   }
 
   @Override

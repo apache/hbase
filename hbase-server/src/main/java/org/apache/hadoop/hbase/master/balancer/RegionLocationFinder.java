@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -52,16 +53,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.MoreExecuto
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * This will find where data for a region is located in HDFS. It ranks
- * {@link ServerName}'s by the size of the store files they are holding for a
- * given region.
- *
+ * This will find where data for a region is located in HDFS. It ranks {@link ServerName}'s by the
+ * size of the store files they are holding for a given region.
  */
 @InterfaceAudience.Private
 class RegionLocationFinder {
   private static final Logger LOG = LoggerFactory.getLogger(RegionLocationFinder.class);
   private static final long CACHE_TIME = 240 * 60 * 1000;
-  private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION = new HDFSBlocksDistribution();
+  private static final HDFSBlocksDistribution EMPTY_BLOCK_DISTRIBUTION =
+    new HDFSBlocksDistribution();
   private Configuration conf;
   private volatile ClusterMetrics status;
   private MasterServices services;
@@ -70,37 +70,32 @@ class RegionLocationFinder {
   private long lastFullRefresh = EnvironmentEdgeManager.currentTime();
 
   private CacheLoader<RegionInfo, HDFSBlocksDistribution> loader =
-      new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
+    new CacheLoader<RegionInfo, HDFSBlocksDistribution>() {
 
-    @Override
-    public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
+      @Override
+      public ListenableFuture<HDFSBlocksDistribution> reload(final RegionInfo hri,
         HDFSBlocksDistribution oldValue) throws Exception {
-      return executor.submit(new Callable<HDFSBlocksDistribution>() {
-        @Override
-        public HDFSBlocksDistribution call() throws Exception {
-          return internalGetTopBlockLocation(hri);
-        }
-      });
-    }
+        return executor.submit(new Callable<HDFSBlocksDistribution>() {
+          @Override
+          public HDFSBlocksDistribution call() throws Exception {
+            return internalGetTopBlockLocation(hri);
+          }
+        });
+      }
 
-    @Override
-    public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
-      return internalGetTopBlockLocation(key);
-    }
-  };
+      @Override
+      public HDFSBlocksDistribution load(RegionInfo key) throws Exception {
+        return internalGetTopBlockLocation(key);
+      }
+    };
 
   // The cache for where regions are located.
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> cache = null;
 
   RegionLocationFinder() {
     this.cache = createCache();
-    executor = MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            5,
-            new ThreadFactoryBuilder().
-                setDaemon(true)
-                .setNameFormat("region-location-%d")
-                .build()));
+    executor = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("region-location-%d").build()));
   }
 
   /**
@@ -108,9 +103,8 @@ class RegionLocationFinder {
    * @return A new Cache.
    */
   private LoadingCache<RegionInfo, HDFSBlocksDistribution> createCache() {
-    return CacheBuilder.newBuilder()
-        .expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
-        .build(loader);
+    return CacheBuilder.newBuilder().expireAfterWrite(CACHE_TIME, TimeUnit.MILLISECONDS)
+      .build(loader);
   }
 
   public Configuration getConf() {
@@ -130,14 +124,13 @@ class RegionLocationFinder {
     this.status = status;
     if (currentTime > lastFullRefresh + (CACHE_TIME / 2)) {
       // Only count the refresh if it includes user tables ( eg more than meta and namespace ).
-      lastFullRefresh = scheduleFullRefresh()?currentTime:lastFullRefresh;
+      lastFullRefresh = scheduleFullRefresh() ? currentTime : lastFullRefresh;
     }
 
   }
 
   /**
    * Refresh all the region locations.
-   *
    * @return true if user created regions got refreshed.
    */
   private boolean scheduleFullRefresh() {
@@ -166,8 +159,8 @@ class RegionLocationFinder {
   }
 
   /**
-   * Returns an ordered list of hosts which have better locality for this region
-   * than the current host.
+   * Returns an ordered list of hosts which have better locality for this region than the current
+   * host.
    */
   protected List<ServerName> getTopBlockLocations(RegionInfo region, String currentHost) {
     HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
@@ -182,11 +175,9 @@ class RegionLocationFinder {
   }
 
   /**
-   * Returns an ordered list of hosts that are hosting the blocks for this
-   * region. The weight of each host is the sum of the block lengths of all
-   * files on that host, so the first host in the list is the server which holds
-   * the most bytes of the given region's HFiles.
-   *
+   * Returns an ordered list of hosts that are hosting the blocks for this region. The weight of
+   * each host is the sum of the block lengths of all files on that host, so the first host in the
+   * list is the server which holds the most bytes of the given region's HFiles.
    * @param region region
    * @return ordered list of hosts holding blocks of the specified region
    */
@@ -195,12 +186,12 @@ class RegionLocationFinder {
       TableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
-            HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
+          HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
         return blocksDistribution;
       }
     } catch (IOException ioe) {
       LOG.warn("IOException during HDFSBlocksDistribution computation. for " + "region = "
-          + region.getEncodedName(), ioe);
+        + region.getEncodedName(), ioe);
     }
 
     return EMPTY_BLOCK_DISTRIBUTION;
@@ -208,10 +199,7 @@ class RegionLocationFinder {
 
   /**
    * return TableDescriptor for a given tableName
-   *
-   * @param tableName the table name
-   * @return TableDescriptor
-   * @throws IOException
+   * @param tableName the table name nn
    */
   protected TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     TableDescriptor tableDescriptor = null;
@@ -227,9 +215,7 @@ class RegionLocationFinder {
   }
 
   /**
-   * Map hostname to ServerName, The output ServerName list will have the same
-   * order as input hosts.
-   *
+   * Map hostname to ServerName, The output ServerName list will have the same order as input hosts.
    * @param hosts the list of hosts
    * @return ServerName list
    */
@@ -289,8 +275,7 @@ class RegionLocationFinder {
     }
   }
 
-  private ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(
-      RegionInfo hri) {
+  private ListenableFuture<HDFSBlocksDistribution> asyncGetBlockDistribution(RegionInfo hri) {
     try {
       return loader.reload(hri, EMPTY_BLOCK_DISTRIBUTION);
     } catch (Exception e) {
@@ -299,22 +284,21 @@ class RegionLocationFinder {
   }
 
   public void refreshAndWait(Collection<RegionInfo> hris) {
-    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures = new ArrayList<>(hris.size());
+    ArrayList<ListenableFuture<HDFSBlocksDistribution>> regionLocationFutures =
+      new ArrayList<>(hris.size());
     for (RegionInfo hregionInfo : hris) {
       regionLocationFutures.add(asyncGetBlockDistribution(hregionInfo));
     }
     int index = 0;
     for (RegionInfo hregionInfo : hris) {
-      ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures
-          .get(index);
+      ListenableFuture<HDFSBlocksDistribution> future = regionLocationFutures.get(index);
       try {
         cache.put(hregionInfo, future.get());
       } catch (InterruptedException ite) {
         Thread.currentThread().interrupt();
       } catch (ExecutionException ee) {
-        LOG.debug(
-            "ExecutionException during HDFSBlocksDistribution computation. for region = "
-                + hregionInfo.getEncodedName(), ee);
+        LOG.debug("ExecutionException during HDFSBlocksDistribution computation. for region = "
+          + hregionInfo.getEncodedName(), ee);
       }
       index++;
     }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +32,6 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -75,7 +73,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
-
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -92,29 +89,24 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Script used evaluating Stargate performance and scalability.  Runs a SG
- * client that steps through one of a set of hardcoded tests or 'experiments'
- * (e.g. a random reads test, a random writes test, etc.). Pass on the
- * command-line which test to run and how many clients are participating in
- * this experiment. Run <code>java PerformanceEvaluation --help</code> to
- * obtain usage.
- *
- * <p>This class sets up and runs the evaluation programs described in
- * Section 7, <i>Performance Evaluation</i>, of the <a
- * href="http://labs.google.com/papers/bigtable.html">Bigtable</a>
- * paper, pages 8-10.
- *
- * <p>If number of clients > 1, we start up a MapReduce job. Each map task
- * runs an individual client. Each client does about 1GB of data.
+ * Script used evaluating Stargate performance and scalability. Runs a SG client that steps through
+ * one of a set of hardcoded tests or 'experiments' (e.g. a random reads test, a random writes test,
+ * etc.). Pass on the command-line which test to run and how many clients are participating in this
+ * experiment. Run <code>java PerformanceEvaluation --help</code> to obtain usage.
+ * <p>
+ * This class sets up and runs the evaluation programs described in Section 7, <i>Performance
+ * Evaluation</i>, of the <a href="http://labs.google.com/papers/bigtable.html">Bigtable</a> paper,
+ * pages 8-10.
+ * <p>
+ * If number of clients > 1, we start up a MapReduce job. Each map task runs an individual client.
+ * Each client does about 1GB of data.
  */
 public class PerformanceEvaluation extends Configured implements Tool {
-  protected static final Logger LOG =
-      LoggerFactory.getLogger(PerformanceEvaluation.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(PerformanceEvaluation.class);
 
   private static final int DEFAULT_ROW_PREFIX_LENGTH = 16;
   private static final int ROW_LENGTH = 1000;
@@ -150,20 +142,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /**
    * Regex to parse lines in input file passed to mapreduce task.
    */
-  public static final Pattern LINE_PATTERN =
-      Pattern.compile("tableName=(\\w+),\\s+" +
-          "startRow=(\\d+),\\s+" +
-          "perClientRunRows=(\\d+),\\s+" +
-          "totalRows=(\\d+),\\s+" +
-          "clients=(\\d+),\\s+" +
-          "flushCommits=(\\w+),\\s+" +
-          "writeToWAL=(\\w+),\\s+" +
-          "useTags=(\\w+),\\s+" +
-          "noOfTags=(\\d+)");
+  public static final Pattern LINE_PATTERN = Pattern
+    .compile("tableName=(\\w+),\\s+" + "startRow=(\\d+),\\s+" + "perClientRunRows=(\\d+),\\s+"
+      + "totalRows=(\\d+),\\s+" + "clients=(\\d+),\\s+" + "flushCommits=(\\w+),\\s+"
+      + "writeToWAL=(\\w+),\\s+" + "useTags=(\\w+),\\s+" + "noOfTags=(\\d+)");
 
   /**
-   * Enum for map metrics.  Keep it out here rather than inside in the Map
-   * inner-class so we can find associated properties.
+   * Enum for map metrics. Keep it out here rather than inside in the Map inner-class so we can find
+   * associated properties.
    */
   protected enum Counter {
     /** elapsed time */
@@ -179,33 +165,28 @@ public class PerformanceEvaluation extends Configured implements Tool {
   public PerformanceEvaluation(final Configuration c) {
     this.conf = c;
 
-    addCommandDescriptor(RandomReadTest.class, "randomRead",
-        "Run random read test");
+    addCommandDescriptor(RandomReadTest.class, "randomRead", "Run random read test");
     addCommandDescriptor(RandomSeekScanTest.class, "randomSeekScan",
-        "Run random seek and scan 100 test");
+      "Run random seek and scan 100 test");
     addCommandDescriptor(RandomScanWithRange10Test.class, "scanRange10",
-        "Run random seek scan with both start and stop row (max 10 rows)");
+      "Run random seek scan with both start and stop row (max 10 rows)");
     addCommandDescriptor(RandomScanWithRange100Test.class, "scanRange100",
-        "Run random seek scan with both start and stop row (max 100 rows)");
+      "Run random seek scan with both start and stop row (max 100 rows)");
     addCommandDescriptor(RandomScanWithRange1000Test.class, "scanRange1000",
-        "Run random seek scan with both start and stop row (max 1000 rows)");
+      "Run random seek scan with both start and stop row (max 1000 rows)");
     addCommandDescriptor(RandomScanWithRange10000Test.class, "scanRange10000",
-        "Run random seek scan with both start and stop row (max 10000 rows)");
-    addCommandDescriptor(RandomWriteTest.class, "randomWrite",
-        "Run random write test");
-    addCommandDescriptor(SequentialReadTest.class, "sequentialRead",
-        "Run sequential read test");
-    addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
-        "Run sequential write test");
-    addCommandDescriptor(ScanTest.class, "scan",
-        "Run scan test (read every row)");
+      "Run random seek scan with both start and stop row (max 10000 rows)");
+    addCommandDescriptor(RandomWriteTest.class, "randomWrite", "Run random write test");
+    addCommandDescriptor(SequentialReadTest.class, "sequentialRead", "Run sequential read test");
+    addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite", "Run sequential write test");
+    addCommandDescriptor(ScanTest.class, "scan", "Run scan test (read every row)");
     addCommandDescriptor(FilteredScanTest.class, "filterScan",
-        "Run scan test using a filter to find a specific row based " +
-        "on it's value (make sure to use --rows=20)");
+      "Run scan test using a filter to find a specific row based "
+        + "on it's value (make sure to use --rows=20)");
   }
 
-  protected void addCommandDescriptor(Class<? extends Test> cmdClass,
-      String name, String description) {
+  protected void addCommandDescriptor(Class<? extends Test> cmdClass, String name,
+    String description) {
     CmdDescriptor cmdDescriptor = new CmdDescriptor(cmdClass, name, description);
     commands.put(name, cmdDescriptor);
   }
@@ -223,10 +204,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   *  This class works as the InputSplit of Performance Evaluation
-   *  MapReduce InputFormat, and the Record Value of RecordReader.
-   *  Each map task will only read one record from a PeInputSplit,
-   *  the record value is the PeInputSplit itself.
+   * This class works as the InputSplit of Performance Evaluation MapReduce InputFormat, and the
+   * Record Value of RecordReader. Each map task will only read one record from a PeInputSplit, the
+   * record value is the PeInputSplit itself.
    */
   public static class PeInputSplit extends InputSplit implements Writable {
     private TableName tableName;
@@ -240,7 +220,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private int noOfTags;
 
     public PeInputSplit(TableName tableName, int startRow, int rows, int totalRows, int clients,
-        boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags) {
+      boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags) {
       this.tableName = tableName;
       this.startRow = startRow;
       this.rows = rows;
@@ -327,8 +307,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   *  InputFormat of Performance Evaluation MapReduce job.
-   *  It extends from FileInputFormat, want to use it's methods such as setInputPaths().
+   * InputFormat of Performance Evaluation MapReduce job. It extends from FileInputFormat, want to
+   * use it's methods such as setInputPaths().
    */
   public static class PeInputFormat extends FileInputFormat<NullWritable, PeInputSplit> {
     @Override
@@ -363,20 +343,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
             boolean useTags = Boolean.parseBoolean(m.group(8));
             int noOfTags = Integer.parseInt(m.group(9));
 
-            LOG.debug("tableName=" + tableName +
-                      " split["+ splitList.size() + "] " +
-                      " startRow=" + startRow +
-                      " rows=" + rows +
-                      " totalRows=" + totalRows +
-                      " clients=" + clients +
-                      " flushCommits=" + flushCommits +
-                      " writeToWAL=" + writeToWAL +
-                      " useTags=" + useTags +
-                      " noOfTags=" + noOfTags);
+            LOG.debug("tableName=" + tableName + " split[" + splitList.size() + "] " + " startRow="
+              + startRow + " rows=" + rows + " totalRows=" + totalRows + " clients=" + clients
+              + " flushCommits=" + flushCommits + " writeToWAL=" + writeToWAL + " useTags="
+              + useTags + " noOfTags=" + noOfTags);
 
-            PeInputSplit newSplit =
-              new PeInputSplit(tableName, startRow, rows, totalRows, clients,
-                  flushCommits, writeToWAL, useTags, noOfTags);
+            PeInputSplit newSplit = new PeInputSplit(tableName, startRow, rows, totalRows, clients,
+              flushCommits, writeToWAL, useTags, noOfTags);
             splitList.add(newSplit);
           }
         }
@@ -389,7 +362,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     public RecordReader<NullWritable, PeInputSplit> createRecordReader(InputSplit split,
-        TaskAttemptContext context) {
+      TaskAttemptContext context) {
       return new PeRecordReader();
     }
 
@@ -402,7 +375,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       @Override
       public void initialize(InputSplit split, TaskAttemptContext context) {
         this.readOver = false;
-        this.split = (PeInputSplit)split;
+        this.split = (PeInputSplit) split;
       }
 
       @Override
@@ -448,7 +421,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * MapReduce job that runs a performance evaluation client in each map task.
    */
   public static class EvaluationMapTask
-      extends Mapper<NullWritable, PeInputSplit, LongWritable, LongWritable> {
+    extends Mapper<NullWritable, PeInputSplit, LongWritable, LongWritable> {
 
     /** configuration parameter name that contains the command */
     public final static String CMD_KEY = "EvaluationMapTask.command";
@@ -465,10 +438,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       // this is required so that extensions of PE are instantiated within the
       // map reduce task...
       Class<? extends PerformanceEvaluation> peClass =
-          forName(context.getConfiguration().get(PE_KEY), PerformanceEvaluation.class);
+        forName(context.getConfiguration().get(PE_KEY), PerformanceEvaluation.class);
       try {
-        this.pe = peClass.getConstructor(Configuration.class)
-            .newInstance(context.getConfiguration());
+        this.pe =
+          peClass.getConstructor(Configuration.class).newInstance(context.getConfiguration());
       } catch (Exception e) {
         throw new IllegalStateException("Could not instantiate PE instance", e);
       }
@@ -486,16 +459,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     @Override
     protected void map(NullWritable key, PeInputSplit value, final Context context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       Status status = context::setStatus;
 
       // Evaluation task
       pe.tableName = value.getTableName();
-      long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
-        value.getRows(), value.getTotalRows(),
-        value.isFlushCommits(), value.isWriteToWAL(),
-        value.isUseTags(), value.getNoOfTags(),
-        ConnectionFactory.createConnection(context.getConfiguration()), status);
+      long elapsedTime =
+        this.pe.runOneClient(this.cmd, value.getStartRow(), value.getRows(), value.getTotalRows(),
+          value.isFlushCommits(), value.isWriteToWAL(), value.isUseTags(), value.getNoOfTags(),
+          ConnectionFactory.createConnection(context.getConfiguration()), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -520,7 +492,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
 
       byte[][] splits = getSplits();
-      for (int i=0; i < splits.length; i++) {
+      for (int i = 0; i < splits.length; i++) {
         LOG.debug(" split " + i + ": " + Bytes.toStringBinary(splits[i]));
       }
       admin.createTable(tableDescriptor);
@@ -552,17 +524,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /**
    * Generates splits based on total number of rows and specified split regions
-   *
    * @return splits : array of byte []
    */
-  protected  byte[][] getSplits() {
+  protected byte[][] getSplits() {
     if (this.presplitRegions == 0) {
       return new byte[0][];
     }
 
     int numSplitPoints = presplitRegions - 1;
     byte[][] splits = new byte[numSplitPoints][];
-    int jump = this.R  / this.presplitRegions;
+    int jump = this.R / this.presplitRegions;
     for (int i = 0; i < numSplitPoints; i++) {
       int rowkey = jump * (1 + i);
       splits[i] = format(rowkey);
@@ -571,12 +542,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   * We're to run multiple clients concurrently.  Setup a mapreduce job.  Run
-   * one map per client.  Then run a single reduce to sum the elapsed times.
+   * We're to run multiple clients concurrently. Setup a mapreduce job. Run one map per client. Then
+   * run a single reduce to sum the elapsed times.
    * @param cmd Command to run.
    */
   private void runNIsMoreThanOne(final Class<? extends Test> cmd)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     RemoteAdmin remoteAdmin = new RemoteAdmin(new Client(cluster), getConf());
     checkTable(remoteAdmin);
     if (nomapred) {
@@ -594,7 +565,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private void doMultipleClients(final Class<? extends Test> cmd) throws IOException {
     final List<Thread> threads = new ArrayList<>(this.N);
     final long[] timings = new long[this.N];
-    final int perClientRows = R/N;
+    final int perClientRows = R / N;
     final TableName tableName = this.tableName;
     final DataBlockEncoding encoding = this.blockEncoding;
     final boolean flushCommits = this.flushCommits;
@@ -622,13 +593,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
           pe.useTags = useTags;
           pe.noOfTags = numTags;
           try {
-            long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
-                perClientRows, R,
-                 flushCommits, writeToWAL, useTags, noOfTags, connection,
+            long elapsedTime = pe.runOneClient(cmd, index * perClientRows, perClientRows, R,
+              flushCommits, writeToWAL, useTags, noOfTags, connection,
               msg -> LOG.info("client-" + getName() + " " + msg));
             timings[index] = elapsedTime;
-            LOG.info("Finished " + getName() + " in " + elapsedTime +
-              "ms writing " + perClientRows + " rows");
+            LOG.info("Finished " + getName() + " in " + elapsedTime + "ms writing " + perClientRows
+              + " rows");
           } catch (IOException e) {
             throw new RuntimeException(e);
           }
@@ -649,27 +619,23 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
     }
     final String test = cmd.getSimpleName();
-    LOG.info("[" + test + "] Summary of timings (ms): "
-             + Arrays.toString(timings));
+    LOG.info("[" + test + "] Summary of timings (ms): " + Arrays.toString(timings));
     Arrays.sort(timings);
     long total = 0;
     for (int i = 0; i < this.N; i++) {
       total += timings[i];
     }
-    LOG.info("[" + test + "]"
-             + "\tMin: " + timings[0] + "ms"
-             + "\tMax: " + timings[this.N - 1] + "ms"
-             + "\tAvg: " + (total / this.N) + "ms");
+    LOG.info("[" + test + "]" + "\tMin: " + timings[0] + "ms" + "\tMax: " + timings[this.N - 1]
+      + "ms" + "\tAvg: " + (total / this.N) + "ms");
   }
 
   /**
-   * Run a mapreduce job.  Run as many maps as asked-for clients.
-   * Before we start up the job, write out an input file with instruction
-   * per client regards which row they are to start on.
+   * Run a mapreduce job. Run as many maps as asked-for clients. Before we start up the job, write
+   * out an input file with instruction per client regards which row they are to start on.
    * @param cmd Command to run.
    */
   private void doMapReduce(final Class<? extends Test> cmd)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     Configuration conf = getConf();
     Path inputDir = writeInputFile(conf);
     conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
@@ -767,8 +733,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation} tests
-   * This makes the reflection logic a little easier to understand...
+   * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation} tests This
+   * makes the reflection logic a little easier to understand...
    */
   static class TestOptions {
     private int startRow;
@@ -782,8 +748,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private Connection connection;
 
     TestOptions(int startRow, int perClientRunRows, int totalRows, TableName tableName,
-        boolean flushCommits, boolean writeToWAL, boolean useTags,
-        int noOfTags, Connection connection) {
+      boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags,
+      Connection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
@@ -833,17 +799,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /*
-   * A test.
-   * Subclass to particularize what happens per row.
+   * A test. Subclass to particularize what happens per row.
    */
   static abstract class Test {
     // Below is make it so when Tests are all running in the one
     // jvm, that they each have a differently seeded Random.
-    private static final Random randomSeed =
-      new Random(System.currentTimeMillis());
+    private static final Random randomSeed = new Random(System.currentTimeMillis());
+
     private static long nextRandomSeed() {
       return randomSeed.nextLong();
     }
+
     protected final Random rand = new Random(nextRandomSeed());
 
     protected final int startRow;
@@ -858,8 +824,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected Connection connection;
 
     /**
-     * Note that all subclasses of this class must provide a public contructor
-     * that has the exact same list of arguments.
+     * Note that all subclasses of this class must provide a public contructor that has the exact
+     * same list of arguments.
      */
     Test(final Configuration conf, final TestOptions options, final Status status) {
       super();
@@ -881,10 +847,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     protected int getReportingPeriod() {
       int period = this.perClientRunRows / 10;
-      return period == 0? this.perClientRunRows: period;
+      return period == 0 ? this.perClientRunRows : period;
     }
 
-    abstract void testTakedown()  throws IOException;
+    abstract void testTakedown() throws IOException;
 
     /**
      * Run test
@@ -959,7 +925,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    void testTakedown()  throws IOException {
+    void testTakedown() throws IOException {
       if (flushCommits) {
         this.mutator.flush();
       }
@@ -984,7 +950,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     protected int getReportingPeriod() {
       int period = this.perClientRunRows / 100;
-      return period == 0? this.perClientRunRows: period;
+      return period == 0 ? this.perClientRunRows : period;
     }
   }
 
@@ -1007,8 +973,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
       if (i % 100 == 0) {
         LOG.info(String.format("Scan for key range %s - %s returned %s rows",
-            Bytes.toString(startAndStopRow.getFirst()),
-            Bytes.toString(startAndStopRow.getSecond()), count));
+          Bytes.toString(startAndStopRow.getFirst()), Bytes.toString(startAndStopRow.getSecond()),
+          count));
       }
 
       s.close();
@@ -1025,7 +991,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     protected int getReportingPeriod() {
       int period = this.perClientRunRows / 100;
-      return period == 0? this.perClientRunRows: period;
+      return period == 0 ? this.perClientRunRows : period;
     }
   }
 
@@ -1088,7 +1054,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     protected int getReportingPeriod() {
       int period = this.perClientRunRows / 100;
-      return period == 0? this.perClientRunRows: period;
+      return period == 0 ? this.perClientRunRows : period;
     }
   }
 
@@ -1109,8 +1075,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           Tag t = new ArrayBackedTag((byte) n, tag);
           tags[n] = t;
         }
-        KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,
-            value, tags);
+        KeyValue kv =
+          new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP, value, tags);
         put.add(kv);
       } else {
         put.addColumn(FAMILY_NAME, QUALIFIER_NAME, value);
@@ -1176,8 +1142,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           Tag t = new ArrayBackedTag((byte) n, tag);
           tags[n] = t;
         }
-        KeyValue kv = new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP,
-            value, tags);
+        KeyValue kv =
+          new KeyValue(row, FAMILY_NAME, QUALIFIER_NAME, HConstants.LATEST_TIMESTAMP, value, tags);
         put.add(kv);
       } else {
         put.addColumn(FAMILY_NAME, QUALIFIER_NAME, value);
@@ -1205,10 +1171,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     protected Scan constructScan(byte[] valuePrefix) {
-      Filter filter = new SingleColumnValueFilter(
-          FAMILY_NAME, QUALIFIER_NAME, CompareOperator.EQUAL,
-          new BinaryComparator(valuePrefix)
-      );
+      Filter filter = new SingleColumnValueFilter(FAMILY_NAME, QUALIFIER_NAME,
+        CompareOperator.EQUAL, new BinaryComparator(valuePrefix));
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
       scan.setFilter(filter);
@@ -1220,31 +1184,31 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * Format passed integer.
    * @param number the integer to format
    * @return Returns zero-prefixed 10-byte wide decimal version of passed number (Does absolute in
-   *    case number is negative).
+   *         case number is negative).
    */
-  public static byte [] format(final int number) {
+  public static byte[] format(final int number) {
     byte[] b = new byte[DEFAULT_ROW_PREFIX_LENGTH + 10];
     int d = Math.abs(number);
     for (int i = b.length - 1; i >= 0; i--) {
-      b[i] = (byte)((d % 10) + '0');
+      b[i] = (byte) ((d % 10) + '0');
       d /= 10;
     }
     return b;
   }
 
   public static byte[] generateData(final Random r, int length) {
-    byte[] b = new byte [length];
+    byte[] b = new byte[length];
     int i;
 
-    for (i = 0; i < (length-8); i += 8) {
+    for (i = 0; i < (length - 8); i += 8) {
       b[i] = (byte) (65 + r.nextInt(26));
-      b[i+1] = b[i];
-      b[i+2] = b[i];
-      b[i+3] = b[i];
-      b[i+4] = b[i];
-      b[i+5] = b[i];
-      b[i+6] = b[i];
-      b[i+7] = b[i];
+      b[i + 1] = b[i];
+      b[i + 2] = b[i];
+      b[i + 3] = b[i];
+      b[i + 4] = b[i];
+      b[i + 5] = b[i];
+      b[i + 6] = b[i];
+      b[i + 7] = b[i];
     }
 
     byte a = (byte) (65 + r.nextInt(26));
@@ -1255,7 +1219,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   public static byte[] generateValue(final Random r) {
-    byte [] b = new byte [ROW_LENGTH];
+    byte[] b = new byte[ROW_LENGTH];
     r.nextBytes(b);
     return b;
   }
@@ -1264,33 +1228,32 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
 
-  long runOneClient(final Class<? extends Test> cmd, final int startRow,
-      final int perClientRunRows, final int totalRows,
-      boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags,
-      Connection connection, final Status status) throws IOException {
-    status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
-      perClientRunRows + " rows");
+  long runOneClient(final Class<? extends Test> cmd, final int startRow, final int perClientRunRows,
+    final int totalRows, boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags,
+    Connection connection, final Status status) throws IOException {
+    status
+      .setStatus("Start " + cmd + " at offset " + startRow + " for " + perClientRunRows + " rows");
     long totalElapsedTime;
 
-    TestOptions options = new TestOptions(startRow, perClientRunRows,
-      totalRows, tableName, flushCommits, writeToWAL, useTags, noOfTags, connection);
+    TestOptions options = new TestOptions(startRow, perClientRunRows, totalRows, tableName,
+      flushCommits, writeToWAL, useTags, noOfTags, connection);
     final Test t;
     try {
-      Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
-          Configuration.class, TestOptions.class, Status.class);
+      Constructor<? extends Test> constructor =
+        cmd.getDeclaredConstructor(Configuration.class, TestOptions.class, Status.class);
       t = constructor.newInstance(this.conf, options, status);
     } catch (NoSuchMethodException e) {
-      throw new IllegalArgumentException("Invalid command class: " +
-          cmd.getName() + ".  It does not provide a constructor as described by" +
-          "the javadoc comment.  Available constructors are: " +
-          Arrays.toString(cmd.getConstructors()));
+      throw new IllegalArgumentException("Invalid command class: " + cmd.getName()
+        + ".  It does not provide a constructor as described by"
+        + "the javadoc comment.  Available constructors are: "
+        + Arrays.toString(cmd.getConstructors()));
     } catch (Exception e) {
       throw new IllegalStateException("Failed to construct command class", e);
     }
     totalElapsedTime = t.test();
 
-    status.setStatus("Finished " + cmd + " in " + totalElapsedTime +
-      "ms at offset " + startRow + " for " + perClientRunRows + " rows");
+    status.setStatus("Finished " + cmd + " in " + totalElapsedTime + "ms at offset " + startRow
+      + " for " + perClientRunRows + " rows");
     return totalElapsedTime;
   }
 
@@ -1302,15 +1265,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Client client = new Client(cluster);
       admin = new RemoteAdmin(client, getConf());
       checkTable(admin);
-      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL,
-        this.useTags, this.noOfTags, this.connection, status);
+      runOneClient(cmd, 0, this.R, this.R, this.flushCommits, this.writeToWAL, this.useTags,
+        this.noOfTags, this.connection, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     }
   }
 
   private void runTest(final Class<? extends Test> cmd)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     if (N == 1) {
       // If there is only one client and one HRegionServer, we assume nothing
       // has been set up at all.
@@ -1331,30 +1294,30 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
     System.err.println("  [--nomapred] [--rows=ROWS] [--table=NAME] \\");
-    System.err.println("  [--compress=TYPE] [--blockEncoding=TYPE] " +
-      "[-D<property=value>]* <command> <nclients>");
+    System.err.println(
+      "  [--compress=TYPE] [--blockEncoding=TYPE] " + "[-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("General Options:");
-    System.err.println(" nomapred        Run multiple clients using threads " +
-      "(rather than use mapreduce)");
+    System.err.println(
+      " nomapred        Run multiple clients using threads " + "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
     System.err.println();
     System.err.println("Table Creation / Write Tests:");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
-    System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
-      "Default: false");
+    System.err.println(
+      " flushCommits    Used to determine if the test should flush the table. " + "Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
-    System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
-      "analysis (see guide).  Default: disabled");
-    System.err.println(" usetags         Writes tags along with KVs.  Use with HFile V3. " +
-      "Default : false");
-    System.err.println(" numoftags        Specify the no of tags that would be needed. " +
-      "This works only if usetags is true.");
+    System.err.println(" presplit        Create presplit table. Recommended for accurate perf "
+      + "analysis (see guide).  Default: disabled");
+    System.err.println(
+      " usetags         Writes tags along with KVs.  Use with HFile V3. " + "Default : false");
+    System.err.println(" numoftags        Specify the no of tags that would be needed. "
+      + "This works only if usetags is true.");
     System.err.println();
     System.err.println("Read Tests:");
-    System.err.println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as " +
-      "possible.  Not guaranteed that reads are always served from inmemory.  Default: false");
+    System.err.println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as "
+      + "possible.  Not guaranteed that reads are always served from inmemory.  Default: false");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -1367,13 +1330,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
     System.err.println();
     System.err.println("Args:");
-    System.err.println(" nclients      Integer. Required. Total number of " +
-      "clients (and HRegionServers)");
+    System.err.println(
+      " nclients      Integer. Required. Total number of " + "clients (and HRegionServers)");
     System.err.println("               running: 1 <= value <= 500");
     System.err.println("Examples:");
     System.err.println(" To run a single evaluation client:");
-    System.err.println(" $ hbase " + this.getClass().getName()
-        + " sequentialWrite 1");
+    System.err.println(" $ hbase " + this.getClass().getName() + " sequentialWrite 1");
   }
 
   private void getArgs(final int start, final String[] args) {

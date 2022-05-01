@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,7 +95,7 @@ public class TestSCPGetRegionsRace {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       if (req.getTransition(0).getTransitionCode() == TransitionCode.CLOSED) {
         if (ARRIVE_REPORT != null) {
           ARRIVE_REPORT.countDown();
@@ -206,8 +206,8 @@ public class TestSCPGetRegionsRace {
     EXCLUDE_SERVERS.add(dest);
     RESUME_GET.countDown();
     // wait until there are no SCPs and TRSPs
-    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished() ||
-      (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
+    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished()
+      || (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
 
     // assert the region is only on the dest server.
     HRegionServer rs = UTIL.getMiniHBaseCluster().getRegionServer(dest);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,12 +31,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestOffPeakHours {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestOffPeakHours.class);
+    HBaseClassTestRule.forClass(TestOffPeakHours.class);
 
   private static HBaseTestingUtility testUtil;
 
@@ -54,9 +54,9 @@ public class TestOffPeakHours {
   @Before
   public void setUp() {
     hourOfDay = 15;
-    hourPlusOne = ((hourOfDay+1)%24);
-    hourMinusOne = ((hourOfDay-1+24)%24);
-    hourMinusTwo = ((hourOfDay-2+24)%24);
+    hourPlusOne = ((hourOfDay + 1) % 24);
+    hourMinusOne = ((hourOfDay - 1 + 24) % 24);
+    hourMinusTwo = ((hourOfDay - 2 + 24) % 24);
     conf = testUtil.getConfiguration();
   }
 

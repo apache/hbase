@@ -21,6 +21,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,21 +35,21 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for various kinds of TableNames.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestTableName {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableName.class);
+    HBaseClassTestRule.forClass(TestTableName.class);
 
-  private static String[] emptyNames = {"", " "};
-  private static String[] invalidNamespace = {":a", "%:a"};
-  private static String[] legalTableNames = {"foo", "with-dash_under.dot", "_under_start_ok",
+  private static String[] emptyNames = { "", " " };
+  private static String[] invalidNamespace = { ":a", "%:a" };
+  private static String[] legalTableNames = { "foo", "with-dash_under.dot", "_under_start_ok",
     "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02",
     "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
-    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
-  private static String[] illegalTableNames = {".dot_start_illegal", "-dash_start_illegal",
+    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02" };
+  private static String[] illegalTableNames = { ".dot_start_illegal", "-dash_start_illegal",
     "spaces not ok", "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
-    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
+    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2" };
 
   static class Names {
     String ns;
@@ -95,54 +96,52 @@ public class TestTableName {
     }
   }
 
-  private static Names[] names = new Names[] {
-    new Names("n1", "n1"),
-    new Names("n2", "n2"),
-    new Names("table1", "table1"),
-    new Names("table2", "table2"),
-    new Names("table2", "table1"),
-    new Names("table1", "table2"),
-    new Names("n1", "table1"),
-    new Names("n1", "table1"),
-    new Names("n2", "table2"),
-    new Names("n2", "table2")
-  };
+  private static Names[] names = new Names[] { new Names("n1", "n1"), new Names("n2", "n2"),
+    new Names("table1", "table1"), new Names("table2", "table2"), new Names("table2", "table1"),
+    new Names("table1", "table2"), new Names("n1", "table1"), new Names("n1", "table1"),
+    new Names("n2", "table2"), new Names("n2", "table2") };
 
-  @Test public void testInvalidNamespace() {
+  @Test
+  public void testInvalidNamespace() {
     for (String tn : invalidNamespace) {
       assertThrows(IllegalArgumentException.class,
         () -> TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn)));
     }
   }
 
-  @Test public void testEmptyNamespaceName() {
+  @Test
+  public void testEmptyNamespaceName() {
     for (String nn : emptyNames) {
       assertThrows(IllegalArgumentException.class,
         () -> TableName.isLegalNamespaceName(Bytes.toBytes(nn)));
     }
   }
 
-  @Test public void testEmptyTableName() {
+  @Test
+  public void testEmptyTableName() {
     for (String tn : emptyNames) {
       assertThrows(IllegalArgumentException.class,
         () -> TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn)));
     }
   }
 
-  @Test public void testLegalHTableNames() {
+  @Test
+  public void testLegalHTableNames() {
     for (String tn : legalTableNames) {
       TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn));
     }
   }
 
-  @Test public void testIllegalHTableNames() {
+  @Test
+  public void testIllegalHTableNames() {
     for (String tn : illegalTableNames) {
       assertThrows(Exception.class,
         () -> TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn)));
     }
   }
 
-  @Test public void testValueOf() {
+  @Test
+  public void testValueOf() {
     Map<String, TableName> inCache = new HashMap<>();
     // fill cache
     for (Names name : names) {
@@ -153,8 +152,8 @@ public class TestTableName {
       assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nsb, name.tnb), name));
       assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nn), name));
       assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nnb), name));
-      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(
-          ByteBuffer.wrap(name.nsb), ByteBuffer.wrap(name.tnb)), name));
+      assertSame(inCache.get(name.nn), validateNames(
+        TableName.valueOf(ByteBuffer.wrap(name.nsb), ByteBuffer.wrap(name.tnb)), name));
     }
   }
 

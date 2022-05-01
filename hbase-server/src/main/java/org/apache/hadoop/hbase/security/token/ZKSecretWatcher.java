@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
@@ -45,9 +44,8 @@ public class ZKSecretWatcher extends ZKListener {
   private String baseKeyZNode;
   private String keysParentZNode;
 
-  public ZKSecretWatcher(Configuration conf,
-      ZKWatcher watcher,
-      AuthenticationTokenSecretManager secretManager) {
+  public ZKSecretWatcher(Configuration conf, ZKWatcher watcher,
+    AuthenticationTokenSecretManager secretManager) {
     super(watcher);
     this.secretManager = secretManager;
     String keyZNodeParent = conf.get("zookeeper.znode.tokenauth.parent", DEFAULT_ROOT_NODE);
@@ -62,7 +60,7 @@ public class ZKSecretWatcher extends ZKListener {
 
     if (ZKUtil.watchAndCheckExists(watcher, keysParentZNode)) {
       List<ZKUtil.NodeAndData> nodes =
-          ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
+        ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
       refreshNodes(nodes);
     }
   }
@@ -72,11 +70,11 @@ public class ZKSecretWatcher extends ZKListener {
     if (path.equals(keysParentZNode)) {
       try {
         List<ZKUtil.NodeAndData> nodes =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
         LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
-        watcher.abort("Error reading new key znode "+path, ke);
+        watcher.abort("Error reading new key znode " + path, ke);
       }
     }
   }
@@ -90,7 +88,7 @@ public class ZKSecretWatcher extends ZKListener {
         secretManager.removeKey(id);
         LOG.info("Node deleted id={}", id);
       } catch (NumberFormatException nfe) {
-        LOG.error("Invalid znode name for key ID '"+keyId+"'", nfe);
+        LOG.error("Invalid znode name for key ID '" + keyId + "'", nfe);
       }
     }
   }
@@ -101,19 +99,19 @@ public class ZKSecretWatcher extends ZKListener {
       try {
         byte[] data = ZKUtil.getDataAndWatch(watcher, path);
         if (data == null || data.length == 0) {
-          LOG.debug("Ignoring empty node "+path);
+          LOG.debug("Ignoring empty node " + path);
           return;
         }
 
-        AuthenticationKey key = (AuthenticationKey)Writables.getWritable(data,
-            new AuthenticationKey());
+        AuthenticationKey key =
+          (AuthenticationKey) Writables.getWritable(data, new AuthenticationKey());
         secretManager.addKey(key);
       } catch (KeeperException ke) {
         LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
-        watcher.abort("Error reading updated key znode "+path, ke);
+        watcher.abort("Error reading updated key znode " + path, ke);
       } catch (IOException ioe) {
         LOG.error(HBaseMarkers.FATAL, "Error reading key writables", ioe);
-        watcher.abort("Error reading key writables from znode "+path, ioe);
+        watcher.abort("Error reading key writables from znode " + path, ioe);
       }
     }
   }
@@ -124,7 +122,7 @@ public class ZKSecretWatcher extends ZKListener {
       // keys changed
       try {
         List<ZKUtil.NodeAndData> nodes =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
         LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);
@@ -144,16 +142,16 @@ public class ZKSecretWatcher extends ZKListener {
       try {
         byte[] data = n.getData();
         if (data == null || data.length == 0) {
-          LOG.debug("Ignoring empty node "+path);
+          LOG.debug("Ignoring empty node " + path);
           continue;
         }
-        AuthenticationKey key = (AuthenticationKey)Writables.getWritable(
-            data, new AuthenticationKey());
+        AuthenticationKey key =
+          (AuthenticationKey) Writables.getWritable(data, new AuthenticationKey());
         secretManager.addKey(key);
       } catch (IOException ioe) {
-        LOG.error(HBaseMarkers.FATAL, "Failed reading new secret key for id '" +
-            keyId + "' from zk", ioe);
-        watcher.abort("Error deserializing key from znode "+path, ioe);
+        LOG.error(HBaseMarkers.FATAL,
+          "Failed reading new secret key for id '" + keyId + "' from zk", ioe);
+        watcher.abort("Error deserializing key from znode " + path, ioe);
       }
     }
   }
@@ -167,12 +165,12 @@ public class ZKSecretWatcher extends ZKListener {
     try {
       ZKUtil.deleteNode(watcher, keyZNode);
     } catch (KeeperException.NoNodeException nne) {
-      LOG.error("Non-existent znode "+keyZNode+" for key "+key.getKeyId(), nne);
+      LOG.error("Non-existent znode " + keyZNode + " for key " + key.getKeyId(), nne);
     } catch (KeeperException ke) {
-      LOG.error(HBaseMarkers.FATAL, "Failed removing znode "+keyZNode+" for key "+
-          key.getKeyId(), ke);
-      watcher.abort("Unhandled zookeeper error removing znode "+keyZNode+
-          " for key "+key.getKeyId(), ke);
+      LOG.error(HBaseMarkers.FATAL,
+        "Failed removing znode " + keyZNode + " for key " + key.getKeyId(), ke);
+      watcher.abort(
+        "Unhandled zookeeper error removing znode " + keyZNode + " for key " + key.getKeyId(), ke);
     }
   }
 
@@ -183,13 +181,12 @@ public class ZKSecretWatcher extends ZKListener {
       // TODO: is there any point in retrying beyond what ZK client does?
       ZKUtil.createSetData(watcher, keyZNode, keyData);
     } catch (KeeperException ke) {
-      LOG.error(HBaseMarkers.FATAL, "Unable to synchronize master key "+key.getKeyId()+
-          " to znode "+keyZNode, ke);
-      watcher.abort("Unable to synchronize secret key "+
-          key.getKeyId()+" in zookeeper", ke);
+      LOG.error(HBaseMarkers.FATAL,
+        "Unable to synchronize master key " + key.getKeyId() + " to znode " + keyZNode, ke);
+      watcher.abort("Unable to synchronize secret key " + key.getKeyId() + " in zookeeper", ke);
     } catch (IOException ioe) {
       // this can only happen from an error serializing the key
-      watcher.abort("Failed serializing key "+key.getKeyId(), ioe);
+      watcher.abort("Failed serializing key " + key.getKeyId(), ioe);
     }
   }
 
@@ -204,13 +201,12 @@ public class ZKSecretWatcher extends ZKListener {
         ZKUtil.createSetData(watcher, keyZNode, keyData);
       }
     } catch (KeeperException ke) {
-      LOG.error(HBaseMarkers.FATAL, "Unable to update master key "+key.getKeyId()+
-          " in znode "+keyZNode);
-      watcher.abort("Unable to synchronize secret key "+
-          key.getKeyId()+" in zookeeper", ke);
+      LOG.error(HBaseMarkers.FATAL,
+        "Unable to update master key " + key.getKeyId() + " in znode " + keyZNode);
+      watcher.abort("Unable to synchronize secret key " + key.getKeyId() + " in zookeeper", ke);
     } catch (IOException ioe) {
       // this can only happen from an error serializing the key
-      watcher.abort("Failed serializing key "+key.getKeyId(), ioe);
+      watcher.abort("Failed serializing key " + key.getKeyId(), ioe);
     }
   }
 
@@ -220,7 +216,7 @@ public class ZKSecretWatcher extends ZKListener {
   synchronized void refreshKeys() {
     try {
       List<ZKUtil.NodeAndData> nodes =
-          ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
+        ZKUtil.getChildDataAndWatchForNewChildren(watcher, keysParentZNode);
       refreshNodes(nodes);
     } catch (KeeperException ke) {
       LOG.error(HBaseMarkers.FATAL, "Error reading data from zookeeper", ke);

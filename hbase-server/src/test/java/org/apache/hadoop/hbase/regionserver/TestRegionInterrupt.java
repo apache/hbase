@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
@@ -24,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -72,7 +70,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRegionInterrupt {
 
   @ClassRule
@@ -96,8 +94,8 @@ public class TestRegionInterrupt {
     conf.setClass(HConstants.REGION_IMPL, InterruptInterceptingHRegion.class, Region.class);
     conf.setBoolean(HRegion.CLOSE_WAIT_ABORT, true);
     // Ensure the sleep interval is long enough for interrupts to occur.
-    long waitInterval = conf.getLong(HRegion.CLOSE_WAIT_INTERVAL,
-      HRegion.DEFAULT_CLOSE_WAIT_INTERVAL);
+    long waitInterval =
+      conf.getLong(HRegion.CLOSE_WAIT_INTERVAL, HRegion.DEFAULT_CLOSE_WAIT_INTERVAL);
     sleepTime = waitInterval * 2;
     // Try to bound the running time of this unit if expected actions do not take place.
     conf.setLong(HRegion.CLOSE_WAIT_TIME, sleepTime * 2);
@@ -152,7 +150,7 @@ public class TestRegionInterrupt {
 
       // Wait for the filter to begin sleeping
       LOG.info("Waiting for scanner to start");
-      Waiter.waitFor(TEST_UTIL.getConfiguration(), 10*1000, new Waiter.Predicate<Exception>() {
+      Waiter.waitFor(TEST_UTIL.getConfiguration(), 10 * 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           return DelayingFilter.isSleeping();
@@ -210,7 +208,7 @@ public class TestRegionInterrupt {
 
     // Wait for delayed insertion to begin
     LOG.info("Waiting for mutations to start");
-    Waiter.waitFor(TEST_UTIL.getConfiguration(), 10*1000, new Waiter.Predicate<Exception>() {
+    Waiter.waitFor(TEST_UTIL.getConfiguration(), 10 * 1000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
         return MutationDelayingCoprocessor.isSleeping();
@@ -239,14 +237,13 @@ public class TestRegionInterrupt {
       return interrupted;
     }
 
-    public InterruptInterceptingHRegion(Path tableDir, WAL wal, FileSystem fs,
-        Configuration conf, RegionInfo regionInfo, TableDescriptor htd,
-        RegionServerServices rsServices) {
+    public InterruptInterceptingHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration conf,
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
     }
 
     public InterruptInterceptingHRegion(HRegionFileSystem fs, WAL wal, Configuration conf,
-        TableDescriptor htd, RegionServerServices rsServices) {
+      TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, conf, htd, rsServices);
     }
 
@@ -293,8 +290,7 @@ public class TestRegionInterrupt {
       return ReturnCode.INCLUDE;
     }
 
-    public static DelayingFilter parseFrom(final byte [] pbBytes)
-        throws DeserializationException {
+    public static DelayingFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
       // Just return a new instance.
       return new DelayingFilter();
     }
@@ -331,28 +327,28 @@ public class TestRegionInterrupt {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       doSleep(Region.Operation.PUT);
       RegionObserver.super.prePut(c, put, edit, durability);
     }
 
     @Override
     public void preDelete(ObserverContext<RegionCoprocessorEnvironment> c, Delete delete,
-        WALEdit edit, Durability durability) throws IOException {
+      WALEdit edit, Durability durability) throws IOException {
       doSleep(Region.Operation.DELETE);
       RegionObserver.super.preDelete(c, delete, edit, durability);
     }
 
     @Override
     public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
-        throws IOException {
+      throws IOException {
       doSleep(Region.Operation.APPEND);
       return RegionObserver.super.preAppend(c, append);
     }
 
     @Override
     public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> c, Increment increment)
-        throws IOException {
+      throws IOException {
       doSleep(Region.Operation.INCREMENT);
       return RegionObserver.super.preIncrement(c, increment);
     }

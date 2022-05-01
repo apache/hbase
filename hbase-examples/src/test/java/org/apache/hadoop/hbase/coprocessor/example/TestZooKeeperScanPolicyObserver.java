@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestZooKeeperScanPolicyObserver {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZooKeeperScanPolicyObserver.class);
+    HBaseClassTestRule.forClass(TestZooKeeperScanPolicyObserver.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -63,12 +63,12 @@ public class TestZooKeeperScanPolicyObserver {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setCoprocessor(ZooKeeperScanPolicyObserver.class.getName())
-            .setValue(ZooKeeperScanPolicyObserver.ZK_ENSEMBLE_KEY,
-              UTIL.getZkCluster().getAddress().toString())
-            .setValue(ZooKeeperScanPolicyObserver.ZK_SESSION_TIMEOUT_KEY, "2000")
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setCoprocessor(ZooKeeperScanPolicyObserver.class.getName())
+        .setValue(ZooKeeperScanPolicyObserver.ZK_ENSEMBLE_KEY,
+          UTIL.getZkCluster().getAddress().toString())
+        .setValue(ZooKeeperScanPolicyObserver.ZK_SESSION_TIMEOUT_KEY, "2000")
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 
@@ -81,7 +81,7 @@ public class TestZooKeeperScanPolicyObserver {
   }
 
   private void setExpireBefore(long time)
-      throws KeeperException, InterruptedException, IOException {
+    throws KeeperException, InterruptedException, IOException {
     ZooKeeper zk = UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().getZooKeeper();
     if (zk.exists(ZooKeeperScanPolicyObserver.NODE, false) == null) {
       zk.create(ZooKeeperScanPolicyObserver.NODE, Bytes.toBytes(time), ZooDefs.Ids.OPEN_ACL_UNSAFE,
@@ -131,7 +131,7 @@ public class TestZooKeeperScanPolicyObserver {
     Thread.sleep(5000);
     UTIL.getAdmin().majorCompact(NAME);
     UTIL.waitFor(30000, () -> UTIL.getHBaseCluster().getRegions(NAME).iterator().next()
-        .getStore(FAMILY).getStorefilesCount() == 1);
+      .getStore(FAMILY).getStorefilesCount() == 1);
     assertNotExists(0, 50);
     assertValueEquals(50, 100);
   }

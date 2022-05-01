@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public interface MonkeyConstants {
   String NETWORK_ISSUE_RATIO = "network.issue.ratio";
   String NETWORK_ISSUE_DELAY = "network.issue.delay";
   String NETWORK_ISSUE_INTERFACE = "network.issue.interface";
-  //should be higher than the usual timeout because the target machine might respond slowly
+  // should be higher than the usual timeout because the target machine might respond slowly
   String FILL_DISK_COMMAND_TIMEOUT = "fill.disk.command.timeout";
   String FILL_DISK_PATH = "fill.disk.path";
   String FILL_DISK_FILE_SIZE = "fill.disk.file.size";
@@ -67,8 +67,8 @@ public interface MonkeyConstants {
    * A Set of prefixes which encompasses all of the configuration properties for the ChaosMonky.
    */
   Set<String> MONKEY_CONFIGURATION_KEY_PREFIXES = new HashSet<>(
-      Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.", "unbalance.",
-          "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data.", "skip"));
+    Arrays.asList("sdm.", "move.", "restart.", "batch.", "rolling.", "compact.", "unbalance.",
+      "decrease.", "decrease.", "graceful.", "cpu.", "network.", "fill.", "data.", "skip"));
 
   long DEFAULT_PERIODIC_ACTION1_PERIOD = 60 * 1000;
   long DEFAULT_PERIODIC_ACTION2_PERIOD = 90 * 1000;

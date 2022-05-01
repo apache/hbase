@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
@@ -21,127 +21,14 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.4.6.7.2.16.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-rest</artifactId>
   <name>Apache HBase - Rest</name>
   <description>HBase Rest Server</description>
-  <build>
-    <!-- Makes sure the resources get added before they are processed
-      by placing this first -->
-    <resources>
-      <!-- Add the build webabpps to the classpth -->
-      <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
-      </resource>
-    </resources>
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </testResource>
-    </testResources>
-    <plugins>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <!-- General ant tasks, bound to different build phases -->
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <!-- Generate web app sources -->
-          <execution>
-            <id>generate</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <target>
-                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
-                <mkdir dir="${build.webapps}"/>
-                <copy todir="${build.webapps}">
-                  <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
-                  </fileset>
-                </copy>
-                <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-                <mkdir dir="${build.webapps}/rest/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <!-- Add the generated sources -->
-          <execution>
-            <id>jspcSource-packageInfo-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Testing plugins -->
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>compile-protoc</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
   <dependencies>
     <!--This one is upfront to get in front of
          any dependency that pulls in jersey-core.
@@ -224,8 +111,8 @@
              which pulls in the below. It messes up
         this build at assembly time. See HBASE-22029 -->
         <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-core</artifactId>
+          <groupId>com.sun.jersey</groupId>
+          <artifactId>jersey-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -300,12 +187,12 @@
         -->
       <groupId>org.codehaus.jettison</groupId>
       <artifactId>jettison</artifactId>
-        <exclusions>
-          <exclusion>
-            <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId>
-          </exclusion>
-        </exclusions>
+      <exclusions>
+        <exclusion>
+          <groupId>stax</groupId>
+          <artifactId>stax-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <!--For JspC used in ant task-->
@@ -382,6 +269,119 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <build>
+    <!-- Makes sure the resources get added before they are processed
+      by placing this first -->
+    <resources>
+      <!-- Add the build webabpps to the classpth -->
+      <resource>
+        <directory>${project.build.directory}</directory>
+        <includes>
+          <include>hbase-webapps/**</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <!-- General ant tasks, bound to different build phases -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Generate web app sources -->
+          <execution>
+            <id>generate</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target>
+                <property location="${project.build.directory}/hbase-webapps" name="build.webapps"/>
+                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps"/>
+                <property location="${project.build.directory}/generated-sources" name="generated.sources"/>
+                <mkdir dir="${build.webapps}"/>
+                <copy todir="${build.webapps}">
+                  <fileset dir="${src.webapps}">
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
+                  </fileset>
+                </copy>
+                <!--The compile.classpath is passed in by maven -->
+                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
+                <mkdir dir="${build.webapps}/rest/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" uriroot="${src.webapps}/rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <!-- Add the generated sources -->
+          <execution>
+            <id>jspcSource-packageInfo-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Testing plugins -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>compile-protoc</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <phase>generate-sources</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
@@ -498,8 +498,8 @@
           <scope>test</scope>
           <exclusions>
             <exclusion>
-             <groupId>com.google.guava</groupId>
-             <artifactId>guava</artifactId>
+              <groupId>com.google.guava</groupId>
+              <artifactId>guava</artifactId>
             </exclusion>
           </exclusions>
         </dependency>

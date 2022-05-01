@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,8 +54,8 @@ public class DefaultStoreFlusher extends StoreFlusher {
     InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
     StoreFileWriter writer;
     try {
-      // TODO:  We can fail in the below block before we complete adding this flush to
-      //        list of store files.  Add cleanup of anything put on filesystem if we fail.
+      // TODO: We can fail in the below block before we complete adding this flush to
+      // list of store files. Add cleanup of anything put on filesystem if we fail.
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
@@ -80,8 +79,8 @@ public class DefaultStoreFlusher extends StoreFlusher {
       scanner.close();
     }
     LOG.info("Flushed memstore data size={} at sequenceid={} (bloomFilter={}), to={}",
-        StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
-        writer.getPath());
+      StringUtils.byteDesc(snapshot.getDataSize()), cacheFlushId, writer.hasGeneralBloom(),
+      writer.getPath());
     result.add(writer.getPath());
     return result;
   }

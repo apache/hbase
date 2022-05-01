@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
@@ -40,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 
 @InterfaceAudience.Private
 public class RefreshPeerProcedure extends ServerRemoteProcedure
-    implements PeerProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+  implements PeerProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RefreshPeerProcedure.class);
 
@@ -104,8 +103,8 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     assert targetServer.equals(remote);
     return Optional.of(new ServerOperation(this, getProcId(), RefreshPeerCallable.class,
-        RefreshPeerParameter.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-            .setTargetServer(ProtobufUtil.toServerName(remote)).build().toByteArray()));
+      RefreshPeerParameter.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
+        .setTargetServer(ProtobufUtil.toServerName(remote)).build().toByteArray()));
   }
 
   @Override
@@ -139,7 +138,7 @@ public class RefreshPeerProcedure extends ServerRemoteProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     serializer.serialize(
       RefreshPeerStateData.newBuilder().setPeerId(peerId).setType(toPeerModificationType(type))
-          .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
   }
 
   @Override

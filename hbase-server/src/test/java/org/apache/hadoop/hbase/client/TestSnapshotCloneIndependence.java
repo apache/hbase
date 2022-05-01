@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestSnapshotCloneIndependence {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotCloneIndependence.class);
+    HBaseClassTestRule.forClass(TestSnapshotCloneIndependence.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCloneIndependence.class);
 
@@ -108,7 +108,7 @@ public class TestSnapshotCloneIndependence {
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
+      ConstantSizeRegionSplitPolicy.class.getName());
     // Execute cleaner frequently to induce failures
     conf.setInt("hbase.master.cleaner.interval", CLEANER_INTERVAL);
     conf.setInt("hbase.master.hfilecleaner.plugins.snapshot.period", CLEANER_INTERVAL);
@@ -237,9 +237,9 @@ public class TestSnapshotCloneIndependence {
   }
 
   /**
-   * Takes the snapshot of originalTable and clones the snapshot to another tables.
-   * If {@code online} is false, the original table is disabled during taking snapshot, so also
-   * enables it again.
+   * Takes the snapshot of originalTable and clones the snapshot to another tables. If
+   * {@code online} is false, the original table is disabled during taking snapshot, so also enables
+   * it again.
    * @param online - Whether the table is online or not during the snapshot
    */
   private void createAndCloneSnapshot(boolean online) throws Exception {
@@ -376,7 +376,7 @@ public class TestSnapshotCloneIndependence {
   }
 
   protected Table createTable(final TableName table, byte[] family) throws Exception {
-   Table t = UTIL.createTable(table, family);
+    Table t = UTIL.createTable(table, family);
     // Wait for everything to be ready with the table
     UTIL.waitUntilAllRegionsAssigned(table);
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.locking;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -58,19 +59,21 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockHeartbeatResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestLockProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLockProcedure.class);
+    HBaseClassTestRule.forClass(TestLockProcedure.class);
 
   @Rule
   public final ExpectedException exception = ExpectedException.none();
@@ -95,7 +98,7 @@ public class TestLockProcedure {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    conf.setBoolean("hbase.procedure.check.owner.set", false);  // since rpc user will be null
+    conf.setBoolean("hbase.procedure.check.owner.set", false); // since rpc user will be null
     conf.setInt(LockProcedure.REMOTE_LOCKS_TIMEOUT_MS_CONF, HEARTBEAT_TIMEOUT);
     conf.setInt(LockProcedure.LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF, LOCAL_LOCKS_TIMEOUT);
   }
@@ -105,10 +108,10 @@ public class TestLockProcedure {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
     UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    UTIL.createTable(tableName1,
-        new byte[][]{ Bytes.toBytes("fam")}, new byte[][] {Bytes.toBytes("1")});
-    UTIL.createTable(tableName2,
-        new byte[][]{Bytes.toBytes("fam")}, new byte[][] {Bytes.toBytes("1")});
+    UTIL.createTable(tableName1, new byte[][] { Bytes.toBytes("fam") },
+      new byte[][] { Bytes.toBytes("1") });
+    UTIL.createTable(tableName2, new byte[][] { Bytes.toBytes("fam") },
+      new byte[][] { Bytes.toBytes("1") });
     masterRpcService = UTIL.getHBaseCluster().getMaster().getMasterRpcServices();
     procExec = UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     tableRegions1 = UTIL.getAdmin().getRegions(tableName1);
@@ -144,27 +147,27 @@ public class TestLockProcedure {
   }
 
   private LockRequest getNamespaceLock(String namespace, String description) {
-    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
-        namespace, null, null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE, namespace, null,
+      null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private LockRequest getTableExclusiveLock(TableName tableName, String description) {
-    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
-        null, tableName, null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE, null, tableName,
+      null, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private LockRequest getRegionLock(List<RegionInfo> regionInfos, String description) {
-    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE,
-        null, null, regionInfos, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return LockServiceClient.buildLockRequest(LockServiceProtos.LockType.EXCLUSIVE, null, null,
+      regionInfos, description, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   private void validateLockRequestException(LockRequest lockRequest, String message)
-      throws Exception {
+    throws Exception {
     exception.expect(ServiceException.class);
     exception.expectCause(IsInstanceOf.instanceOf(DoNotRetryIOException.class));
-    exception.expectMessage(
-        StringStartsWith.startsWith("org.apache.hadoop.hbase.DoNotRetryIOException: "
-            + "java.lang.IllegalArgumentException: " + message));
+    exception
+      .expectMessage(StringStartsWith.startsWith("org.apache.hadoop.hbase.DoNotRetryIOException: "
+        + "java.lang.IllegalArgumentException: " + message));
     masterRpcService.requestLock(null, lockRequest);
   }
 
@@ -184,7 +187,7 @@ public class TestLockProcedure {
     regions.addAll(tableRegions1);
     regions.addAll(tableRegions2);
     validateLockRequestException(getRegionLock(regions, "desc"),
-        "All regions should be from same table");
+      "All regions should be from same table");
   }
 
   /**
@@ -195,7 +198,7 @@ public class TestLockProcedure {
     long deadline = System.currentTimeMillis() + timeoutInMs;
     while (System.currentTimeMillis() < deadline) {
       LockHeartbeatResponse response = masterRpcService.lockHeartbeat(null,
-          LockHeartbeatRequest.newBuilder().setProcId(procId).build());
+        LockHeartbeatRequest.newBuilder().setProcId(procId).build());
       if (response.getLockStatus() == LockHeartbeatResponse.LockStatus.LOCKED) {
         assertEquals(HEARTBEAT_TIMEOUT, response.getTimeoutMs());
         LOG.debug(String.format("Proc id %s acquired lock.", procId));
@@ -213,7 +216,7 @@ public class TestLockProcedure {
 
   private void sendHeartbeatAndCheckLocked(long procId, boolean isLocked) throws ServiceException {
     LockHeartbeatResponse response = masterRpcService.lockHeartbeat(null,
-        LockHeartbeatRequest.newBuilder().setProcId(procId).build());
+      LockHeartbeatRequest.newBuilder().setProcId(procId).build());
     if (isLocked) {
       assertEquals(LockHeartbeatResponse.LockStatus.LOCKED, response.getLockStatus());
     } else {
@@ -224,7 +227,7 @@ public class TestLockProcedure {
 
   private void releaseLock(long procId) throws ServiceException {
     masterRpcService.lockHeartbeat(null,
-        LockHeartbeatRequest.newBuilder().setProcId(procId).setKeepAlive(false).build());
+      LockHeartbeatRequest.newBuilder().setProcId(procId).setKeepAlive(false).build());
   }
 
   @Test
@@ -232,11 +235,11 @@ public class TestLockProcedure {
     LockRequest lock = getTableExclusiveLock(tableName1, testMethodName);
     final long procId = queueLock(lock);
     assertTrue(awaitForLocked(procId, 2000));
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
     releaseLock(procId);
     sendHeartbeatAndCheckLocked(procId, false);
@@ -260,11 +263,11 @@ public class TestLockProcedure {
     LockRequest lock = getNamespaceLock(namespace, testMethodName);
     final long procId = queueLock(lock);
     assertTrue(awaitForLocked(procId, 2000));
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(HEARTBEAT_TIMEOUT /2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
     releaseLock(procId);
     sendHeartbeatAndCheckLocked(procId, false);
@@ -291,7 +294,7 @@ public class TestLockProcedure {
   public void testMultipleLocks() throws Exception {
     LockRequest nsLock = getNamespaceLock(namespace, testMethodName);
     LockRequest tableLock1 = getTableExclusiveLock(tableName1, testMethodName);
-    LockRequest tableLock2 =  getTableExclusiveLock(tableName2, testMethodName);
+    LockRequest tableLock2 = getTableExclusiveLock(tableName2, testMethodName);
     LockRequest regionsLock1 = getRegionLock(tableRegions1, testMethodName);
     LockRequest regionsLock2 = getRegionLock(tableRegions2, testMethodName);
     // Acquire namespace lock, then queue other locks.
@@ -307,7 +310,8 @@ public class TestLockProcedure {
     // Assert tables & region locks are waiting because of namespace lock.
     long now = System.currentTimeMillis();
     // leave extra 10 msec in case more than half the HEARTBEAT_TIMEOUT has passed
-    Thread.sleep(Math.min(HEARTBEAT_TIMEOUT / 2, Math.max(HEARTBEAT_TIMEOUT-(now-start)-10, 0)));
+    Thread
+      .sleep(Math.min(HEARTBEAT_TIMEOUT / 2, Math.max(HEARTBEAT_TIMEOUT - (now - start) - 10, 0)));
     sendHeartbeatAndCheckLocked(nsProcId, true);
     sendHeartbeatAndCheckLocked(table1ProcId, false);
     sendHeartbeatAndCheckLocked(table2ProcId, false);
@@ -353,9 +357,8 @@ public class TestLockProcedure {
   public void testLatch() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     // MasterRpcServices don't set latch with LockProcedure, so create one and submit it directly.
-    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"),
-        org.apache.hadoop.hbase.procedure2.LockType.EXCLUSIVE, "desc", latch);
+    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(), TableName.valueOf("table"),
+      org.apache.hadoop.hbase.procedure2.LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
     releaseLock(lockProc.getProcId());
@@ -368,8 +371,8 @@ public class TestLockProcedure {
   public void testLocalLockTimeout() throws Exception {
     CountDownLatch latch = new CountDownLatch(1);
     // MasterRpcServices don't set latch with LockProcedure, so create one and submit it directly.
-    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"), LockType.EXCLUSIVE, "desc", latch);
+    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(), TableName.valueOf("table"),
+      LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(awaitForLocked(lockProc.getProcId(), 2000));
     Thread.sleep(LOCAL_LOCKS_TIMEOUT / 2);
@@ -398,11 +401,11 @@ public class TestLockProcedure {
 
     // After recovery, remote locks should reacquire locks and function normally.
     assertTrue(awaitForLocked(procId, 2000));
-    Thread.sleep(HEARTBEAT_TIMEOUT/2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(HEARTBEAT_TIMEOUT/2);
+    Thread.sleep(HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, true);
-    Thread.sleep(2 * HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT/2);
+    Thread.sleep(2 * HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT / 2);
     sendHeartbeatAndCheckLocked(procId, false);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -430,8 +433,8 @@ public class TestLockProcedure {
   public void testLocalMasterLockRecovery() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
     CountDownLatch latch = new CountDownLatch(1);
-    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(),
-        TableName.valueOf("table"), LockType.EXCLUSIVE, "desc", latch);
+    LockProcedure lockProc = new LockProcedure(UTIL.getConfiguration(), TableName.valueOf("table"),
+      LockType.EXCLUSIVE, "desc", latch);
     procExec.submitProcedure(lockProc);
     assertTrue(latch.await(2000, TimeUnit.MILLISECONDS));
 

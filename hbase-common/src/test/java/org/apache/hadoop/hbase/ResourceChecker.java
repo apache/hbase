@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,22 +19,21 @@ package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility class to check the resources:
- *  - log them before and after each test method
- *  - check them against a minimum or maximum
- *  - check that they don't leak during the test
+ * Utility class to check the resources: - log them before and after each test method - check them
+ * against a minimum or maximum - check that they don't leak during the test
  */
 public class ResourceChecker {
   private static final Logger LOG = LoggerFactory.getLogger(ResourceChecker.class);
   private String tagLine;
 
   enum Phase {
-    INITIAL, INTERMEDIATE, END
+    INITIAL,
+    INTERMEDIATE,
+    END
   }
 
   /**
@@ -51,24 +49,22 @@ public class ResourceChecker {
    */
   abstract static class ResourceAnalyzer {
     /**
-     * Maximum we set for the resource. Will get a warning in logs
-     * if we go over this limit.
+     * Maximum we set for the resource. Will get a warning in logs if we go over this limit.
      */
     public int getMax() {
       return Integer.MAX_VALUE;
     }
 
     /**
-     * Minimum we set for the resource. Will get a warning in logs
-     * if we go under this limit.
+     * Minimum we set for the resource. Will get a warning in logs if we go under this limit.
      */
     public int getMin() {
       return Integer.MIN_VALUE;
     }
 
     /**
-     * Name of the resource analyzed. By default extracted from the class name, but
-     *  can be overridden by the subclasses.
+     * Name of the resource analyzed. By default extracted from the class name, but can be
+     * overridden by the subclasses.
      */
     public String getName() {
       String className = this.getClass().getSimpleName();
@@ -85,7 +81,7 @@ public class ResourceChecker {
      * @param phase the {@link Phase} to get the value for
      */
     abstract public int getVal(Phase phase);
-    
+
     /*
      * Retrieves List of Strings which would be logged in logEndings()
      */
@@ -180,9 +176,7 @@ public class ResourceChecker {
   }
 
   /**
-   * To be called as the beginning of a test method:
-   * - measure the resources
-   * - check vs. the limits.
+   * To be called as the beginning of a test method: - measure the resources - check vs. the limits.
    * - logs them.
    */
   public void start() {
@@ -196,11 +190,8 @@ public class ResourceChecker {
   }
 
   /**
-   * To be called as the end of a test method:
-   * - measure the resources
-   * - check vs. the limits.
-   * - check vs. the initial state
-   * - logs them.
+   * To be called as the end of a test method: - measure the resources - check vs. the limits. -
+   * check vs. the initial state - logs them.
    */
   public void end() {
     if (ras.isEmpty()) {

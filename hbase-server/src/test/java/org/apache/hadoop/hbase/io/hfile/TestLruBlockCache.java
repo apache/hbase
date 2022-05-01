@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,18 +51,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests the concurrent LruBlockCache.<p>
- *
- * Tests will ensure it grows and shrinks in size properly,
- * evictions run when they're supposed to and do what they should,
- * and that cached blocks are accessible when expected to be.
+ * Tests the concurrent LruBlockCache.
+ * <p>
+ * Tests will ensure it grows and shrinks in size properly, evictions run when they're supposed to
+ * and do what they should, and that cached blocks are accessible when expected to be.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestLruBlockCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLruBlockCache.class);
+    HBaseClassTestRule.forClass(TestLruBlockCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLruBlockCache.class);
 
@@ -90,8 +89,10 @@ public class TestLruBlockCache {
         service.execute(new Runnable() {
           @Override
           public void run() {
-            for (int blockIndex = 0; blockIndex < blocksPerThread || (!cache.isEvictionInProgress()); ++blockIndex) {
-              CachedItem block = new CachedItem(hfileName, (int) blockSize, blockCount.getAndIncrement());
+            for (int blockIndex = 0; blockIndex < blocksPerThread
+              || (!cache.isEvictionInProgress()); ++blockIndex) {
+              CachedItem block =
+                new CachedItem(hfileName, (int) blockSize, blockCount.getAndIncrement());
               boolean inMemory = Math.random() > 0.5;
               cache.cacheBlock(block.cacheKey, block, inMemory);
             }
@@ -117,6 +118,7 @@ public class TestLruBlockCache {
       assertEquals(cache.getOverhead(), cache.getCurrentSize());
     }
   }
+
   @Test
   public void testBackgroundEvictionThread() throws Exception {
     long maxSize = 100000;
@@ -124,7 +126,7 @@ public class TestLruBlockCache {
     long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
     assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
 
@@ -160,8 +162,8 @@ public class TestLruBlockCache {
     // acceptableSize, combined with variance between object overhead on
     // different environments.
     int n = 0;
-    for (long prevCnt = 0 /* < number of blocks added */, curCnt =
-      cache.getBlockCount(); prevCnt != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
+    for (long prevCnt = 0 /* < number of blocks added */, curCnt = cache.getBlockCount(); prevCnt
+        != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
       Thread.sleep(200);
       assertTrue("Cache never stabilized.", n++ < 100);
     }
@@ -178,7 +180,7 @@ public class TestLruBlockCache {
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
 
-    CachedItem [] blocks = generateRandomBlocks(100, blockSize);
+    CachedItem[] blocks = generateRandomBlocks(100, blockSize);
 
     long expectedCacheSize = cache.heapSize();
 
@@ -208,9 +210,8 @@ public class TestLruBlockCache {
     for (CachedItem block : blocks) {
       cache.cacheBlock(block.cacheKey, block);
     }
-    assertEquals(
-            "Cache should ignore cache requests for blocks already in cache",
-            expectedBlockCount, cache.getBlockCount());
+    assertEquals("Cache should ignore cache requests for blocks already in cache",
+      expectedBlockCount, cache.getBlockCount());
 
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());
@@ -234,9 +235,9 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false);
 
-    CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
+    CachedItem[] blocks = generateFixedBlocks(10, blockSize, "block");
 
     long expectedCacheSize = cache.heapSize();
 
@@ -250,21 +251,18 @@ public class TestLruBlockCache {
     assertEquals(1, cache.getStats().getEvictionCount());
 
     // Our expected size overruns acceptable limit
-    assertTrue(expectedCacheSize >
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    assertTrue(expectedCacheSize > (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // But the cache did not grow beyond max
     assertTrue(cache.heapSize() < maxSize);
 
     // And is still below the acceptable limit
-    assertTrue(cache.heapSize() <
-        (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    assertTrue(cache.heapSize() < (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
-    // All blocks except block 0  should be in the cache
+    // All blocks except block 0 should be in the cache
     assertTrue(cache.getBlock(blocks[0].cacheKey, true, false, true) == null);
-    for(int i=1;i<blocks.length;i++) {
-      assertEquals(cache.getBlock(blocks[i].cacheKey, true, false, true),
-          blocks[i]);
+    for (int i = 1; i < blocks.length; i++) {
+      assertEquals(cache.getBlock(blocks[i].cacheKey, true, false, true), blocks[i]);
     }
   }
 
@@ -273,7 +271,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false);
 
     CachedItem[] singleBlocks = generateFixedBlocks(5, 10000, "single");
     CachedItem[] multiBlocks = generateFixedBlocks(5, 10000, "multi");
@@ -300,29 +298,25 @@ public class TestLruBlockCache {
     assertEquals(2, cache.getStats().getEvictedCount());
 
     // Our expected size overruns acceptable limit
-    assertTrue(expectedCacheSize >
-      (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    assertTrue(expectedCacheSize > (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // But the cache did not grow beyond max
     assertTrue(cache.heapSize() <= maxSize);
 
     // And is now below the acceptable limit
-    assertTrue(cache.heapSize() <=
-        (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    assertTrue(cache.heapSize() <= (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
     // We expect fairness across the two priorities.
     // This test makes multi go barely over its limit, in-memory
-    // empty, and the rest in single.  Two single evictions and
+    // empty, and the rest in single. Two single evictions and
     // one multi eviction expected.
     assertTrue(cache.getBlock(singleBlocks[0].cacheKey, true, false, true) == null);
     assertTrue(cache.getBlock(multiBlocks[0].cacheKey, true, false, true) == null);
 
     // And all others to be cached
-    for(int i=1;i<4;i++) {
-      assertEquals(cache.getBlock(singleBlocks[i].cacheKey, true, false, true),
-          singleBlocks[i]);
-      assertEquals(cache.getBlock(multiBlocks[i].cacheKey, true, false, true),
-          multiBlocks[i]);
+    for (int i = 1; i < 4; i++) {
+      assertEquals(cache.getBlock(singleBlocks[i].cacheKey, true, false, true), singleBlocks[i]);
+      assertEquals(cache.getBlock(multiBlocks[i].cacheKey, true, false, true), multiBlocks[i]);
     }
   }
 
@@ -331,18 +325,15 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.98f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.98f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        1.2f,  // limit
-        false,
-        16 * 1024 * 1024);
+        1.2f, // limit
+        false, 16 * 1024 * 1024);
 
     CachedItem[] singleBlocks = generateFixedBlocks(5, blockSize, "single");
     CachedItem[] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -351,7 +342,7 @@ public class TestLruBlockCache {
     long expectedCacheSize = cache.heapSize();
 
     // Add 3 blocks from each priority
-    for(int i=0;i<3;i++) {
+    for (int i = 0; i < 3; i++) {
 
       // Just add single blocks
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
@@ -408,7 +399,7 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(memoryBlocks[0].cacheKey, true, false, true));
 
     // Add a block that is twice as big (should force two evictions)
-    CachedItem [] bigBlocks = generateFixedBlocks(3, blockSize*3, "big");
+    CachedItem[] bigBlocks = generateFixedBlocks(3, blockSize * 3, "big");
     cache.cacheBlock(bigBlocks[0].cacheKey, bigBlocks[0]);
 
     // Four evictions, six evicted (inserted block 3X size, expect +3 evicted)
@@ -453,27 +444,24 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.98f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.98f, // min
         0.99f, // acceptable
         0.2f, // single
         0.3f, // multi
         0.5f, // memory
         1.2f, // limit
-        true,
-        16 * 1024 * 1024);
+        true, 16 * 1024 * 1024);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(10, blockSize, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
-    CachedItem [] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
+    CachedItem[] singleBlocks = generateFixedBlocks(10, blockSize, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
+    CachedItem[] memoryBlocks = generateFixedBlocks(10, blockSize, "memory");
 
     long expectedCacheSize = cache.heapSize();
 
     // 0. Add 5 single blocks and 4 multi blocks to make cache full, si:mu:me = 5:4:0
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
       // Just add single blocks
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
       expectedCacheSize += singleBlocks[i].cacheBlockHeapSize();
@@ -543,7 +531,7 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(memoryBlocks[0].cacheKey, true, false, true));
 
     // 6. Insert one new single block, itself evicted immediately since
-    //    all blocks in cache are memory-type which have higher priority
+    // all blocks in cache are memory-type which have higher priority
     // si:mu:me = 0:0:9 (no change)
     cache.cacheBlock(singleBlocks[9].cacheKey, singleBlocks[9]);
     // one eviction, one evicted.
@@ -560,18 +548,15 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.66f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.66f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        1.2f,  // limit
-        false,
-        16 * 1024 * 1024);
+        1.2f, // limit
+        false, 16 * 1024 * 1024);
 
     CachedItem[] singleBlocks = generateFixedBlocks(20, blockSize, "single");
     CachedItem[] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
@@ -599,11 +584,11 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(multiBlocks[0].cacheKey, true, false, true));
     assertEquals(null, cache.getBlock(multiBlocks[1].cacheKey, true, false, true));
 
-    // Let's keep "scanning" by adding single blocks.  From here on we only
+    // Let's keep "scanning" by adding single blocks. From here on we only
     // expect evictions from the single bucket.
 
     // Every time we reach 10 total blocks (every 4 inserts) we get 4 single
-    // blocks evicted.  Inserting 13 blocks should yield 3 more evictions and
+    // blocks evicted. Inserting 13 blocks should yield 3 more evictions and
     // 12 more evicted.
 
     for (int i = 5; i < 18; i++) {
@@ -624,33 +609,29 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.66f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.66f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        1.2f,  // limit
-        false,
-        1024);
-    CachedItem[] tooLong = generateFixedBlocks(10, 1024+5, "long");
+        1.2f, // limit
+        false, 1024);
+    CachedItem[] tooLong = generateFixedBlocks(10, 1024 + 5, "long");
     CachedItem[] small = generateFixedBlocks(15, 600, "small");
 
-
-    for (CachedItem i:tooLong) {
+    for (CachedItem i : tooLong) {
       cache.cacheBlock(i.cacheKey, i);
     }
-    for (CachedItem i:small) {
+    for (CachedItem i : small) {
       cache.cacheBlock(i.cacheKey, i);
     }
-    assertEquals(15,cache.getBlockCount());
-    for (CachedItem i:small) {
+    assertEquals(15, cache.getBlockCount());
+    for (CachedItem i : small) {
       assertNotNull(cache.getBlock(i.cacheKey, true, false, false));
     }
-    for (CachedItem i:tooLong) {
+    for (CachedItem i : tooLong) {
       assertNull(cache.getBlock(i.cacheKey, true, false, false));
     }
 
@@ -663,18 +644,15 @@ public class TestLruBlockCache {
     long maxSize = 300000;
     long blockSize = calculateBlockSize(maxSize, 31);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.98f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.98f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        1.2f,  // limit
-        false,
-        16 * 1024 * 1024);
+        1.2f, // limit
+        false, 16 * 1024 * 1024);
 
     CachedItem[] singleBlocks = generateFixedBlocks(10, blockSize, "single");
     CachedItem[] multiBlocks = generateFixedBlocks(10, blockSize, "multi");
@@ -697,7 +675,7 @@ public class TestLruBlockCache {
     assertEquals(0, cache.getStats().getEvictionCount());
 
     // Resize to half capacity plus an extra block (otherwise we evict an extra)
-    cache.setMaxSize((long)(maxSize * 0.5f));
+    cache.setMaxSize((long) (maxSize * 0.5f));
 
     // Should have run a single eviction
     assertEquals(1, cache.getStats().getEvictionCount());
@@ -706,14 +684,14 @@ public class TestLruBlockCache {
     assertEquals(15, cache.getStats().getEvictedCount());
 
     // And the oldest 5 blocks from each category should be gone
-    for(int i=0;i<5;i++) {
+    for (int i = 0; i < 5; i++) {
       assertEquals(null, cache.getBlock(singleBlocks[i].cacheKey, true, false, true));
       assertEquals(null, cache.getBlock(multiBlocks[i].cacheKey, true, false, true));
       assertEquals(null, cache.getBlock(memoryBlocks[i].cacheKey, true, false, true));
     }
 
     // And the newest 5 blocks should still be accessible
-    for(int i=5;i<10;i++) {
+    for (int i = 5; i < 10; i++) {
       assertEquals(singleBlocks[i], cache.getBlock(singleBlocks[i].cacheKey, true, false, true));
       assertEquals(multiBlocks[i], cache.getBlock(multiBlocks[i].cacheKey, true, false, true));
       assertEquals(memoryBlocks[i], cache.getBlock(memoryBlocks[i].cacheKey, true, false, true));
@@ -779,12 +757,12 @@ public class TestLruBlockCache {
     stats.hit(false, true, BlockType.DATA);
     stats.rollMetricsPeriod();
     assertEquals(0.6, stats.getHitRatioPastNPeriods(), delta);
-    assertEquals((double)1/3, stats.getHitCachingRatioPastNPeriods(), delta);
+    assertEquals((double) 1 / 3, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 6, evict period 3
     // should be (2/6)=1/3 and (0/4)=0
     stats.rollMetricsPeriod();
-    assertEquals((double)1/3, stats.getHitRatioPastNPeriods(), delta);
+    assertEquals((double) 1 / 3, stats.getHitRatioPastNPeriods(), delta);
     assertEquals(0.0, stats.getHitCachingRatioPastNPeriods(), delta);
 
     // period 7, evict period 4
@@ -820,22 +798,19 @@ public class TestLruBlockCache {
     ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
     HFileContext meta = new HFileContextBuilder().build();
     HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
-        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, 52, -1, meta, HEAP);
+      ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, 52, -1, meta, HEAP);
     HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
-        ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, -1, -1, meta, HEAP);
+      ByteBuff.wrap(buf), HFileBlock.FILL_HEADER, -1, -1, -1, meta, HEAP);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false,
-        (int)Math.ceil(1.2*maxSize/blockSize),
-        LruBlockCache.DEFAULT_LOAD_FACTOR,
-        LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-        0.66f, // min
+    LruBlockCache cache =
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.66f, // min
         0.99f, // acceptable
         0.33f, // single
         0.33f, // multi
         0.34f, // memory
-        1.2f,  // limit
-        false,
-        1024);
+        1.2f, // limit
+        false, 1024);
 
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     ByteBuffer actualBuffer = ByteBuffer.allocate(length);
@@ -844,69 +819,67 @@ public class TestLruBlockCache {
     blockWithNextBlockMetadata.serialize(block1Buffer, true);
     blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
 
-    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
 
-    //Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
+    // Add blockWithoutNextBlockMetada, expect blockWithNextBlockMetadata back.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
 
-    //Clear and add blockWithoutNextBlockMetadata
+    // Clear and add blockWithoutNextBlockMetadata
     cache.clearCache();
     assertNull(cache.getBlock(key, false, false, false));
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithoutNextBlockMetadata, actualBuffer,
-        block2Buffer);
+      block2Buffer);
 
-    //Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata to replace.
     CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
-        block1Buffer);
+      block1Buffer);
   }
 
-  private CachedItem [] generateFixedBlocks(int numBlocks, int size, String pfx) {
-    CachedItem [] blocks = new CachedItem[numBlocks];
-    for(int i=0;i<numBlocks;i++) {
+  private CachedItem[] generateFixedBlocks(int numBlocks, int size, String pfx) {
+    CachedItem[] blocks = new CachedItem[numBlocks];
+    for (int i = 0; i < numBlocks; i++) {
       blocks[i] = new CachedItem(pfx + i, size);
     }
     return blocks;
   }
 
   private CachedItem[] generateFixedBlocks(int numBlocks, long size, String pfx) {
-    return generateFixedBlocks(numBlocks, (int)size, pfx);
+    return generateFixedBlocks(numBlocks, (int) size, pfx);
   }
 
   private CachedItem[] generateRandomBlocks(int numBlocks, long maxSize) {
-    CachedItem [] blocks = new CachedItem[numBlocks];
+    CachedItem[] blocks = new CachedItem[numBlocks];
     Random rand = ThreadLocalRandom.current();
-    for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new CachedItem("block" + i, rand.nextInt((int)maxSize)+1);
+    for (int i = 0; i < numBlocks; i++) {
+      blocks[i] = new CachedItem("block" + i, rand.nextInt((int) maxSize) + 1);
     }
     return blocks;
   }
 
   private long calculateBlockSize(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
-    int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
-        ClassSize.CONCURRENT_HASHMAP +
-        (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-        (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
-    long negateBlockSize = (long)(totalOverhead/numEntries);
+    int numEntries = (int) Math.ceil((1.2) * maxSize / roughBlockSize);
+    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
+      + (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+      + (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+    long negateBlockSize = (long) (totalOverhead / numEntries);
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
-    return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*0.99f));
+    return ClassSize.align((long) Math.floor((roughBlockSize - negateBlockSize) * 0.99f));
   }
 
   private long calculateBlockSizeDefault(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
-    int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
-        ClassSize.CONCURRENT_HASHMAP +
-        (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-        (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+    int numEntries = (int) Math.ceil((1.2) * maxSize / roughBlockSize);
+    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
+      + (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+      + (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
     long negateBlockSize = totalOverhead / numEntries;
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
-    return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*
-        LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    return ClassSize.align((long) Math
+      .floor((roughBlockSize - negateBlockSize) * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
 
   private static class CachedItem implements Cacheable {
@@ -931,9 +904,8 @@ public class TestLruBlockCache {
 
     /** Size of the cache block holding this item. Used for verification. */
     public long cacheBlockHeapSize() {
-      return LruCachedBlock.PER_BLOCK_OVERHEAD
-          + ClassSize.align(cacheKey.heapSize())
-          + ClassSize.align(size);
+      return LruCachedBlock.PER_BLOCK_OVERHEAD + ClassSize.align(cacheKey.heapSize())
+        + ClassSize.align(size);
     }
 
     @Override
@@ -963,8 +935,8 @@ public class TestLruBlockCache {
     HFileContext meta = new HFileContextBuilder().build();
     BlockCacheKey key = new BlockCacheKey("key1", 0);
     HFileBlock blk = new HFileBlock(BlockType.DATA, size, size, -1,
-        ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1, 52, -1, meta,
-        HEAP);
+      ByteBuff.wrap(ByteBuffer.wrap(byteArr, 0, size)), HFileBlock.FILL_HEADER, -1, 52, -1, meta,
+      HEAP);
     AtomicBoolean err1 = new AtomicBoolean(false);
     Thread t1 = new Thread(() -> {
       for (int i = 0; i < 10000 && !err1.get(); i++) {
@@ -1016,16 +988,14 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSize(maxSize, 10);
     LruBlockCache cache =
-        new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
-            LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL,
-            0.66f, // min
-            0.99f, // acceptable
-            0.33f, // single
-            0.33f, // multi
-            0.34f, // memory
-            1.2f, // limit
-            false, 1024);
+      new LruBlockCache(maxSize, blockSize, false, (int) Math.ceil(1.2 * maxSize / blockSize),
+        LruBlockCache.DEFAULT_LOAD_FACTOR, LruBlockCache.DEFAULT_CONCURRENCY_LEVEL, 0.66f, // min
+        0.99f, // acceptable
+        0.33f, // single
+        0.33f, // multi
+        0.34f, // memory
+        1.2f, // limit
+        false, 1024);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
 }
-

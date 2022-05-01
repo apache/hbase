@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,18 +46,17 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestVersionResource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVersionResource.class);
+    HBaseClassTestRule.forClass(TestVersionResource.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVersionResource.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
 
@@ -65,11 +64,8 @@ public class TestVersionResource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
-    context = JAXBContext.newInstance(
-      VersionModel.class,
-      StorageClusterVersionModel.class);
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
+    context = JAXBContext.newInstance(VersionModel.class, StorageClusterVersionModel.class);
   }
 
   @AfterClass
@@ -122,9 +118,8 @@ public class TestVersionResource {
     Response response = client.get("/version", Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    VersionModel model = (VersionModel)
-      context.createUnmarshaller().unmarshal(
-        new ByteArrayInputStream(response.getBody()));
+    VersionModel model = (VersionModel) context.createUnmarshaller()
+      .unmarshal(new ByteArrayInputStream(response.getBody()));
     validate(model);
     LOG.info("success retrieving Stargate version as XML");
   }
@@ -134,10 +129,9 @@ public class TestVersionResource {
     Response response = client.get("/version", Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-            .locateMapper(VersionModel.class, MediaType.APPLICATION_JSON_TYPE);
-    VersionModel model
-            = mapper.readValue(response.getBody(), VersionModel.class);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(VersionModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
+    VersionModel model = mapper.readValue(response.getBody(), VersionModel.class);
     validate(model);
     LOG.info("success retrieving Stargate version as JSON");
   }
@@ -166,15 +160,12 @@ public class TestVersionResource {
   }
 
   @Test
-  public void testGetStorageClusterVersionXML() throws IOException,
-      JAXBException {
-    Response response = client.get("/version/cluster",Constants.MIMETYPE_XML);
+  public void testGetStorageClusterVersionXML() throws IOException, JAXBException {
+    Response response = client.get("/version/cluster", Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    StorageClusterVersionModel clusterVersionModel =
-      (StorageClusterVersionModel)
-        context.createUnmarshaller().unmarshal(
-          new ByteArrayInputStream(response.getBody()));
+    StorageClusterVersionModel clusterVersionModel = (StorageClusterVersionModel) context
+      .createUnmarshaller().unmarshal(new ByteArrayInputStream(response.getBody()));
     assertNotNull(clusterVersionModel);
     assertNotNull(clusterVersionModel.getVersion());
     LOG.info("success retrieving storage cluster version as XML");
@@ -186,12 +177,11 @@ public class TestVersionResource {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider()
-            .locateMapper(StorageClusterVersionModel.class, MediaType.APPLICATION_JSON_TYPE);
-    StorageClusterVersionModel clusterVersionModel
-            = mapper.readValue(response.getBody(), StorageClusterVersionModel.class);
+      .locateMapper(StorageClusterVersionModel.class, MediaType.APPLICATION_JSON_TYPE);
+    StorageClusterVersionModel clusterVersionModel =
+      mapper.readValue(response.getBody(), StorageClusterVersionModel.class);
     assertNotNull(clusterVersionModel);
     assertNotNull(clusterVersionModel.getVersion());
     LOG.info("success retrieving storage cluster version as JSON");
   }
 }
-

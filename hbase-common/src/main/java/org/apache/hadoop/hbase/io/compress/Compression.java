@@ -1,18 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress;
 
@@ -22,7 +23,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.util.BlockIOUtils;
@@ -42,8 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Compression related stuff.
- * Copied from hadoop-3315 tfile.
+ * Compression related stuff. Copied from hadoop-3315 tfile.
  */
 @InterfaceAudience.Private
 public final class Compression {
@@ -93,13 +92,11 @@ public final class Compression {
   }
 
   /**
-   * Compression algorithms. The ordinal of these cannot change or else you
-   * risk breaking all existing HFiles out there.  Even the ones that are
-   * not compressed! (They use the NONE algorithm)
+   * Compression algorithms. The ordinal of these cannot change or else you risk breaking all
+   * existing HFiles out there. Even the ones that are not compressed! (They use the NONE algorithm)
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value="SE_TRANSIENT_FIELD_NOT_RESTORED",
-      justification="We are not serializing so doesn't apply (not sure why transient though)")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
+      justification = "We are not serializing so doesn't apply (not sure why transient though)")
   @InterfaceAudience.Public
   public static enum Algorithm {
     // LZO is GPL and requires extra install to setup. See
@@ -124,9 +121,9 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
+            getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
-              new Configuration(conf));
+            new Configuration(conf));
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
         }
@@ -163,9 +160,8 @@ public final class Compression {
       }
 
       @Override
-      public synchronized InputStream createDecompressionStream(
-          InputStream downStream, Decompressor decompressor,
-          int downStreamBufferSize) throws IOException {
+      public synchronized InputStream createDecompressionStream(InputStream downStream,
+        Decompressor decompressor, int downStreamBufferSize) throws IOException {
         if (downStreamBufferSize > 0) {
           return new BufferedInputStream(downStream, downStreamBufferSize);
         }
@@ -173,9 +169,8 @@ public final class Compression {
       }
 
       @Override
-      public synchronized OutputStream createCompressionStream(
-          OutputStream downStream, Compressor compressor,
-          int downStreamBufferSize) throws IOException {
+      public synchronized OutputStream createCompressionStream(OutputStream downStream,
+        Compressor compressor, int downStreamBufferSize) throws IOException {
         if (downStreamBufferSize > 0) {
           return new BufferedOutputStream(downStream, downStreamBufferSize);
         }
@@ -203,7 +198,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+            getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
@@ -230,7 +225,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
+            getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
@@ -257,7 +252,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.BZip2Codec");
+            getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.BZip2Codec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
@@ -284,7 +279,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.ZStandardCodec");
+            getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.ZStandardCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
@@ -307,48 +302,40 @@ public final class Compression {
 
     abstract CompressionCodec getCodec(Configuration conf);
 
-    public InputStream createDecompressionStream(
-        InputStream downStream, Decompressor decompressor,
-        int downStreamBufferSize) throws IOException {
+    public InputStream createDecompressionStream(InputStream downStream, Decompressor decompressor,
+      int downStreamBufferSize) throws IOException {
       CompressionCodec codec = getCodec(conf);
       // Set the internal buffer size to read from down stream.
       if (downStreamBufferSize > 0) {
-        ((Configurable)codec).getConf().setInt("io.file.buffer.size",
-            downStreamBufferSize);
+        ((Configurable) codec).getConf().setInt("io.file.buffer.size", downStreamBufferSize);
       }
-      CompressionInputStream cis =
-          codec.createInputStream(downStream, decompressor);
+      CompressionInputStream cis = codec.createInputStream(downStream, decompressor);
       BufferedInputStream bis2 = new BufferedInputStream(cis, DATA_IBUF_SIZE);
       return bis2;
 
     }
 
-    public OutputStream createCompressionStream(
-        OutputStream downStream, Compressor compressor, int downStreamBufferSize)
-        throws IOException {
+    public OutputStream createCompressionStream(OutputStream downStream, Compressor compressor,
+      int downStreamBufferSize) throws IOException {
       OutputStream bos1 = null;
       if (downStreamBufferSize > 0) {
         bos1 = new BufferedOutputStream(downStream, downStreamBufferSize);
-      }
-      else {
+      } else {
         bos1 = downStream;
       }
-      CompressionOutputStream cos =
-          createPlainCompressionStream(bos1, compressor);
+      CompressionOutputStream cos = createPlainCompressionStream(bos1, compressor);
       BufferedOutputStream bos2 =
-          new BufferedOutputStream(new FinishOnFlushCompressionStream(cos),
-              DATA_OBUF_SIZE);
+        new BufferedOutputStream(new FinishOnFlushCompressionStream(cos), DATA_OBUF_SIZE);
       return bos2;
     }
 
     /**
-     * Creates a compression stream without any additional wrapping into
-     * buffering streams.
+     * Creates a compression stream without any additional wrapping into buffering streams.
      */
-    public CompressionOutputStream createPlainCompressionStream(
-        OutputStream downStream, Compressor compressor) throws IOException {
+    public CompressionOutputStream createPlainCompressionStream(OutputStream downStream,
+      Compressor compressor) throws IOException {
       CompressionCodec codec = getCodec(conf);
-      ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
+      ((Configurable) codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
       return codec.createOutputStream(downStream, compressor);
     }
 
@@ -380,7 +367,8 @@ public final class Compression {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
         Decompressor decompressor = CodecPool.getDecompressor(codec);
-        if (LOG.isTraceEnabled()) LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
+        if (LOG.isTraceEnabled())
+          LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
         if (decompressor != null) {
           if (decompressor.finished()) {
             // Somebody returns the decompressor to CodecPool but is still using it.
@@ -424,9 +412,8 @@ public final class Compression {
 
   /**
    * Get names of supported compression algorithms.
-   *
-   * @return Array of strings, each represents a supported compression
-   * algorithm. Currently, the following compression algorithms are supported.
+   * @return Array of strings, each represents a supported compression algorithm. Currently, the
+   *         following compression algorithms are supported.
    */
   public static String[] getSupportedAlgorithms() {
     Algorithm[] algos = Algorithm.class.getEnumConstants();
@@ -443,25 +430,25 @@ public final class Compression {
   /**
    * Decompresses data from the given stream using the configured compression algorithm. It will
    * throw an exception if the dest buffer does not have enough space to hold the decompressed data.
-   * @param dest the output buffer
+   * @param dest                  the output buffer
    * @param bufferedBoundedStream a stream to read compressed data from, bounded to the exact amount
-   *          of compressed data
-   * @param uncompressedSize uncompressed data size, header not included
-   * @param compressAlgo compression algorithm used
+   *                              of compressed data
+   * @param uncompressedSize      uncompressed data size, header not included
+   * @param compressAlgo          compression algorithm used
    * @throws IOException if any IO error happen
    */
   public static void decompress(ByteBuff dest, InputStream bufferedBoundedStream,
-      int uncompressedSize, Compression.Algorithm compressAlgo) throws IOException {
+    int uncompressedSize, Compression.Algorithm compressAlgo) throws IOException {
     if (dest.remaining() < uncompressedSize) {
       throw new IllegalArgumentException("Output buffer does not have enough space to hold "
-          + uncompressedSize + " decompressed bytes, available: " + dest.remaining());
+        + uncompressedSize + " decompressed bytes, available: " + dest.remaining());
     }
 
     Decompressor decompressor = null;
     try {
       decompressor = compressAlgo.getDecompressor();
       try (InputStream is =
-          compressAlgo.createDecompressionStream(bufferedBoundedStream, decompressor, 0)) {
+        compressAlgo.createDecompressionStream(bufferedBoundedStream, decompressor, 0)) {
         BlockIOUtils.readFullyWithHeapBuffer(is, dest, uncompressedSize);
       }
     } finally {

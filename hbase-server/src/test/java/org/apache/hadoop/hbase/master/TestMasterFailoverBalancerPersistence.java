@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,26 +35,23 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterFailoverBalancerPersistence {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFailoverBalancerPersistence.class);
+    HBaseClassTestRule.forClass(TestMasterFailoverBalancerPersistence.class);
 
   /**
-   * Test that if the master fails, the load balancer maintains its
-   * state (running or not) when the next master takes over
-   *
-   * @throws Exception
+   * Test that if the master fails, the load balancer maintains its state (running or not) when the
+   * next master takes over n
    */
   @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(3).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(3).build();
     TEST_UTIL.startMiniCluster(option);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
@@ -85,15 +82,11 @@ public class TestMasterFailoverBalancerPersistence {
   }
 
   /**
-   * Kill the master and wait for a new active master to show up
-   *
-   * @param cluster
-   * @return the new active master
-   * @throws InterruptedException
-   * @throws java.io.IOException
+   * Kill the master and wait for a new active master to show up n * @return the new active master n
+   * * @throws java.io.IOException
    */
   private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     int activeIndex = getActiveMasterIndex(cluster);
     HMaster active = cluster.getMaster();
     cluster.stopMaster(activeIndex);
@@ -107,9 +100,7 @@ public class TestMasterFailoverBalancerPersistence {
 
   /**
    * return the index of the active master in the cluster
-   *
-   * @throws org.apache.hadoop.hbase.MasterNotRunningException
-   *          if no active master found
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException if no active master found
    */
   private int getActiveMasterIndex(MiniHBaseCluster cluster) throws MasterNotRunningException {
     // get all the master threads

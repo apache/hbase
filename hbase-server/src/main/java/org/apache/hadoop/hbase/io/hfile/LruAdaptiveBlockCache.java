@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,8 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,14 +46,13 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * <b>This realisation improve performance of classical LRU
- * cache up to 3 times via reduce GC job.</b>
+ * <b>This realisation improve performance of classical LRU cache up to 3 times via reduce GC
+ * job.</b>
  * </p>
  * The classical block cache implementation that is memory-aware using {@link HeapSize},
- * memory-bound using an
- * LRU eviction algorithm, and concurrent: backed by a {@link ConcurrentHashMap} and with a
- * non-blocking eviction thread giving constant-time {@link #cacheBlock} and {@link #getBlock}
- * operations.
+ * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
+ * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving constant-time
+ * {@link #cacheBlock} and {@link #getBlock} operations.
  * </p>
  * Contains three levels of block priority to allow for scan-resistance and in-memory families
  * {@link org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder#setInMemory(boolean)} (An
@@ -90,57 +87,50 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * <p/>
  * Adaptive LRU cache lets speed up performance while we are reading much more data than can fit
  * into BlockCache and it is the cause of a high rate of evictions. This in turn leads to heavy
- * Garbage Collector works. So a lot of blocks put into BlockCache but never read, but spending
- * a lot of CPU resources for cleaning. We could avoid this situation via parameters:
+ * Garbage Collector works. So a lot of blocks put into BlockCache but never read, but spending a
+ * lot of CPU resources for cleaning. We could avoid this situation via parameters:
  * <p/>
- * <b>hbase.lru.cache.heavy.eviction.count.limit</b>  - set how many times we have to run the
- * eviction process that starts to avoid putting data to BlockCache. By default it is 0 and it
- * meats the feature will start at the beginning. But if we have some times short reading the same
- * data and some times long-term reading - we can divide it by this parameter. For example we know
- * that our short reading used to be about 1 minutes, then we have to set the parameter about 10
- * and it will enable the feature only for long time massive reading (after ~100 seconds). So when
- * we use short-reading and want all of them in the cache we will have it (except for eviction of
- * course). When we use long-term heavy reading the feature will be enabled after some time and
- * bring better performance.
+ * <b>hbase.lru.cache.heavy.eviction.count.limit</b> - set how many times we have to run the
+ * eviction process that starts to avoid putting data to BlockCache. By default it is 0 and it meats
+ * the feature will start at the beginning. But if we have some times short reading the same data
+ * and some times long-term reading - we can divide it by this parameter. For example we know that
+ * our short reading used to be about 1 minutes, then we have to set the parameter about 10 and it
+ * will enable the feature only for long time massive reading (after ~100 seconds). So when we use
+ * short-reading and want all of them in the cache we will have it (except for eviction of course).
+ * When we use long-term heavy reading the feature will be enabled after some time and bring better
+ * performance.
  * <p/>
  * <b>hbase.lru.cache.heavy.eviction.mb.size.limit</b> - set how many bytes in 10 seconds desirable
  * putting into BlockCache (and evicted from it). The feature will try to reach this value and
- * maintain it. Don't try to set it too small because it leads to premature exit from this mode.
- * For powerful CPUs (about 20-40 physical cores)  it could be about 400-500 MB. Average system
- * (~10 cores) 200-300 MB. Some weak systems (2-5 cores) may be good with 50-100 MB.
- * How it works: we set the limit and after each ~10 second calculate how many bytes were freed.
- * Overhead = Freed Bytes Sum (MB) * 100 / Limit (MB) - 100;
- * For example we set the limit = 500 and were evicted 2000 MB. Overhead is:
- * 2000 * 100 / 500 - 100 = 300%
- * The feature is going to reduce a percent caching data blocks and fit evicted bytes closer to
- * 100% (500 MB). Some kind of an auto-scaling.
- * If freed bytes less then the limit we have got negative overhead.
- * For example if were freed 200 MB:
- * 200 * 100 / 500 - 100 = -60%
- * The feature will increase the percent of caching blocks.
- * That leads to fit evicted bytes closer to 100% (500 MB).
- * The current situation we can find out in the log of RegionServer:
- * BlockCache evicted (MB): 0, overhead (%): -100, heavy eviction counter: 0, current caching
- * DataBlock (%): 100 - means no eviction, 100% blocks is caching
- * BlockCache evicted (MB): 2000, overhead (%): 300, heavy eviction counter: 1, current caching
- * DataBlock (%): 97 - means eviction begin, reduce of caching blocks by 3%.
- * It help to tune your system and find out what value is better set. Don't try to reach 0%
- * overhead, it is impossible. Quite good 50-100% overhead,
- * it prevents premature exit from this mode.
+ * maintain it. Don't try to set it too small because it leads to premature exit from this mode. For
+ * powerful CPUs (about 20-40 physical cores) it could be about 400-500 MB. Average system (~10
+ * cores) 200-300 MB. Some weak systems (2-5 cores) may be good with 50-100 MB. How it works: we set
+ * the limit and after each ~10 second calculate how many bytes were freed. Overhead = Freed Bytes
+ * Sum (MB) * 100 / Limit (MB) - 100; For example we set the limit = 500 and were evicted 2000 MB.
+ * Overhead is: 2000 * 100 / 500 - 100 = 300% The feature is going to reduce a percent caching data
+ * blocks and fit evicted bytes closer to 100% (500 MB). Some kind of an auto-scaling. If freed
+ * bytes less then the limit we have got negative overhead. For example if were freed 200 MB: 200 *
+ * 100 / 500 - 100 = -60% The feature will increase the percent of caching blocks. That leads to fit
+ * evicted bytes closer to 100% (500 MB). The current situation we can find out in the log of
+ * RegionServer: BlockCache evicted (MB): 0, overhead (%): -100, heavy eviction counter: 0, current
+ * caching DataBlock (%): 100 - means no eviction, 100% blocks is caching BlockCache evicted (MB):
+ * 2000, overhead (%): 300, heavy eviction counter: 1, current caching DataBlock (%): 97 - means
+ * eviction begin, reduce of caching blocks by 3%. It help to tune your system and find out what
+ * value is better set. Don't try to reach 0% overhead, it is impossible. Quite good 50-100%
+ * overhead, it prevents premature exit from this mode.
  * <p/>
  * <b>hbase.lru.cache.heavy.eviction.overhead.coefficient</b> - set how fast we want to get the
  * result. If we know that our reading is heavy for a long time, we don't want to wait and can
  * increase the coefficient and get good performance sooner. But if we aren't sure we can do it
- * slowly and it could prevent premature exit from this mode. So, when the coefficient is higher
- * we can get better performance when heavy reading is stable. But when reading is changing we
- * can adjust to it and set  the coefficient to lower value.
- * For example, we set the coefficient = 0.01. It means the overhead (see above) will be
- * multiplied by 0.01 and the result is the value of reducing percent caching blocks. For example,
- * if the overhead = 300% and the coefficient = 0.01,
- * then percent of caching blocks will reduce by 3%.
- * Similar logic when overhead has got negative value (overshooting).  Maybe it is just short-term
- * fluctuation and we will try to stay in this mode. It helps avoid premature exit during
- * short-term fluctuation. Backpressure has simple logic: more overshooting - more caching blocks.
+ * slowly and it could prevent premature exit from this mode. So, when the coefficient is higher we
+ * can get better performance when heavy reading is stable. But when reading is changing we can
+ * adjust to it and set the coefficient to lower value. For example, we set the coefficient = 0.01.
+ * It means the overhead (see above) will be multiplied by 0.01 and the result is the value of
+ * reducing percent caching blocks. For example, if the overhead = 300% and the coefficient = 0.01,
+ * then percent of caching blocks will reduce by 3%. Similar logic when overhead has got negative
+ * value (overshooting). Maybe it is just short-term fluctuation and we will try to stay in this
+ * mode. It helps avoid premature exit during short-term fluctuation. Backpressure has simple logic:
+ * more overshooting - more caching blocks.
  * <p/>
  * Find more information about improvement: https://issues.apache.org/jira/browse/HBASE-23887
  */
@@ -174,14 +164,14 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     "hbase.lru.blockcache.memory.percentage";
 
   /**
-   * Configuration key to force data-block always (except in-memory are too much)
-   * cached in memory for in-memory hfile, unlike inMemory, which is a column-family
-   * configuration, inMemoryForceMode is a cluster-wide configuration
+   * Configuration key to force data-block always (except in-memory are too much) cached in memory
+   * for in-memory hfile, unlike inMemory, which is a column-family configuration, inMemoryForceMode
+   * is a cluster-wide configuration
    */
   private static final String LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME =
     "hbase.lru.rs.inmemoryforcemode";
 
-  /* Default Configuration Parameters*/
+  /* Default Configuration Parameters */
 
   /* Backing Concurrent Map Configuration */
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
@@ -205,29 +195,28 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private static final String LRU_MAX_BLOCK_SIZE = "hbase.lru.max.block.size";
   private static final long DEFAULT_MAX_BLOCK_SIZE = 16L * 1024L * 1024L;
 
-  private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT
-    = "hbase.lru.cache.heavy.eviction.count.limit";
+  private static final String LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT =
+    "hbase.lru.cache.heavy.eviction.count.limit";
   // Default value actually equal to disable feature of increasing performance.
   // Because 2147483647 is about ~680 years (after that it will start to work)
   // We can set it to 0-10 and get the profit right now.
   // (see details https://issues.apache.org/jira/browse/HBASE-23887).
   private static final int DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT = Integer.MAX_VALUE;
 
-  private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT
-    = "hbase.lru.cache.heavy.eviction.mb.size.limit";
+  private static final String LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT =
+    "hbase.lru.cache.heavy.eviction.mb.size.limit";
   private static final long DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT = 500;
 
-  private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT
-    = "hbase.lru.cache.heavy.eviction.overhead.coefficient";
+  private static final String LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT =
+    "hbase.lru.cache.heavy.eviction.overhead.coefficient";
   private static final float DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT = 0.01f;
 
   /**
    * Defined the cache map as {@link ConcurrentHashMap} here, because in
-   * {@link LruAdaptiveBlockCache#getBlock}, we need to guarantee the atomicity
-   * of map#computeIfPresent (key, func). Besides, the func method must execute exactly once only
-   * when the key is present and under the lock context, otherwise the reference count will be
-   * messed up. Notice that the
-   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+   * {@link LruAdaptiveBlockCache#getBlock}, we need to guarantee the atomicity of
+   * map#computeIfPresent (key, func). Besides, the func method must execute exactly once only when
+   * the key is present and under the lock context, otherwise the reference count will be messed up.
+   * Notice that the {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
    */
   private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
 
@@ -297,8 +286,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   /**
    * Where to send victims (blocks evicted/missing from the cache). This is used only when we use an
-   * external cache as L2.
-   * Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
+   * external cache as L2. Note: See org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache
    */
   private transient BlockCache victimHandler = null;
 
@@ -315,12 +303,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private final float heavyEvictionOverheadCoefficient;
 
   /**
-   * Default constructor.  Specify maximum size and expected average block
-   * size (approximation is fine).
-   *
-   * <p>All other factors will be calculated based on defaults specified in
-   * this class.
-   *
+   * Default constructor. Specify maximum size and expected average block size (approximation is
+   * fine).
+   * <p>
+   * All other factors will be calculated based on defaults specified in this class.
    * @param maxSize   maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
    */
@@ -329,37 +315,27 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Constructor used for testing.  Allows disabling of the eviction thread.
+   * Constructor used for testing. Allows disabling of the eviction thread.
    */
   public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread) {
-    this(maxSize, blockSize, evictionThread,
-      (int) Math.ceil(1.2 * maxSize / blockSize),
-      DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
-      DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
-      DEFAULT_SINGLE_FACTOR,
-      DEFAULT_MULTI_FACTOR,
-      DEFAULT_MEMORY_FACTOR,
-      DEFAULT_HARD_CAPACITY_LIMIT_FACTOR,
-      false,
-      DEFAULT_MAX_BLOCK_SIZE,
-      DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT,
-      DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
+    this(maxSize, blockSize, evictionThread, (int) Math.ceil(1.2 * maxSize / blockSize),
+      DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL, DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
+      DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR, DEFAULT_MEMORY_FACTOR,
+      DEFAULT_HARD_CAPACITY_LIMIT_FACTOR, false, DEFAULT_MAX_BLOCK_SIZE,
+      DEFAULT_LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT, DEFAULT_LRU_CACHE_HEAVY_EVICTION_MB_SIZE_LIMIT,
       DEFAULT_LRU_CACHE_HEAVY_EVICTION_OVERHEAD_COEFFICIENT);
   }
 
-  public LruAdaptiveBlockCache(long maxSize, long blockSize,
-    boolean evictionThread, Configuration conf) {
-    this(maxSize, blockSize, evictionThread,
-      (int) Math.ceil(1.2 * maxSize / blockSize),
-      DEFAULT_LOAD_FACTOR,
-      DEFAULT_CONCURRENCY_LEVEL,
+  public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread,
+    Configuration conf) {
+    this(maxSize, blockSize, evictionThread, (int) Math.ceil(1.2 * maxSize / blockSize),
+      DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
       conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
       conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
       conf.getFloat(LRU_SINGLE_PERCENTAGE_CONFIG_NAME, DEFAULT_SINGLE_FACTOR),
       conf.getFloat(LRU_MULTI_PERCENTAGE_CONFIG_NAME, DEFAULT_MULTI_FACTOR),
       conf.getFloat(LRU_MEMORY_PERCENTAGE_CONFIG_NAME, DEFAULT_MEMORY_FACTOR),
-      conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
-        DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
+      conf.getFloat(LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME, DEFAULT_HARD_CAPACITY_LIMIT_FACTOR),
       conf.getBoolean(LRU_IN_MEMORY_FORCE_MODE_CONFIG_NAME, DEFAULT_IN_MEMORY_FORCE_MODE),
       conf.getLong(LRU_MAX_BLOCK_SIZE, DEFAULT_MAX_BLOCK_SIZE),
       conf.getInt(LRU_CACHE_HEAVY_EVICTION_COUNT_LIMIT,
@@ -375,38 +351,38 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Configurable constructor.  Use this constructor if not using defaults.
-   *
-   * @param maxSize             maximum size of this cache, in bytes
-   * @param blockSize           expected average size of blocks, in bytes
-   * @param evictionThread      whether to run evictions in a bg thread or not
-   * @param mapInitialSize      initial size of backing ConcurrentHashMap
-   * @param mapLoadFactor       initial load factor of backing ConcurrentHashMap
-   * @param mapConcurrencyLevel initial concurrency factor for backing CHM
-   * @param minFactor           percentage of total size that eviction will evict until
-   * @param acceptableFactor    percentage of total size that triggers eviction
-   * @param singleFactor        percentage of total size for single-access blocks
-   * @param multiFactor         percentage of total size for multiple-access blocks
-   * @param memoryFactor        percentage of total size for in-memory blocks
-   * @param hardLimitFactor     hard capacity limit
-   * @param forceInMemory       in-memory hfile's data block has higher priority when evicting
-   * @param maxBlockSize        maximum block size for caching
-   * @param heavyEvictionCountLimit   when starts AdaptiveLRU algoritm work
-   * @param heavyEvictionMbSizeLimit  how many bytes desirable putting into BlockCache
-   * @param heavyEvictionOverheadCoefficient  how aggressive AdaptiveLRU will reduce GC
+   * Configurable constructor. Use this constructor if not using defaults.
+   * @param maxSize                          maximum size of this cache, in bytes
+   * @param blockSize                        expected average size of blocks, in bytes
+   * @param evictionThread                   whether to run evictions in a bg thread or not
+   * @param mapInitialSize                   initial size of backing ConcurrentHashMap
+   * @param mapLoadFactor                    initial load factor of backing ConcurrentHashMap
+   * @param mapConcurrencyLevel              initial concurrency factor for backing CHM
+   * @param minFactor                        percentage of total size that eviction will evict until
+   * @param acceptableFactor                 percentage of total size that triggers eviction
+   * @param singleFactor                     percentage of total size for single-access blocks
+   * @param multiFactor                      percentage of total size for multiple-access blocks
+   * @param memoryFactor                     percentage of total size for in-memory blocks
+   * @param hardLimitFactor                  hard capacity limit
+   * @param forceInMemory                    in-memory hfile's data block has higher priority when
+   *                                         evicting
+   * @param maxBlockSize                     maximum block size for caching
+   * @param heavyEvictionCountLimit          when starts AdaptiveLRU algoritm work
+   * @param heavyEvictionMbSizeLimit         how many bytes desirable putting into BlockCache
+   * @param heavyEvictionOverheadCoefficient how aggressive AdaptiveLRU will reduce GC
    */
   public LruAdaptiveBlockCache(long maxSize, long blockSize, boolean evictionThread,
-    int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel,
-    float minFactor, float acceptableFactor, float singleFactor,
-    float multiFactor, float memoryFactor, float hardLimitFactor,
-    boolean forceInMemory, long maxBlockSize,
-    int heavyEvictionCountLimit, long heavyEvictionMbSizeLimit,
-    float heavyEvictionOverheadCoefficient) {
+    int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel, float minFactor,
+    float acceptableFactor, float singleFactor, float multiFactor, float memoryFactor,
+    float hardLimitFactor, boolean forceInMemory, long maxBlockSize, int heavyEvictionCountLimit,
+    long heavyEvictionMbSizeLimit, float heavyEvictionOverheadCoefficient) {
     this.maxBlockSize = maxBlockSize;
-    if(singleFactor + multiFactor + memoryFactor != 1 ||
-      singleFactor < 0 || multiFactor < 0 || memoryFactor < 0) {
-      throw new IllegalArgumentException("Single, multi, and memory factors " +
-        " should be non-negative and total 1.0");
+    if (
+      singleFactor + multiFactor + memoryFactor != 1 || singleFactor < 0 || multiFactor < 0
+        || memoryFactor < 0
+    ) {
+      throw new IllegalArgumentException(
+        "Single, multi, and memory factors " + " should be non-negative and total 1.0");
     }
     if (minFactor >= acceptableFactor) {
       throw new IllegalArgumentException("minFactor must be smaller than acceptableFactor");
@@ -446,7 +422,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     heavyEvictionOverheadCoefficient = Math.max(heavyEvictionOverheadCoefficient, 0.001f);
     this.heavyEvictionOverheadCoefficient = heavyEvictionOverheadCoefficient;
 
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
+    // TODO: Add means of turning this off. Bit obnoxious running thread just to make a log
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), STAT_THREAD_PERIOD,
       STAT_THREAD_PERIOD, TimeUnit.SECONDS);
@@ -473,13 +449,13 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * The block cached in LruAdaptiveBlockCache will always be an heap block: on the one side,
-   * the heap access will be more faster then off-heap, the small index block or meta block
-   * cached in CombinedBlockCache will benefit a lot. on other side, the LruAdaptiveBlockCache
-   * size is always calculated based on the total heap size, if caching an off-heap block in
-   * LruAdaptiveBlockCache, the heap size will be messed up. Here we will clone the block into an
-   * heap block if it's an off-heap block, otherwise just use the original block. The key point is
-   * maintain the refCnt of the block (HBASE-22127): <br>
+   * The block cached in LruAdaptiveBlockCache will always be an heap block: on the one side, the
+   * heap access will be more faster then off-heap, the small index block or meta block cached in
+   * CombinedBlockCache will benefit a lot. on other side, the LruAdaptiveBlockCache size is always
+   * calculated based on the total heap size, if caching an off-heap block in LruAdaptiveBlockCache,
+   * the heap size will be messed up. Here we will clone the block into an heap block if it's an
+   * off-heap block, otherwise just use the original block. The key point is maintain the refCnt of
+   * the block (HBASE-22127): <br>
    * 1. if cache the cloned heap block, its refCnt is an totally new one, it's easy to handle; <br>
    * 2. if cache the original heap block, we're sure that it won't be tracked in ByteBuffAllocator's
    * reservoir, if both RPC and LruAdaptiveBlockCache release the block, then it can be garbage
@@ -506,7 +482,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    * <p>
    * It is assumed this will NOT be called on an already cached block. In rare cases (HBASE-8547)
    * this can happen, for which we compare the buffer contents.
-   *
    * @param cacheKey block's cache key
    * @param buf      block buffer
    * @param inMemory if block is in-memory
@@ -531,18 +506,15 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       // big this can make the logs way too noisy.
       // So we log 2%
       if (stats.failInsert() % 50 == 0) {
-        LOG.warn("Trying to cache too large a block "
-          + cacheKey.getHfileName() + " @ "
-          + cacheKey.getOffset()
-          + " is " + buf.heapSize()
-          + " which is larger than " + maxBlockSize);
+        LOG.warn("Trying to cache too large a block " + cacheKey.getHfileName() + " @ "
+          + cacheKey.getOffset() + " is " + buf.heapSize() + " which is larger than "
+          + maxBlockSize);
       }
       return;
     }
 
     LruCachedBlock cb = map.get(cacheKey);
-    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this,
-      cacheKey, buf)) {
+    if (cb != null && !BlockCacheUtil.shouldReplaceExistingCacheBlock(this, cacheKey, buf)) {
       return;
     }
     long currentSize = size.get();
@@ -580,20 +552,20 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Sanity-checking for parity between actual block cache content and metrics.
-   * Intended only for use with TRACE level logging and -ea JVM.
+   * Sanity-checking for parity between actual block cache content and metrics. Intended only for
+   * use with TRACE level logging and -ea JVM.
    */
   private static void assertCounterSanity(long mapSize, long counterVal) {
     if (counterVal < 0) {
-      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal +
-        ", mapSize=" + mapSize);
+      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal
+        + ", mapSize=" + mapSize);
       return;
     }
     if (mapSize < Integer.MAX_VALUE) {
       double pct_diff = Math.abs((((double) counterVal) / ((double) mapSize)) - 1.);
       if (pct_diff > 0.05) {
-        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal +
-          ", mapSize=" + mapSize);
+        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal
+          + ", mapSize=" + mapSize);
       }
     }
   }
@@ -606,7 +578,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    * switch whether make the LRU on-heap or not, if so we may need copy the memory to on-heap,
    * otherwise the caching size is based on off-heap.
    * @param cacheKey block's cache key
-   * @param buf block buffer
+   * @param buf      block buffer
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
@@ -614,9 +586,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Helper function that updates the local size counter and also updates any
-   * per-cf or per-blocktype metrics it can discern from given
-   * {@link LruCachedBlock}
+   * Helper function that updates the local size counter and also updates any per-cf or
+   * per-blocktype metrics it can discern from given {@link LruCachedBlock}
    */
   private long updateSizeMetrics(LruCachedBlock cb, boolean evict) {
     long heapsize = cb.heapSize();
@@ -632,14 +603,11 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   /**
    * Get the buffer of the block with the specified name.
-   *
    * @param cacheKey           block's cache key
    * @param caching            true if the caller caches blocks on cache misses
-   * @param repeat             Whether this is a repeat lookup for the same block
-   *                           (used to avoid double counting cache misses when doing double-check
-   *                           locking)
+   * @param repeat             Whether this is a repeat lookup for the same block (used to avoid
+   *                           double counting cache misses when doing double-check locking)
    * @param updateCacheMetrics Whether to update cache metrics or not
-   *
    * @return buffer of specified cache key, or null if not in cache
    */
   @Override
@@ -682,7 +650,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   /**
    * Whether the cache contains block with specified cacheKey
-   *
    * @return true if contains the block
    */
   @Override
@@ -697,13 +664,11 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Evicts all blocks for a specific HFile. This is an
-   * expensive operation implemented as a linear-time search through all blocks
-   * in the cache. Ideally this should be a search in a log-access-time map.
-   *
+   * Evicts all blocks for a specific HFile. This is an expensive operation implemented as a
+   * linear-time search through all blocks in the cache. Ideally this should be a search in a
+   * log-access-time map.
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
-   *
    * @return the number of blocks evicted
    */
   @Override
@@ -717,11 +682,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Evict the block, and it will be cached by the victim handler if exists &amp;&amp;
-   * block may be read again later
-   *
-   * @param evictedByEvictionProcess true if the given block is evicted by
-   *          EvictionThread
+   * Evict the block, and it will be cached by the victim handler if exists &amp;&amp; block may be
+   * read again later
+   * @param evictedByEvictionProcess true if the given block is evicted by EvictionThread
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
@@ -773,11 +736,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /**
-   * Eviction method.
-   *
-   * Evict items in order of use, allowing delete items
-   * which haven't been used for the longest amount of time.
-   *
+   * Eviction method. Evict items in order of use, allowing delete items which haven't been used for
+   * the longest amount of time.
    * @return how many bytes were freed
    */
   long evict() {
@@ -795,9 +755,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Block cache LRU eviction started; Attempting to free " +
-          StringUtils.byteDesc(bytesToFree) + " of total=" +
-          StringUtils.byteDesc(currentSize));
+        LOG.trace("Block cache LRU eviction started; Attempting to free "
+          + StringUtils.byteDesc(bytesToFree) + " of total=" + StringUtils.byteDesc(currentSize));
       }
 
       if (bytesToFree <= 0) {
@@ -805,12 +764,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       }
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle
-        = new BlockBucket("single", bytesToFree, blockSize, singleSize());
-      BlockBucket bucketMulti
-        = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
-      BlockBucket bucketMemory
-        = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
+      BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize, singleSize());
+      BlockBucket bucketMulti = new BlockBucket("multi", bytesToFree, blockSize, multiSize());
+      BlockBucket bucketMemory = new BlockBucket("memory", bytesToFree, blockSize, memorySize());
 
       // Scan entire map putting into appropriate buckets
       for (LruCachedBlock cachedBlock : map.values()) {
@@ -840,13 +796,13 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
           bytesFreed = bucketSingle.free(s);
           bytesFreed += bucketMulti.free(m);
           if (LOG.isTraceEnabled()) {
-            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
-              " from single and multi buckets");
+            LOG.trace(
+              "freed " + StringUtils.byteDesc(bytesFreed) + " from single and multi buckets");
           }
           bytesFreed += bucketMemory.free(bytesToFree - bytesFreed);
           if (LOG.isTraceEnabled()) {
-            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
-              " total from all three buckets ");
+            LOG.trace(
+              "freed " + StringUtils.byteDesc(bytesFreed) + " total from all three buckets ");
           }
         } else {
           // this means no need to evict block in memory bucket,
@@ -893,12 +849,11 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         long single = bucketSingle.totalSize();
         long multi = bucketMulti.totalSize();
         long memory = bucketMemory.totalSize();
-        LOG.trace("Block cache LRU eviction completed; " +
-          "freed=" + StringUtils.byteDesc(bytesFreed) + ", " +
-          "total=" + StringUtils.byteDesc(this.size.get()) + ", " +
-          "single=" + StringUtils.byteDesc(single) + ", " +
-          "multi=" + StringUtils.byteDesc(multi) + ", " +
-          "memory=" + StringUtils.byteDesc(memory));
+        LOG.trace(
+          "Block cache LRU eviction completed; " + "freed=" + StringUtils.byteDesc(bytesFreed)
+            + ", " + "total=" + StringUtils.byteDesc(this.size.get()) + ", " + "single="
+            + StringUtils.byteDesc(single) + ", " + "multi=" + StringUtils.byteDesc(multi) + ", "
+            + "memory=" + StringUtils.byteDesc(memory));
       }
     } finally {
       stats.evict();
@@ -910,26 +865,21 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-      .add("blockCount", getBlockCount())
+    return MoreObjects.toStringHelper(this).add("blockCount", getBlockCount())
       .add("currentSize", StringUtils.byteDesc(getCurrentSize()))
       .add("freeSize", StringUtils.byteDesc(getFreeSize()))
       .add("maxSize", StringUtils.byteDesc(getMaxSize()))
       .add("heapSize", StringUtils.byteDesc(heapSize()))
-      .add("minSize", StringUtils.byteDesc(minSize()))
-      .add("minFactor", minFactor)
-      .add("multiSize", StringUtils.byteDesc(multiSize()))
-      .add("multiFactor", multiFactor)
-      .add("singleSize", StringUtils.byteDesc(singleSize()))
-      .add("singleFactor", singleFactor)
+      .add("minSize", StringUtils.byteDesc(minSize())).add("minFactor", minFactor)
+      .add("multiSize", StringUtils.byteDesc(multiSize())).add("multiFactor", multiFactor)
+      .add("singleSize", StringUtils.byteDesc(singleSize())).add("singleFactor", singleFactor)
       .toString();
   }
 
   /**
-   * Used to group blocks into priority buckets.  There will be a BlockBucket
-   * for each priority (single, multi, memory).  Once bucketed, the eviction
-   * algorithm takes the appropriate number of elements out of each according
-   * to configuration parameters and their relatives sizes.
+   * Used to group blocks into priority buckets. There will be a BlockBucket for each priority
+   * (single, multi, memory). Once bucketed, the eviction algorithm takes the appropriate number of
+   * elements out of each according to configuration parameters and their relatives sizes.
    */
   private class BlockBucket implements Comparable<BlockBucket> {
 
@@ -986,7 +936,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       if (!(that instanceof BlockBucket)) {
         return false;
       }
-      return compareTo((BlockBucket)that) == 0;
+      return compareTo((BlockBucket) that) == 0;
     }
 
     @Override
@@ -996,17 +946,14 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this)
-        .add("name", name)
+      return MoreObjects.toStringHelper(this).add("name", name)
         .add("totalSize", StringUtils.byteDesc(totalSize))
-        .add("bucketSize", StringUtils.byteDesc(bucketSize))
-        .toString();
+        .add("bucketSize", StringUtils.byteDesc(bucketSize)).toString();
     }
   }
 
   /**
    * Get the maximum size of this cache.
-   *
    * @return max size in bytes
    */
 
@@ -1050,10 +997,9 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /*
-   * Eviction thread.  Sits in waiting state until an eviction is triggered
-   * when the cache size grows above the acceptable level.<p>
-   *
-   * Thread is triggered into action by {@link LruAdaptiveBlockCache#runEviction()}
+   * Eviction thread. Sits in waiting state until an eviction is triggered when the cache size grows
+   * above the acceptable level.<p> Thread is triggered into action by {@link
+   * LruAdaptiveBlockCache#runEviction()}
    */
   static class EvictionThread extends Thread {
 
@@ -1078,7 +1024,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       while (this.go) {
         synchronized (this) {
           try {
-            this.wait(1000 * 10/*Don't wait for ever*/);
+            this.wait(1000 * 10/* Don't wait for ever */);
           } catch (InterruptedException e) {
             LOG.warn("Interrupted eviction thread ", e);
             Thread.currentThread().interrupt();
@@ -1088,18 +1034,15 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
         if (cache == null) {
           break;
         }
-        freedSumMb += cache.evict()/1024/1024;
+        freedSumMb += cache.evict() / 1024 / 1024;
         /*
-         * Sometimes we are reading more data than can fit into BlockCache
-         * and it is the cause a high rate of evictions.
-         * This in turn leads to heavy Garbage Collector works.
-         * So a lot of blocks put into BlockCache but never read,
-         * but spending a lot of CPU resources.
-         * Here we will analyze how many bytes were freed and decide
-         * decide whether the time has come to reduce amount of caching blocks.
-         * It help avoid put too many blocks into BlockCache
-         * when evict() works very active and save CPU for other jobs.
-         * More delails: https://issues.apache.org/jira/browse/HBASE-23887
+         * Sometimes we are reading more data than can fit into BlockCache and it is the cause a
+         * high rate of evictions. This in turn leads to heavy Garbage Collector works. So a lot of
+         * blocks put into BlockCache but never read, but spending a lot of CPU resources. Here we
+         * will analyze how many bytes were freed and decide decide whether the time has come to
+         * reduce amount of caching blocks. It help avoid put too many blocks into BlockCache when
+         * evict() works very active and save CPU for other jobs. More delails:
+         * https://issues.apache.org/jira/browse/HBASE-23887
          */
 
         // First of all we have to control how much time
@@ -1164,11 +1107,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
               cache.cacheDataBlockPercent = 100;
             }
           }
-          LOG.info("BlockCache evicted (MB): {}, overhead (%): {}, " +
-              "heavy eviction counter: {}, " +
-              "current caching DataBlock (%): {}",
-            freedSumMb, freedDataOverheadPercent,
-            heavyEvictionCount, cache.cacheDataBlockPercent);
+          LOG.info(
+            "BlockCache evicted (MB): {}, overhead (%): {}, " + "heavy eviction counter: {}, "
+              + "current caching DataBlock (%): {}",
+            freedSumMb, freedDataOverheadPercent, heavyEvictionCount, cache.cacheDataBlockPercent);
 
           freedSumMb = 0;
           startTime = stopTime;
@@ -1176,8 +1118,8 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
       }
     }
 
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
-      justification="This is what we want")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NN_NAKED_NOTIFY",
+        justification = "This is what we want")
     public void evict() {
       synchronized (this) {
         this.notifyAll();
@@ -1198,7 +1140,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   }
 
   /*
-   * Statistics thread.  Periodically prints the cache statistics to the log.
+   * Statistics thread. Periodically prints the cache statistics to the log.
    */
   static class StatisticsThread extends Thread {
 
@@ -1220,28 +1162,27 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    LruAdaptiveBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
-      "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
-      "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
-      "blockCount=" + getBlockCount() + ", " +
-      "accesses=" + stats.getRequestCount() + ", " +
-      "hits=" + stats.getHitCount() + ", " +
-      "hitRatio=" + (stats.getHitCount() == 0 ?
-      "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
-      "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
-      "cachingHits=" + stats.getHitCachingCount() + ", " +
-      "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
-      "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
-      "evictions=" + stats.getEvictionCount() + ", " +
-      "evicted=" + stats.getEvictedCount() + ", " +
-      "evictedPerRun=" + stats.evictedPerEviction());
+    LruAdaptiveBlockCache.LOG
+      .info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " + "freeSize="
+        + StringUtils.byteDesc(freeSize) + ", " + "max=" + StringUtils.byteDesc(this.maxSize) + ", "
+        + "blockCount=" + getBlockCount() + ", " + "accesses=" + stats.getRequestCount() + ", "
+        + "hits=" + stats.getHitCount() + ", " + "hitRatio="
+        + (stats.getHitCount() == 0
+          ? "0"
+          : (StringUtils.formatPercent(stats.getHitRatio(), 2) + ", "))
+        + ", " + "cachingAccesses=" + stats.getRequestCachingCount() + ", " + "cachingHits="
+        + stats.getHitCachingCount() + ", " + "cachingHitsRatio="
+        + (stats.getHitCachingCount() == 0
+          ? "0,"
+          : (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", "))
+        + "evictions=" + stats.getEvictionCount() + ", " + "evicted=" + stats.getEvictedCount()
+        + ", " + "evictedPerRun=" + stats.evictedPerEviction());
   }
 
   /**
    * Get counter statistics for this cache.
-   *
-   * <p>Includes: total accesses, hits, misses, evicted blocks, and runs
-   * of the eviction processes.
+   * <p>
+   * Includes: total accesses, hits, misses, evicted blocks, and runs of the eviction processes.
    */
   @Override
   public CacheStats getStats() {
@@ -1338,7 +1279,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
           @Override
           public boolean equals(Object obj) {
             if (obj instanceof CachedBlock) {
-              CachedBlock cb = (CachedBlock)obj;
+              CachedBlock cb = (CachedBlock) obj;
               return compareTo(cb) == 0;
             } else {
               return false;
@@ -1357,17 +1298,21 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   // Simple calculators of sizes given factors and maxSize
 
   long acceptableSize() {
-    return (long)Math.floor(this.maxSize * this.acceptableFactor);
+    return (long) Math.floor(this.maxSize * this.acceptableFactor);
   }
+
   private long minSize() {
-    return (long)Math.floor(this.maxSize * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.minFactor);
   }
+
   private long singleSize() {
-    return (long)Math.floor(this.maxSize * this.singleFactor * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.singleFactor * this.minFactor);
   }
+
   private long multiSize() {
-    return (long)Math.floor(this.maxSize * this.multiFactor * this.minFactor);
+    return (long) Math.floor(this.maxSize * this.multiFactor * this.minFactor);
   }
+
   private long memorySize() {
     return (long) Math.floor(this.maxSize * this.memoryFactor * this.minFactor);
   }

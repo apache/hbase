@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,15 +43,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationSourceInterface {
   /**
    * Initializer for the source
-   * @param conf the configuration to use
-   * @param fs the file system to use
+   * @param conf    the configuration to use
+   * @param fs      the file system to use
    * @param manager the manager to use
-   * @param server the server for this region server
+   * @param server  the server for this region server
    */
   void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException;
+    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+    String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
@@ -63,13 +62,13 @@ public interface ReplicationSourceInterface {
   /**
    * Add hfile names to the queue to be replicated.
    * @param tableName Name of the table these files belongs to
-   * @param family Name of the family these files belong to
-   * @param pairs list of pairs of { HFile location in staging dir, HFile path in region dir which
-   *          will be added in the queue for replication}
+   * @param family    Name of the family these files belong to
+   * @param pairs     list of pairs of { HFile location in staging dir, HFile path in region dir
+   *                  which will be added in the queue for replication}
    * @throws ReplicationException If failed to add hfile references
    */
   void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-      throws ReplicationException;
+    throws ReplicationException;
 
   /**
    * Start the replication
@@ -85,14 +84,14 @@ public interface ReplicationSourceInterface {
   /**
    * End the replication
    * @param reason why it's terminating
-   * @param cause the error that's causing it
+   * @param cause  the error that's causing it
    */
   void terminate(String reason, Exception cause);
 
   /**
    * End the replication
-   * @param reason why it's terminating
-   * @param cause the error that's causing it
+   * @param reason       why it's terminating
+   * @param cause        the error that's causing it
    * @param clearMetrics removes all metrics about this Source
    */
   void terminate(String reason, Exception cause, boolean clearMetrics);
@@ -105,21 +104,18 @@ public interface ReplicationSourceInterface {
 
   /**
    * Get the queue id that the source is replicating to
-   *
    * @return queue id
    */
   String getQueueId();
 
   /**
    * Get the id that the source is replicating to.
-   *
    * @return peer id
    */
   String getPeerId();
 
   /**
-   * Get a string representation of the current statistics
-   * for this source
+   * Get a string representation of the current statistics for this source
    * @return printable stats
    */
   String getStats();
@@ -162,7 +158,7 @@ public interface ReplicationSourceInterface {
 
   /**
    * Call this after the shipper thread ship some entries to peer cluster.
-   * @param entries pushed
+   * @param entries   pushed
    * @param batchSize entries size pushed
    */
   void postShipEdits(List<Entry> entries, int batchSize);
@@ -195,10 +191,10 @@ public interface ReplicationSourceInterface {
   ReplicationQueueStorage getReplicationQueueStorage();
 
   /**
-   * Log the current position to storage. Also clean old logs from the replication queue.
-   * Use to bypass the default call to
-   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface,
-   * WALEntryBatch)} whem implementation does not need to persist state to backing storage.
+   * Log the current position to storage. Also clean old logs from the replication queue. Use to
+   * bypass the default call to
+   * {@link ReplicationSourceManager#logPositionAndCleanOldLogs(ReplicationSourceInterface, WALEntryBatch)}
+   * whem implementation does not need to persist state to backing storage.
    * @param entryBatch the wal entry batch we just shipped
    * @return The instance of queueStorage used by this ReplicationSource.
    */

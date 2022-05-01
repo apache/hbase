@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCompoundConfiguration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompoundConfiguration.class);
+    HBaseClassTestRule.forClass(TestCompoundConfiguration.class);
 
   private Configuration baseConf;
   private int baseConfSize;
@@ -53,15 +53,14 @@ public class TestCompoundConfiguration {
 
   @Test
   public void testBasicFunctionality() throws ClassNotFoundException {
-    CompoundConfiguration compoundConf = new CompoundConfiguration()
-        .add(baseConf);
+    CompoundConfiguration compoundConf = new CompoundConfiguration().add(baseConf);
     assertEquals("1", compoundConf.get("A"));
     assertEquals(2, compoundConf.getInt("B", 0));
     assertEquals(3, compoundConf.getInt("C", 0));
     assertEquals(0, compoundConf.getInt("D", 0));
 
-    assertEquals(CompoundConfiguration.class, compoundConf
-        .getClassByName(CompoundConfiguration.class.getName()));
+    assertEquals(CompoundConfiguration.class,
+      compoundConf.getClassByName(CompoundConfiguration.class.getName()));
     try {
       compoundConf.getClassByName("bad_class_name");
       fail("Trying to load bad_class_name should throw an exception");
@@ -72,8 +71,7 @@ public class TestCompoundConfiguration {
 
   @Test
   public void testPut() {
-    CompoundConfiguration compoundConf = new CompoundConfiguration()
-      .add(baseConf);
+    CompoundConfiguration compoundConf = new CompoundConfiguration().add(baseConf);
     assertEquals("1", compoundConf.get("A"));
     assertEquals(2, compoundConf.getInt("B", 0));
     assertEquals(3, compoundConf.getInt("C", 0));
@@ -100,9 +98,7 @@ public class TestCompoundConfiguration {
     conf.set("C", "33");
     conf.set("D", "4");
 
-    CompoundConfiguration compoundConf = new CompoundConfiguration()
-        .add(baseConf)
-        .add(conf);
+    CompoundConfiguration compoundConf = new CompoundConfiguration().add(baseConf).add(conf);
     assertEquals("1", compoundConf.get("A"));
     assertEquals("2b", compoundConf.get("B"));
     assertEquals(33, compoundConf.getInt("C", 0));
@@ -112,7 +108,7 @@ public class TestCompoundConfiguration {
     assertEquals(6, compoundConf.getInt("F", 6));
 
     int cnt = 0;
-    for (Map.Entry<String,String> entry : compoundConf) {
+    for (Map.Entry<String, String> entry : compoundConf) {
       cnt++;
       if (entry.getKey().equals("B")) {
         assertEquals("2b", entry.getValue());
@@ -137,9 +133,7 @@ public class TestCompoundConfiguration {
     // unlike config, note that IBW Maps can accept null values
     map.put(strToIb("G"), null);
 
-    CompoundConfiguration compoundConf = new CompoundConfiguration()
-      .add(baseConf)
-      .addBytesMap(map);
+    CompoundConfiguration compoundConf = new CompoundConfiguration().add(baseConf).addBytesMap(map);
     assertEquals("1", compoundConf.get("A"));
     assertEquals("2b", compoundConf.get("B"));
     assertEquals(33, compoundConf.getInt("C", 0));
@@ -150,7 +144,7 @@ public class TestCompoundConfiguration {
     assertNull(compoundConf.get("G"));
 
     int cnt = 0;
-    for (Map.Entry<String,String> entry : compoundConf) {
+    for (Map.Entry<String, String> entry : compoundConf) {
       cnt++;
       if (entry.getKey().equals("B")) {
         assertEquals("2b", entry.getValue());
@@ -190,7 +184,7 @@ public class TestCompoundConfiguration {
     assertNull(compoundConf.get("G"));
 
     int cnt = 0;
-    for (Map.Entry<String,String> entry : compoundConf) {
+    for (Map.Entry<String, String> entry : compoundConf) {
       cnt++;
       if (entry.getKey().equals("B")) {
         assertEquals("2b", entry.getValue());
@@ -221,8 +215,8 @@ public class TestCompoundConfiguration {
     map2.put("A", newValueForA);
     map2.put("B", newValueForB);
 
-    CompoundConfiguration compoundConf = new CompoundConfiguration()
-      .addStringMap(map1).add(baseConf);
+    CompoundConfiguration compoundConf =
+      new CompoundConfiguration().addStringMap(map1).add(baseConf);
     assertEquals("1", compoundConf.get("A"));
     assertEquals("5", compoundConf.get("D"));
     compoundConf.addStringMap(map2);
@@ -231,7 +225,7 @@ public class TestCompoundConfiguration {
     assertEquals("5", compoundConf.get("D"));
 
     int cnt = 0;
-    for (Map.Entry<String,String> entry : compoundConf) {
+    for (Map.Entry<String, String> entry : compoundConf) {
       cnt++;
       if (entry.getKey().equals("A")) {
         assertEquals(newValueForA, entry.getValue());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,14 +49,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestAccessControlFilter extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAccessControlFilter.class);
+    HBaseClassTestRule.forClass(TestAccessControlFilter.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
 
   private static User READER;
@@ -69,7 +70,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
   private static byte[] PUBLIC_COL = Bytes.toBytes("public");
 
   @Before
-  public void setup () {
+  public void setup() {
     TABLE = TableName.valueOf(name.getMethodName());
   }
 
@@ -117,7 +118,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
     // put some test data
     List<Put> puts = new ArrayList<>(100);
-    for (int i=0; i<100; i++) {
+    for (int i = 0; i < 100; i++) {
       Put p = new Put(Bytes.toBytes(i));
       p.addColumn(FAMILY, PRIVATE_COL, Bytes.toBytes("secret " + i));
       p.addColumn(FAMILY, PUBLIC_COL, Bytes.toBytes("info " + i));
@@ -141,9 +142,9 @@ public class TestAccessControlFilter extends SecureTestUtil {
             rowcnt++;
             int rownum = Bytes.toInt(r.getRow());
             assertTrue(r.containsColumn(FAMILY, PRIVATE_COL));
-            assertEquals("secret "+rownum, Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
+            assertEquals("secret " + rownum, Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
             assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
-            assertEquals("info "+rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+            assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
           }
           assertEquals("Expected 100 rows returned", 100, rowcnt);
           return null;
@@ -183,7 +184,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     });
 
     // test as user with no permission
-    DENIED.runAs(new PrivilegedExceptionAction<Object>(){
+    DENIED.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());

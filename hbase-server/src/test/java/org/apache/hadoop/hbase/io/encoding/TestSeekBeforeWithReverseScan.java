@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestSeekBeforeWithReverseScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSeekBeforeWithReverseScan.class);
+    HBaseClassTestRule.forClass(TestSeekBeforeWithReverseScan.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
@@ -104,11 +104,11 @@ public class TestSeekBeforeWithReverseScan {
       count++;
     }
     assertEquals("b", Bytes.toString(res.get(0).getRowArray(), res.get(0).getRowOffset(),
-        res.get(0).getRowLength()));
+      res.get(0).getRowLength()));
     assertEquals("ab", Bytes.toString(res.get(1).getRowArray(), res.get(1).getRowOffset(),
-        res.get(1).getRowLength()));
+      res.get(1).getRowLength()));
     assertEquals("a", Bytes.toString(res.get(2).getRowArray(), res.get(2).getRowOffset(),
-        res.get(2).getRowLength()));
+      res.get(2).getRowLength()));
     assertEquals(3, count);
   }
 

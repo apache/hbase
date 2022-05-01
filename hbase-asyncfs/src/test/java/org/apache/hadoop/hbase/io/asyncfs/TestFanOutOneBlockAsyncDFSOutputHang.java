@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +40,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -63,10 +64,10 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutputHang.class);
+    HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutputHang.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutputHang.class);
+    LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutputHang.class);
 
   private static DistributedFileSystem FS;
 

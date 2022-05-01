@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,21 +41,21 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFilePrettyPrinter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFilePrettyPrinter.class);
+    HBaseClassTestRule.forClass(TestHFilePrettyPrinter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFilePrettyPrinter.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static FileSystem fs;
   private static Configuration conf;
-  private static byte [] cf = Bytes.toBytes("cf");
-  private static byte [] fam = Bytes.toBytes("fam");
-  private static byte [] value = Bytes.toBytes("val");
+  private static byte[] cf = Bytes.toBytes("cf");
+  private static byte[] fam = Bytes.toBytes("fam");
+  private static byte[] value = Bytes.toBytes("val");
   private static PrintStream original;
   private static PrintStream ps;
   private static ByteArrayOutputStream stream;
@@ -78,13 +78,13 @@ public class TestHFilePrettyPrinter {
 
   @Test
   public void testHFilePrettyPrinterNonRootDir() throws Exception {
-    Path fileNotInRootDir =  UTIL.getDataTestDir("hfile");
+    Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
-    assertNotEquals("directory used is not an HBase root dir",
-      UTIL.getDefaultRootDirPath(), fileNotInRootDir);
+    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
+      fileNotInRootDir);
 
     System.setOut(ps);
-    new HFilePrettyPrinter(conf).run(new String[]{"-v", String.valueOf(fileNotInRootDir)});
+    new HFilePrettyPrinter(conf).run(new String[] { "-v", String.valueOf(fileNotInRootDir) });
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1000\n";
     assertEquals(expectedResult, result);
@@ -96,14 +96,13 @@ public class TestHFilePrettyPrinter {
     String rootString = rootPath + rootPath.SEPARATOR;
     Path fileInRootDir = new Path(rootString + "hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileInRootDir, cf, fam, value, 1000);
-    assertTrue("directory used is a root dir",
-      fileInRootDir.toString().startsWith(rootString));
+    assertTrue("directory used is a root dir", fileInRootDir.toString().startsWith(rootString));
 
     System.setOut(ps);
     HFilePrettyPrinter printer = new HFilePrettyPrinter();
     printer.setConf(conf);
     printer.processFile(fileInRootDir, true);
-    printer.run(new String[]{"-v", String.valueOf(fileInRootDir)});
+    printer.run(new String[] { "-v", String.valueOf(fileInRootDir) });
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileInRootDir + "\n" + "Scanned kv count -> 1000\n";
     assertEquals(expectedResult, result);
@@ -117,12 +116,12 @@ public class TestHFilePrettyPrinter {
       fileNotInRootDir);
 
     HFile.Reader reader =
-        HFile.createReader(fs, fileNotInRootDir, CacheConfig.DISABLED, true, conf);
+      HFile.createReader(fs, fileNotInRootDir, CacheConfig.DISABLED, true, conf);
     String firstRowKey = new String(reader.getFirstRowKey().get());
 
     System.setOut(ps);
     new HFilePrettyPrinter(conf)
-        .run(new String[] { "-v", "-w" + firstRowKey, String.valueOf(fileNotInRootDir) });
+      .run(new String[] { "-v", "-w" + firstRowKey, String.valueOf(fileNotInRootDir) });
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
     assertEquals(expectedResult, result);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,7 +70,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationSmallTests.class);
+    HBaseClassTestRule.forClass(TestReplicationSmallTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSmallTests.class);
   private static final String PEER_ID = "2";
@@ -265,7 +265,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
       }
     }
     ReplicationPeerConfig rpc =
-        ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey()).build();
     hbaseAdmin.addReplicationPeer(PEER_ID, rpc);
     Thread.sleep(SLEEP_TIME);
     rowKey = Bytes.toBytes("do rep");
@@ -337,7 +337,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
           }
           LOG.error("Last row: " + lastRow);
           fail("Waited too much time for normal batch replication, " + res.length + " instead of "
-              + NB_ROWS_IN_BIG_BATCH + "; waited=" + (System.currentTimeMillis() - start) + "ms");
+            + NB_ROWS_IN_BIG_BATCH + "; waited=" + (System.currentTimeMillis() - start) + "ms");
         } else {
           LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);
@@ -367,10 +367,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {
-      hadmin.createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(tName + i))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(colFam))
-              .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-          .build());
+      hadmin.createTable(TableDescriptorBuilder
+        .newBuilder(TableName.valueOf(tName + i)).setColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder(Bytes.toBytes(colFam)).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .build());
     }
 
     // verify the result

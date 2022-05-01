@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test {@link CommonFSUtils}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCommonFSUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCommonFSUtils.class);
+    HBaseClassTestRule.forClass(TestCommonFSUtils.class);
 
   private HBaseCommonTestingUtility htu;
   private Configuration conf;
@@ -80,10 +80,9 @@ public class TestCommonFSUtils {
     assertFalse(CommonFSUtils.isMatchingTail(new Path("x"), fullPath));
   }
 
-  private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize)
-    throws Exception {
+  private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize) throws Exception {
     FSDataOutputStream out = fs.create(file);
-    byte [] data = new byte[dataSize];
+    byte[] data = new byte[dataSize];
     out.write(data, 0, dataSize);
     out.close();
   }
@@ -122,7 +121,7 @@ public class TestCommonFSUtils {
     assertEquals(walRoot, CommonFSUtils.getWALRootDir(conf));
   }
 
-  @Test(expected=IllegalStateException.class)
+  @Test(expected = IllegalStateException.class)
   public void testGetWALRootDirIllegalWALDir() throws IOException {
     Path root = new Path("file:///hbase/root");
     Path invalidWALDir = new Path("file:///hbase/root/logroot");

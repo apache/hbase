@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
-
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * FilterListWithOR represents an ordered list of filters which will be evaluated with an OR
@@ -82,39 +79,40 @@ public class FilterListWithOR extends FilterListBase {
    * next family for RegionScanner, INCLUDE_AND_NEXT_ROW is the same. so we should pass current cell
    * to the filter, if row mismatch or row match but column family mismatch. (HBASE-18368)
    * @see org.apache.hadoop.hbase.filter.Filter.ReturnCode
-   * @param subFilter which sub-filter to calculate the return code by using previous cell and
-   *          previous return code.
-   * @param prevCell the previous cell passed to given sub-filter.
+   * @param subFilter   which sub-filter to calculate the return code by using previous cell and
+   *                    previous return code.
+   * @param prevCell    the previous cell passed to given sub-filter.
    * @param currentCell the current cell which will pass to given sub-filter.
-   * @param prevCode the previous return code for given sub-filter.
+   * @param prevCode    the previous return code for given sub-filter.
    * @return return code calculated by using previous cell and previous return code. null means can
    *         not decide which return code should return, so we will pass the currentCell to
    *         subFilter for getting currentCell's return code, and it won't impact the sub-filter's
    *         internal states.
    */
   private ReturnCode calculateReturnCodeByPrevCellAndRC(Filter subFilter, Cell currentCell,
-      Cell prevCell, ReturnCode prevCode) throws IOException {
+    Cell prevCell, ReturnCode prevCode) throws IOException {
     if (prevCell == null || prevCode == null) {
       return null;
     }
     switch (prevCode) {
-    case INCLUDE:
-    case SKIP:
+      case INCLUDE:
+      case SKIP:
         return null;
-    case SEEK_NEXT_USING_HINT:
+      case SEEK_NEXT_USING_HINT:
         Cell nextHintCell = subFilter.getNextCellHint(prevCell);
         return nextHintCell != null && compareCell(currentCell, nextHintCell) < 0
-          ? ReturnCode.SEEK_NEXT_USING_HINT : null;
-    case NEXT_COL:
-    case INCLUDE_AND_NEXT_COL:
+          ? ReturnCode.SEEK_NEXT_USING_HINT
+          : null;
+      case NEXT_COL:
+      case INCLUDE_AND_NEXT_COL:
         // Once row changed, reset() will clear prevCells, so we need not to compare their rows
         // because rows are the same here.
         return CellUtil.matchingColumn(prevCell, currentCell) ? ReturnCode.NEXT_COL : null;
-    case NEXT_ROW:
-    case INCLUDE_AND_SEEK_NEXT_ROW:
+      case NEXT_ROW:
+      case INCLUDE_AND_SEEK_NEXT_ROW:
         // As described above, rows are definitely the same, so we only compare the family.
         return CellUtil.matchingFamily(prevCell, currentCell) ? ReturnCode.NEXT_ROW : null;
-    default:
+      default:
         throw new IllegalStateException("Received code is not valid.");
     }
   }
@@ -129,7 +127,8 @@ public class FilterListWithOR extends FilterListBase {
    * The jump step will be:
    *
    * <pre>
-   * INCLUDE &lt; SKIP &lt; INCLUDE_AND_NEXT_COL &lt; NEXT_COL &lt; INCLUDE_AND_SEEK_NEXT_ROW &lt; NEXT_ROW &lt; SEEK_NEXT_USING_HINT
+   * INCLUDE &lt; SKIP &lt; INCLUDE_AND_NEXT_COL &lt; NEXT_COL &lt; INCLUDE_AND_SEEK_NEXT_ROW &lt; NEXT_ROW
+   *     &lt; SEEK_NEXT_USING_HINT
    * </pre>
    *
    * Here, we have the following map to describe The Minimal Step Rule. if current return code (for
@@ -148,7 +147,7 @@ public class FilterListWithOR extends FilterListBase {
    * SEEK_NEXT_USING_HINT       INCLUDE INCLUDE                  INCLUDE                    SKIP      SKIP                  SKIP                      SEEK_NEXT_USING_HINT
    * </pre>
    *
-   * @param rc Return code which is calculated by previous sub-filter(s) in filter list.
+   * @param rc      Return code which is calculated by previous sub-filter(s) in filter list.
    * @param localRC Return code of the current sub-filter in filter list.
    * @return Return code which is merged by the return code of previous sub-filter(s) and the return
    *         code of current sub-filter.
@@ -156,90 +155,101 @@ public class FilterListWithOR extends FilterListBase {
   private ReturnCode mergeReturnCode(ReturnCode rc, ReturnCode localRC) {
     if (rc == null) return localRC;
     switch (localRC) {
-    case INCLUDE:
-      return ReturnCode.INCLUDE;
-    case INCLUDE_AND_NEXT_COL:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP,
-        ReturnCode.SEEK_NEXT_USING_HINT)) {
+      case INCLUDE:
         return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW,
-        ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_NEXT_COL;
-      }
-      break;
-    case INCLUDE_AND_SEEK_NEXT_ROW:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP,
-        ReturnCode.SEEK_NEXT_USING_HINT)) {
-        return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.NEXT_COL)) {
-        return ReturnCode.INCLUDE_AND_NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
-      }
-      break;
-    case SKIP:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW,
-        ReturnCode.SEEK_NEXT_USING_HINT)) {
-        return ReturnCode.SKIP;
-      }
-      break;
-    case NEXT_COL:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE)) {
-        return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)) {
-        return ReturnCode.SKIP;
-      }
-      break;
-    case NEXT_ROW:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE)) {
-        return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL)) {
-        return ReturnCode.INCLUDE_AND_NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)) {
-        return ReturnCode.SKIP;
-      }
-      if (isInReturnCodes(rc, ReturnCode.NEXT_COL)) {
-        return ReturnCode.NEXT_COL;
-      }
-      if (isInReturnCodes(rc, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.NEXT_ROW;
-      }
-      break;
-    case SEEK_NEXT_USING_HINT:
-      if (isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
-        return ReturnCode.INCLUDE;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
-        return ReturnCode.SKIP;
-      }
-      if (isInReturnCodes(rc, ReturnCode.SEEK_NEXT_USING_HINT)) {
-        return ReturnCode.SEEK_NEXT_USING_HINT;
-      }
-      break;
+      case INCLUDE_AND_NEXT_COL:
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)
+        ) {
+          return ReturnCode.INCLUDE;
+        }
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW,
+            ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)
+        ) {
+          return ReturnCode.INCLUDE_AND_NEXT_COL;
+        }
+        break;
+      case INCLUDE_AND_SEEK_NEXT_ROW:
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)
+        ) {
+          return ReturnCode.INCLUDE;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.NEXT_COL)) {
+          return ReturnCode.INCLUDE_AND_NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        }
+        break;
+      case SKIP:
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
+            ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)
+        ) {
+          return ReturnCode.INCLUDE;
+        }
+        if (
+          isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW,
+            ReturnCode.SEEK_NEXT_USING_HINT)
+        ) {
+          return ReturnCode.SKIP;
+        }
+        break;
+      case NEXT_COL:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE)) {
+          return ReturnCode.INCLUDE;
+        }
+        if (isInReturnCodes(rc, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_COL;
+        }
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)
+        ) {
+          return ReturnCode.INCLUDE_AND_NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)) {
+          return ReturnCode.SKIP;
+        }
+        break;
+      case NEXT_ROW:
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE)) {
+          return ReturnCode.INCLUDE;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_NEXT_COL)) {
+          return ReturnCode.INCLUDE_AND_NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+          return ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.SEEK_NEXT_USING_HINT)) {
+          return ReturnCode.SKIP;
+        }
+        if (isInReturnCodes(rc, ReturnCode.NEXT_COL)) {
+          return ReturnCode.NEXT_COL;
+        }
+        if (isInReturnCodes(rc, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.NEXT_ROW;
+        }
+        break;
+      case SEEK_NEXT_USING_HINT:
+        if (
+          isInReturnCodes(rc, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
+            ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)
+        ) {
+          return ReturnCode.INCLUDE;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SKIP, ReturnCode.NEXT_COL, ReturnCode.NEXT_ROW)) {
+          return ReturnCode.SKIP;
+        }
+        if (isInReturnCodes(rc, ReturnCode.SEEK_NEXT_USING_HINT)) {
+          return ReturnCode.SEEK_NEXT_USING_HINT;
+        }
+        break;
     }
     throw new IllegalStateException(
-        "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
+      "Received code is not valid. rc: " + rc + ", localRC: " + localRC);
   }
 
   private void updatePrevFilterRCList(int index, ReturnCode currentRC) {
@@ -287,8 +297,10 @@ public class FilterListWithOR extends FilterListBase {
       rc = mergeReturnCode(rc, localRC);
 
       // For INCLUDE* case, we need to update the transformed cell.
-      if (isInReturnCodes(localRC, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
-        ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+      if (
+        isInReturnCodes(localRC, ReturnCode.INCLUDE, ReturnCode.INCLUDE_AND_NEXT_COL,
+          ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW)
+      ) {
         subFiltersIncludedCell.set(i, true);
       }
     }
@@ -395,7 +407,6 @@ public class FilterListWithOR extends FilterListBase {
     return minKeyHint;
   }
 
-
   @Override
   public boolean equals(Object obj) {
     if (obj == null || (!(obj instanceof FilterListWithOR))) {
@@ -405,9 +416,8 @@ public class FilterListWithOR extends FilterListBase {
       return true;
     }
     FilterListWithOR f = (FilterListWithOR) obj;
-    return this.filters.equals(f.getFilters()) &&
-      this.prevFilterRCList.equals(f.prevFilterRCList) &&
-      this.prevCellList.equals(f.prevCellList);
+    return this.filters.equals(f.getFilters()) && this.prevFilterRCList.equals(f.prevFilterRCList)
+      && this.prevCellList.equals(f.prevCellList);
   }
 
   @Override

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A builder that helps in building up the HFileContext 
+ * A builder that helps in building up the HFileContext
  */
 @InterfaceAudience.Private
 public class HFileContextBuilder {
@@ -59,7 +59,8 @@ public class HFileContextBuilder {
   private byte[] tableName = null;
   private CellComparator cellComparator;
 
-  public HFileContextBuilder() {}
+  public HFileContextBuilder() {
+  }
 
   /**
    * Use this constructor if you want to change a few settings only in another context.
@@ -142,12 +143,12 @@ public class HFileContextBuilder {
     return this;
   }
 
-  public HFileContextBuilder withColumnFamily(byte[] columnFamily){
+  public HFileContextBuilder withColumnFamily(byte[] columnFamily) {
     this.columnFamily = columnFamily;
     return this;
   }
 
-  public HFileContextBuilder withTableName(byte[] tableName){
+  public HFileContextBuilder withTableName(byte[] tableName) {
     this.tableName = tableName;
     return this;
   }
@@ -159,7 +160,7 @@ public class HFileContextBuilder {
 
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-        compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
-        fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
+      compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
+      fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
   }
 }

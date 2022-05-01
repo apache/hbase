@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,20 +37,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Spark creates many instances of TableOutputFormat within a single process.  We need to make
- * sure we can have many instances and not leak connections.
- *
- * This test creates a few TableOutputFormats and shouldn't fail due to ZK connection exhaustion.
+ * Spark creates many instances of TableOutputFormat within a single process. We need to make sure
+ * we can have many instances and not leak connections. This test creates a few TableOutputFormats
+ * and shouldn't fail due to ZK connection exhaustion.
  */
 @Category(MediumTests.class)
 public class TestTableOutputFormatConnectionExhaust {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableOutputFormatConnectionExhaust.class);
+    HBaseClassTestRule.forClass(TestTableOutputFormatConnectionExhaust.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestTableOutputFormatConnectionExhaust.class);
+    LoggerFactory.getLogger(TestTableOutputFormatConnectionExhaust.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   static final String TABLE = "TestTableOutputFormatConnectionExhaust";
@@ -77,16 +76,16 @@ public class TestTableOutputFormatConnectionExhaust {
   }
 
   /**
-   * Open and close a TableOutputFormat.  The closing the RecordWriter should release HBase
+   * Open and close a TableOutputFormat. The closing the RecordWriter should release HBase
    * Connection (ZK) resources, and will throw exception if they are exhausted.
    */
-  static void openCloseTableOutputFormat(int iter)  throws IOException {
+  static void openCloseTableOutputFormat(int iter) throws IOException {
     LOG.info("Instantiating TableOutputFormat connection  " + iter);
     JobConf conf = new JobConf();
     conf.addResource(UTIL.getConfiguration());
     conf.set(TableOutputFormat.OUTPUT_TABLE, TABLE);
-    TableMapReduceUtil.initTableMapJob(TABLE, FAMILY, TableMap.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, conf);
+    TableMapReduceUtil.initTableMapJob(TABLE, FAMILY, TableMap.class, ImmutableBytesWritable.class,
+      ImmutableBytesWritable.class, conf);
     TableOutputFormat tof = new TableOutputFormat();
     RecordWriter rw = tof.getRecordWriter(null, conf, TABLE, null);
     rw.close(null);

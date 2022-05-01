@@ -1,5 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,18 +6,18 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -61,12 +61,12 @@ public final class ServerMetricsBuilder {
   }
 
   public static ServerMetrics toServerMetrics(ServerName serverName,
-      ClusterStatusProtos.ServerLoad serverLoadPB) {
+    ClusterStatusProtos.ServerLoad serverLoadPB) {
     return toServerMetrics(serverName, 0, "0.0.0", serverLoadPB);
   }
 
   public static ServerMetrics toServerMetrics(ServerName serverName, int versionNumber,
-      String version, ClusterStatusProtos.ServerLoad serverLoadPB) {
+    String version, ClusterStatusProtos.ServerLoad serverLoadPB) {
     return ServerMetricsBuilder.newBuilder(serverName)
       .setRequestCountPerSecond(serverLoadPB.getNumberOfRequests())
       .setRequestCount(serverLoadPB.getTotalNumberOfRequests())
@@ -77,10 +77,10 @@ public final class ServerMetricsBuilder {
         .map(HBaseProtos.Coprocessor::getName).collect(Collectors.toList()))
       .setRegionMetrics(serverLoadPB.getRegionLoadsList().stream()
         .map(RegionMetricsBuilder::toRegionMetrics).collect(Collectors.toList()))
-        .setUserMetrics(serverLoadPB.getUserLoadsList().stream()
-            .map(UserMetricsBuilder::toUserMetrics).collect(Collectors.toList()))
+      .setUserMetrics(serverLoadPB.getUserLoadsList().stream()
+        .map(UserMetricsBuilder::toUserMetrics).collect(Collectors.toList()))
       .setReplicationLoadSources(serverLoadPB.getReplLoadSourceList().stream()
-          .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
+        .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
       .setReplicationLoadSink(serverLoadPB.hasReplLoadSink()
         ? ProtobufUtil.toReplicationLoadSink(serverLoadPB.getReplLoadSink())
         : null)
@@ -90,27 +90,26 @@ public final class ServerMetricsBuilder {
   }
 
   public static List<HBaseProtos.Coprocessor> toCoprocessor(Collection<String> names) {
-    return names.stream()
-        .map(n -> HBaseProtos.Coprocessor.newBuilder().setName(n).build())
-        .collect(Collectors.toList());
+    return names.stream().map(n -> HBaseProtos.Coprocessor.newBuilder().setName(n).build())
+      .collect(Collectors.toList());
   }
 
   public static ClusterStatusProtos.ServerLoad toServerLoad(ServerMetrics metrics) {
     ClusterStatusProtos.ServerLoad.Builder builder = ClusterStatusProtos.ServerLoad.newBuilder()
-        .setNumberOfRequests(metrics.getRequestCountPerSecond())
-        .setTotalNumberOfRequests(metrics.getRequestCount())
-        .setInfoServerPort(metrics.getInfoServerPort())
-        .setMaxHeapMB((int) metrics.getMaxHeapSize().get(Size.Unit.MEGABYTE))
-        .setUsedHeapMB((int) metrics.getUsedHeapSize().get(Size.Unit.MEGABYTE))
-        .addAllCoprocessors(toCoprocessor(metrics.getCoprocessorNames())).addAllRegionLoads(
-            metrics.getRegionMetrics().values().stream().map(RegionMetricsBuilder::toRegionLoad)
-                .collect(Collectors.toList())).addAllUserLoads(
-            metrics.getUserMetrics().values().stream().map(UserMetricsBuilder::toUserMetrics)
-                .collect(Collectors.toList())).addAllReplLoadSource(
-            metrics.getReplicationLoadSourceList().stream()
-                .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
-        .setReportStartTime(metrics.getLastReportTimestamp())
-        .setReportEndTime(metrics.getReportTimestamp());
+      .setNumberOfRequests(metrics.getRequestCountPerSecond())
+      .setTotalNumberOfRequests(metrics.getRequestCount())
+      .setInfoServerPort(metrics.getInfoServerPort())
+      .setMaxHeapMB((int) metrics.getMaxHeapSize().get(Size.Unit.MEGABYTE))
+      .setUsedHeapMB((int) metrics.getUsedHeapSize().get(Size.Unit.MEGABYTE))
+      .addAllCoprocessors(toCoprocessor(metrics.getCoprocessorNames()))
+      .addAllRegionLoads(metrics.getRegionMetrics().values().stream()
+        .map(RegionMetricsBuilder::toRegionLoad).collect(Collectors.toList()))
+      .addAllUserLoads(metrics.getUserMetrics().values().stream()
+        .map(UserMetricsBuilder::toUserMetrics).collect(Collectors.toList()))
+      .addAllReplLoadSource(metrics.getReplicationLoadSourceList().stream()
+        .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
+      .setReportStartTime(metrics.getLastReportTimestamp())
+      .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
       builder.setReplLoadSink(ProtobufUtil.toReplicationLoadSink(metrics.getReplicationLoadSink()));
     }
@@ -138,6 +137,7 @@ public final class ServerMetricsBuilder {
   private final Set<String> coprocessorNames = new TreeSet<>();
   private long reportTimestamp = System.currentTimeMillis();
   private long lastReportTimestamp = 0;
+
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
   }
@@ -213,22 +213,9 @@ public final class ServerMetricsBuilder {
   }
 
   public ServerMetrics build() {
-    return new ServerMetricsImpl(
-        serverName,
-        versionNumber,
-        version,
-        requestCountPerSecond,
-        requestCount,
-        usedHeapSize,
-        maxHeapSize,
-        infoServerPort,
-        sources,
-        sink,
-        regionStatus,
-        coprocessorNames,
-        reportTimestamp,
-        lastReportTimestamp,
-        userMetrics);
+    return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
+      requestCount, usedHeapSize, maxHeapSize, infoServerPort, sources, sink, regionStatus,
+      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -250,10 +237,10 @@ public final class ServerMetricsBuilder {
     private final Map<byte[], UserMetrics> userMetrics;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
-        long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
-        int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
-        Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-        long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
+      long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
+      int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
+      Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
+      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -266,7 +253,7 @@ public final class ServerMetricsBuilder {
       this.sink = sink;
       this.regionStatus = Preconditions.checkNotNull(regionStatus);
       this.userMetrics = Preconditions.checkNotNull(userMetrics);
-      this.coprocessorNames =Preconditions.checkNotNull(coprocessorNames);
+      this.coprocessorNames = Preconditions.checkNotNull(coprocessorNames);
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
     }
@@ -316,11 +303,11 @@ public final class ServerMetricsBuilder {
     }
 
     @Override
-    public Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap(){
-      Map<String,List<ReplicationLoadSource>> sourcesMap = new HashMap<>();
-      for(ReplicationLoadSource loadSource : sources){
-        sourcesMap.computeIfAbsent(loadSource.getPeerID(),
-          peerId -> new ArrayList()).add(loadSource);
+    public Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap() {
+      Map<String, List<ReplicationLoadSource>> sourcesMap = new HashMap<>();
+      for (ReplicationLoadSource loadSource : sources) {
+        sourcesMap.computeIfAbsent(loadSource.getPeerID(), peerId -> new ArrayList())
+          .add(loadSource);
       }
       return sourcesMap;
     }
@@ -377,8 +364,8 @@ public final class ServerMetricsBuilder {
         storeFileCount += r.getStoreFileCount();
         storeRefCount += r.getStoreRefCount();
         int currentMaxCompactedStoreFileRefCount = r.getMaxCompactedStoreFileRefCount();
-        maxCompactedStoreFileRefCount = Math.max(maxCompactedStoreFileRefCount,
-          currentMaxCompactedStoreFileRefCount);
+        maxCompactedStoreFileRefCount =
+          Math.max(maxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
         uncompressedStoreFileSizeMB += r.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
         storeFileSizeMB += r.getStoreFileSize().get(Size.Unit.MEGABYTE);
         memStoreSizeMB += r.getMemStoreSize().get(Size.Unit.MEGABYTE);
@@ -392,21 +379,20 @@ public final class ServerMetricsBuilder {
         compactingCellCount += r.getCompactingCellCount();
       }
       StringBuilder sb = Strings.appendKeyValue(new StringBuilder(), "requestsPerSecond",
-            Double.valueOf(getRequestCountPerSecond()));
+        Double.valueOf(getRequestCountPerSecond()));
       Strings.appendKeyValue(sb, "numberOfOnlineRegions",
-          Integer.valueOf(getRegionMetrics().size()));
+        Integer.valueOf(getRegionMetrics().size()));
       Strings.appendKeyValue(sb, "usedHeapMB", getUsedHeapSize());
       Strings.appendKeyValue(sb, "maxHeapMB", getMaxHeapSize());
       Strings.appendKeyValue(sb, "numberOfStores", storeCount);
       Strings.appendKeyValue(sb, "numberOfStorefiles", storeFileCount);
       Strings.appendKeyValue(sb, "storeRefCount", storeRefCount);
-      Strings.appendKeyValue(sb, "maxCompactedStoreFileRefCount",
-        maxCompactedStoreFileRefCount);
+      Strings.appendKeyValue(sb, "maxCompactedStoreFileRefCount", maxCompactedStoreFileRefCount);
       Strings.appendKeyValue(sb, "storefileUncompressedSizeMB", uncompressedStoreFileSizeMB);
       Strings.appendKeyValue(sb, "storefileSizeMB", storeFileSizeMB);
       if (uncompressedStoreFileSizeMB != 0) {
-        Strings.appendKeyValue(sb, "compressionRatio", String.format("%.4f",
-            (float) storeFileSizeMB / (float) uncompressedStoreFileSizeMB));
+        Strings.appendKeyValue(sb, "compressionRatio",
+          String.format("%.4f", (float) storeFileSizeMB / (float) uncompressedStoreFileSizeMB));
       }
       Strings.appendKeyValue(sb, "memstoreSizeMB", memStoreSizeMB);
       Strings.appendKeyValue(sb, "readRequestsCount", readRequestsCount);
@@ -419,8 +405,7 @@ public final class ServerMetricsBuilder {
       Strings.appendKeyValue(sb, "currentCompactedKVs", compactedCellCount);
       float compactionProgressPct = Float.NaN;
       if (compactingCellCount > 0) {
-        compactionProgressPct =
-            Float.valueOf((float) compactedCellCount / compactingCellCount);
+        compactionProgressPct = Float.valueOf((float) compactedCellCount / compactingCellCount);
       }
       Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
       Strings.appendKeyValue(sb, "coprocessors", getCoprocessorNames());

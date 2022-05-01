@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
@@ -49,12 +48,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestStripeStoreEngine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStripeStoreEngine.class);
+    HBaseClassTestRule.forClass(TestStripeStoreEngine.class);
 
   @Test
   public void testCreateBasedOnConfig() throws Exception {
@@ -81,9 +80,7 @@ public class TestStripeStoreEngine {
     StripeCompactor mockCompactor = mock(StripeCompactor.class);
     se.setCompactorOverride(mockCompactor);
     when(
-      mockCompactor.compact(any(), anyInt(), anyLong(), any(),
-        any(), any(), any(),
-        any(), any()))
+      mockCompactor.compact(any(), anyInt(), anyLong(), any(), any(), any(), any(), any(), any()))
         .thenReturn(new ArrayList<>());
 
     // Produce 3 L0 files.
@@ -110,8 +107,7 @@ public class TestStripeStoreEngine {
 
   private static HStoreFile createFile() throws Exception {
     HStoreFile sf = mock(HStoreFile.class);
-    when(sf.getMetadataValue(any()))
-      .thenReturn(StripeStoreFileManager.INVALID_KEY);
+    when(sf.getMetadataValue(any())).thenReturn(StripeStoreFileManager.INVALID_KEY);
     when(sf.getReader()).thenReturn(mock(StoreFileReader.class));
     when(sf.getPath()).thenReturn(new Path("moo"));
     when(sf.getBulkLoadTimestamp()).thenReturn(OptionalLong.empty());

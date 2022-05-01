@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class TestHBaseOnOtherDfsCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseOnOtherDfsCluster.class);
+    HBaseClassTestRule.forClass(TestHBaseOnOtherDfsCluster.class);
 
   @Rule
   public TestName name = new TestName();
@@ -58,7 +58,7 @@ public class TestHBaseOnOtherDfsCluster {
     util2.setDFSCluster(dfs, false);
     util2.startMiniCluster();
 
-    //ensure that they are pointed at the same place
+    // ensure that they are pointed at the same place
     FileSystem fs = dfs.getFileSystem();
     FileSystem targetFs = util2.getDFSCluster().getFileSystem();
     assertFsSameUri(fs, targetFs);
@@ -67,7 +67,7 @@ public class TestHBaseOnOtherDfsCluster {
     targetFs = FileSystem.get(util2.getConfiguration());
     assertFsSameUri(fs, targetFs);
 
-    Path randomFile = new Path("/"+util1.getRandomUUID());
+    Path randomFile = new Path("/" + util1.getRandomUUID());
     assertTrue(targetFs.createNewFile(randomFile));
     assertTrue(fs.exists(randomFile));
 

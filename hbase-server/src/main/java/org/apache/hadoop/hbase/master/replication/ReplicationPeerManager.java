@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,14 +81,14 @@ public class ReplicationPeerManager {
   }
 
   private void checkQueuesDeleted(String peerId)
-      throws ReplicationException, DoNotRetryIOException {
+    throws ReplicationException, DoNotRetryIOException {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
         ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
         if (queueInfo.getPeerId().equals(peerId)) {
-          throw new DoNotRetryIOException("undeleted queue for peerId: " + peerId +
-            ", replicator: " + replicator + ", queueId: " + queueId);
+          throw new DoNotRetryIOException("undeleted queue for peerId: " + peerId + ", replicator: "
+            + replicator + ", queueId: " + queueId);
         }
       }
     }
@@ -98,7 +98,7 @@ public class ReplicationPeerManager {
   }
 
   void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
-      throws DoNotRetryIOException, ReplicationException {
+    throws DoNotRetryIOException, ReplicationException {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
@@ -143,29 +143,31 @@ public class ReplicationPeerManager {
    * Return the old peer description. Can never be null.
    */
   ReplicationPeerDescription preUpdatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws DoNotRetryIOException {
+    throws DoNotRetryIOException {
     checkPeerConfig(peerConfig);
     ReplicationPeerDescription desc = checkPeerExists(peerId);
     ReplicationPeerConfig oldPeerConfig = desc.getPeerConfig();
     if (!isStringEquals(peerConfig.getClusterKey(), oldPeerConfig.getClusterKey())) {
       throw new DoNotRetryIOException(
-        "Changing the cluster key on an existing peer is not allowed. Existing key '" +
-          oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '" +
-          peerConfig.getClusterKey() + "'");
+        "Changing the cluster key on an existing peer is not allowed. Existing key '"
+          + oldPeerConfig.getClusterKey() + "' for peer " + peerId + " does not match new key '"
+          + peerConfig.getClusterKey() + "'");
     }
 
-    if (!isStringEquals(peerConfig.getReplicationEndpointImpl(),
-      oldPeerConfig.getReplicationEndpointImpl())) {
-      throw new DoNotRetryIOException("Changing the replication endpoint implementation class " +
-        "on an existing peer is not allowed. Existing class '" +
-        oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId +
-        " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
+    if (
+      !isStringEquals(peerConfig.getReplicationEndpointImpl(),
+        oldPeerConfig.getReplicationEndpointImpl())
+    ) {
+      throw new DoNotRetryIOException("Changing the replication endpoint implementation class "
+        + "on an existing peer is not allowed. Existing class '"
+        + oldPeerConfig.getReplicationEndpointImpl() + "' for peer " + peerId
+        + " does not match new class '" + peerConfig.getReplicationEndpointImpl() + "'");
     }
     return desc;
   }
 
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws ReplicationException {
+    throws ReplicationException {
     if (peers.containsKey(peerId)) {
       // this should be a retry, just return
       return;
@@ -204,12 +206,12 @@ public class ReplicationPeerManager {
   }
 
   public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
+    throws ReplicationException {
     // the checking rules are too complicated here so we give up checking whether this is a retry.
     ReplicationPeerDescription desc = peers.get(peerId);
     ReplicationPeerConfig oldPeerConfig = desc.getPeerConfig();
     ReplicationPeerConfigBuilder newPeerConfigBuilder =
-        ReplicationPeerConfig.newBuilder(peerConfig);
+      ReplicationPeerConfig.newBuilder(peerConfig);
     // we need to use the new conf to overwrite the old one.
     newPeerConfigBuilder.putAllConfiguration(oldPeerConfig.getConfiguration());
     newPeerConfigBuilder.putAllConfiguration(peerConfig.getConfiguration());
@@ -225,7 +227,7 @@ public class ReplicationPeerManager {
       return new ArrayList<>(peers.values());
     }
     return peers.values().stream().filter(r -> pattern.matcher(r.getPeerId()).matches())
-        .collect(Collectors.toList());
+      .collect(Collectors.toList());
   }
 
   public Optional<ReplicationPeerConfig> getPeerConfig(String peerId) {
@@ -260,8 +262,8 @@ public class ReplicationPeerManager {
     if (!StringUtils.isBlank(replicationEndpointImpl)) {
       try {
         // try creating a instance
-        endpoint = Class.forName(replicationEndpointImpl)
-          .asSubclass(ReplicationEndpoint.class).getDeclaredConstructor().newInstance();
+        endpoint = Class.forName(replicationEndpointImpl).asSubclass(ReplicationEndpoint.class)
+          .getDeclaredConstructor().newInstance();
       } catch (Throwable e) {
         throw new DoNotRetryIOException(
           "Can not instantiate configured replication endpoint class=" + replicationEndpointImpl,
@@ -281,10 +283,12 @@ public class ReplicationPeerManager {
       // If replicate_all flag is true, it means all user tables will be replicated to peer cluster.
       // Then allow config exclude namespaces or exclude table-cfs which can't be replicated to peer
       // cluster.
-      if ((peerConfig.getNamespaces() != null && !peerConfig.getNamespaces().isEmpty())
-          || (peerConfig.getTableCFsMap() != null && !peerConfig.getTableCFsMap().isEmpty())) {
+      if (
+        (peerConfig.getNamespaces() != null && !peerConfig.getNamespaces().isEmpty())
+          || (peerConfig.getTableCFsMap() != null && !peerConfig.getTableCFsMap().isEmpty())
+      ) {
         throw new DoNotRetryIOException("Need clean namespaces or table-cfs config firstly "
-            + "when you want replicate all cluster");
+          + "when you want replicate all cluster");
       }
       checkNamespacesAndTableCfsConfigConflict(peerConfig.getExcludeNamespaces(),
         peerConfig.getExcludeTableCFsMap());
@@ -292,13 +296,14 @@ public class ReplicationPeerManager {
       // If replicate_all flag is false, it means all user tables can't be replicated to peer
       // cluster. Then allow to config namespaces or table-cfs which will be replicated to peer
       // cluster.
-      if ((peerConfig.getExcludeNamespaces() != null
-          && !peerConfig.getExcludeNamespaces().isEmpty())
+      if (
+        (peerConfig.getExcludeNamespaces() != null && !peerConfig.getExcludeNamespaces().isEmpty())
           || (peerConfig.getExcludeTableCFsMap() != null
-              && !peerConfig.getExcludeTableCFsMap().isEmpty())) {
+            && !peerConfig.getExcludeTableCFsMap().isEmpty())
+      ) {
         throw new DoNotRetryIOException(
-            "Need clean exclude-namespaces or exclude-table-cfs config firstly"
-                + " when replicate_all flag is false");
+          "Need clean exclude-namespaces or exclude-table-cfs config firstly"
+            + " when replicate_all flag is false");
       }
       checkNamespacesAndTableCfsConfigConflict(peerConfig.getNamespaces(),
         peerConfig.getTableCFsMap());
@@ -327,7 +332,7 @@ public class ReplicationPeerManager {
    * </ol>
    */
   private void checkNamespacesAndTableCfsConfigConflict(Set<String> namespaces,
-      Map<TableName, ? extends Collection<String>> tableCfs) throws DoNotRetryIOException {
+    Map<TableName, ? extends Collection<String>> tableCfs) throws DoNotRetryIOException {
     if (namespaces == null || namespaces.isEmpty()) {
       return;
     }
@@ -337,24 +342,24 @@ public class ReplicationPeerManager {
     for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
       TableName table = entry.getKey();
       if (namespaces.contains(table.getNamespaceAsString())) {
-        throw new DoNotRetryIOException("Table-cfs " + table + " is conflict with namespaces " +
-          table.getNamespaceAsString() + " in peer config");
+        throw new DoNotRetryIOException("Table-cfs " + table + " is conflict with namespaces "
+          + table.getNamespaceAsString() + " in peer config");
       }
     }
   }
 
   private void checkConfiguredWALEntryFilters(ReplicationPeerConfig peerConfig)
-      throws DoNotRetryIOException {
+    throws DoNotRetryIOException {
     String filterCSV = peerConfig.getConfiguration()
-        .get(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+      .get(BaseReplicationEndpoint.REPLICATION_WALENTRYFILTER_CONFIG_KEY);
     if (filterCSV != null && !filterCSV.isEmpty()) {
       String[] filters = filterCSV.split(",");
       for (String filter : filters) {
         try {
           Class.forName(filter).getDeclaredConstructor().newInstance();
         } catch (Exception e) {
-          throw new DoNotRetryIOException("Configured WALEntryFilter " + filter +
-            " could not be created. Failing add/update peer operation.", e);
+          throw new DoNotRetryIOException("Configured WALEntryFilter " + filter
+            + " could not be created. Failing add/update peer operation.", e);
         }
       }
     }
@@ -398,7 +403,7 @@ public class ReplicationPeerManager {
   }
 
   public static ReplicationPeerManager create(ZKWatcher zk, Configuration conf, String clusterId)
-      throws ReplicationException {
+    throws ReplicationException {
     ReplicationPeerStorage peerStorage =
       ReplicationStorageFactory.getReplicationPeerStorage(zk, conf);
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();

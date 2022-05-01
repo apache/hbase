@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestFromClientSideScanExcpetion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFromClientSideScanExcpetion.class);
+    HBaseClassTestRule.forClass(TestFromClientSideScanExcpetion.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -111,13 +111,13 @@ public class TestFromClientSideScanExcpetion {
 
     @SuppressWarnings("deprecation")
     public MyHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
     @Override
     protected HStore instantiateHStore(ColumnFamilyDescriptor family, boolean warmup)
-        throws IOException {
+      throws IOException {
       return new MyHStore(this, family, conf, warmup);
     }
   }
@@ -125,27 +125,28 @@ public class TestFromClientSideScanExcpetion {
   public static final class MyHStore extends HStore {
 
     public MyHStore(HRegion region, ColumnFamilyDescriptor family, Configuration confParam,
-        boolean warmup) throws IOException {
+      boolean warmup) throws IOException {
       super(region, family, confParam, warmup);
     }
 
     @Override
     protected KeyValueScanner createScanner(Scan scan, ScanInfo scanInfo,
-        NavigableSet<byte[]> targetCols, long readPt) throws IOException {
-      return scan.isReversed() ? new ReversedStoreScanner(this, scanInfo, scan, targetCols, readPt)
-          : new MyStoreScanner(this, scanInfo, scan, targetCols, readPt);
+      NavigableSet<byte[]> targetCols, long readPt) throws IOException {
+      return scan.isReversed()
+        ? new ReversedStoreScanner(this, scanInfo, scan, targetCols, readPt)
+        : new MyStoreScanner(this, scanInfo, scan, targetCols, readPt);
     }
   }
 
   public static final class MyStoreScanner extends StoreScanner {
     public MyStoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
-        long readPt) throws IOException {
+      long readPt) throws IOException {
       super(store, scanInfo, scan, columns, readPt);
     }
 
     @Override
     protected List<KeyValueScanner> selectScannersFrom(HStore store,
-        List<? extends KeyValueScanner> allScanners) {
+      List<? extends KeyValueScanner> allScanners) {
       List<KeyValueScanner> scanners = super.selectScannersFrom(store, allScanners);
       List<KeyValueScanner> newScanners = new ArrayList<>(scanners.size());
       for (KeyValueScanner scanner : scanners) {
@@ -173,13 +174,11 @@ public class TestFromClientSideScanExcpetion {
   /**
    * Tests the case where a Scan can throw an IOException in the middle of the seek / reseek leaving
    * the server side RegionScanner to be in dirty state. The client has to ensure that the
-   * ClientScanner does not get an exception and also sees all the data.
-   * @throws IOException
-   * @throws InterruptedException
+   * ClientScanner does not get an exception and also sees all the data. nn
    */
   @Test
   public void testClientScannerIsResetWhenScanThrowsIOException()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     reset();
     THROW_ONCE.set(true); // throw exceptions only once
     TableName tableName = TableName.valueOf(name.getMethodName());
@@ -199,7 +198,7 @@ public class TestFromClientSideScanExcpetion {
    */
   @Test
   public void testScannerThrowsExceptionWhenCoprocessorThrowsDNRIOE()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     reset();
     IS_DO_NOT_RETRY.set(true);
     TableName tableName = TableName.valueOf(name.getMethodName());
@@ -222,7 +221,7 @@ public class TestFromClientSideScanExcpetion {
    */
   @Test
   public void testScannerFailsAfterRetriesWhenCoprocessorThrowsIOE()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     TableName tableName = TableName.valueOf(name.getMethodName());
     reset();

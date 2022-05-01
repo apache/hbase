@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,16 +25,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsZooKeeperSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsZooKeeperSource.class);
+    HBaseClassTestRule.forClass(TestMetricsZooKeeperSource.class);
 
-  @Test(expected=RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
+    // This should throw an exception because there is no compat lib on the class path.
     CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
   }
 }

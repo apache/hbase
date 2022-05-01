@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Class to help with parsing the version info.
@@ -38,9 +37,8 @@ public final class VersionInfoUtil {
     return hasMinimumVersion(getCurrentClientVersionInfo(), major, minor);
   }
 
-  public static boolean hasMinimumVersion(HBaseProtos.VersionInfo versionInfo,
-                                          int major,
-                                          int minor) {
+  public static boolean hasMinimumVersion(HBaseProtos.VersionInfo versionInfo, int major,
+    int minor) {
     if (versionInfo != null) {
       if (versionInfo.hasVersionMajor() && versionInfo.hasVersionMinor()) {
         int clientMajor = versionInfo.getVersionMajor();
@@ -74,23 +72,18 @@ public final class VersionInfoUtil {
     return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
   }
 
-
   /**
-   * @param version
-   * @return the passed-in <code>version</code> int as a version String
-   *         (e.g. 0x0103004 is 1.3.4)
+   * n * @return the passed-in <code>version</code> int as a version String (e.g. 0x0103004 is
+   * 1.3.4)
    */
   public static String versionNumberToString(final int version) {
-    return String.format("%d.%d.%d",
-        ((version >> 20) & 0xff),
-        ((version >> 12) & 0xff),
-        (version & 0xfff));
+    return String.format("%d.%d.%d", ((version >> 20) & 0xff), ((version >> 12) & 0xff),
+      (version & 0xfff));
   }
 
   /**
-   * Pack the full number version in a int. by shifting each component by 8bit,
-   * except the dot release which has 12bit.
-   * Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
+   * Pack the full number version in a int. by shifting each component by 8bit, except the dot
+   * release which has 12bit. Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
    * @param versionInfo the VersionInfo object to pack
    * @return the version number as int. (e.g. 0x0103004 is 1.3.4)
    */
@@ -108,13 +101,12 @@ public final class VersionInfoUtil {
         return buildVersionNumber(clientMajor, clientMinor, 0);
       }
     }
-    return(0); // no version
+    return (0); // no version
   }
 
   /**
-   * Pack the full number version in a int. by shifting each component by 8bit,
-   * except the dot release which has 12bit.
-   * Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
+   * Pack the full number version in a int. by shifting each component by 8bit, except the dot
+   * release which has 12bit. Examples: (1.3.4 is 0x0103004, 2.1.0 is 0x0201000)
    * @param major version major number
    * @param minor version minor number
    * @param patch version patch number
@@ -125,8 +117,8 @@ public final class VersionInfoUtil {
   }
 
   /**
-   * Returns the version components
-   * Examples: "1.4.3" returns [1, 4, 3], "4.5.6-SNAPSHOT" returns [4, 5, 6, "SNAPSHOT"]
+   * Returns the version components Examples: "1.4.3" returns [1, 4, 3], "4.5.6-SNAPSHOT" returns
+   * [4, 5, 6, "SNAPSHOT"]
    * @return the components of the version string
    */
   private static String[] getVersionComponents(final HBaseProtos.VersionInfo versionInfo) {

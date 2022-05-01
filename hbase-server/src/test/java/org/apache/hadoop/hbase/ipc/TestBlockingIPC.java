@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,11 +37,12 @@ public class TestBlockingIPC extends AbstractTestIPC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlockingIPC.class);
+    HBaseClassTestRule.forClass(TestBlockingIPC.class);
 
-  @Override protected RpcServer createRpcServer(Server server, String name,
-      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
+  @Override
+  protected RpcServer createRpcServer(Server server, String name,
+    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return RpcServerFactory.createRpcServer(server, name, services, bindAddress, conf, scheduler);
   }
 
@@ -62,7 +63,7 @@ public class TestBlockingIPC extends AbstractTestIPC {
 
   @Override
   protected BlockingRpcClient createRpcClientRTEDuringConnectionSetup(Configuration conf)
-      throws IOException {
+    throws IOException {
     return new BlockingRpcClient(conf) {
 
       @Override
@@ -75,14 +76,14 @@ public class TestBlockingIPC extends AbstractTestIPC {
   private static class TestFailingRpcServer extends SimpleRpcServer {
 
     TestFailingRpcServer(Server server, String name,
-        List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-        Configuration conf, RpcScheduler scheduler) throws IOException {
+      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler) throws IOException {
       super(server, name, services, bindAddress, conf, scheduler, true);
     }
 
     final class FailingConnection extends SimpleServerRpcConnection {
       private FailingConnection(TestFailingRpcServer rpcServer, SocketChannel channel,
-          long lastContact) {
+        long lastContact) {
         super(rpcServer, channel, lastContact);
       }
 
@@ -102,8 +103,8 @@ public class TestBlockingIPC extends AbstractTestIPC {
 
   @Override
   protected RpcServer createTestFailingRpcServer(Server server, String name,
-      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
+    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return new TestFailingRpcServer(server, name, services, bindAddress, conf, scheduler);
   }
 }

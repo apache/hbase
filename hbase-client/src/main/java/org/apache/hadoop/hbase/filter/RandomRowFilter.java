@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.util.Objects;
 import java.util.Random;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
  * A filter that includes rows based on a chance.
- * 
  */
 @InterfaceAudience.Public
 public class RandomRowFilter extends FilterBase {
@@ -41,9 +38,7 @@ public class RandomRowFilter extends FilterBase {
   protected boolean filterOutRow;
 
   /**
-   * Create a new filter with a specified chance for a row to be included.
-   * 
-   * @param chance
+   * Create a new filter with a specified chance for a row to be included. n
    */
   public RandomRowFilter(float chance) {
     this.chance = chance;
@@ -57,9 +52,7 @@ public class RandomRowFilter extends FilterBase {
   }
 
   /**
-   * Set the chance that a row is included.
-   * 
-   * @param chance
+   * Set the chance that a row is included. n
    */
   public void setChance(float chance) {
     this.chance = chance;
@@ -118,21 +111,18 @@ public class RandomRowFilter extends FilterBase {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.RandomRowFilter.Builder builder =
-      FilterProtos.RandomRowFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.RandomRowFilter.Builder builder = FilterProtos.RandomRowFilter.newBuilder();
     builder.setChance(this.chance);
     return builder.build().toByteArray();
   }
 
   /**
    * @param pbBytes A pb serialized {@link RandomRowFilter} instance
-   * @return An instance of {@link RandomRowFilter} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray
+   * @return An instance of {@link RandomRowFilter} made from <code>bytes</code> n * @see
+   *         #toByteArray
    */
-  public static RandomRowFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static RandomRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.RandomRowFilter proto;
     try {
       proto = FilterProtos.RandomRowFilter.parseFrom(pbBytes);
@@ -144,15 +134,15 @@ public class RandomRowFilter extends FilterBase {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof RandomRowFilter)) return false;
 
-    RandomRowFilter other = (RandomRowFilter)o;
+    RandomRowFilter other = (RandomRowFilter) o;
     return this.getChance() == other.getChance();
   }
 

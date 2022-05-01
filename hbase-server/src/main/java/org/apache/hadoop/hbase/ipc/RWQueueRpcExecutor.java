@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -29,29 +26,30 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
- * RPC Executor that uses different queues for reads and writes.
- * With the options to use different queues/executors for gets and scans.
- * Each handler has its own queue and there is no stealing.
+ * RPC Executor that uses different queues for reads and writes. With the options to use different
+ * queues/executors for gets and scans. Each handler has its own queue and there is no stealing.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class RWQueueRpcExecutor extends RpcExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(RWQueueRpcExecutor.class);
 
   public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
-      "hbase.ipc.server.callqueue.read.ratio";
+    "hbase.ipc.server.callqueue.read.ratio";
   public static final String CALL_QUEUE_SCAN_SHARE_CONF_KEY =
-      "hbase.ipc.server.callqueue.scan.ratio";
+    "hbase.ipc.server.callqueue.scan.ratio";
 
   private final QueueBalancer writeBalancer;
   private final QueueBalancer readBalancer;
@@ -68,7 +66,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final AtomicInteger activeScanHandlerCount = new AtomicInteger(0);
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
-      final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
+    final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
 
     float callqReadShare = getReadShare(conf);
@@ -80,8 +78,8 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     int readQueues = calcNumReaders(this.numCallQueues, callqReadShare);
     int readHandlers = Math.max(readQueues, calcNumReaders(handlerCount, callqReadShare));
 
-    int scanQueues = Math.max(0, (int)Math.floor(readQueues * callqScanShare));
-    int scanHandlers = Math.max(0, (int)Math.floor(readHandlers * callqScanShare));
+    int scanQueues = Math.max(0, (int) Math.floor(readQueues * callqScanShare));
+    int scanHandlers = Math.max(0, (int) Math.floor(readHandlers * callqScanShare));
 
     if ((readQueues - scanQueues) > 0) {
       readQueues -= scanQueues;
@@ -167,8 +165,8 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   @Override
   public int getScanQueueLength() {
     int length = 0;
-    for (int i = numWriteQueues + numReadQueues;
-        i < (numWriteQueues + numReadQueues + numScanQueues); i++) {
+    for (int i = numWriteQueues + numReadQueues; i
+        < (numWriteQueues + numReadQueues + numScanQueues); i++) {
       length += queues.get(i).size();
     }
     return length;
@@ -177,7 +175,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   @Override
   public int getActiveHandlerCount() {
     return activeWriteHandlerCount.get() + activeReadHandlerCount.get()
-        + activeScanHandlerCount.get();
+      + activeScanHandlerCount.get();
   }
 
   @Override
@@ -198,9 +196,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   protected boolean isWriteRequest(final RequestHeader header, final Message param) {
     // TODO: Is there a better way to do this?
     if (param instanceof MultiRequest) {
-      MultiRequest multi = (MultiRequest)param;
+      MultiRequest multi = (MultiRequest) param;
       for (RegionAction regionAction : multi.getRegionActionList()) {
-        for (Action action: regionAction.getActionList()) {
+        for (Action action : regionAction.getActionList()) {
           if (action.hasMutation()) {
             return true;
           }
@@ -241,16 +239,16 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   }
 
   /*
-   * Calculate the number of writers based on the "total count" and the read share.
-   * You'll get at least one writer.
+   * Calculate the number of writers based on the "total count" and the read share. You'll get at
+   * least one writer.
    */
   private static int calcNumWriters(final int count, final float readShare) {
-    return Math.max(1, count - Math.max(1, (int)Math.round(count * readShare)));
+    return Math.max(1, count - Math.max(1, (int) Math.round(count * readShare)));
   }
 
   /*
-   * Calculate the number of readers based on the "total count" and the read share.
-   * You'll get at least one reader.
+   * Calculate the number of readers based on the "total count" and the read share. You'll get at
+   * least one reader.
    */
   private static int calcNumReaders(final int count, final float readShare) {
     return count - calcNumWriters(count, readShare);

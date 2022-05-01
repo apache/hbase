@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestMobRestoreSnapshotFromClientClone extends RestoreSnapshotFromCl
 
   @Override
   protected void verifyRowCount(HBaseTestingUtility util, TableName tableName, long expectedRows)
-      throws IOException {
+    throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }
 

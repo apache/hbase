@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.AsyncCallback;
@@ -29,7 +27,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,15 +81,14 @@ public class ChaosZKClient {
    */
   private boolean isChaosAgentRunning(String hostname) {
     try {
-      return zk.exists(CHAOS_AGENT_PARENT_ZNODE + ZNODE_PATH_SEPARATOR + hostname,
-        false) != null;
+      return zk.exists(CHAOS_AGENT_PARENT_ZNODE + ZNODE_PATH_SEPARATOR + hostname, false) != null;
     } catch (KeeperException e) {
       if (e.toString().contains(CONNECTION_LOSS)) {
         recreateZKConnection();
         try {
-          return zk.exists(CHAOS_AGENT_PARENT_ZNODE + ZNODE_PATH_SEPARATOR + hostname,
-            false) != null;
-        } catch (KeeperException  | InterruptedException ie) {
+          return zk.exists(CHAOS_AGENT_PARENT_ZNODE + ZNODE_PATH_SEPARATOR + hostname, false)
+              != null;
+        } catch (KeeperException | InterruptedException ie) {
           LOG.error("ERROR ", ie);
         }
       }
@@ -103,25 +99,23 @@ public class ChaosZKClient {
   }
 
   /**
-   * Creates tasks for target hosts by creating ZNodes.
-   * Waits for a limited amount of time to complete task to execute.
+   * Creates tasks for target hosts by creating ZNodes. Waits for a limited amount of time to
+   * complete task to execute.
    * @param taskObject Object data represents command
    * @return returns status
    */
   public String submitTask(final TaskObject taskObject) {
     if (isChaosAgentRunning(taskObject.getTaskHostname())) {
       LOG.info("Creating task node");
-      zk.create(CHAOS_AGENT_STATUS_ZNODE + ZNODE_PATH_SEPARATOR +
-          taskObject.getTaskHostname() + ZNODE_PATH_SEPARATOR + TASK_PREFIX,
-        taskObject.getCommand().getBytes(),
-        ZooDefs.Ids.OPEN_ACL_UNSAFE,
-        CreateMode.EPHEMERAL_SEQUENTIAL,
-        submitTaskCallback,
-        taskObject);
+      zk.create(
+        CHAOS_AGENT_STATUS_ZNODE + ZNODE_PATH_SEPARATOR + taskObject.getTaskHostname()
+          + ZNODE_PATH_SEPARATOR + TASK_PREFIX,
+        taskObject.getCommand().getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
+        CreateMode.EPHEMERAL_SEQUENTIAL, submitTaskCallback, taskObject);
       long start = System.currentTimeMillis();
 
       while ((System.currentTimeMillis() - start) < TASK_EXECUTION_TIMEOUT) {
-        if(taskStatus != null) {
+        if (taskStatus != null) {
           return taskStatus;
         }
         Threads.sleep(500);
@@ -135,27 +129,21 @@ public class ChaosZKClient {
   /**
    * To get status of task submitted
    * @param path path at which to get status
-   * @param ctx path context
+   * @param ctx  path context
    */
-  private void getStatus(String path , Object ctx) {
+  private void getStatus(String path, Object ctx) {
     LOG.info("Getting Status of task: " + path);
-    zk.getData(path,
-      false,
-      getStatusCallback,
-      ctx);
+    zk.getData(path, false, getStatusCallback, ctx);
   }
 
   /**
    * Set a watch on task submitted
-   * @param name ZNode name to set a watch
+   * @param name       ZNode name to set a watch
    * @param taskObject context for ZNode name
    */
   private void setStatusWatch(String name, TaskObject taskObject) {
     LOG.info("Checking for ZNode and Setting watch for task : " + name);
-    zk.exists(name,
-      setStatusWatcher,
-      setStatusWatchCallback,
-      taskObject);
+    zk.exists(name, setStatusWatcher, setStatusWatchCallback, taskObject);
   }
 
   /**
@@ -164,13 +152,10 @@ public class ChaosZKClient {
    */
   private void deleteTask(String path) {
     LOG.info("Deleting task: " + path);
-    zk.delete(path,
-      -1,
-      taskDeleteCallback,
-      null);
+    zk.delete(path, -1, taskDeleteCallback, null);
   }
 
-  //WATCHERS:
+  // WATCHERS:
 
   /**
    * Watcher to get notification whenever status of task changes.
@@ -179,10 +164,10 @@ public class ChaosZKClient {
     @Override
     public void process(WatchedEvent watchedEvent) {
       LOG.info("Setting status watch for task: " + watchedEvent.getPath());
-      if(watchedEvent.getType() == Event.EventType.NodeDataChanged) {
-        if(!watchedEvent.getPath().contains(TASK_PREFIX)) {
-          throw new RuntimeException(KeeperException.create(
-            KeeperException.Code.DATAINCONSISTENCY));
+      if (watchedEvent.getType() == Event.EventType.NodeDataChanged) {
+        if (!watchedEvent.getPath().contains(TASK_PREFIX)) {
+          throw new RuntimeException(
+            KeeperException.create(KeeperException.Code.DATAINCONSISTENCY));
         }
         getStatus(watchedEvent.getPath(), (Object) watchedEvent.getPath());
 
@@ -190,18 +175,18 @@ public class ChaosZKClient {
     }
   };
 
-  //CALLBACKS
+  // CALLBACKS
 
   AsyncCallback.DataCallback getStatusCallback = (rc, path, ctx, data, stat) -> {
     switch (KeeperException.Code.get(rc)) {
       case CONNECTIONLOSS:
-        //Connectionloss while getting status of task, getting again
+        // Connectionloss while getting status of task, getting again
         recreateZKConnection();
         getStatus(path, ctx);
         break;
 
       case OK:
-        if (ctx!=null) {
+        if (ctx != null) {
 
           String status = new String(data);
           taskStatus = status;
@@ -225,28 +210,28 @@ public class ChaosZKClient {
         break;
 
       default:
-        LOG.error("ERROR while getting status of task: " + path + " ERROR: " +
-          KeeperException.create(KeeperException.Code.get(rc)));
+        LOG.error("ERROR while getting status of task: " + path + " ERROR: "
+          + KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
   AsyncCallback.StatCallback setStatusWatchCallback = (rc, path, ctx, stat) -> {
     switch (KeeperException.Code.get(rc)) {
       case CONNECTIONLOSS:
-        //ConnectionLoss while setting watch on status ZNode, setting again.
+        // ConnectionLoss while setting watch on status ZNode, setting again.
         recreateZKConnection();
         setStatusWatch(path, (TaskObject) ctx);
         break;
 
       case OK:
-        if(stat != null) {
+        if (stat != null) {
           getStatus(path, null);
         }
         break;
 
       default:
-        LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: " +
-          KeeperException.create(KeeperException.Code.get(rc)));
+        LOG.error("ERROR while setting watch on task ZNode: " + path + " ERROR: "
+          + KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
@@ -264,8 +249,8 @@ public class ChaosZKClient {
         break;
 
       default:
-        LOG.error("Error submitting task: " + name + " ERROR:" +
-          KeeperException.create(KeeperException.Code.get(rc)));
+        LOG.error("Error submitting task: " + name + " ERROR:"
+          + KeeperException.create(KeeperException.Code.get(rc)));
     }
   };
 
@@ -274,7 +259,7 @@ public class ChaosZKClient {
     public void processResult(int rc, String path, Object ctx) {
       switch (KeeperException.Code.get(rc)) {
         case CONNECTIONLOSS:
-          //Connectionloss while deleting task, deleting again
+          // Connectionloss while deleting task, deleting again
           recreateZKConnection();
           deleteTask(path);
           break;
@@ -290,12 +275,11 @@ public class ChaosZKClient {
           break;
 
         default:
-          LOG.error("ERROR while deleting task: " + path + " ERROR: " +
-            KeeperException.create(KeeperException.Code.get(rc)));
+          LOG.error("ERROR while deleting task: " + path + " ERROR: "
+            + KeeperException.create(KeeperException.Code.get(rc)));
       }
     }
   };
-
 
   private void recreateZKConnection() {
     try {

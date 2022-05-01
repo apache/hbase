@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestRegionLocations {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocations.class);
+    HBaseClassTestRule.forClass(TestRegionLocations.class);
 
   ServerName sn0 = ServerName.valueOf("host0", 10, 10);
   ServerName sn1 = ServerName.valueOf("host1", 10, 10);
@@ -56,7 +56,7 @@ public class TestRegionLocations {
     assertEquals(0, list.size());
     assertEquals(0, list.numNonNullElements());
 
-    list = hrll((HRegionLocation)null);
+    list = hrll((HRegionLocation) null);
     assertTrue(list.isEmpty());
     assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());
@@ -99,7 +99,7 @@ public class TestRegionLocations {
     return new HRegionLocation(hri, sn, seqNum);
   }
 
-  private RegionLocations hrll(HRegionLocation ... locations) {
+  private RegionLocations hrll(HRegionLocation... locations) {
     return new RegionLocations(locations);
   }
 
@@ -167,7 +167,6 @@ public class TestRegionLocations {
     assertEquals(sn2, list.getRegionLocation(2).getServerName());
     assertNull(list.getRegionLocation(5));
     assertNull(list.getRegionLocation(9));
-
 
     // test multi-element remove from multi element list
     list = hrll(hrl(info0, sn1), hrl(info1, sn1), hrl(info2, sn0), hrl(info9, sn0));
@@ -334,12 +333,11 @@ public class TestRegionLocations {
     assertEquals(3, list.size());
   }
 
-
   @Test
   public void testConstructWithNullElements() {
     // RegionLocations can contain null elements as well. These null elements can
 
-    RegionLocations list = new RegionLocations((HRegionLocation)null);
+    RegionLocations list = new RegionLocations((HRegionLocation) null);
     assertTrue(list.isEmpty());
     assertEquals(1, list.size());
     assertEquals(0, list.numNonNullElements());

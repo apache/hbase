@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,45 +37,34 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestImmutableHTableDescriptor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImmutableHTableDescriptor.class);
+    HBaseClassTestRule.forClass(TestImmutableHTableDescriptor.class);
 
   @Rule
   public TestName name = new TestName();
   private static final List<Consumer<ImmutableHTableDescriptor>> TEST_FUNCTION = Arrays.asList(
-    htd -> htd.setValue("a", "a"),
-    htd -> htd.setValue(Bytes.toBytes("a"), Bytes.toBytes("a")),
+    htd -> htd.setValue("a", "a"), htd -> htd.setValue(Bytes.toBytes("a"), Bytes.toBytes("a")),
     htd -> htd.setValue(new Bytes(Bytes.toBytes("a")), new Bytes(Bytes.toBytes("a"))),
-    htd -> htd.setCompactionEnabled(false),
-    htd -> htd.setConfiguration("aaa", "ccc"),
-    htd -> htd.setDurability(Durability.USE_DEFAULT),
-    htd -> htd.setFlushPolicyClassName("class"),
-    htd -> htd.setMaxFileSize(123),
-    htd -> htd.setMemStoreFlushSize(123123123),
-    htd -> htd.setNormalizationEnabled(false),
-    htd -> htd.setPriority(123),
-    htd -> htd.setReadOnly(true),
-    htd -> htd.setRegionMemstoreReplication(true),
-    htd -> htd.setRegionReplication(123),
-    htd -> htd.setRegionSplitPolicyClassName("class"),
+    htd -> htd.setCompactionEnabled(false), htd -> htd.setConfiguration("aaa", "ccc"),
+    htd -> htd.setDurability(Durability.USE_DEFAULT), htd -> htd.setFlushPolicyClassName("class"),
+    htd -> htd.setMaxFileSize(123), htd -> htd.setMemStoreFlushSize(123123123),
+    htd -> htd.setNormalizationEnabled(false), htd -> htd.setPriority(123),
+    htd -> htd.setReadOnly(true), htd -> htd.setRegionMemstoreReplication(true),
+    htd -> htd.setRegionReplication(123), htd -> htd.setRegionSplitPolicyClassName("class"),
     htd -> htd.addFamily(new HColumnDescriptor(Bytes.toBytes("fm"))),
-    htd -> htd.remove(new Bytes(Bytes.toBytes("aaa"))),
-    htd -> htd.remove("aaa"),
-    htd -> htd.remove(Bytes.toBytes("aaa")),
-    htd -> htd.removeConfiguration("xxx"),
-    htd -> htd.removeFamily(Bytes.toBytes("fm")),
-    htd -> {
+    htd -> htd.remove(new Bytes(Bytes.toBytes("aaa"))), htd -> htd.remove("aaa"),
+    htd -> htd.remove(Bytes.toBytes("aaa")), htd -> htd.removeConfiguration("xxx"),
+    htd -> htd.removeFamily(Bytes.toBytes("fm")), htd -> {
       try {
         htd.addCoprocessor("xxx");
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }
-  );
+    });
 
   @Test
   public void testImmutable() {
@@ -113,18 +102,13 @@ public class TestImmutableHTableDescriptor {
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
-  /* ImmutableHTableDescriptor should have a builder style setup where setXXX/addXXX methods
-   * can be chainable together:
-   * . For example:
-   * ImmutableHTableDescriptor d
-   *   = new ImmutableHTableDescriptor()
-   *     .setFoo(foo)
-   *     .setBar(bar)
-   *     .setBuz(buz)
-   *
-   * This test ensures that all methods starting with "set" returns the declaring object
-   */
+    /*
+     * ImmutableHTableDescriptor should have a builder style setup where setXXX/addXXX methods can
+     * be chainable together: . For example: ImmutableHTableDescriptor d = new
+     * ImmutableHTableDescriptor() .setFoo(foo) .setBar(bar) .setBuz(buz) This test ensures that all
+     * methods starting with "set" returns the declaring object
+     */
 
-      BuilderStyleTest.assertClassesAreBuilderStyle(ImmutableHTableDescriptor.class);
+    BuilderStyleTest.assertClassesAreBuilderStyle(ImmutableHTableDescriptor.class);
   }
 }

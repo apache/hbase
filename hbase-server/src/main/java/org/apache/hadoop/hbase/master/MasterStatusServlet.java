@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,17 +32,14 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The servlet responsible for rendering the index page of the
- * master.
+ * The servlet responsible for rendering the index page of the master.
  */
 @InterfaceAudience.Private
 public class MasterStatusServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws IOException
-  {
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     assert master != null : "No Master in context!";
 
@@ -55,8 +51,8 @@ public class MasterStatusServlet extends HttpServlet {
     ServerName metaLocation = null;
     List<ServerName> servers = null;
     Set<ServerName> deadServers = null;
-    
-    if(master.isActiveMaster()) {
+
+    if (master.isActiveMaster()) {
       metaLocation = getMetaLocationOrNull(master);
       ServerManager serverManager = master.getServerManager();
       if (serverManager != null) {
@@ -65,17 +61,12 @@ public class MasterStatusServlet extends HttpServlet {
       }
     }
 
-    MasterStatusTmpl tmpl = new MasterStatusTmpl()
-      .setFrags(frags)
-      .setMetaLocation(metaLocation)
-      .setServers(servers)
-      .setDeadServers(deadServers)
-      .setCatalogJanitorEnabled(master.isCatalogJanitorEnabled());
+    MasterStatusTmpl tmpl =
+      new MasterStatusTmpl().setFrags(frags).setMetaLocation(metaLocation).setServers(servers)
+        .setDeadServers(deadServers).setCatalogJanitorEnabled(master.isCatalogJanitorEnabled());
 
-    if (request.getParameter("filter") != null)
-      tmpl.setFilter(request.getParameter("filter"));
-    if (request.getParameter("format") != null)
-      tmpl.setFormat(request.getParameter("format"));
+    if (request.getParameter("filter") != null) tmpl.setFilter(request.getParameter("filter"));
+    if (request.getParameter("format") != null) tmpl.setFormat(request.getParameter("format"));
     tmpl.render(response.getWriter(), master);
   }
 
@@ -83,10 +74,9 @@ public class MasterStatusServlet extends HttpServlet {
     return MetaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   }
 
-  private Map<String, Integer> getFragmentationInfo(
-      HMaster master, Configuration conf) throws IOException {
-    boolean showFragmentation = conf.getBoolean(
-        "hbase.master.ui.fragmentation.enabled", false);
+  private Map<String, Integer> getFragmentationInfo(HMaster master, Configuration conf)
+    throws IOException {
+    boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
     if (showFragmentation) {
       return FSUtils.getTableFragmentation(master);
     } else {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,21 +43,22 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
   // Only public so classes back in regionserver.wal can access
   public interface Writer extends WALProvider.Writer {
     /**
-     * @throws IOException if something goes wrong initializing an output stream
+     * @throws IOException                    if something goes wrong initializing an output stream
      * @throws StreamLacksCapabilityException if the given FileSystem can't provide streams that
-     *         meet the needs of the given Writer implementation.
+     *                                        meet the needs of the given Writer implementation.
      */
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable, long blocksize)
-        throws IOException, CommonFSUtils.StreamLacksCapabilityException;
+      throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
   /**
    * Public because of FSHLog. Should be package-private
    * @param overwritable if the created writer can overwrite. For recovered edits, it is true and
-   *          for WAL it is false. Thus we can distinguish WAL and recovered edits by this.
+   *                     for WAL it is false. Thus we can distinguish WAL and recovered edits by
+   *                     this.
    */
   public static Writer createWriter(final Configuration conf, final FileSystem fs, final Path path,
-      final boolean overwritable) throws IOException {
+    final boolean overwritable) throws IOException {
     return createWriter(conf, fs, path, overwritable,
       WALUtil.getWALBlockSize(conf, fs, path, overwritable));
   }
@@ -70,21 +70,20 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
-        conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
-            Writer.class);
+      conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();
       FileSystem rootFs = FileSystem.get(path.toUri(), conf);
       writer.init(rootFs, path, conf, overwritable, blocksize);
       return writer;
-    } catch (Exception e) { 
+    } catch (Exception e) {
       if (e instanceof CommonFSUtils.StreamLacksCapabilityException) {
-        LOG.error("The RegionServer write ahead log provider for FileSystem implementations " +
-            "relies on the ability to call " + e.getMessage() + " for proper operation during " +
-            "component failures, but the current FileSystem does not support doing so. Please " +
-            "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure " +
-            "it points to a FileSystem mount that has suitable capabilities for output streams.");
+        LOG.error("The RegionServer write ahead log provider for FileSystem implementations "
+          + "relies on the ability to call " + e.getMessage() + " for proper operation during "
+          + "component failures, but the current FileSystem does not support doing so. Please "
+          + "check the config value of '" + CommonFSUtils.HBASE_WAL_DIR + "' and ensure "
+          + "it points to a FileSystem mount that has suitable capabilities for output streams.");
       } else {
         LOG.debug("Error instantiating log writer.", e);
       }
@@ -95,9 +94,9 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
   @Override
   protected FSHLog createWAL() throws IOException {
     return new FSHLog(CommonFSUtils.getWALFileSystem(conf), abortable,
-        CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
-        getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+      CommonFSUtils.getWALRootDir(conf), getWALDirectoryName(factory.factoryId),
+      getWALArchiveDirectoryName(conf, factory.factoryId), conf, listeners, true, logPrefix,
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override

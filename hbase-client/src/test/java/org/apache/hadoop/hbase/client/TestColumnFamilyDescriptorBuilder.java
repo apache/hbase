@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,24 +43,21 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
-import java.util.Map;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestColumnFamilyDescriptorBuilder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
+    HBaseClassTestRule.forClass(TestColumnFamilyDescriptorBuilder.class);
 
   @Rule
   public ExpectedException expectedEx = ExpectedException.none();
 
   @Test
   public void testBuilder() throws DeserializationException {
-    ColumnFamilyDescriptorBuilder builder
-      = ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
-            .setInMemory(true)
-            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-            .setBloomFilterType(BloomType.NONE);
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).setInMemory(true)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBloomFilterType(BloomType.NONE);
     final int v = 123;
     builder.setBlocksize(v);
     builder.setTimeToLive(v);
@@ -81,13 +79,13 @@ public class TestColumnFamilyDescriptorBuilder {
     builder.setDFSReplication((short) v);
 
     ColumnFamilyDescriptor hcd = builder.build();
-    byte [] bytes = ColumnFamilyDescriptorBuilder.toByteArray(hcd);
+    byte[] bytes = ColumnFamilyDescriptorBuilder.toByteArray(hcd);
     ColumnFamilyDescriptor deserializedHcd = ColumnFamilyDescriptorBuilder.parseFrom(bytes);
     assertTrue(hcd.equals(deserializedHcd));
     assertEquals(v, hcd.getBlocksize());
     assertEquals(v, hcd.getTimeToLive());
-    assertTrue(Bytes.equals(hcd.getValue(Bytes.toBytes("a")),
-        deserializedHcd.getValue(Bytes.toBytes("a"))));
+    assertTrue(
+      Bytes.equals(hcd.getValue(Bytes.toBytes("a")), deserializedHcd.getValue(Bytes.toBytes("a"))));
     assertEquals(hcd.getMaxVersions(), deserializedHcd.getMaxVersions());
     assertEquals(hcd.getMinVersions(), deserializedHcd.getMinVersions());
     assertEquals(hcd.getKeepDeletedCells(), deserializedHcd.getKeepDeletedCells());
@@ -116,8 +114,8 @@ public class TestColumnFamilyDescriptorBuilder {
    */
   @Test
   public void testAddGetRemoveConfiguration() {
-    ColumnFamilyDescriptorBuilder builder
-      = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
     String key = "Some";
     String value = "value";
     builder.setConfiguration(key, value);
@@ -134,11 +132,11 @@ public class TestColumnFamilyDescriptorBuilder {
     // We unify the format of all values saved in the descriptor.
     // Each value is stored as bytes of string.
     String isMobString = PrettyPrinter.format(String.valueOf(isMob),
-            HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
+      HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
     String thresholdString = PrettyPrinter.format(String.valueOf(threshold),
-            HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
+      HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
     String policyString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(policy)),
-        HColumnDescriptor.getUnit(HColumnDescriptor.MOB_COMPACT_PARTITION_POLICY));
+      HColumnDescriptor.getUnit(HColumnDescriptor.MOB_COMPACT_PARTITION_POLICY));
     assertEquals(String.valueOf(isMob), isMobString);
     assertEquals(String.valueOf(threshold), thresholdString);
     assertEquals(String.valueOf(policy), policyString);
@@ -146,16 +144,11 @@ public class TestColumnFamilyDescriptorBuilder {
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
-    /* HColumnDescriptor should have a builder style setup where setXXX/addXXX methods
-     * can be chainable together:
-     * . For example:
-     * HColumnDescriptor hcd
-     *   = new HColumnDescriptor()
-     *     .setFoo(foo)
-     *     .setBar(bar)
-     *     .setBuz(buz)
-     *
-     * This test ensures that all methods starting with "set" returns the declaring object
+    /*
+     * HColumnDescriptor should have a builder style setup where setXXX/addXXX methods can be
+     * chainable together: . For example: HColumnDescriptor hcd = new HColumnDescriptor()
+     * .setFoo(foo) .setBar(bar) .setBuz(buz) This test ensures that all methods starting with "set"
+     * returns the declaring object
      */
 
     BuilderStyleTest.assertClassesAreBuilderStyle(ColumnFamilyDescriptorBuilder.class);
@@ -164,8 +157,8 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testSetTimeToLive() throws HBaseException {
     String ttl;
-    ColumnFamilyDescriptorBuilder builder
-      = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"));
 
     ttl = "50000";
     builder.setTimeToLive(ttl);
@@ -248,8 +241,8 @@ public class TestColumnFamilyDescriptorBuilder {
   // under C6 it became a string of "true" or "false".
   @Test
   public void testIsMobEnabled() {
-    ColumnFamilyDescriptorBuilder builder
-        = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("mob"));
+    ColumnFamilyDescriptorBuilder builder =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("mob"));
     byte[] isMob = Bytes.toBytes(ColumnFamilyDescriptorBuilder.IS_MOB);
 
     builder.setValue(isMob, Bytes.toBytes(false));

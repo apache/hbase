@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,15 +41,15 @@ import org.xml.sax.InputSource;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
 
 /**
- * Basic test case that the ConfServlet can write configuration
- * to its output in XML and JSON format.
+ * Basic test case that the ConfServlet can write configuration to its output in XML and JSON
+ * format.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestConfServlet extends TestCase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConfServlet.class);
+    HBaseClassTestRule.forClass(TestConfServlet.class);
 
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
@@ -71,15 +71,14 @@ public class TestConfServlet extends TestCase {
     programSet.add("programatically");
     programSet.add("programmatically");
     Object parsed = JSON.parse(json);
-    Object[] properties = ((Map<String, Object[]>)parsed).get("properties");
+    Object[] properties = ((Map<String, Object[]>) parsed).get("properties");
     for (Object o : properties) {
-      Map<String, Object> propertyInfo = (Map<String, Object>)o;
-      String key = (String)propertyInfo.get("key");
-      String val = (String)propertyInfo.get("value");
-      String resource = (String)propertyInfo.get("resource");
+      Map<String, Object> propertyInfo = (Map<String, Object>) o;
+      String key = (String) propertyInfo.get("key");
+      String val = (String) propertyInfo.get("value");
+      String resource = (String) propertyInfo.get("resource");
       System.err.println("k: " + key + " v: " + val + " r: " + resource);
-      if (TEST_KEY.equals(key) && TEST_VAL.equals(val)
-          && programSet.contains(resource)) {
+      if (TEST_KEY.equals(key) && TEST_VAL.equals(val) && programSet.contains(resource)) {
         foundSetting = true;
       }
     }
@@ -92,8 +91,7 @@ public class TestConfServlet extends TestCase {
     ConfServlet.writeResponse(getTestConf(), sw, "xml");
     String xml = sw.toString();
 
-    DocumentBuilderFactory docBuilderFactory
-      = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = builder.parse(new InputSource(new StringReader(xml)));
     NodeList nameNodes = doc.getElementsByTagName("name");
@@ -104,7 +102,7 @@ public class TestConfServlet extends TestCase {
       System.err.println("xml key: " + key);
       if (TEST_KEY.equals(key)) {
         foundSetting = true;
-        Element propertyElem = (Element)nameNode.getParentNode();
+        Element propertyElem = (Element) nameNode.getParentNode();
         String val = propertyElem.getElementsByTagName("value").item(0).getTextContent();
         assertEquals(TEST_VAL, val);
       }

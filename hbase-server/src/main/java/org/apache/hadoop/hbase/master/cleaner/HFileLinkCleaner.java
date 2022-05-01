@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * HFileLink cleaner that determines if a hfile should be deleted.
- * HFiles can be deleted only if there're no links to them.
- *
- * When a HFileLink is created a back reference file is created in:
- *      /hbase/archive/table/region/cf/.links-hfile/ref-region.ref-table
- * To check if the hfile can be deleted the back references folder must be empty.
+ * HFileLink cleaner that determines if a hfile should be deleted. HFiles can be deleted only if
+ * there're no links to them. When a HFileLink is created a back reference file is created in:
+ * /hbase/archive/table/region/cf/.links-hfile/ref-region.ref-table To check if the hfile can be
+ * deleted the back references folder must be empty.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
@@ -75,8 +73,8 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
         return !fs.exists(hfilePath);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: " +
-            hfilePath);
+          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
+            + hfilePath);
         }
         return false;
       }
@@ -90,7 +88,7 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Couldn't get the references, not deleting file, just in case. filePath="
-            + filePath + ", backRefDir=" + backRefDir);
+          + filePath + ", backRefDir=" + backRefDir);
       }
       return false;
     }
@@ -106,8 +104,8 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Couldn't instantiate the file system, not deleting file, just in case. "
-            + FileSystem.FS_DEFAULT_NAME_KEY + "="
-            + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
+          + FileSystem.FS_DEFAULT_NAME_KEY + "="
+          + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
       }
     }
   }

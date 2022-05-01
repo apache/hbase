@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,7 +21,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -61,7 +62,8 @@ public final class StoreFileTrackerFactory {
    * Maps between configuration names for trackers and implementation classes.
    */
   public enum Trackers {
-    DEFAULT(DefaultStoreFileTracker.class), FILE(FileBasedStoreFileTracker.class),
+    DEFAULT(DefaultStoreFileTracker.class),
+    FILE(FileBasedStoreFileTracker.class),
     MIGRATION(MigrationStoreFileTracker.class);
 
     final Class<? extends StoreFileTracker> clazz;
@@ -176,13 +178,12 @@ public final class StoreFileTrackerFactory {
   }
 
   public static TableDescriptor updateWithTrackerConfigs(Configuration conf,
-      TableDescriptor descriptor) {
-    //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
-    //descriptors with the SFT impl specific configs. By the time this happens, the table has no
-    //regions nor stores yet, so it can't create a proper StoreContext.
+    TableDescriptor descriptor) {
+    // CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
+    // descriptors with the SFT impl specific configs. By the time this happens, the table has no
+    // regions nor stores yet, so it can't create a proper StoreContext.
     if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
-      StoreFileTracker tracker =
-        StoreFileTrackerFactory.create(conf, true, null);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
       return tracker.updateWithTrackerConfigs(builder).build();
     }
@@ -210,7 +211,7 @@ public final class StoreFileTrackerFactory {
    * <p/>
    * For now, only make sure that we do not use {@link Trackers#MIGRATION} for newly created tables.
    * @throws IOException when there are check errors, the upper layer should fail the
-   *           {@code CreateTableProcedure}.
+   *                     {@code CreateTableProcedure}.
    */
   public static void checkForCreateTable(Configuration conf, TableDescriptor table)
     throws IOException {
@@ -218,7 +219,6 @@ public final class StoreFileTrackerFactory {
       checkForNewFamily(conf, table, family);
     }
   }
-
 
   /**
    * Pre check when modifying a table.
@@ -252,7 +252,7 @@ public final class StoreFileTrackerFactory {
    * </li>
    * </ul>
    * @throws IOException when there are check errors, the upper layer should fail the
-   *           {@code ModifyTableProcedure}.
+   *                     {@code ModifyTableProcedure}.
    */
   public static void checkForModifyTable(Configuration conf, TableDescriptor oldTable,
     TableDescriptor newTable) throws IOException {
@@ -332,11 +332,11 @@ public final class StoreFileTrackerFactory {
   }
 
   /**
-   * Makes sure restoring a snapshot does not break the current SFT setup
-   * follows StoreUtils.createStoreConfiguration
-   * @param currentTableDesc Existing Table's TableDescriptor
+   * Makes sure restoring a snapshot does not break the current SFT setup follows
+   * StoreUtils.createStoreConfiguration
+   * @param currentTableDesc  Existing Table's TableDescriptor
    * @param snapshotTableDesc Snapshot's TableDescriptor
-   * @param baseConf Current global configuration
+   * @param baseConf          Current global configuration
    * @throws RestoreSnapshotException if restore would break the current SFT setup
    */
   public static void validatePreRestoreSnapshot(TableDescriptor currentTableDesc,
@@ -356,7 +356,7 @@ public final class StoreFileTrackerFactory {
         Class<? extends StoreFileTracker> snapSFT =
           StoreFileTrackerFactory.getTrackerClass(snapCompositeConf);
 
-        //restoration is not possible if there is an SFT mismatch
+        // restoration is not possible if there is an SFT mismatch
         if (currentSFT != snapSFT) {
           throw new RestoreSnapshotException(
             "Restoring Snapshot is not possible because " + " the config for column family "

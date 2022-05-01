@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,29 +34,23 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * This coprocessor 'shallows' all the writes. It allows to test a pure
- * write workload, going through all the communication layers.
- * The reads will work as well, but they as we never write, they will always always
- * return an empty structure. The WAL is also skipped.
- * Obviously, the region will never be split automatically. It's up to the user
- * to split and move it.
+ * This coprocessor 'shallows' all the writes. It allows to test a pure write workload, going
+ * through all the communication layers. The reads will work as well, but they as we never write,
+ * they will always always return an empty structure. The WAL is also skipped. Obviously, the region
+ * will never be split automatically. It's up to the user to split and move it.
  * </p>
  * <p>
- * For a table created like this:
- * create 'usertable', {NAME =&gt; 'f1', VERSIONS =&gt; 1}
+ * For a table created like this: create 'usertable', {NAME =&gt; 'f1', VERSIONS =&gt; 1}
  * </p>
  * <p>
- * You can then add the coprocessor with this command:
- * alter 'usertable', 'coprocessor' =&gt; '|org.apache.hadoop.hbase.tool.WriteSinkCoprocessor|'
+ * You can then add the coprocessor with this command: alter 'usertable', 'coprocessor' =&gt;
+ * '|org.apache.hadoop.hbase.tool.WriteSinkCoprocessor|'
  * </p>
  * <p>
- * And then
- * put 'usertable', 'f1', 'f1', 'f1'
+ * And then put 'usertable', 'f1', 'f1', 'f1'
  * </p>
  * <p>
- * scan 'usertable'
- * Will return:
- * 0 row(s) in 0.0050 seconds
+ * scan 'usertable' Will return: 0 row(s) in 0.0050 seconds
  * </p>
  * TODO: It needs tests
  */
@@ -80,15 +73,14 @@ public class WriteSinkCoprocessor implements RegionCoprocessor, RegionObserver {
 
   @Override
   public void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-                             final MiniBatchOperationInProgress<Mutation> miniBatchOp)
-      throws IOException {
+    final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     if (ops.incrementAndGet() % 20000 == 0) {
       LOG.info("Wrote " + ops.get() + " times in region " + regionName);
     }
 
     for (int i = 0; i < miniBatchOp.size(); i++) {
       miniBatchOp.setOperationStatus(i,
-          new OperationStatus(HConstants.OperationStatusCode.SUCCESS));
+        new OperationStatus(HConstants.OperationStatusCode.SUCCESS));
     }
     c.bypass();
   }

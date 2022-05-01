@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.FileNotFoundException;
@@ -43,52 +42,34 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
- *
- * <p><b>The Problem:</b>
+ * <p>
+ * <b>The Problem:</b>
  * <ul>
- *  <li>
- *    HDFS doesn't have support for hardlinks, and this make impossible to referencing
- *    the same data blocks using different names.
- *  </li>
- *  <li>
- *    HBase store files in one location (e.g. table/region/family/) and when the file is not
- *    needed anymore (e.g. compaction, region deletion, ...) moves it to an archive directory.
- *  </li>
+ * <li>HDFS doesn't have support for hardlinks, and this make impossible to referencing the same
+ * data blocks using different names.</li>
+ * <li>HBase store files in one location (e.g. table/region/family/) and when the file is not needed
+ * anymore (e.g. compaction, region deletion, ...) moves it to an archive directory.</li>
  * </ul>
- * If we want to create a reference to a file, we need to remember that it can be in its
- * original location or in the archive folder.
- * The FileLink class tries to abstract this concept and given a set of locations
- * it is able to switch between them making this operation transparent for the user.
- * {@link HFileLink} is a more concrete implementation of the {@code FileLink}.
- *
- * <p><b>Back-references:</b>
- * To help the {@link org.apache.hadoop.hbase.master.cleaner.CleanerChore} to keep track of
- * the links to a particular file, during the {@code FileLink} creation, a new file is placed
- * inside a back-reference directory. There's one back-reference directory for each file that
- * has links, and in the directory there's one file per link.
- *
- * <p>HFileLink Example
+ * If we want to create a reference to a file, we need to remember that it can be in its original
+ * location or in the archive folder. The FileLink class tries to abstract this concept and given a
+ * set of locations it is able to switch between them making this operation transparent for the
+ * user. {@link HFileLink} is a more concrete implementation of the {@code FileLink}.
+ * <p>
+ * <b>Back-references:</b> To help the {@link org.apache.hadoop.hbase.master.cleaner.CleanerChore}
+ * to keep track of the links to a particular file, during the {@code FileLink} creation, a new file
+ * is placed inside a back-reference directory. There's one back-reference directory for each file
+ * that has links, and in the directory there's one file per link.
+ * <p>
+ * HFileLink Example
  * <ul>
- *  <li>
- *      /hbase/table/region-x/cf/file-k
- *      (Original File)
- *  </li>
- *  <li>
- *      /hbase/table-cloned/region-y/cf/file-k.region-x.table
- *     (HFileLink to the original file)
- *  </li>
- *  <li>
- *      /hbase/table-2nd-cloned/region-z/cf/file-k.region-x.table
- *      (HFileLink to the original file)
- *  </li>
- *  <li>
- *      /hbase/.archive/table/region-x/.links-file-k/region-y.table-cloned
- *      (Back-reference to the link in table-cloned)
- *  </li>
- *  <li>
- *      /hbase/.archive/table/region-x/.links-file-k/region-z.table-2nd-cloned
- *      (Back-reference to the link in table-2nd-cloned)
- *  </li>
+ * <li>/hbase/table/region-x/cf/file-k (Original File)</li>
+ * <li>/hbase/table-cloned/region-y/cf/file-k.region-x.table (HFileLink to the original file)</li>
+ * <li>/hbase/table-2nd-cloned/region-z/cf/file-k.region-x.table (HFileLink to the original file)
+ * </li>
+ * <li>/hbase/.archive/table/region-x/.links-file-k/region-y.table-cloned (Back-reference to the
+ * link in table-cloned)</li>
+ * <li>/hbase/.archive/table/region-x/.links-file-k/region-z.table-2nd-cloned (Back-reference to the
+ * link in table-2nd-cloned)</li>
  * </ul>
  */
 @InterfaceAudience.Private
@@ -99,11 +80,11 @@ public class FileLink {
   public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";
 
   /**
-   * FileLink InputStream that handles the switch between the original path
-   * and the alternative locations, when the file is moved.
+   * FileLink InputStream that handles the switch between the original path and the alternative
+   * locations, when the file is moved.
    */
   private static class FileLinkInputStream extends InputStream
-      implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead, CanUnbuffer {
+    implements Seekable, PositionedReadable, CanSetDropBehind, CanSetReadahead, CanUnbuffer {
     private FSDataInputStream in = null;
     private Path currentPath = null;
     private long pos = 0;
@@ -112,13 +93,12 @@ public class FileLink {
     private final int bufferSize;
     private final FileSystem fs;
 
-    public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
-        throws IOException {
+    public FileLinkInputStream(final FileSystem fs, final FileLink fileLink) throws IOException {
       this(fs, fileLink, CommonFSUtils.getDefaultBufferSize(fs));
     }
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
-        throws IOException {
+      throws IOException {
       this.bufferSize = bufferSize;
       this.fileLink = fileLink;
       this.fs = fs;
@@ -144,7 +124,7 @@ public class FileLink {
 
     @Override
     public int read(byte[] b) throws IOException {
-       return read(b, 0, b.length);
+      return read(b, 0, b.length);
     }
 
     @Override
@@ -160,7 +140,7 @@ public class FileLink {
         n = tryOpen().read(b, off, len);
       }
       if (n > 0) pos += n;
-      assert(in.getPos() == pos);
+      assert (in.getPos() == pos);
       return n;
     }
 
@@ -292,18 +272,17 @@ public class FileLink {
 
     /**
      * Try to open the file from one of the available locations.
-     *
      * @return FSDataInputStream stream of the opened file link
      * @throws IOException on unexpected error, or file not found.
      */
     private FSDataInputStream tryOpen() throws IOException {
       IOException exception = null;
-      for (Path path: fileLink.getLocations()) {
+      for (Path path : fileLink.getLocations()) {
         if (path.equals(currentPath)) continue;
         try {
           in = fs.open(path, bufferSize);
           if (pos != 0) in.seek(pos);
-          assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
+          assert (in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
           if (LOG.isTraceEnabled()) {
             if (currentPath == null) {
               LOG.debug("link open path=" + path);
@@ -312,7 +291,7 @@ public class FileLink {
             }
           }
           currentPath = path;
-          return(in);
+          return (in);
         } catch (FileNotFoundException | AccessControlException | RemoteException e) {
           exception = FileLink.handleAccessLocationException(fileLink, e, exception);
         }
@@ -338,7 +317,7 @@ public class FileLink {
   }
 
   /**
-   * @param originPath Original location of the file to link
+   * @param originPath       Original location of the file to link
    * @param alternativePaths Alternative locations to look for the linked file
    */
   public FileLink(Path originPath, Path... alternativePaths) {
@@ -397,7 +376,6 @@ public class FileLink {
 
   /**
    * Get the FileStatus of the referenced file.
-   *
    * @param fs {@link FileSystem} on which to get the file status
    * @return InputStream for the hfile link.
    * @throws IOException on unexpected error.
@@ -416,21 +394,21 @@ public class FileLink {
 
   /**
    * Handle exceptions which are thrown when access locations of file link
-   * @param fileLink the file link
-   * @param newException the exception caught by access the current location
+   * @param fileLink          the file link
+   * @param newException      the exception caught by access the current location
    * @param previousException the previous exception caught by access the other locations
    * @return return AccessControlException if access one of the locations caught, otherwise return
    *         FileNotFoundException. The AccessControlException is threw if user scan snapshot
    *         feature is enabled, see
    *         {@link org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclController}.
    * @throws IOException if the exception is neither AccessControlException nor
-   *           FileNotFoundException
+   *                     FileNotFoundException
    */
   private static IOException handleAccessLocationException(FileLink fileLink,
-      IOException newException, IOException previousException) throws IOException {
+    IOException newException, IOException previousException) throws IOException {
     if (newException instanceof RemoteException) {
       newException = ((RemoteException) newException)
-          .unwrapRemoteException(FileNotFoundException.class, AccessControlException.class);
+        .unwrapRemoteException(FileNotFoundException.class, AccessControlException.class);
     }
     if (newException instanceof FileNotFoundException) {
       // Try another file location
@@ -449,9 +427,8 @@ public class FileLink {
   /**
    * Open the FileLink for read.
    * <p>
-   * It uses a wrapper of FSDataInputStream that is agnostic to the location
-   * of the file, even if the file switches between locations.
-   *
+   * It uses a wrapper of FSDataInputStream that is agnostic to the location of the file, even if
+   * the file switches between locations.
    * @param fs {@link FileSystem} on which to open the FileLink
    * @return InputStream for reading the file link.
    * @throws IOException on unexpected error.
@@ -463,10 +440,9 @@ public class FileLink {
   /**
    * Open the FileLink for read.
    * <p>
-   * It uses a wrapper of FSDataInputStream that is agnostic to the location
-   * of the file, even if the file switches between locations.
-   *
-   * @param fs {@link FileSystem} on which to open the FileLink
+   * It uses a wrapper of FSDataInputStream that is agnostic to the location of the file, even if
+   * the file switches between locations.
+   * @param fs         {@link FileSystem} on which to open the FileLink
    * @param bufferSize the size of the buffer to be used.
    * @return InputStream for reading the file link.
    * @throws IOException on unexpected error.
@@ -476,13 +452,13 @@ public class FileLink {
   }
 
   /**
-   * NOTE: This method must be used only in the constructor!
-   * It creates a List with the specified locations for the link.
+   * NOTE: This method must be used only in the constructor! It creates a List with the specified
+   * locations for the link.
    */
   protected void setLocations(Path originPath, Path... alternativePaths) {
     assert this.locations == null : "Link locations already set";
 
-    List<Path> paths = new ArrayList<>(alternativePaths.length +1);
+    List<Path> paths = new ArrayList<>(alternativePaths.length + 1);
     if (originPath != null) {
       paths.add(originPath);
     }
@@ -497,10 +473,9 @@ public class FileLink {
 
   /**
    * Get the directory to store the link back references
-   *
-   * <p>To simplify the reference count process, during the FileLink creation
-   * a back-reference is added to the back-reference directory of the specified file.
-   *
+   * <p>
+   * To simplify the reference count process, during the FileLink creation a back-reference is added
+   * to the back-reference directory of the specified file.
    * @param storeDir Root directory for the link reference folder
    * @param fileName File Name with links
    * @return Path for the link back references.
@@ -511,7 +486,6 @@ public class FileLink {
 
   /**
    * Get the referenced file name from the reference link directory path.
-   *
    * @param dirPath Link references directory path
    * @return Name of the file referenced
    */
@@ -551,4 +525,3 @@ public class FileLink {
     return Arrays.hashCode(locations);
   }
 }
-

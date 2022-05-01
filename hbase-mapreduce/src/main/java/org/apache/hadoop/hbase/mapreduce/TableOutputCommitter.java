@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +18,10 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Small committer class that does not do anything.
@@ -60,8 +58,6 @@ public class TableOutputCommitter extends OutputCommitter {
     return true;
   }
 
-  public void recoverTask(TaskAttemptContext taskContext)
-  throws IOException
-  {
+  public void recoverTask(TaskAttemptContext taskContext) throws IOException {
   }
 }

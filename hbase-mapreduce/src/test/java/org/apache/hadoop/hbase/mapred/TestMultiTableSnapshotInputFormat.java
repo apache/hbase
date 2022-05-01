@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,18 +46,18 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestMultiTableSnapshotInputFormat
-    extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
+  extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormat.class);
+    HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormat.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestMultiTableSnapshotInputFormat.class);
+    LoggerFactory.getLogger(TestMultiTableSnapshotInputFormat.class);
 
   @Override
   protected void runJob(String jobName, Configuration c, List<Scan> scans)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     JobConf job = new JobConf(TEST_UTIL.getConfiguration());
 
     job.setJobName(jobName);
@@ -65,7 +65,7 @@ public class TestMultiTableSnapshotInputFormat
     job.setReducerClass(Reducer.class);
 
     TableMapReduceUtil.initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans), Mapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
+      ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
 
     TableMapReduceUtil.addDependencyJars(job);
 
@@ -81,21 +81,19 @@ public class TestMultiTableSnapshotInputFormat
   }
 
   public static class Mapper extends TestMultiTableSnapshotInputFormat.ScanMapper
-      implements TableMap<ImmutableBytesWritable, ImmutableBytesWritable> {
+    implements TableMap<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     @Override
     public void map(ImmutableBytesWritable key, Result value,
-        OutputCollector<ImmutableBytesWritable, ImmutableBytesWritable> outputCollector,
-        Reporter reporter) throws IOException {
+      OutputCollector<ImmutableBytesWritable, ImmutableBytesWritable> outputCollector,
+      Reporter reporter) throws IOException {
       makeAssertions(key, value);
       outputCollector.collect(key, key);
     }
 
     /**
-     * Closes this stream and releases any system resources associated
-     * with it. If the stream is already closed then invoking this
-     * method has no effect.
-     *
+     * Closes this stream and releases any system resources associated with it. If the stream is
+     * already closed then invoking this method has no effect.
      * @throws IOException if an I/O error occurs
      */
     @Override
@@ -108,24 +106,22 @@ public class TestMultiTableSnapshotInputFormat
     }
   }
 
-  public static class Reducer extends TestMultiTableSnapshotInputFormat.ScanReducer implements
-      org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-          NullWritable, NullWritable> {
+  public static class Reducer extends TestMultiTableSnapshotInputFormat.ScanReducer
+    implements org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
+      NullWritable, NullWritable> {
 
     private JobConf jobConf;
 
     @Override
     public void reduce(ImmutableBytesWritable key, Iterator<ImmutableBytesWritable> values,
-        OutputCollector<NullWritable, NullWritable> outputCollector, Reporter reporter)
-        throws IOException {
+      OutputCollector<NullWritable, NullWritable> outputCollector, Reporter reporter)
+      throws IOException {
       makeAssertions(key, Lists.newArrayList(values));
     }
 
     /**
-     * Closes this stream and releases any system resources associated
-     * with it. If the stream is already closed then invoking this
-     * method has no effect.
-     *
+     * Closes this stream and releases any system resources associated with it. If the stream is
+     * already closed then invoking this method has no effect.
      * @throws IOException if an I/O error occurs
      */
     @Override

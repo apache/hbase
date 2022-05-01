@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
@@ -81,8 +79,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
   protected final HBaseRpcController controller;
 
   public AsyncRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
-      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
-      long rpcTimeoutNs, int startLogErrorsCnt) {
+    long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
+    int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.priority = priority;
@@ -148,7 +146,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   protected final void onError(Throwable t, Supplier<String> errMsg,
-      Consumer<Throwable> updateCachedLocation) {
+    Consumer<Throwable> updateCachedLocation) {
     if (future.isDone()) {
       // Give up if the future is already done, this is possible if user has already canceled the
       // future. And for timeline consistent read, we will also cancel some requests if we have
@@ -168,9 +166,9 @@ public abstract class AsyncRpcRetryingCaller<T> {
       return;
     }
     if (tries > startLogErrorsCnt) {
-      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts +
-        ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) +
-        " ms, time elapsed = " + elapsedMs() + " ms", error);
+      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts
+        + ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs)
+        + " ms, time elapsed = " + elapsedMs() + " ms", error);
     }
     updateCachedLocation.accept(error);
     RetriesExhaustedException.ThrowableWithExtraContext qt =

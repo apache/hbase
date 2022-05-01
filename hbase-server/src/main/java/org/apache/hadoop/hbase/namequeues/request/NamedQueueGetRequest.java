@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues.request;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
+
 /**
- * Request object to be used by ring buffer use-cases. Clients get records by sending
- * this request object.
- * For each ring buffer use-case, add request payload to this class, client should set
- * namedQueueEvent based on use-case.
- * Protobuf does not support inheritance, hence we need to work with
+ * Request object to be used by ring buffer use-cases. Clients get records by sending this request
+ * object. For each ring buffer use-case, add request payload to this class, client should set
+ * namedQueueEvent based on use-case. Protobuf does not support inheritance, hence we need to work
+ * with
  */
 @InterfaceAudience.Private
 public class NamedQueueGetRequest {
@@ -44,8 +42,7 @@ public class NamedQueueGetRequest {
     return slowLogResponseRequest;
   }
 
-  public void setSlowLogResponseRequest(
-      AdminProtos.SlowLogResponseRequest slowLogResponseRequest) {
+  public void setSlowLogResponseRequest(AdminProtos.SlowLogResponseRequest slowLogResponseRequest) {
     this.slowLogResponseRequest = slowLogResponseRequest;
   }
 
@@ -57,13 +54,13 @@ public class NamedQueueGetRequest {
     return balancerRejectionsRequest;
   }
 
-  public void setBalancerDecisionsRequest(
-      MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest) {
+  public void
+    setBalancerDecisionsRequest(MasterProtos.BalancerDecisionsRequest balancerDecisionsRequest) {
     this.balancerDecisionsRequest = balancerDecisionsRequest;
   }
 
-  public void setBalancerRejectionsRequest(
-    MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest) {
+  public void
+    setBalancerRejectionsRequest(MasterProtos.BalancerRejectionsRequest balancerRejectionsRequest) {
     this.balancerRejectionsRequest = balancerRejectionsRequest;
   }
 
@@ -77,11 +74,9 @@ public class NamedQueueGetRequest {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("slowLogResponseRequest", slowLogResponseRequest)
+    return new ToStringBuilder(this).append("slowLogResponseRequest", slowLogResponseRequest)
       .append("namedQueueEvent", namedQueueEvent)
       .append("balancerDecisionsRequest", balancerDecisionsRequest)
-      .append("balancerRejectionsRequest", balancerRejectionsRequest)
-      .toString();
+      .append("balancerRejectionsRequest", balancerRejectionsRequest).toString();
   }
 }

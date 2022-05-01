@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,29 +68,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests {@link HFile} cache-on-write functionality for data blocks, non-root
- * index blocks, and Bloom filter blocks, as specified by the column family.
+ * Tests {@link HFile} cache-on-write functionality for data blocks, non-root index blocks, and
+ * Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestCacheOnWriteInSchema {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCacheOnWriteInSchema.class);
+    HBaseClassTestRule.forClass(TestCacheOnWriteInSchema.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
-  private static byte [] table;
-  private static byte [] family = Bytes.toBytes("family");
+  private static byte[] table;
+  private static byte[] family = Bytes.toBytes("family");
   private static final int NUM_KV = 25000;
   private static final Random rand = new Random(12983177L);
   /** The number of valid key types possible in a store file */
-  private static final int NUM_VALID_KEY_TYPES =
-      KeyValue.Type.values().length - 2;
+  private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
 
   private static enum CacheOnWriteType {
     DATA_BLOCKS(BlockType.DATA, BlockType.ENCODED_DATA),
@@ -166,11 +166,11 @@ public class TestCacheOnWriteInSchema {
 
     // Create the schema
     ColumnFamilyDescriptor hcd = cowType
-        .modifyFamilySchema(
-          ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
-        .build();
+      .modifyFamilySchema(
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setBloomFilterType(BloomType.ROWCOL))
+      .build();
     TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(hcd).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(hcd).build();
 
     // Create a store based on the schema
     String id = TestCacheOnWriteInSchema.class.getName();
@@ -240,22 +240,20 @@ public class TestCacheOnWriteInSchema {
       while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
         // Flags: don't cache the block, use pread, this is not a compaction.
         // Also, pass null for expected block type to avoid checking it.
-        HFileBlock block = reader.readBlock(offset, -1, false, true,
-          false, true, null, DataBlockEncoding.NONE);
-        BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
-          offset);
+        HFileBlock block =
+          reader.readBlock(offset, -1, false, true, false, true, null, DataBlockEncoding.NONE);
+        BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
         boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
         final BlockType blockType = block.getBlockType();
 
-        if (shouldBeCached != isCached &&
-            (cowType.blockType1.equals(blockType) || cowType.blockType2.equals(blockType))) {
-          throw new AssertionError(
-            "shouldBeCached: " + shouldBeCached+ "\n" +
-            "isCached: " + isCached + "\n" +
-            "Test description: " + testDescription + "\n" +
-            "block: " + block + "\n" +
-            "blockCacheKey: " + blockCacheKey);
+        if (
+          shouldBeCached != isCached
+            && (cowType.blockType1.equals(blockType) || cowType.blockType2.equals(blockType))
+        ) {
+          throw new AssertionError("shouldBeCached: " + shouldBeCached + "\n" + "isCached: "
+            + isCached + "\n" + "Test description: " + testDescription + "\n" + "block: " + block
+            + "\n" + "blockCacheKey: " + blockCacheKey);
         }
         offset += block.getOnDiskSizeWithHeader();
       }
@@ -269,11 +267,10 @@ public class TestCacheOnWriteInSchema {
       // Let's make half of KVs puts.
       return KeyValue.Type.Put;
     } else {
-      KeyValue.Type keyType =
-          KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
+      KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
       if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
-        throw new RuntimeException("Generated an invalid key type: " + keyType
-            + ". " + "Probably the layout of KeyValue.Type has changed.");
+        throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
+          + "Probably the layout of KeyValue.Type has changed.");
       }
       return keyType;
     }
@@ -285,16 +282,10 @@ public class TestCacheOnWriteInSchema {
       byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
       byte[] v = RandomKeyValueUtil.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
-      KeyValue kv = new KeyValue(
-          k, 0, rowLen,
-          k, rowLen, cfLen,
-          k, rowLen + cfLen, k.length - rowLen - cfLen,
-          rand.nextLong(),
-          generateKeyType(rand),
-          v, 0, v.length);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       writer.append(kv);
     }
   }
 
 }
-

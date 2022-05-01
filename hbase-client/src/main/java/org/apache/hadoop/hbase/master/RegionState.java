@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +27,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 /**
- * State of a Region while undergoing transitions.
- * This class is immutable.
+ * State of a Region while undergoing transitions. This class is immutable.
  */
 @InterfaceAudience.Private
 public class RegionState {
@@ -36,23 +35,23 @@ public class RegionState {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public enum State {
-    OFFLINE,        // region is in an offline state
-    OPENING,        // server has begun to open but not yet done
-    OPEN,           // server opened region and updated meta
-    CLOSING,        // server has begun to close but not yet done
-    CLOSED,         // server closed region and updated meta
-    SPLITTING,      // server started split of a region
-    SPLIT,          // server completed split of a region
-    FAILED_OPEN,    // failed to open, and won't retry any more
-    FAILED_CLOSE,   // failed to close, and won't retry any more
-    MERGING,        // server started merge a region
-    MERGED,         // server completed merge a region
-    SPLITTING_NEW,  // new region to be created when RS splits a parent
-                    // region but hasn't be created yet, or master doesn't
-                    // know it's already created
-    MERGING_NEW,    // new region to be created when RS merges two
-                    // daughter regions but hasn't be created yet, or
-                    // master doesn't know it's already created
+    OFFLINE, // region is in an offline state
+    OPENING, // server has begun to open but not yet done
+    OPEN, // server opened region and updated meta
+    CLOSING, // server has begun to close but not yet done
+    CLOSED, // server closed region and updated meta
+    SPLITTING, // server started split of a region
+    SPLIT, // server completed split of a region
+    FAILED_OPEN, // failed to open, and won't retry any more
+    FAILED_CLOSE, // failed to close, and won't retry any more
+    MERGING, // server started merge a region
+    MERGED, // server completed merge a region
+    SPLITTING_NEW, // new region to be created when RS splits a parent
+                   // region but hasn't be created yet, or master doesn't
+                   // know it's already created
+    MERGING_NEW, // new region to be created when RS merges two
+                 // daughter regions but hasn't be created yet, or
+                 // master doesn't know it's already created
     ABNORMALLY_CLOSED; // the region is CLOSED because of a RS crashes. Usually it is the same
                        // with CLOSED, but for some operations such as merge/split, we can not
                        // apply it to a region in this state, as it may lead to data loss as we
@@ -123,7 +122,6 @@ public class RegionState {
 
     /**
      * Convert a protobuf HBaseProtos.RegionState.State to a RegionState.State
-     *
      * @return the RegionState.State
      */
     public static State convert(ClusterStatusProtos.RegionState.State protoState) {
@@ -195,13 +193,12 @@ public class RegionState {
     this(region, state, System.currentTimeMillis(), serverName);
   }
 
-  public RegionState(RegionInfo region,
-      State state, long stamp, ServerName serverName) {
+  public RegionState(RegionInfo region, State state, long stamp, ServerName serverName) {
     this(region, state, stamp, serverName, 0);
   }
 
   public RegionState(RegionInfo region, State state, long stamp, ServerName serverName,
-      long ritDuration) {
+    long ritDuration) {
     this.hri = region;
     this.state = state;
     this.stamp = stamp;
@@ -350,8 +347,7 @@ public class RegionState {
    * Check if a region state can transition to offline
    */
   public boolean isReadyToOffline() {
-    return isMerged() || isSplit() || isOffline()
-      || isSplittingNew() || isMergingNew();
+    return isMerged() || isSplit() || isOffline() || isSplittingNew() || isMergingNew();
   }
 
   /**
@@ -362,16 +358,16 @@ public class RegionState {
   }
 
   /**
-   * Check if a region state is one of offline states that
-   * can't transition to pending_close/closing (unassign/offline)
+   * Check if a region state is one of offline states that can't transition to pending_close/closing
+   * (unassign/offline)
    */
   public boolean isUnassignable() {
     return isUnassignable(state);
   }
 
   /**
-   * Check if a region state is one of offline states that
-   * can't transition to pending_close/closing (unassign/offline)
+   * Check if a region state is one of offline states that can't transition to pending_close/closing
+   * (unassign/offline)
    */
   public static boolean isUnassignable(State state) {
     return state == State.MERGED || state == State.SPLIT || state == State.OFFLINE
@@ -380,10 +376,8 @@ public class RegionState {
 
   @Override
   public String toString() {
-    return "{" + hri.getShortNameToLog()
-      + " state=" + state
-      + ", ts=" + stamp
-      + ", server=" + serverName + "}";
+    return "{" + hri.getShortNameToLog() + " state=" + state + ", ts=" + stamp + ", server="
+      + serverName + "}";
   }
 
   /**
@@ -391,19 +385,17 @@ public class RegionState {
    */
   public String toDescriptiveString() {
     long relTime = System.currentTimeMillis() - stamp;
-    return hri.getRegionNameAsString()
-      + " state=" + state
-      + ", ts=" + new Date(stamp) + " (" + (relTime/1000) + "s ago)"
-      + ", server=" + serverName;
+    return hri.getRegionNameAsString() + " state=" + state + ", ts=" + new Date(stamp) + " ("
+      + (relTime / 1000) + "s ago)" + ", server=" + serverName;
   }
 
   /**
    * Convert a RegionState to an HBaseProtos.RegionState
-   *
    * @return the converted HBaseProtos.RegionState
    */
   public ClusterStatusProtos.RegionState convert() {
-    ClusterStatusProtos.RegionState.Builder regionState = ClusterStatusProtos.RegionState.newBuilder();
+    ClusterStatusProtos.RegionState.Builder regionState =
+      ClusterStatusProtos.RegionState.newBuilder();
     regionState.setRegionInfo(ProtobufUtil.toRegionInfo(hri));
     regionState.setState(state.convert());
     regionState.setStamp(getStamp());
@@ -412,7 +404,6 @@ public class RegionState {
 
   /**
    * Convert a protobuf HBaseProtos.RegionState to a RegionState
-   *
    * @return the RegionState
    */
   public static RegionState convert(ClusterStatusProtos.RegionState proto) {
@@ -429,7 +420,7 @@ public class RegionState {
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    RegionState tmp = (RegionState)obj;
+    RegionState tmp = (RegionState) obj;
 
     return RegionInfo.COMPARATOR.compare(tmp.hri, hri) == 0 && tmp.state == state
       && ((serverName != null && serverName.equals(tmp.serverName))
@@ -441,7 +432,7 @@ public class RegionState {
    */
   @Override
   public int hashCode() {
-    return (serverName != null ? serverName.hashCode() * 11 : 0)
-      + hri.hashCode() + 5 * state.ordinal();
+    return (serverName != null ? serverName.hashCode() * 11 : 0) + hri.hashCode()
+      + 5 * state.ordinal();
   }
 }

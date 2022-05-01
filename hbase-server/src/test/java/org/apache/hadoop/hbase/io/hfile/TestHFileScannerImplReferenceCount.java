@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +70,7 @@ public class TestHFileScannerImplReferenceCount {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileScannerImplReferenceCount.class);
+    HBaseClassTestRule.forClass(TestHFileScannerImplReferenceCount.class);
 
   @Rule
   public TestName CASE = new TestName();
@@ -86,7 +85,7 @@ public class TestHFileScannerImplReferenceCount {
   public String ioengine;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
+    LoggerFactory.getLogger(TestHFileScannerImplReferenceCount.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Random RNG = new Random(9713312); // Just a fixed seed.
   private static final byte[] FAMILY = Bytes.toBytes("f");
@@ -157,19 +156,18 @@ public class TestHFileScannerImplReferenceCount {
   }
 
   private void writeHFile(Configuration conf, FileSystem fs, Path hfilePath, Algorithm compression,
-      DataBlockEncoding encoding, int cellCount) throws IOException {
+    DataBlockEncoding encoding, int cellCount) throws IOException {
     HFileContext context =
-        new HFileContextBuilder().withBlockSize(1).withDataBlockEncoding(DataBlockEncoding.NONE)
-            .withCompression(compression).withDataBlockEncoding(encoding).build();
-    try (HFile.Writer writer =
-        new HFile.WriterFactory(conf, new CacheConfig(conf)).withPath(fs, hfilePath)
-            .withFileContext(context).create()) {
+      new HFileContextBuilder().withBlockSize(1).withDataBlockEncoding(DataBlockEncoding.NONE)
+        .withCompression(compression).withDataBlockEncoding(encoding).build();
+    try (HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
+      .withPath(fs, hfilePath).withFileContext(context).create()) {
       for (int i = 0; i < cellCount; ++i) {
         byte[] keyBytes = Bytes.add(Bytes.toBytes(i), SUFFIX);
         // A random-length random value.
         byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
         KeyValue keyValue =
-            new KeyValue(keyBytes, FAMILY, QUALIFIER, HConstants.LATEST_TIMESTAMP, valueBytes);
+          new KeyValue(keyBytes, FAMILY, QUALIFIER, HConstants.LATEST_TIMESTAMP, valueBytes);
         if (firstCell == null) {
           firstCell = keyValue;
         } else if (secondCell == null) {
@@ -185,7 +183,7 @@ public class TestHFileScannerImplReferenceCount {
    * read the design doc in HBASE-21879 firstly and make sure that understand the refCnt design.
    */
   private void testReleaseBlock(Algorithm compression, DataBlockEncoding encoding)
-      throws Exception {
+    throws Exception {
     writeHFile(conf, fs, hfilePath, compression, encoding, CELL_COUNT);
     HFileBlock curBlock, prevBlock;
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
@@ -199,15 +197,14 @@ public class TestHFileScannerImplReferenceCount {
 
     HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+      .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
+      .getHFileBlock();
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertFalse(block1 instanceof ExclusiveMemHFileBlock);
 
-    HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+    HFileBlock block2 = reader.getDataBlockIndexReader().loadDataBlockWithScanInfo(secondCell, null,
+      true, true, false, DataBlockEncoding.NONE, reader).getHFileBlock();
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertFalse(block2 instanceof ExclusiveMemHFileBlock);
@@ -283,13 +280,12 @@ public class TestHFileScannerImplReferenceCount {
 
     HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+      .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
+      .getHFileBlock();
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertFalse(block1 instanceof ExclusiveMemHFileBlock);
-    HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+    HFileBlock block2 = reader.getDataBlockIndexReader().loadDataBlockWithScanInfo(secondCell, null,
+      true, true, false, DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertFalse(block2 instanceof ExclusiveMemHFileBlock);
     // Wait until flushed to IOEngine;
@@ -344,8 +340,8 @@ public class TestHFileScannerImplReferenceCount {
 
     // Reload the block1 again.
     block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+      .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
+      .getHFileBlock();
     // Wait until flushed to IOEngine;
     waitBucketCacheFlushed(defaultBC);
     Assert.assertTrue(block1.getBlockType().isData());
@@ -413,13 +409,12 @@ public class TestHFileScannerImplReferenceCount {
 
     HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(true, true, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+      .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
+      .getHFileBlock();
     Assert.assertTrue(block1.getBlockType().isData());
     Assert.assertTrue(block1 instanceof ExclusiveMemHFileBlock);
-    HFileBlock block2 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(secondCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+    HFileBlock block2 = reader.getDataBlockIndexReader().loadDataBlockWithScanInfo(secondCell, null,
+      true, true, false, DataBlockEncoding.NONE, reader).getHFileBlock();
     Assert.assertTrue(block2.getBlockType().isData());
     Assert.assertTrue(block2 instanceof ExclusiveMemHFileBlock);
     // One RPC reference path.
@@ -463,8 +458,8 @@ public class TestHFileScannerImplReferenceCount {
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
     HFileBlock block1 = reader.getDataBlockIndexReader()
-        .loadDataBlockWithScanInfo(firstCell, null, true, true, false,
-            DataBlockEncoding.NONE, reader).getHFileBlock();
+      .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
+      .getHFileBlock();
 
     Assert.assertTrue(block1.isSharedMem());
     Assert.assertTrue(block1 instanceof SharedMemHFileBlock);

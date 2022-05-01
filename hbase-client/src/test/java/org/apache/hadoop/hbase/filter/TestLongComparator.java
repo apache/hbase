@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,14 +31,14 @@ import org.junit.experimental.categories.Category;
 public class TestLongComparator {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLongComparator.class);
+    HBaseClassTestRule.forClass(TestLongComparator.class);
 
-  private long[] values = { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L,
-    Long.MAX_VALUE };
+  private long[] values =
+    { Long.MIN_VALUE, -10000000000L, -1000000L, 0L, 1000000L, 10000000000L, Long.MAX_VALUE };
 
   @Test
   public void testSimple() {
-    for (int i = 1; i < values.length ; i++) {
+    for (int i = 1; i < values.length; i++) {
       for (int j = 0; j < i; j++) {
         LongComparator cp = new LongComparator(values[i]);
         assertEquals(1, cp.compareTo(Bytes.toBytes(values[j])));

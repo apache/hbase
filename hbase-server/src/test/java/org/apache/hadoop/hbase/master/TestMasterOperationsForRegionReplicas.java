@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,8 +84,8 @@ public class TestMasterOperationsForRegionReplicas {
   private static Connection CONNECTION = null;
   private static Admin ADMIN;
   private static int numSlaves = 2;
-  private final static StartMiniClusterOption option = StartMiniClusterOption.builder().
-      numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
+  private final static StartMiniClusterOption option = StartMiniClusterOption.builder()
+    .numRegionServers(numSlaves).numMasters(1).numAlwaysStandByMasters(1).build();
   private static Configuration conf;
 
   @Rule
@@ -98,8 +98,10 @@ public class TestMasterOperationsForRegionReplicas {
     TEST_UTIL.startMiniCluster(option);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     resetConnections();
-    while (ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
-      .size() < numSlaves) {
+    while (
+      ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().size()
+          < numSlaves
+    ) {
       Thread.sleep(100);
     }
   }
@@ -234,8 +236,8 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitUntilNoRegionsInTransition();
       List<RegionInfo> regions = TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionsOfTable(tableName);
-      assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica=" +
-        numReplica, regions.size() == numRegions * (numReplica + 1));
+      assertTrue("regions.size=" + regions.size() + ", numRegions=" + numRegions + ", numReplica="
+        + numReplica, regions.size() == numRegions * (numReplica + 1));
 
       // decrease the replica(earlier, table was modified to have a replica count of numReplica + 1)
       ADMIN.disableTable(tableName);
@@ -275,9 +277,8 @@ public class TestMasterOperationsForRegionReplicas {
     for (int i = 0; i < numRegions; i++) {
       for (int j = 0; j < numReplica; j++) {
         RegionInfo replica = RegionReplicaUtil.getRegionInfoForReplica(hris.get(i), j);
-        RegionState state =
-            TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-                .getRegionState(replica);
+        RegionState state = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .getRegionStates().getRegionState(replica);
         assertNotNull(state);
       }
     }
@@ -333,7 +334,7 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private void validateNumberOfRowsInMeta(final TableName table, int numRegions,
-      Connection connection) throws IOException {
+    Connection connection) throws IOException {
     assert (ADMIN.tableExists(table));
     final AtomicInteger count = new AtomicInteger();
     Visitor visitor = new Visitor() {
@@ -348,7 +349,7 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table,
-      int numRegions, int numReplica, Connection connection) throws IOException {
+    int numRegions, int numReplica, Connection connection) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot =
       new SnapshotOfRegionAssignmentFromMeta(connection);
     snapshot.initialize();
@@ -375,7 +376,7 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private void validateSingleRegionServerAssignment(Connection connection, int numRegions,
-      int numReplica) throws IOException {
+    int numReplica) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot =
       new SnapshotOfRegionAssignmentFromMeta(connection);
     snapshot.initialize();

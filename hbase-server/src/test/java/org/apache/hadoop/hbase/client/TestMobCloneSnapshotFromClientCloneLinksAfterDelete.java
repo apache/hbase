@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
-    extends CloneSnapshotFromClientCloneLinksAfterDeleteTestBase {
+  extends CloneSnapshotFromClientCloneLinksAfterDeleteTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,11 +63,13 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
 
     @Override
     public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e,
-        FlushLifeCycleTracker tracker) throws IOException {
+      FlushLifeCycleTracker tracker) throws IOException {
       if (delayFlush) {
         try {
-          if (Bytes.compareTo(e.getEnvironment().getRegionInfo().getStartKey(),
-            HConstants.EMPTY_START_ROW) != 0) {
+          if (
+            Bytes.compareTo(e.getEnvironment().getRegionInfo().getStartKey(),
+              HConstants.EMPTY_START_ROW) != 0
+          ) {
             Thread.sleep(100);
           }
         } catch (InterruptedException e1) {

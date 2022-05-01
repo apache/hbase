@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +31,8 @@ import org.apache.hbase.thirdparty.io.netty.util.Timer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
 /**
- * Retry caller for a request call to region server.
- * Now only used for coprocessor call to region server.
+ * Retry caller for a request call to region server. Now only used for coprocessor call to region
+ * server.
  */
 @InterfaceAudience.Private
 public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
@@ -46,8 +46,8 @@ public class AsyncServerRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
   private ServerName serverName;
 
   public AsyncServerRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
-      long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
+    long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs,
+    int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
     super(retryTimer, conn, HConstants.NORMAL_QOS, pauseNs, pauseForCQTBENs, maxAttempts,
       operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.serverName = serverName;

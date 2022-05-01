@@ -25,8 +25,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Registry for meta information needed for connection setup to a HBase cluster. Implementations
- * hold cluster information such as this cluster's id, location of hbase:meta, etc..
- * Internal use only.
+ * hold cluster information such as this cluster's id, location of hbase:meta, etc.. Internal use
+ * only.
  */
 @InterfaceAudience.Private
 interface ConnectionRegistry extends Closeable {

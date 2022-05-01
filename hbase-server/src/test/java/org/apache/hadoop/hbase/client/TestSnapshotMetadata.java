@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,12 +53,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test class to verify that metadata is consistent before and after a snapshot attempt.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestSnapshotMetadata {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotMetadata.class);
+    HBaseClassTestRule.forClass(TestSnapshotMetadata.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotMetadata.class);
 
@@ -81,9 +81,8 @@ public class TestSnapshotMetadata {
   private static final String TEST_CONF_CUSTOM_VALUE = "TestCustomConf";
   private static final String TEST_CUSTOM_VALUE = "TestCustomValue";
 
-  private static final byte[][] families = {
-    MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM
-  };
+  private static final byte[][] families =
+    { MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM };
 
   private static final DataBlockEncoding DATA_BLOCK_ENCODING_TYPE = DataBlockEncoding.FAST_DIFF;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
@@ -148,7 +147,7 @@ public class TestSnapshotMetadata {
   }
 
   /*
-   *  Create a table that has non-default properties so we can see if they hold
+   * Create a table that has non-default properties so we can see if they hold
    */
   private void createTableWithNonDefaultProperties() throws Exception {
     final long startTime = System.currentTimeMillis();
@@ -184,7 +183,6 @@ public class TestSnapshotMetadata {
     original.close();
   }
 
-
   /**
    * Verify that the describe for a cloned table matches the describe from the original.
    */
@@ -193,8 +191,7 @@ public class TestSnapshotMetadata {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableName;
     final TableName clonedTableName = TableName.valueOf(clonedTableNameAsString);
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + System.currentTimeMillis();
+    final String snapshotNameAsString = "snapshot" + originalTableName + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
     // restore the snapshot into a cloned table and examine the output
@@ -202,21 +199,19 @@ public class TestSnapshotMetadata {
     Collections.addAll(familiesList, families);
 
     // Create a snapshot in which all families are empty
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null,
-      familiesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null, familiesList,
+      snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     Table clonedTable = UTIL.getConnection().getTable(clonedTableName);
     HTableDescriptor cloneHtd = admin.getTableDescriptor(clonedTableName);
-    assertEquals(
-      originalTableDescription.replace(originalTableName.getNameAsString(),clonedTableNameAsString),
-      cloneHtd.toStringCustomizedValues());
+    assertEquals(originalTableDescription.replace(originalTableName.getNameAsString(),
+      clonedTableNameAsString), cloneHtd.toStringCustomizedValues());
 
     // Verify the custom fields
-    assertEquals(originalTableDescriptor.getValues().size(),
-                        cloneHtd.getValues().size());
+    assertEquals(originalTableDescriptor.getValues().size(), cloneHtd.getValues().size());
     assertEquals(originalTableDescriptor.getConfiguration().size(),
-                        cloneHtd.getConfiguration().size());
+      cloneHtd.getConfiguration().size());
     assertEquals(TEST_CUSTOM_VALUE, cloneHtd.getValue(TEST_CUSTOM_VALUE));
     assertEquals(TEST_CONF_CUSTOM_VALUE, cloneHtd.getConfigurationValue(TEST_CONF_CUSTOM_VALUE));
     assertEquals(originalTableDescriptor.getValues(), cloneHtd.getValues());
@@ -245,8 +240,7 @@ public class TestSnapshotMetadata {
 
   /**
    * Verify that when the table is empty, making metadata changes after the restore does not affect
-   * the restored table's original metadata
-   * @throws Exception
+   * the restored table's original metadata n
    */
   @Test
   public void testDescribeOnEmptyTableMatchesAfterMetadataChangeAndRestore() throws Exception {
@@ -258,7 +252,7 @@ public class TestSnapshotMetadata {
   }
 
   private void runRestoreWithAdditionalMetadata(boolean changeMetadata, boolean addData)
-      throws Exception {
+    throws Exception {
 
     if (admin.isTableDisabled(originalTableName)) {
       admin.enableTable(originalTableName);
@@ -285,13 +279,11 @@ public class TestSnapshotMetadata {
     }
 
     // take a "disabled" snapshot
-    final String snapshotNameAsString = "snapshot" + originalTableName
-        + System.currentTimeMillis();
+    final String snapshotNameAsString = "snapshot" + originalTableName + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName,
-      familiesWithDataList, emptyFamiliesList, snapshotNameAsString, rootDir, fs,
-      /* onlineSnapshot= */ false);
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, familiesWithDataList,
+      emptyFamiliesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.enableTable(originalTableName);
 

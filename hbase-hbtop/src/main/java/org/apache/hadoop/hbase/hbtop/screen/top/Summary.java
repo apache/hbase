@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.hbtop.screen.top;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents the summary of the metrics.
  */
@@ -37,8 +36,8 @@ public class Summary {
   private final double averageLoad;
   private final long aggregateRequestPerSecond;
 
-  public Summary(String currentTime, String version, String clusterId, int servers,
-    int liveServers, int deadServers, int regionCount, int ritCount, double averageLoad,
+  public Summary(String currentTime, String version, String clusterId, int servers, int liveServers,
+    int deadServers, int regionCount, int ritCount, double averageLoad,
     long aggregateRequestPerSecond) {
     this.currentTime = Objects.requireNonNull(currentTime);
     this.version = Objects.requireNonNull(version);

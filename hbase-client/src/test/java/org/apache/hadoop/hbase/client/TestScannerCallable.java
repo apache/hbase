@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -48,7 +47,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 public class TestScannerCallable {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerCallable.class);
+    HBaseClassTestRule.forClass(TestScannerCallable.class);
 
   private static final TableName TABLE_NAME = TableName.valueOf("TestScannerCallable");
 
@@ -77,11 +76,10 @@ public class TestScannerCallable {
 
   @Test
   public void testPrepareAlwaysUsesCache() throws Exception {
-    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0))
-        .thenReturn(regionLocations);
+    when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0)).thenReturn(regionLocations);
 
     ScannerCallable callable =
-        new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+      new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
     callable.prepare(false);
     callable.prepare(true);
 
@@ -93,7 +91,7 @@ public class TestScannerCallable {
     when(connection.isTableDisabled(TABLE_NAME)).thenReturn(true);
 
     ScannerCallable callable =
-        new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+      new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
 
     assertThrows(TableNotEnabledException.class, () -> callable.prepare(true));
   }

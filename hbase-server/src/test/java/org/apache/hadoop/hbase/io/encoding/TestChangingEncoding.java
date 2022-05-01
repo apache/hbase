@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -60,12 +59,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests changing data block encoding settings of a column family.
  */
-@Category({IOTests.class, LargeTests.class})
+@Category({ IOTests.class, LargeTests.class })
 public class TestChangingEncoding {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestChangingEncoding.class);
+    HBaseClassTestRule.forClass(TestChangingEncoding.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChangingEncoding.class);
   static final String CF = "EncodingTestCF";
@@ -82,8 +81,7 @@ public class TestChangingEncoding {
   private HColumnDescriptor hcd;
 
   private TableName tableName;
-  private static final List<DataBlockEncoding> ENCODINGS_TO_ITERATE =
-      createEncodingsToIterate();
+  private static final List<DataBlockEncoding> ENCODINGS_TO_ITERATE = createEncodingsToIterate();
 
   private static final List<DataBlockEncoding> createEncodingsToIterate() {
     List<DataBlockEncoding> encodings = new ArrayList<>(Arrays.asList(DataBlockEncoding.values()));
@@ -112,7 +110,7 @@ public class TestChangingEncoding {
     // Disabling split to make sure split does not cause modify column to wait which timesout test
     // sometime
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        "org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy");
+      "org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy");
     // ((Log4JLogger)RpcServerImplementation.LOG).getLogger().setLevel(Level.TRACE);
     // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.TRACE);
     TEST_UTIL.startMiniCluster();
@@ -132,12 +130,10 @@ public class TestChangingEncoding {
   }
 
   private static byte[] getValue(int batchId, int i, int j) {
-    return Bytes.toBytes("value_for_" + Bytes.toString(getRowKey(batchId, i))
-        + "_col" + j);
+    return Bytes.toBytes("value_for_" + Bytes.toString(getRowKey(batchId, i)) + "_col" + j);
   }
 
-  static void writeTestDataBatch(TableName tableName,
-      int batchId) throws Exception {
+  static void writeTestDataBatch(TableName tableName, int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
@@ -149,13 +145,12 @@ public class TestChangingEncoding {
       puts.add(put);
     }
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        Table table = conn.getTable(tableName)) {
+      Table table = conn.getTable(tableName)) {
       table.put(puts);
     }
   }
 
-  static void verifyTestDataBatch(TableName tableName,
-      int batchId) throws Exception {
+  static void verifyTestDataBatch(TableName tableName, int batchId) throws Exception {
     LOG.debug("Verifying test data batch " + batchId);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
@@ -183,10 +178,9 @@ public class TestChangingEncoding {
     }
   }
 
-  private void setEncodingConf(DataBlockEncoding encoding,
-      boolean onlineChange) throws Exception {
-    LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
-      + encoding.ordinal() + "), onlineChange=" + onlineChange);
+  private void setEncodingConf(DataBlockEncoding encoding, boolean onlineChange) throws Exception {
+    LOG.debug("Setting CF encoding to " + encoding + " (ordinal=" + encoding.ordinal()
+      + "), onlineChange=" + onlineChange);
     hcd.setDataBlockEncoding(encoding);
     try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
       if (!onlineChange) {
@@ -207,7 +201,7 @@ public class TestChangingEncoding {
   @Test
   public void testChangingEncoding() throws Exception {
     prepareTest("ChangingEncoding");
-    for (boolean onlineChange : new boolean[]{false, true}) {
+    for (boolean onlineChange : new boolean[] { false, true }) {
       for (DataBlockEncoding encoding : ENCODINGS_TO_ITERATE) {
         setEncodingConf(encoding, onlineChange);
         writeSomeNewData();
@@ -219,7 +213,7 @@ public class TestChangingEncoding {
   @Test
   public void testChangingEncodingWithCompaction() throws Exception {
     prepareTest("ChangingEncodingWithCompaction");
-    for (boolean onlineChange : new boolean[]{false, true}) {
+    for (boolean onlineChange : new boolean[] { false, true }) {
       for (DataBlockEncoding encoding : ENCODINGS_TO_ITERATE) {
         setEncodingConf(encoding, onlineChange);
         writeSomeNewData();

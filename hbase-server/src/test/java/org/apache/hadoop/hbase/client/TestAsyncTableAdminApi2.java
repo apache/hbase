@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,8 +42,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations
- * @see TestAsyncTableAdminApi This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ * @see TestAsyncTableAdminApi This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
@@ -51,7 +51,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableAdminApi2.class);
+    HBaseClassTestRule.forClass(TestAsyncTableAdminApi2.class);
 
   @Test
   public void testDisableCatalogTable() throws Exception {
@@ -150,7 +150,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
@@ -166,7 +166,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_1));
     admin.createTable(builder.build()).join();
     admin.disableTable(tableName).join();
     // Verify the table descriptor
@@ -186,7 +186,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   }
 
   private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
-      throws Exception {
+    throws Exception {
     // Verify descriptor from master
     TableDescriptor htd = admin.getDescriptor(tableName).get();
     verifyTableDescriptor(htd, tableName, families);
@@ -199,7 +199,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
   }
 
   private void verifyTableDescriptor(final TableDescriptor htd, final TableName tableName,
-      final byte[]... families) {
+    final byte[]... families) {
     Set<byte[]> htdFamilies = htd.getColumnFamilyNames();
     assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
@@ -207,7 +207,6 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
       assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
     }
   }
-
 
   @Test
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
@@ -237,7 +236,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     assertFalse(ts.isPresent());
 
     byte[] regionName = ASYNC_CONN.getRegionLocator(tableName)
-        .getRegionLocation(Bytes.toBytes("row1")).get().getRegion().getRegionName();
+      .getRegionLocation(Bytes.toBytes("row1")).get().getRegion().getRegionName();
     Optional<Long> ts1 = admin.getLastMajorCompactionTimestampForRegion(regionName).get();
     assertFalse(ts1.isPresent());
     p = new Put(Bytes.toBytes("row2"));
@@ -276,7 +275,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     }
     // Sleep to wait region server report
     Thread
-        .sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
+      .sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
 
     ts = admin.getLastMajorCompactionTimestamp(tableName).get();
     // after a compaction our earliest timestamp will have progressed forward

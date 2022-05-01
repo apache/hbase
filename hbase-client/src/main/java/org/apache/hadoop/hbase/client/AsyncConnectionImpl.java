@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -120,7 +120,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   private final ClusterStatusListener clusterStatusListener;
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-      User user) {
+    User user) {
     this.conf = conf;
     this.user = user;
 
@@ -158,14 +158,13 @@ class AsyncConnectionImpl implements AsyncConnection {
         LOG.warn("{} is true, but {} is not set", STATUS_PUBLISHED, STATUS_LISTENER_CLASS);
       } else {
         try {
-          listener = new ClusterStatusListener(
-            new ClusterStatusListener.DeadServerHandler() {
-              @Override
-              public void newDead(ServerName sn) {
-                locator.clearCache(sn);
-                rpcClient.cancelConnections(sn);
-              }
-            }, conf, listenerClass);
+          listener = new ClusterStatusListener(new ClusterStatusListener.DeadServerHandler() {
+            @Override
+            public void newDead(ServerName sn) {
+              locator.clearCache(sn);
+              rpcClient.cancelConnections(sn);
+            }
+          }, conf, listenerClass);
         } catch (IOException e) {
           LOG.warn("Failed create of ClusterStatusListener, not a critical, ignoring...", e);
         }
@@ -180,8 +179,7 @@ class AsyncConnectionImpl implements AsyncConnection {
   }
 
   /**
-   * If choreService has not been created yet, create the ChoreService.
-   * @return ChoreService
+   * If choreService has not been created yet, create the ChoreService. n
    */
   synchronized ChoreService getChoreService() {
     if (isClosed()) {
@@ -206,7 +204,7 @@ class AsyncConnectionImpl implements AsyncConnection {
       return;
     }
     LOG.info("Connection has been closed by {}.", Thread.currentThread().getName());
-    if(LOG.isDebugEnabled()){
+    if (LOG.isDebugEnabled()) {
       logCallStack(Thread.currentThread().getStackTrace());
     }
     IOUtils.closeQuietly(clusterStatusListener,
@@ -325,7 +323,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return new AsyncTableBuilderBase<ScanResultConsumer>(tableName, connConf) {
 
       @Override
@@ -366,7 +364,7 @@ class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return new AsyncBufferedMutatorBuilderImpl(connConf, getTableBuilder(tableName, pool),
       RETRY_TIMER);
   }

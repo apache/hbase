@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 
@@ -38,30 +37,31 @@ public abstract class BaseReplicationEndpoint extends AbstractService
   implements ReplicationEndpoint {
 
   private static final Logger LOG = LoggerFactory.getLogger(BaseReplicationEndpoint.class);
-  public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY
-      = "hbase.replication.source.custom.walentryfilters";
+  public static final String REPLICATION_WALENTRYFILTER_CONFIG_KEY =
+    "hbase.replication.source.custom.walentryfilters";
   protected Context ctx;
 
   @Override
   public void init(Context context) throws IOException {
     this.ctx = context;
 
-    if (this.ctx != null){
+    if (this.ctx != null) {
       ReplicationPeer peer = this.ctx.getReplicationPeer();
-      if (peer != null){
+      if (peer != null) {
         peer.registerPeerConfigListener(this);
       } else {
-        LOG.warn("Not tracking replication peer config changes for Peer Id " + this.ctx.getPeerId() +
-            " because there's no such peer");
+        LOG.warn("Not tracking replication peer config changes for Peer Id " + this.ctx.getPeerId()
+          + " because there's no such peer");
       }
     }
   }
 
   @Override
   /**
-   * No-op implementation for subclasses to override if they wish to execute logic if their config changes
+   * No-op implementation for subclasses to override if they wish to execute logic if their config
+   * changes
    */
-  public void peerConfigUpdated(ReplicationPeerConfig rpc){
+  public void peerConfigUpdated(ReplicationPeerConfig rpc) {
 
   }
 
@@ -78,7 +78,8 @@ public abstract class BaseReplicationEndpoint extends AbstractService
       filters.add(tableCfFilter);
     }
     if (ctx != null && ctx.getPeerConfig() != null) {
-      String filterNameCSV = ctx.getPeerConfig().getConfiguration().get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
+      String filterNameCSV =
+        ctx.getPeerConfig().getConfiguration().get(REPLICATION_WALENTRYFILTER_CONFIG_KEY);
       if (filterNameCSV != null && !filterNameCSV.isEmpty()) {
         String[] filterNames = filterNameCSV.split(",");
         for (String filterName : filterNames) {
@@ -94,14 +95,18 @@ public abstract class BaseReplicationEndpoint extends AbstractService
     return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
   }
 
-  /** Returns a WALEntryFilter for checking the scope. Subclasses can
-   * return null if they don't want this filter */
+  /**
+   * Returns a WALEntryFilter for checking the scope. Subclasses can return null if they don't want
+   * this filter
+   */
   protected WALEntryFilter getScopeWALEntryFilter() {
     return new ScopeWALEntryFilter();
   }
 
-  /** Returns a WALEntryFilter for checking replication per table and CF. Subclasses can
-   * return null if they don't want this filter */
+  /**
+   * Returns a WALEntryFilter for checking replication per table and CF. Subclasses can return null
+   * if they don't want this filter
+   */
   protected WALEntryFilter getNamespaceTableCfWALEntryFilter() {
     return new NamespaceTableCfWALEntryFilter(ctx.getReplicationPeer());
   }

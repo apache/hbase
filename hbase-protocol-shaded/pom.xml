@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
     /**
@@ -21,8 +21,8 @@
     -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.4.6.7.2.16.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
@@ -36,13 +36,28 @@
     -->
     <internal.protobuf.version>3.17.3</internal.protobuf.version>
   </properties>
+  <dependencies>
+    <!--BE CAREFUL! Any dependency added here needs to be
+          excluded above in the shade plugin else the dependency
+          will get bundled-->
+    <!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-protobuf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
   <build>
     <plugins>
       <!-- Make a jar and put the sources in the jar -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-		  </plugin>
+      </plugin>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
@@ -56,10 +71,10 @@
         <executions>
           <execution>
             <id>secondPartTestsExecution</id>
-            <phase>test</phase>
             <goals>
               <goal>test</goal>
             </goals>
+            <phase>test</phase>
             <configuration>
               <skip>true</skip>
             </configuration>
@@ -72,10 +87,10 @@
         <executions>
           <execution>
             <id>compile-protoc</id>
-            <phase>generate-sources</phase>
             <goals>
               <goal>compile</goal>
             </goals>
+            <phase>generate-sources</phase>
             <configuration>
               <protocArtifact>com.google.protobuf:protoc:${internal.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
               <checkStaleness>true</checkStaleness>
@@ -95,48 +110,48 @@
         <groupId>com.google.code.maven-replacer-plugin</groupId>
         <artifactId>replacer</artifactId>
         <version>1.5.3</version>
+        <configuration>
+          <basedir>${basedir}/target/generated-sources/</basedir>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+          <!-- Ignore errors when missing files, because it means this build
+                 was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
+          <ignoreErrors>true</ignoreErrors>
+          <replacements>
+            <replacement>
+              <token>([^\.])com.google.protobuf</token>
+              <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
+            </replacement>
+            <replacement>
+              <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
+              <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
+            </replacement>
+            <!-- replacer doesn't support anchoring or negative lookbehind -->
+            <replacement>
+              <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
+              <value>$1</value>
+            </replacement>
+          </replacements>
+        </configuration>
         <executions>
           <execution>
-            <phase>process-sources</phase>
             <goals>
               <goal>replace</goal>
             </goals>
+            <phase>process-sources</phase>
           </execution>
         </executions>
-        <configuration>
-          <basedir>${basedir}/target/generated-sources/</basedir>
-            <includes>
-                <include>**/*.java</include>
-            </includes>
-            <!-- Ignore errors when missing files, because it means this build
-                 was run with -Dprotoc.skip and there is no -Dreplacer.skip -->
-            <ignoreErrors>true</ignoreErrors>
-            <replacements>
-              <replacement>
-                <token>([^\.])com.google.protobuf</token>
-                <value>$1org.apache.hbase.thirdparty.com.google.protobuf</value>
-              </replacement>
-              <replacement>
-                <token>(public)(\W+static)?(\W+final)?(\W+class)</token>
-                <value>@javax.annotation.Generated("proto") $1$2$3$4</value>
-              </replacement>
-              <!-- replacer doesn't support anchoring or negative lookbehind -->
-              <replacement>
-                <token>(@javax.annotation.Generated\("proto"\) ){2}</token>
-                <value>$1</value>
-              </replacement>
-            </replacements>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>shade</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <minimizeJar>true</minimizeJar>
               <shadeSourcesContent>true</shadeSourcesContent>
@@ -187,21 +202,6 @@
       </plugin>
     </plugins>
   </build>
-  <dependencies>
-    <!--BE CAREFUL! Any dependency added here needs to be
-          excluded above in the shade plugin else the dependency
-          will get bundled-->
-    <!-- Intra-project dependencies -->
-    <dependency>
-      <groupId>org.apache.hbase.thirdparty</groupId>
-      <artifactId>hbase-shaded-protobuf</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
@@ -260,9 +260,7 @@
                     </pluginExecution>
                     <pluginExecution>
                       <pluginExecutionFilter>
-                        <groupId>
-                          com.google.code.maven-replacer-plugin
-                        </groupId>
+                        <groupId>com.google.code.maven-replacer-plugin</groupId>
                         <artifactId>replacer</artifactId>
                         <versionRange>[1.5.3,)</versionRange>
                         <goals>
@@ -271,7 +269,7 @@
                       </pluginExecutionFilter>
                       <action>
                         <execute>
-                         <runOnIncremental>false</runOnIncremental>
+                          <runOnIncremental>false</runOnIncremental>
                         </execute>
                       </action>
                     </pluginExecution>

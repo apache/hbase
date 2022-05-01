@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertArrayEquals;
+
 import java.util.Arrays;
 import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -57,7 +58,7 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDelegationTokenWithEncryption.class);
+    HBaseClassTestRule.forClass(TestDelegationTokenWithEncryption.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -74,8 +75,7 @@ public class TestDelegationTokenWithEncryption extends SecureTestCluster {
   public static Collection<Object> parameters() {
     // Client connection supports only non-blocking RPCs (due to master registry restriction), hence
     // we only test NettyRpcClient.
-    return Arrays.asList(
-      new Object[] { NettyRpcClient.class.getName() });
+    return Arrays.asList(new Object[] { NettyRpcClient.class.getName() });
   }
 
   @Parameter

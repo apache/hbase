@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,28 +51,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A write/read/verify load test on a mini HBase cluster. Tests reading
- * and then writing.
+ * A write/read/verify load test on a mini HBase cluster. Tests reading and then writing.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadSequential {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMiniClusterLoadSequential.class);
+    HBaseClassTestRule.forClass(TestMiniClusterLoadSequential.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestMiniClusterLoadSequential.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMiniClusterLoadSequential.class);
 
-  protected static final TableName TABLE =
-      TableName.valueOf("load_test_tbl");
+  protected static final TableName TABLE = TableName.valueOf("load_test_tbl");
   protected static final byte[] CF = Bytes.toBytes("load_test_cf");
   protected static final int NUM_THREADS = 8;
   protected static final int NUM_RS = 2;
   protected static final int TIMEOUT_MS = 180000;
-  protected static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   protected final Configuration conf = TEST_UTIL.getConfiguration();
   protected final boolean isMultiPut;
@@ -84,8 +80,7 @@ public class TestMiniClusterLoadSequential {
 
   protected Compression.Algorithm compression = Compression.Algorithm.NONE;
 
-  public TestMiniClusterLoadSequential(boolean isMultiPut,
-      DataBlockEncoding dataBlockEncoding) {
+  public TestMiniClusterLoadSequential(boolean isMultiPut, DataBlockEncoding dataBlockEncoding) {
     this.isMultiPut = isMultiPut;
     this.dataBlockEncoding = dataBlockEncoding;
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
@@ -97,10 +92,10 @@ public class TestMiniClusterLoadSequential {
   @Parameters
   public static Collection<Object[]> parameters() {
     List<Object[]> parameters = new ArrayList<>();
-    for (boolean multiPut : new boolean[]{false, true}) {
-      for (DataBlockEncoding dataBlockEncoding : new DataBlockEncoding[] {
-          DataBlockEncoding.NONE, DataBlockEncoding.PREFIX }) {
-        parameters.add(new Object[]{multiPut, dataBlockEncoding});
+    for (boolean multiPut : new boolean[] { false, true }) {
+      for (DataBlockEncoding dataBlockEncoding : new DataBlockEncoding[] { DataBlockEncoding.NONE,
+        DataBlockEncoding.PREFIX }) {
+        parameters.add(new Object[] { multiPut, dataBlockEncoding });
       }
     }
     return parameters;
@@ -119,13 +114,13 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected MultiThreadedReader prepareReaderThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, TableName tableName, double verifyPercent) throws IOException {
+    Configuration conf, TableName tableName, double verifyPercent) throws IOException {
     MultiThreadedReader reader = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
     return reader;
   }
 
   protected MultiThreadedWriter prepareWriterThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, TableName tableName) throws IOException {
+    Configuration conf, TableName tableName) throws IOException {
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, tableName);
     writer.setMultiPut(isMultiPut);
     return writer;
@@ -150,26 +145,27 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected void createPreSplitLoadTestTable(HTableDescriptor htd, HColumnDescriptor hcd)
-      throws IOException {
+    throws IOException {
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, htd, hcd);
     TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
   protected void prepareForLoadTest() throws IOException {
-    LOG.info("Starting load test: dataBlockEncoding=" + dataBlockEncoding +
-        ", isMultiPut=" + isMultiPut);
+    LOG.info(
+      "Starting load test: dataBlockEncoding=" + dataBlockEncoding + ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
     Admin admin = TEST_UTIL.getAdmin();
-    while (admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-                .getLiveServerMetrics().size() < NUM_RS) {
+    while (
+      admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().size()
+          < NUM_RS
+    ) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);
     }
     admin.close();
 
     HTableDescriptor htd = new HTableDescriptor(TABLE);
-    HColumnDescriptor hcd = new HColumnDescriptor(CF)
-      .setCompressionType(compression)
+    HColumnDescriptor hcd = new HColumnDescriptor(CF).setCompressionType(compression)
       .setDataBlockEncoding(dataBlockEncoding);
     createPreSplitLoadTestTable(htd, hcd);
 
@@ -183,7 +179,7 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected HColumnDescriptor getColumnDesc(Admin admin)
-      throws TableNotFoundException, IOException {
+    throws TableNotFoundException, IOException {
     return admin.getTableDescriptor(TABLE).getFamily(CF);
   }
 

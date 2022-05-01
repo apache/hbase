@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -310,8 +310,8 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
       tableCFs.clear();
       tableCFs.put(tableName3, null);
       admin.removeReplicationPeerTableCFs(ID_ONE, tableCFs).join();
-      fail("Test case should fail as removing table-cfs from a peer whose" +
-        " table-cfs didn't contain t3");
+      fail("Test case should fail as removing table-cfs from a peer whose"
+        + " table-cfs didn't contain t3");
     } catch (CompletionException e) {
       assertTrue(e.getCause() instanceof ReplicationException);
     }

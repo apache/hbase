@@ -58,24 +58,18 @@ class NormalizationTarget {
 
     NormalizationTarget that = (NormalizationTarget) o;
 
-    return new EqualsBuilder()
-      .append(regionSizeMb, that.regionSizeMb)
-      .append(regionInfo, that.regionInfo)
-      .isEquals();
+    return new EqualsBuilder().append(regionSizeMb, that.regionSizeMb)
+      .append(regionInfo, that.regionInfo).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(regionInfo)
-      .append(regionSizeMb)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(regionInfo).append(regionSizeMb).toHashCode();
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("regionInfo", regionInfo)
-      .append("regionSizeMb", regionSizeMb)
-      .toString();
+      .append("regionInfo", regionInfo).append("regionSizeMb", regionSizeMb).toString();
   }
 }

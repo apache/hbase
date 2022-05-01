@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
- <!--
+  <!--
  Licensed to the Apache Software Foundation (ASF) under one
  or more contributor license agreements.  See the NOTICE file
  distributed with this work for additional information
@@ -19,67 +19,16 @@ limitations under the License.
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.4.6.7.2.16.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
 
   <artifactId>hbase-hadoop2-compat</artifactId>
   <name>Apache HBase - Hadoop Two Compatibility</name>
-  <description>
-        Interfaces to be implemented in order to smooth
-        over hadoop version differences
-    </description>
-<!--REMOVE-->
-
-  <build>
-    <plugins>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>create-mrapp-generated-classpath</id>
-            <phase>generate-test-resources</phase>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <!-- needed to run the unit test for DS to generate the required classpath
-                that is required in the env of the launch container in the mini mr/yarn cluster -->
-              <outputFile>
-                ${project.build.directory}/test-classes/mrapp-generated-classpath
-              </outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <configuration>
-          <failOnViolation>true</failOnViolation>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+  <description>Interfaces to be implemented in order to smooth
+        over hadoop version differences</description>
 
   <dependencies>
     <dependency>
@@ -190,21 +139,68 @@ limitations under the License.
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <!--REMOVE-->
+
+  <build>
+    <plugins>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-mrapp-generated-classpath</id>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <phase>generate-test-resources</phase>
+            <configuration>
+              <!-- needed to run the unit test for DS to generate the required classpath
+                that is required in the env of the launch container in the mini mr/yarn cluster -->
+              <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
   <profiles>
-        <!-- Skip the tests in this module -->
-        <profile>
-            <id>skipHadoopTwoCompatTests</id>
-            <activation>
-                <property>
-                    <name>skipHadoopTwoCompatTests</name>
-                </property>
-            </activation>
-            <properties>
-                <surefire.skipFirstPart>true</surefire.skipFirstPart>
-                <surefire.skipSecondPart>true</surefire.skipSecondPart>
-            </properties>
-        </profile>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipHadoopTwoCompatTests</id>
+      <activation>
+        <property>
+          <name>skipHadoopTwoCompatTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
     <profile>
       <id>eclipse-specific</id>
       <activation>

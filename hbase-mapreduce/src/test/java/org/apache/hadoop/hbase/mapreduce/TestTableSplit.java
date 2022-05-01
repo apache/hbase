@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,11 +34,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestTableSplit {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableSplit.class);
+    HBaseClassTestRule.forClass(TestTableSplit.class);
 
   @Rule
   public TestName name = new TestName();
@@ -46,11 +46,9 @@ public class TestTableSplit {
   @Test
   public void testHashCode() {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-        "row-start".getBytes(),
-        "row-end".getBytes(), "location");
+      "row-start".getBytes(), "row-end".getBytes(), "location");
     TableSplit split2 = new TableSplit(TableName.valueOf(name.getMethodName()),
-        "row-start".getBytes(),
-        "row-end".getBytes(), "location");
+      "row-start".getBytes(), "row-end".getBytes(), "location");
     assertEquals(split1, split2);
     assertTrue(split1.hashCode() == split2.hashCode());
     HashSet<TableSplit> set = new HashSet<>(2);
@@ -61,15 +59,13 @@ public class TestTableSplit {
 
   /**
    * length of region should not influence hashcode
-   * */
+   */
   @Test
   public void testHashCode_length() {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 1984);
+      "row-start".getBytes(), "row-end".getBytes(), "location", 1984);
     TableSplit split2 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 1982);
+      "row-start".getBytes(), "row-end".getBytes(), "location", 1982);
 
     assertEquals(split1, split2);
     assertTrue(split1.hashCode() == split2.hashCode());
@@ -81,16 +77,14 @@ public class TestTableSplit {
 
   /**
    * Length of region need to be properly serialized.
-   * */
+   */
   @Test
   public void testLengthIsSerialized() throws Exception {
     TableSplit split1 = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start".getBytes(),
-            "row-end".getBytes(), "location", 666);
+      "row-start".getBytes(), "row-end".getBytes(), "location", 666);
 
     TableSplit deserialized = new TableSplit(TableName.valueOf(name.getMethodName()),
-            "row-start2".getBytes(),
-            "row-end2".getBytes(), "location1");
+      "row-start2".getBytes(), "row-end2".getBytes(), "location1");
     ReflectionUtils.copy(new Configuration(), split1, deserialized);
 
     Assert.assertEquals(666, deserialized.getLength());
@@ -98,36 +92,26 @@ public class TestTableSplit {
 
   @Test
   public void testToString() {
-    TableSplit split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), "row-start".getBytes(), "row-end".getBytes(),
-            "location");
-    String str =
-        "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
-            + "endrow=row-end, regionLocation=location, "
-            + "regionname=)";
+    TableSplit split = new TableSplit(TableName.valueOf(name.getMethodName()),
+      "row-start".getBytes(), "row-end".getBytes(), "location");
+    String str = "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
+      + "endrow=row-end, regionLocation=location, " + "regionname=)";
     Assert.assertEquals(str, split.toString());
 
-    split =
-        new TableSplit(TableName.valueOf(name.getMethodName()), null, "row-start".getBytes(),
-            "row-end".getBytes(), "location", "encoded-region-name", 1000L);
-    str =
-        "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
-            + "endrow=row-end, regionLocation=location, "
-            + "regionname=encoded-region-name)";
+    split = new TableSplit(TableName.valueOf(name.getMethodName()), null, "row-start".getBytes(),
+      "row-end".getBytes(), "location", "encoded-region-name", 1000L);
+    str = "Split(tablename=" + name.getMethodName() + ", startrow=row-start, "
+      + "endrow=row-end, regionLocation=location, " + "regionname=encoded-region-name)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit(null, null, null, null);
-    str =
-        "Split(tablename=null, startrow=null, "
-            + "endrow=null, regionLocation=null, "
-            + "regionname=)";
+    str = "Split(tablename=null, startrow=null, " + "endrow=null, regionLocation=null, "
+      + "regionname=)";
     Assert.assertEquals(str, split.toString());
 
     split = new TableSplit(null, null, null, null, null, null, 1000L);
-    str =
-        "Split(tablename=null, startrow=null, "
-            + "endrow=null, regionLocation=null, "
-            + "regionname=null)";
+    str = "Split(tablename=null, startrow=null, " + "endrow=null, regionLocation=null, "
+      + "regionname=null)";
     Assert.assertEquals(str, split.toString());
   }
 }

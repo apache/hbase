@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,8 @@ import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Set;
-
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -72,11 +70,11 @@ import org.slf4j.LoggerFactory;
  * HttpComponents to verify that the doas= mechanicsm works, and that the proxyuser settings are
  * observed.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProxyUserSpnegoHttpServer.class);
+    HBaseClassTestRule.forClass(TestProxyUserSpnegoHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProxyUserSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
@@ -93,7 +91,6 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   private static File unprivilegedKeytab;
   private static File privilegedKeytab;
   private static File privileged2Keytab;
-
 
   @BeforeClass
   public static void setupServer() throws Exception {
@@ -132,7 +129,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     server.start();
     baseUrl = getServerURL(server);
 
-    LOG.info("HTTP server started: "+ baseUrl);
+    LOG.info("HTTP server started: " + baseUrl);
   }
 
   @AfterClass
@@ -154,14 +151,13 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   }
 
   private static void setupUser(SimpleKdcServer kdc, File keytab, String principal)
-      throws KrbException {
+    throws KrbException {
     kdc.createPrincipal(principal);
     kdc.exportPrincipal(principal, keytab);
   }
 
-
   protected static Configuration buildSpnegoConfiguration(Configuration conf,
-      String serverPrincipal, File serverKeytab) {
+    String serverPrincipal, File serverKeytab) {
     KerberosName.setRules("DEFAULT");
 
     conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
@@ -182,13 +178,13 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI
-   * which are meant only for administrators.
+   * Builds an ACL that will restrict the users who can issue commands to endpoints on the UI which
+   * are meant only for administrators.
    */
   public static AccessControlList buildAdminAcl(Configuration conf) {
     final String userGroups = conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, null);
-    final String adminGroups = conf.get(
-        HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
+    final String adminGroups =
+      conf.get(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY, null);
     if (userGroups == null && adminGroups == null) {
       // Backwards compatibility - if the user doesn't have anything set, allow all users in.
       return new AccessControlList("*", null);
@@ -198,20 +194,23 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
   @Test
   public void testProxyAllowed() throws Exception {
-      testProxy(WHEEL_PRINCIPAL, PRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_OK, null);
+    testProxy(WHEEL_PRINCIPAL, PRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_OK, null);
   }
 
   @Test
   public void testProxyDisallowedForUnprivileged() throws Exception {
-      testProxy(WHEEL_PRINCIPAL, UNPRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 Forbidden");
+    testProxy(WHEEL_PRINCIPAL, UNPRIVILEGED_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN,
+      "403 Forbidden");
   }
 
   @Test
   public void testProxyDisallowedForNotSudoAble() throws Exception {
-      testProxy(WHEEL_PRINCIPAL, PRIVILEGED2_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN, "403 Forbidden");
+    testProxy(WHEEL_PRINCIPAL, PRIVILEGED2_PRINCIPAL, HttpURLConnection.HTTP_FORBIDDEN,
+      "403 Forbidden");
   }
 
-  public void testProxy(String clientPrincipal, String doAs, int responseCode, String statusLine) throws Exception {
+  public void testProxy(String clientPrincipal, String doAs, int responseCode, String statusLine)
+    throws Exception {
     // Create the subject for the client
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(WHEEL_PRINCIPAL, wheelKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
@@ -221,7 +220,7 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
-            clientSubject.getPrivateCredentials(KerberosTicket.class);
+      clientSubject.getPrivateCredentials(KerberosTicket.class);
     assertFalse(privateCredentials.isEmpty());
     KerberosTicket tgt = privateCredentials.iterator().next();
     assertNotNull(tgt);
@@ -231,34 +230,32 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
 
     // Run this code, logged in as the subject (the client)
     HttpResponse resp = Subject.doAs(clientSubject, new PrivilegedExceptionAction<HttpResponse>() {
-        @Override
-        public HttpResponse run() throws Exception {
-          // Logs in with Kerberos via GSS
-          GSSManager gssManager = GSSManager.getInstance();
-          // jGSS Kerberos login constant
-          Oid oid = new Oid("1.2.840.113554.1.2.2");
-          GSSName gssClient = gssManager.createName(principalName, GSSName.NT_USER_NAME);
-          GSSCredential credential = gssManager.createCredential(gssClient,
-              GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+      @Override
+      public HttpResponse run() throws Exception {
+        // Logs in with Kerberos via GSS
+        GSSManager gssManager = GSSManager.getInstance();
+        // jGSS Kerberos login constant
+        Oid oid = new Oid("1.2.840.113554.1.2.2");
+        GSSName gssClient = gssManager.createName(principalName, GSSName.NT_USER_NAME);
+        GSSCredential credential = gssManager.createCredential(gssClient,
+          GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-          HttpClientContext context = HttpClientContext.create();
-          Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-              .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-              .build();
+        HttpClientContext context = HttpClientContext.create();
+        Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+          .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
 
-          HttpClient client = HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
-                  .build();
-          BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-          credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
+        HttpClient client = HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry).build();
+        BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-          URL url = new URL(getServerURL(server), "/echo?doAs=" + doAs + "&a=b");
-          context.setTargetHost(new HttpHost(url.getHost(), url.getPort()));
-          context.setCredentialsProvider(credentialsProvider);
-          context.setAuthSchemeRegistry(authRegistry);
+        URL url = new URL(getServerURL(server), "/echo?doAs=" + doAs + "&a=b");
+        context.setTargetHost(new HttpHost(url.getHost(), url.getPort()));
+        context.setCredentialsProvider(credentialsProvider);
+        context.setAuthSchemeRegistry(authRegistry);
 
-          HttpGet get = new HttpGet(url.toURI());
-          return client.execute(get, context);
-        }
+        HttpGet get = new HttpGet(url.toURI());
+        return client.execute(get, context);
+      }
     });
 
     assertNotNull(resp);
@@ -266,8 +263,8 @@ public class TestProxyUserSpnegoHttpServer extends HttpServerFunctionalTest {
     if (responseCode == HttpURLConnection.HTTP_OK) {
       assertTrue(EntityUtils.toString(resp.getEntity()).trim().contains("a:b"));
     } else {
-      assertTrue(resp.getStatusLine().toString().contains(statusLine) ||
-        EntityUtils.toString(resp.getEntity()).contains(statusLine));
+      assertTrue(resp.getStatusLine().toString().contains(statusLine)
+        || EntityUtils.toString(resp.getEntity()).contains(statusLine));
     }
   }
 

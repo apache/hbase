@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -75,12 +75,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests around regionserver shutdown and abort
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionServerAbort {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerAbort.class);
+    HBaseClassTestRule.forClass(TestRegionServerAbort.class);
 
   private static final byte[] FAMILY_BYTES = Bytes.toBytes("f");
 
@@ -96,9 +96,9 @@ public class TestRegionServerAbort {
     testUtil = new HBaseTestingUtility();
     conf = testUtil.getConfiguration();
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        StopBlockingRegionObserver.class.getName());
+      StopBlockingRegionObserver.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        StopBlockingRegionObserver.class.getName());
+      StopBlockingRegionObserver.class.getName());
     // make sure we have multiple blocks so that the client does not prefetch all block locations
     conf.set("dfs.blocksize", Long.toString(100 * 1024));
     // prefetch the first block
@@ -117,7 +117,8 @@ public class TestRegionServerAbort {
     for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
       HRegionServer rs = t.getRegionServer();
       RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
-      StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(className);
+      StopBlockingRegionObserver cp =
+        (StopBlockingRegionObserver) cpHost.findCoprocessor(className);
       cp.setStopAllowed(true);
     }
     HMaster master = cluster.getMaster();
@@ -130,8 +131,8 @@ public class TestRegionServerAbort {
   }
 
   /**
-   * Test that a regionserver is able to abort properly, even when a coprocessor
-   * throws an exception in preStopRegionServer().
+   * Test that a regionserver is able to abort properly, even when a coprocessor throws an exception
+   * in preStopRegionServer().
    */
   @Test
   public void testAbortFromRPC() throws Exception {
@@ -147,9 +148,9 @@ public class TestRegionServerAbort {
     LOG.info("Flushed table");
 
     // Send a poisoned put to trigger the abort
-    Put put = new Put(new byte[]{0, 0, 0, 0});
-    put.addColumn(FAMILY_BYTES, Bytes.toBytes("c"), new byte[]{});
-    put.setAttribute(StopBlockingRegionObserver.DO_ABORT, new byte[]{1});
+    Put put = new Put(new byte[] { 0, 0, 0, 0 });
+    put.addColumn(FAMILY_BYTES, Bytes.toBytes("c"), new byte[] {});
+    put.setAttribute(StopBlockingRegionObserver.DO_ABORT, new byte[] { 1 });
 
     List<HRegion> regions = cluster.findRegionsForTable(tableName);
     HRegion firstRegion = cluster.findRegionsForTable(tableName).get(0);
@@ -188,8 +189,8 @@ public class TestRegionServerAbort {
     HRegionServer rs = t.getRegionServer();
     assertFalse(rs.isAborted());
     RegionServerCoprocessorHost cpHost = rs.getRegionServerCoprocessorHost();
-    StopBlockingRegionObserver cp = (StopBlockingRegionObserver)cpHost.findCoprocessor(
-        StopBlockingRegionObserver.class.getName());
+    StopBlockingRegionObserver cp = (StopBlockingRegionObserver) cpHost
+      .findCoprocessor(StopBlockingRegionObserver.class.getName());
     // Enable clean abort.
     cp.setStopAllowed(true);
     // Issue two aborts in quick succession.
@@ -210,7 +211,7 @@ public class TestRegionServerAbort {
 
   @CoreCoprocessor
   public static class StopBlockingRegionObserver
-      implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
+    implements RegionServerCoprocessor, RegionCoprocessor, RegionServerObserver, RegionObserver {
     public static final String DO_ABORT = "DO_ABORT";
     private boolean stopAllowed;
     private AtomicInteger abortCount = new AtomicInteger();
@@ -227,20 +228,20 @@ public class TestRegionServerAbort {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-                       Durability durability) throws IOException {
+      Durability durability) throws IOException {
       if (put.getAttribute(DO_ABORT) != null) {
         // TODO: Change this so it throws a CP Abort Exception instead.
         RegionServerServices rss =
-            ((HasRegionServerServices)c.getEnvironment()).getRegionServerServices();
+          ((HasRegionServerServices) c.getEnvironment()).getRegionServerServices();
         String str = "Aborting for test";
-        LOG.info(str  + " " + rss.getServerName());
+        LOG.info(str + " " + rss.getServerName());
         rss.abort(str, new Throwable(str));
       }
     }
 
     @Override
     public void preStopRegionServer(ObserverContext<RegionServerCoprocessorEnvironment> env)
-        throws IOException {
+      throws IOException {
       abortCount.incrementAndGet();
       if (!stopAllowed) {
         throw new IOException("Stop not allowed");
@@ -261,13 +262,12 @@ public class TestRegionServerAbort {
    */
   public static class ErrorThrowingHRegion extends HRegion {
     public ErrorThrowingHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-                                RegionInfo regionInfo, TableDescriptor htd,
-                                RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
     public ErrorThrowingHRegion(HRegionFileSystem fs, WAL wal, Configuration confParam,
-                                TableDescriptor htd, RegionServerServices rsServices) {
+      TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 

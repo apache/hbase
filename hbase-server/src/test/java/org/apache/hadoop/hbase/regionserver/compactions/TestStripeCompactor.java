@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,6 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyRequest;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -71,7 +67,7 @@ public class TestStripeCompactor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStripeCompactor.class);
+    HBaseClassTestRule.forClass(TestStripeCompactor.class);
 
   private static final byte[] NAME_OF_THINGS = Bytes.toBytes("foo");
   private static final TableName TABLE_NAME = TableName.valueOf(NAME_OF_THINGS, NAME_OF_THINGS);
@@ -139,12 +135,12 @@ public class TestStripeCompactor {
   }
 
   private void verifyBoundaryCompaction(KeyValue[] input, byte[][] boundaries, KeyValue[][] output)
-      throws Exception {
+    throws Exception {
     verifyBoundaryCompaction(input, boundaries, output, null, null, true);
   }
 
   private void verifyBoundaryCompaction(KeyValue[] input, byte[][] boundaries, KeyValue[][] output,
-      byte[] majorFrom, byte[] majorTo, boolean allFiles) throws Exception {
+    byte[] majorFrom, byte[] majorTo, boolean allFiles) throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeCompactor sc = createCompactor(writers, input);
     List<Path> paths = sc.compact(createDummyRequest(), Arrays.asList(boundaries), majorFrom,
@@ -180,7 +176,7 @@ public class TestStripeCompactor {
   }
 
   private void verifySizeCompaction(KeyValue[] input, int targetCount, long targetSize, byte[] left,
-      byte[] right, KeyValue[][] output) throws Exception {
+    byte[] right, KeyValue[][] output) throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeCompactor sc = createCompactor(writers, input);
     List<Path> paths = sc.compact(createDummyRequest(), targetCount, targetSize, left, right, null,
@@ -197,15 +193,15 @@ public class TestStripeCompactor {
   }
 
   private StripeCompactor createCompactor(StoreFileWritersCapture writers, KeyValue[] input)
-      throws Exception {
+    throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     final Scanner scanner = new Scanner(input);
 
     // Create store mock that is satisfactory for compactor.
     ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(NAME_OF_THINGS);
-    ScanInfo si = new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0,
-      CellComparatorImpl.COMPARATOR);
+    ScanInfo si =
+      new ScanInfo(conf, familyDescriptor, Long.MAX_VALUE, 0, CellComparatorImpl.COMPARATOR);
     HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor()).thenReturn(familyDescriptor);
     when(store.getScanInfo()).thenReturn(si);
@@ -220,15 +216,15 @@ public class TestStripeCompactor {
     return new StripeCompactor(conf, store) {
       @Override
       protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
-          List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
-          byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
+        List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
+        byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
       protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
-          List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
-          long earliestPutTs) throws IOException {
+        List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
+        long earliestPutTs) throws IOException {
         return scanner;
       }
     };

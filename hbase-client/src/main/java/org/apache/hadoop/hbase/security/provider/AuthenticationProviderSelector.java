@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
@@ -38,12 +37,12 @@ public interface AuthenticationProviderSelector {
    * {@link #selectProvider(String, User)}.
    */
   void configure(Configuration conf,
-      Collection<SaslClientAuthenticationProvider> availableProviders);
+    Collection<SaslClientAuthenticationProvider> availableProviders);
 
   /**
-   * Chooses the authentication provider which should be used given the provided client context
-   * from the authentication providers passed in via {@link #configure(Configuration, Collection)}.
+   * Chooses the authentication provider which should be used given the provided client context from
+   * the authentication providers passed in via {@link #configure(Configuration, Collection)}.
    */
-  Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User user);
+  Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User user);
 }

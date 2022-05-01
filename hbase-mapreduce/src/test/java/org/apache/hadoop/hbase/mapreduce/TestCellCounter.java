@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,11 +49,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestCellCounter {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellCounter.class);
+    HBaseClassTestRule.forClass(TestCellCounter.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
@@ -65,8 +65,8 @@ public class TestCellCounter {
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
 
   private static Path FQ_OUTPUT_DIR;
-  private static final String OUTPUT_DIR = "target" + File.separator + "test-data" + File.separator
-      + "output";
+  private static final String OUTPUT_DIR =
+    "target" + File.separator + "test-data" + File.separator + "output";
   private static long now = System.currentTimeMillis();
 
   @Rule
@@ -86,7 +86,6 @@ public class TestCellCounter {
 
   /**
    * Test CellCounter all data should print to output
-   *
    */
   @Test
   public void testCellCounter() throws Exception {
@@ -249,9 +248,8 @@ public class TestCellCounter {
       p.addColumn(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
       p.addColumn(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
       t.put(p);
-      String[] args =
-        { sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(), ";", "--starttime=" + now + 1,
-          "--endtime=" + now + 2 };
+      String[] args = { sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(), ";",
+        "--starttime=" + now + 1, "--endtime=" + now + 2 };
 
       runCount(args);
       FileInputStream inputStream =
@@ -268,8 +266,8 @@ public class TestCellCounter {
   private boolean runCount(String[] args) throws Exception {
     // need to make a copy of the configuration because to make sure
     // different temp dirs are used.
-    int status = ToolRunner.run(new Configuration(UTIL.getConfiguration()), new CellCounter(),
-        args);
+    int status =
+      ToolRunner.run(new Configuration(UTIL.getConfiguration()), new CellCounter(), args);
     return status == 0;
   }
 
@@ -281,7 +279,7 @@ public class TestCellCounter {
 
     PrintStream oldPrintStream = System.err;
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
@@ -313,9 +311,8 @@ public class TestCellCounter {
     final TableName sourceTable = TableName.valueOf(name.getMethodName());
     String outputPath = OUTPUT_DIR + sourceTable;
     LocalFileSystem localFileSystem = new LocalFileSystem();
-    Path outputDir =
-        new Path(outputPath).makeQualified(localFileSystem.getUri(),
-          localFileSystem.getWorkingDirectory());
+    Path outputDir = new Path(outputPath).makeQualified(localFileSystem.getUri(),
+      localFileSystem.getWorkingDirectory());
     byte[][] families = { FAMILY_A, FAMILY_B };
     Table t = UTIL.createTable(sourceTable, families);
     try {
@@ -332,7 +329,7 @@ public class TestCellCounter {
       String[] args = { sourceTable.getNameAsString(), outputDir.toString(), ";" };
       runCount(args);
       FileInputStream inputStream =
-          new FileInputStream(outputPath + File.separator + "part-r-00000");
+        new FileInputStream(outputPath + File.separator + "part-r-00000");
       String data = IOUtils.toString(inputStream);
       inputStream.close();
       assertTrue(data.contains("Total Families Across all Rows" + "\t" + "2"));
@@ -347,7 +344,7 @@ public class TestCellCounter {
 
       FileUtil.fullyDelete(new File(outputPath));
       args = new String[] { "-D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=a, b",
-                  sourceTable.getNameAsString(), outputDir.toString(), ";"};
+        sourceTable.getNameAsString(), outputDir.toString(), ";" };
       runCount(args);
       inputStream = new FileInputStream(outputPath + File.separator + "part-r-00000");
       String data2 = IOUtils.toString(inputStream);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -36,16 +37,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * This class tests ParseFilter.java
- * It tests the entire work flow from when a string is given by the user
- * and how it is parsed to construct the corresponding Filter object
+ * This class tests ParseFilter.java It tests the entire work flow from when a string is given by
+ * the user and how it is parsed to construct the corresponding Filter object
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestParseFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestParseFilter.class);
+    HBaseClassTestRule.forClass(TestParseFilter.class);
 
   ParseFilter f;
   Filter filter;
@@ -66,7 +66,7 @@ public class TestParseFilter {
     doTestFilter(filterString, KeyOnlyFilter.class);
 
     String filterString2 = "KeyOnlyFilter ('') ";
-    byte [] filterStringAsByteArray2 = Bytes.toBytes(filterString2);
+    byte[] filterStringAsByteArray2 = Bytes.toBytes(filterString2);
     try {
       filter = f.parseFilterString(filterStringAsByteArray2);
       assertTrue(false);
@@ -81,7 +81,7 @@ public class TestParseFilter {
     doTestFilter(filterString, FirstKeyOnlyFilter.class);
 
     String filterString2 = " FirstKeyOnlyFilter ('') ";
-    byte [] filterStringAsByteArray2 = Bytes.toBytes(filterString2);
+    byte[] filterStringAsByteArray2 = Bytes.toBytes(filterString2);
     try {
       filter = f.parseFilterString(filterStringAsByteArray2);
       assertTrue(false);
@@ -94,9 +94,8 @@ public class TestParseFilter {
   public void testPrefixFilter() throws IOException {
     String filterString = " PrefixFilter('row' ) ";
     PrefixFilter prefixFilter = doTestFilter(filterString, PrefixFilter.class);
-    byte [] prefix = prefixFilter.getPrefix();
+    byte[] prefix = prefixFilter.getPrefix();
     assertEquals("row", new String(prefix, StandardCharsets.UTF_8));
-
 
     filterString = " PrefixFilter(row)";
     try {
@@ -110,9 +109,8 @@ public class TestParseFilter {
   @Test
   public void testColumnPrefixFilter() throws IOException {
     String filterString = " ColumnPrefixFilter('qualifier' ) ";
-    ColumnPrefixFilter columnPrefixFilter =
-      doTestFilter(filterString, ColumnPrefixFilter.class);
-    byte [] columnPrefix = columnPrefixFilter.getPrefix();
+    ColumnPrefixFilter columnPrefixFilter = doTestFilter(filterString, ColumnPrefixFilter.class);
+    byte[] columnPrefix = columnPrefixFilter.getPrefix();
     assertEquals("qualifier", new String(columnPrefix, StandardCharsets.UTF_8));
   }
 
@@ -121,7 +119,7 @@ public class TestParseFilter {
     String filterString = " MultipleColumnPrefixFilter('qualifier1', 'qualifier2' ) ";
     MultipleColumnPrefixFilter multipleColumnPrefixFilter =
       doTestFilter(filterString, MultipleColumnPrefixFilter.class);
-    byte [][] prefixes = multipleColumnPrefixFilter.getPrefix();
+    byte[][] prefixes = multipleColumnPrefixFilter.getPrefix();
     assertEquals("qualifier1", new String(prefixes[0], StandardCharsets.UTF_8));
     assertEquals("qualifier2", new String(prefixes[1], StandardCharsets.UTF_8));
   }
@@ -154,8 +152,7 @@ public class TestParseFilter {
   @Test
   public void testPageFilter() throws IOException {
     String filterString = " PageFilter(4)";
-    PageFilter pageFilter =
-      doTestFilter(filterString, PageFilter.class);
+    PageFilter pageFilter = doTestFilter(filterString, PageFilter.class);
     long pageSize = pageFilter.getPageSize();
     assertEquals(4, pageSize);
 
@@ -206,18 +203,15 @@ public class TestParseFilter {
   @Test
   public void testInclusiveStopFilter() throws IOException {
     String filterString = "InclusiveStopFilter ('row 3')";
-    InclusiveStopFilter inclusiveStopFilter =
-      doTestFilter(filterString, InclusiveStopFilter.class);
-    byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();
+    InclusiveStopFilter inclusiveStopFilter = doTestFilter(filterString, InclusiveStopFilter.class);
+    byte[] stopRowKey = inclusiveStopFilter.getStopRowKey();
     assertEquals("row 3", new String(stopRowKey, StandardCharsets.UTF_8));
   }
-
 
   @Test
   public void testTimestampsFilter() throws IOException {
     String filterString = "TimestampsFilter(9223372036854775806, 6)";
-    TimestampsFilter timestampsFilter =
-      doTestFilter(filterString, TimestampsFilter.class);
+    TimestampsFilter timestampsFilter = doTestFilter(filterString, TimestampsFilter.class);
     List<Long> timestamps = timestampsFilter.getTimestamps();
     assertEquals(2, timestamps.size());
     assertEquals(Long.valueOf(6), timestamps.get(0));
@@ -247,8 +241,7 @@ public class TestParseFilter {
   @Test
   public void testRowFilter() throws IOException {
     String filterString = "RowFilter ( =,   'binary:regionse')";
-    RowFilter rowFilter =
-      doTestFilter(filterString, RowFilter.class);
+    RowFilter rowFilter = doTestFilter(filterString, RowFilter.class);
     assertEquals(CompareOperator.EQUAL, rowFilter.getCompareOperator());
     assertTrue(rowFilter.getComparator() instanceof BinaryComparator);
     BinaryComparator binaryComparator = (BinaryComparator) rowFilter.getComparator();
@@ -258,8 +251,7 @@ public class TestParseFilter {
   @Test
   public void testFamilyFilter() throws IOException {
     String filterString = "FamilyFilter(>=, 'binaryprefix:pre')";
-    FamilyFilter familyFilter =
-      doTestFilter(filterString, FamilyFilter.class);
+    FamilyFilter familyFilter = doTestFilter(filterString, FamilyFilter.class);
     assertEquals(CompareOperator.GREATER_OR_EQUAL, familyFilter.getCompareOperator());
     assertTrue(familyFilter.getComparator() instanceof BinaryPrefixComparator);
     BinaryPrefixComparator binaryPrefixComparator =
@@ -270,8 +262,7 @@ public class TestParseFilter {
   @Test
   public void testQualifierFilter() throws IOException {
     String filterString = "QualifierFilter(=, 'regexstring:pre*')";
-    QualifierFilter qualifierFilter =
-      doTestFilter(filterString, QualifierFilter.class);
+    QualifierFilter qualifierFilter = doTestFilter(filterString, QualifierFilter.class);
     assertEquals(CompareOperator.EQUAL, qualifierFilter.getCompareOperator());
     assertTrue(qualifierFilter.getComparator() instanceof RegexStringComparator);
     RegexStringComparator regexStringComparator =
@@ -282,20 +273,17 @@ public class TestParseFilter {
   @Test
   public void testValueFilter() throws IOException {
     String filterString = "ValueFilter(!=, 'substring:pre')";
-    ValueFilter valueFilter =
-      doTestFilter(filterString, ValueFilter.class);
+    ValueFilter valueFilter = doTestFilter(filterString, ValueFilter.class);
     assertEquals(CompareOperator.NOT_EQUAL, valueFilter.getCompareOperator());
     assertTrue(valueFilter.getComparator() instanceof SubstringComparator);
-    SubstringComparator substringComparator =
-      (SubstringComparator) valueFilter.getComparator();
+    SubstringComparator substringComparator = (SubstringComparator) valueFilter.getComparator();
     assertEquals("pre", new String(substringComparator.getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
   public void testColumnRangeFilter() throws IOException {
     String filterString = "ColumnRangeFilter('abc', true, 'xyz', false)";
-    ColumnRangeFilter columnRangeFilter =
-      doTestFilter(filterString, ColumnRangeFilter.class);
+    ColumnRangeFilter columnRangeFilter = doTestFilter(filterString, ColumnRangeFilter.class);
     assertEquals("abc", new String(columnRangeFilter.getMinColumn(), StandardCharsets.UTF_8));
     assertEquals("xyz", new String(columnRangeFilter.getMaxColumn(), StandardCharsets.UTF_8));
     assertTrue(columnRangeFilter.isMinColumnInclusive());
@@ -309,23 +297,23 @@ public class TestParseFilter {
       doTestFilter(filterString, DependentColumnFilter.class);
     assertEquals("family", new String(dependentColumnFilter.getFamily(), StandardCharsets.UTF_8));
     assertEquals("qualifier",
-        new String(dependentColumnFilter.getQualifier(), StandardCharsets.UTF_8));
+      new String(dependentColumnFilter.getQualifier(), StandardCharsets.UTF_8));
     assertTrue(dependentColumnFilter.getDropDependentColumn());
     assertEquals(CompareOperator.EQUAL, dependentColumnFilter.getCompareOperator());
     assertTrue(dependentColumnFilter.getComparator() instanceof BinaryComparator);
-    BinaryComparator binaryComparator = (BinaryComparator)dependentColumnFilter.getComparator();
+    BinaryComparator binaryComparator = (BinaryComparator) dependentColumnFilter.getComparator();
     assertEquals("abc", new String(binaryComparator.getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
   public void testSingleColumnValueFilter() throws IOException {
-    String filterString = "SingleColumnValueFilter " +
-      "('family', 'qualifier', >=, 'binary:a', true, false)";
+    String filterString =
+      "SingleColumnValueFilter " + "('family', 'qualifier', >=, 'binary:a', true, false)";
     SingleColumnValueFilter singleColumnValueFilter =
       doTestFilter(filterString, SingleColumnValueFilter.class);
     assertEquals("family", new String(singleColumnValueFilter.getFamily(), StandardCharsets.UTF_8));
     assertEquals("qualifier",
-        new String(singleColumnValueFilter.getQualifier(), StandardCharsets.UTF_8));
+      new String(singleColumnValueFilter.getQualifier(), StandardCharsets.UTF_8));
     assertEquals(CompareOperator.GREATER_OR_EQUAL, singleColumnValueFilter.getCompareOperator());
     assertTrue(singleColumnValueFilter.getComparator() instanceof BinaryComparator);
     BinaryComparator binaryComparator = (BinaryComparator) singleColumnValueFilter.getComparator();
@@ -333,12 +321,11 @@ public class TestParseFilter {
     assertTrue(singleColumnValueFilter.getFilterIfMissing());
     assertFalse(singleColumnValueFilter.getLatestVersionOnly());
 
-
     filterString = "SingleColumnValueFilter ('family', 'qualifier', >, 'binaryprefix:a')";
     singleColumnValueFilter = doTestFilter(filterString, SingleColumnValueFilter.class);
     assertEquals("family", new String(singleColumnValueFilter.getFamily(), StandardCharsets.UTF_8));
     assertEquals("qualifier",
-        new String(singleColumnValueFilter.getQualifier(), StandardCharsets.UTF_8));
+      new String(singleColumnValueFilter.getQualifier(), StandardCharsets.UTF_8));
     assertEquals(CompareOperator.GREATER, singleColumnValueFilter.getCompareOperator());
     assertTrue(singleColumnValueFilter.getComparator() instanceof BinaryPrefixComparator);
     BinaryPrefixComparator binaryPrefixComparator =
@@ -356,24 +343,24 @@ public class TestParseFilter {
       doTestFilter(filterString, SingleColumnValueExcludeFilter.class);
     assertEquals(CompareOperator.LESS, singleColumnValueExcludeFilter.getCompareOperator());
     assertEquals("family",
-        new String(singleColumnValueExcludeFilter.getFamily(), StandardCharsets.UTF_8));
+      new String(singleColumnValueExcludeFilter.getFamily(), StandardCharsets.UTF_8));
     assertEquals("qualifier",
-        new String(singleColumnValueExcludeFilter.getQualifier(), StandardCharsets.UTF_8));
+      new String(singleColumnValueExcludeFilter.getQualifier(), StandardCharsets.UTF_8));
     assertEquals("a", new String(singleColumnValueExcludeFilter.getComparator().getValue(),
-        StandardCharsets.UTF_8));
+      StandardCharsets.UTF_8));
     assertFalse(singleColumnValueExcludeFilter.getFilterIfMissing());
     assertTrue(singleColumnValueExcludeFilter.getLatestVersionOnly());
 
-    filterString = "SingleColumnValueExcludeFilter " +
-      "('family', 'qualifier', <=, 'binaryprefix:a', true, false)";
+    filterString = "SingleColumnValueExcludeFilter "
+      + "('family', 'qualifier', <=, 'binaryprefix:a', true, false)";
     singleColumnValueExcludeFilter =
       doTestFilter(filterString, SingleColumnValueExcludeFilter.class);
     assertEquals("family",
-        new String(singleColumnValueExcludeFilter.getFamily(), StandardCharsets.UTF_8));
+      new String(singleColumnValueExcludeFilter.getFamily(), StandardCharsets.UTF_8));
     assertEquals("qualifier",
-        new String(singleColumnValueExcludeFilter.getQualifier(), StandardCharsets.UTF_8));
+      new String(singleColumnValueExcludeFilter.getQualifier(), StandardCharsets.UTF_8));
     assertEquals(CompareOperator.LESS_OR_EQUAL,
-        singleColumnValueExcludeFilter.getCompareOperator());
+      singleColumnValueExcludeFilter.getCompareOperator());
     assertTrue(singleColumnValueExcludeFilter.getComparator() instanceof BinaryPrefixComparator);
     BinaryPrefixComparator binaryPrefixComparator =
       (BinaryPrefixComparator) singleColumnValueExcludeFilter.getComparator();
@@ -385,8 +372,7 @@ public class TestParseFilter {
   @Test
   public void testSkipFilter() throws IOException {
     String filterString = "SKIP ValueFilter( =,  'binary:0')";
-    SkipFilter skipFilter =
-      doTestFilter(filterString, SkipFilter.class);
+    SkipFilter skipFilter = doTestFilter(filterString, SkipFilter.class);
     assertTrue(skipFilter.getFilter() instanceof ValueFilter);
     ValueFilter valueFilter = (ValueFilter) skipFilter.getFilter();
 
@@ -399,8 +385,7 @@ public class TestParseFilter {
   @Test
   public void testWhileFilter() throws IOException {
     String filterString = " WHILE   RowFilter ( !=, 'binary:row1')";
-    WhileMatchFilter whileMatchFilter =
-      doTestFilter(filterString, WhileMatchFilter.class);
+    WhileMatchFilter whileMatchFilter = doTestFilter(filterString, WhileMatchFilter.class);
     assertTrue(whileMatchFilter.getFilter() instanceof RowFilter);
     RowFilter rowFilter = (RowFilter) whileMatchFilter.getFilter();
 
@@ -413,24 +398,22 @@ public class TestParseFilter {
   @Test
   public void testCompoundFilter1() throws IOException {
     String filterString = " (PrefixFilter ('realtime')AND  FirstKeyOnlyFilter())";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
     ArrayList<Filter> filters = (ArrayList<Filter>) filterList.getFilters();
 
     assertTrue(filters.get(0) instanceof PrefixFilter);
     assertTrue(filters.get(1) instanceof FirstKeyOnlyFilter);
     PrefixFilter PrefixFilter = (PrefixFilter) filters.get(0);
-    byte [] prefix = PrefixFilter.getPrefix();
+    byte[] prefix = PrefixFilter.getPrefix();
     assertEquals("realtime", new String(prefix, StandardCharsets.UTF_8));
     FirstKeyOnlyFilter firstKeyOnlyFilter = (FirstKeyOnlyFilter) filters.get(1);
   }
 
   @Test
   public void testCompoundFilter2() throws IOException {
-    String filterString = "(PrefixFilter('realtime') AND QualifierFilter (>=, 'binary:e'))" +
-      "OR FamilyFilter (=, 'binary:qualifier') ";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    String filterString = "(PrefixFilter('realtime') AND QualifierFilter (>=, 'binary:e'))"
+      + "OR FamilyFilter (=, 'binary:qualifier') ";
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
     ArrayList<Filter> filterListFilters = (ArrayList<Filter>) filterList.getFilters();
     assertTrue(filterListFilters.get(0) instanceof FilterList);
     assertTrue(filterListFilters.get(1) instanceof FamilyFilter);
@@ -439,7 +422,7 @@ public class TestParseFilter {
     filterList = (FilterList) filterListFilters.get(0);
     FamilyFilter familyFilter = (FamilyFilter) filterListFilters.get(1);
 
-    filterListFilters = (ArrayList<Filter>)filterList.getFilters();
+    filterListFilters = (ArrayList<Filter>) filterList.getFilters();
     assertTrue(filterListFilters.get(0) instanceof PrefixFilter);
     assertTrue(filterListFilters.get(1) instanceof QualifierFilter);
     assertEquals(FilterList.Operator.MUST_PASS_ALL, filterList.getOperator());
@@ -450,7 +433,7 @@ public class TestParseFilter {
     assertEquals("qualifier", new String(binaryComparator.getValue(), StandardCharsets.UTF_8));
 
     PrefixFilter prefixFilter = (PrefixFilter) filterListFilters.get(0);
-    byte [] prefix = prefixFilter.getPrefix();
+    byte[] prefix = prefixFilter.getPrefix();
     assertEquals("realtime", new String(prefix, StandardCharsets.UTF_8));
 
     QualifierFilter qualifierFilter = (QualifierFilter) filterListFilters.get(1);
@@ -462,10 +445,9 @@ public class TestParseFilter {
 
   @Test
   public void testCompoundFilter3() throws IOException {
-    String filterString = " ColumnPrefixFilter ('realtime')AND  " +
-      "FirstKeyOnlyFilter() OR SKIP FamilyFilter(=, 'substring:hihi')";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    String filterString = " ColumnPrefixFilter ('realtime')AND  "
+      + "FirstKeyOnlyFilter() OR SKIP FamilyFilter(=, 'substring:hihi')";
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
     ArrayList<Filter> filters = (ArrayList<Filter>) filterList.getFilters();
 
     assertTrue(filters.get(0) instanceof FilterList);
@@ -479,7 +461,7 @@ public class TestParseFilter {
     assertTrue(filters.get(1) instanceof FirstKeyOnlyFilter);
 
     ColumnPrefixFilter columnPrefixFilter = (ColumnPrefixFilter) filters.get(0);
-    byte [] columnPrefix = columnPrefixFilter.getPrefix();
+    byte[] columnPrefix = columnPrefixFilter.getPrefix();
     assertEquals("realtime", new String(columnPrefix, StandardCharsets.UTF_8));
 
     FirstKeyOnlyFilter firstKeyOnlyFilter = (FirstKeyOnlyFilter) filters.get(1);
@@ -489,17 +471,15 @@ public class TestParseFilter {
 
     assertEquals(CompareOperator.EQUAL, familyFilter.getCompareOperator());
     assertTrue(familyFilter.getComparator() instanceof SubstringComparator);
-    SubstringComparator substringComparator =
-      (SubstringComparator) familyFilter.getComparator();
+    SubstringComparator substringComparator = (SubstringComparator) familyFilter.getComparator();
     assertEquals("hihi", new String(substringComparator.getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
   public void testCompoundFilter4() throws IOException {
-    String filterString = " ColumnPrefixFilter ('realtime') OR " +
-      "FirstKeyOnlyFilter() OR SKIP FamilyFilter(=, 'substring:hihi')";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    String filterString = " ColumnPrefixFilter ('realtime') OR "
+      + "FirstKeyOnlyFilter() OR SKIP FamilyFilter(=, 'substring:hihi')";
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
     ArrayList<Filter> filters = (ArrayList<Filter>) filterList.getFilters();
 
     assertTrue(filters.get(0) instanceof ColumnPrefixFilter);
@@ -510,7 +490,7 @@ public class TestParseFilter {
     FirstKeyOnlyFilter firstKeyOnlyFilter = (FirstKeyOnlyFilter) filters.get(1);
     SkipFilter skipFilter = (SkipFilter) filters.get(2);
 
-    byte [] columnPrefix = columnPrefixFilter.getPrefix();
+    byte[] columnPrefix = columnPrefixFilter.getPrefix();
     assertEquals("realtime", new String(columnPrefix, StandardCharsets.UTF_8));
 
     assertTrue(skipFilter.getFilter() instanceof FamilyFilter);
@@ -518,8 +498,7 @@ public class TestParseFilter {
 
     assertEquals(CompareOperator.EQUAL, familyFilter.getCompareOperator());
     assertTrue(familyFilter.getComparator() instanceof SubstringComparator);
-    SubstringComparator substringComparator =
-      (SubstringComparator) familyFilter.getComparator();
+    SubstringComparator substringComparator = (SubstringComparator) familyFilter.getComparator();
     assertEquals("hihi", new String(substringComparator.getValue(), StandardCharsets.UTF_8));
   }
 
@@ -530,7 +509,7 @@ public class TestParseFilter {
     assertTrue(valueFilter.getComparator() instanceof SubstringComparator);
 
     filterStr = "(ValueFilter(>=,'binary:x') AND (ValueFilter(<=,'binary:y')))"
-            + " OR ValueFilter(=,'binary:ab')";
+      + " OR ValueFilter(=,'binary:ab')";
     filter = f.parseFilterString(filterStr);
     assertTrue(filter instanceof FilterList);
     List<Filter> list = ((FilterList) filter).getFilters();
@@ -552,7 +531,7 @@ public class TestParseFilter {
 
   @Test
   public void testIncorrectComparatorType() throws IOException {
-    String  filterString = "RowFilter ('>=' , 'binaryoperator:region')";
+    String filterString = "RowFilter ('>=' , 'binaryoperator:region')";
     try {
       doTestFilter(filterString, RowFilter.class);
       assertTrue(false);
@@ -568,8 +547,8 @@ public class TestParseFilter {
       System.out.println("RegexStringComparator can only be used with EQUAL or NOT_EQUAL");
     }
 
-    filterString = "SingleColumnValueFilter" +
-      " ('family', 'qualifier', '>=', 'substring:a', 'true', 'false')')";
+    filterString = "SingleColumnValueFilter"
+      + " ('family', 'qualifier', '>=', 'substring:a', 'true', 'false')')";
     try {
       doTestFilter(filterString, RowFilter.class);
       assertTrue(false);
@@ -580,10 +559,9 @@ public class TestParseFilter {
 
   @Test
   public void testPrecedence1() throws IOException {
-    String filterString = " (PrefixFilter ('realtime')AND  FirstKeyOnlyFilter()" +
-      " OR KeyOnlyFilter())";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    String filterString =
+      " (PrefixFilter ('realtime')AND  FirstKeyOnlyFilter()" + " OR KeyOnlyFilter())";
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
 
     ArrayList<Filter> filters = (ArrayList<Filter>) filterList.getFilters();
 
@@ -596,17 +574,16 @@ public class TestParseFilter {
     assertTrue(filters.get(0) instanceof PrefixFilter);
     assertTrue(filters.get(1) instanceof FirstKeyOnlyFilter);
 
-    PrefixFilter prefixFilter = (PrefixFilter)filters.get(0);
-    byte [] prefix = prefixFilter.getPrefix();
+    PrefixFilter prefixFilter = (PrefixFilter) filters.get(0);
+    byte[] prefix = prefixFilter.getPrefix();
     assertEquals("realtime", new String(prefix, StandardCharsets.UTF_8));
   }
 
   @Test
   public void testPrecedence2() throws IOException {
-    String filterString = " PrefixFilter ('realtime')AND  SKIP FirstKeyOnlyFilter()" +
-      "OR KeyOnlyFilter()";
-    FilterList filterList =
-      doTestFilter(filterString, FilterList.class);
+    String filterString =
+      " PrefixFilter ('realtime')AND  SKIP FirstKeyOnlyFilter()" + "OR KeyOnlyFilter()";
+    FilterList filterList = doTestFilter(filterString, FilterList.class);
     ArrayList<Filter> filters = (ArrayList<Filter>) filterList.getFilters();
 
     assertTrue(filters.get(0) instanceof FilterList);
@@ -618,29 +595,27 @@ public class TestParseFilter {
     assertTrue(filters.get(0) instanceof PrefixFilter);
     assertTrue(filters.get(1) instanceof SkipFilter);
 
-    PrefixFilter prefixFilter = (PrefixFilter)filters.get(0);
-    byte [] prefix = prefixFilter.getPrefix();
+    PrefixFilter prefixFilter = (PrefixFilter) filters.get(0);
+    byte[] prefix = prefixFilter.getPrefix();
     assertEquals("realtime", new String(prefix, StandardCharsets.UTF_8));
 
-    SkipFilter skipFilter = (SkipFilter)filters.get(1);
+    SkipFilter skipFilter = (SkipFilter) filters.get(1);
     assertTrue(skipFilter.getFilter() instanceof FirstKeyOnlyFilter);
   }
 
   @Test
   public void testUnescapedQuote1() throws IOException {
     String filterString = "InclusiveStopFilter ('row''3')";
-    InclusiveStopFilter inclusiveStopFilter =
-      doTestFilter(filterString, InclusiveStopFilter.class);
-    byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();
+    InclusiveStopFilter inclusiveStopFilter = doTestFilter(filterString, InclusiveStopFilter.class);
+    byte[] stopRowKey = inclusiveStopFilter.getStopRowKey();
     assertEquals("row'3", new String(stopRowKey, StandardCharsets.UTF_8));
   }
 
   @Test
   public void testUnescapedQuote2() throws IOException {
     String filterString = "InclusiveStopFilter ('row''3''')";
-    InclusiveStopFilter inclusiveStopFilter =
-      doTestFilter(filterString, InclusiveStopFilter.class);
-    byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();
+    InclusiveStopFilter inclusiveStopFilter = doTestFilter(filterString, InclusiveStopFilter.class);
+    byte[] stopRowKey = inclusiveStopFilter.getStopRowKey();
     assertEquals("row'3'", new String(stopRowKey, StandardCharsets.UTF_8));
   }
 
@@ -648,14 +623,14 @@ public class TestParseFilter {
   public void testUnescapedQuote3() throws IOException {
     String filterString = " InclusiveStopFilter ('''')";
     InclusiveStopFilter inclusiveStopFilter = doTestFilter(filterString, InclusiveStopFilter.class);
-    byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();
+    byte[] stopRowKey = inclusiveStopFilter.getStopRowKey();
     assertEquals("'", new String(stopRowKey, StandardCharsets.UTF_8));
   }
 
   @Test
   public void testIncorrectFilterString() throws IOException {
     String filterString = "()";
-    byte [] filterStringAsByteArray = Bytes.toBytes(filterString);
+    byte[] filterStringAsByteArray = Bytes.toBytes(filterString);
     try {
       filter = f.parseFilterString(filterStringAsByteArray);
       assertTrue(false);
@@ -678,8 +653,8 @@ public class TestParseFilter {
   }
 
   private <T extends Filter> T doTestFilter(String filterString, Class<T> clazz)
-      throws IOException {
-    byte [] filterStringAsByteArray = Bytes.toBytes(filterString);
+    throws IOException {
+    byte[] filterStringAsByteArray = Bytes.toBytes(filterString);
     filter = f.parseFilterString(filterStringAsByteArray);
     assertEquals(clazz, filter.getClass());
     return clazz.cast(filter);

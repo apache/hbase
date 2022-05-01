@@ -1,20 +1,19 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -27,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
-
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,17 +48,17 @@ public class ByteBufferArray {
 
   /**
    * We allocate a number of byte buffers as the capacity.
-   * @param capacity total size of the byte buffer array
+   * @param capacity  total size of the byte buffer array
    * @param allocator the ByteBufferAllocator that will create the buffers
    * @throws IOException throws IOException if there is an exception thrown by the allocator
    */
   public ByteBufferArray(long capacity, ByteBufferAllocator allocator) throws IOException {
     this(getBufferSize(capacity), getBufferCount(capacity),
-        Runtime.getRuntime().availableProcessors(), capacity, allocator);
+      Runtime.getRuntime().availableProcessors(), capacity, allocator);
   }
 
   ByteBufferArray(int bufferSize, int bufferCount, int threadCount, long capacity,
-      ByteBufferAllocator alloc) throws IOException {
+    ByteBufferAllocator alloc) throws IOException {
     this.bufferSize = bufferSize;
     this.bufferCount = bufferCount;
     LOG.info("Allocating buffers total={}, sizePerBuffer={}, count={}",
@@ -124,7 +122,7 @@ public class ByteBufferArray {
   /**
    * Transfers bytes from this buffers array into the given destination {@link ByteBuff}
    * @param offset start position in this big logical array.
-   * @param dst the destination ByteBuff. Notice that its position will be advanced.
+   * @param dst    the destination ByteBuff. Notice that its position will be advanced.
    * @return number of bytes read
    */
   public int read(long offset, ByteBuff dst) {
@@ -134,7 +132,7 @@ public class ByteBufferArray {
   /**
    * Transfers bytes from the given source {@link ByteBuff} into this buffer array
    * @param offset start offset of this big logical array.
-   * @param src the source ByteBuff. Notice that its position will be advanced.
+   * @param src    the source ByteBuff. Notice that its position will be advanced.
    * @return number of bytes write
    */
   public int write(long offset, ByteBuff src) {
@@ -166,8 +164,8 @@ public class ByteBufferArray {
    * Transferring all remaining bytes from b to the buffers array starting at offset, or
    * transferring bytes from the buffers array at offset to b until b is filled. Notice that
    * position of ByteBuff b will be advanced.
-   * @param offset where we start in the big logical array.
-   * @param b the ByteBuff to transfer from or to
+   * @param offset   where we start in the big logical array.
+   * @param b        the ByteBuff to transfer from or to
    * @param transfer the transfer interface.
    * @return the length of bytes we transferred.
    */
@@ -183,7 +181,7 @@ public class ByteBufferArray {
       assert !a.hasRemaining();
     }
     assert expectedTransferLen == it.getSum() : "Expected transfer length (=" + expectedTransferLen
-        + ") don't match the actual transfer length(=" + it.getSum() + ")";
+      + ") don't match the actual transfer length(=" + it.getSum() + ")";
     return expectedTransferLen;
   }
 
@@ -194,7 +192,7 @@ public class ByteBufferArray {
    * one be a BB from 'position' 5 to a 'length' 5 and the 2nd BB will be from 'position' 0 to
    * 'length' 5.
    * @param offset the position in the whole array which is composited by multiple byte buffers.
-   * @param len the length of bytes
+   * @param len    the length of bytes
    * @return the underlying ByteBuffers, each ByteBuffer is a slice from the backend and will have a
    *         zero position.
    */

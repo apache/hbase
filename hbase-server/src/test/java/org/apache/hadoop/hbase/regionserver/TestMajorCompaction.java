@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,28 +72,30 @@ import org.slf4j.LoggerFactory;
 /**
  * Test major compactions
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestMajorCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMajorCompaction.class);
+    HBaseClassTestRule.forClass(TestMajorCompaction.class);
 
   @Parameterized.Parameters
   public static Object[] data() {
     return new Object[] { "NONE", "BASIC", "EAGER" };
   }
-  @Rule public TestName name;
+
+  @Rule
+  public TestName name;
   private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
 
   private HRegion r = null;
   private HTableDescriptor htd = null;
-  private static final byte [] COLUMN_FAMILY = fam1;
-  private final byte [] STARTROW = Bytes.toBytes(START_KEY);
-  private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
+  private static final byte[] COLUMN_FAMILY = fam1;
+  private final byte[] STARTROW = Bytes.toBytes(START_KEY);
+  private static final byte[] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
   private int compactionThreshold;
   private byte[] secondRowBytes, thirdRowBytes;
   private static final long MAX_FILES_TO_COMPACT = 10;
@@ -103,7 +105,7 @@ public class TestMajorCompaction {
     super();
     name = new TestName();
     // Set cache flush size to 1MB
-    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(compType));
@@ -113,26 +115,26 @@ public class TestMajorCompaction {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
     thirdRowBytes[START_KEY_BYTES.length - 1] =
-        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
+      (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
   public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(name.getMethodName().replace('[','i').replace(']','i'));
+    this.htd = UTIL.createTableDescriptor(name.getMethodName().replace('[', 'i').replace(']', 'i'));
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = ((HRegion)r).getWAL();
-    ((HRegion)r).close();
+    WAL wal = ((HRegion) r).getWAL();
+    ((HRegion) r).close();
     wal.close();
   }
 
   /**
-   * Test that on a major compaction, if all cells are expired or deleted, then
-   * we'll end up with no product.  Make sure scanner over region returns
-   * right answer in this case - and that it just basically works.
+   * Test that on a major compaction, if all cells are expired or deleted, then we'll end up with no
+   * product. Make sure scanner over region returns right answer in this case - and that it just
+   * basically works.
    * @throws IOException exception encountered
    */
   @Test
@@ -150,9 +152,7 @@ public class TestMajorCompaction {
   }
 
   /**
-   * Run compaction and flushing memstore
-   * Assert deletes get cleaned up.
-   * @throws Exception
+   * Run compaction and flushing memstore Assert deletes get cleaned up. n
    */
   @Test
   public void testMajorCompaction() throws Exception {
@@ -169,23 +169,21 @@ public class TestMajorCompaction {
     majorCompactionWithDataBlockEncoding(false);
   }
 
-  public void majorCompactionWithDataBlockEncoding(boolean inCacheOnly)
-      throws Exception {
+  public void majorCompactionWithDataBlockEncoding(boolean inCacheOnly) throws Exception {
     Map<HStore, HFileDataBlockEncoder> replaceBlockCache = new HashMap<>();
     for (HStore store : r.getStores()) {
       HFileDataBlockEncoder blockEncoder = store.getDataBlockEncoder();
       replaceBlockCache.put(store, blockEncoder);
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
-      final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
-          inCache;
-      ((HStore)store).setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
+      final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE : inCache;
+      ((HStore) store).setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
     }
 
     majorCompaction();
 
     // restore settings
     for (Entry<HStore, HFileDataBlockEncoder> entry : replaceBlockCache.entrySet()) {
-      ((HStore)entry.getKey()).setDataBlockEncoderInTest(entry.getValue());
+      ((HStore) entry.getKey()).setDataBlockEncoderInTest(entry.getValue());
     }
   }
 
@@ -209,25 +207,24 @@ public class TestMajorCompaction {
 
     // look at the second row
     // Increment the least significant character so we get to next row.
-    byte [] secondRowBytes = START_KEY_BYTES.clone();
+    byte[] secondRowBytes = START_KEY_BYTES.clone();
     secondRowBytes[START_KEY_BYTES.length - 1]++;
 
     // Always 3 versions if that is what max versions is.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
-    LOG.debug("Row " + Bytes.toStringBinary(secondRowBytes) + " after " +
-        "initial compaction: " + result);
-    assertEquals("Invalid number of versions of row "
-        + Bytes.toStringBinary(secondRowBytes) + ".", compactionThreshold,
-        result.size());
+    LOG.debug(
+      "Row " + Bytes.toStringBinary(secondRowBytes) + " after " + "initial compaction: " + result);
+    assertEquals("Invalid number of versions of row " + Bytes.toStringBinary(secondRowBytes) + ".",
+      compactionThreshold, result.size());
 
     // Now add deletes to memstore and then flush it.
     // That will put us over
-    // the compaction threshold of 3 store files.  Compacting these store files
+    // the compaction threshold of 3 store files. Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
     LOG.debug("Adding deletes to memstore and flushing");
     Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
-    byte [][] famAndQf = {COLUMN_FAMILY, null};
+    byte[][] famAndQf = { COLUMN_FAMILY, null };
     delete.addFamily(famAndQf[0]);
     r.delete(delete);
 
@@ -240,7 +237,7 @@ public class TestMajorCompaction {
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
-    // Add a bit of data and flush.  Start adding at 'bbb'.
+    // Add a bit of data and flush. Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flush(true);
     // Assert that the second row is still deleted.
@@ -257,7 +254,7 @@ public class TestMajorCompaction {
     // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
     // Also, that compacted store files do not have any secondRowBytes because
     // they were deleted.
-    verifyCounts(3,0);
+    verifyCounts(3, 0);
 
     // Multiple versions allowed for an entry, so the delete isn't enough
     // Lower TTL and expire to ensure that all our entries have been wiped
@@ -295,8 +292,8 @@ public class TestMajorCompaction {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      RatioBasedCompactionPolicy
-          c = (RatioBasedCompactionPolicy)s.storeEngine.getCompactionPolicy();
+      RatioBasedCompactionPolicy c =
+        (RatioBasedCompactionPolicy) s.storeEngine.getCompactionPolicy();
       Collection<HStoreFile> storeFiles = s.getStorefiles();
       long mcTime = c.getNextMajorCompactTime(storeFiles);
       for (int i = 0; i < 10; ++i) {
@@ -315,7 +312,7 @@ public class TestMajorCompaction {
       assertEquals(1, s.getStorefilesCount());
     } finally {
       // reset the timed compaction settings
-      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
+      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000 * 60 * 60 * 24);
       conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
       // run a major to reset the cache
       createStoreFile(r);
@@ -327,33 +324,32 @@ public class TestMajorCompaction {
   private void verifyCounts(int countRow1, int countRow2) throws Exception {
     int count1 = 0;
     int count2 = 0;
-    for (HStoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f : r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
-        byte [] row = CellUtil.cloneRow(scanner.getCell());
+        byte[] row = CellUtil.cloneRow(scanner.getCell());
         if (Bytes.equals(row, STARTROW)) {
           count1++;
-        } else if(Bytes.equals(row, secondRowBytes)) {
+        } else if (Bytes.equals(row, secondRowBytes)) {
           count2++;
         }
-      } while(scanner.next());
+      } while (scanner.next());
     }
-    assertEquals(countRow1,count1);
-    assertEquals(countRow2,count2);
+    assertEquals(countRow1, count1);
+    assertEquals(countRow2, count2);
   }
-
 
   private int count() throws IOException {
     int count = 0;
-    for (HStoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (HStoreFile f : r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;
       }
       do {
         count++;
-      } while(scanner.next());
+      } while (scanner.next());
     }
     return count;
   }
@@ -370,8 +366,8 @@ public class TestMajorCompaction {
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     Table loader = new RegionAsTable(region);
-    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), Bytes.toBytes("" +
-        "bbb"), null);
+    HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), Bytes.toBytes("" + "bbb"),
+      null);
     region.flush(true);
   }
 
@@ -390,8 +386,7 @@ public class TestMajorCompaction {
     CompactionRequestImpl request = store.requestCompaction().get().getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
-      "System-requested major compaction should not occur if there are too many store files",
-      false,
+      "System-requested major compaction should not occur if there are too many store files", false,
       request.isMajor());
   }
 
@@ -399,28 +394,25 @@ public class TestMajorCompaction {
    * Test for HBASE-5920
    */
   @Test
-  public void testUserMajorCompactionRequest() throws IOException{
+  public void testUserMajorCompactionRequest() throws IOException {
     HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequestImpl request =
-        store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get()
-            .getRequest();
+    CompactionRequestImpl request = store
+      .requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get().getRequest();
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
-      true,
-      request.isMajor());
+      true, request.isMajor());
   }
 
   /**
    * Test that on a major compaction, if all cells are expired or deleted, then we'll end up with no
    * product. Make sure scanner over region returns right answer in this case - and that it just
-   * basically works.
-   * @throws IOException
+   * basically works. n
    */
   @Test
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {
@@ -463,7 +455,7 @@ public class TestMajorCompaction {
   }
 
   private void testMajorCompactingWithDeletes(KeepDeletedCells keepDeletedCells)
-      throws IOException {
+    throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {
       createStoreFile(r);

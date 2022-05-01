@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,12 +33,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMiniBatchOperationInProgress {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMiniBatchOperationInProgress.class);
+    HBaseClassTestRule.forClass(TestMiniBatchOperationInProgress.class);
 
   @Test
   public void testMiniBatchOperationInProgressMethods() {
@@ -49,8 +49,8 @@ public class TestMiniBatchOperationInProgress {
       operations[i] = new Pair<>(new Put(Bytes.toBytes(i)), null);
     }
     MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatch =
-      new MiniBatchOperationInProgress<>(operations, retCodeDetails,
-      walEditsFromCoprocessors, 0, 5, 5);
+      new MiniBatchOperationInProgress<>(operations, retCodeDetails, walEditsFromCoprocessors, 0, 5,
+        5);
 
     assertEquals(5, miniBatch.size());
     assertTrue(Bytes.equals(Bytes.toBytes(0), miniBatch.getOperation(0).getFirst().getRow()));
@@ -74,8 +74,8 @@ public class TestMiniBatchOperationInProgress {
     } catch (ArrayIndexOutOfBoundsException e) {
     }
 
-    miniBatch = new MiniBatchOperationInProgress<>(operations,
-        retCodeDetails, walEditsFromCoprocessors, 7, 10, 3);
+    miniBatch = new MiniBatchOperationInProgress<>(operations, retCodeDetails,
+      walEditsFromCoprocessors, 7, 10, 3);
     try {
       miniBatch.setWalEdit(-1, new WALEdit());
       fail("Should throw Exception while accessing out of range");

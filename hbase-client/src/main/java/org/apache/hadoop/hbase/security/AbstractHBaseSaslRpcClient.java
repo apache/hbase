@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase.security;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
@@ -47,44 +45,41 @@ public abstract class AbstractHBaseSaslRpcClient {
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param conf the configuration object
-   * @param provider the authentication provider
-   * @param token token to use if needed by the authentication method
-   * @param serverAddr the address of the hbase service
-   * @param securityInfo the security details for the remote hbase service
-   * @param fallbackAllowed does the client allow fallback to simple authentication
-   * @throws IOException
+   * @param conf            the configuration object
+   * @param provider        the authentication provider
+   * @param token           token to use if needed by the authentication method
+   * @param serverAddr      the address of the hbase service
+   * @param securityInfo    the security details for the remote hbase service
+   * @param fallbackAllowed does the client allow fallback to simple authentication n
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
-      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed)
-          throws IOException {
+    SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed) throws IOException {
     this(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, "authentication");
   }
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * @param conf configuration object
-   * @param provider the authentication provider
-   * @param token token to use if needed by the authentication method
-   * @param serverAddr the address of the hbase service
-   * @param securityInfo the security details for the remote hbase service
+   * @param conf            configuration object
+   * @param provider        the authentication provider
+   * @param token           token to use if needed by the authentication method
+   * @param serverAddr      the address of the hbase service
+   * @param securityInfo    the security details for the remote hbase service
    * @param fallbackAllowed does the client allow fallback to simple authentication
-   * @param rpcProtection the protection level ("authentication", "integrity" or "privacy")
-   * @throws IOException
+   * @param rpcProtection   the protection level ("authentication", "integrity" or "privacy") n
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
-      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
-      String rpcProtection) throws IOException {
+    SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
+    String rpcProtection) throws IOException {
     this.fallbackAllowed = fallbackAllowed;
     saslProps = SaslUtil.initSaslProperties(rpcProtection);
 
-    saslClient = provider.createClient(
-        conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
+    saslClient =
+      provider.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
     if (saslClient == null) {
-      throw new IOException("Authentication provider " + provider.getClass()
-          + " returned a null SaslClient");
+      throw new IOException(
+        "Authentication provider " + provider.getClass() + " returned a null SaslClient");
     }
   }
 

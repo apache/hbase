@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,24 +17,23 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * An interface for RPC request scheduling algorithm.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public abstract class RpcScheduler {
 
   public static final String IPC_SERVER_MAX_CALLQUEUE_LENGTH =
-      "hbase.ipc.server.max.callqueue.length";
+    "hbase.ipc.server.max.callqueue.length";
   public static final String IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH =
-      "hbase.ipc.server.priority.max.callqueue.length";
+    "hbase.ipc.server.priority.max.callqueue.length";
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   public static abstract class Context {
@@ -42,9 +41,8 @@ public abstract class RpcScheduler {
   }
 
   /**
-   * Does some quick initialization. Heavy tasks (e.g. starting threads) should be
-   * done in {@link #start()}. This method is called before {@code start}.
-   *
+   * Does some quick initialization. Heavy tasks (e.g. starting threads) should be done in
+   * {@link #start()}. This method is called before {@code start}.
    * @param context provides methods to retrieve runtime information from
    */
   public abstract void init(Context context);
@@ -60,7 +58,6 @@ public abstract class RpcScheduler {
   /**
    * Dispatches an RPC request asynchronously. An implementation is free to choose to process the
    * request immediately or delay it for later processing.
-   *
    * @param task the request to be dispatched
    */
   public abstract boolean dispatch(CallRunner task) throws IOException, InterruptedException;
@@ -96,15 +93,15 @@ public abstract class RpcScheduler {
   public abstract int getActiveReplicationRpcHandlerCount();
 
   /**
-   * If CoDel-based RPC executors are used, retrieves the number of Calls that were dropped
-   * from general queue because RPC executor is under high load; returns 0 otherwise.
+   * If CoDel-based RPC executors are used, retrieves the number of Calls that were dropped from
+   * general queue because RPC executor is under high load; returns 0 otherwise.
    */
   public abstract long getNumGeneralCallsDropped();
 
   /**
-   * If CoDel-based RPC executors are used, retrieves the number of Calls that were
-   * picked from the tail of the queue (indicating adaptive LIFO mode, when
-   * in the period of overloade we serve last requests first); returns 0 otherwise.
+   * If CoDel-based RPC executors are used, retrieves the number of Calls that were picked from the
+   * tail of the queue (indicating adaptive LIFO mode, when in the period of overloade we serve last
+   * requests first); returns 0 otherwise.
    */
   public abstract long getNumLifoModeSwitches();
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -32,12 +31,12 @@ public class TestMovingAverage {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMovingAverage.class);
+    HBaseClassTestRule.forClass(TestMovingAverage.class);
 
   @Rule
   public TestName name = new TestName();
 
-  private long[] data = {1, 12, 13, 24, 25, 26, 37, 38, 39, 40};
+  private long[] data = { 1, 12, 13, 24, 25, 26, 37, 38, 39, 40 };
   private double delta = 0.1;
 
   @Test

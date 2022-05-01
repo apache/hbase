@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,9 +92,9 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return master.isInitialized() &&
-          ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline() &&
-          master.getServerManager().getOnlineServersList().size() >= 3;
+        return master.isInitialized()
+          && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline()
+          && master.getServerManager().getOnlineServersList().size() >= 3;
       }
     });
   }
@@ -115,8 +115,10 @@ public class TestRSGroupsOfflineMode {
     String newGroup = "my_group";
     RSGroupAdmin groupAdmin = new RSGroupAdminClient(TEST_UTIL.getConnection());
     groupAdmin.addRSGroup(newGroup);
-    if (master.getAssignmentManager().getRegionStates().getRegionAssignments()
-      .containsValue(failoverRS.getServerName())) {
+    if (
+      master.getAssignmentManager().getRegionStates().getRegionAssignments()
+        .containsValue(failoverRS.getServerName())
+    ) {
       for (RegionInfo regionInfo : hbaseAdmin.getRegions(failoverRS.getServerName())) {
         hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(), failoverRS.getServerName());
       }
@@ -135,8 +137,8 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return groupRS.getNumberOfOnlineRegions() < 1 &&
-          master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
+        return groupRS.getNumberOfOnlineRegions() < 1
+          && master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount() < 1;
       }
     });
     // Move table to group and wait.
@@ -156,10 +158,11 @@ public class TestRSGroupsOfflineMode {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return TEST_UTIL.getHBaseCluster().getMaster() != null &&
-          TEST_UTIL.getHBaseCluster().getMaster().isActiveMaster() &&
-          TEST_UTIL.getHBaseCluster().getMaster().isInitialized() &&
-          TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() <= 3;
+        return TEST_UTIL.getHBaseCluster().getMaster() != null
+          && TEST_UTIL.getHBaseCluster().getMaster().isActiveMaster()
+          && TEST_UTIL.getHBaseCluster().getMaster().isInitialized()
+          && TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size()
+              <= 3;
       }
     });
 

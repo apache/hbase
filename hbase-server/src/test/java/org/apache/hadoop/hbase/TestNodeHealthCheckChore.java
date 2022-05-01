@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestNodeHealthCheckChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNodeHealthCheckChore.class);
+    HBaseClassTestRule.forClass(TestNodeHealthCheckChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNodeHealthCheckChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -80,7 +80,7 @@ public class TestNodeHealthCheckChore {
   }
 
   public void healthCheckerTest(String script, HealthCheckerExitStatus expectedStatus)
-      throws Exception {
+    throws Exception {
     Configuration config = getConfForNodeHealthScript();
     config.addResource(healthScriptFile.getName());
     String location = healthScriptFile.getAbsolutePath();
@@ -99,14 +99,14 @@ public class TestNodeHealthCheckChore {
   }
 
   @Test
-  public void testRSHealthChore() throws Exception{
+  public void testRSHealthChore() throws Exception {
     Stoppable stop = new StoppableImplementation();
     Configuration conf = getConfForNodeHealthScript();
     String errorScript = "echo ERROR" + eol + " echo \"Server not healthy\"";
     createScript(errorScript, true);
     HealthCheckChore rsChore = new HealthCheckChore(100, stop, conf);
     try {
-      //Default threshold is three.
+      // Default threshold is three.
       rsChore.chore();
       rsChore.chore();
       assertFalse("Stoppable must not be stopped.", stop.isStopped());
@@ -117,8 +117,7 @@ public class TestNodeHealthCheckChore {
     }
   }
 
-  private void createScript(String scriptStr, boolean setExecutable)
-      throws Exception {
+  private void createScript(String scriptStr, boolean setExecutable) throws Exception {
     if (!this.healthScriptFile.exists()) {
       if (!healthScriptFile.createNewFile()) {
         throw new IOException("Failed create of " + this.healthScriptFile);
@@ -143,8 +142,8 @@ public class TestNodeHealthCheckChore {
         throw new IOException("Failed mkdirs " + tempDir);
       }
     }
-    String scriptName = "HealthScript" + UTIL.getRandomUUID().toString()
-        + (Shell.WINDOWS ? ".cmd" : ".sh");
+    String scriptName =
+      "HealthScript" + UTIL.getRandomUUID().toString() + (Shell.WINDOWS ? ".cmd" : ".sh");
     healthScriptFile = new File(tempDir.getAbsolutePath(), scriptName);
     conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);

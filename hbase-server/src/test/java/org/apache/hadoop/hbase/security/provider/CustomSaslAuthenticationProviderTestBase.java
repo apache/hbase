@@ -536,13 +536,13 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     // This test does not work with master registry in branch-2 because of a nuance in the non-async
     // connection implementation. See the detail below.
     clientConf.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     clientConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
-    UserGroupInformation user1 = UserGroupInformation.createUserForTesting(
-        "user1", new String[0]);
+    UserGroupInformation user1 = UserGroupInformation.createUserForTesting("user1", new String[0]);
     user1.addToken(createPasswordToken("user1", "definitely not the password", clusterId));
     user1.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // There is a slight behavioral difference here in the 3.x vs 2.x branches. 3.x branches
         // use async client connection implementation which throws if there is an exception when
         // fetching the clusterId(). 2.x branches that use non-async client falls back to using a
@@ -558,8 +558,8 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
           assertTrue(re.getMessage(), re.getMessage().contains("SaslException"));
         } catch (Exception e) {
           // Any other exception is unexpected.
-          fail("Unexpected exception caught, was expecting a authentication error: " +
-            Throwables.getStackTraceAsString(e));
+          fail("Unexpected exception caught, was expecting a authentication error: "
+            + Throwables.getStackTraceAsString(e));
         }
         return null;
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,15 +51,16 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestClassFinder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClassFinder.class);
+    HBaseClassTestRule.forClass(TestClassFinder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClassFinder.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private static final String BASEPKG = "tfcpkg";
   private static final String PREFIX = "Prefix";
@@ -106,8 +107,7 @@ public class TestClassFinder {
     packageAndLoadJar(c2);
 
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(
-        makePackageName("", counter), false);
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(makePackageName("", counter), false);
     assertEquals(3, allClasses.size());
   }
 
@@ -120,8 +120,7 @@ public class TestClassFinder {
     packageAndLoadJar(c1);
 
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(
-        makePackageName("", counter), false);
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(makePackageName("", counter), false);
     assertEquals(2, allClasses.size());
   }
 
@@ -138,8 +137,8 @@ public class TestClassFinder {
     packageAndLoadJar(c3);
 
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
-    Set<Class<?>> nestedClasses = allClassesFinder.findClasses(
-        makePackageName(NESTED, counter), false);
+    Set<Class<?>> nestedClasses =
+      allClassesFinder.findClasses(makePackageName(NESTED, counter), false);
     assertEquals(2, nestedClasses.size());
     Class<?> nestedClass1 = makeClass(NESTED, CLASSNAME1, counter);
     assertTrue(nestedClasses.contains(nestedClass1));
@@ -156,8 +155,7 @@ public class TestClassFinder {
     ClassFinder.FileNameFilter notExcNameFilter =
       (fileName, absFilePath) -> !fileName.startsWith(PREFIX);
     ClassFinder incClassesFinder = new ClassFinder(null, notExcNameFilter, null, classLoader);
-    Set<Class<?>> incClasses = incClassesFinder.findClasses(
-        makePackageName("", counter), false);
+    Set<Class<?>> incClasses = incClassesFinder.findClasses(makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
     Class<?> incClass = makeClass("", classNamePrefix, counter);
     assertTrue(incClasses.contains(incClass));
@@ -171,15 +169,14 @@ public class TestClassFinder {
 
     final ClassFinder.ClassFilter notExcClassFilter = c -> !c.getSimpleName().startsWith(PREFIX);
     ClassFinder incClassesFinder = new ClassFinder(null, null, notExcClassFilter, classLoader);
-    Set<Class<?>> incClasses = incClassesFinder.findClasses(
-        makePackageName("", counter), false);
+    Set<Class<?>> incClasses = incClassesFinder.findClasses(makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
     Class<?> incClass = makeClass("", classNamePrefix, counter);
     assertTrue(incClasses.contains(incClass));
   }
 
   private static String createAndLoadJar(final String packageNameSuffix,
-      final String classNamePrefix, final long counter) throws Exception {
+    final String classNamePrefix, final long counter) throws Exception {
     FileAndPath c1 = compileTestClass(counter, packageNameSuffix, classNamePrefix);
     FileAndPath c2 = compileTestClass(counter, packageNameSuffix, PREFIX + "1");
     FileAndPath c3 = compileTestClass(counter, packageNameSuffix, PREFIX + classNamePrefix + "2");
@@ -194,18 +191,16 @@ public class TestClassFinder {
     FileAndPath c2 = compileTestClass(counter, "", "c2");
     packageAndLoadJar(c1);
     final String excludedJar = packageAndLoadJar(c2);
-    /* ResourcePathFilter will pass us the resourcePath as a path of a
-     * URL from the classloader. For Windows, the ablosute path and the
-     * one from the URL have different file separators.
+    /*
+     * ResourcePathFilter will pass us the resourcePath as a path of a URL from the classloader. For
+     * Windows, the ablosute path and the one from the URL have different file separators.
      */
-    final String excludedJarResource =
-      new File(excludedJar).toURI().getRawSchemeSpecificPart();
+    final String excludedJarResource = new File(excludedJar).toURI().getRawSchemeSpecificPart();
 
     final ClassFinder.ResourcePathFilter notExcJarFilter =
       (resourcePath, isJar) -> !isJar || !resourcePath.equals(excludedJarResource);
     ClassFinder incClassesFinder = new ClassFinder(notExcJarFilter, null, null, classLoader);
-    Set<Class<?>> incClasses = incClassesFinder.findClasses(
-        makePackageName("", counter), false);
+    Set<Class<?>> incClasses = incClassesFinder.findClasses(makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
     Class<?> incClass = makeClass("", CLASSNAME, counter);
     assertTrue(incClasses.contains(incClass));
@@ -213,7 +208,7 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderCanFindClassesInDirs() throws Exception {
-    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // Make some classes for us to find. Class naming and packaging is kinda cryptic.
     // TODO: Fix.
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
@@ -228,7 +223,7 @@ public class TestClassFinder {
   }
 
   private static boolean contains(final Set<Class<?>> classes, final String simpleName) {
-    for (Class<?> c: classes) {
+    for (Class<?> c : classes) {
       if (c.getSimpleName().equals(simpleName)) {
         return true;
       }
@@ -238,7 +233,7 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderFiltersByNameInDirs() throws Exception {
-    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // Make some classes for us to find. Class naming and packaging is kinda cryptic.
     // TODO: Fix.
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
@@ -259,7 +254,7 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderFiltersByClassInDirs() throws Exception {
-    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // Make some classes for us to find. Class naming and packaging is kinda cryptic.
     // TODO: Fix.
     final long counter = testCounter.incrementAndGet();
     final String classNamePrefix = name.getMethodName();
@@ -293,8 +288,8 @@ public class TestClassFinder {
     // Correct handling of nested packages is tested elsewhere, so here we just assume
     // pkgClasses is the correct answer that we don't have to check.
     ClassFinder allClassesFinder = new ClassFinder(classLoader);
-    Set<Class<?>> pkgClasses = allClassesFinder.findClasses(
-        ClassFinder.class.getPackage().getName(), false);
+    Set<Class<?>> pkgClasses =
+      allClassesFinder.findClasses(ClassFinder.class.getPackage().getName(), false);
     Set<Class<?>> defaultClasses = allClassesFinder.findClasses(false);
     Object[] pkgClassesArray = pkgClasses.toArray();
     Object[] defaultClassesArray = defaultClasses.toArray();
@@ -305,14 +300,15 @@ public class TestClassFinder {
   private static class FileAndPath {
     String path;
     File file;
+
     public FileAndPath(String path, File file) {
       this.file = file;
       this.path = path;
     }
   }
 
-  private static Class<?> makeClass(String nestedPkgSuffix,
-      String className, long counter) throws ClassNotFoundException {
+  private static Class<?> makeClass(String nestedPkgSuffix, String className, long counter)
+    throws ClassNotFoundException {
     String name = makePackageName(nestedPkgSuffix, counter) + "." + className + counter;
     return Class.forName(name, true, classLoader);
   }
@@ -322,22 +318,21 @@ public class TestClassFinder {
   }
 
   /**
-   * Compiles the test class with bogus code into a .class file.
-   * Unfortunately it's very tedious.
-   * @param counter Unique test counter.
+   * Compiles the test class with bogus code into a .class file. Unfortunately it's very tedious.
+   * @param counter           Unique test counter.
    * @param packageNameSuffix Package name suffix (e.g. ".suffix") for nesting, or "".
    * @return The resulting .class file and the location in jar it is supposed to go to.
    */
-  private static FileAndPath compileTestClass(long counter,
-      String packageNameSuffix, String classNamePrefix) throws Exception {
+  private static FileAndPath compileTestClass(long counter, String packageNameSuffix,
+    String classNamePrefix) throws Exception {
     classNamePrefix = classNamePrefix + counter;
     String packageName = makePackageName(packageNameSuffix, counter);
     String javaPath = basePath + classNamePrefix + ".java";
     String classPath = basePath + classNamePrefix + ".class";
     PrintStream source = new PrintStream(javaPath);
     source.println("package " + packageName + ";");
-    source.println("public class " + classNamePrefix
-        + " { public static void main(String[] args) { } };");
+    source.println(
+      "public class " + classNamePrefix + " { public static void main(String[] args) { } };");
     source.close();
     JavaCompiler jc = ToolProvider.getSystemJavaCompiler();
     int result = jc.run(null, null, null, javaPath);
@@ -379,9 +374,8 @@ public class TestClassFinder {
     }
     for (FileAndPath fileAndPath : filesInJar) {
       File file = fileAndPath.file;
-      jarOutputStream.putNextEntry(
-          new JarEntry(fileAndPath.path + file.getName()));
-      byte[] allBytes = new byte[(int)file.length()];
+      jarOutputStream.putNextEntry(new JarEntry(fileAndPath.path + file.getName()));
+      byte[] allBytes = new byte[(int) file.length()];
       FileInputStream fis = new FileInputStream(file);
       fis.read(allBytes);
       fis.close();

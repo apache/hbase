@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.slowlog;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -42,17 +39,14 @@ public class SlowLogMasterService {
   private final boolean slowlogTableEnabled;
   private final MasterServices masterServices;
 
-  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER =
-    TableDescriptorBuilder.newBuilder(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)
-      .setRegionReplication(1)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(HConstants.SLOWLOG_INFO_FAMILY)
-          .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-          .setBlockCacheEnabled(false)
-          .setMaxVersions(1).build());
+  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
+    .newBuilder(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME).setRegionReplication(1)
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.SLOWLOG_INFO_FAMILY)
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
+      .build());
 
   public SlowLogMasterService(final Configuration configuration,
-      final MasterServices masterServices) {
+    final MasterServices masterServices) {
     slowlogTableEnabled = configuration.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
       HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
     this.masterServices = masterServices;
@@ -63,8 +57,7 @@ public class SlowLogMasterService {
       LOG.info("Slow/Large requests logging to system table hbase:slowlog is disabled. Quitting.");
       return;
     }
-    if (!masterServices.getTableDescriptors().exists(
-        SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
+    if (!masterServices.getTableDescriptors().exists(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME)) {
       LOG.info("slowlog table not found. Creating.");
       this.masterServices.createSystemTable(TABLE_DESCRIPTOR_BUILDER.build());
     }

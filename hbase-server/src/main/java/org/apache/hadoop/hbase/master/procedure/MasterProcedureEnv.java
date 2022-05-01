@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -80,7 +79,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public MasterProcedureEnv(final MasterServices master,
-      final RSProcedureDispatcher remoteDispatcher) {
+    final RSProcedureDispatcher remoteDispatcher) {
     this.master = master;
     this.procSched = new MasterProcedureScheduler(
       procId -> master.getMasterProcedureExecutor().getProcedure(procId));

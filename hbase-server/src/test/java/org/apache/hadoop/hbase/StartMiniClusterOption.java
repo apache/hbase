@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,10 +26,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Options for starting up a mini cluster (including an hbase, dfs and zookeeper clusters) in test.
  * The options include HDFS options to build mini dfs cluster, Zookeeper options to build mini zk
- * cluster, and mostly HBase options to build mini hbase cluster.
+ * cluster, and mostly HBase options to build mini hbase cluster. To create an object, use a
+ * {@link Builder}. Example usage:
  *
- * To create an object, use a {@link Builder}.
- * Example usage:
  * <pre>
  *    StartMiniClusterOption option = StartMiniClusterOption.builder().
  *        .numMasters(3).rsClass(MyRegionServer.class).createWALDir(true).build();
@@ -42,8 +39,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public final class StartMiniClusterOption {
   /**
-   * Number of masters to start up.  We'll start this many hbase masters.  If numMasters > 1, you
-   * can find the active/primary master with {@link MiniHBaseCluster#getMaster()}.
+   * Number of masters to start up. We'll start this many hbase masters. If numMasters > 1, you can
+   * find the active/primary master with {@link MiniHBaseCluster#getMaster()}.
    */
   private final int numMasters;
 
@@ -60,9 +57,8 @@ public final class StartMiniClusterOption {
   private final Class<? extends HMaster> masterClass;
 
   /**
-   * Number of region servers to start up.
-   * If this value is > 1, then make sure config "hbase.regionserver.info.port" is -1
-   * (i.e. no ui per regionserver) otherwise bind errors.
+   * Number of region servers to start up. If this value is > 1, then make sure config
+   * "hbase.regionserver.info.port" is -1 (i.e. no ui per regionserver) otherwise bind errors.
    */
   private final int numRegionServers;
   /**
@@ -93,13 +89,13 @@ public final class StartMiniClusterOption {
   private final int numZkServers;
 
   /**
-   * Whether to create a new root or data directory path.  If true, the newly created data directory
-   * will be configured as HBase rootdir.  This will overwrite existing root directory config.
+   * Whether to create a new root or data directory path. If true, the newly created data directory
+   * will be configured as HBase rootdir. This will overwrite existing root directory config.
    */
   private final boolean createRootDir;
 
   /**
-   * Whether to create a new WAL directory.  If true, the newly created directory will be configured
+   * Whether to create a new WAL directory. If true, the newly created directory will be configured
    * as HBase wal.dir which is separate from HBase rootdir.
    */
   private final boolean createWALDir;
@@ -108,9 +104,9 @@ public final class StartMiniClusterOption {
    * Private constructor. Use {@link Builder#build()}.
    */
   private StartMiniClusterOption(int numMasters, int numAlwaysStandByMasters,
-      Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
-      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
-      String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
+    Class<? extends HMaster> masterClass, int numRegionServers, List<Integer> rsPorts,
+    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> rsClass, int numDataNodes,
+    String[] dataNodeHosts, int numZkServers, boolean createRootDir, boolean createWALDir) {
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
     this.masterClass = masterClass;
@@ -171,10 +167,10 @@ public final class StartMiniClusterOption {
   @Override
   public String toString() {
     return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", masterClass=" + masterClass
-        + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
-        + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes
-        + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers
-        + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+      + ", numRegionServers=" + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts)
+      + ", rsClass=" + rsClass + ", numDataNodes=" + numDataNodes + ", dataNodeHosts="
+      + Arrays.toString(dataNodeHosts) + ", numZkServers=" + numZkServers + ", createRootDir="
+      + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
@@ -185,10 +181,9 @@ public final class StartMiniClusterOption {
   }
 
   /**
-   * Builder pattern for creating an {@link StartMiniClusterOption}.
-   *
-   * The default values of its fields should be considered public and constant. Changing the default
-   * values may cause other tests fail.
+   * Builder pattern for creating an {@link StartMiniClusterOption}. The default values of its
+   * fields should be considered public and constant. Changing the default values may cause other
+   * tests fail.
    */
   public static final class Builder {
     private int numMasters = 1;
@@ -210,9 +205,9 @@ public final class StartMiniClusterOption {
       if (dataNodeHosts != null && dataNodeHosts.length != 0) {
         numDataNodes = dataNodeHosts.length;
       }
-      return new StartMiniClusterOption(numMasters,numAlwaysStandByMasters, masterClass,
-          numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
-          createRootDir, createWALDir);
+      return new StartMiniClusterOption(numMasters, numAlwaysStandByMasters, masterClass,
+        numRegionServers, rsPorts, rsClass, numDataNodes, dataNodeHosts, numZkServers,
+        createRootDir, createWALDir);
     }
 
     public Builder numMasters(int numMasters) {

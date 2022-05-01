@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.UnsupportedEncodingException;
@@ -26,22 +24,19 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Parses a path based row/column/timestamp specification into its component
- * elements.
+ * Parses a path based row/column/timestamp specification into its component elements.
  * <p>
- *  
  */
 @InterfaceAudience.Private
 public class RowSpec {
   public static final long DEFAULT_START_TIMESTAMP = 0;
   public static final long DEFAULT_END_TIMESTAMP = Long.MAX_VALUE;
-  
+
   private byte[] row = HConstants.EMPTY_START_ROW;
   private byte[] endRow = null;
   private TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
@@ -62,8 +57,7 @@ public class RowSpec {
     i = parseQueryParams(path, i);
   }
 
-  private int parseRowKeys(final String path, int i)
-      throws IllegalArgumentException {
+  private int parseRowKeys(final String path, int i) throws IllegalArgumentException {
     String startRow = null, endRow = null;
     try {
       StringBuilder sb = new StringBuilder();
@@ -76,10 +70,8 @@ public class RowSpec {
       String row = startRow = sb.toString();
       int idx = startRow.indexOf(',');
       if (idx != -1) {
-        startRow = URLDecoder.decode(row.substring(0, idx),
-          HConstants.UTF8_ENCODING);
-        endRow = URLDecoder.decode(row.substring(idx + 1),
-          HConstants.UTF8_ENCODING);
+        startRow = URLDecoder.decode(row.substring(0, idx), HConstants.UTF8_ENCODING);
+        endRow = URLDecoder.decode(row.substring(idx + 1), HConstants.UTF8_ENCODING);
       } else {
         startRow = URLDecoder.decode(row, HConstants.UTF8_ENCODING);
       }
@@ -93,13 +85,11 @@ public class RowSpec {
     // table scanning
     if (startRow.charAt(startRow.length() - 1) == '*') {
       if (endRow != null)
-        throw new IllegalArgumentException("invalid path: start row "+
-          "specified with wildcard");
-      this.row = Bytes.toBytes(startRow.substring(0, 
-        startRow.lastIndexOf("*")));
+        throw new IllegalArgumentException("invalid path: start row " + "specified with wildcard");
+      this.row = Bytes.toBytes(startRow.substring(0, startRow.lastIndexOf("*")));
       this.endRow = new byte[this.row.length + 1];
       System.arraycopy(this.row, 0, this.endRow, 0, this.row.length);
-      this.endRow[this.row.length] = (byte)255;
+      this.endRow[this.row.length] = (byte) 255;
     } else {
       this.row = Bytes.toBytes(startRow.toString());
       if (endRow != null) {
@@ -145,8 +135,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseTimestamp(final String path, int i)
-      throws IllegalArgumentException {
+  private int parseTimestamp(final String path, int i) throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
     }
@@ -163,8 +152,7 @@ public class RowSpec {
         i++;
       }
       try {
-        time0 = Long.parseLong(URLDecoder.decode(stamp.toString(),
-          HConstants.UTF8_ENCODING));
+        time0 = Long.parseLong(URLDecoder.decode(stamp.toString(), HConstants.UTF8_ENCODING));
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(e);
       }
@@ -176,8 +164,7 @@ public class RowSpec {
           i++;
         }
         try {
-          time1 = Long.parseLong(URLDecoder.decode(stamp.toString(),
-            HConstants.UTF8_ENCODING));
+          time1 = Long.parseLong(URLDecoder.decode(stamp.toString(), HConstants.UTF8_ENCODING));
         } catch (NumberFormatException e) {
           throw new IllegalArgumentException(e);
         }
@@ -206,8 +193,7 @@ public class RowSpec {
     }
     StringBuilder query = new StringBuilder();
     try {
-      query.append(URLDecoder.decode(path.substring(i), 
-        HConstants.UTF8_ENCODING));
+      query.append(URLDecoder.decode(path.substring(i), HConstants.UTF8_ENCODING));
     } catch (UnsupportedEncodingException e) {
       // should not happen
       throw new RuntimeException(e);
@@ -234,39 +220,41 @@ public class RowSpec {
         break;
       }
       switch (what) {
-      case 'm': {
-        StringBuilder sb = new StringBuilder();
-        while (j <= query.length()) {
-          c = query.charAt(j);
-          if (c < '0' || c > '9') {
-            j--;
-            break;
+        case 'm': {
+          StringBuilder sb = new StringBuilder();
+          while (j <= query.length()) {
+            c = query.charAt(j);
+            if (c < '0' || c > '9') {
+              j--;
+              break;
+            }
+            sb.append(c);
           }
-          sb.append(c);
+          maxVersions = Integer.parseInt(sb.toString());
         }
-        maxVersions = Integer.parseInt(sb.toString());
-      } break;
-      case 'n': {
-        StringBuilder sb = new StringBuilder();
-        while (j <= query.length()) {
-          c = query.charAt(j);
-          if (c < '0' || c > '9') {
-            j--;
-            break;
+          break;
+        case 'n': {
+          StringBuilder sb = new StringBuilder();
+          while (j <= query.length()) {
+            c = query.charAt(j);
+            if (c < '0' || c > '9') {
+              j--;
+              break;
+            }
+            sb.append(c);
           }
-          sb.append(c);
+          maxValues = Integer.parseInt(sb.toString());
         }
-        maxValues = Integer.parseInt(sb.toString());
-      } break;
-      default:
-        throw new IllegalArgumentException("unknown parameter '" + c + "'");
+          break;
+        default:
+          throw new IllegalArgumentException("unknown parameter '" + c + "'");
       }
     }
     return i;
   }
 
-  public RowSpec(byte[] startRow, byte[] endRow, byte[][] columns,
-      long startTime, long endTime, int maxVersions) {
+  public RowSpec(byte[] startRow, byte[] endRow, byte[][] columns, long startTime, long endTime,
+    int maxVersions) {
     this.row = startRow;
     this.endRow = endRow;
     if (columns != null) {
@@ -277,15 +265,16 @@ public class RowSpec {
     this.maxVersions = maxVersions;
   }
 
-  public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns,
-      long startTime, long endTime, int maxVersions, Collection<String> labels) {
+  public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns, long startTime,
+    long endTime, int maxVersions, Collection<String> labels) {
     this(startRow, endRow, columns, startTime, endTime, maxVersions);
-    if(labels != null) {
+    if (labels != null) {
       this.labels.addAll(labels);
     }
   }
-  public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns,
-      long startTime, long endTime, int maxVersions) {
+
+  public RowSpec(byte[] startRow, byte[] endRow, Collection<byte[]> columns, long startTime,
+    long endTime, int maxVersions) {
     this.row = startRow;
     this.endRow = endRow;
     if (columns != null) {
@@ -319,7 +308,7 @@ public class RowSpec {
   public boolean hasColumns() {
     return !columns.isEmpty();
   }
-  
+
   public boolean hasLabels() {
     return !labels.isEmpty();
   }
@@ -347,7 +336,7 @@ public class RowSpec {
   public byte[][] getColumns() {
     return columns.toArray(new byte[columns.size()][]);
   }
-  
+
   public List<String> getLabels() {
     return labels;
   }
@@ -384,11 +373,11 @@ public class RowSpec {
       result.append(Bytes.toString(row));
     }
     result.append("', endRow => '");
-    if (endRow != null)  {
+    if (endRow != null) {
       result.append(Bytes.toString(endRow));
     }
     result.append("', columns => [");
-    for (byte[] col: columns) {
+    for (byte[] col : columns) {
       result.append(" '");
       result.append(Bytes.toString(col));
       result.append("'");

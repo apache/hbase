@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,16 +54,16 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Test {@link HFileScanner#seekTo(Cell)} and its variants.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
 public class TestSeekTo {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSeekTo.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestSeekTo.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final DataBlockEncoding encoding;
+
   @Parameters
   public static Collection<Object[]> parameters() {
     List<Object[]> paramList = new ArrayList<>();
@@ -72,6 +72,7 @@ public class TestSeekTo {
     }
     return paramList;
   }
+
   static boolean switchKVs = false;
 
   public TestSeekTo(DataBlockEncoding encoding) {
@@ -80,35 +81,36 @@ public class TestSeekTo {
 
   @Before
   public void setUp() {
-    //reset
+    // reset
     switchKVs = false;
   }
 
   static KeyValue toKV(String row, TagUsage tagUsage) {
     if (tagUsage == TagUsage.NO_TAG) {
       return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-          Bytes.toBytes("value"));
+        Bytes.toBytes("value"));
     } else if (tagUsage == TagUsage.ONLY_TAG) {
       Tag t = new ArrayBackedTag((byte) 1, "myTag1");
       Tag[] tags = new Tag[1];
       tags[0] = t;
       return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-          HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"), tags);
+        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"), tags);
     } else {
       if (!switchKVs) {
         switchKVs = true;
-        return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
-            Bytes.toBytes("qualifier"), HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
+        return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+          HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
       } else {
         switchKVs = false;
         Tag t = new ArrayBackedTag((byte) 1, "myTag1");
         Tag[] tags = new Tag[1];
         tags[0] = t;
-        return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
-            Bytes.toBytes("qualifier"), HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"), tags);
+        return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+          HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"), tags);
       }
     }
   }
+
   static String toRowStr(Cell c) {
     return Bytes.toString(c.getRowArray(), c.getRowOffset(), c.getRowLength());
   }
@@ -118,11 +120,10 @@ public class TestSeekTo {
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     int blocksize = toKV("a", tagUsage).getLength() * 3;
     HFileContext context = new HFileContextBuilder().withBlockSize(blocksize)
-        .withDataBlockEncoding(encoding)
-        .withIncludesTags(true).build();
+      .withDataBlockEncoding(encoding).withIncludesTags(true).build();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
-        .withFileContext(context).create();
+    HFile.Writer writer =
+      HFile.getWriterFactoryNoCache(conf).withOutputStream(fout).withFileContext(context).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c", tagUsage));
@@ -189,7 +190,7 @@ public class TestSeekTo {
 
   protected void deleteTestDir(FileSystem fs) throws IOException {
     Path dataTestDir = TEST_UTIL.getDataTestDir();
-    if(fs.exists(dataTestDir)) {
+    if (fs.exists(dataTestDir)) {
       fs.delete(dataTestDir, true);
     }
   }
@@ -331,29 +332,19 @@ public class TestSeekTo {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);
-    HFileBlockIndex.BlockIndexReader blockIndexReader =
-      reader.getDataBlockIndexReader();
+    HFileBlockIndex.BlockIndexReader blockIndexReader = reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());
     // falls before the start of the file.
-    assertEquals(-1, blockIndexReader.rootBlockContainingKey(
-        toKV("a", tagUsage)));
-    assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("c", tagUsage)));
-    assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("d", tagUsage)));
-    assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("e", tagUsage)));
-    assertEquals(0, blockIndexReader.rootBlockContainingKey(
-        toKV("g", tagUsage)));
+    assertEquals(-1, blockIndexReader.rootBlockContainingKey(toKV("a", tagUsage)));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(toKV("c", tagUsage)));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(toKV("d", tagUsage)));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(toKV("e", tagUsage)));
+    assertEquals(0, blockIndexReader.rootBlockContainingKey(toKV("g", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("h", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("i", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("j", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("k", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("l", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("i", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("j", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("k", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("l", tagUsage)));
     reader.close();
     deleteTestDir(fs);
   }

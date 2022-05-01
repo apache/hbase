@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +21,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This class provides ShutdownHookManager shims for HBase to interact with the Hadoop 1.0.x and the
- * Hadoop 2.0+ series.
- *
- * NOTE: No testing done against 0.22.x, or 0.21.x.
+ * Hadoop 2.0+ series. NOTE: No testing done against 0.22.x, or 0.21.x.
  */
 @InterfaceAudience.Private
 abstract public class ShutdownHookManager {
@@ -75,10 +73,8 @@ abstract public class ShutdownHookManager {
     public void addShutdownHook(Thread shutdownHookThread, int priority) {
       try {
         Methods.call(shutdownHookManagerClass,
-            Methods.call(shutdownHookManagerClass, null, "get", null, null),
-            "addShutdownHook",
-            new Class[] { Runnable.class, int.class },
-            new Object[] { shutdownHookThread, priority });
+          Methods.call(shutdownHookManagerClass, null, "get", null, null), "addShutdownHook",
+          new Class[] { Runnable.class, int.class }, new Object[] { shutdownHookThread, priority });
       } catch (Exception ex) {
         throw new RuntimeException("we could not use ShutdownHookManager.addShutdownHook", ex);
       }
@@ -87,12 +83,9 @@ abstract public class ShutdownHookManager {
     @Override
     public boolean removeShutdownHook(Runnable shutdownHook) {
       try {
-        return (Boolean)
-        Methods.call(shutdownHookManagerClass,
-            Methods.call(shutdownHookManagerClass, null, "get", null, null),
-            "removeShutdownHook",
-            new Class[] { Runnable.class },
-            new Object[] { shutdownHook });
+        return (Boolean) Methods.call(shutdownHookManagerClass,
+          Methods.call(shutdownHookManagerClass, null, "get", null, null), "removeShutdownHook",
+          new Class[] { Runnable.class }, new Object[] { shutdownHook });
       } catch (Exception ex) {
         throw new RuntimeException("we could not use ShutdownHookManager", ex);
       }

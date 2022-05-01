@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,10 +42,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Abstract HBase test class.  Initializes a few things that can come in handly
- * like an HBaseConfiguration and filesystem.
+ * Abstract HBase test class. Initializes a few things that can come in handly like an
+ * HBaseConfiguration and filesystem.
  * @deprecated since 2.0.0 and will be removed in 3.0.0. Write junit4 unit tests using
- *   {@link HBaseTestingUtility}.
+ *             {@link HBaseTestingUtility}.
  * @see HBaseTestingUtility
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-11912">HBASE-11912</a>
  */
@@ -54,11 +53,11 @@ import org.slf4j.LoggerFactory;
 public abstract class HBaseTestCase extends TestCase {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseTestCase.class);
 
-  protected final static byte [] fam1 = Bytes.toBytes("colfamily11");
-  protected final static byte [] fam2 = Bytes.toBytes("colfamily21");
-  protected final static byte [] fam3 = Bytes.toBytes("colfamily31");
+  protected final static byte[] fam1 = Bytes.toBytes("colfamily11");
+  protected final static byte[] fam2 = Bytes.toBytes("colfamily21");
+  protected final static byte[] fam3 = Bytes.toBytes("colfamily31");
 
-  protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
+  protected static final byte[][] COLUMNS = { fam1, fam2, fam3 };
 
   private boolean localfs = false;
   protected static Path testDir = null;
@@ -67,7 +66,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
   protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
-  protected static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+  protected static final byte[] START_KEY_BYTES = { FIRST_CHAR, FIRST_CHAR, FIRST_CHAR };
   protected String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
   protected static final int MAXVERSIONS = 3;
 
@@ -89,21 +88,20 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * @param name
+   * n
    */
   public HBaseTestCase(String name) {
     super(name);
   }
 
   /**
-   * Note that this method must be called after the mini hdfs cluster has
-   * started or we end up with a local file system.
+   * Note that this method must be called after the mini hdfs cluster has started or we end up with
+   * a local file system.
    */
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    localfs =
-      (conf.get("fs.defaultFS", "file:///").compareTo("file:///") == 0);
+    localfs = (conf.get("fs.defaultFS", "file:///").compareTo("file:///") == 0);
 
     if (fs == null) {
       this.fs = FileSystem.get(conf);
@@ -138,44 +136,34 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * @see HBaseTestingUtility#getBaseTestDir
-   * @param testName
-   * @return directory to use for this test
+   * @see HBaseTestingUtility#getBaseTestDir n * @return directory to use for this test
    */
-    protected Path getUnitTestdir(String testName) {
-      return testUtil.getDataTestDir(testName);
-    }
+  protected Path getUnitTestdir(String testName) {
+    return testUtil.getDataTestDir(testName);
+  }
 
   /**
    * You must call close on the returned region and then close on the log file it created. Do
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to close both the region and the WAL.
-   * @param desc
-   * @param startKey
-   * @param endKey
-   * @return An {@link HRegion}
-   * @throws IOException
+   * nnn * @return An {@link HRegion} n
    */
-  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
-      byte [] endKey)
-  throws IOException {
+  public HRegion createNewHRegion(HTableDescriptor desc, byte[] startKey, byte[] endKey)
+    throws IOException {
     return createNewHRegion(desc, startKey, endKey, this.conf);
   }
 
-  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
-      byte [] endKey, Configuration conf)
-  throws IOException {
+  public HRegion createNewHRegion(HTableDescriptor desc, byte[] startKey, byte[] endKey,
+    Configuration conf) throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
     return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, desc);
   }
 
-  protected HRegion openClosedRegion(final HRegion closedRegion)
-  throws IOException {
+  protected HRegion openClosedRegion(final HRegion closedRegion) throws IOException {
     return HRegion.openHRegion(closedRegion, null);
   }
 
   /**
-   * Create a table of name {@code name} with {@link #COLUMNS} for
-   * families.
+   * Create a table of name {@code name} with {@link #COLUMNS} for families.
    * @param name Name to give table.
    * @return Column descriptor.
    */
@@ -184,55 +172,42 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * Create a table of name {@code name} with {@link #COLUMNS} for
-   * families.
-   * @param name Name to give table.
+   * Create a table of name {@code name} with {@link #COLUMNS} for families.
+   * @param name     Name to give table.
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name,
-      final int versions) {
-    return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS,
-        versions, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+  protected HTableDescriptor createTableDescriptor(final String name, final int versions) {
+    return createTableDescriptor(name, HColumnDescriptor.DEFAULT_MIN_VERSIONS, versions,
+      HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
   }
 
   /**
-   * Create a table of name {@code name} with {@link #COLUMNS} for
-   * families.
-   * @param name Name to give table.
+   * Create a table of name {@code name} with {@link #COLUMNS} for families.
+   * @param name     Name to give table.
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */
-  protected HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+  protected HTableDescriptor createTableDescriptor(final String name, final int minVersions,
+    final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
-      htd.addFamily(new HColumnDescriptor(cfName)
-          .setMinVersions(minVersions)
-          .setMaxVersions(versions)
-          .setKeepDeletedCells(keepDeleted)
-          .setBlockCacheEnabled(false)
-          .setTimeToLive(ttl)
-      );
+    for (byte[] cfName : new byte[][] { fam1, fam2, fam3 }) {
+      htd.addFamily(
+        new HColumnDescriptor(cfName).setMinVersions(minVersions).setMaxVersions(versions)
+          .setKeepDeletedCells(keepDeleted).setBlockCacheEnabled(false).setTimeToLive(ttl));
     }
     return htd;
   }
 
   /**
-   * Add content to region <code>r</code> on the passed column
-   * <code>column</code>.
-   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @param r
-   * @param columnFamily
-   * @param column
-   * @throws IOException
-   * @return count of what we added.
+   * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
+   * from 'aaa', 'aab', etc where key and value are the same. nnnn * @return count of what we added.
    */
-  public static long addContent(final Region r, final byte [] columnFamily, final byte[] column)
-  throws IOException {
-    byte [] startKey = r.getRegionInfo().getStartKey();
-    byte [] endKey = r.getRegionInfo().getEndKey();
-    byte [] startKeyBytes = startKey;
+  public static long addContent(final Region r, final byte[] columnFamily, final byte[] column)
+    throws IOException {
+    byte[] startKey = r.getRegionInfo().getStartKey();
+    byte[] endKey = r.getRegionInfo().getEndKey();
+    byte[] startKeyBytes = startKey;
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
@@ -240,75 +215,62 @@ public abstract class HBaseTestCase extends TestCase {
       startKeyBytes, endKey, -1);
   }
 
-  public static long addContent(final Region r, final byte [] columnFamily) throws IOException {
+  public static long addContent(final Region r, final byte[] columnFamily) throws IOException {
     return addContent(r, columnFamily, null);
   }
 
   /**
-   * Add content to region <code>r</code> on the passed column
-   * <code>column</code>.
-   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @throws IOException
-   * @return count of what we added.
+   * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
+   * from 'aaa', 'aab', etc where key and value are the same. n * @return count of what we added.
    */
-  public static long addContent(final Table updater,
-      final String columnFamily) throws IOException {
+  public static long addContent(final Table updater, final String columnFamily) throws IOException {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
-  public static long addContent(final Table updater, final String family,
-      final String column) throws IOException {
+  public static long addContent(final Table updater, final String family, final String column)
+    throws IOException {
     return addContent(updater, family, column, START_KEY_BYTES, null);
   }
 
   /**
-   * Add content to region <code>r</code> on the passed column
-   * <code>column</code>.
-   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @return count of what we added.
-   * @throws IOException
+   * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
+   * from 'aaa', 'aab', etc where key and value are the same.
+   * @return count of what we added. n
    */
   public static long addContent(final Table updater, final String columnFamily,
-      final byte [] startKeyBytes, final byte [] endKey)
-  throws IOException {
+    final byte[] startKeyBytes, final byte[] endKey) throws IOException {
     return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
 
   public static long addContent(final Table updater, final String family, String column,
-      final byte [] startKeyBytes, final byte [] endKey) throws IOException {
+    final byte[] startKeyBytes, final byte[] endKey) throws IOException {
     return addContent(updater, family, column, startKeyBytes, endKey, -1);
   }
 
   /**
-   * Add content to region <code>r</code> on the passed column
-   * <code>column</code>.
-   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @return count of what we added.
-   * @throws IOException
+   * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
+   * from 'aaa', 'aab', etc where key and value are the same.
+   * @return count of what we added. n
    */
-  public static long addContent(final Table updater,
-                                   final String columnFamily,
-                                   final String column,
-      final byte [] startKeyBytes, final byte [] endKey, final long ts)
-  throws IOException {
+  public static long addContent(final Table updater, final String columnFamily, final String column,
+    final byte[] startKeyBytes, final byte[] endKey, final long ts) throws IOException {
     long count = 0;
-    // Add rows of three characters.  The first character starts with the
-    // 'a' character and runs up to 'z'.  Per first character, we run the
-    // second character over same range.  And same for the third so rows
+    // Add rows of three characters. The first character starts with the
+    // 'a' character and runs up to 'z'. Per first character, we run the
+    // second character over same range. And same for the third so rows
     // (and values) look like this: 'aaa', 'aab', 'aac', etc.
-    char secondCharStart = (char)startKeyBytes[1];
-    char thirdCharStart = (char)startKeyBytes[2];
-    EXIT: for (char c = (char)startKeyBytes[0]; c <= LAST_CHAR; c++) {
+    char secondCharStart = (char) startKeyBytes[1];
+    char thirdCharStart = (char) startKeyBytes[2];
+    EXIT: for (char c = (char) startKeyBytes[0]; c <= LAST_CHAR; c++) {
       for (char d = secondCharStart; d <= LAST_CHAR; d++) {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
-          byte [] t = new byte [] {(byte)c, (byte)d, (byte)e};
-          if (endKey != null && endKey.length > 0
-              && Bytes.compareTo(endKey, t) <= 0) {
+          byte[] t = new byte[] { (byte) c, (byte) d, (byte) e };
+          if (endKey != null && endKey.length > 0 && Bytes.compareTo(endKey, t) <= 0) {
             break EXIT;
           }
           try {
             Put put;
-            if(ts != -1) {
+            if (ts != -1) {
               put = new Put(t, ts);
             } else {
               put = new Put(t);
@@ -328,9 +290,8 @@ public abstract class HBaseTestCase extends TestCase {
                   }
                 }
               }
-              byte[][] split =
-                CellUtil.parseColumn(Bytes.toBytes(sb.toString()));
-              if(split.length == 1) {
+              byte[][] split = CellUtil.parseColumn(Bytes.toBytes(sb.toString()));
+              if (split.length == 1) {
                 byte[] qualifier = new byte[0];
                 put.addColumn(split[0], qualifier, t);
               } else {
@@ -362,37 +323,33 @@ public abstract class HBaseTestCase extends TestCase {
     return count;
   }
 
-  protected void assertResultEquals(final HRegion region, final byte [] row,
-      final byte [] family, final byte [] qualifier, final long timestamp,
-      final byte [] value) throws IOException {
+  protected void assertResultEquals(final HRegion region, final byte[] row, final byte[] family,
+    final byte[] qualifier, final long timestamp, final byte[] value) throws IOException {
     Get get = new Get(row);
     get.setTimestamp(timestamp);
     Result res = region.get(get);
-    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map =
-      res.getMap();
-    byte [] res_value = map.get(family).get(qualifier).get(timestamp);
+    NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> map = res.getMap();
+    byte[] res_value = map.get(family).get(qualifier).get(timestamp);
 
     if (value == null) {
-      assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-          " at timestamp " + timestamp, null, res_value);
+      assertEquals(
+        Bytes.toString(family) + " " + Bytes.toString(qualifier) + " at timestamp " + timestamp,
+        null, res_value);
     } else {
       if (res_value == null) {
-        fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-            " at timestamp " + timestamp + "\" was expected to be \"" +
-            Bytes.toStringBinary(value) + " but was null");
+        fail(Bytes.toString(family) + " " + Bytes.toString(qualifier) + " at timestamp " + timestamp
+          + "\" was expected to be \"" + Bytes.toStringBinary(value) + " but was null");
       }
       if (res_value != null) {
-        assertEquals(Bytes.toString(family) + " " + Bytes.toString(qualifier) +
-            " at timestamp " +
-            timestamp, value, new String(res_value, StandardCharsets.UTF_8));
+        assertEquals(
+          Bytes.toString(family) + " " + Bytes.toString(qualifier) + " at timestamp " + timestamp,
+          value, new String(res_value, StandardCharsets.UTF_8));
       }
     }
   }
 
   /**
-   * Common method to close down a MiniDFSCluster and the associated file system
-   *
-   * @param cluster
+   * Common method to close down a MiniDFSCluster and the associated file system n
    */
   public static void shutdownDfs(MiniDFSCluster cluster) {
     if (cluster != null) {
@@ -418,35 +375,30 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * You must call {@link #closeRootAndMeta()} when done after calling this
-   * method. It does cleanup.
-   * @throws IOException
+   * You must call {@link #closeRootAndMeta()} when done after calling this method. It does cleanup.
+   * n
    */
   protected void createMetaRegion() throws IOException {
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);
-    meta = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
+    meta = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, testDir, conf,
+      fsTableDescriptors.get(TableName.META_TABLE_NAME));
   }
 
   protected void closeRootAndMeta() throws IOException {
     HBaseTestingUtility.closeRegionAndWAL(meta);
   }
 
-  public static void assertByteEquals(byte[] expected,
-                               byte[] actual) {
+  public static void assertByteEquals(byte[] expected, byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
-      throw new AssertionFailedError("expected:<" +
-      Bytes.toString(expected) + "> but was:<" +
-      Bytes.toString(actual) + ">");
+      throw new AssertionFailedError(
+        "expected:<" + Bytes.toString(expected) + "> but was:<" + Bytes.toString(actual) + ">");
     }
   }
 
-  public static void assertEquals(byte[] expected,
-                               byte[] actual) {
+  public static void assertEquals(byte[] expected, byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
-      throw new AssertionFailedError("expected:<" +
-      Bytes.toStringBinary(expected) + "> but was:<" +
-      Bytes.toStringBinary(actual) + ">");
+      throw new AssertionFailedError("expected:<" + Bytes.toStringBinary(expected) + "> but was:<"
+        + Bytes.toStringBinary(actual) + ">");
     }
   }
 }

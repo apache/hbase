@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
@@ -73,7 +72,8 @@ final class ProcedureWALFormat {
     void markCorruptedWAL(ProcedureWALFile log, IOException e);
   }
 
-  private ProcedureWALFormat() {}
+  private ProcedureWALFormat() {
+  }
 
   /**
    * Load all the procedures in these ProcedureWALFiles, and rebuild the given {@code tracker} if
@@ -87,7 +87,7 @@ final class ProcedureWALFormat {
    * procedures.
    */
   public static void load(Iterator<ProcedureWALFile> logs, ProcedureStoreTracker tracker,
-      Loader loader) throws IOException {
+    Loader loader) throws IOException {
     ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker, loader);
     tracker.setKeepDeletes(true);
     // Ignore the last log which is current active log.
@@ -111,33 +111,22 @@ final class ProcedureWALFormat {
   }
 
   public static void writeHeader(OutputStream stream, ProcedureWALHeader header)
-      throws IOException {
+    throws IOException {
     header.writeDelimitedTo(stream);
   }
 
   /*
-   * +-----------------+
-   * | END OF WAL DATA | <---+
-   * +-----------------+     |
-   * |                 |     |
-   * |     Tracker     |     |
-   * |                 |     |
-   * +-----------------+     |
-   * |     version     |     |
-   * +-----------------+     |
-   * |  TRAILER_MAGIC  |     |
-   * +-----------------+     |
-   * |      offset     |-----+
-   * +-----------------+
+   * +-----------------+ | END OF WAL DATA | <---+ +-----------------+ | | | | | Tracker | | | | |
+   * +-----------------+ | | version | | +-----------------+ | | TRAILER_MAGIC | |
+   * +-----------------+ | | offset |-----+ +-----------------+
    */
   public static long writeTrailer(FSDataOutputStream stream, ProcedureStoreTracker tracker)
-      throws IOException {
+    throws IOException {
     long offset = stream.getPos();
 
     // Write EOF Entry
-    ProcedureWALEntry.newBuilder()
-      .setType(ProcedureWALEntry.Type.PROCEDURE_WAL_EOF)
-      .build().writeDelimitedTo(stream);
+    ProcedureWALEntry.newBuilder().setType(ProcedureWALEntry.Type.PROCEDURE_WAL_EOF).build()
+      .writeDelimitedTo(stream);
 
     // Write Tracker
     tracker.toProto().writeDelimitedTo(stream);
@@ -148,8 +137,7 @@ final class ProcedureWALFormat {
     return stream.getPos() - offset;
   }
 
-  public static ProcedureWALHeader readHeader(InputStream stream)
-      throws IOException {
+  public static ProcedureWALHeader readHeader(InputStream stream) throws IOException {
     ProcedureWALHeader header;
     try {
       header = ProcedureWALHeader.parseDelimitedFrom(stream);
@@ -162,8 +150,8 @@ final class ProcedureWALFormat {
     }
 
     if (header.getVersion() < 0 || header.getVersion() != HEADER_VERSION) {
-      throw new InvalidWALDataException("Invalid Header version. got " + header.getVersion() +
-          " expected " + HEADER_VERSION);
+      throw new InvalidWALDataException(
+        "Invalid Header version. got " + header.getVersion() + " expected " + HEADER_VERSION);
     }
 
     if (header.getType() < 0 || header.getType() > LOG_TYPE_MAX_VALID) {
@@ -174,7 +162,7 @@ final class ProcedureWALFormat {
   }
 
   public static ProcedureWALTrailer readTrailer(FSDataInputStream stream, long startPos, long size)
-      throws IOException {
+    throws IOException {
     // Beginning of the Trailer Jump. 17 = 1 byte version + 8 byte magic + 8 byte offset
     long trailerPos = size - 17;
 
@@ -185,14 +173,14 @@ final class ProcedureWALFormat {
     stream.seek(trailerPos);
     int version = stream.read();
     if (version != TRAILER_VERSION) {
-      throw new InvalidWALDataException("Invalid Trailer version. got " + version +
-          " expected " + TRAILER_VERSION);
+      throw new InvalidWALDataException(
+        "Invalid Trailer version. got " + version + " expected " + TRAILER_VERSION);
     }
 
     long magic = StreamUtils.readLong(stream);
     if (magic != TRAILER_MAGIC) {
-      throw new InvalidWALDataException("Invalid Trailer magic. got " + magic +
-          " expected " + TRAILER_MAGIC);
+      throw new InvalidWALDataException(
+        "Invalid Trailer magic. got " + magic + " expected " + TRAILER_MAGIC);
     }
 
     long trailerOffset = StreamUtils.readLong(stream);
@@ -203,10 +191,8 @@ final class ProcedureWALFormat {
       throw new InvalidWALDataException("Invalid Trailer begin");
     }
 
-    ProcedureWALTrailer trailer = ProcedureWALTrailer.newBuilder()
-      .setVersion(version)
-      .setTrackerPos(stream.getPos())
-      .build();
+    ProcedureWALTrailer trailer =
+      ProcedureWALTrailer.newBuilder().setVersion(version).setTrackerPos(stream.getPos()).build();
     return trailer;
   }
 
@@ -214,8 +200,8 @@ final class ProcedureWALFormat {
     return ProcedureWALEntry.parseDelimitedFrom(stream);
   }
 
-  public static void writeEntry(ByteSlot slot, ProcedureWALEntry.Type type,
-      Procedure<?> proc, Procedure<?>[] subprocs) throws IOException {
+  public static void writeEntry(ByteSlot slot, ProcedureWALEntry.Type type, Procedure<?> proc,
+    Procedure<?>[] subprocs) throws IOException {
     final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(type);
     builder.addProcedure(ProcedureUtil.convertToProtoProcedure(proc));
@@ -227,23 +213,20 @@ final class ProcedureWALFormat {
     builder.build().writeDelimitedTo(slot);
   }
 
-  public static void writeInsert(ByteSlot slot, Procedure<?> proc)
-      throws IOException {
+  public static void writeInsert(ByteSlot slot, Procedure<?> proc) throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INIT, proc, null);
   }
 
   public static void writeInsert(ByteSlot slot, Procedure<?> proc, Procedure<?>[] subprocs)
-      throws IOException {
+    throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INSERT, proc, subprocs);
   }
 
-  public static void writeUpdate(ByteSlot slot, Procedure<?> proc)
-      throws IOException {
+  public static void writeUpdate(ByteSlot slot, Procedure<?> proc) throws IOException {
     writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_UPDATE, proc, null);
   }
 
-  public static void writeDelete(ByteSlot slot, long procId)
-      throws IOException {
+  public static void writeDelete(ByteSlot slot, long procId) throws IOException {
     final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(procId);
@@ -251,7 +234,7 @@ final class ProcedureWALFormat {
   }
 
   public static void writeDelete(ByteSlot slot, Procedure<?> proc, long[] subprocs)
-      throws IOException {
+    throws IOException {
     final ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
     builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(proc.getProcId());

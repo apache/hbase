@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,8 +37,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
- * Implementation of a log cleaner that checks if a log is still scheduled for
- * replication before deleting it when its TTL is over.
+ * Implementation of a log cleaner that checks if a log is still scheduled for replication before
+ * deleting it when its TTL is over.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
@@ -93,7 +93,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
 
   @Override
   public void setConf(Configuration config) {
-    // Make my own Configuration.  Then I'll have my own connection to zk that
+    // Make my own Configuration. Then I'll have my own connection to zk that
     // I can close myself when comes time.
     Configuration conf = new Configuration(config);
     try {
@@ -113,7 +113,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
   }
-  
+
   @Override
   public void stop(String why) {
     if (this.stopped) return;

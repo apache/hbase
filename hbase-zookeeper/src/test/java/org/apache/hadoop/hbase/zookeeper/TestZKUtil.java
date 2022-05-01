@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,8 +54,7 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 @Category({ ZKTests.class, MediumTests.class })
 public class TestZKUtil {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKUtil.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestZKUtil.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKUtil.class);
 
@@ -67,7 +66,7 @@ public class TestZKUtil {
   public static void setUp() throws Exception {
     UTIL.startMiniZKCluster().getClientPort();
     ZKW = new ZKWatcher(new Configuration(UTIL.getConfiguration()), TestZKUtil.class.getName(),
-        new WarnOnlyAbortable());
+      new WarnOnlyAbortable());
   }
 
   @AfterClass
@@ -142,13 +141,13 @@ public class TestZKUtil {
 
   /**
    * A test for HBASE-3238
-   * @throws IOException A connection attempt to zk failed
+   * @throws IOException          A connection attempt to zk failed
    * @throws InterruptedException One of the non ZKUtil actions was interrupted
-   * @throws KeeperException Any of the zookeeper connections had a KeeperException
+   * @throws KeeperException      Any of the zookeeper connections had a KeeperException
    */
   @Test
   public void testCreateSilentIsReallySilent()
-      throws InterruptedException, KeeperException, IOException {
+    throws InterruptedException, KeeperException, IOException {
     Configuration c = UTIL.getConfiguration();
 
     String aclZnode = "/aclRoot";

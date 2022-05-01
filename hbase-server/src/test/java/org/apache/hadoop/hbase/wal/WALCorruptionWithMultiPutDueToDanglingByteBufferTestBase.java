@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -37,8 +36,8 @@ import org.slf4j.LoggerFactory;
 
 public abstract class WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase {
 
-  private static final Logger LOG = LoggerFactory
-    .getLogger(WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -46,8 +45,8 @@ public abstract class WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase {
 
   protected static CountDownLatch RESUME;
 
-  protected static TableName TABLE_NAME = TableName
-    .valueOf("WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase");
+  protected static TableName TABLE_NAME =
+    TableName.valueOf("WALCorruptionWithMultiPutDueToDanglingByteBufferTestBase");
 
   protected static byte[] CF = Bytes.toBytes("cf");
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,15 +23,14 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Do basic codec performance eval.
@@ -42,63 +41,62 @@ public class CodecPerformance {
   @Deprecated
   public static final Logger LOG = LoggerFactory.getLogger(CodecPerformance.class);
 
-  static Cell [] getCells(final int howMany) {
-    Cell [] cells = new Cell[howMany];
+  static Cell[] getCells(final int howMany) {
+    Cell[] cells = new Cell[howMany];
     for (int i = 0; i < howMany; i++) {
-      byte [] index = Bytes.toBytes(i);
+      byte[] index = Bytes.toBytes(i);
       KeyValue kv = new KeyValue(index, Bytes.toBytes("f"), index, index);
       cells[i] = kv;
     }
     return cells;
   }
 
-  static int getRoughSize(final Cell [] cells) {
+  static int getRoughSize(final Cell[] cells) {
     int size = 0;
-    for (Cell c: cells) {
+    for (Cell c : cells) {
       size += c.getRowLength() + c.getFamilyLength() + c.getQualifierLength() + c.getValueLength();
       size += Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE;
     }
     return size;
   }
 
-  static byte [] runEncoderTest(final int index, final int initialBufferSize,
-      final ByteArrayOutputStream baos, final CellOutputStream encoder, final Cell [] cells)
-  throws IOException {
+  static byte[] runEncoderTest(final int index, final int initialBufferSize,
+    final ByteArrayOutputStream baos, final CellOutputStream encoder, final Cell[] cells)
+    throws IOException {
     long startTime = System.currentTimeMillis();
     for (int i = 0; i < cells.length; i++) {
       encoder.write(cells[i]);
     }
     encoder.flush();
-    LOG.info("" + index + " encoded count=" + cells.length + " in " +
-      (System.currentTimeMillis() - startTime) + "ms for encoder " + encoder);
+    LOG.info("" + index + " encoded count=" + cells.length + " in "
+      + (System.currentTimeMillis() - startTime) + "ms for encoder " + encoder);
     // Ensure we did not have to grow the backing buffer.
     assertTrue(baos.size() < initialBufferSize);
     return baos.toByteArray();
   }
 
-  static Cell [] runDecoderTest(final int index, final int count, final CellScanner decoder)
-  throws IOException {
-    Cell [] cells = new Cell[count];
+  static Cell[] runDecoderTest(final int index, final int count, final CellScanner decoder)
+    throws IOException {
+    Cell[] cells = new Cell[count];
     long startTime = System.currentTimeMillis();
     for (int i = 0; decoder.advance(); i++) {
       cells[i] = decoder.current();
     }
-    LOG.info("" + index + " decoded count=" + cells.length + " in " +
-      (System.currentTimeMillis() - startTime) + "ms for decoder " + decoder);
+    LOG.info("" + index + " decoded count=" + cells.length + " in "
+      + (System.currentTimeMillis() - startTime) + "ms for decoder " + decoder);
     // Ensure we did not have to grow the backing buffer.
     assertTrue(cells.length == count);
     return cells;
   }
 
-  static void verifyCells(final Cell [] input, final Cell [] output) {
+  static void verifyCells(final Cell[] input, final Cell[] output) {
     assertArrayEquals(input, output);
   }
 
-  static void doCodec(final Codec codec, final Cell [] cells, final int cycles, final int count,
-      final int initialBufferSize)
-  throws IOException {
-    byte [] bytes = null;
-    Cell [] cellsDecoded = null;
+  static void doCodec(final Codec codec, final Cell[] cells, final int cycles, final int count,
+    final int initialBufferSize) throws IOException {
+    byte[] bytes = null;
+    Cell[] cellsDecoded = null;
     for (int i = 0; i < cycles; i++) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
       Codec.Encoder encoder = codec.getEncoder(baos);
@@ -118,7 +116,7 @@ public class CodecPerformance {
     // How many times to do an operation; repeat gives hotspot chance to warm up.
     final int cycles = 30;
 
-    Cell [] cells = getCells(count);
+    Cell[] cells = getCells(count);
     int size = getRoughSize(cells);
     int initialBufferSize = 2 * size; // Multiply by 2 to ensure we don't have to grow buffer
 

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,20 +71,18 @@ class SplitRequest implements Runnable {
 
   private void requestRegionSplit() {
     final TableName table = parent.getTable();
-    final RegionInfo hri_a = RegionInfoBuilder.newBuilder(table)
-        .setStartKey(parent.getStartKey())
-        .setEndKey(midKey)
-        .build();
-    final RegionInfo hri_b = RegionInfoBuilder.newBuilder(table)
-        .setStartKey(midKey)
-        .setEndKey(parent.getEndKey())
-        .build();
+    final RegionInfo hri_a = RegionInfoBuilder.newBuilder(table).setStartKey(parent.getStartKey())
+      .setEndKey(midKey).build();
+    final RegionInfo hri_b =
+      RegionInfoBuilder.newBuilder(table).setStartKey(midKey).setEndKey(parent.getEndKey()).build();
     // Send the split request to the master. the master will do the validation on the split-key.
     // The parent region will be unassigned and the two new regions will be assigned.
     // hri_a and hri_b objects may not reflect the regions that will be created, those objects
     // are created just to pass the information to the reportRegionStateTransition().
-    if (!server.reportRegionStateTransition(new RegionStateTransitionContext(
-      TransitionCode.READY_TO_SPLIT, HConstants.NO_SEQNUM, -1, parent, hri_a, hri_b))) {
+    if (
+      !server.reportRegionStateTransition(new RegionStateTransitionContext(
+        TransitionCode.READY_TO_SPLIT, HConstants.NO_SEQNUM, -1, parent, hri_a, hri_b))
+    ) {
       LOG.error("Unable to ask master to split " + parent.getRegionNameAsString());
     }
   }
@@ -93,8 +90,8 @@ class SplitRequest implements Runnable {
   @Override
   public void run() {
     if (this.server.isStopping() || this.server.isStopped()) {
-      LOG.debug("Skipping split because server is stopping=" +
-        this.server.isStopping() + " or stopped=" + this.server.isStopped());
+      LOG.debug("Skipping split because server is stopping=" + this.server.isStopping()
+        + " or stopped=" + this.server.isStopped());
       return;
     }
 

@@ -38,17 +38,15 @@ public class AlwaysStandByHMaster extends HMaster {
    * An implementation of ActiveMasterManager that never transitions it's master to active state. It
    * always remains as a stand by master. With the master registry implementation (HBASE-18095) it
    * is expected to have at least one active / standby master always running at any point in time
-   * since they serve as the gateway for client connections.
-   *
-   * With this implementation, tests can simulate the scenario of not having an active master yet
-   * the client connections to the cluster succeed.
+   * since they serve as the gateway for client connections. With this implementation, tests can
+   * simulate the scenario of not having an active master yet the client connections to the cluster
+   * succeed.
    */
   private static class AlwaysStandByMasterManager extends ActiveMasterManager {
-    private static final Logger LOG =
-        LoggerFactory.getLogger(AlwaysStandByMasterManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AlwaysStandByMasterManager.class);
 
     AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master)
-        throws InterruptedIOException {
+      throws InterruptedIOException {
       super(watcher, sn, master);
     }
 
@@ -78,13 +76,12 @@ public class AlwaysStandByHMaster extends HMaster {
               clusterHasActiveMaster.wait(checkInterval);
             } catch (InterruptedException e) {
               // We expect to be interrupted when a master dies,
-              //  will fall out if so
+              // will fall out if so
               LOG.debug("Interrupted waiting for master to die", e);
             }
           }
           if (clusterShutDown.get()) {
-            this.master.stop(
-                "Cluster went down before this master became active");
+            this.master.stop("Cluster went down before this master became active");
           }
         }
       }
@@ -97,7 +94,7 @@ public class AlwaysStandByHMaster extends HMaster {
   }
 
   protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
-      org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
+    org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
     return new AlwaysStandByMasterManager(zk, sn, server);
   }
 }

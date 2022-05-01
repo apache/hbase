@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.HashMap;
@@ -49,10 +50,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A WALSplitter sink that outputs {@link org.apache.hadoop.hbase.io.hfile.HFile}s.
- * Runs with a bounded number of HFile writers at any one time rather than let the count run up.
+ * A WALSplitter sink that outputs {@link org.apache.hadoop.hbase.io.hfile.HFile}s. Runs with a
+ * bounded number of HFile writers at any one time rather than let the count run up.
  * @see BoundedRecoveredEditsOutputSink for a sink implementation that writes intermediate
- *   recovered.edits files.
+ *      recovered.edits files.
  */
 @InterfaceAudience.Private
 public class BoundedRecoveredHFilesOutputSink extends OutputSink {
@@ -90,10 +91,10 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
         String familyName = Bytes.toString(CellUtil.cloneFamily(cell));
         // comparator need to be specified for meta
         familyCells
-            .computeIfAbsent(familyName,
-              key -> new CellSet(
-                  isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
-            .add(cell);
+          .computeIfAbsent(familyName,
+            key -> new CellSet(
+              isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR))
+          .add(cell);
         familySeqIds.compute(familyName, (k, v) -> v == null ? seqId : Math.max(v, seqId));
       }
     }
@@ -136,7 +137,6 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
 
   /**
    * Write out the remaining RegionEntryBuffers and close the writers.
-   *
    * @return true when there is no error.
    */
   private boolean writeRemainingEntryBuffers() throws IOException {
@@ -188,21 +188,21 @@ public class BoundedRecoveredHFilesOutputSink extends OutputSink {
   }
 
   /**
-   * @return Returns a base HFile without compressions or encodings; good enough for recovery
-   *   given hfile has metadata on how it was written.
+   * @return Returns a base HFile without compressions or encodings; good enough for recovery given
+   *         hfile has metadata on how it was written.
    */
   private StoreFileWriter createRecoveredHFileWriter(TableName tableName, String regionName,
-      long seqId, String familyName, boolean isMetaTable) throws IOException {
+    long seqId, String familyName, boolean isMetaTable) throws IOException {
     Path outputDir = WALSplitUtil.tryCreateRecoveredHFilesDir(walSplitter.rootFS, walSplitter.conf,
       tableName, regionName, familyName);
     StoreFileWriter.Builder writerBuilder =
-        new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
-            .withOutputDir(outputDir);
-    HFileContext hFileContext = new HFileContextBuilder().
-      withChecksumType(StoreUtils.getChecksumType(walSplitter.conf)).
-      withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(walSplitter.conf)).
-      withCellComparator(isMetaTable?
-        MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR).build();
+      new StoreFileWriter.Builder(walSplitter.conf, CacheConfig.DISABLED, walSplitter.rootFS)
+        .withOutputDir(outputDir);
+    HFileContext hFileContext =
+      new HFileContextBuilder().withChecksumType(StoreUtils.getChecksumType(walSplitter.conf))
+        .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(walSplitter.conf)).withCellComparator(
+          isMetaTable ? MetaCellComparator.META_COMPARATOR : CellComparatorImpl.COMPARATOR)
+        .build();
     return writerBuilder.withFileContext(hFileContext).build();
   }
 }

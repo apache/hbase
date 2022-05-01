@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDateTieredCompactionPolicy.class);
+    HBaseClassTestRule.forClass(TestDateTieredCompactionPolicy.class);
 
   @Override
   protected void config() {
@@ -82,8 +82,8 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     long[] maxTimestamps = new long[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 };
     long[] sizes = new long[] { 30, 31, 32, 33, 34, 20, 21, 22, 23, 24, 25, 10, 11 };
 
-    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 20, 21, 22, 23,
-        24, 25 }, new long[] { Long.MIN_VALUE, 6}, false, true);
+    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 20, 21, 22, 23, 24, 25 }, new long[] { Long.MIN_VALUE, 6 }, false, true);
   }
 
   /**
@@ -111,7 +111,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     long[] sizes = new long[] { 30, 31, 32, 33, 34, 20, 21, 22, 23, 24, 25, 10, 11, 12, 13 };
 
     compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 10, 11, 12, 13 },
-      new long[] { Long.MIN_VALUE, 12}, false, true);
+      new long[] { Long.MIN_VALUE, 12 }, false, true);
   }
 
   /**
@@ -125,7 +125,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     long[] sizes = new long[] { 0, 20, 21, 22, 23, 1 };
 
     compactEquals(194, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 22, 23 },
-      new long[] { Long.MIN_VALUE, 96}, false, true);
+      new long[] { Long.MIN_VALUE, 96 }, false, true);
   }
 
   @Test
@@ -190,8 +190,8 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     long[] maxTimestamps = new long[] { 44, 60, 61, 96, 100, 104, 105, 106, 113, 145, 157 };
     long[] sizes = new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 };
 
-    compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 40, 41, 42, 33,
-        30, 31 }, new long[] { Long.MIN_VALUE, 96 }, false, true);
+    compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 40, 41, 42, 33, 30, 31 }, new long[] { Long.MIN_VALUE, 96 }, false, true);
   }
 
   /**
@@ -204,8 +204,9 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
     long[] maxTimestamps = new long[] { 0, 13, 3, 10, 11, 1, 2, 12, 14, 15 };
     long[] sizes = new long[] { 30, 31, 32, 33, 34, 22, 28, 23, 24, 1 };
 
-    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 31, 32, 33, 34,
-        22, 28, 23, 24, 1 }, new long[] { Long.MIN_VALUE, 12 }, false, true);
+    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 31, 32, 33, 34, 22, 28, 23, 24, 1 }, new long[] { Long.MIN_VALUE, 12 }, false,
+      true);
   }
 
   /**
@@ -215,13 +216,13 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
   @Test
   public void negativeEpochtime() throws IOException {
     long[] minTimestamps =
-        new long[] { -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000 };
+      new long[] { -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000 };
     long[] maxTimestamps = new long[] { -28, -11, -10, -9, -8, -7, -6, -5, -4, -3 };
     long[] sizes = new long[] { 30, 31, 32, 33, 34, 22, 25, 23, 24, 1 };
 
     compactEquals(1, sfCreate(minTimestamps, maxTimestamps, sizes),
-      new long[] { 31, 32, 33, 34, 22, 25, 23, 24, 1 },
-      new long[] { Long.MIN_VALUE, -24 }, false, true);
+      new long[] { 31, 32, 33, 34, 22, 25, 23, 24, 1 }, new long[] { Long.MIN_VALUE, -24 }, false,
+      true);
   }
 
   /**
@@ -241,8 +242,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
 
   /**
    * Major Compaction to check min max timestamp falling in the same window and also to check
-   * boundary condition in which case binary sort gives insertion point as length of the array
-   * @throws IOException
+   * boundary condition in which case binary sort gives insertion point as length of the array n
    */
   @Test
   public void checkMinMaxTimestampSameBoundary() throws IOException {
@@ -262,12 +262,12 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
   @Test
   public void negativeForMajor() throws IOException {
     long[] minTimestamps =
-        new long[] { -155, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100 };
+      new long[] { -155, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100 };
     long[] maxTimestamps = new long[] { -8, -7, -6, -5, -4, -3, -2, -1, 0, 6, 13 };
     long[] sizes = new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 };
 
-    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes), new long[] { 0, 50, 51, 40,
-        41, 42, 33, 30, 31, 2, 1 },
+    compactEquals(16, sfCreate(minTimestamps, maxTimestamps, sizes),
+      new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 },
       new long[] { Long.MIN_VALUE, -144, -120, -96, -72, -48, -24, 0, 6, 12 }, true, true);
   }
 }

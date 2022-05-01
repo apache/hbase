@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class, MiscTests.class})
+@Category({ SmallTests.class, MiscTests.class })
 public class TestPBCell {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPBCell.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestPBCell.class);
 
   private static final PBCell CODEC = new PBCell();
 
@@ -52,7 +51,7 @@ public class TestPBCell {
   @Test
   public void testRoundTrip() {
     final Cell cell = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("fam"),
-        Bytes.toBytes("qual"), Bytes.toBytes("val"));
+      Bytes.toBytes("qual"), Bytes.toBytes("val"));
     CellProtos.Cell c = ProtobufUtil.toCell(cell), decoded;
     PositionedByteRange pbr = new SimplePositionedByteRange(c.getSerializedSize());
     pbr.setPosition(0);
@@ -61,6 +60,6 @@ public class TestPBCell {
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
     assertTrue(CellUtil.equals(cell, ProtobufUtil
-        .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
+      .toCell(ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY), decoded)));
   }
 }

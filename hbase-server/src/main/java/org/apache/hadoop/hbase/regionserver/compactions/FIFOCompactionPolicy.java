@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -33,22 +31,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 
- * FIFO compaction policy selects only files which have all cells expired. 
- * The column family MUST have non-default TTL. One of the use cases for this 
- * policy is when we need to store raw data which will be post-processed later 
- * and discarded completely after quite short period of time. Raw time-series vs. 
- * time-based roll up aggregates and compacted time-series. We collect raw time-series
- * and store them into CF with FIFO compaction policy, periodically we run task 
- * which creates roll up aggregates and compacts time-series, the original raw data 
- * can be discarded after that.
- * 
+ * FIFO compaction policy selects only files which have all cells expired. The column family MUST
+ * have non-default TTL. One of the use cases for this policy is when we need to store raw data
+ * which will be post-processed later and discarded completely after quite short period of time. Raw
+ * time-series vs. time-based roll up aggregates and compacted time-series. We collect raw
+ * time-series and store them into CF with FIFO compaction policy, periodically we run task which
+ * creates roll up aggregates and compacts time-series, the original raw data can be discarded after
+ * that.
  */
 @InterfaceAudience.Private
 public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
-  
-  private static final Logger LOG = LoggerFactory.getLogger(FIFOCompactionPolicy.class);
 
+  private static final Logger LOG = LoggerFactory.getLogger(FIFOCompactionPolicy.class);
 
   public FIFOCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
@@ -56,15 +50,15 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
 
   @Override
   public CompactionRequestImpl selectCompaction(Collection<HStoreFile> candidateFiles,
-      List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
-      boolean forceMajor) throws IOException {
-    if(forceMajor){
+    List<HStoreFile> filesCompacting, boolean isUserCompaction, boolean mayUseOffPeak,
+    boolean forceMajor) throws IOException {
+    if (forceMajor) {
       LOG.warn("Major compaction is not supported for FIFO compaction policy. Ignore the flag.");
     }
     boolean isAfterSplit = StoreUtils.hasReferences(candidateFiles);
-    if(isAfterSplit){
+    if (isAfterSplit) {
       LOG.info("Split detected, delegate selection to the parent policy.");
-      return super.selectCompaction(candidateFiles, filesCompacting, isUserCompaction, 
+      return super.selectCompaction(candidateFiles, filesCompacting, isUserCompaction,
         mayUseOffPeak, forceMajor);
     }
 
@@ -78,7 +72,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   public boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
     throws IOException {
     boolean isAfterSplit = StoreUtils.hasReferences(filesToCompact);
-    if(isAfterSplit){
+    if (isAfterSplit) {
       LOG.info("Split detected, delegate to the parent policy.");
       return super.shouldPerformMajorCompaction(filesToCompact);
     }
@@ -87,9 +81,9 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
 
   @Override
   public boolean needsCompaction(Collection<HStoreFile> storeFiles,
-      List<HStoreFile> filesCompacting) {
+    List<HStoreFile> filesCompacting) {
     boolean isAfterSplit = StoreUtils.hasReferences(storeFiles);
-    if(isAfterSplit){
+    if (isAfterSplit) {
       LOG.info("Split detected, delegate to the parent policy.");
       return super.needsCompaction(storeFiles, filesCompacting);
     }
@@ -126,7 +120,7 @@ public class FIFOCompactionPolicy extends ExploringCompactionPolicy {
   }
 
   private Collection<HStoreFile> getExpiredStores(Collection<HStoreFile> files,
-      Collection<HStoreFile> filesCompacting) {
+    Collection<HStoreFile> filesCompacting) {
     long currentTime = EnvironmentEdgeManager.currentTime();
     Collection<HStoreFile> expiredStores = new ArrayList<>();
     for (HStoreFile sf : files) {

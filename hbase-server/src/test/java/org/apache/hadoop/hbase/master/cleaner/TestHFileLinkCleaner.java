@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,8 +95,8 @@ public class TestHFileLinkCleaner {
     RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableName, hri.getEncodedName(), familyName);
+    Path archiveStoreDir =
+      HFileArchiveUtil.getStoreArchivePath(conf, tableName, hri.getEncodedName(), familyName);
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
     Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
@@ -186,7 +186,8 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public void abort(String why, Throwable e) {}
+    public void abort(String why, Throwable e) {
+    }
 
     @Override
     public boolean isAborted() {
@@ -194,7 +195,8 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public void stop(String why) {}
+    public void stop(String why) {
+    }
 
     @Override
     public boolean isStopped() {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
-@Category({FlakeyTests.class, LargeTests.class})
+@Category({ FlakeyTests.class, LargeTests.class })
 public class TestPerTableCFReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPerTableCFReplication.class);
+    HBaseClassTestRule.forClass(TestPerTableCFReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPerTableCFReplication.class);
 
@@ -106,14 +106,14 @@ public class TestPerTableCFReplication {
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     // smaller block size and capacity to trigger more operations
     // and test them
-    conf1.setInt("hbase.regionserver.hlog.blocksize", 1024*20);
+    conf1.setInt("hbase.regionserver.hlog.blocksize", 1024 * 20);
     conf1.setInt("replication.source.size.capacity", 1024);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
+      "org.apache.hadoop.hbase.replication.TestMasterReplication$CoprocessorCounter");
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -207,28 +207,28 @@ public class TestPerTableCFReplication {
     // 2. single table: "tableName1" / "tableName2:cf1" / "tableName3:cf1,cf3"
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableName1.getNameAsString());
     assertEquals(1, tabCFsMap.size()); // only one table
-    assertTrue(tabCFsMap.containsKey(tableName1));   // its table name is "tableName1"
-    assertFalse(tabCFsMap.containsKey(tableName2));  // not other table
-    assertEquals(null, tabCFsMap.get(tableName1));   // null cf-list,
+    assertTrue(tabCFsMap.containsKey(tableName1)); // its table name is "tableName1"
+    assertFalse(tabCFsMap.containsKey(tableName2)); // not other table
+    assertEquals(null, tabCFsMap.get(tableName1)); // null cf-list,
 
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableName2 + ":cf1");
     assertEquals(1, tabCFsMap.size()); // only one table
-    assertTrue(tabCFsMap.containsKey(tableName2));   // its table name is "tableName2"
-    assertFalse(tabCFsMap.containsKey(tableName1));  // not other table
-    assertEquals(1, tabCFsMap.get(tableName2).size());   // cf-list contains only 1 cf
+    assertTrue(tabCFsMap.containsKey(tableName2)); // its table name is "tableName2"
+    assertFalse(tabCFsMap.containsKey(tableName1)); // not other table
+    assertEquals(1, tabCFsMap.get(tableName2).size()); // cf-list contains only 1 cf
     assertEquals("cf1", tabCFsMap.get(tableName2).get(0));// the only cf is "cf1"
 
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableName3 + " : cf1 , cf3");
     assertEquals(1, tabCFsMap.size()); // only one table
-    assertTrue(tabCFsMap.containsKey(tableName3));   // its table name is "tableName2"
-    assertFalse(tabCFsMap.containsKey(tableName1));  // not other table
-    assertEquals(2, tabCFsMap.get(tableName3).size());   // cf-list contains 2 cf
+    assertTrue(tabCFsMap.containsKey(tableName3)); // its table name is "tableName2"
+    assertFalse(tabCFsMap.containsKey(tableName1)); // not other table
+    assertEquals(2, tabCFsMap.get(tableName3).size()); // cf-list contains 2 cf
     assertTrue(tabCFsMap.get(tableName3).contains("cf1"));// contains "cf1"
     assertTrue(tabCFsMap.get(tableName3).contains("cf3"));// contains "cf3"
 
     // 3. multiple tables: "tableName1 ; tableName2:cf1 ; tableName3:cf1,cf3"
-    tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableName1 + " ; " + tableName2
-            + ":cf1 ; " + tableName3 + ":cf1,cf3");
+    tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(
+      tableName1 + " ; " + tableName2 + ":cf1 ; " + tableName3 + ":cf1,cf3");
     // 3.1 contains 3 tables : "tableName1", "tableName2" and "tableName3"
     assertEquals(3, tabCFsMap.size());
     assertTrue(tabCFsMap.containsKey(tableName1));
@@ -264,7 +264,7 @@ public class TestPerTableCFReplication {
     assertTrue(tabCFsMap.get(tableName3).contains("cf3"));
 
     // 5. invalid format "tableName1:tt:cf1 ; tableName2::cf1 ; tableName3:cf1,cf3"
-    //    "tableName1:tt:cf1" and "tableName2::cf1" are invalid and will be ignored totally
+    // "tableName1:tt:cf1" and "tableName2::cf1" are invalid and will be ignored totally
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(
       tableName1 + ":tt:cf1 ; " + tableName2 + "::cf1 ; " + tableName3 + ":cf1,cf3");
     // 5.1 no "tableName1" and "tableName2", only "tableName3"
@@ -272,11 +272,11 @@ public class TestPerTableCFReplication {
     assertFalse(tabCFsMap.containsKey(tableName1));
     assertFalse(tabCFsMap.containsKey(tableName2));
     assertTrue(tabCFsMap.containsKey(tableName3));
-   // 5.2 table "tableName3" : cf-list contains "cf1" and "cf3"
+    // 5.2 table "tableName3" : cf-list contains "cf1" and "cf3"
     assertEquals(2, tabCFsMap.get(tableName3).size());
     assertTrue(tabCFsMap.get(tableName3).contains("cf1"));
     assertTrue(tabCFsMap.get(tableName3).contains("cf3"));
- }
+  }
 
   @Test
   public void testTableCFsHelperConverter() {
@@ -300,8 +300,7 @@ public class TestPerTableCFReplication {
     tabCFsMap.put(tableName1, null);
     tableCFs = ReplicationPeerConfigUtil.convert(tabCFsMap);
     assertEquals(1, tableCFs.length); // only one table
-    assertEquals(tableName1.toString(),
-        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(tableName1.toString(), tableCFs[0].getTableName().getQualifier().toStringUtf8());
     assertEquals(0, tableCFs[0].getFamiliesCount());
 
     tabCFsMap.clear();
@@ -309,8 +308,7 @@ public class TestPerTableCFReplication {
     tabCFsMap.get(tableName2).add("cf1");
     tableCFs = ReplicationPeerConfigUtil.convert(tabCFsMap);
     assertEquals(1, tableCFs.length); // only one table
-    assertEquals(tableName2.toString(),
-        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(tableName2.toString(), tableCFs[0].getTableName().getQualifier().toStringUtf8());
     assertEquals(1, tableCFs[0].getFamiliesCount());
     assertEquals("cf1", tableCFs[0].getFamilies(0).toStringUtf8());
 
@@ -320,8 +318,7 @@ public class TestPerTableCFReplication {
     tabCFsMap.get(tableName3).add("cf3");
     tableCFs = ReplicationPeerConfigUtil.convert(tabCFsMap);
     assertEquals(1, tableCFs.length);
-    assertEquals(tableName3.toString(),
-        tableCFs[0].getTableName().getQualifier().toStringUtf8());
+    assertEquals(tableName3.toString(), tableCFs[0].getTableName().getQualifier().toStringUtf8());
     assertEquals(2, tableCFs[0].getFamiliesCount());
     assertEquals("cf1", tableCFs[0].getFamilies(0).toStringUtf8());
     assertEquals("cf3", tableCFs[0].getFamilies(1).toStringUtf8());
@@ -341,19 +338,19 @@ public class TestPerTableCFReplication {
     assertNotNull(ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName3.toString()));
 
     assertEquals(0,
-        ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName1.toString()).getFamiliesCount());
+      ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName1.toString()).getFamiliesCount());
 
-    assertEquals(1, ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName2.toString())
-        .getFamiliesCount());
+    assertEquals(1,
+      ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName2.toString()).getFamiliesCount());
     assertEquals("cf1", ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName2.toString())
-        .getFamilies(0).toStringUtf8());
+      .getFamilies(0).toStringUtf8());
 
-    assertEquals(2, ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName3.toString())
-        .getFamiliesCount());
+    assertEquals(2,
+      ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName3.toString()).getFamiliesCount());
     assertEquals("cf1", ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName3.toString())
-        .getFamilies(0).toStringUtf8());
+      .getFamilies(0).toStringUtf8());
     assertEquals("cf3", ReplicationPeerConfigUtil.getTableCF(tableCFs, tableName3.toString())
-        .getFamilies(1).toStringUtf8());
+      .getFamilies(1).toStringUtf8());
 
     tabCFsMap = ReplicationPeerConfigUtil.convert2Map(tableCFs);
     assertEquals(3, tabCFsMap.size());
@@ -443,12 +440,12 @@ public class TestPerTableCFReplication {
       putAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
       deleteAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
 
-      //  cf 'f2' of tableB can only replicated to cluster3
+      // cf 'f2' of tableB can only replicated to cluster3
       putAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
       ensureRowNotReplicated(row1, f2Name, htab2B);
       deleteAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
 
-      //  cf 'f3' of tableB can only replicated to cluster2
+      // cf 'f3' of tableB can only replicated to cluster2
       putAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
       ensureRowNotReplicated(row1, f3Name, htab3B);
       deleteAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
@@ -486,11 +483,11 @@ public class TestPerTableCFReplication {
       putAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
       ensureRowNotReplicated(row2, f1Name, htab3A);
       deleteAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
-      //     cf 'f2' of tableA can only replicated to cluster2
+      // cf 'f2' of tableA can only replicated to cluster2
       putAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
       ensureRowNotReplicated(row2, f2Name, htab3A);
       deleteAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
-      //     cf 'f3' of tableA isn't replicable to either cluster2 or cluster3
+      // cf 'f3' of tableA isn't replicable to either cluster2 or cluster3
       putAndWaitWithFamily(row2, f3Name, htab1A);
       ensureRowNotReplicated(row2, f3Name, htab2A, htab3A);
       deleteAndWaitWithFamily(row2, f3Name, htab1A);
@@ -512,11 +509,11 @@ public class TestPerTableCFReplication {
       putAndWaitWithFamily(row2, f1Name, htab1C);
       ensureRowNotReplicated(row2, f1Name, htab2C, htab3C);
       deleteAndWaitWithFamily(row2, f1Name, htab1C);
-      //     cf 'f2' of tableC can only replicated to cluster2
+      // cf 'f2' of tableC can only replicated to cluster2
       putAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
       ensureRowNotReplicated(row2, f2Name, htab3C);
       deleteAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
-      //     cf 'f3' of tableC can replicated to cluster2 and cluster3
+      // cf 'f3' of tableC can replicated to cluster2 and cluster3
       putAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
       deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
     } finally {
@@ -535,8 +532,7 @@ public class TestPerTableCFReplication {
     }
   }
 
-  private void deleteAndWaitWithFamily(byte[] row, byte[] fam,
-      Table source, Table... targets)
+  private void deleteAndWaitWithFamily(byte[] row, byte[] fam, Table source, Table... targets)
     throws Exception {
     Delete del = new Delete(row);
     del.addFamily(fam);
@@ -545,7 +541,7 @@ public class TestPerTableCFReplication {
     Get get = new Get(row);
     get.addFamily(fam);
     for (int i = 0; i < NB_RETRIES; i++) {
-      if (i==NB_RETRIES-1) {
+      if (i == NB_RETRIES - 1) {
         fail("Waited too much time for del replication");
       }
       boolean removedFromAll = true;
@@ -565,8 +561,7 @@ public class TestPerTableCFReplication {
     }
   }
 
-  private void putAndWaitWithFamily(byte[] row, byte[] fam,
-      Table source, Table... targets)
+  private void putAndWaitWithFamily(byte[] row, byte[] fam, Table source, Table... targets)
     throws Exception {
     Put put = new Put(row);
     put.addColumn(fam, row, val);
@@ -575,7 +570,7 @@ public class TestPerTableCFReplication {
     Get get = new Get(row);
     get.addFamily(fam);
     for (int i = 0; i < NB_RETRIES; i++) {
-      if (i==NB_RETRIES-1) {
+      if (i == NB_RETRIES - 1) {
         fail("Waited too much time for put replication");
       }
       boolean replicatedToAll = true;

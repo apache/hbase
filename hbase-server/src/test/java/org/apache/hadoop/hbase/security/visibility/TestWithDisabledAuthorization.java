@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, LargeTests.class})
+@Category({ SecurityTests.class, LargeTests.class })
 public class TestWithDisabledAuthorization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWithDisabledAuthorization.class);
+    HBaseClassTestRule.forClass(TestWithDisabledAuthorization.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -67,7 +67,6 @@ public class TestWithDisabledAuthorization {
   private static final byte[] TEST_FAMILY = Bytes.toBytes("test");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q");
   private static final byte[] ZERO = Bytes.toBytes(0L);
-
 
   @Rule
   public final TestName TEST_NAME = new TestName();
@@ -104,10 +103,8 @@ public class TestWithDisabledAuthorization {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn,
-            new String[] { SECRET, CONFIDENTIAL, PRIVATE });
-          VisibilityClient.setAuths(conn,
-            new String[] { SECRET, CONFIDENTIAL },
+          VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL, PRIVATE });
+          VisibilityClient.setAuths(conn, new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
           fail("Should not have failed");
@@ -130,8 +127,7 @@ public class TestWithDisabledAuthorization {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.setAuths(conn,
-            new String[] { SECRET, CONFIDENTIAL },
+          VisibilityClient.setAuths(conn, new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
           fail("Should not have failed");
@@ -146,8 +142,7 @@ public class TestWithDisabledAuthorization {
         public List<String> run() throws Exception {
           GetAuthsResponse authsResponse = null;
           try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            authsResponse = VisibilityClient.getAuths(conn,
-              USER_RW.getShortName());
+            authsResponse = VisibilityClient.getAuths(conn, USER_RW.getShortName());
           } catch (Throwable t) {
             fail("Should not have failed");
           }
@@ -168,9 +163,7 @@ public class TestWithDisabledAuthorization {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.clearAuths(conn,
-            new String[] { SECRET },
-            USER_RW.getShortName());
+          VisibilityClient.clearAuths(conn, new String[] { SECRET }, USER_RW.getShortName());
         } catch (Throwable t) {
           fail("Should not have failed");
         }
@@ -186,9 +179,7 @@ public class TestWithDisabledAuthorization {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.clearAuths(conn,
-            new String[] { CONFIDENTIAL },
-            USER_RW.getShortName());
+          VisibilityClient.clearAuths(conn, new String[] { CONFIDENTIAL }, USER_RW.getShortName());
         } catch (Throwable t) {
           fail("Should not have failed");
         }
@@ -203,12 +194,8 @@ public class TestWithDisabledAuthorization {
   @Test
   public void testPassiveVisibility() throws Exception {
     // No values should be filtered regardless of authorization if we are passive
-    try (Table t = createTableAndWriteDataWithLabels(
-      TableName.valueOf(TEST_NAME.getMethodName()),
-        SECRET,
-        PRIVATE,
-        SECRET + "|" + CONFIDENTIAL,
-        PRIVATE + "|" + CONFIDENTIAL)) {
+    try (Table t = createTableAndWriteDataWithLabels(TableName.valueOf(TEST_NAME.getMethodName()),
+      SECRET, PRIVATE, SECRET + "|" + CONFIDENTIAL, PRIVATE + "|" + CONFIDENTIAL)) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations());
       try (ResultScanner scanner = t.getScanner(s)) {
@@ -237,10 +224,10 @@ public class TestWithDisabledAuthorization {
   }
 
   static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
-      throws Exception {
+    throws Exception {
     List<Put> puts = new ArrayList<>(labelExps.length + 1);
     for (int i = 0; i < labelExps.length; i++) {
-      Put put = new Put(Bytes.toBytes("row" + (i+1)));
+      Put put = new Put(Bytes.toBytes("row" + (i + 1)));
       put.addColumn(TEST_FAMILY, TEST_QUALIFIER, HConstants.LATEST_TIMESTAMP, ZERO);
       put.setCellVisibility(new CellVisibility(labelExps[i]));
       puts.add(put);

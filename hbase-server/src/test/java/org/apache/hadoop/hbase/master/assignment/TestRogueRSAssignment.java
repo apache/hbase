@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,12 +65,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 /**
  * Tests to verify master/ assignment manager functionality against rogue RS
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRogueRSAssignment {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRogueRSAssignment.class);
+    HBaseClassTestRule.forClass(TestRogueRSAssignment.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRogueRSAssignment.class);
 
@@ -130,7 +130,7 @@ public class TestRogueRSAssignment {
 
   @After
   public void tearDown() throws Exception {
-    for (TableDescriptor td: UTIL.getAdmin().listTableDescriptors()) {
+    for (TableDescriptor td : UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + td.getTableName());
       UTIL.deleteTable(td.getTableName());
     }
@@ -149,37 +149,36 @@ public class TestRogueRSAssignment {
     List<HRegionInfo> tableRegions = createTable(tableName);
 
     final ServerName sn = ServerName.parseVersionedServerName(
-        ServerName.valueOf("1.example.org", 1, System.currentTimeMillis()).getVersionedBytes());
+      ServerName.valueOf("1.example.org", 1, System.currentTimeMillis()).getVersionedBytes());
 
     // make fake request with a region assigned to different RS
     RegionServerStatusProtos.RegionServerReportRequest.Builder request =
-        makeRSReportRequestWithRegions(sn, tableRegions.get(1));
+      makeRSReportRequestWithRegions(sn, tableRegions.get(1));
 
     // sending fake request to master
     // TODO: replace YouAreDeadException with appropriate exception as and when necessary
     exception.expect(ServiceException.class);
     exception.expectCause(isA(YouAreDeadException.class));
     RegionServerStatusProtos.RegionServerReportResponse response =
-        master.getMasterRpcServices().regionServerReport(null, request.build());
+      master.getMasterRpcServices().regionServerReport(null, request.build());
   }
 
   private RegionServerStatusProtos.RegionServerReportRequest.Builder
-      makeRSReportRequestWithRegions(final ServerName sn, HRegionInfo... regions) {
+    makeRSReportRequestWithRegions(final ServerName sn, HRegionInfo... regions) {
     ClusterStatusProtos.ServerLoad.Builder sl = ClusterStatusProtos.ServerLoad.newBuilder();
     for (int i = 0; i < regions.length; i++) {
       HBaseProtos.RegionSpecifier.Builder rs = HBaseProtos.RegionSpecifier.newBuilder();
       rs.setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME);
       rs.setValue(UnsafeByteOperations.unsafeWrap(regions[i].getRegionName()));
 
-      ClusterStatusProtos.RegionLoad.Builder rl = ClusterStatusProtos.RegionLoad.newBuilder()
-          .setRegionSpecifier(rs.build());
+      ClusterStatusProtos.RegionLoad.Builder rl =
+        ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rs.build());
 
       sl.addRegionLoads(i, rl.build());
     }
 
     return RegionServerStatusProtos.RegionServerReportRequest.newBuilder()
-              .setServer(ProtobufUtil.toServerName(sn))
-              .setLoad(sl);
+      .setServer(ProtobufUtil.toServerName(sn)).setLoad(sl);
   }
 
   private List<HRegionInfo> createTable(final TableName tableName) throws Exception {
@@ -195,7 +194,7 @@ public class TestRogueRSAssignment {
   }
 
   private List<HRegionInfo> assertRegionCount(final TableName tableName, final int nregions)
-      throws Exception {
+    throws Exception {
     UTIL.waitUntilNoRegionsInTransition();
     List<HRegionInfo> tableRegions = admin.getTableRegions(tableName);
     assertEquals(nregions, tableRegions.size());

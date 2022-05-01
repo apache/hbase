@@ -24,10 +24,10 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The 'peer' used internally by Catalog Region Replicas Replication Source.
- * The Replication system has 'peer' baked into its core so though we do not need 'peering', we
- * need a 'peer' and its configuration else the replication system breaks at a few locales.
- * Set "hbase.region.replica.catalog.replication" if you want to change the configured endpoint.
+ * The 'peer' used internally by Catalog Region Replicas Replication Source. The Replication system
+ * has 'peer' baked into its core so though we do not need 'peering', we need a 'peer' and its
+ * configuration else the replication system breaks at a few locales. Set
+ * "hbase.region.replica.catalog.replication" if you want to change the configured endpoint.
  */
 @InterfaceAudience.Private
 class CatalogReplicationSourcePeer extends ReplicationPeerImpl {
@@ -35,15 +35,11 @@ class CatalogReplicationSourcePeer extends ReplicationPeerImpl {
    * @param clusterKey Usually the UUID from zk passed in by caller as a String.
    */
   CatalogReplicationSourcePeer(Configuration configuration, String clusterKey, String peerId) {
-    super(configuration, ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER + "_catalog",
-      true,
-      ReplicationPeerConfig.newBuilder().
-        setClusterKey(clusterKey).
-        setReplicationEndpointImpl(
-          configuration.get("hbase.region.replica.catalog.replication",
-            RegionReplicaReplicationEndpoint.class.getName())).
-        setBandwidth(0). // '0' means no bandwidth.
-        setSerial(false).
-        build());
+    super(configuration, ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_PEER + "_catalog", true,
+      ReplicationPeerConfig.newBuilder().setClusterKey(clusterKey)
+        .setReplicationEndpointImpl(configuration.get("hbase.region.replica.catalog.replication",
+          RegionReplicaReplicationEndpoint.class.getName()))
+        .setBandwidth(0). // '0' means no bandwidth.
+        setSerial(false).build());
   }
 }

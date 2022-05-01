@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.Collections;
@@ -39,15 +37,15 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   private int priority = HConstants.PRIORITY_UNSET;
 
   /**
-   * empty construction.
-   * We need this empty construction to keep binary compatibility.
+   * empty construction. We need this empty construction to keep binary compatibility.
    */
   protected OperationWithAttributes() {
   }
 
   protected OperationWithAttributes(OperationWithAttributes clone) {
-    this.attributes = clone.getAttributesMap() == null ? null :
-      clone.getAttributesMap().entrySet().stream()
+    this.attributes = clone.getAttributesMap() == null
+      ? null
+      : clone.getAttributesMap().entrySet().stream()
         .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (k, v) -> {
           throw new RuntimeException("collisions!!!");
         }, () -> new TreeMap<>()));
@@ -96,7 +94,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
     long size = 0;
     if (attributes != null) {
       size += ClassSize.align(this.attributes.size() * ClassSize.MAP_ENTRY);
-      for(Map.Entry<String, byte[]> entry : this.attributes.entrySet()) {
+      for (Map.Entry<String, byte[]> entry : this.attributes.entrySet()) {
         size += ClassSize.align(ClassSize.STRING + entry.getKey().length());
         size += ClassSize.align(ClassSize.ARRAY + entry.getValue().length);
       }
@@ -105,13 +103,10 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   }
 
   /**
-   * This method allows you to set an identifier on an operation. The original
-   * motivation for this was to allow the identifier to be used in slow query
-   * logging, but this could obviously be useful in other places. One use of
-   * this could be to put a class.method identifier in here to see where the
-   * slow query is coming from.
-   * @param id
-   *          id to set for the scan
+   * This method allows you to set an identifier on an operation. The original motivation for this
+   * was to allow the identifier to be used in slow query logging, but this could obviously be
+   * useful in other places. One use of this could be to put a class.method identifier in here to
+   * see where the slow query is coming from. n * id to set for the scan
    */
   public OperationWithAttributes setId(String id) {
     setAttribute(ID_ATRIBUTE, Bytes.toBytes(id));
@@ -119,13 +114,12 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   }
 
   /**
-   * This method allows you to retrieve the identifier for the operation if one
-   * was set.
+   * This method allows you to retrieve the identifier for the operation if one was set.
    * @return the id or null if not set
    */
   public String getId() {
     byte[] attr = getAttribute(ID_ATRIBUTE);
-    return attr == null? null: Bytes.toString(attr);
+    return attr == null ? null : Bytes.toString(attr);
   }
 
   public OperationWithAttributes setPriority(int priority) {

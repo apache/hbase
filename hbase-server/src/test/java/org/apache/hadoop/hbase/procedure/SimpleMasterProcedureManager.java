@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,18 +22,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 
 public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
@@ -59,15 +59,15 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
   @Override
   public void initialize(MasterServices master, MetricsMaster metricsMaster)
-      throws KeeperException, IOException, UnsupportedOperationException {
+    throws KeeperException, IOException, UnsupportedOperationException {
     this.master = master;
     this.done = false;
 
     // setup the default procedure coordinator
     String name = master.getServerName().toString();
     ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, 1);
-    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinator(
-        master.getZooKeeper(), getProcedureSignature(), name);
+    ProcedureCoordinatorRpcs comms =
+      new ZKProcedureCoordinator(master.getZooKeeper(), getProcedureSignature(), name);
 
     this.coordinator = new ProcedureCoordinator(comms, tpool);
   }
@@ -90,22 +90,21 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     }
     Procedure proc = coordinator.startProcedure(monitor, desc.getInstance(), new byte[0], servers);
     if (proc == null) {
-      String msg = "Failed to submit distributed procedure for '"
-          + getProcedureSignature() + "'";
+      String msg = "Failed to submit distributed procedure for '" + getProcedureSignature() + "'";
       LOG.error(msg);
       throw new IOException(msg);
     }
 
     HashMap<String, byte[]> returnData = null;
     try {
-      // wait for the procedure to complete.  A timer thread is kicked off that should cancel this
+      // wait for the procedure to complete. A timer thread is kicked off that should cancel this
       // if it takes too long.
       returnData = proc.waitForCompletedWithRet();
       LOG.info("Done waiting - exec procedure for " + desc.getInstance());
       this.done = true;
     } catch (InterruptedException e) {
       ForeignException ee =
-          new ForeignException("Interrupted while waiting for procdure to finish", e);
+        new ForeignException("Interrupted while waiting for procdure to finish", e);
       monitor.receive(ee);
       Thread.currentThread().interrupt();
     } catch (ForeignException e) {
@@ -117,7 +116,8 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
   @Override
   public void checkPermissions(ProcedureDescription desc, AccessChecker accessChecker, User user)
-      throws IOException {}
+    throws IOException {
+  }
 
   @Override
   public boolean isProcedureDone(ProcedureDescription desc) throws IOException {

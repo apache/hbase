@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -32,19 +31,17 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMa
 
 /**
  * Procedure described by a series of steps.
- *
- * <p>The procedure implementor must have an enum of 'states', describing
- * the various step of the procedure.
- * Once the procedure is running, the procedure-framework will call executeFromState()
- * using the 'state' provided by the user. The first call to executeFromState()
- * will be performed with 'state = null'. The implementor can jump between
- * states using setNextState(MyStateEnum.ordinal()).
- * The rollback will call rollbackState() for each state that was executed, in reverse order.
+ * <p>
+ * The procedure implementor must have an enum of 'states', describing the various step of the
+ * procedure. Once the procedure is running, the procedure-framework will call executeFromState()
+ * using the 'state' provided by the user. The first call to executeFromState() will be performed
+ * with 'state = null'. The implementor can jump between states using
+ * setNextState(MyStateEnum.ordinal()). The rollback will call rollbackState() for each state that
+ * was executed, in reverse order.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class StateMachineProcedure<TEnvironment, TState>
-    extends Procedure<TEnvironment> {
+public abstract class StateMachineProcedure<TEnvironment, TState> extends Procedure<TEnvironment> {
   private static final Logger LOG = LoggerFactory.getLogger(StateMachineProcedure.class);
 
   private static final int EOF_STATE = Integer.MIN_VALUE;
@@ -79,11 +76,11 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   /**
    * called to perform a single step of the specified 'state' of the procedure
    * @param state state to execute
-   * @return Flow.NO_MORE_STATE if the procedure is completed,
-   *         Flow.HAS_MORE_STATE if there is another step.
+   * @return Flow.NO_MORE_STATE if the procedure is completed, Flow.HAS_MORE_STATE if there is
+   *         another step.
    */
   protected abstract Flow executeFromState(TEnvironment env, TState state)
-          throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException;
 
   /**
    * called to perform the rollback of the specified state
@@ -123,9 +120,9 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   /**
-   * By default, the executor will try ro run all the steps of the procedure start to finish.
-   * Return true to make the executor yield between execution steps to
-   * give other procedures time to run their steps.
+   * By default, the executor will try ro run all the steps of the procedure start to finish. Return
+   * true to make the executor yield between execution steps to give other procedures time to run
+   * their steps.
    * @param state the state we are going to execute next.
    * @return Return true if the executor should yield before the execution of the specified step.
    *         Defaults to return false.
@@ -138,8 +135,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * Add a child procedure to execute
    * @param subProcedure the child procedure
    */
-  protected <T extends Procedure<TEnvironment>> void addChildProcedure(
-      @SuppressWarnings("unchecked") T... subProcedure) {
+  protected <T extends Procedure<TEnvironment>> void
+    addChildProcedure(@SuppressWarnings("unchecked") T... subProcedure) {
     if (subProcedure == null) {
       return;
     }
@@ -162,7 +159,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
 
   @Override
   protected Procedure[] execute(final TEnvironment env)
-          throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
       failIfAborted();
@@ -177,7 +174,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       }
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace(state  + " " + this + "; cycles=" + this.cycles);
+        LOG.trace(state + " " + this + "; cycles=" + this.cycles);
       }
       // Keep running count of cycles
       if (getStateId(state) != this.previousState) {
@@ -198,15 +195,14 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
         subProcList = null;
         return subProcedures;
       }
-      return (isWaiting() || isFailed() || !hasMoreState()) ? null : new Procedure[] {this};
+      return (isWaiting() || isFailed() || !hasMoreState()) ? null : new Procedure[] { this };
     } finally {
       updateTimestamp();
     }
   }
 
   @Override
-  protected void rollback(final TEnvironment env)
-      throws IOException, InterruptedException {
+  protected void rollback(final TEnvironment env) throws IOException, InterruptedException {
     if (isEofState()) {
       stateCount--;
     }
@@ -221,7 +217,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   protected boolean isEofState() {
-    return stateCount > 0 && states[stateCount-1] == EOF_STATE;
+    return stateCount > 0 && states[stateCount - 1] == EOF_STATE;
   }
 
   @Override
@@ -254,8 +250,8 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   /**
-   * Used by the default implementation of abort() to know if the current state can be aborted
-   * and rollback can be triggered.
+   * Used by the default implementation of abort() to know if the current state can be aborted and
+   * rollback can be triggered.
    */
   protected boolean isRollbackSupported(final TState state) {
     return false;
@@ -271,7 +267,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   protected TState getCurrentState() {
-    return stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
+    return stateCount > 0 ? getState(states[stateCount - 1]) : getInitialState();
   }
 
   /**
@@ -308,8 +304,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     StateMachineProcedureData.Builder data = StateMachineProcedureData.newBuilder();
     for (int i = 0; i < stateCount; ++i) {
       data.addState(states[i]);
@@ -318,8 +313,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     StateMachineProcedureData data = serializer.deserialize(StateMachineProcedureData.class);
     stateCount = data.getStateCount();
     if (stateCount > 0) {

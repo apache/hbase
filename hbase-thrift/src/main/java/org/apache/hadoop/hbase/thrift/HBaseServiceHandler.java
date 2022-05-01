@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,8 +29,7 @@ import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * abstract class for HBase handler
- * providing a Connection cache and get table/admin method
+ * abstract class for HBase handler providing a Connection cache and get table/admin method
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public abstract class HBaseServiceHandler {
@@ -43,13 +40,12 @@ public abstract class HBaseServiceHandler {
 
   protected final ConnectionCache connectionCache;
 
-  public HBaseServiceHandler(final Configuration c,
-      final UserProvider userProvider) throws IOException {
+  public HBaseServiceHandler(final Configuration c, final UserProvider userProvider)
+    throws IOException {
     this.conf = c;
     int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
     int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
-    connectionCache = new ConnectionCache(
-        conf, userProvider, cleanInterval, maxIdleTime);
+    connectionCache = new ConnectionCache(conf, userProvider, cleanInterval, maxIdleTime);
   }
 
   protected ThriftMetrics metrics = null;
@@ -70,10 +66,7 @@ public abstract class HBaseServiceHandler {
   }
 
   /**
-   * Creates and returns a Table instance from a given table name.
-   *
-   * @param tableName
-   *          name of table
+   * Creates and returns a Table instance from a given table name. n * name of table
    * @return Table object
    * @throws IOException if getting the table fails
    */

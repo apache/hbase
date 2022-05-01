@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,18 +42,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class abstracts a bunch of operations the HMaster needs to interact with
- * the underlying file system like creating the initial layout, checking file
- * system status, etc.
+ * This class abstracts a bunch of operations the HMaster needs to interact with the underlying file
+ * system like creating the initial layout, checking file system status, etc.
  */
 @InterfaceAudience.Private
 public class MasterFileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(MasterFileSystem.class);
 
-  /** Parameter name for HBase instance root directory permission*/
+  /** Parameter name for HBase instance root directory permission */
   public static final String HBASE_DIR_PERMS = "hbase.rootdir.perms";
 
-  /** Parameter name for HBase WAL directory permission*/
+  /** Parameter name for HBase WAL directory permission */
   public static final String HBASE_WAL_DIR_PERMS = "hbase.wal.dir.perms";
 
   // HBase configuration
@@ -72,15 +70,14 @@ public class MasterFileSystem {
   // root hbase directory on the FS
   private final Path walRootDir;
 
-
   /*
-   * In a secure env, the protected sub-directories and files under the HBase rootDir
-   * would be restricted. The sub-directory will have '700' except the bulk load staging dir,
-   * which will have '711'.  The default '700' can be overwritten by setting the property
-   * 'hbase.rootdir.perms'. The protected files (version file, clusterId file) will have '600'.
-   * The rootDir itself will be created with HDFS default permissions if it does not exist.
-   * We will check the rootDir permissions to make sure it has 'x' for all to ensure access
-   * to the staging dir. If it does not, we will add it.
+   * In a secure env, the protected sub-directories and files under the HBase rootDir would be
+   * restricted. The sub-directory will have '700' except the bulk load staging dir, which will have
+   * '711'. The default '700' can be overwritten by setting the property 'hbase.rootdir.perms'. The
+   * protected files (version file, clusterId file) will have '600'. The rootDir itself will be
+   * created with HDFS default permissions if it does not exist. We will check the rootDir
+   * permissions to make sure it has 'x' for all to ensure access to the staging dir. If it does
+   * not, we will add it.
    */
   // Permissions for the directories under rootDir that need protection
   private final FsPermission secureRootSubDirPerms;
@@ -95,7 +92,7 @@ public class MasterFileSystem {
     this.conf = conf;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
-    // default localfs.  Presumption is that rootdir is fully-qualified before
+    // default localfs. Presumption is that rootdir is fully-qualified before
     // we get to here with appropriate fs scheme.
     this.rootdir = CommonFSUtils.getRootDir(conf);
     this.tempdir = new Path(this.rootdir, HConstants.HBASE_TEMP_DIRECTORY);
@@ -119,28 +116,21 @@ public class MasterFileSystem {
   /**
    * Create initial layout in filesystem.
    * <ol>
-   * <li>Check if the meta region exists and is readable, if not create it.
-   * Create hbase.version and the hbase:meta directory if not one.
-   * </li>
+   * <li>Check if the meta region exists and is readable, if not create it. Create hbase.version and
+   * the hbase:meta directory if not one.</li>
    * </ol>
    * Idempotent.
    */
   private void createInitialFileSystemLayout() throws IOException {
 
-    final String[] protectedSubDirs = new String[] {
-        HConstants.BASE_NAMESPACE_DIR,
-        HConstants.HFILE_ARCHIVE_DIRECTORY,
-        HConstants.HBCK_SIDELINEDIR_NAME,
-        MobConstants.MOB_DIR_NAME
-    };
+    final String[] protectedSubDirs =
+      new String[] { HConstants.BASE_NAMESPACE_DIR, HConstants.HFILE_ARCHIVE_DIRECTORY,
+        HConstants.HBCK_SIDELINEDIR_NAME, MobConstants.MOB_DIR_NAME };
 
-    //With the introduction of RegionProcedureStore,
+    // With the introduction of RegionProcedureStore,
     // there's no need to create MasterProcWAL dir here anymore. See HBASE-23715
-    final String[] protectedSubLogDirs = new String[] {
-      HConstants.HREGION_LOGDIR_NAME,
-      HConstants.HREGION_OLDLOGDIR_NAME,
-      HConstants.CORRUPT_DIR_NAME
-    };
+    final String[] protectedSubLogDirs = new String[] { HConstants.HREGION_LOGDIR_NAME,
+      HConstants.HREGION_OLDLOGDIR_NAME, HConstants.CORRUPT_DIR_NAME };
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
 
@@ -169,16 +159,17 @@ public class MasterFileSystem {
       fs.setPermission(new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME), secureRootFilePerms);
     }
     FsPermission currentRootPerms = fs.getFileStatus(this.rootdir).getPermission();
-    if (!currentRootPerms.getUserAction().implies(FsAction.EXECUTE)
+    if (
+      !currentRootPerms.getUserAction().implies(FsAction.EXECUTE)
         || !currentRootPerms.getGroupAction().implies(FsAction.EXECUTE)
-        || !currentRootPerms.getOtherAction().implies(FsAction.EXECUTE)) {
+        || !currentRootPerms.getOtherAction().implies(FsAction.EXECUTE)
+    ) {
       LOG.warn("rootdir permissions do not contain 'excute' for user, group or other. "
         + "Automatically adding 'excute' permission for all");
-      fs.setPermission(
-        this.rootdir,
-        new FsPermission(currentRootPerms.getUserAction().or(FsAction.EXECUTE), currentRootPerms
-            .getGroupAction().or(FsAction.EXECUTE), currentRootPerms.getOtherAction().or(
-          FsAction.EXECUTE)));
+      fs.setPermission(this.rootdir,
+        new FsPermission(currentRootPerms.getUserAction().or(FsAction.EXECUTE),
+          currentRootPerms.getGroupAction().or(FsAction.EXECUTE),
+          currentRootPerms.getOtherAction().or(FsAction.EXECUTE)));
     }
   }
 
@@ -230,13 +221,9 @@ public class MasterFileSystem {
   }
 
   /**
-   * Get the rootdir.  Make sure its wholesome and exists before returning.
-   * @param rd
-   * @param c
-   * @param fs
-   * @return hbase.rootdir (after checks for existence and bootstrapping if
-   * needed populating the directory with necessary bootup files).
-   * @throws IOException
+   * Get the rootdir. Make sure its wholesome and exists before returning. nnn * @return
+   * hbase.rootdir (after checks for existence and bootstrapping if needed populating the directory
+   * with necessary bootup files). n
    */
   private void checkRootDir(final Path rd, final Configuration c, final FileSystem fs)
     throws IOException {
@@ -291,16 +278,16 @@ public class MasterFileSystem {
   }
 
   /**
-   * Make sure the hbase temp directory exists and is empty.
-   * NOTE that this method is only executed once just after the master becomes the active one.
+   * Make sure the hbase temp directory exists and is empty. NOTE that this method is only executed
+   * once just after the master becomes the active one.
    */
   void checkTempDir(final Path tmpdir, final Configuration c, final FileSystem fs)
-      throws IOException {
+    throws IOException {
     // If the temp directory exists, clear the content (left over, from the previous run)
     if (fs.exists(tmpdir)) {
       // Archive table in temp, maybe left over from failed deletion,
       // if not the cleaner will take care of them.
-      for (Path tableDir: FSUtils.getTableDirs(fs, tmpdir)) {
+      for (Path tableDir : FSUtils.getTableDirs(fs, tmpdir)) {
         HFileArchiver.archiveRegions(c, fs, this.rootdir, tableDir,
           FSUtils.getRegionDirs(fs, tableDir));
         if (!FSUtils.getRegionDirs(fs, tableDir).isEmpty()) {
@@ -328,9 +315,7 @@ public class MasterFileSystem {
   }
 
   /**
-   * Make sure the directories under rootDir have good permissions. Create if necessary.
-   * @param p
-   * @throws IOException
+   * Make sure the directories under rootDir have good permissions. Create if necessary. nn
    */
   private void checkSubDir(final Path p, final String dirPermsConfName) throws IOException {
     FileSystem fs = p.getFileSystem(conf);
@@ -345,15 +330,14 @@ public class MasterFileSystem {
           throw new IOException("HBase directory '" + p + "' creation failure.");
         }
       }
-    }
-    else {
+    } else {
       if (isSecurityEnabled && !dirPerms.equals(fs.getFileStatus(p).getPermission())) {
         // check whether the permission match
         LOG.warn("Found HBase directory permissions NOT matching expected permissions for "
-            + p.toString() + " permissions=" + fs.getFileStatus(p).getPermission()
-            + ", expecting " + dirPerms + ". Automatically setting the permissions. "
-            + "You can change the permissions by setting \"" + dirPermsConfName + "\" in hbase-site.xml "
-            + "and restarting the master");
+          + p.toString() + " permissions=" + fs.getFileStatus(p).getPermission() + ", expecting "
+          + dirPerms + ". Automatically setting the permissions. "
+          + "You can change the permissions by setting \"" + dirPermsConfName
+          + "\" in hbase-site.xml " + "and restarting the master");
         fs.setPermission(p, dirPerms);
       }
     }
@@ -361,8 +345,7 @@ public class MasterFileSystem {
 
   /**
    * Check permissions for bulk load staging directory. This directory has special hidden
-   * permissions. Create it if necessary.
-   * @throws IOException
+   * permissions. Create it if necessary. n
    */
   private void checkStagingDir() throws IOException {
     Path p = new Path(this.rootdir, HConstants.BULKLOAD_STAGING_DIR_NAME);
@@ -376,31 +359,29 @@ public class MasterFileSystem {
       }
     } catch (IOException e) {
       LOG.error("Failed to create or set permission on staging directory " + p.toString());
-      throw new IOException("Failed to create or set permission on staging directory "
-          + p.toString(), e);
+      throw new IOException(
+        "Failed to create or set permission on staging directory " + p.toString(), e);
     }
   }
 
-  public void deleteFamilyFromFS(RegionInfo region, byte[] familyName)
-      throws IOException {
+  public void deleteFamilyFromFS(RegionInfo region, byte[] familyName) throws IOException {
     deleteFamilyFromFS(rootdir, region, familyName);
   }
 
   public void deleteFamilyFromFS(Path rootDir, RegionInfo region, byte[] familyName)
-      throws IOException {
+    throws IOException {
     // archive family store files
     Path tableDir = CommonFSUtils.getTableDir(rootDir, region.getTable());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder
-    Path familyDir = new Path(tableDir,
-      new Path(region.getEncodedName(), Bytes.toString(familyName)));
+    Path familyDir =
+      new Path(tableDir, new Path(region.getEncodedName(), Bytes.toString(familyName)));
     if (fs.delete(familyDir, true) == false) {
       if (fs.exists(familyDir)) {
-        throw new IOException("Could not delete family "
-            + Bytes.toString(familyName) + " from FileSystem for region "
-            + region.getRegionNameAsString() + "(" + region.getEncodedName()
-            + ")");
+        throw new IOException(
+          "Could not delete family " + Bytes.toString(familyName) + " from FileSystem for region "
+            + region.getRegionNameAsString() + "(" + region.getEncodedName() + ")");
       }
     }
   }

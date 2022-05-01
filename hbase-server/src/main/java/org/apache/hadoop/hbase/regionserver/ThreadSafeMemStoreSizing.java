@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Accounting of current heap and data sizes.
- * Thread-safe. Many threads can do updates against this single instance.
+ * Accounting of current heap and data sizes. Thread-safe. Many threads can do updates against this
+ * single instance.
  * @see NonThreadSafeMemStoreSizing
  * @see MemStoreSize
  */
@@ -56,7 +55,7 @@ class ThreadSafeMemStoreSizing implements MemStoreSizing {
 
   @Override
   public long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
-      int cellsCountDelta) {
+    int cellsCountDelta) {
     this.offHeapSize.addAndGet(offHeapSizeDelta);
     this.heapSize.addAndGet(heapSizeDelta);
     this.cellsCount.addAndGet(cellsCountDelta);

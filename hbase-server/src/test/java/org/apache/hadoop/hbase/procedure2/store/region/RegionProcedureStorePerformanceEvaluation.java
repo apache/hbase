@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -121,8 +121,9 @@ public class RegionProcedureStorePerformanceEvaluation
     Pair<Long, MemoryType> pair = MemorySizeUtil.getGlobalMemStoreSize(conf);
     long globalMemStoreSize = pair.getFirst();
     boolean offheap = pair.getSecond() == MemoryType.NON_HEAP;
-    float poolSizePercentage = offheap ? 1.0F :
-      conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
+    float poolSizePercentage = offheap
+      ? 1.0F
+      : conf.getFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, MemStoreLAB.POOL_MAX_SIZE_DEFAULT);
     float initialCountPercentage =
       conf.getFloat(MemStoreLAB.CHUNK_POOL_INITIALSIZE_KEY, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT);
     int chunkSize = conf.getInt(MemStoreLAB.CHUNK_SIZE_KEY, MemStoreLAB.CHUNK_SIZE_DEFAULT);

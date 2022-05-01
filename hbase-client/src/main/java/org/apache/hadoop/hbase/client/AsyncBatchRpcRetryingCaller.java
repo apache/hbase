@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -150,8 +150,8 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   public AsyncBatchRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      TableName tableName, List<? extends Row> actions, long pauseNs, long pauseForCQTBENs,
-      int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    TableName tableName, List<? extends Row> actions, long pauseNs, long pauseForCQTBENs,
+    int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
@@ -215,13 +215,13 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private void logException(int tries, Supplier<Stream<RegionRequest>> regionsSupplier,
-      Throwable error, ServerName serverName) {
+    Throwable error, ServerName serverName) {
     if (tries > startLogErrorsCnt) {
       String regions =
         regionsSupplier.get().map(r -> "'" + r.loc.getRegion().getRegionNameAsString() + "'")
           .collect(Collectors.joining(",", "[", "]"));
-      LOG.warn("Process batch for " + regions + " in " + tableName + " from " + serverName +
-        " failed, tries=" + tries, error);
+      LOG.warn("Process batch for " + regions + " in " + tableName + " from " + serverName
+        + " failed, tries=" + tries, error);
     }
   }
 
@@ -276,7 +276,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private ClientProtos.MultiRequest buildReq(Map<byte[], RegionRequest> actionsByRegion,
-      List<CellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
+    List<CellScannable> cells, Map<Integer, Integer> indexMap) throws IOException {
     ClientProtos.MultiRequest.Builder multiRequestBuilder = ClientProtos.MultiRequest.newBuilder();
     ClientProtos.RegionAction.Builder regionActionBuilder = ClientProtos.RegionAction.newBuilder();
     ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
@@ -290,21 +290,21 @@ class AsyncBatchRpcRetryingCaller<T> {
         entry.getValue().actions.stream()
           .sorted((a1, a2) -> Integer.compare(a1.getOriginalIndex(), a2.getOriginalIndex()))
           .collect(Collectors.toList()),
-        cells, multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder,
-        nonceGroup, indexMap);
+        cells, multiRequestBuilder, regionActionBuilder, actionBuilder, mutationBuilder, nonceGroup,
+        indexMap);
     }
     return multiRequestBuilder.build();
   }
 
   @SuppressWarnings("unchecked")
   private void onComplete(Action action, RegionRequest regionReq, int tries, ServerName serverName,
-      RegionResult regionResult, List<Action> failedActions, Throwable regionException,
-      MutableBoolean retryImmediately) {
+    RegionResult regionResult, List<Action> failedActions, Throwable regionException,
+    MutableBoolean retryImmediately) {
     Object result = regionResult.result.getOrDefault(action.getOriginalIndex(), regionException);
     if (result == null) {
-      LOG.error("Server " + serverName + " sent us neither result nor exception for row '" +
-        Bytes.toStringBinary(action.getAction().getRow()) + "' of " +
-        regionReq.loc.getRegion().getRegionNameAsString());
+      LOG.error("Server " + serverName + " sent us neither result nor exception for row '"
+        + Bytes.toStringBinary(action.getAction().getRow()) + "' of "
+        + regionReq.loc.getRegion().getRegionNameAsString());
       addError(action, new RuntimeException("Invalid response"), serverName);
       failedActions.add(action);
     } else if (result instanceof Throwable) {
@@ -326,7 +326,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private void onComplete(Map<byte[], RegionRequest> actionsByRegion, int tries,
-      ServerName serverName, MultiResponse resp) {
+    ServerName serverName, MultiResponse resp) {
     ConnectionUtils.updateStats(conn.getStatisticsTracker(), conn.getConnectionMetrics(),
       serverName, resp);
     List<Action> failedActions = new ArrayList<>();
@@ -406,8 +406,8 @@ class AsyncBatchRpcRetryingCaller<T> {
         onError(serverReq.actionsByRegion, tries, controller.getFailed(), serverName);
       } else {
         try {
-          onComplete(serverReq.actionsByRegion, tries, serverName, ResponseConverter.getResults(req,
-            indexMap, resp, controller.cellScanner()));
+          onComplete(serverReq.actionsByRegion, tries, serverName,
+            ResponseConverter.getResults(req, indexMap, resp, controller.cellScanner()));
         } catch (Exception e) {
           onError(serverReq.actionsByRegion, tries, e, serverName);
           return;
@@ -452,7 +452,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private void onError(Map<byte[], RegionRequest> actionsByRegion, int tries, Throwable t,
-      ServerName serverName) {
+    ServerName serverName) {
     Throwable error = translateException(t);
     logException(tries, () -> actionsByRegion.values().stream(), error, serverName);
     actionsByRegion.forEach(
@@ -470,7 +470,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   }
 
   private void tryResubmit(Stream<Action> actions, int tries, boolean immediately,
-      boolean isCallQueueTooBig) {
+    boolean isCallQueueTooBig) {
     if (immediately) {
       groupAndSend(actions, tries);
       return;

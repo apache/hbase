@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,15 +27,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests that the incrementing environment edge increments time instead of using
- * the default.
+ * Tests that the incrementing environment edge increments time instead of using the default.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestIncrementingEnvironmentEdge {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementingEnvironmentEdge.class);
+    HBaseClassTestRule.forClass(TestIncrementingEnvironmentEdge.class);
 
   @Test
   public void testGetCurrentTimeUsesSystemClock() {

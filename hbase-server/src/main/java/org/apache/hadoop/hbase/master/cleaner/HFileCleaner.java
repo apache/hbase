@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,8 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This Chore, every time it runs, will clear the HFiles in the hfile archive
- * folder that are deletable for each HFile cleaner in the chain.
+ * This Chore, every time it runs, will clear the HFiles in the hfile archive folder that are
+ * deletable for each HFile cleaner in the chain.
  */
 @InterfaceAudience.Private
 public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
@@ -56,35 +56,35 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
 
   // Configuration key for large/small throttle point
   public final static String HFILE_DELETE_THROTTLE_THRESHOLD =
-      "hbase.regionserver.thread.hfilecleaner.throttle";
+    "hbase.regionserver.thread.hfilecleaner.throttle";
   public final static int DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD = 64 * 1024 * 1024;// 64M
 
   // Configuration key for large queue initial size
   public final static String LARGE_HFILE_QUEUE_INIT_SIZE =
-      "hbase.regionserver.hfilecleaner.large.queue.size";
+    "hbase.regionserver.hfilecleaner.large.queue.size";
   public final static int DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE = 10240;
 
   // Configuration key for small queue initial size
   public final static String SMALL_HFILE_QUEUE_INIT_SIZE =
-      "hbase.regionserver.hfilecleaner.small.queue.size";
+    "hbase.regionserver.hfilecleaner.small.queue.size";
   public final static int DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE = 10240;
 
   // Configuration key for large file delete thread number
   public final static String LARGE_HFILE_DELETE_THREAD_NUMBER =
-      "hbase.regionserver.hfilecleaner.large.thread.count";
+    "hbase.regionserver.hfilecleaner.large.thread.count";
   public final static int DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER = 1;
 
   // Configuration key for small file delete thread number
   public final static String SMALL_HFILE_DELETE_THREAD_NUMBER =
-      "hbase.regionserver.hfilecleaner.small.thread.count";
+    "hbase.regionserver.hfilecleaner.small.thread.count";
   public final static int DEFAULT_SMALL_HFILE_DELETE_THREAD_NUMBER = 1;
 
   public static final String HFILE_DELETE_THREAD_TIMEOUT_MSEC =
-      "hbase.regionserver.hfilecleaner.thread.timeout.msec";
+    "hbase.regionserver.hfilecleaner.thread.timeout.msec";
   static final long DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   public static final String HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC =
-      "hbase.regionserver.hfilecleaner.thread.check.interval.msec";
+    "hbase.regionserver.hfilecleaner.thread.check.interval.msec";
   static final long DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC = 1000L;
 
   private static final Logger LOG = LoggerFactory.getLogger(HFileCleaner.class);
@@ -105,13 +105,13 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   private AtomicLong deletedSmallFiles = new AtomicLong();
 
   /**
-   * @param period the period of time to sleep between each run
-   * @param stopper the stopper
-   * @param conf configuration to use
-   * @param fs handle to the FS
+   * @param period    the period of time to sleep between each run
+   * @param stopper   the stopper
+   * @param conf      configuration to use
+   * @param fs        handle to the FS
    * @param directory directory to be cleaned
-   * @param pool the thread pool used to scan directories
-   * @param params params could be used in subclass of BaseHFileCleanerDelegate
+   * @param pool      the thread pool used to scan directories
+   * @param params    params could be used in subclass of BaseHFileCleanerDelegate
    */
   public HFileCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
     Path directory, DirScanPool pool, Map<String, Object> params) {
@@ -122,15 +122,15 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
 
   /**
    * For creating customized HFileCleaner.
-   * @param name name of the chore being run
-   * @param period the period of time to sleep between each run
-   * @param stopper the stopper
-   * @param conf configuration to use
-   * @param fs handle to the FS
+   * @param name      name of the chore being run
+   * @param period    the period of time to sleep between each run
+   * @param stopper   the stopper
+   * @param conf      configuration to use
+   * @param fs        handle to the FS
    * @param directory directory to be cleaned
-   * @param confKey configuration key for the classes to instantiate
-   * @param pool the thread pool used to scan directories
-   * @param params params could be used in subclass of BaseHFileCleanerDelegate
+   * @param confKey   configuration key for the classes to instantiate
+   * @param pool      the thread pool used to scan directories
+   * @param params    params could be used in subclass of BaseHFileCleanerDelegate
    */
   public HFileCleaner(String name, int period, Stoppable stopper, Configuration conf, FileSystem fs,
     Path directory, String confKey, DirScanPool pool, Map<String, Object> params) {
@@ -156,9 +156,9 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
 
   @Override
   protected boolean validate(Path file) {
-    return HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent()) ||
-      StoreFileInfo.validateStoreFileName(file.getName()) ||
-      file.getName().endsWith(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
+    return HFileLink.isBackReferencesDir(file) || HFileLink.isBackReferencesDir(file.getParent())
+      || StoreFileInfo.validateStoreFileName(file.getName())
+      || file.getName().endsWith(MasterRegionFactory.ARCHIVED_HFILE_SUFFIX);
   }
 
   /**
@@ -315,7 +315,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   private void stopHFileDeleteThreads() {
     running = false;
     LOG.debug("Stopping file delete threads");
-    for(Thread thread: threads){
+    for (Thread thread : threads) {
       thread.interrupt();
     }
   }
@@ -360,20 +360,21 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
         while (!done) {
           long startTimeNanos = System.nanoTime();
           wait(waitIfNotFinished);
-          waitTimeMsec += TimeUnit.MILLISECONDS.convert(System.nanoTime() - startTimeNanos,
-              TimeUnit.NANOSECONDS);
+          waitTimeMsec +=
+            TimeUnit.MILLISECONDS.convert(System.nanoTime() - startTimeNanos, TimeUnit.NANOSECONDS);
           if (done) {
             return this.result;
           }
           if (waitTimeMsec > timeoutMsec) {
-            LOG.warn("Wait more than " + timeoutMsec + " ms for deleting " + this.filePath
-                + ", exit...");
+            LOG.warn(
+              "Wait more than " + timeoutMsec + " ms for deleting " + this.filePath + ", exit...");
             return false;
           }
         }
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting for result of deleting " + filePath
-            + ", will return false", e);
+        LOG.warn(
+          "Interrupted while waiting for result of deleting " + filePath + ", will return false",
+          e);
         return false;
       }
       return this.result;
@@ -421,7 +422,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
     stopHFileDeleteThreads();
     // record the left over tasks
     List<HFileDeleteTask> leftOverTasks =
-        new ArrayList<>(largeFileQueue.size() + smallFileQueue.size());
+      new ArrayList<>(largeFileQueue.size() + smallFileQueue.size());
     leftOverTasks.addAll(largeFileQueue);
     leftOverTasks.addAll(smallFileQueue);
     largeFileQueue = new StealJobQueue<>(largeQueueInitSize, smallQueueInitSize, COMPARATOR);
@@ -442,53 +443,52 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   private boolean checkAndUpdateConfigurations(Configuration conf) {
     boolean updated = false;
     int throttlePoint =
-        conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
+      conf.getInt(HFILE_DELETE_THROTTLE_THRESHOLD, DEFAULT_HFILE_DELETE_THROTTLE_THRESHOLD);
     if (throttlePoint != this.throttlePoint) {
       LOG.debug("Updating throttle point, from {} to {}", this.throttlePoint, throttlePoint);
       this.throttlePoint = throttlePoint;
       updated = true;
     }
     int largeQueueInitSize =
-        conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
+      conf.getInt(LARGE_HFILE_QUEUE_INIT_SIZE, DEFAULT_LARGE_HFILE_QUEUE_INIT_SIZE);
     if (largeQueueInitSize != this.largeQueueInitSize) {
       LOG.debug("Updating largeQueueInitSize, from {} to {}", this.largeQueueInitSize,
-          largeQueueInitSize);
+        largeQueueInitSize);
       this.largeQueueInitSize = largeQueueInitSize;
       updated = true;
     }
     int smallQueueInitSize =
-        conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
+      conf.getInt(SMALL_HFILE_QUEUE_INIT_SIZE, DEFAULT_SMALL_HFILE_QUEUE_INIT_SIZE);
     if (smallQueueInitSize != this.smallQueueInitSize) {
       LOG.debug("Updating smallQueueInitSize, from {} to {}", this.smallQueueInitSize,
-          smallQueueInitSize);
+        smallQueueInitSize);
       this.smallQueueInitSize = smallQueueInitSize;
       updated = true;
     }
     int largeFileDeleteThreadNumber =
-        conf.getInt(LARGE_HFILE_DELETE_THREAD_NUMBER, DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER);
+      conf.getInt(LARGE_HFILE_DELETE_THREAD_NUMBER, DEFAULT_LARGE_HFILE_DELETE_THREAD_NUMBER);
     if (largeFileDeleteThreadNumber != this.largeFileDeleteThreadNumber) {
       LOG.debug("Updating largeFileDeleteThreadNumber, from {} to {}",
-          this.largeFileDeleteThreadNumber, largeFileDeleteThreadNumber);
+        this.largeFileDeleteThreadNumber, largeFileDeleteThreadNumber);
       this.largeFileDeleteThreadNumber = largeFileDeleteThreadNumber;
       updated = true;
     }
     int smallFileDeleteThreadNumber =
-        conf.getInt(SMALL_HFILE_DELETE_THREAD_NUMBER, DEFAULT_SMALL_HFILE_DELETE_THREAD_NUMBER);
+      conf.getInt(SMALL_HFILE_DELETE_THREAD_NUMBER, DEFAULT_SMALL_HFILE_DELETE_THREAD_NUMBER);
     if (smallFileDeleteThreadNumber != this.smallFileDeleteThreadNumber) {
       LOG.debug("Updating smallFileDeleteThreadNumber, from {} to {}",
-          this.smallFileDeleteThreadNumber, smallFileDeleteThreadNumber);
+        this.smallFileDeleteThreadNumber, smallFileDeleteThreadNumber);
       this.smallFileDeleteThreadNumber = smallFileDeleteThreadNumber;
       updated = true;
     }
     long cleanerThreadTimeoutMsec =
-        conf.getLong(HFILE_DELETE_THREAD_TIMEOUT_MSEC, DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC);
+      conf.getLong(HFILE_DELETE_THREAD_TIMEOUT_MSEC, DEFAULT_HFILE_DELETE_THREAD_TIMEOUT_MSEC);
     if (cleanerThreadTimeoutMsec != this.cleanerThreadTimeoutMsec) {
       this.cleanerThreadTimeoutMsec = cleanerThreadTimeoutMsec;
       updated = true;
     }
-    long cleanerThreadCheckIntervalMsec =
-        conf.getLong(HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
-            DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC);
+    long cleanerThreadCheckIntervalMsec = conf.getLong(HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC,
+      DEFAULT_HFILE_DELETE_THREAD_CHECK_INTERVAL_MSEC);
     if (cleanerThreadCheckIntervalMsec != this.cleanerThreadCheckIntervalMsec) {
       this.cleanerThreadCheckIntervalMsec = cleanerThreadCheckIntervalMsec;
       updated = true;
@@ -499,7 +499,7 @@ public class HFileCleaner extends CleanerChore<BaseHFileCleanerDelegate>
   @Override
   public synchronized void cancel(boolean mayInterruptIfRunning) {
     super.cancel(mayInterruptIfRunning);
-    for (Thread t: this.threads) {
+    for (Thread t : this.threads) {
       t.interrupt();
     }
   }

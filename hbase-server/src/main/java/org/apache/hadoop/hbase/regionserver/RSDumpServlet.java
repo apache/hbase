@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,14 +35,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RSDumpServlet extends StateDumpServlet {
   private static final long serialVersionUID = 1L;
-  private static final String LINE =
-    "===========================================================";
+  private static final String LINE = "===========================================================";
 
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
-    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
-        HRegionServer.REGIONSERVER);
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    HRegionServer hrs =
+      (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
     response.setContentType("text/plain");
@@ -57,8 +54,7 @@ public class RSDumpServlet extends StateDumpServlet {
     OutputStream os = response.getOutputStream();
     try (PrintWriter out = new PrintWriter(os)) {
 
-      out.println("RegionServer status for " + hrs.getServerName()
-        + " as of " + new Date());
+      out.println("RegionServer status for " + hrs.getServerName() + " as of " + new Date());
 
       out.println("\n\nVersion Info:");
       out.println(LINE);
@@ -111,7 +107,7 @@ public class RSDumpServlet extends StateDumpServlet {
   public static void dumpRowLock(HRegionServer hrs, PrintWriter out) {
     StringBuilder sb = new StringBuilder();
     for (Region region : hrs.getRegions()) {
-      HRegion hRegion = (HRegion)region;
+      HRegion hRegion = (HRegion) region;
       if (hRegion.getLockedRows().size() > 0) {
         for (HRegion.RowLockContext rowLockContext : hRegion.getLockedRows().values()) {
           sb.setLength(0);
@@ -124,12 +120,10 @@ public class RSDumpServlet extends StateDumpServlet {
     }
   }
 
-  public static void dumpQueue(HRegionServer hrs, PrintWriter out)
-      throws IOException {
+  public static void dumpQueue(HRegionServer hrs, PrintWriter out) throws IOException {
     if (hrs.compactSplitThread != null) {
       // 1. Print out Compaction/Split Queue
-      out.println("Compaction/Split Queue summary: "
-          + hrs.compactSplitThread.toString() );
+      out.println("Compaction/Split Queue summary: " + hrs.compactSplitThread.toString());
       out.println(hrs.compactSplitThread.dumpQueue());
     }
 
@@ -140,29 +134,28 @@ public class RSDumpServlet extends StateDumpServlet {
     }
   }
 
-
   public static void dumpCallQueues(HRegionServer hrs, PrintWriter out) {
     CallQueueInfo callQueueInfo = hrs.rpcServices.rpcServer.getScheduler().getCallQueueInfo();
 
-    for(String queueName: callQueueInfo.getCallQueueNames()) {
+    for (String queueName : callQueueInfo.getCallQueueNames()) {
 
       out.println("\nQueue Name: " + queueName);
 
       long totalCallCount = 0L, totalCallSize = 0L;
-      for (String methodName: callQueueInfo.getCalledMethodNames(queueName)) {
+      for (String methodName : callQueueInfo.getCalledMethodNames(queueName)) {
         long thisMethodCount, thisMethodSize;
         thisMethodCount = callQueueInfo.getCallMethodCount(queueName, methodName);
         thisMethodSize = callQueueInfo.getCallMethodSize(queueName, methodName);
 
-        out.println("Method in call: "+methodName);
-        out.println("Total call count for method: "+thisMethodCount);
-        out.println("Total call size for method (bytes): "+thisMethodSize);
+        out.println("Method in call: " + methodName);
+        out.println("Total call count for method: " + thisMethodCount);
+        out.println("Total call size for method (bytes): " + thisMethodSize);
 
         totalCallCount += thisMethodCount;
         totalCallSize += thisMethodSize;
       }
-      out.println("Total call count for queue: "+totalCallCount);
-      out.println("Total call size for queue (bytes): "+totalCallSize);
+      out.println("Total call count for queue: " + totalCallCount);
+      out.println("Total call size for queue (bytes): " + totalCallSize);
     }
 
   }

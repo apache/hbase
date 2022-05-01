@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
@@ -46,31 +45,29 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
 /**
  * Tool to test performance of different {@link org.apache.hadoop.hbase.master.LoadBalancer}
- * implementations.
- * Example command:
- * $ bin/hbase org.apache.hadoop.hbase.master.balancer.LoadBalancerPerformanceEvaluation
- *   -regions 1000 -servers 100
- *   -load_balancer org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer
+ * implementations. Example command: $ bin/hbase
+ * org.apache.hadoop.hbase.master.balancer.LoadBalancerPerformanceEvaluation -regions 1000 -servers
+ * 100 -load_balancer org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   private static final Logger LOG =
-      LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
+    LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
   private static final int DEFAULT_NUM_REGIONS = 1000000;
   private static Option NUM_REGIONS_OPT = new Option("regions", true,
-      "Number of regions to consider by load balancer. Default: " + DEFAULT_NUM_REGIONS);
+    "Number of regions to consider by load balancer. Default: " + DEFAULT_NUM_REGIONS);
 
   private static final int DEFAULT_NUM_SERVERS = 1000;
   private static Option NUM_SERVERS_OPT = new Option("servers", true,
-      "Number of servers to consider by load balancer. Default: " + DEFAULT_NUM_SERVERS);
+    "Number of servers to consider by load balancer. Default: " + DEFAULT_NUM_SERVERS);
 
   private static final String DEFAULT_LOAD_BALANCER =
-      "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer";
+    "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer";
   private static Option LOAD_BALANCER_OPT = new Option("load_balancer", true,
-      "Type of Load Balancer to use. Default: " + DEFAULT_LOAD_BALANCER);
+    "Type of Load Balancer to use. Default: " + DEFAULT_LOAD_BALANCER);
 
   private int numRegions;
   private int numServers;
@@ -87,7 +84,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
 
   // Non-default configurations.
   private void setupConf() {
-    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz, LoadBalancer.class);
+    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
+      LoadBalancer.class);
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
   }
 
@@ -102,12 +100,8 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
       Bytes.putInt(start, 0, i);
       Bytes.putInt(end, 0, i + 1);
       TableName tableName = TableName.valueOf("LoadBalancerPerfTable");
-      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
-        .setStartKey(start)
-        .setEndKey(end)
-        .setSplit(false)
-        .setRegionId(i)
-        .build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(start).setEndKey(end)
+        .setSplit(false).setRegionId(i).build();
       regions.add(hri);
       regionServerMap.put(hri, null);
     }

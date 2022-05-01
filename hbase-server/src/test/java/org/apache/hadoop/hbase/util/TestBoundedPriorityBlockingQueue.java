@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestBoundedPriorityBlockingQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBoundedPriorityBlockingQueue.class);
+    HBaseClassTestRule.forClass(TestBoundedPriorityBlockingQueue.class);
 
   private final static int CAPACITY = 16;
 
@@ -66,7 +66,8 @@ public class TestBoundedPriorityBlockingQueue {
   }
 
   static class TestObjectComparator implements Comparator<TestObject> {
-    public TestObjectComparator() {}
+    public TestObjectComparator() {
+    }
 
     @Override
     public int compare(TestObject a, TestObject b) {
@@ -230,8 +231,8 @@ public class TestBoundedPriorityBlockingQueue {
       @Override
       public void run() {
         try {
-            threadsStarted.await();
-            queue.offer(testObj);
+          threadsStarted.await();
+          queue.offer(testObj);
         } catch (Exception e) {
           throw new RuntimeException(e);
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,6 +57,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 
 /**
@@ -67,7 +68,7 @@ public class TestPerColumnFamilyFlush {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPerColumnFamilyFlush.class);
+    HBaseClassTestRule.forClass(TestPerColumnFamilyFlush.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPerColumnFamilyFlush.class);
 
@@ -78,7 +79,7 @@ public class TestPerColumnFamilyFlush {
   public static final TableName TABLENAME = TableName.valueOf("TestPerColumnFamilyFlush", "t1");
 
   public static final byte[][] FAMILIES = { Bytes.toBytes("f1"), Bytes.toBytes("f2"),
-      Bytes.toBytes("f3"), Bytes.toBytes("f4"), Bytes.toBytes("f5") };
+    Bytes.toBytes("f3"), Bytes.toBytes("f4"), Bytes.toBytes("f5") };
 
   public static final byte[] FAMILY1 = FAMILIES[0];
 
@@ -131,8 +132,7 @@ public class TestPerColumnFamilyFlush {
     Configuration conf = new HBaseTestingUtility().getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllLargeStoresPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN,
-        40 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 40 * 1024);
     // Intialize the region
     HRegion region = initHRegion("testSelectiveFlushWithDataCompaction", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
@@ -160,8 +160,8 @@ public class TestPerColumnFamilyFlush {
     MemStoreSize cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
 
     // Get the overall smallest LSN in the region's memstores.
-    long smallestSeqInRegionCurrentMemstore = getWAL(region)
-        .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    long smallestSeqInRegionCurrentMemstore =
+      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // The overall smallest LSN in the region's memstores should be the same as
     // the LSN of the smallest edit in CF1
@@ -177,7 +177,7 @@ public class TestPerColumnFamilyFlush {
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
     assertEquals(totalMemstoreSize, cf1MemstoreSize.getDataSize() + cf2MemstoreSize.getDataSize()
-        + cf3MemstoreSize.getDataSize());
+      + cf3MemstoreSize.getDataSize());
 
     // Flush!
     region.flush(false);
@@ -191,8 +191,8 @@ public class TestPerColumnFamilyFlush {
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
-    smallestSeqInRegionCurrentMemstore = getWAL(region)
-        .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    smallestSeqInRegionCurrentMemstore =
+      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // We should have cleared out only CF1, since we chose the flush thresholds
     // and number of puts accordingly.
@@ -229,8 +229,8 @@ public class TestPerColumnFamilyFlush {
     cf2MemstoreSize = region.getStore(FAMILY2).getMemStoreSize();
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
-    smallestSeqInRegionCurrentMemstore = getWAL(region)
-        .getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+    smallestSeqInRegionCurrentMemstore =
+      getWAL(region).getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // CF1 and CF2, both should be absent.
     assertEquals(0, cf1MemstoreSize.getDataSize());
@@ -302,7 +302,7 @@ public class TestPerColumnFamilyFlush {
     // The total memstore size should be the same as the sum of the sizes of
     // memstores of CF1, CF2 and CF3.
     assertEquals(totalMemstoreSize, cf1MemstoreSize.getDataSize() + cf2MemstoreSize.getDataSize()
-        + cf3MemstoreSize.getDataSize());
+      + cf3MemstoreSize.getDataSize());
 
     // Flush!
     region.flush(false);
@@ -312,7 +312,7 @@ public class TestPerColumnFamilyFlush {
     cf3MemstoreSize = region.getStore(FAMILY3).getMemStoreSize();
     totalMemstoreSize = region.getMemStoreDataSize();
     long smallestSeqInRegionCurrentMemstore =
-        region.getWAL().getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
+      region.getWAL().getEarliestMemStoreSeqNum(region.getRegionInfo().getEncodedNameAsBytes());
 
     // Everything should have been cleared
     assertEquals(0, cf1MemstoreSize.getDataSize());
@@ -348,8 +348,8 @@ public class TestPerColumnFamilyFlush {
     final int numRegionServers = 4;
     try {
       TEST_UTIL.startMiniCluster(numRegionServers);
-      TEST_UTIL.getAdmin().createNamespace(
-        NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
+      TEST_UTIL.getAdmin()
+        .createNamespace(NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
       Table table = TEST_UTIL.createTable(TABLENAME, FAMILIES);
       HTableDescriptor htd = table.getTableDescriptor();
 
@@ -430,7 +430,7 @@ public class TestPerColumnFamilyFlush {
   }
 
   private WAL getWAL(Region region) {
-    return ((HRegion)region).getWAL();
+    return ((HRegion) region).getWAL();
   }
 
   private int getNumRolledLogFiles(Region region) {
@@ -440,8 +440,7 @@ public class TestPerColumnFamilyFlush {
   /**
    * When a log roll is about to happen, we do a flush of the regions who will be affected by the
    * log roll. These flushes cannot be a selective flushes, otherwise we cannot roll the logs. This
-   * test ensures that we do a full-flush in that scenario.
-   * @throws IOException
+   * test ensures that we do a full-flush in that scenario. n
    */
   @Test
   public void testFlushingWhenLogRolling() throws Exception {
@@ -494,9 +493,12 @@ public class TestPerColumnFamilyFlush {
         }
       }
       assertEquals(maxLogs, getNumRolledLogFiles(desiredRegion));
-      assertTrue(desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize() > cfFlushSizeLowerBound);
-      assertTrue(desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
-      assertTrue(desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
+      assertTrue(
+        desiredRegion.getStore(FAMILY1).getMemStoreSize().getHeapSize() > cfFlushSizeLowerBound);
+      assertTrue(
+        desiredRegion.getStore(FAMILY2).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
+      assertTrue(
+        desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize() < cfFlushSizeLowerBound);
       table.put(createPut(1, 12345678));
       // Make numRolledLogFiles greater than maxLogs
       desiredRegionAndServer.getSecond().getWalRoller().requestRollAll();
@@ -583,8 +585,8 @@ public class TestPerColumnFamilyFlush {
     int cf3StoreFileCount1 = -1;
     try {
       TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.getAdmin().createNamespace(
-        NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
+      TEST_UTIL.getAdmin()
+        .createNamespace(NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
       TEST_UTIL.getAdmin().createTable(htd);
       TEST_UTIL.waitTableAvailable(TABLENAME);
       Connection conn = ConnectionFactory.createConnection(conf);
@@ -607,8 +609,8 @@ public class TestPerColumnFamilyFlush {
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND_MIN, 0);
     try {
       TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.getAdmin().createNamespace(
-        NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
+      TEST_UTIL.getAdmin()
+        .createNamespace(NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
       TEST_UTIL.getAdmin().createTable(htd);
       Connection conn = ConnectionFactory.createConnection(conf);
       Table table = conn.getTable(TABLENAME);
@@ -624,12 +626,12 @@ public class TestPerColumnFamilyFlush {
       TEST_UTIL.shutdownMiniCluster();
     }
 
-    LOG.info("disable selective flush: " + Bytes.toString(FAMILY1) + "=>" + cf1StoreFileCount
-        + ", " + Bytes.toString(FAMILY2) + "=>" + cf2StoreFileCount + ", "
-        + Bytes.toString(FAMILY3) + "=>" + cf3StoreFileCount);
-    LOG.info("enable selective flush: " + Bytes.toString(FAMILY1) + "=>" + cf1StoreFileCount1
-        + ", " + Bytes.toString(FAMILY2) + "=>" + cf2StoreFileCount1 + ", "
-        + Bytes.toString(FAMILY3) + "=>" + cf3StoreFileCount1);
+    LOG.info("disable selective flush: " + Bytes.toString(FAMILY1) + "=>" + cf1StoreFileCount + ", "
+      + Bytes.toString(FAMILY2) + "=>" + cf2StoreFileCount + ", " + Bytes.toString(FAMILY3) + "=>"
+      + cf3StoreFileCount);
+    LOG.info("enable selective flush: " + Bytes.toString(FAMILY1) + "=>" + cf1StoreFileCount1 + ", "
+      + Bytes.toString(FAMILY2) + "=>" + cf2StoreFileCount1 + ", " + Bytes.toString(FAMILY3) + "=>"
+      + cf3StoreFileCount1);
     // small CF will have less store files.
     assertTrue(cf1StoreFileCount1 < cf1StoreFileCount);
     assertTrue(cf2StoreFileCount1 < cf2StoreFileCount);

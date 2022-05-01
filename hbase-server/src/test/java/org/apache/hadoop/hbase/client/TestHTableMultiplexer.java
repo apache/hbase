@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestHTableMultiplexer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHTableMultiplexer.class);
+    HBaseClassTestRule.forClass(TestHTableMultiplexer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexer.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -74,7 +74,7 @@ public class TestHTableMultiplexer {
   }
 
   private static void checkExistence(Table htable, byte[] row, byte[] family, byte[] quality)
-      throws Exception {
+    throws Exception {
     // verify that the Get returns the correct result
     Result r;
     Get get = new Get(row);
@@ -99,15 +99,13 @@ public class TestHTableMultiplexer {
     List<Put> failedPuts;
     boolean success;
 
-    HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(),
-        PER_REGIONSERVER_QUEUE_SIZE);
+    HTableMultiplexer multiplexer =
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
 
-    Table htable1 =
-        TEST_UTIL.createTable(tableName1, new byte[][] { FAMILY }, VERSION,
-        Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
-    Table htable2 =
-        TEST_UTIL.createTable(tableName2, new byte[][] { FAMILY }, VERSION, Bytes.toBytes("aaaaa"),
-          Bytes.toBytes("zzzzz"), NUM_REGIONS);
+    Table htable1 = TEST_UTIL.createTable(tableName1, new byte[][] { FAMILY }, VERSION,
+      Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+    Table htable2 = TEST_UTIL.createTable(tableName2, new byte[][] { FAMILY }, VERSION,
+      Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName1);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName2);
 
@@ -117,7 +115,7 @@ public class TestHTableMultiplexer {
 
       // SinglePut case
       for (int i = 0; i < NUM_REGIONS; i++) {
-        byte [] row = startRows[i];
+        byte[] row = startRows[i];
         if (row == null || row.length <= 0) continue;
         Put put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
         success = multiplexer.put(tableName1, put);
@@ -137,7 +135,7 @@ public class TestHTableMultiplexer {
       // MultiPut case
       List<Put> multiput = new ArrayList<>();
       for (int i = 0; i < NUM_REGIONS; i++) {
-        byte [] row = endRows[i];
+        byte[] row = endRows[i];
         if (row == null || row.length <= 0) continue;
         Put put = new Put(row);
         put.addColumn(FAMILY, QUALIFIER, VALUE2);
@@ -148,7 +146,7 @@ public class TestHTableMultiplexer {
 
       // verify that the Get returns the correct result
       for (int i = 0; i < NUM_REGIONS; i++) {
-        byte [] row = endRows[i];
+        byte[] row = endRows[i];
         if (row == null || row.length <= 0) continue;
         Get get = new Get(row);
         get.addColumn(FAMILY, QUALIFIER);
@@ -158,8 +156,10 @@ public class TestHTableMultiplexer {
           assertTrue(nbTry++ < 50);
           Thread.sleep(100);
           r = htable1.get(get);
-        } while (r == null || r.getValue(FAMILY, QUALIFIER) == null ||
-            Bytes.compareTo(VALUE2, r.getValue(FAMILY, QUALIFIER)) != 0);
+        } while (
+          r == null || r.getValue(FAMILY, QUALIFIER) == null
+            || Bytes.compareTo(VALUE2, r.getValue(FAMILY, QUALIFIER)) != 0
+        );
       }
     }
   }

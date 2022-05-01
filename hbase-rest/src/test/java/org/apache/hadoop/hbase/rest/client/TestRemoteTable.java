@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,19 +58,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestRemoteTable {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRemoteTable.class);
+    HBaseClassTestRule.forClass(TestRemoteTable.class);
 
   // Verify that invalid URL characters and arbitrary bytes are escaped when
   // constructing REST URLs per HBASE-7621. RemoteHTable should support row keys
   // and qualifiers containing any byte for all table operations.
   private static final String INVALID_URL_CHARS_1 =
-      "|\"\\^{}\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000B\u000C";
+    "|\"\\^{}\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u0009\u000B\u000C";
 
-  // HColumnDescriptor prevents certain characters in column names.  The following
+  // HColumnDescriptor prevents certain characters in column names. The following
   // are examples of characters are allowed in column names but are not valid in
   // URLs.
   private static final String INVALID_URL_CHARS_2 = "|^{}\u0242";
@@ -79,12 +79,12 @@ public class TestRemoteTable {
   private static final String VALID_TABLE_NAME_CHARS = "_-.";
 
   private static final TableName TABLE =
-      TableName.valueOf("TestRemoteTable" + VALID_TABLE_NAME_CHARS);
+    TableName.valueOf("TestRemoteTable" + VALID_TABLE_NAME_CHARS);
 
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1" + INVALID_URL_CHARS_1);
   private static final byte[] ROW_2 = Bytes.toBytes("testrow2" + INVALID_URL_CHARS_1);
   private static final byte[] ROW_3 = Bytes.toBytes("testrow3" + INVALID_URL_CHARS_1);
-  private static final byte[] ROW_4 = Bytes.toBytes("testrow4"+ INVALID_URL_CHARS_1);
+  private static final byte[] ROW_4 = Bytes.toBytes("testrow4" + INVALID_URL_CHARS_1);
 
   private static final byte[] COLUMN_1 = Bytes.toBytes("a" + INVALID_URL_CHARS_2);
   private static final byte[] COLUMN_2 = Bytes.toBytes("b" + INVALID_URL_CHARS_2);
@@ -100,8 +100,7 @@ public class TestRemoteTable {
   private static final long TS_1 = TS_2 - ONE_HOUR;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private RemoteHTable remoteTable;
 
   @BeforeClass
@@ -111,7 +110,7 @@ public class TestRemoteTable {
   }
 
   @Before
-  public void before() throws Exception  {
+  public void before() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.tableExists(TABLE)) {
       if (admin.isTableEnabled(TABLE)) {
@@ -135,9 +134,8 @@ public class TestRemoteTable {
       put.addColumn(COLUMN_2, QUALIFIER_2, TS_2, VALUE_2);
       table.put(put);
     }
-    remoteTable = new RemoteHTable(
-      new Client(new Cluster().add("localhost",
-          REST_TEST_UTIL.getServletPort())),
+    remoteTable =
+      new RemoteHTable(new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
         TEST_UTIL.getConfiguration(), TABLE.toBytes());
   }
 
@@ -251,7 +249,7 @@ public class TestRemoteTable {
     get.setMaxVersions(2);
     result = remoteTable.get(get);
     int count = 0;
-    for (Cell kv: result.listCells()) {
+    for (Cell kv : result.listCells()) {
       if (CellUtil.matchingFamily(kv, COLUMN_1) && TS_1 == kv.getTimestamp()) {
         assertTrue(CellUtil.matchingValue(kv, VALUE_1)); // @TS_1
         count++;
@@ -275,7 +273,7 @@ public class TestRemoteTable {
     assertEquals(1, results[0].size());
     assertEquals(2, results[1].size());
 
-    //Test Versions
+    // Test Versions
     gets = new ArrayList<>(2);
     Get g = new Get(ROW_1);
     g.setMaxVersions(3);
@@ -287,7 +285,7 @@ public class TestRemoteTable {
     assertEquals(1, results[0].size());
     assertEquals(3, results[1].size());
 
-    //404
+    // 404
     gets = new ArrayList<>(1);
     gets.add(new Get(Bytes.toBytes("RESALLYREALLYNOTTHERE")));
     results = remoteTable.get(gets);
@@ -345,7 +343,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_2, value));
 
     assertTrue(Bytes.equals(Bytes.toBytes("TestRemoteTable" + VALID_TABLE_NAME_CHARS),
-        remoteTable.getTableName()));
+      remoteTable.getTableName()));
   }
 
   @Test
@@ -481,7 +479,7 @@ public class TestRemoteTable {
 
     scanner.close();
 
-    scanner = remoteTable.getScanner(COLUMN_1,QUALIFIER_1);
+    scanner = remoteTable.getScanner(COLUMN_1, QUALIFIER_1);
     results = scanner.next(4);
     assertNotNull(results);
     assertEquals(4, results.length);
@@ -506,18 +504,18 @@ public class TestRemoteTable {
     assertEquals(1, remoteTable.existsAll(Collections.singletonList(get)).length);
     Delete delete = new Delete(ROW_1);
 
-    remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
-        .ifEquals(VALUE_1).thenDelete(delete);
+    remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1).ifEquals(VALUE_1)
+      .thenDelete(delete);
     assertFalse(remoteTable.exists(get));
 
     Put put = new Put(ROW_1);
     put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     remoteTable.put(put);
 
-    assertTrue(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
-        .ifEquals(VALUE_1).thenPut(put));
-    assertFalse(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1)
-        .ifEquals(VALUE_2).thenPut(put));
+    assertTrue(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1).ifEquals(VALUE_1)
+      .thenPut(put));
+    assertFalse(remoteTable.checkAndMutate(ROW_1, COLUMN_1).qualifier(QUALIFIER_1).ifEquals(VALUE_2)
+      .thenPut(put));
   }
 
   /**
@@ -555,7 +553,7 @@ public class TestRemoteTable {
    * Test a some methods of class Response.
    */
   @Test
-  public void testResponse(){
+  public void testResponse() {
     Response response = new Response(200);
     assertEquals(200, response.getCode());
     Header[] headers = new Header[2];
@@ -578,7 +576,6 @@ public class TestRemoteTable {
   /**
    * Tests keeping a HBase scanner alive for long periods of time. Each call to next() should reset
    * the ConnectionCache timeout for the scanner's connection.
-   *
    * @throws Exception if starting the servlet container or disabling or truncating the table fails
    */
   @Test
@@ -601,8 +598,8 @@ public class TestRemoteTable {
     TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
     TEST_UTIL.getHBaseAdmin().truncateTable(TABLE, false);
 
-    remoteTable = new RemoteHTable(
-        new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
+    remoteTable =
+      new RemoteHTable(new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
         TEST_UTIL.getConfiguration(), TABLE.toBytes());
 
     String row = "testrow";

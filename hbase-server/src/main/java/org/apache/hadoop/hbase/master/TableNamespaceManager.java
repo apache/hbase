@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
@@ -61,15 +60,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * This is a helper class used internally to manage the namespace metadata that is stored in
  * TableName.NAMESPACE_TABLE_NAME. It also mirrors updates to the ZK store by forwarding updates to
- * {@link org.apache.hadoop.hbase.ZKNamespaceManager}.
- *
- * WARNING: Do not use. Go via the higher-level {@link ClusterSchema} API instead. This manager
- * is likely to go aways anyways.
+ * {@link org.apache.hadoop.hbase.ZKNamespaceManager}. WARNING: Do not use. Go via the higher-level
+ * {@link ClusterSchema} API instead. This manager is likely to go aways anyways.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-  justification="TODO: synchronize access on nsTable but it is done in tiers above and this " +
-    "class is going away/shrinking")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "TODO: synchronize access on nsTable but it is done in tiers above and this "
+      + "class is going away/shrinking")
 public class TableNamespaceManager implements Stoppable {
   private static final Logger LOG = LoggerFactory.getLogger(TableNamespaceManager.class);
   private volatile boolean stopped = false;
@@ -104,7 +101,7 @@ public class TableNamespaceManager implements Stoppable {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
           throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
-              + "be assigned and enabled: " + getTableState());
+            + "be assigned and enabled: " + getTableState());
         }
         Thread.sleep(100);
       }
@@ -142,11 +139,10 @@ public class TableNamespaceManager implements Stoppable {
     if (res.isEmpty()) {
       return null;
     }
-    byte[] val = CellUtil.cloneValue(res.getColumnLatestCell(
-        HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES, HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
-    return
-        ProtobufUtil.toNamespaceDescriptor(
-            HBaseProtos.NamespaceDescriptor.parseFrom(val));
+    byte[] val =
+      CellUtil.cloneValue(res.getColumnLatestCell(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+        HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
+    return ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(val));
   }
 
   public void insertIntoNSTable(final NamespaceDescriptor ns) throws IOException {
@@ -155,14 +151,11 @@ public class TableNamespaceManager implements Stoppable {
     }
     byte[] row = Bytes.toBytes(ns.getName());
     Put p = new Put(row, true);
-    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(row)
-          .setFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
-          .setQualifier(TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES)
-          .setTimestamp(p.getTimestamp())
-          .setType(Cell.Type.Put)
-          .setValue(ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray())
-          .build());
+    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+      .setFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
+      .setQualifier(TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES).setTimestamp(p.getTimestamp())
+      .setType(Cell.Type.Put).setValue(ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray())
+      .build());
     nsTable.put(p);
   }
 
@@ -190,16 +183,15 @@ public class TableNamespaceManager implements Stoppable {
 
   public synchronized NavigableSet<NamespaceDescriptor> list() throws IOException {
     NavigableSet<NamespaceDescriptor> ret =
-        Sets.newTreeSet(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR);
+      Sets.newTreeSet(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR);
     ResultScanner scanner =
-        getNamespaceTable().getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
+      getNamespaceTable().getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
-      for(Result r : scanner) {
-        byte[] val = CellUtil.cloneValue(r.getColumnLatestCell(
-          HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-          HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
-        ret.add(ProtobufUtil.toNamespaceDescriptor(
-            HBaseProtos.NamespaceDescriptor.parseFrom(val)));
+      for (Result r : scanner) {
+        byte[] val =
+          CellUtil.cloneValue(r.getColumnLatestCell(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+            HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
+        ret.add(ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(val)));
       }
     } finally {
       scanner.close();
@@ -222,30 +214,28 @@ public class TableNamespaceManager implements Stoppable {
 
   /**
    * Create Namespace in a blocking manner. Keeps trying until
-   * {@link ClusterSchema#HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY} expires.
-   * Note, by-passes notifying coprocessors and name checks. Use for system namespaces only.
+   * {@link ClusterSchema#HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY} expires. Note,
+   * by-passes notifying coprocessors and name checks. Use for system namespaces only.
    */
   private void blockingCreateNamespace(final NamespaceDescriptor namespaceDescriptor)
-      throws IOException {
+    throws IOException {
     ClusterSchema clusterSchema = this.masterServices.getClusterSchema();
-    long procId = clusterSchema.createNamespace(namespaceDescriptor, null, ProcedurePrepareLatch.getNoopLatch());
+    long procId = clusterSchema.createNamespace(namespaceDescriptor, null,
+      ProcedurePrepareLatch.getNoopLatch());
     block(this.masterServices, procId);
   }
 
-
   /**
-   * An ugly utility to be removed when refactor TableNamespaceManager.
-   * @throws TimeoutIOException
+   * An ugly utility to be removed when refactor TableNamespaceManager. n
    */
   private static void block(final MasterServices services, final long procId)
-  throws TimeoutIOException {
-    int timeoutInMillis = services.getConfiguration().
-        getInt(ClusterSchema.HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY,
-            ClusterSchema.DEFAULT_HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT);
+    throws TimeoutIOException {
+    int timeoutInMillis = services.getConfiguration().getInt(
+      ClusterSchema.HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY,
+      ClusterSchema.DEFAULT_HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT);
     long deadlineTs = EnvironmentEdgeManager.currentTime() + timeoutInMillis;
-    ProcedureExecutor<MasterProcedureEnv> procedureExecutor =
-        services.getMasterProcedureExecutor();
-    while(EnvironmentEdgeManager.currentTime() < deadlineTs) {
+    ProcedureExecutor<MasterProcedureEnv> procedureExecutor = services.getMasterProcedureExecutor();
+    while (EnvironmentEdgeManager.currentTime() < deadlineTs) {
       if (procedureExecutor.isFinished(procId)) return;
       // Sleep some
       Threads.sleep(10);
@@ -254,14 +244,13 @@ public class TableNamespaceManager implements Stoppable {
   }
 
   /**
-   * This method checks if the namespace table is assigned and then
-   * tries to create its Table reference. If it was already created before, it also makes
-   * sure that the connection isn't closed.
+   * This method checks if the namespace table is assigned and then tries to create its Table
+   * reference. If it was already created before, it also makes sure that the connection isn't
+   * closed.
    * @return true if the namespace table manager is ready to serve, false otherwise
    */
   @SuppressWarnings("deprecation")
-  public synchronized boolean isTableAvailableAndInitialized()
-  throws IOException {
+  public synchronized boolean isTableAvailableAndInitialized() throws IOException {
     // Did we already get a table? If so, still make sure it's available
     if (isTableNamespaceManagerInitialized()) {
       return true;
@@ -290,12 +279,11 @@ public class TableNamespaceManager implements Stoppable {
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for (Result result : scanner) {
-            byte[] val =  CellUtil.cloneValue(result.getColumnLatestCell(
-                HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+            byte[] val = CellUtil
+              .cloneValue(result.getColumnLatestCell(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
                 HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
             NamespaceDescriptor ns =
-                ProtobufUtil.toNamespaceDescriptor(
-                    HBaseProtos.NamespaceDescriptor.parseFrom(val));
+              ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(val));
             zkNamespaceManager.update(ns);
           }
         } finally {
@@ -324,18 +312,18 @@ public class TableNamespaceManager implements Stoppable {
 
   private boolean isTableAssigned() {
     // TODO: we have a better way now (wait on event)
-    return masterServices.getAssignmentManager()
-        .getRegionStates().hasTableRegionStates(TableName.NAMESPACE_TABLE_NAME);
+    return masterServices.getAssignmentManager().getRegionStates()
+      .hasTableRegionStates(TableName.NAMESPACE_TABLE_NAME);
   }
 
   public void validateTableAndRegionCount(NamespaceDescriptor desc) throws IOException {
     if (getMaxRegions(desc) <= 0) {
-      throw new ConstraintException("The max region quota for " + desc.getName()
-          + " is less than or equal to zero.");
+      throw new ConstraintException(
+        "The max region quota for " + desc.getName() + " is less than or equal to zero.");
     }
     if (getMaxTables(desc) <= 0) {
-      throw new ConstraintException("The max tables quota for " + desc.getName()
-          + " is less than or equal to zero.");
+      throw new ConstraintException(
+        "The max tables quota for " + desc.getName() + " is less than or equal to zero.");
     }
   }
 

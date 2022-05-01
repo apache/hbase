@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +18,14 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Tags are part of cells and helps to add metadata about them.
- * Metadata could be ACLs, visibility labels, etc.
+ * Tags are part of cells and helps to add metadata about them. Metadata could be ACLs, visibility
+ * labels, etc.
  * <p>
  * Each Tag is having a type (one byte) and value part. The max value length for a Tag is 65533.
  * <p>
@@ -44,10 +41,11 @@ public interface Tag {
   public static final int MAX_TAG_LENGTH = (2 * Short.MAX_VALUE) + 1 - TAG_LENGTH_SIZE;
 
   /**
-   * Custom tags if created are suggested to be above this range. So that
-   * it does not overlap with internal tag types
+   * Custom tags if created are suggested to be above this range. So that it does not overlap with
+   * internal tag types
    */
-  public static final byte CUSTOM_TAG_TYPE_RANGE = (byte)64;
+  public static final byte CUSTOM_TAG_TYPE_RANGE = (byte) 64;
+
   /**
    * @return the tag type
    */
@@ -70,10 +68,8 @@ public interface Tag {
   boolean hasArray();
 
   /**
-   * @return The array containing the value bytes.
-   * @throws UnsupportedOperationException
-   *           when {@link #hasArray()} return false. Use {@link #getValueByteBuffer()} in such
-   *           situation
+   * @return The array containing the value bytes. n * when {@link #hasArray()} return false. Use
+   *         {@link #getValueByteBuffer()} in such situation
    */
   byte[] getValueArray();
 
@@ -138,8 +134,8 @@ public interface Tag {
 
   /**
    * Copies the tag's value bytes to the given byte array
-   * @param tag The Tag
-   * @param out The byte array where to copy the Tag value.
+   * @param tag    The Tag
+   * @param out    The byte array where to copy the Tag value.
    * @param offset The offset within 'out' array where to copy the Tag value.
    */
   public static void copyValueTo(Tag tag, byte[] out, int offset) {

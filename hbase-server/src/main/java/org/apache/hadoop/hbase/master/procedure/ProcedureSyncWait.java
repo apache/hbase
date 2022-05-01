@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -43,9 +42,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
- * Helper to synchronously wait on conditions.
- * This will be removed in the future (mainly when the AssignmentManager will be
- * replaced with a Procedure version) by using ProcedureYieldException,
+ * Helper to synchronously wait on conditions. This will be removed in the future (mainly when the
+ * AssignmentManager will be replaced with a Procedure version) by using ProcedureYieldException,
  * and the queue will handle waiting and scheduling based on events.
  */
 @InterfaceAudience.Private
@@ -53,7 +51,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 public final class ProcedureSyncWait {
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureSyncWait.class);
 
-  private ProcedureSyncWait() {}
+  private ProcedureSyncWait() {
+  }
 
   @InterfaceAudience.Private
   public interface Predicate<T> {
@@ -101,7 +100,7 @@ public final class ProcedureSyncWait {
 
     @Override
     public byte[] get(long timeout, TimeUnit unit)
-        throws InterruptedException, ExecutionException, TimeoutException {
+      throws InterruptedException, ExecutionException, TimeoutException {
       if (hasResult) {
         return result;
       }
@@ -118,7 +117,7 @@ public final class ProcedureSyncWait {
   }
 
   public static Future<byte[]> submitProcedure(final ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<MasterProcedureEnv> proc) {
+    final Procedure<MasterProcedureEnv> proc) {
     if (proc.isInitializing()) {
       procExec.submitProcedure(proc);
     }
@@ -126,7 +125,7 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] submitAndWaitProcedure(ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure<MasterProcedureEnv> proc) throws IOException {
+    final Procedure<MasterProcedureEnv> proc) throws IOException {
     if (proc.isInitializing()) {
       procExec.submitProcedure(proc);
     }
@@ -134,8 +133,8 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] waitForProcedureToCompleteIOE(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
-      final long timeout) throws IOException {
+    final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
+    final long timeout) throws IOException {
     try {
       return waitForProcedureToComplete(procExec, proc, timeout);
     } catch (IOException e) {
@@ -146,8 +145,8 @@ public final class ProcedureSyncWait {
   }
 
   public static byte[] waitForProcedureToComplete(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
-      final long timeout) throws IOException {
+    final ProcedureExecutor<MasterProcedureEnv> procExec, final Procedure<?> proc,
+    final long timeout) throws IOException {
     waitFor(procExec.getEnvironment(), timeout, "pid=" + proc.getProcId(),
       new ProcedureSyncWait.Predicate<Boolean>() {
         @Override
@@ -179,21 +178,21 @@ public final class ProcedureSyncWait {
   }
 
   public static <T> T waitFor(MasterProcedureEnv env, String purpose, Predicate<T> predicate)
-      throws IOException {
+    throws IOException {
     Configuration conf = env.getMasterConfiguration();
     long waitTime = conf.getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
     return waitFor(env, waitTime, purpose, predicate);
   }
 
   public static <T> T waitFor(MasterProcedureEnv env, long waitTime, String purpose,
-      Predicate<T> predicate) throws IOException {
+    Predicate<T> predicate) throws IOException {
     Configuration conf = env.getMasterConfiguration();
     long waitingTimeForEvents = conf.getInt("hbase.master.event.waiting.time", 1000);
     return waitFor(env, waitTime, waitingTimeForEvents, purpose, predicate);
   }
 
   public static <T> T waitFor(MasterProcedureEnv env, long waitTime, long waitingTimeForEvents,
-      String purpose, Predicate<T> predicate) throws IOException {
+    String purpose, Predicate<T> predicate) throws IOException {
     long done = EnvironmentEdgeManager.currentTime() + waitTime;
     if (done <= 0) {
       // long overflow, usually this means we pass Long.MAX_VALUE as waitTime
@@ -209,7 +208,7 @@ public final class ProcedureSyncWait {
         Thread.sleep(waitingTimeForEvents);
       } catch (InterruptedException e) {
         LOG.warn("Interrupted while sleeping, waiting on " + purpose);
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace("waitFor " + purpose);
@@ -225,8 +224,10 @@ public final class ProcedureSyncWait {
   protected static void waitMetaRegions(final MasterProcedureEnv env) throws IOException {
     int timeout = env.getMasterConfiguration().getInt("hbase.client.catalog.timeout", 10000);
     try {
-      if (MetaTableLocator.waitMetaRegionLocation(env.getMasterServices().getZooKeeper(),
-        timeout) == null) {
+      if (
+        MetaTableLocator.waitMetaRegionLocation(env.getMasterServices().getZooKeeper(), timeout)
+            == null
+      ) {
         throw new NotAllMetaRegionsOnlineException();
       }
     } catch (InterruptedException e) {
@@ -235,27 +236,27 @@ public final class ProcedureSyncWait {
   }
 
   protected static void waitRegionInTransition(final MasterProcedureEnv env,
-      final List<RegionInfo> regions) throws IOException {
+    final List<RegionInfo> regions) throws IOException {
     final RegionStates states = env.getAssignmentManager().getRegionStates();
     for (final RegionInfo region : regions) {
       ProcedureSyncWait.waitFor(env, "regions " + region.getRegionNameAsString() + " in transition",
-          new ProcedureSyncWait.Predicate<Boolean>() {
-        @Override
-        public Boolean evaluate() throws IOException {
-          return !states.isRegionInTransition(region);
-        }
-      });
+        new ProcedureSyncWait.Predicate<Boolean>() {
+          @Override
+          public Boolean evaluate() throws IOException {
+            return !states.isRegionInTransition(region);
+          }
+        });
     }
   }
 
   protected static MasterQuotaManager getMasterQuotaManager(final MasterProcedureEnv env)
-      throws IOException {
+    throws IOException {
     return ProcedureSyncWait.waitFor(env, "quota manager to be available",
-        new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
-      @Override
-      public MasterQuotaManager evaluate() throws IOException {
-        return env.getMasterServices().getMasterQuotaManager();
-      }
-    });
+      new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
+        @Override
+        public MasterQuotaManager evaluate() throws IOException {
+          return env.getMasterServices().getMasterQuotaManager();
+        }
+      });
   }
 }

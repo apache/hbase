@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -28,6 +26,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionResponse;
@@ -43,16 +42,15 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
   private boolean reload;
 
   public FlushRegionCallable(ClusterConnection connection,
-      RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] regionName,
-      byte[] regionStartKey, boolean writeFlushWalMarker) {
+    RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] regionName,
+    byte[] regionStartKey, boolean writeFlushWalMarker) {
     super(connection, rpcControllerFactory, tableName, regionStartKey);
     this.regionName = regionName;
     this.writeFlushWalMarker = writeFlushWalMarker;
   }
 
   public FlushRegionCallable(ClusterConnection connection,
-      RpcControllerFactory rpcControllerFactory, RegionInfo regionInfo,
-      boolean writeFlushWalMarker) {
+    RpcControllerFactory rpcControllerFactory, RegionInfo regionInfo, boolean writeFlushWalMarker) {
     this(connection, rpcControllerFactory, regionInfo.getTable(), regionInfo.getRegionName(),
       regionInfo.getStartKey(), writeFlushWalMarker);
   }
@@ -72,17 +70,14 @@ public class FlushRegionCallable extends RegionAdminServiceCallable<FlushRegionR
         throw new IOException("Cached location seems to be different than requested region.");
       }
       LOG.info("Skipping flush region, because the located region "
-          + Bytes.toStringBinary(location.getRegionInfo().getRegionName()) + " is different than "
-          + " requested region " + Bytes.toStringBinary(regionName));
-      return FlushRegionResponse.newBuilder()
-          .setLastFlushTime(EnvironmentEdgeManager.currentTime())
-          .setFlushed(false)
-          .setWroteFlushWalMarker(false)
-          .build();
+        + Bytes.toStringBinary(location.getRegionInfo().getRegionName()) + " is different than "
+        + " requested region " + Bytes.toStringBinary(regionName));
+      return FlushRegionResponse.newBuilder().setLastFlushTime(EnvironmentEdgeManager.currentTime())
+        .setFlushed(false).setWroteFlushWalMarker(false).build();
     }
 
     FlushRegionRequest request =
-        RequestConverter.buildFlushRegionRequest(regionName, null, writeFlushWalMarker);
+      RequestConverter.buildFlushRegionRequest(regionName, null, writeFlushWalMarker);
     return stub.flushRegion(controller, request);
   }
 }

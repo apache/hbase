@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} that encodes fixed-length values encoded using
- * {@link org.apache.hadoop.hbase.util.Bytes#toBytes(String)}. 
- * Intended to make it easier to transition away from direct use of 
- * {@link org.apache.hadoop.hbase.util.Bytes}.
+ * {@link org.apache.hadoop.hbase.util.Bytes#toBytes(String)}. Intended to make it easier to
+ * transition away from direct use of {@link org.apache.hadoop.hbase.util.Bytes}.
  * @see org.apache.hadoop.hbase.util.Bytes#toBytes(String)
  * @see org.apache.hadoop.hbase.util.Bytes#toString(byte[], int, int)
  * @see RawString
@@ -33,8 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RawStringFixedLength extends FixedLengthWrapper<String> {
 
   /**
-   * Create a {@code RawStringFixedLength} using the specified
-   * {@code order} and {@code length}.
+   * Create a {@code RawStringFixedLength} using the specified {@code order} and {@code length}.
    */
   public RawStringFixedLength(Order order, int length) {
     super(new RawString(order), length);

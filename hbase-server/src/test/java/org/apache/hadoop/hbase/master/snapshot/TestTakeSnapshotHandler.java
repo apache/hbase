@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,14 +39,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-
 /**
  * Unfortunately, couldn't test TakeSnapshotHandler using mocks, because it relies on TableLock,
  * which is tightly coupled to LockManager and LockProcedure classes, which are both final and
- * prevents us from mocking its behaviour. Looks like an overkill having to emulate a
- * whole cluster run for such a small optional property behaviour.
+ * prevents us from mocking its behaviour. Looks like an overkill having to emulate a whole cluster
+ * run for such a small optional property behaviour.
  */
-@Category({ MediumTests.class})
+@Category({ MediumTests.class })
 public class TestTakeSnapshotHandler {
 
   private static HBaseTestingUtility UTIL;
@@ -58,24 +57,23 @@ public class TestTakeSnapshotHandler {
   @Rule
   public TestName name = new TestName();
 
-
   @Before
-  public void setup()  {
+  public void setup() {
     UTIL = new HBaseTestingUtility();
   }
 
   public TableDescriptor createTableInsertDataAndTakeSnapshot(Map<String, Object> snapshotProps)
-      throws Exception {
+    throws Exception {
     TableDescriptor descriptor =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build()).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f")).build())
+        .build();
     UTIL.getConnection().getAdmin().createTable(descriptor);
     Table table = UTIL.getConnection().getTable(descriptor.getTableName());
     Put put = new Put(Bytes.toBytes("1"));
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("1"), Bytes.toBytes("v1"));
     table.put(put);
-    String snapName = "snap"+name.getMethodName();
+    String snapName = "snap" + name.getMethodName();
     UTIL.getAdmin().snapshot(snapName, descriptor.getTableName(), snapshotProps);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
     UTIL.getAdmin().cloneSnapshot(snapName, cloned);
@@ -89,8 +87,7 @@ public class TestTakeSnapshotHandler {
     snapshotProps.put(TableDescriptorBuilder.MAX_FILESIZE, Long.parseLong("21474836480"));
     TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(snapshotProps);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
-    assertEquals(-1,
-      UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
+    assertEquals(-1, UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
     assertEquals(21474836480L, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
   }
 
@@ -99,8 +96,7 @@ public class TestTakeSnapshotHandler {
     UTIL.startMiniCluster();
     TableDescriptor descriptor = createTableInsertDataAndTakeSnapshot(null);
     TableName cloned = TableName.valueOf(name.getMethodName() + "clone");
-    assertEquals(-1,
-      UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
+    assertEquals(-1, UTIL.getAdmin().getDescriptor(descriptor.getTableName()).getMaxFileSize());
     assertEquals(-1, UTIL.getAdmin().getDescriptor(cloned).getMaxFileSize());
   }
 

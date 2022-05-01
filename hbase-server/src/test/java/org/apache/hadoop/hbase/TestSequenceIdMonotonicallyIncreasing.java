@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -110,7 +110,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
 
   @Test
   public void testSplit()
-      throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     try (Table table = createTable(false)) {
       table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0)));
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(0)));
@@ -130,7 +130,7 @@ public class TestSequenceIdMonotonicallyIncreasing {
 
   @Test
   public void testMerge()
-      throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     try (Table table = createTable(true)) {
       table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0)));
       table.put(new Put(Bytes.toBytes(1)).addColumn(CF, CQ, Bytes.toBytes(0)));

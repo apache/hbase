@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -28,16 +27,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to flush a random region of a table.
-*/
+ * Action that tries to flush a random region of a table.
+ */
 public class FlushRandomRegionOfTableAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(FlushRandomRegionOfTableAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FlushRandomRegionOfTableAction.class);
   private final long sleepTime;
   private final TableName tableName;
 
   public FlushRandomRegionOfTableAction(TableName tableName) {
-    this (-1, tableName);
+    this(-1, tableName);
   }
 
   public FlushRandomRegionOfTableAction(int sleepTime, TableName tableName) {
@@ -45,7 +43,8 @@ public class FlushRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -61,8 +60,7 @@ public class FlushRandomRegionOfTableAction extends Action {
       return;
     }
 
-    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new RegionInfo[0]));
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(regions.toArray(new RegionInfo[0]));
     getLogger().debug("Flushing region " + region.getRegionNameAsString());
     try {
       admin.flushRegion(region.getRegionName());

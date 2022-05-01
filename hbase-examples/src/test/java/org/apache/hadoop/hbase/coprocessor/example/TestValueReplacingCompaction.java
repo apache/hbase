@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,14 +50,14 @@ public class TestValueReplacingCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestValueReplacingCompaction.class);
+    HBaseClassTestRule.forClass(TestValueReplacingCompaction.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final TableName NAME = TableName.valueOf("TestValueReplacement");
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
-  private static final ColumnFamilyDescriptor CFD = ColumnFamilyDescriptorBuilder
-      .newBuilder(FAMILY).build();
+  private static final ColumnFamilyDescriptor CFD =
+    ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final String value = "foo";
   private static final String replacedValue = "bar";
@@ -66,11 +66,11 @@ public class TestValueReplacingCompaction {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setCoprocessor(ValueRewritingObserver.class.getName())
-            .setValue(ValueRewritingObserver.ORIGINAL_VALUE_KEY, value)
-            .setValue(ValueRewritingObserver.REPLACED_VALUE_KEY, replacedValue)
-            .setColumnFamily(CFD).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setCoprocessor(ValueRewritingObserver.class.getName())
+        .setValue(ValueRewritingObserver.ORIGINAL_VALUE_KEY, value)
+        .setValue(ValueRewritingObserver.REPLACED_VALUE_KEY, replacedValue).setColumnFamily(CFD)
+        .build());
   }
 
   @AfterClass

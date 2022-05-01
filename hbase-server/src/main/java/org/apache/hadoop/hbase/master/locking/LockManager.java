@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.master.locking;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -49,13 +47,13 @@ public final class LockManager {
     return remoteLocks;
   }
 
-  public MasterLock createMasterLock(final String namespace,
-      final LockType type, final String description) {
+  public MasterLock createMasterLock(final String namespace, final LockType type,
+    final String description) {
     return new MasterLock(namespace, type, description);
   }
 
-  public MasterLock createMasterLock(final TableName tableName,
-      final LockType type, final String description) {
+  public MasterLock createMasterLock(final TableName tableName, final LockType type,
+    final String description) {
     return new MasterLock(tableName, type, description);
   }
 
@@ -69,13 +67,12 @@ public final class LockManager {
   }
 
   /**
-   * Locks on namespace/table/regions.
-   * Underneath, uses procedure framework and queues a {@link LockProcedure} which waits in a
-   * queue until scheduled.
-   * Use this lock instead LockManager.remoteLocks() for MASTER ONLY operations for two advantages:
-   * - no need of polling on LockProcedure to check if lock was acquired.
-   * - Generous timeout for lock preemption (default 10 min), no need to spawn thread for heartbeats.
-   * (timeout configuration {@link LockProcedure#DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS}).
+   * Locks on namespace/table/regions. Underneath, uses procedure framework and queues a
+   * {@link LockProcedure} which waits in a queue until scheduled. Use this lock instead
+   * LockManager.remoteLocks() for MASTER ONLY operations for two advantages: - no need of polling
+   * on LockProcedure to check if lock was acquired. - Generous timeout for lock preemption (default
+   * 10 min), no need to spawn thread for heartbeats. (timeout configuration
+   * {@link LockProcedure#DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS}).
    */
   public class MasterLock {
     private final String namespace;
@@ -86,8 +83,7 @@ public final class LockManager {
 
     private LockProcedure proc = null;
 
-    public MasterLock(final String namespace,
-        final LockType type, final String description) {
+    public MasterLock(final String namespace, final LockType type, final String description) {
       this.namespace = namespace;
       this.tableName = null;
       this.regionInfos = null;
@@ -95,8 +91,7 @@ public final class LockManager {
       this.description = description;
     }
 
-    public MasterLock(final TableName tableName,
-        final LockType type, final String description) {
+    public MasterLock(final TableName tableName, final LockType type, final String description) {
       this.namespace = null;
       this.tableName = tableName;
       this.regionInfos = null;
@@ -113,10 +108,9 @@ public final class LockManager {
     }
 
     /**
-     * Acquire the lock, waiting indefinitely until the lock is released or
-     * the thread is interrupted.
-     * @throws InterruptedException If current thread is interrupted while
-     *                              waiting for the lock
+     * Acquire the lock, waiting indefinitely until the lock is released or the thread is
+     * interrupted.
+     * @throws InterruptedException If current thread is interrupted while waiting for the lock
      */
     public boolean acquire() throws InterruptedException {
       return tryAcquire(0);
@@ -124,12 +118,11 @@ public final class LockManager {
 
     /**
      * Acquire the lock within a wait time.
-     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock,
-     *                  0 to wait indefinitely
-     * @return True if the lock was acquired, false if waiting time elapsed
-     *         before the lock was acquired
-     * @throws InterruptedException If the thread is interrupted while waiting to
-     *                              acquire the lock
+     * @param timeoutMs The maximum time (in milliseconds) to wait for the lock, 0 to wait
+     *                  indefinitely
+     * @return True if the lock was acquired, false if waiting time elapsed before the lock was
+     *         acquired
+     * @throws InterruptedException If the thread is interrupted while waiting to acquire the lock
      */
     public boolean tryAcquire(final long timeoutMs) throws InterruptedException {
       if (proc != null && proc.isLocked()) {
@@ -138,14 +131,14 @@ public final class LockManager {
       // Use new condition and procedure every time lock is requested.
       final CountDownLatch lockAcquireLatch = new CountDownLatch(1);
       if (regionInfos != null) {
-        proc = new LockProcedure(master.getConfiguration(), regionInfos, type,
-            description, lockAcquireLatch);
+        proc = new LockProcedure(master.getConfiguration(), regionInfos, type, description,
+          lockAcquireLatch);
       } else if (tableName != null) {
-        proc = new LockProcedure(master.getConfiguration(), tableName, type,
-            description, lockAcquireLatch);
+        proc = new LockProcedure(master.getConfiguration(), tableName, type, description,
+          lockAcquireLatch);
       } else if (namespace != null) {
-        proc = new LockProcedure(master.getConfiguration(), namespace, type,
-            description, lockAcquireLatch);
+        proc = new LockProcedure(master.getConfiguration(), namespace, type, description,
+          lockAcquireLatch);
       } else {
         throw new UnsupportedOperationException("no namespace/table/region provided");
       }
@@ -176,8 +169,7 @@ public final class LockManager {
     }
 
     /**
-     * Release the lock.
-     * No-op if the lock was never acquired.
+     * Release the lock. No-op if the lock was never acquired.
      */
     public void release() {
       if (proc != null) {
@@ -197,28 +189,28 @@ public final class LockManager {
   }
 
   /**
-   * Locks on namespace/table/regions for remote operations.
-   * Since remote operations are unreliable and the client/RS may die anytime and never release
-   * locks, regular heartbeats are required to keep the lock held.
+   * Locks on namespace/table/regions for remote operations. Since remote operations are unreliable
+   * and the client/RS may die anytime and never release locks, regular heartbeats are required to
+   * keep the lock held.
    */
   public class RemoteLocks {
     public long requestNamespaceLock(final String namespace, final LockType type,
-        final String description, final NonceKey nonceKey)
-        throws IllegalArgumentException, IOException {
+      final String description, final NonceKey nonceKey)
+      throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(namespace, null, null, type, description);
-      final LockProcedure proc = new LockProcedure(master.getConfiguration(), namespace,
-          type, description, null);
+      final LockProcedure proc =
+        new LockProcedure(master.getConfiguration(), namespace, type, description, null);
       submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(namespace, null, null, type, description);
       return proc.getProcId();
     }
 
     public long requestTableLock(final TableName tableName, final LockType type,
-        final String description, final NonceKey nonceKey)
-        throws IllegalArgumentException, IOException {
+      final String description, final NonceKey nonceKey)
+      throws IllegalArgumentException, IOException {
       master.getMasterCoprocessorHost().preRequestLock(null, tableName, null, type, description);
-      final LockProcedure proc = new LockProcedure(master.getConfiguration(), tableName,
-          type, description, null);
+      final LockProcedure proc =
+        new LockProcedure(master.getConfiguration(), tableName, type, description, null);
       submitProcedure(proc, nonceKey);
       master.getMasterCoprocessorHost().postRequestLock(null, tableName, null, type, description);
       return proc.getProcId();
@@ -228,15 +220,14 @@ public final class LockManager {
      * @throws IllegalArgumentException if all regions are not from same table.
      */
     public long requestRegionsLock(final RegionInfo[] regionInfos, final String description,
-        final NonceKey nonceKey)
-    throws IllegalArgumentException, IOException {
-      master.getMasterCoprocessorHost().preRequestLock(null, null, regionInfos,
-            LockType.EXCLUSIVE, description);
+      final NonceKey nonceKey) throws IllegalArgumentException, IOException {
+      master.getMasterCoprocessorHost().preRequestLock(null, null, regionInfos, LockType.EXCLUSIVE,
+        description);
       final LockProcedure proc = new LockProcedure(master.getConfiguration(), regionInfos,
-          LockType.EXCLUSIVE, description, null);
+        LockType.EXCLUSIVE, description, null);
       submitProcedure(proc, nonceKey);
-      master.getMasterCoprocessorHost().postRequestLock(null, null, regionInfos,
-            LockType.EXCLUSIVE, description);
+      master.getMasterCoprocessorHost().postRequestLock(null, null, regionInfos, LockType.EXCLUSIVE,
+        description);
       return proc.getProcId();
     }
 
@@ -245,8 +236,8 @@ public final class LockManager {
      * @return true, if procedure is found and it has the lock; else false.
      */
     public boolean lockHeartbeat(final long procId, final boolean keepAlive) throws IOException {
-      final LockProcedure proc = master.getMasterProcedureExecutor()
-        .getProcedure(LockProcedure.class, procId);
+      final LockProcedure proc =
+        master.getMasterProcedureExecutor().getProcedure(LockProcedure.class, procId);
       if (proc == null) return false;
 
       master.getMasterCoprocessorHost().preLockHeartbeat(proc, keepAlive);

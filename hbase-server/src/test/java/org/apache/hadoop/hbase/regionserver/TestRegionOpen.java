@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,12 +51,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, RegionServerTests.class})
+@Category({ MediumTests.class, RegionServerTests.class })
 public class TestRegionOpen {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionOpen.class);
+    HBaseClassTestRule.forClass(TestRegionOpen.class);
 
   @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
@@ -84,15 +84,15 @@ public class TestRegionOpen {
   @Test
   public void testPriorityRegionIsOpenedWithSeparateThreadPool() throws Exception {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
-    ThreadPoolExecutor exec = getRS().getExecutorService()
-        .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
+    ThreadPoolExecutor exec =
+      getRS().getExecutorService().getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
     long completed = exec.getCompletedTaskCount();
 
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setPriority(HConstants.HIGH_QOS);
     htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       admin.createTable(htd);
     }
 
@@ -114,15 +114,16 @@ public class TestRegionOpen {
     HTU.waitUntilNoRegionsInTransition(60000);
 
     // Create new HRI with non-default region replica id
-    HRegionInfo hri = new HRegionInfo(htd.getTableName(),  Bytes.toBytes("A"), Bytes.toBytes("B"), false,
-        System.currentTimeMillis(), 2);
+    HRegionInfo hri = new HRegionInfo(htd.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("B"),
+      false, System.currentTimeMillis(), 2);
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
     Path regionDir = regionFs.getRegionDir();
     try {
       HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
     } catch (IOException e) {
-      LOG.info("Caught expected IOE due missing .regioninfo file, due: " + e.getMessage() + " skipping region open.");
+      LOG.info("Caught expected IOE due missing .regioninfo file, due: " + e.getMessage()
+        + " skipping region open.");
       // We should only have 1 region online
       List<HRegionInfo> regions = admin.getTableRegions(tableName);
       LOG.info("Regions: " + regions);

@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -37,7 +38,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -53,11 +53,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A helper class for process-based mini-cluster tests. Unlike
- * {@link MiniHBaseCluster}, starts daemons as separate processes, allowing to
- * do real kill testing.
+ * A helper class for process-based mini-cluster tests. Unlike {@link MiniHBaseCluster}, starts
+ * daemons as separate processes, allowing to do real kill testing.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class ProcessBasedLocalHBaseCluster {
 
   private final String hbaseHome, workDir;
@@ -69,11 +68,9 @@ public class ProcessBasedLocalHBaseCluster {
 
   private static final int MAX_FILE_SIZE_OVERRIDE = 10 * 1000 * 1000;
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      ProcessBasedLocalHBaseCluster.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProcessBasedLocalHBaseCluster.class);
 
-  private List<String> daemonPidFiles =
-      Collections.synchronizedList(new ArrayList<String>());;
+  private List<String> daemonPidFiles = Collections.synchronizedList(new ArrayList<String>());;
 
   private boolean shutdownHookInstalled;
 
@@ -101,12 +98,11 @@ public class ProcessBasedLocalHBaseCluster {
 
   /**
    * Constructor. Modifies the passed configuration.
-   * @param conf the {@link Configuration} to use
-   * @param numDataNodes the number of data nodes
+   * @param conf             the {@link Configuration} to use
+   * @param numDataNodes     the number of data nodes
    * @param numRegionServers the number of region servers
    */
-  public ProcessBasedLocalHBaseCluster(Configuration conf,
-      int numDataNodes, int numRegionServers) {
+  public ProcessBasedLocalHBaseCluster(Configuration conf, int numDataNodes, int numRegionServers) {
     this.conf = conf;
     this.hbaseHome = HBaseHomePath.getHomePath();
     this.numMasters = 1;
@@ -126,8 +122,7 @@ public class ProcessBasedLocalHBaseCluster {
 
   /**
    * Makes this local HBase cluster use a mini-DFS cluster. Must be called before
-   * {@link #startHBase()}.
-   * @throws IOException
+   * {@link #startHBase()}. n
    */
   public void startMiniDFS() throws Exception {
     if (testUtil == null) {
@@ -137,9 +132,9 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   /**
-   * Generates a list of random port numbers in the sorted order. A sorted
-   * order makes sense if we ever want to refer to these servers by their index
-   * in the returned array, e.g. server #0, #1, etc.
+   * Generates a list of random port numbers in the sorted order. A sorted order makes sense if we
+   * ever want to refer to these servers by their index in the returned array, e.g. server #0, #1,
+   * etc.
    */
   private static List<Integer> sortedPorts(int n) {
     List<Integer> ports = new ArrayList<>(n);
@@ -176,14 +171,13 @@ public class ProcessBasedLocalHBaseCluster {
       try {
         testUtil.getConnection().getTable(TableName.META_TABLE_NAME);
       } catch (Exception e) {
-        LOG.info("Waiting for HBase to startup. Retries left: " + attemptsLeft,
-            e);
+        LOG.info("Waiting for HBase to startup. Retries left: " + attemptsLeft, e);
         Threads.sleep(1000);
       }
     }
 
-    LOG.info("Process-based HBase Cluster with " + numRegionServers +
-        " region servers up and running... \n\n");
+    LOG.info("Process-based HBase Cluster with " + numRegionServers
+      + " region servers up and running... \n\n");
   }
 
   public void startRegionServer(int port) {
@@ -210,29 +204,26 @@ public class ProcessBasedLocalHBaseCluster {
     executeCommand(command, null);
   }
 
-  private void executeCommand(String command, Map<String,
-      String> envOverrides) {
+  private void executeCommand(String command, Map<String, String> envOverrides) {
     ensureShutdownHookInstalled();
     LOG.debug("Command : " + command);
 
     try {
-      String [] envp = null;
+      String[] envp = null;
       if (envOverrides != null) {
         Map<String, String> map = new HashMap<>(System.getenv());
         map.putAll(envOverrides);
         envp = new String[map.size()];
         int idx = 0;
-        for (Map.Entry<String, String> e: map.entrySet()) {
+        for (Map.Entry<String, String> e : map.entrySet()) {
           envp[idx++] = e.getKey() + "=" + e.getValue();
         }
       }
 
       Process p = Runtime.getRuntime().exec(command, envp);
 
-      BufferedReader stdInput = new BufferedReader(
-          new InputStreamReader(p.getInputStream()));
-      BufferedReader stdError = new BufferedReader(
-          new InputStreamReader(p.getErrorStream()));
+      BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+      BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
       // read the output from the command
       String s = null;
@@ -317,8 +308,7 @@ public class ProcessBasedLocalHBaseCluster {
   private String pidFilePath(ServerType serverType, int port) {
     String dir = serverWorkingDir(serverType, port);
     String user = System.getenv("USER");
-    String pidFile = String.format("%s/hbase-%s-%s.pid",
-                                   dir, user, serverType.fullName);
+    String pidFile = String.format("%s/hbase-%s-%s.pid", dir, user, serverType.fullName);
     return pidFile;
   }
 
@@ -348,37 +338,29 @@ public class ProcessBasedLocalHBaseCluster {
     // using default ports. If we want to run remote debugging on process-based local cluster's
     // daemons, we can automatically choose non-conflicting JDWP and JMX ports for each daemon
     // and specify them here.
-    writeStringToFile(
-        "unset HBASE_MASTER_OPTS\n" +
-        "unset HBASE_REGIONSERVER_OPTS\n" +
-        "unset HBASE_ZOOKEEPER_OPTS\n" +
-        "HBASE_MASTER_DBG_OPTS=' '\n" +
-        "HBASE_REGIONSERVER_DBG_OPTS=' '\n" +
-        "HBASE_ZOOKEEPER_DBG_OPTS=' '\n" +
-        "HBASE_MASTER_JMX_OPTS=' '\n" +
-        "HBASE_REGIONSERVER_JMX_OPTS=' '\n" +
-        "HBASE_ZOOKEEPER_JMX_OPTS=' '\n",
-        dir + "/hbase-env.sh");
+    writeStringToFile("unset HBASE_MASTER_OPTS\n" + "unset HBASE_REGIONSERVER_OPTS\n"
+      + "unset HBASE_ZOOKEEPER_OPTS\n" + "HBASE_MASTER_DBG_OPTS=' '\n"
+      + "HBASE_REGIONSERVER_DBG_OPTS=' '\n" + "HBASE_ZOOKEEPER_DBG_OPTS=' '\n"
+      + "HBASE_MASTER_JMX_OPTS=' '\n" + "HBASE_REGIONSERVER_JMX_OPTS=' '\n"
+      + "HBASE_ZOOKEEPER_JMX_OPTS=' '\n", dir + "/hbase-env.sh");
 
     Map<String, String> envOverrides = new HashMap<>();
     envOverrides.put("HBASE_LOG_DIR", dir);
     envOverrides.put("HBASE_PID_DIR", dir);
     try {
-      FileUtils.copyFile(
-          new File(hbaseHome, "conf/log4j.properties"),
-          new File(dir, "log4j.properties"));
+      FileUtils.copyFile(new File(hbaseHome, "conf/log4j.properties"),
+        new File(dir, "log4j.properties"));
     } catch (IOException ex) {
       LOG.error("Could not install log4j.properties into " + dir);
     }
 
-    executeCommand(hbaseDaemonScript + " --config " + dir +
-                   " start " + serverType.fullName, envOverrides);
+    executeCommand(hbaseDaemonScript + " --config " + dir + " start " + serverType.fullName,
+      envOverrides);
     daemonPidFiles.add(pidFilePath(serverType, rsPort));
     logTailDirs.add(dir);
   }
 
-  private final String generateConfig(ServerType serverType, int rpcPort,
-      String daemonDir) {
+  private final String generateConfig(ServerType serverType, int rpcPort, String daemonDir) {
     StringBuilder sb = new StringBuilder();
     Map<String, Object> confMap = new TreeMap<>();
     confMap.put(HConstants.CLUSTER_DISTRIBUTED, true);
@@ -420,8 +402,7 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   private static void reportWebUIPort(String daemon, int port) {
-    LOG.info("Local " + daemon + " web UI is at http://"
-        + HConstants.LOCALHOST + ":" + port);
+    LOG.info("Local " + daemon + " web UI is at http://" + HConstants.LOCALHOST + ":" + port);
   }
 
   public Configuration getConf() {
@@ -436,10 +417,9 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
   private static final Pattern TO_REMOVE_FROM_LOG_LINES_RE =
-      Pattern.compile("org\\.apache\\.hadoop\\.hbase\\.");
+    Pattern.compile("org\\.apache\\.hadoop\\.hbase\\.");
 
-  private static final Pattern LOG_PATH_FORMAT_RE =
-      Pattern.compile("^.*/([A-Z]+)-(\\d+)/[^/]+$");
+  private static final Pattern LOG_PATH_FORMAT_RE = Pattern.compile("^.*/([A-Z]+)-(\\d+)/[^/]+$");
 
   private static String processLine(String line) {
     Matcher m = TO_REMOVE_FROM_LOG_LINES_RE.matcher(line);
@@ -507,7 +487,7 @@ public class ProcessBasedLocalHBaseCluster {
         return;
       }
       final String logMsgPrefix =
-          "[" + serverType + (serverPort != 0 ? ":" + serverPort : "") + "] ";
+        "[" + serverType + (serverPort != 0 ? ":" + serverPort : "") + "] ";
 
       LOG.debug("Tailing " + filePath);
       Thread t = new Thread(new Runnable() {
@@ -555,4 +535,3 @@ public class ProcessBasedLocalHBaseCluster {
   }
 
 }
-

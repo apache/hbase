@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -54,8 +52,8 @@ public class DemoClient {
   public static void main(String[] args) throws Exception {
     System.out.println("Thrift2 Demo");
     System.out.println("Usage: DemoClient [host=localhost] [port=9090] [secure=false]");
-    System.out.println("This demo assumes you have a table called \"example\" with a column " +
-            "family called \"family1\"");
+    System.out.println("This demo assumes you have a table called \"example\" with a column "
+      + "family called \"family1\"");
 
     // use passed in arguments instead of defaults
     if (args.length >= 1) {
@@ -78,14 +76,13 @@ public class DemoClient {
     }
 
     final DemoClient client = new DemoClient();
-    Subject.doAs(getSubject(),
-      new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          client.run();
-          return null;
-        }
-      });
+    Subject.doAs(getSubject(), new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        client.run();
+        return null;
+      }
+    });
   }
 
   public void run() throws Exception {
@@ -97,15 +94,20 @@ public class DemoClient {
       transport = new TFramedTransport(transport);
     } else if (secure) {
       /*
-       * The Thrift server the DemoClient is trying to connect to
-       * must have a matching principal, and support authentication.
-       *
-       * The HBase cluster must be secure, allow proxy user.
+       * The Thrift server the DemoClient is trying to connect to must have a matching principal,
+       * and support authentication. The HBase cluster must be secure, allow proxy user.
        */
       Map<String, String> saslProperties = new HashMap<>();
       saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
-      transport = new TSaslClientTransport("GSSAPI", null,
-        user != null ? user : "hbase",// Thrift server user name, should be an authorized proxy user
+      transport = new TSaslClientTransport("GSSAPI", null, user != null ? user : "hbase", // Thrift
+                                                                                          // server
+                                                                                          // user
+                                                                                          // name,
+                                                                                          // should
+                                                                                          // be an
+                                                                                          // authorized
+                                                                                          // proxy
+                                                                                          // user
         host, // Thrift server domain
         saslProperties, null, transport);
     }

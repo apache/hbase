@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -61,9 +59,9 @@ public class DefaultOperationQuota implements OperationQuota {
    */
   public DefaultOperationQuota(final Configuration conf, final List<QuotaLimiter> limiters) {
     this.writeCapacityUnit =
-        conf.getLong(QuotaUtil.WRITE_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_WRITE_CAPACITY_UNIT);
+      conf.getLong(QuotaUtil.WRITE_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_WRITE_CAPACITY_UNIT);
     this.readCapacityUnit =
-        conf.getLong(QuotaUtil.READ_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_READ_CAPACITY_UNIT);
+      conf.getLong(QuotaUtil.READ_CAPACITY_UNIT_CONF_KEY, QuotaUtil.DEFAULT_READ_CAPACITY_UNIT);
     this.limiters = limiters;
     int size = OperationType.values().length;
     operationSize = new long[size];
@@ -97,9 +95,9 @@ public class DefaultOperationQuota implements OperationQuota {
     // Adjust the quota consumed for the specified operation
     writeDiff = operationSize[OperationType.MUTATE.ordinal()] - writeConsumed;
     readDiff = operationSize[OperationType.GET.ordinal()]
-        + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
-    writeCapacityUnitDiff = calculateWriteCapacityUnitDiff(
-      operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
+      + operationSize[OperationType.SCAN.ordinal()] - readConsumed;
+    writeCapacityUnitDiff =
+      calculateWriteCapacityUnitDiff(operationSize[OperationType.MUTATE.ordinal()], writeConsumed);
     readCapacityUnitDiff = calculateReadCapacityUnitDiff(
       operationSize[OperationType.GET.ordinal()] + operationSize[OperationType.SCAN.ordinal()],
       readConsumed);
@@ -137,8 +135,8 @@ public class DefaultOperationQuota implements OperationQuota {
   /**
    * Update estimate quota(read/write size/capacityUnits) which will be consumed
    * @param numWrites the number of write requests
-   * @param numReads the number of read requests
-   * @param numScans the number of scan requests
+   * @param numReads  the number of read requests
+   * @param numScans  the number of scan requests
    */
   protected void updateEstimateConsumeQuota(int numWrites, int numReads, int numScans) {
     writeConsumed = estimateConsume(OperationType.MUTATE, numWrites, 100);

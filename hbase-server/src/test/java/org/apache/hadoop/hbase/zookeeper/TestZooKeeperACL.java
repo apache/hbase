@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,11 +53,10 @@ public class TestZooKeeperACL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZooKeeperACL.class);
+    HBaseClassTestRule.forClass(TestZooKeeperACL.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestZooKeeperACL.class);
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ZKWatcher zkw;
   private static boolean secureZKAvailable;
@@ -67,21 +66,14 @@ public class TestZooKeeperACL {
     File saslConfFile = File.createTempFile("tmp", "jaas.conf");
     FileWriter fwriter = new FileWriter(saslConfFile);
 
-    fwriter.write("" +
-      "Server {\n" +
-        "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
-        "user_hbase=\"secret\";\n" +
-      "};\n" +
-      "Client {\n" +
-        "org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
-        "username=\"hbase\"\n" +
-        "password=\"secret\";\n" +
-      "};" + "\n");
+    fwriter.write("" + "Server {\n"
+      + "org.apache.zookeeper.server.auth.DigestLoginModule required\n" + "user_hbase=\"secret\";\n"
+      + "};\n" + "Client {\n" + "org.apache.zookeeper.server.auth.DigestLoginModule required\n"
+      + "username=\"hbase\"\n" + "password=\"secret\";\n" + "};" + "\n");
     fwriter.close();
-    System.setProperty("java.security.auth.login.config",
-        saslConfFile.getAbsolutePath());
+    System.setProperty("java.security.auth.login.config", saslConfFile.getAbsolutePath());
     System.setProperty("zookeeper.authProvider.1",
-        "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
+      "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
 
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.maxClientCnxns", 1000);
 
@@ -94,9 +86,8 @@ public class TestZooKeeperACL {
       secureZKAvailable = false;
       return;
     }
-    zkw = new ZKWatcher(
-      new Configuration(TEST_UTIL.getConfiguration()),
-        TestZooKeeper.class.getName(), null);
+    zkw = new ZKWatcher(new Configuration(TEST_UTIL.getConfiguration()),
+      TestZooKeeper.class.getName(), null);
   }
 
   @AfterClass
@@ -116,16 +107,13 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * Create a node and check its ACL. When authentication is enabled on
-   * ZooKeeper, all nodes (except /hbase/root-region-server, /hbase/master
-   * and /hbase/hbaseid) should be created so that only the hbase server user
-   * (master or region server user) that created them can access them, and
-   * this user should have all permissions on this node. For
-   * /hbase/root-region-server, /hbase/master, and /hbase/hbaseid the
-   * permissions should be as above, but should also be world-readable. First
-   * we check the general case of /hbase nodes in the following test, and
-   * then check the subset of world-readable nodes in the three tests after
-   * that.
+   * Create a node and check its ACL. When authentication is enabled on ZooKeeper, all nodes (except
+   * /hbase/root-region-server, /hbase/master and /hbase/hbaseid) should be created so that only the
+   * hbase server user (master or region server user) that created them can access them, and this
+   * user should have all permissions on this node. For /hbase/root-region-server, /hbase/master,
+   * and /hbase/hbaseid the permissions should be as above, but should also be world-readable. First
+   * we check the general case of /hbase nodes in the following test, and then check the subset of
+   * world-readable nodes in the three tests after that.
    */
   @Test
   public void testHBaseRootZNodeACL() throws Exception {
@@ -133,8 +121,7 @@ public class TestZooKeeperACL {
       return;
     }
 
-    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
-        .getACL("/hbase", new Stat());
+    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper().getACL("/hbase", new Stat());
     assertEquals(1, acls.size());
     assertEquals("sasl", acls.get(0).getId().getScheme());
     assertEquals("hbase", acls.get(0).getId().getId());
@@ -142,9 +129,9 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on ZooKeeper, /hbase/root-region-server
-   * should be created with 2 ACLs: one specifies that the hbase user has
-   * full access to the node; the other, that it is world-readable.
+   * When authentication is enabled on ZooKeeper, /hbase/root-region-server should be created with 2
+   * ACLs: one specifies that the hbase user has full access to the node; the other, that it is
+   * world-readable.
    */
   @Test
   public void testHBaseRootRegionServerZNodeACL() throws Exception {
@@ -152,19 +139,18 @@ public class TestZooKeeperACL {
       return;
     }
 
-    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
-        .getACL("/hbase/root-region-server", new Stat());
+    List<ACL> acls =
+      zkw.getRecoverableZooKeeper().getZooKeeper().getACL("/hbase/root-region-server", new Stat());
     assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
         assertEquals("anyone", acls.get(0).getId().getId());
         assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
         foundWorldReadableAcl = true;
-      }
-      else {
+      } else {
         if (acls.get(i).getId().getScheme().equals("sasl") == true) {
           assertEquals("hbase", acls.get(1).getId().getId());
           assertEquals("sasl", acls.get(1).getId().getScheme());
@@ -179,9 +165,9 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on ZooKeeper, /hbase/master should be
-   * created with 2 ACLs: one specifies that the hbase user has full access
-   * to the node; the other, that it is world-readable.
+   * When authentication is enabled on ZooKeeper, /hbase/master should be created with 2 ACLs: one
+   * specifies that the hbase user has full access to the node; the other, that it is
+   * world-readable.
    */
   @Test
   public void testHBaseMasterServerZNodeACL() throws Exception {
@@ -189,13 +175,13 @@ public class TestZooKeeperACL {
       return;
     }
 
-    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
-        .getACL("/hbase/master", new Stat());
+    List<ACL> acls =
+      zkw.getRecoverableZooKeeper().getZooKeeper().getACL("/hbase/master", new Stat());
     assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
         assertEquals("anyone", acls.get(0).getId().getId());
         assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
@@ -215,9 +201,9 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * When authentication is enabled on ZooKeeper, /hbase/hbaseid should be
-   * created with 2 ACLs: one specifies that the hbase user has full access
-   * to the node; the other, that it is world-readable.
+   * When authentication is enabled on ZooKeeper, /hbase/hbaseid should be created with 2 ACLs: one
+   * specifies that the hbase user has full access to the node; the other, that it is
+   * world-readable.
    */
   @Test
   public void testHBaseIDZNodeACL() throws Exception {
@@ -225,13 +211,13 @@ public class TestZooKeeperACL {
       return;
     }
 
-    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
-        .getACL("/hbase/hbaseid", new Stat());
+    List<ACL> acls =
+      zkw.getRecoverableZooKeeper().getZooKeeper().getACL("/hbase/hbaseid", new Stat());
     assertEquals(2, acls.size());
 
     boolean foundWorldReadableAcl = false;
     boolean foundHBaseOwnerAcl = false;
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       if (acls.get(i).getId().getScheme().equals("world") == true) {
         assertEquals("anyone", acls.get(0).getId().getId());
         assertEquals(ZooDefs.Perms.READ, acls.get(0).getPerms());
@@ -251,8 +237,8 @@ public class TestZooKeeperACL {
   }
 
   /**
-   * Finally, we check the ACLs of a node outside of the /hbase hierarchy and
-   * verify that its ACL is simply 'hbase:Perms.ALL'.
+   * Finally, we check the ACLs of a node outside of the /hbase hierarchy and verify that its ACL is
+   * simply 'hbase:Perms.ALL'.
    */
   @Test
   public void testOutsideHBaseNodeACL() throws Exception {
@@ -261,8 +247,8 @@ public class TestZooKeeperACL {
     }
 
     ZKUtil.createWithParents(zkw, "/testACLNode");
-    List<ACL> acls = zkw.getRecoverableZooKeeper().getZooKeeper()
-        .getACL("/testACLNode", new Stat());
+    List<ACL> acls =
+      zkw.getRecoverableZooKeeper().getZooKeeper().getACL("/testACLNode", new Stat());
     assertEquals(1, acls.size());
     assertEquals("sasl", acls.get(0).getId().getScheme());
     assertEquals("hbase", acls.get(0).getId().getId());
@@ -275,7 +261,7 @@ public class TestZooKeeperACL {
   @Test
   public void testIsZooKeeperSecure() throws Exception {
     boolean testJaasConfig =
-        ZKAuthentication.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
+      ZKAuthentication.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
     assertEquals(testJaasConfig, secureZKAvailable);
     // Define Jaas configuration without ZooKeeper Jaas config
     File saslConfFile = File.createTempFile("tmp", "fakeJaas.conf");
@@ -283,11 +269,10 @@ public class TestZooKeeperACL {
 
     fwriter.write("");
     fwriter.close();
-    System.setProperty("java.security.auth.login.config",
-        saslConfFile.getAbsolutePath());
+    System.setProperty("java.security.auth.login.config", saslConfFile.getAbsolutePath());
 
-    testJaasConfig = ZKAuthentication.isSecureZooKeeper(
-      new Configuration(TEST_UTIL.getConfiguration()));
+    testJaasConfig =
+      ZKAuthentication.isSecureZooKeeper(new Configuration(TEST_UTIL.getConfiguration()));
     assertFalse(testJaasConfig);
     saslConfFile.delete();
   }
@@ -347,4 +332,3 @@ public class TestZooKeeperACL {
   }
 
 }
-

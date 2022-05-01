@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,12 +59,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestFSHLogProvider {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSHLogProvider.class);
+    HBaseClassTestRule.forClass(TestFSHLogProvider.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSHLogProvider.class);
 
@@ -95,12 +95,9 @@ public class TestFSHLogProvider {
     TEST_UTIL.getConfiguration().setInt("dfs.client.socket-timeout", 5000);
 
     // faster failover with cluster.shutdown();fs.close() idiom
-    TEST_UTIL.getConfiguration()
-        .setInt("hbase.ipc.client.connect.max.retries", 1);
-    TEST_UTIL.getConfiguration().setInt(
-        "dfs.client.block.recovery.retries", 1);
-    TEST_UTIL.getConfiguration().setInt(
-      "hbase.ipc.client.connection.maxidletime", 500);
+    TEST_UTIL.getConfiguration().setInt("hbase.ipc.client.connect.max.retries", 1);
+    TEST_UTIL.getConfiguration().setInt("dfs.client.block.recovery.retries", 1);
+    TEST_UTIL.getConfiguration().setInt("hbase.ipc.client.connection.maxidletime", 500);
     TEST_UTIL.startMiniDFSCluster(3);
 
     // Set up a working space for our tests.
@@ -121,8 +118,8 @@ public class TestFSHLogProvider {
   @Test
   public void testGetServerNameFromWALDirectoryName() throws IOException {
     ServerName sn = ServerName.valueOf("hn", 450, 1398);
-    String hl = CommonFSUtils.getRootDir(conf) + "/" +
-        AbstractFSWALProvider.getWALDirectoryName(sn.toString());
+    String hl = CommonFSUtils.getRootDir(conf) + "/"
+      + AbstractFSWALProvider.getWALDirectoryName(sn.toString());
 
     // Must not throw exception
     assertNull(AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, null));
@@ -136,22 +133,21 @@ public class TestFSHLogProvider {
 
     final String wals = "/WALs/";
     ServerName parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
-      "/localhost%2C32984%2C1343316388997.1343316390417");
-    assertEquals("standard",  sn, parsed);
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn
+        + "/localhost%2C32984%2C1343316388997.1343316390417");
+    assertEquals("standard", sn, parsed);
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl + "/qdf");
     assertEquals("subdir", sn, parsed);
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
-      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn +
-      "-splitting/localhost%3A57020.1340474893931");
+      CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn
+        + "-splitting/localhost%3A57020.1340474893931");
     assertEquals("split", sn, parsed);
   }
 
-
   private void addEdits(WAL log, RegionInfo hri, TableDescriptor htd, int times,
-      NavigableMap<byte[], Integer> scopes) throws IOException {
+    NavigableMap<byte[], Integer> scopes) throws IOException {
     final byte[] row = Bytes.toBytes("row");
     for (int i = 0; i < times; i++) {
       long timestamp = System.currentTimeMillis();
@@ -164,18 +160,15 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * used by TestDefaultWALProviderWithHLogKey
-   * @param scopes
+   * used by TestDefaultWALProviderWithHLogKey n
    */
   WALKeyImpl getWalKey(final byte[] info, final TableName tableName, final long timestamp,
-      NavigableMap<byte[], Integer> scopes) {
+    NavigableMap<byte[], Integer> scopes) {
     return new WALKeyImpl(info, tableName, timestamp, mvcc, scopes);
   }
 
   /**
-   * helper method to simulate region flush for a WAL.
-   * @param wal
-   * @param regionEncodedName
+   * helper method to simulate region flush for a WAL. nn
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
@@ -186,11 +179,11 @@ public class TestFSHLogProvider {
   public void testLogCleaning() throws Exception {
     LOG.info(currentTest.getMethodName());
     TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     TableDescriptor htd2 =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
       scopes1.put(fam, 0);
@@ -252,26 +245,25 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * Tests wal archiving by adding data, doing flushing/rolling and checking we archive old logs
-   * and also don't archive "live logs" (that is, a log with un-flushed entries).
+   * Tests wal archiving by adding data, doing flushing/rolling and checking we archive old logs and
+   * also don't archive "live logs" (that is, a log with un-flushed entries).
    * <p>
-   * This is what it does:
-   * It creates two regions, and does a series of inserts along with log rolling.
-   * Whenever a WAL is rolled, HLogBase checks previous wals for archiving. A wal is eligible for
-   * archiving if for all the regions which have entries in that wal file, have flushed - past
-   * their maximum sequence id in that wal file.
+   * This is what it does: It creates two regions, and does a series of inserts along with log
+   * rolling. Whenever a WAL is rolled, HLogBase checks previous wals for archiving. A wal is
+   * eligible for archiving if for all the regions which have entries in that wal file, have flushed
+   * - past their maximum sequence id in that wal file.
    * <p>
-   * @throws IOException
+   * n
    */
   @Test
   public void testWALArchiving() throws IOException {
     LOG.debug(currentTest.getMethodName());
     TableDescriptor table1 =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "1"))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "1"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     TableDescriptor table2 =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : table1.getColumnFamilyNames()) {
       scopes1.put(fam, 0);
@@ -336,16 +328,15 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * Write to a log file with three concurrent threads and verifying all data is written.
-   * @throws Exception
+   * Write to a log file with three concurrent threads and verifying all data is written. n
    */
   @Test
   public void testConcurrentWrites() throws Exception {
     // Run the WPE tool with three threads writing 3000 edits each concurrently.
     // When done, verify that all edits were written.
-    int errCode = WALPerformanceEvaluation.
-      innerMain(new Configuration(TEST_UTIL.getConfiguration()),
-        new String [] {"-threads", "3", "-verify", "-noclosefs", "-iterations", "3000"});
+    int errCode =
+      WALPerformanceEvaluation.innerMain(new Configuration(TEST_UTIL.getConfiguration()),
+        new String[] { "-threads", "3", "-verify", "-noclosefs", "-iterations", "3000" });
     assertEquals(0, errCode);
   }
 
@@ -363,11 +354,11 @@ public class TestFSHLogProvider {
         seen.add(wals.getWAL(null)));
       for (int i = 0; i < 1000; i++) {
         assertFalse(
-          "default wal provider is only supposed to return a single wal, which should " +
-            "compare as .equals itself.",
+          "default wal provider is only supposed to return a single wal, which should "
+            + "compare as .equals itself.",
           seen.add(wals.getWAL(RegionInfoBuilder
-              .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt()))
-              .build())));
+            .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt()))
+            .build())));
       }
     } finally {
       wals.close();

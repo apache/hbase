@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestCompatibilitySingletonFactory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompatibilitySingletonFactory.class);
+    HBaseClassTestRule.forClass(TestCompatibilitySingletonFactory.class);
 
   private static final int ITERATIONS = 100000;
 
@@ -47,9 +47,8 @@ public class TestCompatibilitySingletonFactory {
     public String call() throws Exception {
       // XXX: Why is this sleep here?
       Thread.sleep(10);
-      RandomStringGenerator
-          instance =
-          CompatibilitySingletonFactory.getInstance(RandomStringGenerator.class);
+      RandomStringGenerator instance =
+        CompatibilitySingletonFactory.getInstance(RandomStringGenerator.class);
       return instance.getRandString();
     }
   }
@@ -58,7 +57,6 @@ public class TestCompatibilitySingletonFactory {
   public void testGetInstance() throws Exception {
     List<TestCompatibilitySingletonFactoryCallable> callables = new ArrayList<>(ITERATIONS);
     List<String> resultStrings = new ArrayList<>(ITERATIONS);
-
 
     // Create the callables.
     for (int i = 0; i < ITERATIONS; i++) {
@@ -76,7 +74,6 @@ public class TestCompatibilitySingletonFactory {
 
     // Get the first string.
     String firstString = resultStrings.get(0);
-
 
     // Assert that all the strings are equal to the fist.
     for (String s : resultStrings) {

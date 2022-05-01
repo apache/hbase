@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,16 +23,13 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
-
 import javax.ws.rs.core.MediaType;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -103,12 +100,12 @@ import org.slf4j.LoggerFactory;
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestSecureRESTServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureRESTServer.class);
+    HBaseClassTestRule.forClass(TestSecureRESTServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureRESTServer.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -140,8 +137,7 @@ public class TestSecureRESTServer {
     /*
      * Keytabs
      */
-    File keytabDir = new File(target, TestSecureRESTServer.class.getSimpleName()
-        + "_keytabs");
+    File keytabDir = new File(target, TestSecureRESTServer.class.getSimpleName() + "_keytabs");
     if (keytabDir.exists()) {
       FileUtils.deleteDirectory(keytabDir);
     }
@@ -177,15 +173,14 @@ public class TestSecureRESTServer {
     conf.set("hbase.master.keytab.file", serviceKeytab.getAbsolutePath());
     conf.set("hbase.unsafe.regionserver.hostname", "localhost");
     conf.set("hbase.master.hostname", "localhost");
-    HBaseKerberosUtils.setSecuredConfiguration(conf,
-        SERVICE_PRINCIPAL+ "@" + KDC.getRealm(), SPNEGO_SERVICE_PRINCIPAL+ "@" + KDC.getRealm());
+    HBaseKerberosUtils.setSecuredConfiguration(conf, SERVICE_PRINCIPAL + "@" + KDC.getRealm(),
+      SPNEGO_SERVICE_PRINCIPAL + "@" + KDC.getRealm());
     setHdfsSecuredConfiguration(conf);
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        TokenProvider.class.getName(), AccessController.class.getName());
-    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        AccessController.class.getName());
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, TokenProvider.class.getName(),
+      AccessController.class.getName());
+    conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        AccessController.class.getName());
+      AccessController.class.getName());
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
     conf.set("hbase.superuser", "hbase");
@@ -196,18 +191,15 @@ public class TestSecureRESTServer {
     UserGroupInformation.setConfiguration(conf);
 
     updateKerberosConfiguration(conf, REST_SERVER_PRINCIPAL, SPNEGO_SERVICE_PRINCIPAL,
-        restServerKeytab);
+      restServerKeytab);
 
     // Start HDFS
-    TEST_UTIL.startMiniCluster(StartMiniClusterOption.builder()
-        .numMasters(1)
-        .numRegionServers(1)
-        .numZkServers(1)
-        .build());
+    TEST_UTIL.startMiniCluster(
+      StartMiniClusterOption.builder().numMasters(1).numRegionServers(1).numZkServers(1).build());
 
     // Start REST
-    UserGroupInformation restUser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        REST_SERVER_PRINCIPAL, restServerKeytab.getAbsolutePath());
+    UserGroupInformation restUser = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(REST_SERVER_PRINCIPAL, restServerKeytab.getAbsolutePath());
     restUser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -217,18 +209,18 @@ public class TestSecureRESTServer {
     });
     baseUrl = new URL("http://localhost:" + REST_TEST.getServletPort());
 
-    LOG.info("HTTP server started: "+ baseUrl);
+    LOG.info("HTTP server started: " + baseUrl);
     TEST_UTIL.waitTableAvailable(TableName.valueOf("hbase:acl"));
 
     // Let the REST server create, read, and write globally
-    UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+    UserGroupInformation superuser = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
     superuser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-          AccessControlClient.grant(
-              conn, REST_SERVER_PRINCIPAL, Action.CREATE, Action.READ, Action.WRITE);
+          AccessControlClient.grant(conn, REST_SERVER_PRINCIPAL, Action.CREATE, Action.READ,
+            Action.WRITE);
         } catch (Throwable t) {
           if (t instanceof Exception) {
             throw (Exception) t;
@@ -270,13 +262,13 @@ public class TestSecureRESTServer {
   private static void setHdfsSecuredConfiguration(Configuration conf) throws Exception {
     // Set principal+keytab configuration for HDFS
     conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
-        SERVICE_PRINCIPAL + "@" + KDC.getRealm());
+      SERVICE_PRINCIPAL + "@" + KDC.getRealm());
     conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, serviceKeytab.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY,
-        SERVICE_PRINCIPAL + "@" + KDC.getRealm());
+      SERVICE_PRINCIPAL + "@" + KDC.getRealm());
     conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, serviceKeytab.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        SPNEGO_SERVICE_PRINCIPAL + "@" + KDC.getRealm());
+      SPNEGO_SERVICE_PRINCIPAL + "@" + KDC.getRealm());
     // Enable token access for HDFS blocks
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     // Only use HTTPS (required because we aren't using "secure" ports)
@@ -295,8 +287,8 @@ public class TestSecureRESTServer {
     conf.setBoolean("ignore.secure.ports.for.testing", true);
   }
 
-  private static void updateKerberosConfiguration(Configuration conf,
-      String serverPrincipal, String spnegoPrincipal, File serverKeytab) {
+  private static void updateKerberosConfiguration(Configuration conf, String serverPrincipal,
+    String spnegoPrincipal, File serverKeytab) {
     KerberosName.setRules("DEFAULT");
 
     // Enable Kerberos (pre-req)
@@ -314,16 +306,15 @@ public class TestSecureRESTServer {
 
   private static void instertData() throws IOException, InterruptedException {
     // Create a table, write a row to it, grant read perms to the client
-    UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+    UserGroupInformation superuser = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
     final TableName table = TableName.valueOf("publicTable");
     superuser.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
           TableDescriptor desc = TableDescriptorBuilder.newBuilder(table)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1"))
-            .build();
+            .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
           conn.getAdmin().createTable(desc);
           try (Table t = conn.getTable(table)) {
             Put p = new Put(Bytes.toBytes("a"));
@@ -343,21 +334,22 @@ public class TestSecureRESTServer {
     });
   }
 
-  public void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode) throws Exception{
-    UserGroupInformation superuser = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-      SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+  public void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode)
+    throws Exception {
+    UserGroupInformation superuser = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
     final TableName table = TableName.valueOf("publicTable");
 
     // Read that row as the client
-    Pair<CloseableHttpClient,HttpClientContext> pair = getClient();
+    Pair<CloseableHttpClient, HttpClientContext> pair = getClient();
     CloseableHttpClient client = pair.getFirst();
     HttpClientContext context = pair.getSecond();
 
-    HttpGet get = new HttpGet(new URL("http://localhost:"+ REST_TEST.getServletPort()).toURI()
+    HttpGet get = new HttpGet(new URL("http://localhost:" + REST_TEST.getServletPort()).toURI()
       + "/" + table + "/a" + extraArgs);
     get.addHeader("Accept", "application/json");
-    UserGroupInformation user = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-      PRINCIPAL, keytab.getAbsolutePath());
+    UserGroupInformation user =
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(PRINCIPAL, keytab.getAbsolutePath());
     String jsonResponse = user.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
@@ -369,8 +361,9 @@ public class TestSecureRESTServer {
         }
       }
     });
-    if(responseCode == HttpURLConnection.HTTP_OK) {
-      ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    if (responseCode == HttpURLConnection.HTTP_OK) {
+      ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+        MediaType.APPLICATION_JSON_TYPE);
       CellSetModel model = mapper.readValue(jsonResponse, CellSetModel.class);
       assertEquals(1, model.getRows().size());
       RowModel row = model.getRows().get(0);
@@ -388,12 +381,12 @@ public class TestSecureRESTServer {
 
   @Test
   public void testDoAs() throws Exception {
-    testProxy("?doAs="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+    testProxy("?doAs=" + CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
   }
 
   @Test
   public void testDoas() throws Exception {
-    testProxy("?doas="+CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
+    testProxy("?doas=" + CLIENT_PRINCIPAL, WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_OK);
   }
 
   @Test
@@ -401,48 +394,44 @@ public class TestSecureRESTServer {
     testProxy("", WHEEL_PRINCIPAL, wheelKeytab, HttpURLConnection.HTTP_FORBIDDEN);
   }
 
-
   @Test
   public void testNegativeAuthorization() throws Exception {
-    Pair<CloseableHttpClient,HttpClientContext> pair = getClient();
+    Pair<CloseableHttpClient, HttpClientContext> pair = getClient();
     CloseableHttpClient client = pair.getFirst();
     HttpClientContext context = pair.getSecond();
 
     StringEntity entity = new StringEntity(
-        "{\"name\":\"test\", \"ColumnSchema\":[{\"name\":\"f\"}]}", ContentType.APPLICATION_JSON);
-    HttpPut put = new HttpPut("http://localhost:"+ REST_TEST.getServletPort() + "/test/schema");
+      "{\"name\":\"test\", \"ColumnSchema\":[{\"name\":\"f\"}]}", ContentType.APPLICATION_JSON);
+    HttpPut put = new HttpPut("http://localhost:" + REST_TEST.getServletPort() + "/test/schema");
     put.setEntity(entity);
 
-
-    UserGroupInformation unprivileged = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        CLIENT_PRINCIPAL, clientKeytab.getAbsolutePath());
+    UserGroupInformation unprivileged = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(CLIENT_PRINCIPAL, clientKeytab.getAbsolutePath());
     unprivileged.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         try (CloseableHttpResponse response = client.execute(put, context)) {
           final int statusCode = response.getStatusLine().getStatusCode();
           HttpEntity entity = response.getEntity();
-          assertEquals("Got response: "+ EntityUtils.toString(entity),
-              HttpURLConnection.HTTP_FORBIDDEN, statusCode);
+          assertEquals("Got response: " + EntityUtils.toString(entity),
+            HttpURLConnection.HTTP_FORBIDDEN, statusCode);
         }
         return null;
       }
     });
   }
 
-  private Pair<CloseableHttpClient,HttpClientContext> getClient() {
+  private Pair<CloseableHttpClient, HttpClientContext> getClient() {
     HttpClientConnectionManager pool = new PoolingHttpClientConnectionManager();
     HttpHost host = new HttpHost("localhost", REST_TEST.getServletPort());
-    Registry<AuthSchemeProvider> authRegistry =
-        RegistryBuilder.<AuthSchemeProvider>create().register(AuthSchemes.SPNEGO,
-            new SPNegoSchemeFactory(true, true)).build();
+    Registry<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+      .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
     CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
     credentialsProvider.setCredentials(AuthScope.ANY, EmptyCredentials.INSTANCE);
     AuthCache authCache = new BasicAuthCache();
 
-    CloseableHttpClient client = HttpClients.custom()
-        .setDefaultAuthSchemeRegistry(authRegistry)
-        .setConnectionManager(pool).build();
+    CloseableHttpClient client = HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
+      .setConnectionManager(pool).build();
 
     HttpClientContext context = HttpClientContext.create();
     context.setTargetHost(host);
@@ -456,10 +445,13 @@ public class TestSecureRESTServer {
   private static class EmptyCredentials implements Credentials {
     public static final EmptyCredentials INSTANCE = new EmptyCredentials();
 
-    @Override public String getPassword() {
+    @Override
+    public String getPassword() {
       return null;
     }
-    @Override public Principal getUserPrincipal() {
+
+    @Override
+    public Principal getUserPrincipal() {
       return null;
     }
   }

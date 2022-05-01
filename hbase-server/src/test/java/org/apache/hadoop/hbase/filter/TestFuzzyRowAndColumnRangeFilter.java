@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,12 +54,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  */
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestFuzzyRowAndColumnRangeFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFuzzyRowAndColumnRangeFilter.class);
+    HBaseClassTestRule.forClass(TestFuzzyRowAndColumnRangeFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestFuzzyRowAndColumnRangeFilter.class);
@@ -102,8 +102,8 @@ public class TestFuzzyRowAndColumnRangeFilter {
   @Test
   public void Test() throws Exception {
     String cf = "f";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-            Bytes.toBytes(cf), Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
+      Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier
@@ -127,8 +127,8 @@ public class TestFuzzyRowAndColumnRangeFilter {
           p.setDurability(Durability.SKIP_WAL);
           p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
           ht.put(p);
-          LOG.info("Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: "
-                  + Bytes.toStringBinary(cq));
+          LOG.info(
+            "Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: " + Bytes.toStringBinary(cq));
         }
       }
     }
@@ -149,18 +149,18 @@ public class TestFuzzyRowAndColumnRangeFilter {
     buf.clear();
     buf.putShort((short) 2);
     for (int i = 0; i < 4; i++)
-      buf.put((byte)63);
-    buf.putInt((short)1);
+      buf.put((byte) 63);
+    buf.putInt((short) 1);
 
-    byte[] mask = new byte[] {0 , 0, 1, 1, 1, 1, 0, 0, 0, 0};
+    byte[] mask = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
 
     Pair<byte[], byte[]> pair = new Pair<>(fuzzyKey, mask);
     FuzzyRowFilter fuzzyRowFilter = new FuzzyRowFilter(Lists.newArrayList(pair));
-    ColumnRangeFilter columnRangeFilter = new ColumnRangeFilter(Bytes.toBytes(cqStart), true
-            , Bytes.toBytes(4), true);
-    //regular test
+    ColumnRangeFilter columnRangeFilter =
+      new ColumnRangeFilter(Bytes.toBytes(cqStart), true, Bytes.toBytes(4), true);
+    // regular test
     runScanner(hTable, expectedSize, fuzzyRowFilter, columnRangeFilter);
-    //reverse filter order test
+    // reverse filter order test
     runScanner(hTable, expectedSize, columnRangeFilter, fuzzyRowFilter);
   }
 
@@ -178,7 +178,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
-                + Bytes.toStringBinary(CellUtil.cloneQualifier(kv)));
+          + Bytes.toStringBinary(CellUtil.cloneQualifier(kv)));
         results.add(kv);
       }
     }

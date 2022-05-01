@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,20 +22,17 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 
 /**
- * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link com.google.protobuf.Service}s.
- * Note that clients should not use this class directly, except through
- * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
+ * Base class which provides clients with an RPC connection to call coprocessor endpoint
+ * {@link com.google.protobuf.Service}s. Note that clients should not use this class directly,
+ * except through {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public
 abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
@@ -43,10 +40,8 @@ abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
 
   @Override
   @InterfaceAudience.Private
-  public void callMethod(Descriptors.MethodDescriptor method,
-                         RpcController controller,
-                         Message request, Message responsePrototype,
-                         RpcCallback<Message> callback) {
+  public void callMethod(Descriptors.MethodDescriptor method, RpcController controller,
+    Message request, Message responsePrototype, RpcCallback<Message> callback) {
     Message response = null;
     try {
       response = callExecService(controller, method, request, responsePrototype);
@@ -61,18 +56,16 @@ abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
 
   @Override
   @InterfaceAudience.Private
-  public Message callBlockingMethod(Descriptors.MethodDescriptor method,
-                                    RpcController controller,
-                                    Message request, Message responsePrototype)
-      throws ServiceException {
+  public Message callBlockingMethod(Descriptors.MethodDescriptor method, RpcController controller,
+    Message request, Message responsePrototype) throws ServiceException {
     try {
       return callExecService(controller, method, request, responsePrototype);
     } catch (IOException ioe) {
-      throw new ServiceException("Error calling method "+method.getFullName(), ioe);
+      throw new ServiceException("Error calling method " + method.getFullName(), ioe);
     }
   }
 
   protected abstract Message callExecService(RpcController controller,
-      Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
-          throws IOException;
+    Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
+    throws IOException;
 }

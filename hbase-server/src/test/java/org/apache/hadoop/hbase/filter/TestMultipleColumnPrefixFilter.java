@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,15 +49,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestMultipleColumnPrefixFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
+    HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new
-      HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
   public TestName name = new TestName();
@@ -71,8 +70,8 @@ public class TestMultipleColumnPrefixFilter {
     htd.addFamily(hcd);
     // HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -88,16 +87,15 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           p.add(kv);
           kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
+          for (String s : prefixMap.keySet()) {
             if (column.startsWith(s)) {
               prefixMap.get(s).add(kv);
             }
@@ -110,9 +108,9 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
     scan.setMaxVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
+    byte[][] filter_prefix = new byte[2][];
+    filter_prefix[0] = new byte[] { 'p' };
+    filter_prefix[1] = new byte[] { 'q' };
 
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
@@ -137,8 +135,8 @@ public class TestMultipleColumnPrefixFilter {
     hcd2.setMaxVersions(3);
     htd.addFamily(hcd2);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -154,10 +152,10 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           double rand = Math.random();
           Cell kv;
@@ -168,7 +166,7 @@ public class TestMultipleColumnPrefixFilter {
           }
           p.add(kv);
           kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
+          for (String s : prefixMap.keySet()) {
             if (column.startsWith(s)) {
               prefixMap.get(s).add(kv);
             }
@@ -181,9 +179,9 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
     scan.setMaxVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
+    byte[][] filter_prefix = new byte[2][];
+    filter_prefix[0] = new byte[] { 'p' };
+    filter_prefix[1] = new byte[] { 'q' };
 
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
@@ -202,8 +200,8 @@ public class TestMultipleColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -211,13 +209,12 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           p.add(kv);
         }
       }
@@ -227,8 +224,8 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter multiplePrefixFilter;
     Scan scan1 = new Scan();
     scan1.setMaxVersions();
-    byte [][] filter_prefix = new byte [1][];
-    filter_prefix[0] = new byte [] {'p'};
+    byte[][] filter_prefix = new byte[1][];
+    filter_prefix[0] = new byte[] { 'p' };
 
     multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
     scan1.setFilter(multiplePrefixFilter);
@@ -256,7 +253,7 @@ public class TestMultipleColumnPrefixFilter {
   List<String> generateRandomWords(int numberOfWords, String suffix) {
     Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {
-      int lengthOfWords = (int) (Math.random()*2) + 1;
+      int lengthOfWords = (int) (Math.random() * 2) + 1;
       char[] wordChar = new char[lengthOfWords];
       for (int j = 0; j < wordChar.length; j++) {
         wordChar[j] = (char) (Math.random() * 26 + 97);
@@ -274,5 +271,3 @@ public class TestMultipleColumnPrefixFilter {
   }
 
 }
-
-

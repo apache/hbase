@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +18,11 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ParseConstants holds a bunch of constants related to parsing Filter Strings
- * Used by {@link ParseFilter}
+ * ParseConstants holds a bunch of constants related to parsing Filter Strings Used by
+ * {@link ParseFilter}
  */
 @InterfaceAudience.Public
 public final class ParseConstants {
@@ -97,7 +95,7 @@ public final class ParseConstants {
   /**
    * SKIP Array
    */
-  public static final byte [] SKIP_ARRAY = new byte [ ] {'S', 'K', 'I', 'P'};
+  public static final byte[] SKIP_ARRAY = new byte[] { 'S', 'K', 'I', 'P' };
   public static final ByteBuffer SKIP_BUFFER = ByteBuffer.wrap(SKIP_ARRAY);
 
   /**
@@ -123,19 +121,19 @@ public final class ParseConstants {
   /**
    * WHILE Array
    */
-  public static final byte [] WHILE_ARRAY = new byte [] {'W', 'H', 'I', 'L', 'E'};
+  public static final byte[] WHILE_ARRAY = new byte[] { 'W', 'H', 'I', 'L', 'E' };
   public static final ByteBuffer WHILE_BUFFER = ByteBuffer.wrap(WHILE_ARRAY);
 
   /**
    * OR Array
    */
-  public static final byte [] OR_ARRAY = new byte [] {'O','R'};
+  public static final byte[] OR_ARRAY = new byte[] { 'O', 'R' };
   public static final ByteBuffer OR_BUFFER = ByteBuffer.wrap(OR_ARRAY);
 
   /**
    * AND Array
    */
-  public static final byte [] AND_ARRAY = new byte [] {'A','N', 'D'};
+  public static final byte[] AND_ARRAY = new byte[] { 'A', 'N', 'D' };
   public static final ByteBuffer AND_BUFFER = ByteBuffer.wrap(AND_ARRAY);
 
   /**
@@ -156,39 +154,39 @@ public final class ParseConstants {
   /**
    * LESS_THAN Array
    */
-  public static final byte [] LESS_THAN_ARRAY = new byte [] {'<'};
+  public static final byte[] LESS_THAN_ARRAY = new byte[] { '<' };
   public static final ByteBuffer LESS_THAN_BUFFER = ByteBuffer.wrap(LESS_THAN_ARRAY);
 
   /**
    * LESS_THAN_OR_EQUAL_TO Array
    */
-  public static final byte [] LESS_THAN_OR_EQUAL_TO_ARRAY = new byte [] {'<', '='};
+  public static final byte[] LESS_THAN_OR_EQUAL_TO_ARRAY = new byte[] { '<', '=' };
   public static final ByteBuffer LESS_THAN_OR_EQUAL_TO_BUFFER =
     ByteBuffer.wrap(LESS_THAN_OR_EQUAL_TO_ARRAY);
 
   /**
    * GREATER_THAN Array
    */
-  public static final byte [] GREATER_THAN_ARRAY = new byte [] {'>'};
+  public static final byte[] GREATER_THAN_ARRAY = new byte[] { '>' };
   public static final ByteBuffer GREATER_THAN_BUFFER = ByteBuffer.wrap(GREATER_THAN_ARRAY);
 
   /**
    * GREATER_THAN_OR_EQUAL_TO Array
    */
-  public static final byte [] GREATER_THAN_OR_EQUAL_TO_ARRAY = new byte [] {'>', '='};
+  public static final byte[] GREATER_THAN_OR_EQUAL_TO_ARRAY = new byte[] { '>', '=' };
   public static final ByteBuffer GREATER_THAN_OR_EQUAL_TO_BUFFER =
     ByteBuffer.wrap(GREATER_THAN_OR_EQUAL_TO_ARRAY);
 
   /**
    * EQUAL_TO Array
    */
-  public static final byte [] EQUAL_TO_ARRAY = new byte [] {'='};
+  public static final byte[] EQUAL_TO_ARRAY = new byte[] { '=' };
   public static final ByteBuffer EQUAL_TO_BUFFER = ByteBuffer.wrap(EQUAL_TO_ARRAY);
 
   /**
    * NOT_EQUAL_TO Array
    */
-  public static final byte [] NOT_EQUAL_TO_ARRAY = new byte [] {'!', '='};
+  public static final byte[] NOT_EQUAL_TO_ARRAY = new byte[] { '!', '=' };
   public static final ByteBuffer NOT_EQUAL_TO_BUFFER = ByteBuffer.wrap(NOT_EQUAL_TO_ARRAY);
 
   /**
@@ -199,17 +197,17 @@ public final class ParseConstants {
   /**
    * AND Byte Array
    */
-  public static final byte [] AND = new byte [] {'A','N','D'};
+  public static final byte[] AND = new byte[] { 'A', 'N', 'D' };
 
   /**
    * OR Byte Array
    */
-  public static final byte [] OR = new byte [] {'O', 'R'};
+  public static final byte[] OR = new byte[] { 'O', 'R' };
 
   /**
    * LPAREN Array
    */
-  public static final byte [] LPAREN_ARRAY = new byte [] {'('};
+  public static final byte[] LPAREN_ARRAY = new byte[] { '(' };
   public static final ByteBuffer LPAREN_BUFFER = ByteBuffer.wrap(LPAREN_ARRAY);
 
   /**
@@ -230,24 +228,25 @@ public final class ParseConstants {
   /**
    * BinaryType byte array
    */
-  public static final byte [] binaryType = new byte [] {'b','i','n','a','r','y'};
+  public static final byte[] binaryType = new byte[] { 'b', 'i', 'n', 'a', 'r', 'y' };
 
   /**
    * BinaryPrefixType byte array
    */
-  public static final byte [] binaryPrefixType = new byte [] {'b','i','n','a','r','y',
-                                                              'p','r','e','f','i','x'};
+  public static final byte[] binaryPrefixType =
+    new byte[] { 'b', 'i', 'n', 'a', 'r', 'y', 'p', 'r', 'e', 'f', 'i', 'x' };
 
   /**
    * RegexStringType byte array
    */
-  public static final byte [] regexStringType = new byte [] {'r','e','g','e', 'x',
-                                                             's','t','r','i','n','g'};
+  public static final byte[] regexStringType =
+    new byte[] { 'r', 'e', 'g', 'e', 'x', 's', 't', 'r', 'i', 'n', 'g' };
 
   /**
    * SubstringType byte array
    */
-  public static final byte [] substringType = new byte [] {'s','u','b','s','t','r','i','n','g'};
+  public static final byte[] substringType =
+    new byte[] { 's', 'u', 'b', 's', 't', 'r', 'i', 'n', 'g' };
 
   /**
    * ASCII for Minus Sign

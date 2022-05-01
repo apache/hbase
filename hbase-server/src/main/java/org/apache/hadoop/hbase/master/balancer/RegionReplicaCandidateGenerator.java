@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generates candidates which moves the replicas out of the region server for
- * co-hosted region replicas
+ * Generates candidates which moves the replicas out of the region server for co-hosted region
+ * replicas
  */
 @InterfaceAudience.Private
 class RegionReplicaCandidateGenerator extends CandidateGenerator {
@@ -31,17 +30,17 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
     new StochasticLoadBalancer.RandomCandidateGenerator();
 
   /**
-   * Randomly select one regionIndex out of all region replicas co-hosted in the same group
-   * (a group is a server, host or rack)
-   *
+   * Randomly select one regionIndex out of all region replicas co-hosted in the same group (a group
+   * is a server, host or rack)
    * @param primariesOfRegionsPerGroup either Cluster.primariesOfRegionsPerServer,
-   *   primariesOfRegionsPerHost or primariesOfRegionsPerRack
-   * @param regionsPerGroup either Cluster.regionsPerServer, regionsPerHost or regionsPerRack
-   * @param regionIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
+   *                                   primariesOfRegionsPerHost or primariesOfRegionsPerRack
+   * @param regionsPerGroup            either Cluster.regionsPerServer, regionsPerHost or
+   *                                   regionsPerRack
+   * @param regionIndexToPrimaryIndex  Cluster.regionsIndexToPrimaryIndex
    * @return a regionIndex for the selected primary or -1 if there is no co-locating
    */
   int selectCoHostedRegionPerGroup(int[] primariesOfRegionsPerGroup, int[] regionsPerGroup,
-      int[] regionIndexToPrimaryIndex) {
+    int[] regionIndexToPrimaryIndex) {
     int currentPrimary = -1;
     int currentPrimaryIndex = -1;
     int selectedPrimaryIndex = -1;
@@ -50,8 +49,7 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
     // ids for the regions hosted in server, a consecutive repetition means that replicas
     // are co-hosted
     for (int j = 0; j <= primariesOfRegionsPerGroup.length; j++) {
-      int primary = j < primariesOfRegionsPerGroup.length
-        ? primariesOfRegionsPerGroup[j] : -1;
+      int primary = j < primariesOfRegionsPerGroup.length ? primariesOfRegionsPerGroup[j] : -1;
       if (primary != currentPrimary) { // check for whether we see a new primary
         int numReplicas = j - currentPrimaryIndex;
         if (numReplicas > 1) { // means consecutive primaries, indicating co-location
@@ -89,10 +87,8 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
       return BaseLoadBalancer.Cluster.NullAction;
     }
 
-    int regionIndex = selectCoHostedRegionPerGroup(
-      cluster.primariesOfRegionsPerServer[serverIndex],
-      cluster.regionsPerServer[serverIndex],
-      cluster.regionIndexToPrimaryIndex);
+    int regionIndex = selectCoHostedRegionPerGroup(cluster.primariesOfRegionsPerServer[serverIndex],
+      cluster.regionsPerServer[serverIndex], cluster.regionIndexToPrimaryIndex);
 
     // if there are no pairs of region replicas co-hosted, default to random generator
     if (regionIndex == -1) {

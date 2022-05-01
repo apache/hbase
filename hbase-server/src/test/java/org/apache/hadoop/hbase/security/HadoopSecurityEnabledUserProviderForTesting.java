@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.security.UserProvider;
-
 /**
- * A {@link UserProvider} that always says hadoop security is enabled, regardless of the underlying
- * configuration. HBase security is <i>not enabled</i> as this is used to determine if SASL is used
- * to do the authentication, which requires a Kerberos ticket (which we currently don't have in
- * tests).
+ * A {@link org.apache.hadoop.hbase.security.UserProvider} that always says hadoop security is
+ * enabled, regardless of the underlying configuration. HBase security is <i>not enabled</i> as this
+ * is used to determine if SASL is used to do the authentication, which requires a Kerberos ticket
+ * (which we currently don't have in tests).
  * <p>
  * This should only be used for <b>TESTING</b>.
  */

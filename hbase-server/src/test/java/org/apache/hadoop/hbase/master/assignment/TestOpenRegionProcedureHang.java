@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,11 +80,13 @@ public class TestOpenRegionProcedureHang {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition transition = req.getTransition(0);
-      if (transition.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME) &&
-        ARRIVE != null) {
+      if (
+        transition.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(transition.getRegionInfo(0).getTableName()).equals(NAME)
+          && ARRIVE != null
+      ) {
         ARRIVE.countDown();
         try {
           RESUME.await();
@@ -194,9 +196,9 @@ public class TestOpenRegionProcedureHang {
     Thread.sleep(2000);
     RESUME.countDown();
     if (!FINISH.await(15, TimeUnit.SECONDS)) {
-      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if" +
-        " we update the procedure store, as the WALProcedureStore" +
-        " will retry forever to roll the writer if it is not closed");
+      LOG.info("Wait reportRegionStateTransition to finish timed out, this is possible if"
+        + " we update the procedure store, as the WALProcedureStore"
+        + " will retry forever to roll the writer if it is not closed");
     }
     FINISH = null;
     // if the reportRegionTransition is finished, wait a bit to let it return the data to RS

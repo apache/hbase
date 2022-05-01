@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSource;
@@ -37,8 +36,7 @@ public interface MetricsThriftServerSource extends ExceptionTrackingSource, JvmP
   String ACTIVE_WORKER_COUNT_KEY = "numActiveWorkers";
 
   /**
-   * Add how long an operation was in the queue.
-   * @param time
+   * Add how long an operation was in the queue. n
    */
   void incTimeInQueue(long time);
 

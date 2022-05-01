@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -49,24 +50,24 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
   public static int DEFAULT_NUM_THREADS = 20;
 
   public static Option NUM_THREADS_OPTION = new Option("threads", true,
-    "Number of parallel threads which will write insert/updates/deletes to store. Default: " +
-      DEFAULT_NUM_THREADS);
+    "Number of parallel threads which will write insert/updates/deletes to store. Default: "
+      + DEFAULT_NUM_THREADS);
 
   public static int DEFAULT_NUM_PROCS = 1000000; // 1M
 
   public static Option NUM_PROCS_OPTION = new Option("procs", true,
-    "Total number of procedures. Each procedure writes one insert and one update. Default: " +
-      DEFAULT_NUM_PROCS);
+    "Total number of procedures. Each procedure writes one insert and one update. Default: "
+      + DEFAULT_NUM_PROCS);
 
   public static int DEFAULT_STATE_SIZE = 1024; // 1KB
 
-  public static Option STATE_SIZE_OPTION = new Option("state_size", true,
-    "Size of serialized state in bytes to write on update. Default: " + DEFAULT_STATE_SIZE +
-      "bytes");
+  public static Option STATE_SIZE_OPTION =
+    new Option("state_size", true, "Size of serialized state in bytes to write on update. Default: "
+      + DEFAULT_STATE_SIZE + "bytes");
 
   public static Option SYNC_OPTION = new Option("sync", true,
-    "Type of sync to use when writing WAL contents to file system. Accepted values: hflush, " +
-      "hsync, nosync. Default: hflush");
+    "Type of sync to use when writing WAL contents to file system. Accepted values: hflush, "
+      + "hsync, nosync. Default: hflush");
 
   public static String DEFAULT_SYNC_OPTION = "hflush";
 
@@ -101,8 +102,8 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
     numThreads = getOptionAsInt(cmd, NUM_THREADS_OPTION.getOpt(), DEFAULT_NUM_THREADS);
     numProcs = getOptionAsInt(cmd, NUM_PROCS_OPTION.getOpt(), DEFAULT_NUM_PROCS);
     syncType = cmd.getOptionValue(SYNC_OPTION.getOpt(), DEFAULT_SYNC_OPTION);
-    assert "hsync".equals(syncType) || "hflush".equals(syncType) || "nosync".equals(
-      syncType) : "sync argument can only accept one of these three values: hsync, hflush, nosync";
+    assert "hsync".equals(syncType) || "hflush".equals(syncType) || "nosync".equals(syncType)
+      : "sync argument can only accept one of these three values: hsync, hflush, nosync";
     stateSize = getOptionAsInt(cmd, STATE_SIZE_OPTION.getOpt(), DEFAULT_STATE_SIZE);
     SERIALIZED_STATE = new byte[stateSize];
     Bytes.random(SERIALIZED_STATE);
@@ -136,8 +137,8 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
       storeDir = fs.makeQualified(new Path(outputPath));
       fs.delete(storeDir, true);
     } catch (IOException e) {
-      System.err.println("Error: Couldn't delete log dir. You can delete it manually to free up " +
-        "disk space. Location: " + storeDir);
+      System.err.println("Error: Couldn't delete log dir. You can delete it manually to free up "
+        + "disk space. Location: " + storeDir);
       e.printStackTrace();
     }
   }
@@ -217,8 +218,8 @@ public abstract class ProcedureStorePerformanceEvaluation<T extends ProcedureSto
         }
         if (procId != 0 && procId % 10000 == 0) {
           long ns = System.nanoTime() - start;
-          System.out.println("Wrote " + procId + " procedures in " +
-            StringUtils.humanTimeDiff(TimeUnit.NANOSECONDS.toMillis(ns)));
+          System.out.println("Wrote " + procId + " procedures in "
+            + StringUtils.humanTimeDiff(TimeUnit.NANOSECONDS.toMillis(ns)));
         }
         try {
           preWrite(procId);

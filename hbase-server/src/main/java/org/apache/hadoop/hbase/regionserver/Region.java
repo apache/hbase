@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -90,14 +89,16 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Return the list of Stores managed by this region
-   * <p>Use with caution.  Exposed for use of fixup utilities.
+   * <p>
+   * Use with caution. Exposed for use of fixup utilities.
    * @return a list of the Stores managed by this region
    */
   List<? extends Store> getStores();
 
   /**
    * Return the Store for the given family
-   * <p>Use with caution.  Exposed for use of fixup utilities.
+   * <p>
+   * Use with caution. Exposed for use of fixup utilities.
    * @return the Store for the given family
    */
   Store getStore(byte[] family);
@@ -106,15 +107,14 @@ public interface Region extends ConfigurationObserver {
   List<String> getStoreFileList(byte[][] columns);
 
   /**
-   * Check the region's underlying store files, open the files that have not
-   * been opened yet, and remove the store file readers for store files no
-   * longer available.
-   * @throws IOException
+   * Check the region's underlying store files, open the files that have not been opened yet, and
+   * remove the store file readers for store files no longer available. n
    */
   boolean refreshStoreFiles() throws IOException;
 
-  /** @return the max sequence id of flushed data on this region; no edit in memory will have
-   * a sequence id that is less that what is returned here.
+  /**
+   * @return the max sequence id of flushed data on this region; no edit in memory will have a
+   *         sequence id that is less that what is returned here.
    */
   long getMaxFlushedSeqId();
 
@@ -127,14 +127,13 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * @return map of column family names to max sequence id that was read from storage when this
-   * region was opened
+   *         region was opened
    */
   public Map<byte[], Long> getMaxStoreSeqId();
 
   /**
-   * @return The earliest time a store in the region was flushed. All
-   *         other stores in the region would have been flushed either at, or
-   *         after this time.
+   * @return The earliest time a store in the region was flushed. All other stores in the region
+   *         would have been flushed either at, or after this time.
    */
   long getEarliestFlushTimeForAllStores();
 
@@ -158,16 +157,16 @@ public interface Region extends ConfigurationObserver {
   long getMemStoreDataSize();
 
   /**
-   * @return memstore heap size for this region, in bytes. It accounts data size of cells
-   *         added to the memstores of this Region, as well as java heap overhead for the cell
-   *         objects or any other.
+   * @return memstore heap size for this region, in bytes. It accounts data size of cells added to
+   *         the memstores of this Region, as well as java heap overhead for the cell objects or any
+   *         other.
    */
   long getMemStoreHeapSize();
 
   /**
-   * @return memstore off-heap size for this region, in bytes. It accounts data size of cells
-   *         added to the memstores of this Region, as well as overhead for the cell
-   *         objects or any other that is allocated off-heap.
+   * @return memstore off-heap size for this region, in bytes. It accounts data size of cells added
+   *         to the memstores of this Region, as well as overhead for the cell objects or any other
+   *         that is allocated off-heap.
    */
   long getMemStoreOffHeapSize();
 
@@ -192,84 +191,87 @@ public interface Region extends ConfigurationObserver {
   // Region read locks
 
   /**
-   * Operation enum is used in {@link Region#startRegionOperation} and elsewhere to provide
-   * context for various checks.
+   * Operation enum is used in {@link Region#startRegionOperation} and elsewhere to provide context
+   * for various checks.
    */
   enum Operation {
-    ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE, COMPACT_REGION, REPLAY_EVENT, SNAPSHOT, COMPACT_SWITCH,
+    ANY,
+    GET,
+    PUT,
+    DELETE,
+    SCAN,
+    APPEND,
+    INCREMENT,
+    SPLIT_REGION,
+    MERGE_REGION,
+    BATCH_MUTATE,
+    REPLAY_BATCH_MUTATE,
+    COMPACT_REGION,
+    REPLAY_EVENT,
+    SNAPSHOT,
+    COMPACT_SWITCH,
     CHECK_AND_MUTATE
   }
 
   /**
-   * This method needs to be called before any public call that reads or
-   * modifies data.
-   * Acquires a read lock and checks if the region is closing or closed.
-   * <p>{@link #closeRegionOperation} MUST then always be called after
-   * the operation has completed, whether it succeeded or failed.
-   * @throws IOException
+   * This method needs to be called before any public call that reads or modifies data. Acquires a
+   * read lock and checks if the region is closing or closed.
+   * <p>
+   * {@link #closeRegionOperation} MUST then always be called after the operation has completed,
+   * whether it succeeded or failed. n
    */
   // TODO Exposing this and closeRegionOperation() as we have getRowLock() exposed.
   // Remove if we get rid of exposing getRowLock().
   void startRegionOperation() throws IOException;
 
   /**
-   * This method needs to be called before any public call that reads or
-   * modifies data.
-   * Acquires a read lock and checks if the region is closing or closed.
-   * <p>{@link #closeRegionOperation} MUST then always be called after
-   * the operation has completed, whether it succeeded or failed.
-   * @param op The operation is about to be taken on the region
-   * @throws IOException
+   * This method needs to be called before any public call that reads or modifies data. Acquires a
+   * read lock and checks if the region is closing or closed.
+   * <p>
+   * {@link #closeRegionOperation} MUST then always be called after the operation has completed,
+   * whether it succeeded or failed.
+   * @param op The operation is about to be taken on the region n
    */
   void startRegionOperation(Operation op) throws IOException;
 
   /**
-   * Closes the region operation lock.
-   * @throws IOException
+   * Closes the region operation lock. n
    */
   void closeRegionOperation() throws IOException;
 
   /**
-   * Closes the region operation lock. This needs to be called in the finally block corresponding
-   * to the try block of {@link #startRegionOperation(Operation)}
-   * @throws IOException
+   * Closes the region operation lock. This needs to be called in the finally block corresponding to
+   * the try block of {@link #startRegionOperation(Operation)} n
    */
   void closeRegionOperation(Operation op) throws IOException;
 
   // Row write locks
 
   /**
-   * Row lock held by a given thread.
-   * One thread may acquire multiple locks on the same row simultaneously.
-   * The locks must be released by calling release() from the same thread.
+   * Row lock held by a given thread. One thread may acquire multiple locks on the same row
+   * simultaneously. The locks must be released by calling release() from the same thread.
    */
   public interface RowLock {
     /**
-     * Release the given lock.  If there are no remaining locks held by the current thread
-     * then unlock the row and allow other threads to acquire the lock.
-     * @throws IllegalArgumentException if called by a different thread than the lock owning
-     *     thread
+     * Release the given lock. If there are no remaining locks held by the current thread then
+     * unlock the row and allow other threads to acquire the lock.
+     * @throws IllegalArgumentException if called by a different thread than the lock owning thread
      */
     void release();
   }
 
   /**
-   *
-   * Get a row lock for the specified row. All locks are reentrant.
-   *
-   * Before calling this function make sure that a region operation has already been
-   * started (the calling thread has already acquired the region-close-guard lock).
+   * Get a row lock for the specified row. All locks are reentrant. Before calling this function
+   * make sure that a region operation has already been started (the calling thread has already
+   * acquired the region-close-guard lock).
    * <p>
    * The obtained locks should be released after use by {@link RowLock#release()}
    * <p>
-   * NOTE: the boolean passed here has changed. It used to be a boolean that
-   * stated whether or not to wait on the lock. Now it is whether it an exclusive
-   * lock is requested.
-   *
-   * @param row The row actions will be performed against
-   * @param readLock is the lock reader or writer. True indicates that a non-exclusive
-   * lock is requested
+   * NOTE: the boolean passed here has changed. It used to be a boolean that stated whether or not
+   * to wait on the lock. Now it is whether it an exclusive lock is requested.
+   * @param row      The row actions will be performed against
+   * @param readLock is the lock reader or writer. True indicates that a non-exclusive lock is
+   *                 requested
    * @see #startRegionOperation()
    * @see #startRegionOperation(Operation)
    */
@@ -281,10 +283,7 @@ public interface Region extends ConfigurationObserver {
   // Region operations
 
   /**
-   * Perform one or more append operations on a row.
-   * @param append
-   * @return result of the operation
-   * @throws IOException
+   * Perform one or more append operations on a row. n * @return result of the operation n
    */
   Result append(Append append) throws IOException;
 
@@ -293,106 +292,97 @@ public interface Region extends ConfigurationObserver {
    * <p>
    * Please do not operate on a same column of a single row in a batch, we will not consider the
    * previous operation in the same batch when performing the operations in the batch.
-   *
    * @param mutations the list of mutations
-   * @return an array of OperationStatus which internally contains the
-   *         OperationStatusCode and the exceptionMessage if any.
-   * @throws IOException
+   * @return an array of OperationStatus which internally contains the OperationStatusCode and the
+   *         exceptionMessage if any. n
    */
-  OperationStatus[] batchMutate(Mutation[] mutations)
-      throws IOException;
+  OperationStatus[] batchMutate(Mutation[] mutations) throws IOException;
 
   /**
-   * Atomically checks if a row/family/qualifier value matches the expected value and if it does,
-   * it performs the mutation. If the passed value is null, the lack of column value
-   * (ie: non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a
-   * single row.
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op the comparison operator
+   * Atomically checks if a row/family/qualifier value matches the expected value and if it does, it
+   * performs the mutation. If the passed value is null, the lack of column value (ie:
+   * non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a single
+   * row.
+   * @param row        to check
+   * @param family     column family to check
+   * @param qualifier  column qualifier to check
+   * @param op         the comparison operator
    * @param comparator the expected value
-   * @param mutation data to put if check succeeds
+   * @param mutation   data to put if check succeeds
    * @return true if mutation was applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  default boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
+  default boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
     ByteArrayComparable comparator, Mutation mutation) throws IOException {
     return checkAndMutate(row, family, qualifier, op, comparator, TimeRange.allTime(), mutation);
   }
 
   /**
-   * Atomically checks if a row/family/qualifier value matches the expected value and if it does,
-   * it performs the mutation. If the passed value is null, the lack of column value
-   * (ie: non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a
-   * single row.
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op the comparison operator
+   * Atomically checks if a row/family/qualifier value matches the expected value and if it does, it
+   * performs the mutation. If the passed value is null, the lack of column value (ie:
+   * non-existence) is used. See checkAndRowMutate to do many checkAndPuts at a time on a single
+   * row.
+   * @param row        to check
+   * @param family     column family to check
+   * @param qualifier  column qualifier to check
+   * @param op         the comparison operator
    * @param comparator the expected value
-   * @param mutation data to put if check succeeds
-   * @param timeRange time range to check
+   * @param mutation   data to put if check succeeds
+   * @param timeRange  time range to check
    * @return true if mutation was applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
+  boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, TimeRange timeRange, Mutation mutation) throws IOException;
 
   /**
    * Atomically checks if a row matches the filter and if it does, it performs the mutation. See
    * checkAndRowMutate to do many checkAndPuts at a time on a single row.
-   * @param row to check
-   * @param filter the filter
+   * @param row      to check
+   * @param filter   the filter
    * @param mutation data to put if check succeeds
    * @return true if mutation was applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  default boolean checkAndMutate(byte [] row, Filter filter, Mutation mutation)
-    throws IOException {
+  default boolean checkAndMutate(byte[] row, Filter filter, Mutation mutation) throws IOException {
     return checkAndMutate(row, filter, TimeRange.allTime(), mutation);
   }
 
   /**
    * Atomically checks if a row value matches the filter and if it does, it performs the mutation.
    * See checkAndRowMutate to do many checkAndPuts at a time on a single row.
-   * @param row to check
-   * @param filter the filter
-   * @param mutation data to put if check succeeds
+   * @param row       to check
+   * @param filter    the filter
+   * @param mutation  data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutation was applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  boolean checkAndMutate(byte [] row, Filter filter, TimeRange timeRange, Mutation mutation)
+  boolean checkAndMutate(byte[] row, Filter filter, TimeRange timeRange, Mutation mutation)
     throws IOException;
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
-   * it performs the row mutations. If the passed value is null, the lack of column value
-   * (ie: non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate
-   * to do one checkAndMutate at a time.
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op the comparison operator
+   * it performs the row mutations. If the passed value is null, the lack of column value (ie:
+   * non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate to do one
+   * checkAndMutate at a time.
+   * @param row        to check
+   * @param family     column family to check
+   * @param qualifier  column qualifier to check
+   * @param op         the comparison operator
    * @param comparator the expected value
-   * @param mutations data to put if check succeeds
+   * @param mutations  data to put if check succeeds
    * @return true if mutations were applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
   default boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
@@ -403,37 +393,34 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected values and if it does,
-   * it performs the row mutations. If the passed value is null, the lack of column value
-   * (ie: non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate
-   * to do one checkAndMutate at a time.
-   * @param row to check
-   * @param family column family to check
-   * @param qualifier column qualifier to check
-   * @param op the comparison operator
+   * it performs the row mutations. If the passed value is null, the lack of column value (ie:
+   * non-existence) is used. Use to do many mutations on a single row. Use checkAndMutate to do one
+   * checkAndMutate at a time.
+   * @param row        to check
+   * @param family     column family to check
+   * @param qualifier  column qualifier to check
+   * @param op         the comparison operator
    * @param comparator the expected value
-   * @param mutations data to put if check succeeds
-   * @param timeRange time range to check
+   * @param mutations  data to put if check succeeds
+   * @param timeRange  time range to check
    * @return true if mutations were applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier, CompareOperator op,
-      ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations)
-      throws IOException;
+  boolean checkAndRowMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
+    ByteArrayComparable comparator, TimeRange timeRange, RowMutations mutations) throws IOException;
 
   /**
    * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
    * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
    * time.
-   * @param row to check
-   * @param filter the filter
+   * @param row       to check
+   * @param filter    the filter
    * @param mutations data to put if check succeeds
    * @return true if mutations were applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
   default boolean checkAndRowMutate(byte[] row, Filter filter, RowMutations mutations)
@@ -445,23 +432,21 @@ public interface Region extends ConfigurationObserver {
    * Atomically checks if a row matches the filter and if it does, it performs the row mutations.
    * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
    * time.
-   * @param row to check
-   * @param filter the filter
+   * @param row       to check
+   * @param filter    the filter
    * @param mutations data to put if check succeeds
    * @param timeRange time range to check
    * @return true if mutations were applied, false otherwise
-   *
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
-   *   {@link #checkAndMutate(CheckAndMutate)}  instead.
+   *             {@link #checkAndMutate(CheckAndMutate)} instead.
    */
   @Deprecated
-  boolean checkAndRowMutate(byte [] row, Filter filter, TimeRange timeRange,
-    RowMutations mutations) throws IOException;
+  boolean checkAndRowMutate(byte[] row, Filter filter, TimeRange timeRange, RowMutations mutations)
+    throws IOException;
 
   /**
-   * Atomically checks if a row matches the conditions and if it does, it performs the actions.
-   * Use to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a
-   * time.
+   * Atomically checks if a row matches the conditions and if it does, it performs the actions. Use
+   * to do many mutations on a single row. Use checkAndMutate to do one checkAndMutate at a time.
    * @param checkAndMutate the CheckAndMutate object
    * @return true if mutations were applied, false otherwise
    * @throws IOException if an error occurred in this method
@@ -469,9 +454,7 @@ public interface Region extends ConfigurationObserver {
   CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException;
 
   /**
-   * Deletes the specified cells/row.
-   * @param delete
-   * @throws IOException
+   * Deletes the specified cells/row. nn
    */
   void delete(Delete delete) throws IOException;
 
@@ -484,22 +467,18 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Do a get based on the get parameter.
-   * @param get query parameters
-   * @param withCoprocessor invoke coprocessor or not. We don't want to
-   * always invoke cp.
+   * @param get             query parameters
+   * @param withCoprocessor invoke coprocessor or not. We don't want to always invoke cp.
    * @return list of cells resulting from the operation
    */
   List<Cell> get(Get get, boolean withCoprocessor) throws IOException;
 
   /**
-   * Return an iterator that scans over the HRegion, returning the indicated
-   * columns and rows specified by the {@link Scan}.
+   * Return an iterator that scans over the HRegion, returning the indicated columns and rows
+   * specified by the {@link Scan}.
    * <p>
    * This Iterator must be closed by the caller.
-   *
-   * @param scan configured {@link Scan}
-   * @return RegionScanner
-   * @throws IOException read exceptions
+   * @param scan configured {@link Scan} n * @throws IOException read exceptions
    */
   RegionScanner getScanner(Scan scan) throws IOException;
 
@@ -510,11 +489,9 @@ public interface Region extends ConfigurationObserver {
    * pass additional scanners only within this Region
    * <p>
    * This Iterator must be closed by the caller.
-   *
-   * @param scan configured {@link Scan}
-   * @param additionalScanners Any additional scanners to be used
-   * @return RegionScanner
-   * @throws IOException read exceptions
+   * @param scan               configured {@link Scan}
+   * @param additionalScanners Any additional scanners to be used n * @throws IOException read
+   *                           exceptions
    */
   RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException;
 
@@ -522,87 +499,77 @@ public interface Region extends ConfigurationObserver {
   CellComparator getCellComparator();
 
   /**
-   * Perform one or more increment operations on a row.
-   * @param increment
-   * @return result of the operation
-   * @throws IOException
+   * Perform one or more increment operations on a row. n * @return result of the operation n
    */
   Result increment(Increment increment) throws IOException;
 
   /**
    * Performs multiple mutations atomically on a single row.
-   *
    * @param mutations object that specifies the set of mutations to perform atomically
    * @return results of Increment/Append operations. If no Increment/Append operations, it returns
-   *   null
-   * @throws IOException
+   *         null n
    */
   Result mutateRow(RowMutations mutations) throws IOException;
 
   /**
    * Perform atomic mutations within the region.
-   *
-   * @param mutations The list of mutations to perform.
-   * <code>mutations</code> can contain operations for multiple rows.
-   * Caller has to ensure that all rows are contained in this region.
+   * @param mutations  The list of mutations to perform. <code>mutations</code> can contain
+   *                   operations for multiple rows. Caller has to ensure that all rows are
+   *                   contained in this region.
    * @param rowsToLock Rows to lock
    * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
-   * If multiple rows are locked care should be taken that
-   * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
-   * @throws IOException
+   * @param nonce      Optional nonce of the operation (unique random id to ensure "more
+   *                   idempotence") If multiple rows are locked care should be taken that
+   *                   <code>rowsToLock</code> is sorted in order to avoid deadlocks. n
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
   void mutateRowsWithLocks(Collection<Mutation> mutations, Collection<byte[]> rowsToLock,
-      long nonceGroup, long nonce) throws IOException;
+    long nonceGroup, long nonce) throws IOException;
 
   /**
    * Performs atomic multiple reads and writes on a given row.
-   *
    * @param processor The object defines the reads and writes to a row.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
+   *             Coprocessors instead.
    */
   @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor) throws IOException;
+  void processRowsWithLocks(RowProcessor<?, ?> processor) throws IOException;
 
   /**
    * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
+   * @param processor  The object defines the reads and writes to a row.
    * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @param nonce      Optional nonce of the operation (unique random id to ensure "more
+   *                   idempotence")
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
+   *             Coprocessors instead.
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
   @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long nonceGroup, long nonce)
-      throws IOException;
+  void processRowsWithLocks(RowProcessor<?, ?> processor, long nonceGroup, long nonce)
+    throws IOException;
 
   /**
    * Performs atomic multiple reads and writes on a given row.
-   *
-   * @param processor The object defines the reads and writes to a row.
-   * @param timeout The timeout of the processor.process() execution
-   *                Use a negative number to switch off the time bound
+   * @param processor  The object defines the reads and writes to a row.
+   * @param timeout    The timeout of the processor.process() execution Use a negative number to
+   *                   switch off the time bound
    * @param nonceGroup Optional nonce group of the operation (client Id)
-   * @param nonce Optional nonce of the operation (unique random id to ensure "more idempotence")
+   * @param nonce      Optional nonce of the operation (unique random id to ensure "more
+   *                   idempotence")
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. For customization, use
-   * Coprocessors instead.
+   *             Coprocessors instead.
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
   @Deprecated
-  void processRowsWithLocks(RowProcessor<?,?> processor, long timeout, long nonceGroup, long nonce)
-      throws IOException;
+  void processRowsWithLocks(RowProcessor<?, ?> processor, long timeout, long nonceGroup, long nonce)
+    throws IOException;
 
   /**
-   * Puts some data in the table.
-   * @param put
-   * @throws IOException
+   * Puts some data in the table. nn
    */
   void put(Put put) throws IOException;
 
@@ -619,13 +586,13 @@ public interface Region extends ConfigurationObserver {
    * Request compaction on this region.
    */
   void requestCompaction(String why, int priority, boolean major,
-      CompactionLifeCycleTracker tracker) throws IOException;
+    CompactionLifeCycleTracker tracker) throws IOException;
 
   /**
    * Request compaction for the given family
    */
   void requestCompaction(byte[] family, String why, int priority, boolean major,
-      CompactionLifeCycleTracker tracker) throws IOException;
+    CompactionLifeCycleTracker tracker) throws IOException;
 
   /**
    * Request flush on this region.
@@ -634,10 +601,9 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Wait for all current flushes of the region to complete
-   *
    * @param timeout The maximum time to wait in milliseconds.
    * @return False when timeout elapsed but flushes are not over. True when flushes are over within
-   * max wait time period.
+   *         max wait time period.
    */
   boolean waitForFlushes(long timeout);
 

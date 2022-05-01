@@ -59,19 +59,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
  * removed when old non-secure client for backward compatibility is not supported.
  */
 @RunWith(Parameterized.class)
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 @Ignore // BROKEN. FIX OR REMOVE.
 public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionServerBulkLoad {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
+    HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
 
   public TestHRegionServerBulkLoadWithOldSecureEndpoint(int duration) {
     super(duration);
   }
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
+    LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
@@ -86,15 +86,14 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
     private TableName tableName;
 
     public AtomicHFileLoader(TableName tableName, TestContext ctx, byte[][] targetFamilies)
-            throws IOException {
+      throws IOException {
       super(ctx);
       this.tableName = tableName;
     }
 
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
-      Path dir =  UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d",
-          iteration));
+      Path dir = UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d", iteration));
 
       // create HFiles for different column families
       FileSystem fs = UTIL.getTestFileSystem();
@@ -112,20 +111,19 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       Table table = conn.getTable(tableName);
       final String bulkToken = new SecureBulkLoadEndpointClient(table).prepareBulkLoad(tableName);
       RpcControllerFactory rpcControllerFactory = new RpcControllerFactory(UTIL.getConfiguration());
-      ClientServiceCallable<Void> callable =
-        new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
-          @Override
-          protected Void rpcCall() throws Exception {
-            LOG.debug("Going to connect to server " + getLocation() + " for row " +
-                Bytes.toStringBinary(getRow()));
-            try (Table table = conn.getTable(getTableName())) {
-              boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths,
-                  null, bulkToken, getLocation().getRegionInfo().getStartKey());
-            }
-            return null;
+      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, tableName,
+        Bytes.toBytes("aaa"), rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+        @Override
+        protected Void rpcCall() throws Exception {
+          LOG.debug("Going to connect to server " + getLocation() + " for row "
+            + Bytes.toStringBinary(getRow()));
+          try (Table table = conn.getTable(getTableName())) {
+            boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths, null,
+              bulkToken, getLocation().getRegionInfo().getStartKey());
           }
-        };
+          return null;
+        }
+      };
       RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
       caller.callWithRetries(callable, Integer.MAX_VALUE);
@@ -134,16 +132,14 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       if (numBulkLoads.get() % 5 == 0) {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-            rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
           @Override
           protected Void rpcCall() throws Exception {
-            LOG.debug("compacting " + getLocation() + " for row "
-                + Bytes.toStringBinary(getRow()));
+            LOG.debug("compacting " + getLocation() + " for row " + Bytes.toStringBinary(getRow()));
             AdminProtos.AdminService.BlockingInterface server =
               conn.getAdmin(getLocation().getServerName());
-            CompactRegionRequest request =
-              RequestConverter.buildCompactRegionRequest(
-                getLocation().getRegionInfo().getRegionName(), true, null);
+            CompactRegionRequest request = RequestConverter
+              .buildCompactRegionRequest(getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;
@@ -155,7 +151,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
   }
 
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
-          throws Exception {
+    throws Exception {
     setupTable(tableName, 10);
 
     TestContext ctx = new TestContext(UTIL.getConfiguration());

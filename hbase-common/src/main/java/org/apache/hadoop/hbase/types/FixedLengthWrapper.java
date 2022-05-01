@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,9 @@ import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Wraps an existing {@link DataType} implementation as a fixed-length
- * version of itself. This has the useful side-effect of turning an existing
- * {@link DataType} which is not {@code skippable} into a {@code skippable}
- * variant.
+ * Wraps an existing {@link DataType} implementation as a fixed-length version of itself. This has
+ * the useful side-effect of turning an existing {@link DataType} which is not {@code skippable}
+ * into a {@code skippable} variant.
  */
 @InterfaceAudience.Public
 public class FixedLengthWrapper<T> implements DataType<T> {
@@ -36,7 +35,7 @@ public class FixedLengthWrapper<T> implements DataType<T> {
 
   /**
    * Create a fixed-length version of the {@code wrapped}.
-   * @param base the {@link DataType} to restrict to a fixed length.
+   * @param base   the {@link DataType} to restrict to a fixed length.
    * @param length the maximum length (in bytes) for encoded values.
    */
   public FixedLengthWrapper(DataType<T> base, int length) {
@@ -90,9 +89,9 @@ public class FixedLengthWrapper<T> implements DataType<T> {
   @Override
   public T decode(PositionedByteRange src) {
     if (src.getRemaining() < length) {
-      throw new IllegalArgumentException("Not enough buffer remaining. src.offset: "
-          + src.getOffset() + " src.length: " + src.getLength() + " src.position: "
-          + src.getPosition() + " max length: " + length);
+      throw new IllegalArgumentException(
+        "Not enough buffer remaining. src.offset: " + src.getOffset() + " src.length: "
+          + src.getLength() + " src.position: " + src.getPosition() + " max length: " + length);
     }
     // create a copy range limited to length bytes. boo.
     PositionedByteRange b = new SimplePositionedMutableByteRange(length);
@@ -103,14 +102,14 @@ public class FixedLengthWrapper<T> implements DataType<T> {
   @Override
   public int encode(PositionedByteRange dst, T val) {
     if (dst.getRemaining() < length) {
-      throw new IllegalArgumentException("Not enough buffer remaining. dst.offset: "
-          + dst.getOffset() + " dst.length: " + dst.getLength() + " dst.position: "
-          + dst.getPosition() + " max length: " + length);
+      throw new IllegalArgumentException(
+        "Not enough buffer remaining. dst.offset: " + dst.getOffset() + " dst.length: "
+          + dst.getLength() + " dst.position: " + dst.getPosition() + " max length: " + length);
     }
     int written = base.encode(dst, val);
     if (written > length) {
-      throw new IllegalArgumentException("Length of encoded value (" + written
-          + ") exceeds max length (" + length + ").");
+      throw new IllegalArgumentException(
+        "Length of encoded value (" + written + ") exceeds max length (" + length + ").");
     }
     // TODO: is the zero-padding appropriate?
     for (; written < length; written++) {

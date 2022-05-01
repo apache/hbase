@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The context object used in the {@link RpcRetryingCaller} to enable
- * {@link RetryingCallerInterceptor} to intercept calls.
- * {@link RetryingCallerInterceptorContext} is the piece of information unique
- * to a retrying call that transfers information from the call into the
- * {@link RetryingCallerInterceptor} so that {@link RetryingCallerInterceptor}
- * can take appropriate action according to the specific logic
- *
+ * {@link RetryingCallerInterceptor} to intercept calls. {@link RetryingCallerInterceptorContext} is
+ * the piece of information unique to a retrying call that transfers information from the call into
+ * the {@link RetryingCallerInterceptor} so that {@link RetryingCallerInterceptor} can take
+ * appropriate action according to the specific logic
  */
 @InterfaceAudience.Private
 abstract class RetryingCallerInterceptorContext {
@@ -39,29 +37,19 @@ abstract class RetryingCallerInterceptorContext {
   public abstract void clear();
 
   /**
-   * This prepares the context object by populating it with information specific
-   * to the implementation of the {@link RetryingCallerInterceptor} along with
-   * which this will be used.
-   * 
-   * @param callable
-   *          : The {@link RetryingCallable} that contains the information about
-   *          the call that is being made.
-   * @return A new {@link RetryingCallerInterceptorContext} object that can be
-   *         used for use in the current retrying call
+   * This prepares the context object by populating it with information specific to the
+   * implementation of the {@link RetryingCallerInterceptor} along with which this will be used. n *
+   * : The {@link RetryingCallable} that contains the information about the call that is being made.
+   * @return A new {@link RetryingCallerInterceptorContext} object that can be used for use in the
+   *         current retrying call
    */
   public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable);
 
   /**
-   * Telescopic extension that takes which of the many retries we are currently
-   * in.
-   * 
-   * @param callable
-   *          : The {@link RetryingCallable} that contains the information about
-   *          the call that is being made.
-   * @param tries
-   *          : The retry number that we are currently in.
-   * @return A new context object that can be used for use in the current
-   *         retrying call
+   * Telescopic extension that takes which of the many retries we are currently in. n * : The
+   * {@link RetryingCallable} that contains the information about the call that is being made. n * :
+   * The retry number that we are currently in.
+   * @return A new context object that can be used for use in the current retrying call
    */
   public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable, int tries);
 }

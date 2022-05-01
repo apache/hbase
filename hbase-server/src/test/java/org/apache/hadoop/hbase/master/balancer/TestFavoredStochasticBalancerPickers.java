@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,10 +74,10 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFavoredStochasticBalancerPickers.class);
+    HBaseClassTestRule.forClass(TestFavoredStochasticBalancerPickers.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFavoredStochasticBalancerPickers.class);
+    LoggerFactory.getLogger(TestFavoredStochasticBalancerPickers.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int SLAVES = 6;
@@ -95,7 +95,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     conf = TEST_UTIL.getConfiguration();
     // Enable favored nodes based load balancer
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
+      LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 30000);
     conf.setInt("hbase.master.balancer.stochastic.moveCost", 0);
     conf.setBoolean("hbase.master.balancer.stochastic.execute.maxSteps", true);
@@ -106,7 +106,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   public void startCluster() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.getDFSCluster().waitClusterUp();
-    TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster(120*1000);
+    TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster(120 * 1000);
     cluster = TEST_UTIL.getMiniHBaseCluster();
     admin = TEST_UTIL.getAdmin();
     admin.setBalancerRunning(false, true);
@@ -118,16 +118,13 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-
   @Test
   public void testPickers() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     ColumnFamilyDescriptor columnFamilyDescriptor =
-        ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).build();
-    TableDescriptor desc = TableDescriptorBuilder
-        .newBuilder(tableName)
-        .setColumnFamily(columnFamilyDescriptor)
-        .build();
+      ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY).build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(columnFamilyDescriptor).build();
     admin.createTable(desc, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGIONS);
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     TEST_UTIL.loadTable(admin.getConnection().getTable(tableName), HConstants.CATALOG_FAMILY);
@@ -144,7 +141,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     // Lets find another server with more regions to calculate number of regions to move
     ServerName source = getRSWithMaxRegions(tableName, excludedServers);
     assertNotNull(source);
-    int regionsToMove = getTableRegionsFromServer(tableName, source).size()/2;
+    int regionsToMove = getTableRegionsFromServer(tableName, source).size() / 2;
 
     // Since move only works if the target is part of favored nodes of the region, lets get all
     // regions that are movable to mostLoadedServer
@@ -157,8 +154,8 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return ServerName.isSameAddress(
-              rst.getRegionServerOfRegion(regionInfo), mostLoadedServer);
+          return ServerName.isSameAddress(rst.getRegionServerOfRegion(regionInfo),
+            mostLoadedServer);
         }
       });
     }
@@ -186,18 +183,19 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
     regionFinder.setServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     Cluster cluster = new Cluster(serverAssignments, null, regionFinder, new RackManager(conf));
     LoadOnlyFavoredStochasticBalancer balancer = (LoadOnlyFavoredStochasticBalancer) TEST_UTIL
-        .getMiniHBaseCluster().getMaster().getLoadBalancer();
+      .getMiniHBaseCluster().getMaster().getLoadBalancer();
 
     cluster.sortServersByRegionCount();
     Integer[] servers = cluster.serverIndicesSortedByRegionCount;
     LOG.info("Servers sorted by region count:" + Arrays.toString(servers));
     LOG.info("Cluster dump: " + cluster);
-    if (!mostLoadedServer.equals(cluster.servers[servers[servers.length -1]])) {
+    if (!mostLoadedServer.equals(cluster.servers[servers[servers.length - 1]])) {
       LOG.error("Most loaded server: " + mostLoadedServer + " does not match: "
-          + cluster.servers[servers[servers.length -1]]);
+        + cluster.servers[servers[servers.length - 1]]);
     }
-    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length -1]]);
-    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker = balancer.new FavoredNodeLoadPicker();
+    assertEquals(mostLoadedServer, cluster.servers[servers[servers.length - 1]]);
+    FavoredStochasticBalancer.FavoredNodeLoadPicker loadPicker =
+      balancer.new FavoredNodeLoadPicker();
     boolean userRegionPicked = false;
     for (int i = 0; i < 100; i++) {
       if (userRegionPicked) {
@@ -212,8 +210,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
           assertEquals(cluster.servers[moveRegionAction.fromServer], mostLoadedServer);
           if (!region.getTable().isSystemTable()) {
             List<ServerName> favNodes = fnm.getFavoredNodes(region);
-            assertTrue(favNodes.contains(
-              ServerName.valueOf(destinationServer.getAddress(), -1)));
+            assertTrue(favNodes.contains(ServerName.valueOf(destinationServer.getAddress(), -1)));
             userRegionPicked = true;
           }
         }
@@ -223,17 +220,18 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   }
 
   /*
-   * A region can only be moved to one of its favored node. Hence this method helps us to
-   * get that list which makes it easy to write non-flaky tests.
+   * A region can only be moved to one of its favored node. Hence this method helps us to get that
+   * list which makes it easy to write non-flaky tests.
    */
-  private List<RegionInfo> getRegionsThatCanBeMoved(TableName tableName,
-      ServerName serverName) {
+  private List<RegionInfo> getRegionsThatCanBeMoved(TableName tableName, ServerName serverName) {
     List<RegionInfo> regions = Lists.newArrayList();
     RegionStates rst = cluster.getMaster().getAssignmentManager().getRegionStates();
     FavoredNodesManager fnm = cluster.getMaster().getFavoredNodesManager();
     for (RegionInfo regionInfo : fnm.getRegionsOfFavoredNode(serverName)) {
-      if (regionInfo.getTable().equals(tableName) &&
-          !ServerName.isSameAddress(rst.getRegionServerOfRegion(regionInfo), serverName)) {
+      if (
+        regionInfo.getTable().equals(tableName)
+          && !ServerName.isSameAddress(rst.getRegionServerOfRegion(regionInfo), serverName)
+      ) {
         regions.add(regionInfo);
       }
     }
@@ -241,7 +239,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   }
 
   private List<RegionInfo> getTableRegionsFromServer(TableName tableName, ServerName source)
-      throws IOException {
+    throws IOException {
     List<RegionInfo> regionInfos = Lists.newArrayList();
     HRegionServer regionServer = cluster.getRegionServer(source);
     for (Region region : regionServer.getRegions(tableName)) {
@@ -251,7 +249,7 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
   }
 
   private ServerName getRSWithMaxRegions(TableName tableName, List<ServerName> excludeNodes)
-      throws IOException {
+    throws IOException {
 
     int maxRegions = 0;
     ServerName maxLoadedServer = null;
@@ -260,8 +258,10 @@ public class TestFavoredStochasticBalancerPickers extends BalancerTestBase {
       List<HRegion> regions = rst.getRegionServer().getRegions(tableName);
       LOG.debug("Server: " + rst.getRegionServer().getServerName() + " regions: " + regions.size());
       if (regions.size() > maxRegions) {
-        if (excludeNodes == null ||
-            !doesMatchExcludeNodes(excludeNodes, rst.getRegionServer().getServerName())) {
+        if (
+          excludeNodes == null
+            || !doesMatchExcludeNodes(excludeNodes, rst.getRegionServer().getServerName())
+        ) {
           maxRegions = regions.size();
           maxLoadedServer = rst.getRegionServer().getServerName();
         }

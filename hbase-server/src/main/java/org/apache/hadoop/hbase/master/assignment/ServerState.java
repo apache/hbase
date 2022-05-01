@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,15 +35,14 @@ public enum ServerState {
   CRASHED,
 
   /**
-   * Only server which carries meta can have this state. We will split wal for meta and then
-   * assign meta first before splitting other wals.
+   * Only server which carries meta can have this state. We will split wal for meta and then assign
+   * meta first before splitting other wals.
    */
   SPLITTING_META,
 
   /**
-   * Indicate that the meta splitting is done. We need this state so that the UnassignProcedure
-   * for meta can safely quit. See the comments in UnassignProcedure.remoteCallFailed for more
-   * details.
+   * Indicate that the meta splitting is done. We need this state so that the UnassignProcedure for
+   * meta can safely quit. See the comments in UnassignProcedure.remoteCallFailed for more details.
    */
   SPLITTING_META_DONE,
 

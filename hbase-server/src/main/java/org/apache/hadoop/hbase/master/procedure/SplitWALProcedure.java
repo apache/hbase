@@ -37,16 +37,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
- * The procedure is to split a WAL. It will get an available region server and
- * schedule a {@link SplitWALRemoteProcedure} to actually send the request to region
- * server to split this WAL.
- * It also check if the split wal task really succeed. If the WAL still exists, it will
- * schedule another region server to split this WAL.
+ * The procedure is to split a WAL. It will get an available region server and schedule a
+ * {@link SplitWALRemoteProcedure} to actually send the request to region server to split this WAL.
+ * It also check if the split wal task really succeed. If the WAL still exists, it will schedule
+ * another region server to split this WAL.
  */
 @InterfaceAudience.Private
 public class SplitWALProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.SplitWALState>
-    implements ServerProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.SplitWALState>
+  implements ServerProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(SplitWALProcedure.class);
   private String walPath;
   private ServerName worker;
@@ -63,7 +62,7 @@ public class SplitWALProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, MasterProcedureProtos.SplitWALState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
     switch (state) {
       case ACQUIRE_SPLIT_WAL_WORKER:
@@ -106,8 +105,7 @@ public class SplitWALProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env,
-      MasterProcedureProtos.SplitWALState splitOneWalState)
-      throws IOException, InterruptedException {
+    MasterProcedureProtos.SplitWALState splitOneWalState) throws IOException, InterruptedException {
     if (splitOneWalState == getInitialState()) {
       return;
     }
@@ -133,7 +131,7 @@ public class SplitWALProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     MasterProcedureProtos.SplitWALData.Builder builder =
-        MasterProcedureProtos.SplitWALData.newBuilder();
+      MasterProcedureProtos.SplitWALData.newBuilder();
     builder.setWalPath(walPath).setCrashedServer(ProtobufUtil.toServerName(crashedServer));
     if (worker != null) {
       builder.setWorker(ProtobufUtil.toServerName(worker));
@@ -145,7 +143,7 @@ public class SplitWALProcedure
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     MasterProcedureProtos.SplitWALData data =
-        serializer.deserialize(MasterProcedureProtos.SplitWALData.class);
+      serializer.deserialize(MasterProcedureProtos.SplitWALData.class);
     walPath = data.getWalPath();
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
     if (data.hasWorker()) {
@@ -164,7 +162,7 @@ public class SplitWALProcedure
     return walPath;
   }
 
-  public ServerName getWorker(){
+  public ServerName getWorker() {
     return worker;
   }
 
@@ -184,16 +182,19 @@ public class SplitWALProcedure
   }
 
   @Override
-  protected void afterReplay(MasterProcedureEnv env){
+  protected void afterReplay(MasterProcedureEnv env) {
     if (worker != null) {
-      if (env != null && env.getMasterServices() != null &&
-          env.getMasterServices().getSplitWALManager() != null) {
+      if (
+        env != null && env.getMasterServices() != null
+          && env.getMasterServices().getSplitWALManager() != null
+      ) {
         env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
       }
     }
   }
 
-  @Override protected void toStringClassDetails(StringBuilder builder) {
+  @Override
+  protected void toStringClassDetails(StringBuilder builder) {
     builder.append(getProcName());
     if (this.worker != null) {
       builder.append(", worker=");
@@ -205,16 +206,17 @@ public class SplitWALProcedure
     }
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + getWALNameFromStrPath(getWAL());
   }
 
   /**
    * @return Return the WAL filename when given a Path-as-a-string; i.e. return the last path
-   *   component only.
+   *         component only.
    */
   static String getWALNameFromStrPath(String path) {
     int slashIndex = path.lastIndexOf('/');
-    return slashIndex != -1? path.substring(slashIndex + 1): path;
+    return slashIndex != -1 ? path.substring(slashIndex + 1) : path;
   }
 }

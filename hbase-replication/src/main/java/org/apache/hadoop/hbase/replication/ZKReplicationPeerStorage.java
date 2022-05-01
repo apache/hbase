@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -31,12 +30,14 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
+
 /**
  * ZK based replication peer storage.
  */
 @InterfaceAudience.Private
 public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
-    implements ReplicationPeerStorage {
+  implements ReplicationPeerStorage {
 
   public static final String PEERS_ZNODE = "zookeeper.znode.replication.peers";
   public static final String PEERS_ZNODE_DEFAULT = "peers";
@@ -77,7 +78,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       ZKUtil.createWithParents(zookeeper, peersZNode);
       ZKUtil.multiOrSequential(zookeeper,
@@ -89,7 +90,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
         false);
     } catch (KeeperException e) {
       throw new ReplicationException("Could not add peer with id=" + peerId + ", peerConfif=>"
-          + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"), e);
+        + peerConfig + ", state=" + (enabled ? "ENABLED" : "DISABLED"), e);
     }
   }
 
@@ -114,13 +115,13 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(peerId),
         ReplicationPeerConfigUtil.toByteArray(peerConfig));
     } catch (KeeperException e) {
       throw new ReplicationException(
-          "There was a problem trying to save changes to the " + "replication peer " + peerId, e);
+        "There was a problem trying to save changes to the " + "replication peer " + peerId, e);
     }
   }
 
@@ -154,13 +155,13 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
     }
     if (data == null || data.length == 0) {
       throw new ReplicationException(
-          "Replication peer config data shouldn't be empty, peerId=" + peerId);
+        "Replication peer config data shouldn't be empty, peerId=" + peerId);
     }
     try {
       return ReplicationPeerConfigUtil.parsePeerFrom(data);
     } catch (DeserializationException e) {
       throw new ReplicationException(
-          "Failed to parse replication peer config for peer with id=" + peerId, e);
+        "Failed to parse replication peer config for peer with id=" + peerId, e);
     }
   }
 }

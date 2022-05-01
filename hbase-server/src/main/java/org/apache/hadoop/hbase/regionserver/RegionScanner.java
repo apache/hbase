@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -45,20 +43,14 @@ public interface RegionScanner extends InternalScanner {
   boolean isFilterDone() throws IOException;
 
   /**
-   * Do a reseek to the required row. Should not be used to seek to a key which
-   * may come before the current position. Always seeks to the beginning of a
-   * row boundary.
-   *
-   * @throws IOException
-   * @throws IllegalArgumentException
-   *           if row is null
-   *
+   * Do a reseek to the required row. Should not be used to seek to a key which may come before the
+   * current position. Always seeks to the beginning of a row boundary. nn * if row is null
    */
   boolean reseek(byte[] row) throws IOException;
 
   /**
    * @return The preferred max buffersize. See
-   * {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
+   *         {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
    */
   long getMaxResultSize();
 
@@ -106,13 +98,12 @@ public interface RegionScanner extends InternalScanner {
    *   region.closeRegionOperation();
    * }
    * </code>
-   * @param result return output array
+   * @param result         return output array
    * @param scannerContext The {@link ScannerContext} instance encapsulating all limits that should
-   *          be tracked during calls to this method. The progress towards these limits can be
-   *          tracked within this instance.
+   *                       be tracked during calls to this method. The progress towards these limits
+   *                       can be tracked within this instance.
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result, ScannerContext scannerContext)
-      throws IOException;
+  boolean nextRaw(List<Cell> result, ScannerContext scannerContext) throws IOException;
 }

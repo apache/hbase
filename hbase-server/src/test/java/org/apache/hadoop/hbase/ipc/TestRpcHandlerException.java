@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestRpcHandlerException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRpcHandlerException.class);
+    HBaseClassTestRule.forClass(TestRpcHandlerException.class);
 
   private final static Configuration CONF = HBaseConfiguration.create();
 
@@ -78,7 +78,7 @@ public class TestRpcHandlerException {
   @Parameters(name = "{index}: rpcServerImpl={0}")
   public static Collection<Object[]> parameters() {
     return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
-        new Object[] { NettyRpcServer.class.getName() });
+      new Object[] { NettyRpcServer.class.getName() });
   }
 
   @Parameter(0)
@@ -95,8 +95,8 @@ public class TestRpcHandlerException {
     CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
     RpcScheduler scheduler = new SimpleRpcScheduler(CONF, 2, 0, 0, 0, qosFunction, abortable, 0);
     RpcServer rpcServer = RpcServerFactory.createRpcServer(null, "testRpcServer",
-        Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
-        new InetSocketAddress("localhost", 0), CONF, scheduler);
+      Lists.newArrayList(new BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+      new InetSocketAddress("localhost", 0), CONF, scheduler);
     try (BlockingRpcClient client = new BlockingRpcClient(CONF)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());

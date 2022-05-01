@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,14 +32,13 @@ public abstract class Hash {
   /** Constant to denote {@link JenkinsHash}. */
   public static final int JENKINS_HASH = 0;
   /** Constant to denote {@link MurmurHash}. */
-  public static final int MURMUR_HASH  = 1;
+  public static final int MURMUR_HASH = 1;
   /** Constant to denote {@link MurmurHash3}. */
   public static final int MURMUR_HASH3 = 2;
 
   /**
-   * This utility method converts String representation of hash function name
-   * to a symbolic constant. Currently three function types are supported,
-   * "jenkins", "murmur" and "murmur3".
+   * This utility method converts String representation of hash function name to a symbolic
+   * constant. Currently three function types are supported, "jenkins", "murmur" and "murmur3".
    * @param name hash function name
    * @return one of the predefined constants
    */
@@ -58,8 +55,7 @@ public abstract class Hash {
   }
 
   /**
-   * This utility method converts the name of the configured
-   * hash type to a symbolic constant.
+   * This utility method converts the name of the configured hash type to a symbolic constant.
    * @param conf configuration
    * @return one of the predefined constants
    */
@@ -87,8 +83,7 @@ public abstract class Hash {
   }
 
   /**
-   * Get a singleton instance of hash function of a type
-   * defined in the configuration.
+   * Get a singleton instance of hash function of a type defined in the configuration.
    * @param conf current configuration
    * @return defined hash type, or null if type is invalid
    */

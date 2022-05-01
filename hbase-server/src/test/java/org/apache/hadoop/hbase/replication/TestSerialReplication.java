@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -119,8 +119,8 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         Long seqId = regionsToSeqId.get(encodedName);
         assertNotNull(
           "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to " +
-          entry.getKey().getSequenceId() + " for " + encodedName,
+        assertTrue("Sequence id go backwards from " + seqId + " to "
+          + entry.getKey().getSequenceId() + " for " + encodedName,
           entry.getKey().getSequenceId() >= seqId.longValue());
         if (count < 100) {
           assertEquals(encodedName + " is pushed before parent " + region.getEncodedName(),
@@ -180,13 +180,13 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         Long seqId = regionsToSeqId.get(encodedName);
         assertNotNull(
           "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to " +
-          entry.getKey().getSequenceId() + " for " + encodedName,
+        assertTrue("Sequence id go backwards from " + seqId + " to "
+          + entry.getKey().getSequenceId() + " for " + encodedName,
           entry.getKey().getSequenceId() >= seqId.longValue());
         if (count < 100) {
           assertNotEquals(
-            encodedName + " is pushed before parents " +
-              regions.stream().map(RegionInfo::getEncodedName).collect(Collectors.joining(" and ")),
+            encodedName + " is pushed before parents " + regions.stream()
+              .map(RegionInfo::getEncodedName).collect(Collectors.joining(" and ")),
             region.getEncodedName(), encodedName);
         } else {
           assertEquals(region.getEncodedName(), encodedName);

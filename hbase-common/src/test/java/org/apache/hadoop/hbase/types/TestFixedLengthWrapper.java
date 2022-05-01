@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,22 +31,20 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestFixedLengthWrapper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFixedLengthWrapper.class);
+    HBaseClassTestRule.forClass(TestFixedLengthWrapper.class);
 
-  static final byte[][] VALUES = new byte[][] {
-    Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
-    Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
-    Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"),
-  };
+  static final byte[][] VALUES =
+    new byte[][] { Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
+      Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
+      Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"), };
 
   /**
-   * all values of {@code limit} are >= max length of a member of
-   * {@code VALUES}.
+   * all values of {@code limit} are >= max length of a member of {@code VALUES}.
    */
   static final int[] limits = { 9, 12, 15 };
 

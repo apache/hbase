@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,25 +22,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * Filter that returns only cells whose timestamp (version) is
- * in the specified list of timestamps (versions).
+ * Filter that returns only cells whose timestamp (version) is in the specified list of timestamps
+ * (versions).
  * <p>
- * Note: Use of this filter overrides any time range/time stamp
- * options specified using {@link org.apache.hadoop.hbase.client.Get#setTimeRange(long, long)},
+ * Note: Use of this filter overrides any time range/time stamp options specified using
+ * {@link org.apache.hadoop.hbase.client.Get#setTimeRange(long, long)},
  * {@link org.apache.hadoop.hbase.client.Scan#setTimeRange(long, long)},
- * {@link org.apache.hadoop.hbase.client.Get#setTimestamp(long)},
- * or {@link org.apache.hadoop.hbase.client.Scan#setTimestamp(long)}.
+ * {@link org.apache.hadoop.hbase.client.Get#setTimestamp(long)}, or
+ * {@link org.apache.hadoop.hbase.client.Scan#setTimestamp(long)}.
  */
 @InterfaceAudience.Public
 public class TimestampsFilter extends FilterBase {
@@ -54,23 +54,19 @@ public class TimestampsFilter extends FilterBase {
   long minTimestamp = Long.MAX_VALUE;
 
   /**
-   * Constructor for filter that retains only the specified timestamps in the list.
-   * @param timestamps
+   * Constructor for filter that retains only the specified timestamps in the list. n
    */
   public TimestampsFilter(List<Long> timestamps) {
     this(timestamps, false);
   }
 
   /**
-   * Constructor for filter that retains only those
-   * cells whose timestamp (version) is in the specified
-   * list of timestamps.
-   *
+   * Constructor for filter that retains only those cells whose timestamp (version) is in the
+   * specified list of timestamps.
    * @param timestamps list of timestamps that are wanted.
-   * @param canHint should the filter provide a seek hint? This can skip
-   *                past delete tombstones, so it should only be used when that
-   *                is not an issue ( no deletes, or don't care if data
-   *                becomes visible)
+   * @param canHint    should the filter provide a seek hint? This can skip past delete tombstones,
+   *                   so it should only be used when that is not an issue ( no deletes, or don't
+   *                   care if data becomes visible)
    */
   public TimestampsFilter(List<Long> timestamps, boolean canHint) {
     for (Long timestamp : timestamps) {
@@ -98,7 +94,7 @@ public class TimestampsFilter extends FilterBase {
 
   /**
    * Gets the minimum timestamp requested by filter.
-   * @return  minimum timestamp requested by filter.
+   * @return minimum timestamp requested by filter.
    */
   public long getMin() {
     return minTimestamp;
@@ -128,13 +124,10 @@ public class TimestampsFilter extends FilterBase {
     return canHint ? ReturnCode.SEEK_NEXT_USING_HINT : ReturnCode.SKIP;
   }
 
-
   /**
-   * Pick the next cell that the scanner should seek to. Since this can skip any number of cells
-   * any of which can be a delete this can resurect old data.
-   *
-   * The method will only be used if canHint was set to true while creating the filter.
-   *
+   * Pick the next cell that the scanner should seek to. Since this can skip any number of cells any
+   * of which can be a delete this can resurect old data. The method will only be used if canHint
+   * was set to true while creating the filter.
    * @throws IOException This will never happen.
    */
   @Override
@@ -163,9 +156,9 @@ public class TimestampsFilter extends FilterBase {
     return PrivateCellUtil.createFirstOnRowColTS(currentCell, nextTimestamp);
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     ArrayList<Long> timestamps = new ArrayList<>(filterArguments.size());
-    for (int i = 0; i<filterArguments.size(); i++) {
+    for (int i = 0; i < filterArguments.size(); i++) {
       long timestamp = ParseFilter.convertByteArrayToLong(filterArguments.get(i));
       timestamps.add(timestamp);
     }
@@ -177,8 +170,7 @@ public class TimestampsFilter extends FilterBase {
    */
   @Override
   public byte[] toByteArray() {
-    FilterProtos.TimestampsFilter.Builder builder =
-        FilterProtos.TimestampsFilter.newBuilder();
+    FilterProtos.TimestampsFilter.Builder builder = FilterProtos.TimestampsFilter.newBuilder();
     builder.addAllTimestamps(this.timestamps);
     builder.setCanHint(canHint);
     return builder.build().toByteArray();
@@ -186,12 +178,10 @@ public class TimestampsFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link TimestampsFilter} instance
-   *
    * @return An instance of {@link TimestampsFilter} made from <code>bytes</code>
    * @see #toByteArray
    */
-  public static TimestampsFilter parseFrom(final byte[] pbBytes)
-      throws DeserializationException {
+  public static TimestampsFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.TimestampsFilter proto;
     try {
       proto = FilterProtos.TimestampsFilter.parseFrom(pbBytes);
@@ -199,20 +189,20 @@ public class TimestampsFilter extends FilterBase {
       throw new DeserializationException(e);
     }
     return new TimestampsFilter(proto.getTimestampsList(),
-        proto.hasCanHint() && proto.getCanHint());
+      proto.hasCanHint() && proto.getCanHint());
   }
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof TimestampsFilter)) return false;
 
-    TimestampsFilter other = (TimestampsFilter)o;
+    TimestampsFilter other = (TimestampsFilter) o;
     return this.getTimestamps().equals(other.getTimestamps());
   }
 
@@ -236,8 +226,8 @@ public class TimestampsFilter extends FilterBase {
       }
     }
 
-    return String.format("%s (%d/%d): [%s] canHint: [%b]", this.getClass().getSimpleName(),
-        count, this.timestamps.size(), tsList.toString(), canHint);
+    return String.format("%s (%d/%d): [%s] canHint: [%b]", this.getClass().getSimpleName(), count,
+      this.timestamps.size(), tsList.toString(), canHint);
   }
 
   @Override

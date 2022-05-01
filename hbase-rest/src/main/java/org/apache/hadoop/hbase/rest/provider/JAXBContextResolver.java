@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.provider;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
@@ -43,12 +38,12 @@ import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Plumbing for hooking up Jersey's JSON entity body encoding and decoding
- * support to JAXB. Modify how the context is created (by using e.g. a 
- * different configuration builder) to control how JSON is processed and
- * created.
+ * Plumbing for hooking up Jersey's JSON entity body encoding and decoding support to JAXB. Modify
+ * how the context is created (by using e.g. a different configuration builder) to control how JSON
+ * is processed and created.
  */
 @Provider
 @InterfaceAudience.Private
@@ -58,23 +53,11 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
   private final Set<Class<?>> types;
 
-  private final Class<?>[] cTypes = {
-    CellModel.class,
-    CellSetModel.class,
-    ColumnSchemaModel.class,
-    NamespacesModel.class,
-    NamespacesInstanceModel.class,
-    RowModel.class,
-    ScannerModel.class,
-    StorageClusterStatusModel.class,
-    StorageClusterVersionModel.class,
-    TableInfoModel.class,
-    TableListModel.class,
-    TableModel.class,
-    TableRegionModel.class,
-    TableSchemaModel.class,
-    VersionModel.class
-  };
+  private final Class<?>[] cTypes = { CellModel.class, CellSetModel.class, ColumnSchemaModel.class,
+    NamespacesModel.class, NamespacesInstanceModel.class, RowModel.class, ScannerModel.class,
+    StorageClusterStatusModel.class, StorageClusterVersionModel.class, TableInfoModel.class,
+    TableListModel.class, TableModel.class, TableRegionModel.class, TableSchemaModel.class,
+    VersionModel.class };
 
   @SuppressWarnings("unchecked")
   public JAXBContextResolver() throws Exception {

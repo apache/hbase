@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,15 +31,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestCellSkipListSet extends TestCase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellSkipListSet.class);
+    HBaseClassTestRule.forClass(TestCellSkipListSet.class);
 
-  private final CellSet csls =
-    new CellSet(CellComparatorImpl.COMPARATOR);
+  private final CellSet csls = new CellSet(CellComparatorImpl.COMPARATOR);
 
   @Override
   protected void setUp() throws Exception {
@@ -70,16 +69,16 @@ public class TestCellSkipListSet extends TestCase {
   }
 
   public void testIterator() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(getName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
       this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
     }
     // Assert that we added 'total' values and that they are in order
     int count = 0;
-    for (Cell kv: this.csls) {
+    for (Cell kv : this.csls) {
       assertEquals("" + count,
         Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
       assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value1,
@@ -105,9 +104,9 @@ public class TestCellSkipListSet extends TestCase {
   }
 
   public void testDescendingIterator() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(getName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
       this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
@@ -142,9 +141,9 @@ public class TestCellSkipListSet extends TestCase {
   }
 
   public void testHeadTail() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(getName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     KeyValue splitter = null;
     for (int i = 0; i < total; i++) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Optional;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -93,10 +92,10 @@ public interface AdvancedScanResultConsumer extends ScanResultConsumerBase {
 
   /**
    * Indicate that we have receive some data.
-   * @param results the data fetched from HBase service.
+   * @param results    the data fetched from HBase service.
    * @param controller used to suspend or terminate the scan. Notice that the {@code controller}
-   *          instance is only valid within scope of onNext method. You can only call its method in
-   *          onNext, do NOT store it and call it later outside onNext.
+   *                   instance is only valid within scope of onNext method. You can only call its
+   *                   method in onNext, do NOT store it and call it later outside onNext.
    */
   void onNext(Result[] results, ScanController controller);
 
@@ -113,8 +112,9 @@ public interface AdvancedScanResultConsumer extends ScanResultConsumerBase {
    * <p>
    * This method give you a chance to terminate a slow scan operation.
    * @param controller used to suspend or terminate the scan. Notice that the {@code controller}
-   *          instance is only valid within the scope of onHeartbeat method. You can only call its
-   *          method in onHeartbeat, do NOT store it and call it later outside onHeartbeat.
+   *                   instance is only valid within the scope of onHeartbeat method. You can only
+   *                   call its method in onHeartbeat, do NOT store it and call it later outside
+   *                   onHeartbeat.
    */
   default void onHeartbeat(ScanController controller) {
   }

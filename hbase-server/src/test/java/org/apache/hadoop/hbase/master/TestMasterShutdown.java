@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -42,15 +43,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestMasterShutdown {
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterShutdown.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterShutdown.class);
+    HBaseClassTestRule.forClass(TestMasterShutdown.class);
 
   private HBaseTestingUtility htu;
 
@@ -67,8 +69,8 @@ public class TestMasterShutdown {
   /**
    * Simple test of shutdown.
    * <p>
-   * Starts with three masters.  Tells the active master to shutdown the cluster.
-   * Verifies that all masters are properly shutdown.
+   * Starts with three masters. Tells the active master to shutdown the cluster. Verifies that all
+   * masters are properly shutdown.
    */
   @Test
   public void testMasterShutdown() throws Exception {
@@ -78,11 +80,8 @@ public class TestMasterShutdown {
     // Start the cluster
     try {
       htu = new HBaseTestingUtility(conf);
-      StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(3)
-        .numRegionServers(1)
-        .numDataNodes(1)
-        .build();
+      StartMiniClusterOption option =
+        StartMiniClusterOption.builder().numMasters(3).numRegionServers(1).numDataNodes(1).build();
       final MiniHBaseCluster cluster = htu.startMiniCluster(option);
 
       // wait for all master thread to spawn and start their run loop.
@@ -90,8 +89,7 @@ public class TestMasterShutdown {
       final long oneSecond = TimeUnit.SECONDS.toMillis(1);
       assertNotEquals(-1, htu.waitFor(thirtySeconds, oneSecond, () -> {
         final List<MasterThread> masterThreads = cluster.getMasterThreads();
-        return masterThreads != null
-          && masterThreads.size() >= 3
+        return masterThreads != null && masterThreads.size() >= 3
           && masterThreads.stream().allMatch(Thread::isAlive);
       }));
 
@@ -127,18 +125,13 @@ public class TestMasterShutdown {
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
     LocalHBaseCluster hbaseCluster = null;
     try {
-      htu =  new HBaseTestingUtility(
-        createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
+      htu =
+        new HBaseTestingUtility(createMasterShutdownBeforeStartingAnyRegionServerConfiguration());
 
       // configure a cluster with
-      final StartMiniClusterOption options = StartMiniClusterOption.builder()
-        .numDataNodes(1)
-        .numMasters(1)
-        .numRegionServers(0)
-        .masterClass(HMaster.class)
-        .rsClass(MiniHBaseCluster.MiniHBaseClusterRegionServer.class)
-        .createRootDir(true)
-        .build();
+      final StartMiniClusterOption options = StartMiniClusterOption.builder().numDataNodes(1)
+        .numMasters(1).numRegionServers(0).masterClass(HMaster.class)
+        .rsClass(MiniHBaseCluster.MiniHBaseClusterRegionServer.class).createRootDir(true).build();
 
       // Can't simply `htu.startMiniCluster(options)` because that method waits for the master to
       // start completely. However, this test's premise is that a partially started master should
@@ -160,8 +153,8 @@ public class TestMasterShutdown {
       // manager is usually init'ed in time for the RPC to be made. For now, adding an explicit
       // wait() in the test, waiting for the server manager to become available.
       final long timeout = TimeUnit.MINUTES.toMillis(10);
-      assertNotEquals("Timeout waiting for server manager to become available.",
-        -1, Waiter.waitFor(htu.getConfiguration(), timeout,
+      assertNotEquals("Timeout waiting for server manager to become available.", -1,
+        Waiter.waitFor(htu.getConfiguration(), timeout,
           () -> masterThread.getMaster().getServerManager() != null));
       htu.getConnection().getAdmin().shutdown();
       masterThread.join();
@@ -194,7 +187,6 @@ public class TestMasterShutdown {
    * settings tuned very aggressively. The resulting client is used within a retry loop, so there's
    * no value in having the client itself do the retries. We want to iterate on the base
    * configuration because we're waiting for the mini-cluster to start and set it's ZK client port.
-   *
    * @return a new, configured {@link Configuration} instance.
    */
   private static Configuration createResponsiveZkConfig(final Configuration baseConf) {

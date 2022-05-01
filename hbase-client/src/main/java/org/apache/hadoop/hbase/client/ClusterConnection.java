@@ -1,6 +1,4 @@
-/**
- *
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,8 +40,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientServ
 public interface ClusterConnection extends Connection {
 
   /**
-   * Key for configuration in Configuration whose value is the class we implement making a
-   * new Connection instance.
+   * Key for configuration in Configuration whose value is the class we implement making a new
+   * Connection instance.
    */
   String HBASE_CLIENT_CONNECTION_IMPL = "hbase.client.connection.impl";
 
@@ -52,28 +50,19 @@ public interface ClusterConnection extends Connection {
    * @deprecated this has been deprecated without a replacement
    */
   @Deprecated
-  boolean isMasterRunning()
-      throws MasterNotRunningException, ZooKeeperConnectionException;
+  boolean isMasterRunning() throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
-   * Use this api to check if the table has been created with the specified number of
-   * splitkeys which was used while creating the given table.
-   * Note : If this api is used after a table's region gets splitted, the api may return
-   * false.
-   * @param tableName
-   *          tableName
-   * @param splitKeys
-   *          splitKeys used while creating table
-   * @throws IOException
-   *           if a remote or network exception occurs
+   * Use this api to check if the table has been created with the specified number of splitkeys
+   * which was used while creating the given table. Note : If this api is used after a table's
+   * region gets splitted, the api may return false. n * tableName n * splitKeys used while creating
+   * table n * if a remote or network exception occurs
    */
-  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
-      IOException;
+  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException;
 
   /**
-   * A table that isTableEnabled == false and isTableDisabled == false
-   * is possible. This happens when a table has a lot of regions
-   * that must be processed.
+   * A table that isTableEnabled == false and isTableDisabled == false is possible. This happens
+   * when a table has a lot of regions that must be processed.
    * @param tableName table name
    * @return true if the table is enabled, false otherwise
    * @throws IOException if a remote or network exception occurs
@@ -92,19 +81,16 @@ public interface ClusterConnection extends Connection {
    * @param tableName table state for
    * @return state of the table
    */
-  TableState getTableState(TableName tableName)  throws IOException;
+  TableState getTableState(TableName tableName) throws IOException;
 
   /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in.
+   * Find the location of the region of <i>tableName</i> that <i>row</i> lives in.
    * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the region in
-   *   question
+   * @param row       row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the region in question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(final TableName tableName,
-      final byte [] row) throws IOException;
+  HRegionLocation locateRegion(final TableName tableName, final byte[] row) throws IOException;
 
   /**
    * @deprecated {@link #clearRegionLocationCache()} instead.
@@ -117,10 +103,8 @@ public interface ClusterConnection extends Connection {
   void cacheLocation(final TableName tableName, final RegionLocations location);
 
   /**
-   * Allows flushing the region cache of all locations that pertain to
-   * <code>tableName</code>
-   * @param tableName Name of the table whose regions we are to remove from
-   *   cache.
+   * Allows flushing the region cache of all locations that pertain to <code>tableName</code>
+   * @param tableName Name of the table whose regions we are to remove from cache.
    */
   void clearRegionCache(final TableName tableName);
 
@@ -131,51 +115,46 @@ public interface ClusterConnection extends Connection {
   void deleteCachedRegionLocation(final HRegionLocation location);
 
   /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in, ignoring any value that might be in the cache.
+   * Find the location of the region of <i>tableName</i> that <i>row</i> lives in, ignoring any
+   * value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
-   * @return HRegionLocation that describes where to find the region in
-   *   question
+   * @param row       row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the region in question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation relocateRegion(final TableName tableName,
-      final byte [] row) throws IOException;
+  HRegionLocation relocateRegion(final TableName tableName, final byte[] row) throws IOException;
 
   /**
-   * Find the location of the region of <i>tableName</i> that <i>row</i>
-   * lives in, ignoring any value that might be in the cache.
+   * Find the location of the region of <i>tableName</i> that <i>row</i> lives in, ignoring any
+   * value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in
-   * @param row row key you're trying to find the region of
+   * @param row       row key you're trying to find the region of
    * @param replicaId the replicaId of the region
-   * @return RegionLocations that describe where to find the region in
-   *   question
+   * @return RegionLocations that describe where to find the region in question
    * @throws IOException if a remote or network exception occurs
    */
-  RegionLocations relocateRegion(final TableName tableName,
-      final byte [] row, int replicaId) throws IOException;
+  RegionLocations relocateRegion(final TableName tableName, final byte[] row, int replicaId)
+    throws IOException;
 
   /**
    * Update the location cache. This is used internally by HBase, in most cases it should not be
-   *  used by the client application.
-   * @param tableName the table name
+   * used by the client application.
+   * @param tableName  the table name
    * @param regionName the region name
-   * @param rowkey the row
-   * @param exception the exception if any. Can be null.
-   * @param source the previous location
+   * @param rowkey     the row
+   * @param exception  the exception if any. Can be null.
+   * @param source     the previous location
    */
   void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
-                                    Object exception, ServerName source);
+    Object exception, ServerName source);
 
   /**
    * Gets the location of the region of <i>regionName</i>.
    * @param regionName name of the region to locate
-   * @return HRegionLocation that describes where to find the region in
-   *   question
+   * @return HRegionLocation that describes where to find the region in question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(final byte[] regionName)
-  throws IOException;
+  HRegionLocation locateRegion(final byte[] regionName) throws IOException;
 
   /**
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
@@ -188,40 +167,37 @@ public interface ClusterConnection extends Connection {
   /**
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
    * @param tableName table to get regions of
-   * @param useCache Should we use the cache to retrieve the region information.
-   * @param offlined True if we are to include offlined regions, false and we'll leave out offlined
-   *          regions from returned list.
+   * @param useCache  Should we use the cache to retrieve the region information.
+   * @param offlined  True if we are to include offlined regions, false and we'll leave out offlined
+   *                  regions from returned list.
    * @return list of region locations for all regions of table
    * @throws IOException if IO failure occurs
    */
-  List<HRegionLocation> locateRegions(final TableName tableName,
-      final boolean useCache,
-      final boolean offlined) throws IOException;
+  List<HRegionLocation> locateRegions(final TableName tableName, final boolean useCache,
+    final boolean offlined) throws IOException;
 
   /**
-   *
    * @param tableName table to get regions of
-   * @param row the row
-   * @param useCache Should we use the cache to retrieve the region information.
-   * @param retry do we retry
+   * @param row       the row
+   * @param useCache  Should we use the cache to retrieve the region information.
+   * @param retry     do we retry
    * @return region locations for this row.
    * @throws IOException if IO failure occurs
    */
-  RegionLocations locateRegion(TableName tableName,
-                               byte[] row, boolean useCache, boolean retry) throws IOException;
+  RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry)
+    throws IOException;
 
- /**
-  *
-  * @param tableName table to get regions of
-  * @param row the row
-  * @param useCache Should we use the cache to retrieve the region information.
-  * @param retry do we retry
-  * @param replicaId the replicaId for the region
-  * @return region locations for this row.
-  * @throws IOException if IO failure occurs
-  */
+  /**
+   * @param tableName table to get regions of
+   * @param row       the row
+   * @param useCache  Should we use the cache to retrieve the region information.
+   * @param retry     do we retry
+   * @param replicaId the replicaId for the region
+   * @return region locations for this row.
+   * @throws IOException if IO failure occurs
+   */
   RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
-     int replicaId) throws IOException;
+    int replicaId) throws IOException;
 
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
@@ -242,26 +218,24 @@ public interface ClusterConnection extends Connection {
   AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
 
   /**
-   * Establishes a connection to the region server at the specified address, and returns
-   * a region client protocol.
-   *
+   * Establishes a connection to the region server at the specified address, and returns a region
+   * client protocol.
    * @param serverName the region server to connect to
    * @return ClientProtocol proxy for RegionServer
    * @throws IOException if a remote or network exception occurs
-   *
    */
   ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
 
   /**
    * Find region location hosting passed row
    * @param tableName table name
-   * @param row Row to find.
-   * @param reload If true do not use cache, otherwise bypass.
+   * @param row       Row to find.
+   * @param reload    If true do not use cache, otherwise bypass.
    * @return Location of row.
    * @throws IOException if a remote or network exception occurs
    */
   HRegionLocation getRegionLocation(TableName tableName, byte[] row, boolean reload)
-      throws IOException;
+    throws IOException;
 
   /**
    * Clear any caches that pertain to server name <code>sn</code>.
@@ -280,11 +254,10 @@ public interface ClusterConnection extends Connection {
   AsyncProcess getAsyncProcess();
 
   /**
-   * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}.
-   * This RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
+   * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}. This
+   * RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
    * intercepted with the configured {@link RetryingCallerInterceptor}
-   * @param conf configuration
-   * @return RpcRetryingCallerFactory
+   * @param conf configuration n
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
 

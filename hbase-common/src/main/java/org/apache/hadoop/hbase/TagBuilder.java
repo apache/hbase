@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.nio.ByteBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *  Builder implementation to create {@link Tag}
- *  Call setTagValue(byte[]) method to create {@link ArrayBackedTag}
+ * Builder implementation to create {@link Tag} Call setTagValue(byte[]) method to create
+ * {@link ArrayBackedTag}
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface TagBuilder {

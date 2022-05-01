@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,8 +93,8 @@ public final class MasterRegionFactory {
     Class<? extends StoreFileTracker> trackerClass =
       StoreFileTrackerFactory.getTrackerClass(trackerImpl);
     if (StoreFileTrackerFactory.isMigration(trackerClass)) {
-      throw new IllegalArgumentException("Should not set store file tracker to " +
-        StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
+      throw new IllegalArgumentException("Should not set store file tracker to "
+        + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
     }
     StoreFileTracker tracker = ReflectionUtils.newInstance(trackerClass, conf, true, null);
     return tracker.updateWithTrackerConfigs(TableDescriptorBuilder.newBuilder(TABLE_DESC)).build();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,7 +56,7 @@ public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
   }
 
   private void testRetriesExhaustedFailure(final TableName tableName, final MockRSExecutor executor)
-      throws Exception {
+    throws Exception {
     RegionInfo hri = createRegionInfo(tableName, 1);
 
     // collect AM metrics before test
@@ -90,7 +90,7 @@ public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
   }
 
   private void testFailedOpen(final TableName tableName, final MockRSExecutor executor)
-      throws Exception {
+    throws Exception {
     final RegionInfo hri = createRegionInfo(tableName, 1);
 
     // Test Assign operation failure

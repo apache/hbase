@@ -21,7 +21,7 @@
 # timestamp suffix. Deploys builds to maven.
 #
 # To finish, check what was build.  If good copy to people.apache.org and
-# close the maven repos.  Call a vote. 
+# close the maven repos.  Call a vote.
 #
 # Presumes that dev-support/generate-hadoopX-poms.sh has already been run.
 # Presumes your settings.xml all set up so can sign artifacts published to mvn, etc.

@@ -43,10 +43,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.GCRegionState;
 
 /**
- * GC a Region that is no longer in use. It has been split or merged away.
- * Caller determines if it is GC time. This Procedure does not check.
- * <p>This is a Region StateMachine Procedure. We take a read lock on the Table and then
- * exclusive on the Region.
+ * GC a Region that is no longer in use. It has been split or merged away. Caller determines if it
+ * is GC time. This Procedure does not check.
+ * <p>
+ * This is a Region StateMachine Procedure. We take a read lock on the Table and then exclusive on
+ * the Region.
  */
 @InterfaceAudience.Private
 public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCRegionState> {
@@ -68,7 +69,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, GCRegionState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -133,7 +134,8 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env, GCRegionState state) throws IOException, InterruptedException {
+  protected void rollbackState(MasterProcedureEnv env, GCRegionState state)
+    throws IOException, InterruptedException {
     // no-op
   }
 
@@ -153,22 +155,20 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     // Double serialization of regionname. Superclass is also serializing. Fix.
     final MasterProcedureProtos.GCRegionStateData.Builder msg =
-        MasterProcedureProtos.GCRegionStateData.newBuilder()
+      MasterProcedureProtos.GCRegionStateData.newBuilder()
         .setRegionInfo(ProtobufUtil.toRegionInfo(getRegion()));
     serializer.serialize(msg.build());
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     final MasterProcedureProtos.GCRegionStateData msg =
-        serializer.deserialize(MasterProcedureProtos.GCRegionStateData.class);
+      serializer.deserialize(MasterProcedureProtos.GCRegionStateData.class);
     setRegion(ProtobufUtil.toRegionInfo(msg.getRegionInfo()));
   }
 }

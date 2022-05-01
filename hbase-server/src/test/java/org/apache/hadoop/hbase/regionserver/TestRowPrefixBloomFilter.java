@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,12 +61,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test TestRowPrefixBloomFilter
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestRowPrefixBloomFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRowPrefixBloomFilter.class);
+    HBaseClassTestRule.forClass(TestRowPrefixBloomFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowPrefixBloomFilter.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -98,8 +98,7 @@ public class TestRowPrefixBloomFilter {
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
     conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, prefixLength);
 
-    localfs =
-        (conf.get("fs.defaultFS", "file:///").compareTo("file:///") == 0);
+    localfs = (conf.get("fs.defaultFS", "file:///").compareTo("file:///") == 0);
 
     if (fs == null) {
       fs = FileSystem.get(conf);
@@ -137,38 +136,29 @@ public class TestRowPrefixBloomFilter {
   }
 
   private void writeStoreFile(final Path f, BloomType bt, int expKeys) throws IOException {
-    HFileContext meta = new HFileContextBuilder()
-        .withBlockSize(BLOCKSIZE_SMALL)
-        .withChecksumType(CKTYPE)
-        .withBytesPerCheckSum(CKBYTES)
-        .build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
+      .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
-    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withFilePath(f)
-        .withBloomType(bt)
-        .withMaxKeyCount(expKeys)
-        .withFileContext(meta)
-        .build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(f)
+      .withBloomType(bt).withMaxKeyCount(expKeys).withFileContext(meta).build();
     long now = System.currentTimeMillis();
     try {
-      //Put with valid row style
+      // Put with valid row style
       for (int i = 0; i < prefixRowCount; i += 2) { // prefix rows
         String prefixRow = String.format(prefixFormatter, i);
-        for (int j = 0; j < suffixRowCount; j++) {   // suffix rows
+        for (int j = 0; j < suffixRowCount; j++) { // suffix rows
           String row = generateRowWithSuffix(prefixRow, j);
-          KeyValue kv =
-              new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("col"), now,
-                  Bytes.toBytes("value"));
+          KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+            Bytes.toBytes("col"), now, Bytes.toBytes("value"));
           writer.append(kv);
         }
       }
 
-      //Put with invalid row style
+      // Put with invalid row style
       for (int i = prefixRowCount; i < prefixRowCount * 2; i += 2) { // prefix rows
         String row = String.format(invalidFormatter, i);
-        KeyValue kv =
-            new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("col"), now,
-                Bytes.toBytes("value"));
+        KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+          Bytes.toBytes("col"), now, Bytes.toBytes("value"));
         writer.append(kv);
       }
     } finally {
@@ -196,12 +186,12 @@ public class TestRowPrefixBloomFilter {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
     fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
-    //check basic param
+    // check basic param
     assertEquals(bt, reader.getBloomFilterType());
     assertEquals(prefixLength, reader.getPrefixLength());
     assertEquals(expKeys, reader.getGeneralBloomFilter().getKeyCount());
@@ -213,11 +203,11 @@ public class TestRowPrefixBloomFilter {
     int falseNeg = 0;
     for (int i = 0; i < prefixRowCount; i++) { // prefix rows
       String prefixRow = String.format(prefixFormatter, i);
-      for (int j = 0; j < suffixRowCount; j++) {   // suffix rows
+      for (int j = 0; j < suffixRowCount; j++) { // suffix rows
         String startRow = generateRowWithSuffix(prefixRow, j);
         String stopRow = generateRowWithSuffix(prefixRow, j + 1);
         Scan scan =
-            new Scan().withStartRow(Bytes.toBytes(startRow)).withStopRow(Bytes.toBytes(stopRow));
+          new Scan().withStartRow(Bytes.toBytes(startRow)).withStopRow(Bytes.toBytes(stopRow));
         boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
         boolean shouldPrefixRowExist = i % 2 == 0;
         if (shouldPrefixRowExist) {
@@ -251,9 +241,8 @@ public class TestRowPrefixBloomFilter {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * expErr);
-    assertTrue(
-        "Too many false positives: " + falsePos + " (err=" + err + ", expected no more than " +
-            maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos + ")", falsePos <= maxFalsePos);
   }
 
   @Test
@@ -267,7 +256,7 @@ public class TestRowPrefixBloomFilter {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
     fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
@@ -276,8 +265,8 @@ public class TestRowPrefixBloomFilter {
     HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
 
-    //Get with valid row style
-    //prefix row in bloom
+    // Get with valid row style
+    // prefix row in bloom
     String prefixRow = String.format(prefixFormatter, prefixRowCount - 2);
     String row = generateRowWithSuffix(prefixRow, 0);
     Scan scan = new Scan(new Get(Bytes.toBytes(row)));
@@ -320,7 +309,7 @@ public class TestRowPrefixBloomFilter {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
     HFileInfo fileInfo = new HFileInfo(context, conf);
     StoreFileReader reader =
-        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
     fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
@@ -329,14 +318,14 @@ public class TestRowPrefixBloomFilter {
     HStore store = mock(HStore.class);
     when(store.getColumnFamilyDescriptor()).thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
 
-    //Scan with valid row style. startRow and stopRow have a common prefix.
-    //And the length of the common prefix is no less than prefixLength.
-    //prefix row in bloom
+    // Scan with valid row style. startRow and stopRow have a common prefix.
+    // And the length of the common prefix is no less than prefixLength.
+    // prefix row in bloom
     String prefixRow = String.format(prefixFormatter, prefixRowCount - 2);
     String startRow = generateRowWithSuffix(prefixRow, 0);
     String stopRow = generateRowWithSuffix(prefixRow, 1);
     Scan scan =
-        new Scan().withStartRow(Bytes.toBytes(startRow)).withStopRow(Bytes.toBytes(stopRow));
+      new Scan().withStartRow(Bytes.toBytes(startRow)).withStopRow(Bytes.toBytes(stopRow));
     boolean exists = scanner.shouldUseScanner(scan, store, Long.MIN_VALUE);
     assertTrue(exists);
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,26 +55,25 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestClientTimeouts {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientTimeouts.class);
+    HBaseClassTestRule.forClass(TestClientTimeouts.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static int SLAVES = 1;
 
- /**
+  /**
    * @throws java.lang.Exception
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
     // Set the custom RPC client with random timeouts as the client
-    TEST_UTIL.getConfiguration().set(
-        RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
-        RandomTimeoutRpcClient.class.getName());
+    TEST_UTIL.getConfiguration().set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
+      RandomTimeoutRpcClient.class.getName());
   }
 
   /**
@@ -86,16 +85,15 @@ public class TestClientTimeouts {
   }
 
   /**
-   * Test that a client that fails an RPC to the master retries properly and
-   * doesn't throw any unexpected exceptions.
-   * @throws Exception
+   * Test that a client that fails an RPC to the master retries properly and doesn't throw any
+   * unexpected exceptions. n
    */
   @Test
   public void testAdminTimeout() throws Exception {
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
     RandomTimeoutRpcClient rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-        .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+      .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
 
     try {
       for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
@@ -113,17 +111,17 @@ public class TestClientTimeouts {
           admin.setBalancerRunning(false, false);
         } catch (MasterNotRunningException ex) {
           // Since we are randomly throwing SocketTimeoutExceptions, it is possible to get
-          // a MasterNotRunningException.  It's a bug if we get other exceptions.
+          // a MasterNotRunningException. It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
-          if(admin != null) {
+          if (admin != null) {
             admin.close();
             if (admin.getConnection().isClosed()) {
               rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-                  .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
             }
           }
-          if(connection != null) {
+          if (connection != null) {
             connection.close();
           }
         }
@@ -141,20 +139,20 @@ public class TestClientTimeouts {
    */
   public static class RandomTimeoutRpcClient extends BlockingRpcClient {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-        MetricsConnection metrics) {
+      MetricsConnection metrics) {
       super(conf, clusterId, localAddr, metrics);
     }
 
     // Return my own instance, one that does random timeouts
     @Override
-    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
-        User ticket, int rpcTimeout) throws UnknownHostException {
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User ticket, int rpcTimeout)
+      throws UnknownHostException {
       return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
     }
 
     @Override
     public RpcChannel createRpcChannel(ServerName sn, User ticket, int rpcTimeout)
-        throws UnknownHostException {
+      throws UnknownHostException {
       return new RandomTimeoutRpcChannel(this, sn, ticket, rpcTimeout);
     }
   }
@@ -163,24 +161,23 @@ public class TestClientTimeouts {
    * Blocking rpc channel that goes via hbase rpc.
    */
   static class RandomTimeoutBlockingRpcChannel
-      extends AbstractRpcClient.BlockingRpcChannelImplementation {
+    extends AbstractRpcClient.BlockingRpcChannelImplementation {
     private static final Random RANDOM = new Random(System.currentTimeMillis());
     public static final double CHANCE_OF_TIMEOUT = 0.3;
     private static AtomicInteger invokations = new AtomicInteger();
 
     RandomTimeoutBlockingRpcChannel(final BlockingRpcClient rpcClient, final ServerName sn,
-        final User ticket, final int rpcTimeout) {
+      final User ticket, final int rpcTimeout) {
       super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
-    public Message callBlockingMethod(MethodDescriptor md,
-        RpcController controller, Message param, Message returnType)
-        throws ServiceException {
+    public Message callBlockingMethod(MethodDescriptor md, RpcController controller, Message param,
+      Message returnType) throws ServiceException {
       invokations.getAndIncrement();
       if (RANDOM.nextFloat() < CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, becuase that is the only exception type that
-        // {@link ProtobufRpcEngine} throws.  If this RpcEngine is used with a different
+        // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
         // "actual" type, this may not properly mimic the underlying RpcEngine.
         throw new ServiceException(new SocketTimeoutException("fake timeout"));
       }
@@ -191,16 +188,17 @@ public class TestClientTimeouts {
   private static class RandomTimeoutRpcChannel extends AbstractRpcClient.RpcChannelImplementation {
 
     RandomTimeoutRpcChannel(AbstractRpcClient<?> rpcClient, ServerName sn, User ticket,
-                            int rpcTimeout) throws UnknownHostException {
+      int rpcTimeout) throws UnknownHostException {
       super(rpcClient, new InetSocketAddress(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
     public void callMethod(MethodDescriptor md, RpcController controller, Message param,
-                           Message returnType, RpcCallback<Message> done) {
+      Message returnType, RpcCallback<Message> done) {
       RandomTimeoutBlockingRpcChannel.invokations.getAndIncrement();
-      if (ThreadLocalRandom.current().nextFloat() <
-          RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT) {
+      if (
+        ThreadLocalRandom.current().nextFloat() < RandomTimeoutBlockingRpcChannel.CHANCE_OF_TIMEOUT
+      ) {
         // throw a ServiceException, because that is the only exception type that
         // {@link ProtobufRpcEngine} throws. If this RpcEngine is used with a different
         // "actual" type, this may not properly mimic the underlying RpcEngine.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestTablesWithQuotas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTablesWithQuotas.class);
+    HBaseClassTestRule.forClass(TestTablesWithQuotas.class);
 
   private Connection conn;
   private Configuration conf;
@@ -100,8 +100,8 @@ public class TestTablesWithQuotas {
 
   @Test
   public void testInsufficientlyReportedTableFiltering() throws Exception {
-    final Map<TableName,Integer> reportedRegions = new HashMap<>();
-    final Map<TableName,Integer> actualRegions = new HashMap<>();
+    final Map<TableName, Integer> reportedRegions = new HashMap<>();
+    final Map<TableName, Integer> actualRegions = new HashMap<>();
     final Configuration conf = HBaseConfiguration.create();
     conf.setDouble(QuotaObserverChore.QUOTA_OBSERVER_CHORE_REPORT_PERCENT_KEY, 0.95);
 
@@ -144,7 +144,8 @@ public class TestTablesWithQuotas {
     Set<TableName> filteredTablesWithTableQuotas = tables.getTableQuotaTables();
     assertEquals(Collections.singleton(sufficientRegionsTable), filteredTablesWithTableQuotas);
     Set<TableName> filteredTablesWithNamespaceQutoas = tables.getNamespaceQuotaTables();
-    assertEquals(Collections.singleton(sufficientRegionsNamespaceTable), filteredTablesWithNamespaceQutoas);
+    assertEquals(Collections.singleton(sufficientRegionsNamespaceTable),
+      filteredTablesWithNamespaceQutoas);
   }
 
   @Test
@@ -158,20 +159,16 @@ public class TestTablesWithQuotas {
     tables.addNamespaceQuotaTable(TableName.valueOf("ns2", "t1"));
     tables.addNamespaceQuotaTable(TableName.valueOf("ns2", "t2"));
 
-    Multimap<String,TableName> tablesByNamespace = tables.getTablesByNamespace();
+    Multimap<String, TableName> tablesByNamespace = tables.getTablesByNamespace();
     Collection<TableName> tablesInNs = tablesByNamespace.get("ns1");
     assertEquals(3, tablesInNs.size());
     assertTrue("Unexpected results for ns1: " + tablesInNs,
-        tablesInNs.containsAll(Arrays.asList(
-            TableName.valueOf("ns1", "t1"),
-            TableName.valueOf("ns1", "t2"),
-            TableName.valueOf("ns1", "t3"))));
+      tablesInNs.containsAll(Arrays.asList(TableName.valueOf("ns1", "t1"),
+        TableName.valueOf("ns1", "t2"), TableName.valueOf("ns1", "t3"))));
     tablesInNs = tablesByNamespace.get("ns2");
     assertEquals(2, tablesInNs.size());
-    assertTrue("Unexpected results for ns2: " + tablesInNs,
-        tablesInNs.containsAll(Arrays.asList(
-            TableName.valueOf("ns2", "t1"),
-            TableName.valueOf("ns2", "t2"))));
+    assertTrue("Unexpected results for ns2: " + tablesInNs, tablesInNs
+      .containsAll(Arrays.asList(TableName.valueOf("ns2", "t1"), TableName.valueOf("ns2", "t2"))));
   }
 
   @Test
@@ -183,7 +180,7 @@ public class TestTablesWithQuotas {
     when(admin.getTableRegions(missingTable)).thenReturn(null);
 
     QuotaObserverChore chore = mock(QuotaObserverChore.class);
-    Map<RegionInfo,Long> regionUsage = new HashMap<>();
+    Map<RegionInfo, Long> regionUsage = new HashMap<>();
     TableQuotaSnapshotStore store = new TableQuotaSnapshotStore(conn, chore, regionUsage);
 
     // A super dirty hack to verify that, after getting no regions for our table,
@@ -199,7 +196,7 @@ public class TestTablesWithQuotas {
     tables.filterInsufficientlyReportedTables(store);
 
     final Set<TableName> tablesWithQuotas = tables.getTableQuotaTables();
-    assertTrue(
-        "Expected to find no tables, but found " + tablesWithQuotas, tablesWithQuotas.isEmpty());
+    assertTrue("Expected to find no tables, but found " + tablesWithQuotas,
+      tablesWithQuotas.isEmpty());
   }
 }

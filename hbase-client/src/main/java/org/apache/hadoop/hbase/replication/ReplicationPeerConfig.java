@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.util.Collection;
@@ -56,22 +55,22 @@ public class ReplicationPeerConfig {
     this.peerData = Collections.unmodifiableMap(builder.peerData);
     this.configuration = Collections.unmodifiableMap(builder.configuration);
     this.tableCFsMap =
-        builder.tableCFsMap != null ? unmodifiableTableCFsMap(builder.tableCFsMap) : null;
+      builder.tableCFsMap != null ? unmodifiableTableCFsMap(builder.tableCFsMap) : null;
     this.namespaces =
-        builder.namespaces != null ? Collections.unmodifiableSet(builder.namespaces) : null;
+      builder.namespaces != null ? Collections.unmodifiableSet(builder.namespaces) : null;
     this.replicateAllUserTables = builder.replicateAllUserTables;
-    this.excludeTableCFsMap =
-        builder.excludeTableCFsMap != null ? unmodifiableTableCFsMap(builder.excludeTableCFsMap)
-            : null;
-    this.excludeNamespaces =
-        builder.excludeNamespaces != null ? Collections.unmodifiableSet(builder.excludeNamespaces)
-            : null;
+    this.excludeTableCFsMap = builder.excludeTableCFsMap != null
+      ? unmodifiableTableCFsMap(builder.excludeTableCFsMap)
+      : null;
+    this.excludeNamespaces = builder.excludeNamespaces != null
+      ? Collections.unmodifiableSet(builder.excludeNamespaces)
+      : null;
     this.bandwidth = builder.bandwidth;
     this.serial = builder.serial;
   }
 
   private Map<TableName, List<String>>
-      unmodifiableTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
+    unmodifiableTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
     Map<TableName, List<String>> newTableCFsMap = new HashMap<>();
     tableCFsMap.forEach((table, cfs) -> newTableCFsMap.put(table,
       cfs != null ? Collections.unmodifiableList(cfs) : null));
@@ -138,8 +137,8 @@ public class ReplicationPeerConfig {
    *             {@link ReplicationPeerConfigBuilder#setTableCFsMap(Map)} instead.
    */
   @Deprecated
-  public ReplicationPeerConfig setTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
+  public ReplicationPeerConfig
+    setTableCFsMap(Map<TableName, ? extends Collection<String>> tableCFsMap) {
     this.tableCFsMap = tableCFsMap;
     return this;
   }
@@ -195,8 +194,8 @@ public class ReplicationPeerConfig {
    *             {@link ReplicationPeerConfigBuilder#setExcludeTableCFsMap(Map)} instead.
    */
   @Deprecated
-  public ReplicationPeerConfig setExcludeTableCFsMap(Map<TableName,
-                                              ? extends Collection<String>> tableCFsMap) {
+  public ReplicationPeerConfig
+    setExcludeTableCFsMap(Map<TableName, ? extends Collection<String>> tableCFsMap) {
     this.excludeTableCFsMap = tableCFsMap;
     return this;
   }
@@ -292,8 +291,7 @@ public class ReplicationPeerConfig {
     }
 
     @Override
-    public ReplicationPeerConfigBuilder
-        setTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
+    public ReplicationPeerConfigBuilder setTableCFsMap(Map<TableName, List<String>> tableCFsMap) {
       this.tableCFsMap = tableCFsMap;
       return this;
     }
@@ -312,7 +310,7 @@ public class ReplicationPeerConfig {
 
     @Override
     public ReplicationPeerConfigBuilder
-        setExcludeTableCFsMap(Map<TableName, List<String>> excludeTableCFsMap) {
+      setExcludeTableCFsMap(Map<TableName, List<String>> excludeTableCFsMap) {
       this.excludeTableCFsMap = excludeTableCFsMap;
       return this;
     }
@@ -380,11 +378,11 @@ public class ReplicationPeerConfig {
   /**
    * Decide whether the passed family of the table need replicate to the peer cluster according to
    * this peer config.
-   * @param table name of the table
+   * @param table  name of the table
    * @param family family name
-   * @return true if (the family of) the table need replicate to the peer cluster.
-   *         If passed family is null, return true if any CFs of the table need replicate;
-   *         If passed family is not null, return true if the passed family need replicate.
+   * @return true if (the family of) the table need replicate to the peer cluster. If passed family
+   *         is null, return true if any CFs of the table need replicate; If passed family is not
+   *         null, return true if the passed family need replicate.
    */
   public boolean needToReplicate(TableName table, byte[] family) {
     String namespace = table.getNamespaceAsString();
@@ -401,8 +399,8 @@ public class ReplicationPeerConfig {
       // If cfs is null or empty then we can make sure that we do not need to replicate this table,
       // otherwise, we may still need to replicate the table but filter out some families.
       return cfs != null && !cfs.isEmpty()
-        // If exclude-table-cfs contains passed family then we make sure that we do not need to
-        // replicate this family.
+      // If exclude-table-cfs contains passed family then we make sure that we do not need to
+      // replicate this family.
         && (family == null || !cfs.contains(Bytes.toString(family)));
     } else {
       // Not replicate all user tables, so filter by namespaces and table-cfs config
@@ -419,7 +417,7 @@ public class ReplicationPeerConfig {
       return tableCFsMap != null && tableCFsMap.containsKey(table)
         && (family == null || CollectionUtils.isEmpty(tableCFsMap.get(table))
         // If table-cfs must contain passed family then we need to replicate this family.
-        || tableCFsMap.get(table).contains(Bytes.toString(family)));
+          || tableCFsMap.get(table).contains(Bytes.toString(family)));
     }
   }
 }

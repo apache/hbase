@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListSet;
-
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -87,24 +86,25 @@ public class TestHMobStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHMobStore.class);
+    HBaseClassTestRule.forClass(TestHMobStore.class);
 
   public static final Logger LOG = LoggerFactory.getLogger(TestHMobStore.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   private HMobStore store;
   private HRegion region;
   private FileSystem fs;
-  private byte [] table = Bytes.toBytes("table");
-  private byte [] family = Bytes.toBytes("family");
-  private byte [] row = Bytes.toBytes("row");
-  private byte [] row2 = Bytes.toBytes("row2");
-  private byte [] qf1 = Bytes.toBytes("qf1");
-  private byte [] qf2 = Bytes.toBytes("qf2");
-  private byte [] qf3 = Bytes.toBytes("qf3");
-  private byte [] qf4 = Bytes.toBytes("qf4");
-  private byte [] qf5 = Bytes.toBytes("qf5");
-  private byte [] qf6 = Bytes.toBytes("qf6");
+  private byte[] table = Bytes.toBytes("table");
+  private byte[] family = Bytes.toBytes("family");
+  private byte[] row = Bytes.toBytes("row");
+  private byte[] row2 = Bytes.toBytes("row2");
+  private byte[] qf1 = Bytes.toBytes("qf1");
+  private byte[] qf2 = Bytes.toBytes("qf2");
+  private byte[] qf3 = Bytes.toBytes("qf3");
+  private byte[] qf4 = Bytes.toBytes("qf4");
+  private byte[] qf5 = Bytes.toBytes("qf5");
+  private byte[] qf6 = Bytes.toBytes("qf6");
   private byte[] value = Bytes.toBytes("value");
   private byte[] value2 = Bytes.toBytes("value2");
   private Path mobFilePath;
@@ -120,8 +120,7 @@ public class TestHMobStore {
   private final String DIR = TEST_UTIL.getDataTestDir("TestHMobStore").toString();
 
   /**
-   * Setup
-   * @throws Exception
+   * Setup n
    */
   @Before
   public void setUp() throws Exception {
@@ -130,8 +129,8 @@ public class TestHMobStore {
     qualifiers.add(qf5);
 
     Iterator<byte[]> iter = qualifiers.iterator();
-    while(iter.hasNext()){
-      byte [] next = iter.next();
+    while (iter.hasNext()) {
+      byte[] next = iter.next();
       expected.add(new KeyValue(row, family, next, 1, value));
       get.addColumn(family, next);
       get.readAllVersions();
@@ -139,18 +138,17 @@ public class TestHMobStore {
   }
 
   private void init(String methodName, Configuration conf, boolean testStore) throws IOException {
-    ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(3L)
-            .setMaxVersions(4).build();
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setMobEnabled(true).setMobThreshold(3L).setMaxVersions(4).build();
     init(methodName, conf, cfd, testStore);
   }
 
   private void init(String methodName, Configuration conf, ColumnFamilyDescriptor cfd,
-      boolean testStore) throws IOException {
+    boolean testStore) throws IOException {
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(cfd).build();
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setColumnFamily(cfd).build();
 
-    //Setting up tje Region and Store
+    // Setting up tje Region and Store
     Path basedir = new Path(DIR + methodName);
     Path tableDir = CommonFSUtils.getTableDir(basedir, td.getTableName());
     String logName = "logs";
@@ -159,8 +157,8 @@ public class TestHMobStore {
     fs.delete(logdir, true);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(td.getTableName()).build();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, methodName);
@@ -172,12 +170,11 @@ public class TestHMobStore {
     }
   }
 
-  private void init(Configuration conf, ColumnFamilyDescriptor cfd)
-      throws IOException {
+  private void init(Configuration conf, ColumnFamilyDescriptor cfd) throws IOException {
     Path basedir = CommonFSUtils.getRootDir(conf);
     fs = FileSystem.get(conf);
-    Path homePath = new Path(basedir, Bytes.toString(family) + Path.SEPARATOR
-        + Bytes.toString(family));
+    Path homePath =
+      new Path(basedir, Bytes.toString(family) + Path.SEPARATOR + Bytes.toString(family));
     fs.mkdirs(homePath);
 
     KeyValue key1 = new KeyValue(row, family, qf1, 1, value);
@@ -186,7 +183,7 @@ public class TestHMobStore {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     StoreFileWriter mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
-        cfd.getCompactionCompressionType(), region.getRegionInfo().getStartKey(), false);
+      cfd.getCompactionCompressionType(), region.getRegionInfo().getStartKey(), false);
     mobFilePath = mobWriter.getPath();
 
     mobWriter.append(key1);
@@ -196,8 +193,8 @@ public class TestHMobStore {
 
     String targetPathName = MobUtils.formatDate(currentDate);
     byte[] referenceValue = Bytes.toBytes(targetPathName + Path.SEPARATOR + mobFilePath.getName());
-    Tag tableNameTag = new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE,
-        store.getTableName().getName());
+    Tag tableNameTag =
+      new ArrayBackedTag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName().getName());
     KeyValue kv1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, referenceValue);
     KeyValue kv2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, referenceValue);
     KeyValue kv3 = new KeyValue(row2, family, qf3, Long.MAX_VALUE, referenceValue);
@@ -207,15 +204,14 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting data from memstore
-   * @throws IOException
+   * Getting data from memstore n
    */
   @Test
   public void testGetFromMemStore() throws IOException {
     final Configuration conf = HBaseConfiguration.create();
     init(name.getMethodName(), conf, false);
 
-    //Put data in memstore
+    // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
     this.store.add(new KeyValue(row, family, qf3, 1, value), null);
@@ -225,115 +221,109 @@ public class TestHMobStore {
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
-    //Compare
+    // Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       // Verify the values
       Assert.assertEquals(expected.get(i), results.get(i));
     }
   }
 
   /**
-   * Getting MOB data from files
-   * @throws IOException
+   * Getting MOB data from files n
    */
   @Test
   public void testGetFromFiles() throws IOException {
     final Configuration conf = TEST_UTIL.getConfiguration();
     init(name.getMethodName(), conf, false);
 
-    //Put data in memstore
+    // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
-    //flush
+    // flush
     flush(1);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf3, 1, value), null);
     this.store.add(new KeyValue(row, family, qf4, 1, value), null);
-    //flush
+    // flush
     flush(2);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf5, 1, value), null);
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
-    //flush
+    // flush
     flush(3);
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
-    //Compare
+    // Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
   }
 
   /**
-   * Getting the reference data from files
-   * @throws IOException
+   * Getting the reference data from files n
    */
   @Test
   public void testGetReferencesFromFiles() throws IOException {
     final Configuration conf = HBaseConfiguration.create();
     init(name.getMethodName(), conf, false);
 
-    //Put data in memstore
+    // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
-    //flush
+    // flush
     flush(1);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf3, 1, value), null);
     this.store.add(new KeyValue(row, family, qf4, 1, value), null);
-    //flush
+    // flush
     flush(2);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf5, 1, value), null);
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
-    //flush
+    // flush
     flush(3);
 
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-      0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
-    //Compare
+    // Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
       Assert.assertTrue(MobUtils.isMobReferenceCell(cell));
     }
   }
 
   /**
-   * Getting data from memstore and files
-   * @throws IOException
+   * Getting data from memstore and files n
    */
   @Test
   public void testGetFromMemStoreAndFiles() throws IOException {
@@ -342,85 +332,81 @@ public class TestHMobStore {
 
     init(name.getMethodName(), conf, false);
 
-    //Put data in memstore
+    // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
-    //flush
+    // flush
     flush(1);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf3, 1, value), null);
     this.store.add(new KeyValue(row, family, qf4, 1, value), null);
-    //flush
+    // flush
     flush(2);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf5, 1, value), null);
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
 
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
-    //Compare
+    // Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
   }
 
   /**
-   * Getting data from memstore and files
-   * @throws IOException
+   * Getting data from memstore and files n
    */
   @Test
   public void testMobCellSizeThreshold() throws IOException {
     final Configuration conf = HBaseConfiguration.create();
-    ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(100)
-            .setMaxVersions(4).build();
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setMobEnabled(true).setMobThreshold(100).setMaxVersions(4).build();
     init(name.getMethodName(), conf, cfd, false);
 
-    //Put data in memstore
+    // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
-    //flush
+    // flush
     flush(1);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf3, 1, value), null);
     this.store.add(new KeyValue(row, family, qf4, 1, value), null);
-    //flush
+    // flush
     flush(2);
 
-    //Add more data
+    // Add more data
     this.store.add(new KeyValue(row, family, qf5, 1, value), null);
     this.store.add(new KeyValue(row, family, qf6, 1, value), null);
-    //flush
+    // flush
     flush(3);
 
     Scan scan = new Scan(get);
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-      0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
 
-    //Compare
+    // Compare
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
-      //this is not mob reference cell.
+      // this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
       Assert.assertEquals(expected.get(i), results.get(i));
       Assert.assertEquals(100, store.getColumnFamilyDescriptor().getMobThreshold());
@@ -432,11 +418,11 @@ public class TestHMobStore {
     final Configuration conf = HBaseConfiguration.create();
     init(name.getMethodName(), conf, true);
     String targetPathName = MobUtils.formatDate(new Date());
-    Path targetPath = new Path(store.getPath(), (targetPathName
-        + Path.SEPARATOR + mobFilePath.getName()));
+    Path targetPath =
+      new Path(store.getPath(), (targetPathName + Path.SEPARATOR + mobFilePath.getName()));
     fs.delete(targetPath, true);
     Assert.assertFalse(fs.exists(targetPath));
-    //commit file
+    // commit file
     store.commitFile(mobFilePath, targetPath);
     Assert.assertTrue(fs.exists(targetPath));
   }
@@ -459,21 +445,16 @@ public class TestHMobStore {
   }
 
   /**
-   * Flush the memstore
-   * @param storeFilesSize
-   * @throws IOException
+   * Flush the memstore nn
    */
-  private void flush(int storeFilesSize) throws IOException{
+  private void flush(int storeFilesSize) throws IOException {
     flushStore(store, id++);
     Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((AbstractMemStore)this.store.memstore).getActive().getCellsCount());
+    Assert.assertEquals(0, ((AbstractMemStore) this.store.memstore).getActive().getCellsCount());
   }
 
   /**
-   * Flush the memstore
-   * @param store
-   * @param id
-   * @throws IOException
+   * Flush the memstore nnn
    */
   private static void flushStore(HMobStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);
@@ -493,11 +474,12 @@ public class TestHMobStore {
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key cfKey = new SecretKeySpec(keyBytes, algorithm);
 
-    ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true).setMobThreshold(100)
-            .setMaxVersions(4).setEncryptionType(algorithm).setEncryptionKey(EncryptionUtil
-            .wrapKey(conf, conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-                User.getCurrent().getShortName()), cfKey)).build();
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setMobEnabled(true).setMobThreshold(100).setMaxVersions(4).setEncryptionType(algorithm)
+      .setEncryptionKey(EncryptionUtil.wrapKey(conf,
+        conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
+        cfKey))
+      .build();
     init(name.getMethodName(), conf, cfd, false);
 
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -516,26 +498,25 @@ public class TestHMobStore {
     // Scan the values
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
-        scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()),
-        0);
+      scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
 
     List<Cell> results = new ArrayList<>();
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
     Assert.assertEquals(expected.size(), results.size());
-    for(int i=0; i<results.size(); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertEquals(expected.get(i), results.get(i));
     }
 
     // Trigger major compaction
     this.store.triggerMajorCompaction();
     Optional<CompactionContext> requestCompaction =
-        this.store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
+      this.store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
     this.store.compact(requestCompaction.get(), NoLimitThroughputController.INSTANCE, null);
     Assert.assertEquals(1, this.store.getStorefiles().size());
 
-    //Check encryption after compaction
+    // Check encryption after compaction
     checkMobHFileEncrytption(this.store.getStorefiles());
   }
 
@@ -545,7 +526,7 @@ public class TestHMobStore {
     byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
     Assert.assertTrue(null != encryptionKey);
     Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
-        .equals(HConstants.CIPHER_AES));
+      .equals(HConstants.CIPHER_AES));
   }
 
 }

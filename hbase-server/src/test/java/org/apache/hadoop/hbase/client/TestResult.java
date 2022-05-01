@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -48,41 +47,35 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestResult extends TestCase {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResult.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestResult.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestResult.class.getName());
 
-  static KeyValue[] genKVs(final byte[] row, final byte[] family,
-                           final byte[] value,
-                    final long timestamp,
-                    final int cols) {
-    KeyValue [] kvs = new KeyValue[cols];
+  static KeyValue[] genKVs(final byte[] row, final byte[] family, final byte[] value,
+    final long timestamp, final int cols) {
+    KeyValue[] kvs = new KeyValue[cols];
 
-    for (int i = 0; i < cols ; i++) {
-      kvs[i] = new KeyValue(
-          row, family, Bytes.toBytes(i),
-          timestamp,
-          Bytes.add(value, Bytes.toBytes(i)));
+    for (int i = 0; i < cols; i++) {
+      kvs[i] =
+        new KeyValue(row, family, Bytes.toBytes(i), timestamp, Bytes.add(value, Bytes.toBytes(i)));
     }
     return kvs;
   }
 
-  static final byte [] row = Bytes.toBytes("row");
-  static final byte [] family = Bytes.toBytes("family");
-  static final byte [] value = Bytes.toBytes("value");
-  static final byte [] qual = Bytes.toBytes("qual");
+  static final byte[] row = Bytes.toBytes("row");
+  static final byte[] family = Bytes.toBytes("family");
+  static final byte[] value = Bytes.toBytes("value");
+  static final byte[] qual = Bytes.toBytes("qual");
 
   /**
-   * Run some tests to ensure Result acts like a proper CellScanner.
-   * @throws IOException
+   * Run some tests to ensure Result acts like a proper CellScanner. n
    */
   public void testResultAsCellScanner() throws IOException {
-    Cell [] cells = genKVs(row, family, value, 1, 10);
+    Cell[] cells = genKVs(row, family, value, 1, 10);
     Arrays.sort(cells, CellComparator.getInstance());
     Result r = Result.create(cells);
     assertSame(r, cells);
@@ -93,7 +86,7 @@ public class TestResult extends TestCase {
     assertTrue(r == r.cellScanner());
   }
 
-  private void assertSame(final CellScanner cellScanner, final Cell [] cells) throws IOException {
+  private void assertSame(final CellScanner cellScanner, final Cell[] cells) throws IOException {
     int count = 0;
     while (cellScanner.advance()) {
       assertTrue(cells[count].equals(cellScanner.current()));
@@ -103,7 +96,7 @@ public class TestResult extends TestCase {
   }
 
   public void testBasicGetColumn() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -135,10 +128,10 @@ public class TestResult extends TestCase {
   }
 
   public void testMultiVersionGetColumn() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -157,7 +150,7 @@ public class TestResult extends TestCase {
   }
 
   public void testBasicGetValue() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -172,10 +165,10 @@ public class TestResult extends TestCase {
   }
 
   public void testMultiVersionGetValue() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -191,7 +184,7 @@ public class TestResult extends TestCase {
   }
 
   public void testBasicLoadValue() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -206,15 +199,15 @@ public class TestResult extends TestCase {
       loadValueBuffer.flip();
       assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
-          r.getValueAsByteBuffer(family, qf));
+        r.getValueAsByteBuffer(family, qf));
     }
   }
 
   public void testMultiVersionLoadValue() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -231,7 +224,7 @@ public class TestResult extends TestCase {
       loadValueBuffer.flip();
       assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
-          r.getValueAsByteBuffer(family, qf));
+        r.getValueAsByteBuffer(family, qf));
     }
   }
 
@@ -239,14 +232,14 @@ public class TestResult extends TestCase {
    * Verify that Result.compareResults(...) behaves correctly.
    */
   public void testCompareResults() throws Exception {
-    byte [] value1 = Bytes.toBytes("value1");
-    byte [] qual = Bytes.toBytes("qual");
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] qual = Bytes.toBytes("qual");
 
     KeyValue kv1 = new KeyValue(row, family, qual, value);
     KeyValue kv2 = new KeyValue(row, family, qual, value1);
 
-    Result r1 = Result.create(new KeyValue[] {kv1});
-    Result r2 = Result.create(new KeyValue[] {kv2});
+    Result r1 = Result.create(new KeyValue[] { kv1 });
+    Result r2 = Result.create(new KeyValue[] { kv2 });
     // no exception thrown
     Result.compareResults(r1, r1);
     try {
@@ -407,9 +400,8 @@ public class TestResult extends TestCase {
     if (tag != null) {
       tags = Arrays.asList(tag);
     }
-    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
-      value, tags);
-    return Result.create(new Cell[] {kvCell});
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put, value, tags);
+    return Result.create(new Cell[] { kvCell });
   }
 
   private Result getByteBufferBackedTagResult(Tag tag) {
@@ -417,13 +409,13 @@ public class TestResult extends TestCase {
     if (tag != null) {
       tags = Arrays.asList(tag);
     }
-    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
-        value, tags);
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put, value, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
     ByteBufferKeyValue bbKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
-    return Result.create(new Cell[] {bbKV});
+    return Result.create(new Cell[] { bbKV });
   }
+
   /**
    * Verifies that one can't modify instance of EMPTY_RESULT.
    */
@@ -447,8 +439,7 @@ public class TestResult extends TestCase {
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
-   *
-   * @throws Exception
+   * n
    */
   public void doReadBenchmark() throws Exception {
 
@@ -457,16 +448,16 @@ public class TestResult extends TestCase {
 
     StringBuilder valueSB = new StringBuilder();
     for (int i = 0; i < 100; i++) {
-      valueSB.append((byte)(Math.random() * 10));
+      valueSB.append((byte) (Math.random() * 10));
     }
 
     StringBuilder rowSB = new StringBuilder();
     for (int i = 0; i < 50; i++) {
-      rowSB.append((byte)(Math.random() * 10));
+      rowSB.append((byte) (Math.random() * 10));
     }
 
-    KeyValue [] kvs = genKVs(Bytes.toBytes(rowSB.toString()), family,
-        Bytes.toBytes(valueSB.toString()), 1, n);
+    KeyValue[] kvs =
+      genKVs(Bytes.toBytes(rowSB.toString()), family, Bytes.toBytes(valueSB.toString()), 1, n);
     Arrays.sort(kvs, CellComparator.getInstance());
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
     Result r = Result.create(kvs);
@@ -510,9 +501,7 @@ public class TestResult extends TestCase {
   }
 
   /**
-   * Calls non-functional test methods.
-   *
-   * @param args
+   * Calls non-functional test methods. n
    */
   public static void main(String[] args) {
     TestResult testResult = new TestResult();

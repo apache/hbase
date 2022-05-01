@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +18,12 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.rest.model.CellModel;
@@ -46,14 +43,10 @@ public class MultiRowResource extends ResourceBase implements Constants {
   String[] columns = null;
 
   /**
-   * Constructor
-   *
-   * @param tableResource
-   * @param versions
-   * @throws java.io.IOException
+   * Constructor nn * @throws java.io.IOException
    */
   public MultiRowResource(TableResource tableResource, String versions, String columnsStr)
-      throws IOException {
+    throws IOException {
     super();
     this.tableResource = tableResource;
 
@@ -88,15 +81,14 @@ public class MultiRowResource extends ResourceBase implements Constants {
           }
         }
 
-        ResultGenerator generator =
-          ResultGenerator.fromRowSpec(this.tableResource.getName(), rowSpec, null,
-            !params.containsKey(NOCACHE_PARAM_NAME));
+        ResultGenerator generator = ResultGenerator.fromRowSpec(this.tableResource.getName(),
+          rowSpec, null, !params.containsKey(NOCACHE_PARAM_NAME));
         Cell value = null;
         RowModel rowModel = new RowModel(rowSpec.getRow());
         if (generator.hasNext()) {
           while ((value = generator.next()) != null) {
-            rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil
-                .cloneQualifier(value), value.getTimestamp(), CellUtil.cloneValue(value)));
+            rowModel.addCell(new CellModel(CellUtil.cloneFamily(value),
+              CellUtil.cloneQualifier(value), value.getTimestamp(), CellUtil.cloneValue(value)));
           }
           model.addRow(rowModel);
         } else {
@@ -107,11 +99,10 @@ public class MultiRowResource extends ResourceBase implements Constants {
       }
 
       if (model.getRows().isEmpty()) {
-      //If no rows found.
+        // If no rows found.
         servlet.getMetrics().incrementFailedGetRequests(1);
-        return Response.status(Response.Status.NOT_FOUND)
-            .type(MIMETYPE_TEXT).entity("No rows found." + CRLF)
-            .build();
+        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+          .entity("No rows found." + CRLF).build();
       } else {
         servlet.getMetrics().incrementSucessfulGetRequests(1);
         return Response.ok(model).build();

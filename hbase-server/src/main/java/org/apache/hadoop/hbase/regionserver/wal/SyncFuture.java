@@ -93,9 +93,7 @@ class SyncFuture {
 
   /**
    * Call this method to clear old usage and get it ready for new deploy.
-   *
-   * @param txid the new transaction id
-   * @return this
+   * @param txid the new transaction id n
    */
   SyncFuture reset(long txid, boolean forceSync) {
     if (t != null && t != Thread.currentThread()) {
@@ -114,8 +112,8 @@ class SyncFuture {
 
   @Override
   public String toString() {
-    return "done=" + isDone() + ", txid=" + this.txid + " threadID=" + t.getId() +
-        " threadName=" + t.getName();
+    return "done=" + isDone() + ", txid=" + this.txid + " threadID=" + t.getId() + " threadName="
+      + t.getName();
   }
 
   long getTxid() {
@@ -137,7 +135,7 @@ class SyncFuture {
 
   /**
    * @param txid the transaction id at which this future 'completed'.
-   * @param t Can be null. Set if we are 'completing' on error (and this 't' is the error).
+   * @param t    Can be null. Set if we are 'completing' on error (and this 't' is the error).
    * @return True if we successfully marked this outstanding future as completed/done. Returns false
    *         if this future is already 'done' when this method called.
    */
@@ -152,7 +150,7 @@ class SyncFuture {
         // Something badly wrong.
         if (throwable == null) {
           this.throwable =
-              new IllegalStateException("done txid=" + txid + ", my txid=" + this.txid);
+            new IllegalStateException("done txid=" + txid + ", my txid=" + this.txid);
         }
       }
       // Mark done.
@@ -164,15 +162,14 @@ class SyncFuture {
     }
   }
 
-  long get(long timeoutNs) throws InterruptedException,
-      ExecutionException, TimeoutIOException {
+  long get(long timeoutNs) throws InterruptedException, ExecutionException, TimeoutIOException {
     doneLock.lock();
     try {
       while (doneTxid == NOT_DONE) {
         if (!doneCondition.await(timeoutNs, TimeUnit.NANOSECONDS)) {
-          throw new TimeoutIOException("Failed to get sync result after "
-              + TimeUnit.NANOSECONDS.toMillis(timeoutNs) + " ms for txid=" + this.txid
-              + ", WAL system stuck?");
+          throw new TimeoutIOException(
+            "Failed to get sync result after " + TimeUnit.NANOSECONDS.toMillis(timeoutNs)
+              + " ms for txid=" + this.txid + ", WAL system stuck?");
         }
       }
       if (this.throwable != null) {

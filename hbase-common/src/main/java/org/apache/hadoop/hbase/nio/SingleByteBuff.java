@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,14 +23,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
-
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import sun.nio.ch.DirectBuffer;
 
 /**
@@ -385,7 +383,7 @@ public class SingleByteBuff extends ByteBuff {
   public int write(FileChannel channel, long offset) throws IOException {
     checkRefCount();
     int total = 0;
-    while(buf.hasRemaining()) {
+    while (buf.hasRemaining()) {
       int len = channel.write(buf, offset);
       total += len;
       offset += len;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,6 +58,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -65,21 +66,16 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * users with different sets of visibility labels authenticated for them. Every row (so cells in
  * that) added with visibility expressions. In load step, 200 map tasks are launched, which in turn
  * write loadmapper.num_to_write (default 100K) rows to an hbase table. Rows are written in blocks,
- * for a total of 100 blocks.
- *
- * Verify step scans the table as both users with Authorizations. This step asserts that user can
- * see only those rows (and so cells) with visibility for which they have label auth.
- *
- * This class can be run as a unit test, as an integration test, or from the command line.
- *
- * Originally taken from Apache Bigtop.
- * Issue user names as comma seperated list.
- *./hbase IntegrationTestWithCellVisibilityLoadAndVerify -u usera,userb
+ * for a total of 100 blocks. Verify step scans the table as both users with Authorizations. This
+ * step asserts that user can see only those rows (and so cells) with visibility for which they have
+ * label auth. This class can be run as a unit test, as an integration test, or from the command
+ * line. Originally taken from Apache Bigtop. Issue user names as comma seperated list. ./hbase
+ * IntegrationTestWithCellVisibilityLoadAndVerify -u usera,userb
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationTestLoadAndVerify {
   private static final String ERROR_STR =
-      "Two user names are to be specified seperated by a ',' like 'usera,userb'";
+    "Two user names are to be specified seperated by a ',' like 'usera,userb'";
   private static final char NOT = '!';
   private static final char OR = '|';
   private static final char AND = '&';
@@ -90,8 +86,8 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   private static final String PUBLIC = "public";
   private static final String PRIVATE = "private";
   private static final String[] LABELS = { CONFIDENTIAL, TOPSECRET, SECRET, PRIVATE, PUBLIC };
-  private static final String[] VISIBILITY_EXPS = { CONFIDENTIAL + AND + TOPSECRET + AND + PRIVATE,
-      CONFIDENTIAL + OR + TOPSECRET, PUBLIC,
+  private static final String[] VISIBILITY_EXPS =
+    { CONFIDENTIAL + AND + TOPSECRET + AND + PRIVATE, CONFIDENTIAL + OR + TOPSECRET, PUBLIC,
       '(' + SECRET + OR + PRIVATE + ')' + AND + NOT + CONFIDENTIAL };
   private static final int VISIBILITY_EXPS_COUNT = VISIBILITY_EXPS.length;
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
@@ -109,7 +105,10 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   private static User USER1, USER2;
 
   private enum Counters {
-    ROWS_VIS_EXP_1, ROWS_VIS_EXP_2, ROWS_VIS_EXP_3, ROWS_VIS_EXP_4;
+    ROWS_VIS_EXP_1,
+    ROWS_VIS_EXP_2,
+    ROWS_VIS_EXP_3,
+    ROWS_VIS_EXP_4;
   }
 
   @Override
@@ -125,7 +124,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
       System.err.println(ERROR_STR);
       throw new IOException(ERROR_STR);
     }
-    System.out.println(userNames + " "+users[0]+ " "+users[1]);
+    System.out.println(userNames + " " + users[0] + " " + users[1]);
     USER1 = User.createUserForTesting(conf, users[0], new String[] {});
     USER2 = User.createUserForTesting(conf, users[1], new String[] {});
     addLabelsAndAuths();
@@ -140,10 +139,9 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   private void addLabelsAndAuths() throws Exception {
     try {
       VisibilityClient.addLabels(util.getConnection(), LABELS);
-      VisibilityClient.setAuths(util.getConnection(), new String[] { CONFIDENTIAL, TOPSECRET,
-          SECRET, PRIVATE }, USER1.getName());
-      VisibilityClient.setAuths(util.getConnection(), new String[] { PUBLIC },
-          USER2.getName());
+      VisibilityClient.setAuths(util.getConnection(),
+        new String[] { CONFIDENTIAL, TOPSECRET, SECRET, PRIVATE }, USER1.getName());
+      VisibilityClient.setAuths(util.getConnection(), new String[] { PUBLIC }, USER2.getName());
     } catch (Throwable t) {
       throw new IOException(t);
     }
@@ -162,8 +160,8 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     }
 
     @Override
-    protected void map(NullWritable key, NullWritable value, Context context) throws IOException,
-        InterruptedException {
+    protected void map(NullWritable key, NullWritable value, Context context)
+      throws IOException, InterruptedException {
       String suffix = "/" + shortTaskId;
       int BLOCK_SIZE = (int) (recordsToWrite / 100);
       Random rand = ThreadLocalRandom.current();
@@ -191,16 +189,16 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
 
     private Counter getCounter(int idx) {
       switch (idx) {
-      case 0:
-        return rowsExp1;
-      case 1:
-        return rowsExp2;
-      case 2:
-        return rowsExp3;
-      case 3:
-        return rowsexp4;
-      default:
-        return null;
+        case 0:
+          return rowsExp1;
+        case 1:
+          return rowsExp2;
+        case 2:
+          return rowsExp3;
+        case 3:
+          return rowsexp4;
+        default:
+          return null;
       }
     }
   }
@@ -218,7 +216,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
 
     @Override
     protected void map(ImmutableBytesWritable key, Result value, Context context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       byte[] row = value.getRow();
       Counter c = getCounter(row);
       c.increment(1);
@@ -247,13 +245,13 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     this.numRowsLoadWithExp3 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_3).getValue();
     this.numRowsLoadWithExp4 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_4).getValue();
     System.out.println("Rows loaded with cell visibility " + VISIBILITY_EXPS[0] + " : "
-        + this.numRowsLoadedWithExp1);
+      + this.numRowsLoadedWithExp1);
     System.out.println("Rows loaded with cell visibility " + VISIBILITY_EXPS[1] + " : "
-        + this.numRowsLoadedWithExp2);
-    System.out.println("Rows loaded with cell visibility " + VISIBILITY_EXPS[2] + " : "
-        + this.numRowsLoadWithExp3);
-    System.out.println("Rows loaded with cell visibility " + VISIBILITY_EXPS[3] + " : "
-        + this.numRowsLoadWithExp4);
+      + this.numRowsLoadedWithExp2);
+    System.out.println(
+      "Rows loaded with cell visibility " + VISIBILITY_EXPS[2] + " : " + this.numRowsLoadWithExp3);
+    System.out.println(
+      "Rows loaded with cell visibility " + VISIBILITY_EXPS[3] + " : " + this.numRowsLoadWithExp4);
     return job;
   }
 
@@ -265,7 +263,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   @Override
   protected void doVerify(final Configuration conf, final HTableDescriptor htd) throws Exception {
     System.out.println(String.format("Verifying for auths %s, %s, %s, %s", CONFIDENTIAL, TOPSECRET,
-        SECRET, PRIVATE));
+      SECRET, PRIVATE));
     PrivilegedExceptionAction<Job> scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
       public Job run() throws Exception {
@@ -320,7 +318,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   }
 
   private Job doVerify(Configuration conf, HTableDescriptor htd, String... auths)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     Path outputDir = getTestDir(TEST_NAME, "verify-output");
     Job job = new Job(conf);
     job.setJarByClass(this.getClass());
@@ -329,7 +327,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     Scan scan = new Scan();
     scan.setAuthorizations(new Authorizations(auths));
     TableMapReduceUtil.initTableMapperJob(htd.getTableName().getNameAsString(), scan,
-        VerifyMapper.class, NullWritable.class, NullWritable.class, job);
+      VerifyMapper.class, NullWritable.class, NullWritable.class, job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
@@ -351,15 +349,15 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     System.err.println("  Loads a table with cell visibilities and verifies with Authorizations");
     System.err.println("Options");
     System.err
-        .println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
+      .println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
     System.err.println("  -Dloadmapper.num_to_write=<n>    "
-        + "Number of rows per mapper (default 100,000 per mapper)");
+      + "Number of rows per mapper (default 100,000 per mapper)");
     System.err.println("  -Dloadmapper.numPresplits=<n>    "
-        + "Number of presplit regions to start with (default 40)");
+      + "Number of presplit regions to start with (default 40)");
     System.err
-        .println("  -Dloadmapper.map.tasks=<n>       Number of map tasks for load (default 200)");
+      .println("  -Dloadmapper.map.tasks=<n>       Number of map tasks for load (default 200)");
     System.err.println("  -Dverify.scannercaching=<n>      "
-        + "Number hbase scanner caching rows to read (default 50)");
+      + "Number hbase scanner caching rows to read (default 50)");
   }
 
   @Override
@@ -371,7 +369,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     try (Connection conn = ConnectionFactory.createConnection(getConf());
-        Admin admin = conn.getAdmin()) {
+      Admin admin = conn.getAdmin()) {
       admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
     }
     doLoad(getConf(), htd);

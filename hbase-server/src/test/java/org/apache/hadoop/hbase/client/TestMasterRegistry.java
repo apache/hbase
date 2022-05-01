@@ -53,7 +53,7 @@ public class TestMasterRegistry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterRegistry.class);
+    HBaseClassTestRule.forClass(TestMasterRegistry.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -157,7 +157,7 @@ public class TestMasterRegistry {
       assertEquals(registry.getClusterId().get(), clusterId);
       // Wait for new set of masters to be populated.
       TEST_UTIL.waitFor(5000,
-          (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
+        (Waiter.Predicate<Exception>) () -> !registry.getParsedMasterServers().equals(masters));
       // new set of masters should not include the bad server
       final Set<ServerName> newMasters = registry.getParsedMasterServers();
       // Bad one should be out.

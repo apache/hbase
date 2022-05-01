@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,10 +25,10 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,15 +38,13 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
- * {@link RpcScheduler}.  Call {@link #run()} to actually execute the contained
- * RpcServer.Call
+ * {@link RpcScheduler}. Call {@link #run()} to actually execute the contained RpcServer.Call
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class CallRunner {
 
-  private static final CallDroppedException CALL_DROPPED_EXCEPTION
-    = new CallDroppedException();
+  private static final CallDroppedException CALL_DROPPED_EXCEPTION = new CallDroppedException();
 
   private RpcCall call;
   private RpcServerInterface rpcServer;
@@ -55,7 +53,7 @@ public class CallRunner {
 
   /**
    * On construction, adds the size of this call to the running count of outstanding call sizes.
-   * Presumption is that we are put on a queue while we wait on an executor to run us.  During this
+   * Presumption is that we are put on a queue while we wait on an executor to run us. During this
    * time we occupy heap.
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
@@ -119,8 +117,8 @@ public class CallRunner {
       this.status.setConnection(call.getRemoteAddress().getHostAddress(), call.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
         Optional<User> remoteUser = call.getRequestUser();
-        RpcServer.LOG.trace(call.toShortString() + " executing as " +
-            (remoteUser.isPresent() ? remoteUser.get().getName() : "NULL principal"));
+        RpcServer.LOG.trace(call.toShortString() + " executing as "
+          + (remoteUser.isPresent() ? remoteUser.get().getName() : "NULL principal"));
       }
       Throwable errorThrowable = null;
       String error = null;
@@ -133,12 +131,12 @@ public class CallRunner {
       try (Scope traceScope = span.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
-          throw new ServerNotRunningYetException("Server " +
-              (address != null ? address : "(channel closed)") + " is not running yet");
+          throw new ServerNotRunningYetException(
+            "Server " + (address != null ? address : "(channel closed)") + " is not running yet");
         }
         // make the call
         resultPair = this.rpcServer.call(call, this.status);
-      } catch (TimeoutIOException e){
+      } catch (TimeoutIOException e) {
         RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
         return;
       } catch (Throwable e) {
@@ -154,7 +152,7 @@ public class CallRunner {
         errorThrowable = e;
         error = StringUtils.stringifyException(e);
         if (e instanceof Error) {
-          throw (Error)e;
+          throw (Error) e;
         }
       } finally {
         RpcServer.CurCall.set(null);
@@ -184,13 +182,13 @@ public class CallRunner {
       }
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
-      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-          "this means that the server " + (address != null ? address : "(channel closed)") +
-          " was processing a request but the client went away. The error message was: " +
-          cce.getMessage());
+      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, "
+        + "this means that the server " + (address != null ? address : "(channel closed)")
+        + " was processing a request but the client went away. The error message was: "
+        + cce.getMessage());
     } catch (Exception e) {
-      RpcServer.LOG.warn(Thread.currentThread().getName()
-          + ": caught: " + StringUtils.stringifyException(e));
+      RpcServer.LOG
+        .warn(Thread.currentThread().getName() + ": caught: " + StringUtils.stringifyException(e));
     } finally {
       if (!sucessful) {
         this.rpcServer.addCallSize(call.getSize() * -1);
@@ -223,13 +221,13 @@ public class CallRunner {
       call.sendResponseIfReady();
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
-      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-        "this means that the server " + (address != null ? address : "(channel closed)") +
-        " was processing a request but the client went away. The error message was: " +
-        cce.getMessage());
+      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, "
+        + "this means that the server " + (address != null ? address : "(channel closed)")
+        + " was processing a request but the client went away. The error message was: "
+        + cce.getMessage());
     } catch (Exception e) {
-      RpcServer.LOG.warn(Thread.currentThread().getName()
-        + ": caught: " + StringUtils.stringifyException(e));
+      RpcServer.LOG
+        .warn(Thread.currentThread().getName() + ": caught: " + StringUtils.stringifyException(e));
     } finally {
       if (!sucessful) {
         this.rpcServer.addCallSize(call.getSize() * -1);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestEnableTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEnableTable.class);
+    HBaseClassTestRule.forClass(TestEnableTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestEnableTable.class);
@@ -75,15 +75,13 @@ public class TestEnableTable {
   }
 
   /**
-   * We were only clearing rows that had a hregioninfo column in hbase:meta.  Mangled rows that
-   * were missing the hregioninfo because of error were being left behind messing up any
-   * subsequent table made with the same name. HBASE-12980
-   * @throws IOException
-   * @throws InterruptedException
+   * We were only clearing rows that had a hregioninfo column in hbase:meta. Mangled rows that were
+   * missing the hregioninfo because of error were being left behind messing up any subsequent table
+   * made with the same name. HBASE-12980 nn
    */
   @Test
   public void testDeleteForSureClearsAllTableRowsFromMeta()
-  throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final Admin admin = TEST_UTIL.getAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -129,7 +127,7 @@ public class TestEnableTable {
     }
   }
 
-  public  static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {
+  public static class MasterSyncObserver implements MasterCoprocessor, MasterObserver {
     volatile CountDownLatch tableCreationLatch = null;
     volatile CountDownLatch tableDeletionLatch = null;
 
@@ -140,9 +138,8 @@ public class TestEnableTable {
 
     @Override
     public void postCompletedCreateTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableDescriptor desc,
-        final RegionInfo[] regions) throws IOException {
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableDescriptor desc,
+      final RegionInfo[] regions) throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedCreateTableAction()
       if (tableCreationLatch != null) {
@@ -152,9 +149,8 @@ public class TestEnableTable {
 
     @Override
     public void postCompletedDeleteTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName)
-    throws IOException {
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException {
       // the AccessController test, some times calls only and directly the postDeleteTableHandler()
       if (tableDeletionLatch != null) {
         tableDeletionLatch.countDown();
@@ -162,13 +158,12 @@ public class TestEnableTable {
     }
   }
 
-  public static void createTable(HBaseTestingUtility testUtil,
-    HTableDescriptor htd, byte [][] splitKeys)
-  throws Exception {
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
+    byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncObserver.class);
     observer.tableCreationLatch = new CountDownLatch(1);
     Admin admin = testUtil.getAdmin();
     if (splitKeys != null) {
@@ -182,11 +177,11 @@ public class TestEnableTable {
   }
 
   public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
-  throws Exception {
+    throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class);
+    MasterSyncObserver observer = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncObserver.class);
     observer.tableDeletionLatch = new CountDownLatch(1);
     Admin admin = testUtil.getAdmin();
     try {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationSourceManagerZkImpl.class);
+    HBaseClassTestRule.forClass(TestReplicationSourceManagerZkImpl.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -65,7 +65,7 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
   public void testNodeFailoverDeadServerParsing() throws Exception {
     Server server = new DummyServer("ec2-54-234-230-108.compute-1.amazonaws.com");
     ReplicationQueueStorage queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+      ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
     // populate some znodes in the peer znode
     files.add("log1");
     files.add("log2");
@@ -92,7 +92,7 @@ public class TestReplicationSourceManagerZkImpl extends TestReplicationSourceMan
     serverName = s2.getServerName();
     unclaimed = queueStorage.getAllQueues(serverName);
     String queue3 =
-        queueStorage.claimQueue(serverName, unclaimed.get(0), s3.getServerName()).getFirst();
+      queueStorage.claimQueue(serverName, unclaimed.get(0), s3.getServerName()).getFirst();
     queueStorage.removeReplicatorIfQueueIsEmpty(serverName);
 
     ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(queue3);

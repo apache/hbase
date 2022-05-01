@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,24 +41,23 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Test setting values in the descriptor
- *
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
  *             {@link HTableDescriptor}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 @Deprecated
 public class TestHTableDescriptor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHTableDescriptor.class);
+    HBaseClassTestRule.forClass(TestHTableDescriptor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableDescriptor.class);
 
   @Rule
   public TestName name = new TestName();
 
-  @Test (expected=IOException.class)
+  @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     String cpName = "a.b.c.d";
@@ -110,7 +109,7 @@ public class TestHTableDescriptor {
     htd.setDurability(Durability.ASYNC_WAL);
     htd.setReadOnly(true);
     htd.setRegionReplication(2);
-    byte [] bytes = htd.toByteArray();
+    byte[] bytes = htd.toByteArray();
     HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(bytes);
     assertEquals(htd, deserializedHtd);
     assertEquals(v, deserializedHtd.getMaxFileSize());
@@ -121,7 +120,6 @@ public class TestHTableDescriptor {
 
   /**
    * Test cps in the table description.
-   *
    * @throws Exception if adding a coprocessor fails
    */
   @Test
@@ -139,7 +137,6 @@ public class TestHTableDescriptor {
 
   /**
    * Test cps in the table description.
-   *
    * @throws Exception if adding a coprocessor fails
    */
   @Test
@@ -198,13 +195,13 @@ public class TestHTableDescriptor {
   String[] legalTableNames = { "foo", "with-dash_under.dot", "_under_start_ok",
     "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02",
     "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
-    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02",
-    "汉", "汉:字", "_字_", "foo:字", "foo.字", "字.foo"};
+    "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02", "汉",
+    "汉:字", "_字_", "foo:字", "foo.字", "字.foo" };
   // Avoiding "zookeeper" in here as it's tough to encode in regex
   String[] illegalTableNames = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
     "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
-    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2", String.valueOf((char)130),
-      String.valueOf((char)5), String.valueOf((char)65530)};
+    "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2", String.valueOf((char) 130),
+    String.valueOf((char) 5), String.valueOf((char) 65530) };
 
   @Test
   public void testLegalHTableNames() {
@@ -241,8 +238,8 @@ public class TestHTableDescriptor {
   public void testLegalHTableNamesRegex() {
     for (String tn : legalTableNames) {
       TableName tName = TableName.valueOf(tn);
-      assertTrue("Testing: '" + tn + "'", Pattern.matches(TableName.VALID_USER_TABLE_REGEX,
-          tName.getNameAsString()));
+      assertTrue("Testing: '" + tn + "'",
+        Pattern.matches(TableName.VALID_USER_TABLE_REGEX, tName.getNameAsString()));
     }
   }
 
@@ -254,7 +251,7 @@ public class TestHTableDescriptor {
     }
   }
 
-    /**
+  /**
    * Test default value handling for maxFileSize
    */
   @Test
@@ -292,16 +289,11 @@ public class TestHTableDescriptor {
 
   @Test
   public void testClassMethodsAreBuilderStyle() {
-    /* HTableDescriptor should have a builder style setup where setXXX/addXXX methods
-     * can be chainable together:
-     * . For example:
-     * HTableDescriptor htd
-     *   = new HTableDescriptor()
-     *     .setFoo(foo)
-     *     .setBar(bar)
-     *     .setBuz(buz)
-     *
-     * This test ensures that all methods starting with "set" returns the declaring object
+    /*
+     * HTableDescriptor should have a builder style setup where setXXX/addXXX methods can be
+     * chainable together: . For example: HTableDescriptor htd = new HTableDescriptor() .setFoo(foo)
+     * .setBar(bar) .setBuz(buz) This test ensures that all methods starting with "set" returns the
+     * declaring object
      */
 
     BuilderStyleTest.assertClassesAreBuilderStyle(HTableDescriptor.class);
@@ -325,7 +317,7 @@ public class TestHTableDescriptor {
     assertEquals(1, htd.getFamily(familyName).getDFSReplication());
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testModifyInexistentFamily() {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");
@@ -333,7 +325,7 @@ public class TestHTableDescriptor {
     htd.modifyFamily(hcd);
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testAddDuplicateFamilies() {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     byte[] familyName = Bytes.toBytes("cf");

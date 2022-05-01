@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -249,8 +248,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
         if (regionsB == null) {
           return false;
         }
-        return getTableRegionMap().get(tableNameA).size() >= 1 &&
-          getTableRegionMap().get(tableNameB).size() >= 1;
+        return getTableRegionMap().get(tableNameA).size() >= 1
+          && getTableRegionMap().get(tableNameB).size() >= 1;
       }
     });
 
@@ -457,8 +456,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
   }
 
   @Test
-  public void testNotMoveTableToNullRSGroupWhenCreatingExistingTable()
-          throws Exception {
+  public void testNotMoveTableToNullRSGroupWhenCreatingExistingTable() throws Exception {
     // Trigger
     TableName tn1 = TableName.valueOf("t1");
     TEST_UTIL.createTable(tn1, "cf1");
@@ -470,19 +468,18 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     }
 
     // Wait then verify
-    //   Could not verify until the rollback of CreateTableProcedure is done
-    //   (that is, the coprocessor finishes its work),
-    //   or the table is still in the "default" rsgroup even though HBASE-21866
-    //   is not fixed.
+    // Could not verify until the rollback of CreateTableProcedure is done
+    // (that is, the coprocessor finishes its work),
+    // or the table is still in the "default" rsgroup even though HBASE-21866
+    // is not fixed.
     TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return
-                (master.getMasterProcedureExecutor().getActiveExecutorCount() == 0);
+        return (master.getMasterProcedureExecutor().getActiveExecutorCount() == 0);
       }
     });
-    SortedSet<TableName> tables
-            = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
+    SortedSet<TableName> tables =
+      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
     assertTrue("Table 't1' must be in 'default' rsgroup", tables.contains(tn1));
 
     // Cleanup
@@ -506,9 +503,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     final TableName tb1 = TableName.valueOf("testRename");
     TEST_UTIL.createTable(tb1, "tr");
     rsGroupAdmin.moveTables(Sets.newHashSet(tb1), oldgroup.getName());
-    TEST_UTIL.waitFor(1000,
-      (Waiter.Predicate<Exception>) () ->
-        rsGroupAdmin.getRSGroupInfoOfTable(tb1).getServers().size() == 2);
+    TEST_UTIL.waitFor(1000, (Waiter.Predicate<
+      Exception>) () -> rsGroupAdmin.getRSGroupInfoOfTable(tb1).getServers().size() == 2);
     oldgroup = rsGroupAdmin.getRSGroupInfo(oldgroup.getName());
     assertEquals(2, oldgroup.getServers().size());
     assertEquals(oldgroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb1).getName());
@@ -520,14 +516,12 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     final TableName tb2 = TableName.valueOf("unmovedTable");
     TEST_UTIL.createTable(tb2, "ut");
     rsGroupAdmin.moveTables(Sets.newHashSet(tb2), normal.getName());
-    TEST_UTIL.waitFor(1000,
-      (Waiter.Predicate<Exception>) () ->
-        rsGroupAdmin.getRSGroupInfoOfTable(tb2).getServers().size() == 1);
+    TEST_UTIL.waitFor(1000, (Waiter.Predicate<
+      Exception>) () -> rsGroupAdmin.getRSGroupInfoOfTable(tb2).getServers().size() == 1);
     normal = rsGroupAdmin.getRSGroupInfo(normal.getName());
     assertEquals(1, normal.getServers().size());
     assertEquals(normal.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tb2).getName());
     assertTrue(normal.containsTable(tb2));
-
 
     // Rename rsgroup
     rsGroupAdmin.renameRSGroup(oldgroup.getName(), "newgroup");
@@ -551,14 +545,14 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     assertNotNull(oldGroup);
     assertEquals(2, oldGroup.getServers().size());
 
-    //Add another RSGroup
+    // Add another RSGroup
     String anotherRSGroupName = "anotherRSGroup";
     RSGroupInfo anotherGroup = addGroup(anotherRSGroupName, 1);
     anotherGroup = rsGroupAdmin.getRSGroupInfo(anotherGroup.getName());
     assertNotNull(anotherGroup);
     assertEquals(1, anotherGroup.getServers().size());
 
-    //Rename a non existing RSGroup
+    // Rename a non existing RSGroup
     try {
       rsGroupAdmin.renameRSGroup("nonExistingRSGroup", "newRSGroup1");
       fail("ConstraintException was expected.");
@@ -566,7 +560,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       assertTrue(e.getMessage().contains("does not exist"));
     }
 
-    //Rename to existing group
+    // Rename to existing group
     try {
       rsGroupAdmin.renameRSGroup(oldGroup.getName(), anotherRSGroupName);
       fail("ConstraintException was expected.");
@@ -574,15 +568,15 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
       assertTrue(e.getMessage().contains("Group already exists"));
     }
 
-    //Rename default RSGroup
+    // Rename default RSGroup
     try {
       rsGroupAdmin.renameRSGroup(RSGroupInfo.DEFAULT_GROUP, "newRSGroup2");
       fail("ConstraintException was expected.");
     } catch (ConstraintException e) {
-      //Do nothing
+      // Do nothing
     }
 
-    //Rename to default RSGroup
+    // Rename to default RSGroup
     try {
       rsGroupAdmin.renameRSGroup(oldGroup.getName(), RSGroupInfo.DEFAULT_GROUP);
       fail("ConstraintException was expected.");

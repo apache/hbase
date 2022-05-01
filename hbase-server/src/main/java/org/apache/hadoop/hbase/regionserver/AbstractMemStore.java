@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,17 +21,16 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.SortedSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
 
 /**
  * An abstract class, which implements the behaviour shared by all concrete memstore instances.
@@ -47,7 +45,7 @@ public abstract class AbstractMemStore implements MemStore {
 
   // active segment absorbs write operations
   private volatile MutableSegment active;
-  // Snapshot of memstore.  Made for flusher.
+  // Snapshot of memstore. Made for flusher.
   protected volatile ImmutableSegment snapshot;
   protected volatile long snapshotId;
   // Used to track when to flush
@@ -64,21 +62,21 @@ public abstract class AbstractMemStore implements MemStore {
   public final static long DEEP_OVERHEAD = FIXED_OVERHEAD;
 
   public static void addToScanners(List<? extends Segment> segments, long readPt,
-      List<KeyValueScanner> scanners) {
+    List<KeyValueScanner> scanners) {
     for (Segment item : segments) {
       addToScanners(item, readPt, scanners);
     }
   }
 
   protected static void addToScanners(Segment segment, long readPt,
-      List<KeyValueScanner> scanners) {
+    List<KeyValueScanner> scanners) {
     if (!segment.isEmpty()) {
       scanners.add(segment.getScanner(readPt));
     }
   }
 
   protected AbstractMemStore(final Configuration conf, final CellComparator c,
-      final RegionServicesForStores regionServices) {
+    final RegionServicesForStores regionServices) {
     this.conf = conf;
     this.comparator = c;
     this.regionServices = regionServices;
@@ -108,7 +106,7 @@ public abstract class AbstractMemStore implements MemStore {
   /**
    * Updates the wal with the lowest sequence id (oldest entry) that is still in memory
    * @param onlyIfMoreRecent a flag that marks whether to update the sequence id no matter what or
-   *                      only if it is greater than the previous sequence id
+   *                         only if it is greater than the previous sequence id
    */
   public abstract void updateLowestUnflushedSequenceIdInWAL(boolean onlyIfMoreRecent);
 
@@ -121,19 +119,14 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public void add(Cell cell, MemStoreSizing memstoreSizing) {
-    doAddOrUpsert(cell, 0, memstoreSizing, true);  }
+    doAddOrUpsert(cell, 0, memstoreSizing, true);
+  }
 
   /*
-   * Inserts the specified Cell into MemStore and deletes any existing
-   * versions of the same row/family/qualifier as the specified Cell.
-   * <p>
-   * First, the specified Cell is inserted into the Memstore.
-   * <p>
-   * If there are any existing Cell in this MemStore with the same row,
-   * family, and qualifier, they are removed.
-   * <p>
-   * Callers must hold the read lock.
-   *
+   * Inserts the specified Cell into MemStore and deletes any existing versions of the same
+   * row/family/qualifier as the specified Cell. <p> First, the specified Cell is inserted into the
+   * Memstore. <p> If there are any existing Cell in this MemStore with the same row, family, and
+   * qualifier, they are removed. <p> Callers must hold the read lock.
    * @param cell the cell to be updated
    * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @param memstoreSizing object to accumulate changed size
@@ -142,15 +135,15 @@ public abstract class AbstractMemStore implements MemStore {
     doAddOrUpsert(cell, readpoint, memstoreSizing, false);
   }
 
-  private void doAddOrUpsert(Cell cell, long readpoint, MemStoreSizing memstoreSizing, boolean
-      doAdd) {
+  private void doAddOrUpsert(Cell cell, long readpoint, MemStoreSizing memstoreSizing,
+    boolean doAdd) {
     MutableSegment currentActive;
     boolean succ = false;
     while (!succ) {
       currentActive = getActive();
       succ = preUpdate(currentActive, cell, memstoreSizing);
       if (succ) {
-        if(doAdd) {
+        if (doAdd) {
           doAdd(currentActive, cell, memstoreSizing);
         } else {
           doUpsert(currentActive, cell, readpoint, memstoreSizing);
@@ -178,8 +171,8 @@ public abstract class AbstractMemStore implements MemStore {
     internalAdd(currentActive, toAdd, mslabUsed, memstoreSizing);
   }
 
-  private void doUpsert(MutableSegment currentActive, Cell cell, long readpoint, MemStoreSizing
-      memstoreSizing) {
+  private void doUpsert(MutableSegment currentActive, Cell cell, long readpoint,
+    MemStoreSizing memstoreSizing) {
     // Add the Cell to the MemStore
     // Use the internalAdd method here since we (a) already have a lock
     // and (b) cannot safely use the MSLAB here without potentially
@@ -195,15 +188,15 @@ public abstract class AbstractMemStore implements MemStore {
     setOldestEditTimeToNow();
   }
 
-    /**
-     * Issue any synchronization and test needed before applying the update
-     * @param currentActive the segment to be updated
-     * @param cell the cell to be added
-     * @param memstoreSizing object to accumulate region size changes
-     * @return true iff can proceed with applying the update
-     */
+  /**
+   * Issue any synchronization and test needed before applying the update
+   * @param currentActive  the segment to be updated
+   * @param cell           the cell to be added
+   * @param memstoreSizing object to accumulate region size changes
+   * @return true iff can proceed with applying the update
+   */
   protected abstract boolean preUpdate(MutableSegment currentActive, Cell cell,
-      MemStoreSizing memstoreSizing);
+    MemStoreSizing memstoreSizing);
 
   /**
    * Issue any post update synchronization and tests
@@ -242,10 +235,10 @@ public abstract class AbstractMemStore implements MemStore {
    */
   @Override
   public void clearSnapshot(long id) throws UnexpectedStateException {
-    if (this.snapshotId == -1) return;  // already cleared
+    if (this.snapshotId == -1) return; // already cleared
     if (this.snapshotId != id) {
-      throw new UnexpectedStateException("Current snapshot id is " + this.snapshotId + ",passed "
-          + id);
+      throw new UnexpectedStateException(
+        "Current snapshot id is " + this.snapshotId + ",passed " + id);
     }
     // OK. Passed in snapshot is same as current snapshot. If not-empty,
     // create a new snapshot and let the old one go.
@@ -275,7 +268,7 @@ public abstract class AbstractMemStore implements MemStore {
         buf.append("Segment (").append(i).append(") ").append(segment.toString()).append("; ");
         i++;
       }
-    } catch (IOException e){
+    } catch (IOException e) {
       return e.toString();
     }
     return buf.toString();
@@ -290,11 +283,8 @@ public abstract class AbstractMemStore implements MemStore {
     snapshot.dump(log);
   }
 
-
   /*
-   * @param a
-   * @param b
-   * @return Return lowest of a or b or null if both a and b are null
+   * nn * @return Return lowest of a or b or null if both a and b are null
    */
   protected Cell getLowest(final Cell a, final Cell b) {
     if (a == null) {
@@ -303,25 +293,24 @@ public abstract class AbstractMemStore implements MemStore {
     if (b == null) {
       return a;
     }
-    return comparator.compareRows(a, b) <= 0? a: b;
+    return comparator.compareRows(a, b) <= 0 ? a : b;
   }
 
   /*
-   * @param key Find row that follows this one.  If null, return first.
+   * @param key Find row that follows this one. If null, return first.
    * @param set Set to look in for a row beyond <code>row</code>.
-   * @return Next row or null if none found.  If one found, will be a new
-   * KeyValue -- can be destroyed by subsequent calls to this method.
+   * @return Next row or null if none found. If one found, will be a new KeyValue -- can be
+   * destroyed by subsequent calls to this method.
    */
-  protected Cell getNextRow(final Cell key,
-      final NavigableSet<Cell> set) {
+  protected Cell getNextRow(final Cell key, final NavigableSet<Cell> set) {
     Cell result = null;
-    SortedSet<Cell> tail = key == null? set: set.tailSet(key);
+    SortedSet<Cell> tail = key == null ? set : set.tailSet(key);
     // Iterate until we fall into the next row; i.e. move off current row
-    for (Cell cell: tail) {
+    for (Cell cell : tail) {
       if (comparator.compareRows(cell, key) <= 0) {
         continue;
       }
-      // Note: Not suppressing deletes or expired cells.  Needs to be handled
+      // Note: Not suppressing deletes or expired cells. Needs to be handled
       // by higher up functions.
       result = cell;
       break;
@@ -331,33 +320,28 @@ public abstract class AbstractMemStore implements MemStore {
 
   /**
    * If the segment has a memory allocator the cell is being cloned to this space, and returned;
-   * Otherwise the given cell is returned
-   *
-   * When a cell's size is too big (bigger than maxAlloc), it is not allocated on MSLAB.
-   * Since the process of flattening to CellChunkMap assumes that all cells are allocated on MSLAB,
-   * during this process, the input parameter forceCloneOfBigCell is set to 'true'
-   * and the cell is copied into MSLAB.
-   *
-   * @param cell the cell to clone
+   * Otherwise the given cell is returned When a cell's size is too big (bigger than maxAlloc), it
+   * is not allocated on MSLAB. Since the process of flattening to CellChunkMap assumes that all
+   * cells are allocated on MSLAB, during this process, the input parameter forceCloneOfBigCell is
+   * set to 'true' and the cell is copied into MSLAB.
+   * @param cell                the cell to clone
    * @param forceCloneOfBigCell true only during the process of flattening to CellChunkMap.
    * @return either the given cell or its clone
    */
-  private Cell maybeCloneWithAllocator(MutableSegment currentActive, Cell cell, boolean
-      forceCloneOfBigCell) {
+  private Cell maybeCloneWithAllocator(MutableSegment currentActive, Cell cell,
+    boolean forceCloneOfBigCell) {
     return currentActive.maybeCloneWithAllocator(cell, forceCloneOfBigCell);
   }
 
   /*
-   * Internal version of add() that doesn't clone Cells with the
-   * allocator, and doesn't take the lock.
-   *
-   * Callers should ensure they already have the read lock taken
+   * Internal version of add() that doesn't clone Cells with the allocator, and doesn't take the
+   * lock. Callers should ensure they already have the read lock taken
    * @param toAdd the cell to add
    * @param mslabUsed whether using MSLAB
    * @param memstoreSizing object to accumulate changed size
    */
-  private void internalAdd(MutableSegment currentActive, final Cell toAdd, final boolean
-      mslabUsed, MemStoreSizing memstoreSizing) {
+  private void internalAdd(MutableSegment currentActive, final Cell toAdd, final boolean mslabUsed,
+    MemStoreSizing memstoreSizing) {
     boolean sizeAddedPreOperation = sizeAddedPreOperation();
     currentActive.add(toAdd, mslabUsed, memstoreSizing, sizeAddedPreOperation);
     setOldestEditTimeToNow();

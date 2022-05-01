@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -48,7 +47,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private final ConcurrentMap<String, Long> regionMaximumEditLogSeqNum = new ConcurrentHashMap<>();
 
   public AbstractRecoveredEditsOutputSink(WALSplitter walSplitter,
-      WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
+    WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
     super(controller, entryBuffers, numWriters);
     this.walSplitter = walSplitter;
   }
@@ -57,14 +56,14 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
    * @return a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close.
    */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
-      long seqId) throws IOException {
+    long seqId) throws IOException {
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,
       walSplitter.getFileBeingSplit().getPath().getName(), walSplitter.getTmpDirName(),
       walSplitter.conf);
     if (walSplitter.walFS.exists(regionEditsPath)) {
-      LOG.warn("Found old edits file. It could be the " +
-        "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length=" +
-        walSplitter.walFS.getFileStatus(regionEditsPath).getLen());
+      LOG.warn("Found old edits file. It could be the "
+        + "result of a previous failed split attempt. Deleting " + regionEditsPath + ", length="
+        + walSplitter.walFS.getFileStatus(regionEditsPath).getLen());
       if (!walSplitter.walFS.delete(regionEditsPath, false)) {
         LOG.warn("Failed delete of old {}", regionEditsPath);
       }
@@ -77,7 +76,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   }
 
   protected Path closeRecoveredEditsWriter(RecoveredEditsWriter editsWriter,
-      List<IOException> thrown) throws IOException {
+    List<IOException> thrown) throws IOException {
     try {
       editsWriter.writer.close();
     } catch (IOException ioe) {
@@ -88,14 +87,16 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
       return null;
     }
     final String msg = "Closed recovered edits writer path=" + editsWriter.path + " (wrote "
-      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in " + (
-      editsWriter.nanosSpent / 1000 / 1000) + " ms)";
+      + editsWriter.editsWritten + " edits, skipped " + editsWriter.editsSkipped + " edits in "
+      + (editsWriter.nanosSpent / 1000 / 1000) + " ms)";
     LOG.info(msg);
     updateStatusWithMsg(msg);
     if (editsWriter.editsWritten == 0) {
       // just remove the empty recovered.edits file
-      if (walSplitter.walFS.exists(editsWriter.path)
-          && !walSplitter.walFS.delete(editsWriter.path, false)) {
+      if (
+        walSplitter.walFS.exists(editsWriter.path)
+          && !walSplitter.walFS.delete(editsWriter.path, false)
+      ) {
         final String errorMsg = "Failed deleting empty " + editsWriter.path;
         LOG.warn(errorMsg);
         updateStatusWithMsg(errorMsg);
@@ -125,8 +126,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
         updateStatusWithMsg(renameEditMsg);
       }
     } catch (IOException ioe) {
-      final String errorMsg = "Could not rename recovered edits " + editsWriter.path
-        + " to " + dst;
+      final String errorMsg = "Could not rename recovered edits " + editsWriter.path + " to " + dst;
       LOG.error(errorMsg, ioe);
       updateStatusWithMsg(errorMsg);
       thrown.add(ioe);
@@ -173,17 +173,17 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
         e);
     }
     if (editsWriter.minLogSeqNum < dstMinLogSeqNum) {
-      LOG.warn("Found existing old edits file. It could be the result of a previous failed" +
-        " split attempt or we have duplicated wal entries. Deleting " + dst + ", length=" +
-        walSplitter.walFS.getFileStatus(dst).getLen());
+      LOG.warn("Found existing old edits file. It could be the result of a previous failed"
+        + " split attempt or we have duplicated wal entries. Deleting " + dst + ", length="
+        + walSplitter.walFS.getFileStatus(dst).getLen());
       if (!walSplitter.walFS.delete(dst, false)) {
         LOG.warn("Failed deleting of old {}", dst);
         throw new IOException("Failed deleting of old " + dst);
       }
     } else {
-      LOG.warn(
-        "Found existing old edits file and we have less entries. Deleting " + editsWriter.path +
-          ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
+      LOG
+        .warn("Found existing old edits file and we have less entries. Deleting " + editsWriter.path
+          + ", length=" + walSplitter.walFS.getFileStatus(editsWriter.path).getLen());
       if (!walSplitter.walFS.delete(editsWriter.path, false)) {
         LOG.warn("Failed deleting of {}", editsWriter.path);
         throw new IOException("Failed deleting of " + editsWriter.path);
@@ -252,7 +252,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     }
 
     private void logAndThrowWriterAppendFailure(WAL.Entry logEntry, IOException e)
-        throws IOException {
+      throws IOException {
       e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
       final String errorMsg = "Failed to write log entry " + logEntry.toString() + " to log";
       LOG.error(HBaseMarkers.FATAL, errorMsg, e);
@@ -262,7 +262,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
 
     private void filterCellByStore(WAL.Entry logEntry) {
       Map<byte[], Long> maxSeqIdInStores = walSplitter.getRegionMaxSeqIdInStores()
-          .get(Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+        .get(Bytes.toString(logEntry.getKey().getEncodedRegionName()));
       if (MapUtils.isEmpty(maxSeqIdInStores)) {
         return;
       }

@@ -15,19 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
-
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>
- * Extends {@link ByteRange} with additional methods to support tracking a
- * consumers position within the viewport. The API is extended with methods
- * {@link #get()} and {@link #put(byte)} for interacting with the backing
- * array from the current position forward. This frees the caller from managing
- * their own index into the array.
+ * Extends {@link ByteRange} with additional methods to support tracking a consumers position within
+ * the viewport. The API is extended with methods {@link #get()} and {@link #put(byte)} for
+ * interacting with the backing array from the current position forward. This frees the caller from
+ * managing their own index into the array.
  * </p>
  * <p>
  * Designed to be a slimmed-down, mutable alternative to {@link java.nio.ByteBuffer}.
@@ -39,8 +36,8 @@ public interface PositionedByteRange extends ByteRange {
   // net new API is here.
 
   /**
-   * The current {@code position} marker. This valuae is 0-indexed, relative to
-   * the beginning of the range.
+   * The current {@code position} marker. This valuae is 0-indexed, relative to the beginning of the
+   * range.
    */
   public int getPosition();
 
@@ -88,20 +85,18 @@ public interface PositionedByteRange extends ByteRange {
   public long getVLong();
 
   /**
-   * Fill {@code dst} with bytes from the range, starting from {@code position}.
-   * This range's {@code position} is incremented by the length of {@code dst},
-   * the number of bytes copied.
+   * Fill {@code dst} with bytes from the range, starting from {@code position}. This range's
+   * {@code position} is incremented by the length of {@code dst}, the number of bytes copied.
    * @param dst the destination of the copy.
    * @return this.
    */
   public PositionedByteRange get(byte[] dst);
 
   /**
-   * Fill {@code dst} with bytes from the range, starting from the current
-   * {@code position}. {@code length} bytes are copied into {@code dst},
-   * starting at {@code offset}. This range's {@code position} is incremented
-   * by the number of bytes copied.
-   * @param dst the destination of the copy.
+   * Fill {@code dst} with bytes from the range, starting from the current {@code position}.
+   * {@code length} bytes are copied into {@code dst}, starting at {@code offset}. This range's
+   * {@code position} is incremented by the number of bytes copied.
+   * @param dst    the destination of the copy.
    * @param offset the offset into {@code dst} to start the copy.
    * @param length the number of bytes to copy into {@code dst}.
    * @return this.
@@ -151,10 +146,9 @@ public interface PositionedByteRange extends ByteRange {
   public PositionedByteRange put(byte[] val);
 
   /**
-   * Store {@code length} bytes from {@code val} into this range. Bytes from
-   * {@code val} are copied starting at {@code offset} into the range, starting at
-   * the current position.
-   * @param val the new value.
+   * Store {@code length} bytes from {@code val} into this range. Bytes from {@code val} are copied
+   * starting at {@code offset} into the range, starting at the current position.
+   * @param val    the new value.
    * @param offset the offset in {@code val} from which to start copying.
    * @param length the number of bytes to copy from {@code val}.
    * @return this.
@@ -162,18 +156,12 @@ public interface PositionedByteRange extends ByteRange {
   public PositionedByteRange put(byte[] val, int offset, int length);
 
   /**
-   * Limits the byte range upto a specified value. Limit cannot be greater than
-   * capacity
-   *
-   * @param limit
-   * @return PositionedByteRange
+   * Limits the byte range upto a specified value. Limit cannot be greater than capacity nn
    */
   public PositionedByteRange setLimit(int limit);
 
   /**
-   * Return the current limit
-   *
-   * @return limit
+   * Return the current limit n
    */
   public int getLimit();
 

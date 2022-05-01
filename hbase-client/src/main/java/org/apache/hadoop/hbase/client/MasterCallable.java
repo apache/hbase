@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
@@ -29,16 +28,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * A RetryingCallable for Master RPC operations.
- * Implement the #rpcCall method. It will be retried on error. See its javadoc and the javadoc of
- * #call(int). See {@link HBaseAdmin} for examples of how this is used. To get at the
- * rpcController that has been created and configured to make this rpc call, use getRpcController().
- * We are trying to contain all protobuf references including references to rpcController so we
- * don't pollute codebase with protobuf references; keep the protobuf references contained and only
- * present in a few classes rather than all about the code base.
- * <p>Like {@link RegionServerCallable} only in here, we can safely be PayloadCarryingRpcController
- * all the time. This is not possible in the similar {@link RegionServerCallable} Callable because
- * it has to deal with Coprocessor Endpoints.
+ * A RetryingCallable for Master RPC operations. Implement the #rpcCall method. It will be retried
+ * on error. See its javadoc and the javadoc of #call(int). See {@link HBaseAdmin} for examples of
+ * how this is used. To get at the rpcController that has been created and configured to make this
+ * rpc call, use getRpcController(). We are trying to contain all protobuf references including
+ * references to rpcController so we don't pollute codebase with protobuf references; keep the
+ * protobuf references contained and only present in a few classes rather than all about the code
+ * base.
+ * <p>
+ * Like {@link RegionServerCallable} only in here, we can safely be PayloadCarryingRpcController all
+ * the time. This is not possible in the similar {@link RegionServerCallable} Callable because it
+ * has to deal with Coprocessor Endpoints.
  * @param <V> return type
  */
 @InterfaceAudience.Private
@@ -81,10 +81,10 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   }
 
   /**
-   * Override that changes the {@link java.util.concurrent.Callable#call()} Exception from {@link Exception} to
-   * {@link IOException}. It also does setup of an rpcController and calls through to the rpcCall()
-   * method which callers are expected to implement. If rpcController is an instance of
-   * PayloadCarryingRpcController, we will set a timeout on it.
+   * Override that changes the {@link java.util.concurrent.Callable#call()} Exception from
+   * {@link Exception} to {@link IOException}. It also does setup of an rpcController and calls
+   * through to the rpcCall() method which callers are expected to implement. If rpcController is an
+   * instance of PayloadCarryingRpcController, we will set a timeout on it.
    */
   @Override
   // Same trick as in RegionServerCallable so users don't have to copy/paste so much boilerplate
@@ -103,12 +103,11 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   }
 
   /**
-   * Run the RPC call. Implement this method. To get at the rpcController that has been created
-   * and configured to make this rpc call, use getRpcController(). We are trying to contain
+   * Run the RPC call. Implement this method. To get at the rpcController that has been created and
+   * configured to make this rpc call, use getRpcController(). We are trying to contain
    * rpcController references so we don't pollute codebase with protobuf references; keep the
-   * protobuf references contained and only present in a few classes rather than all about the
-   * code base.
-   * @throws Exception
+   * protobuf references contained and only present in a few classes rather than all about the code
+   * base. n
    */
   protected abstract V rpcCall() throws Exception;
 
@@ -138,7 +137,7 @@ abstract class MasterCallable<V> implements RetryingCallable<V>, Closeable {
   }
 
   private static boolean isMetaRegion(final byte[] regionName) {
-    return Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName()) ||
-      Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
+    return Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionName())
+      || Bytes.equals(regionName, RegionInfoBuilder.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
   }
 }

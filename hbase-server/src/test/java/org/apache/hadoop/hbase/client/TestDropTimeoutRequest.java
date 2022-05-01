@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,16 +44,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test a drop timeout request.
- * This test used to be in TestHCM but it has particulare requirements -- i.e. one handler only --
- * so run it apart from the rest of TestHCM.
+ * Test a drop timeout request. This test used to be in TestHCM but it has particulare requirements
+ * -- i.e. one handler only -- so run it apart from the rest of TestHCM.
  */
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestDropTimeoutRequest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDropTimeoutRequest.class);
+    HBaseClassTestRule.forClass(TestDropTimeoutRequest.class);
 
   @Rule
   public TestName name = new TestName();
@@ -76,8 +75,8 @@ public class TestDropTimeoutRequest {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+      final List<Cell> results) throws IOException {
       // After first sleep, all requests are timeout except the last retry. If we handle
       // all the following requests, finally the last request is also timeout. If we drop all
       // timeout requests, we can handle the last request immediately and it will not timeout.
@@ -113,7 +112,7 @@ public class TestDropTimeoutRequest {
     // it has been considered as timeout at client. If we don't drop it, the server will waste time
     // on handling timeout requests and finally all requests timeout and client throws exception.
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
     builder.setCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAM_NAM).build();
     builder.setColumnFamily(cfd);

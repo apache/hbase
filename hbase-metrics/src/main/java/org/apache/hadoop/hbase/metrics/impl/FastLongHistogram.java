@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class FastLongHistogram {
   public static final int DEFAULT_NBINS = 255;
 
   public static final double[] DEFAULT_QUANTILES =
-      new double[]{0.25, 0.5, 0.75, 0.90, 0.95, 0.98, 0.99, 0.999};
+    new double[] { 0.25, 0.5, 0.75, 0.90, 0.95, 0.98, 0.99, 0.999 };
 
   /**
    * Bins is a class containing a list of buckets(or bins) for estimation histogram of some data.
@@ -105,8 +105,8 @@ public class FastLongHistogram {
         return this.counts.length - 2;
       }
       // compute the position
-      return 1 + (int) ((value - this.binsMin) * (this.counts.length - 3) /
-          (this.binsMax - this.binsMin));
+      return 1
+        + (int) ((value - this.binsMin) * (this.counts.length - 3) / (this.binsMax - this.binsMin));
 
     }
 
@@ -245,7 +245,7 @@ public class FastLongHistogram {
   /**
    * Constructor.
    * @param numOfBins the number of bins for the histogram. A larger value results in more precise
-   *          results but with lower efficiency, and vice versus.
+   *                  results but with lower efficiency, and vice versus.
    */
   public FastLongHistogram(int numOfBins) {
     this.bins = new Bins(numOfBins);
@@ -254,9 +254,9 @@ public class FastLongHistogram {
   /**
    * Constructor setting the bins assuming a uniform distribution within a range.
    * @param numOfBins the number of bins for the histogram. A larger value results in more precise
-   *          results but with lower efficiency, and vice versus.
-   * @param min lower bound of the region, inclusive.
-   * @param max higher bound of the region, inclusive.
+   *                  results but with lower efficiency, and vice versus.
+   * @param min       lower bound of the region, inclusive.
+   * @param max       higher bound of the region, inclusive.
    */
   public FastLongHistogram(int numOfBins, long min, long max) {
     this(numOfBins);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.DataInput;
@@ -23,27 +22,24 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A byte sequence that is usable as a key or value.  Based on
- * {@link org.apache.hadoop.io.BytesWritable} only this class is NOT resizable
- * and DOES NOT distinguish between the size of the sequence and the current
- * capacity as {@link org.apache.hadoop.io.BytesWritable} does. Hence its
- * comparatively 'immutable'. When creating a new instance of this class,
- * the underlying byte [] is not copied, just referenced.  The backing
- * buffer is accessed when we go to serialize.
+ * A byte sequence that is usable as a key or value. Based on
+ * {@link org.apache.hadoop.io.BytesWritable} only this class is NOT resizable and DOES NOT
+ * distinguish between the size of the sequence and the current capacity as
+ * {@link org.apache.hadoop.io.BytesWritable} does. Hence its comparatively 'immutable'. When
+ * creating a new instance of this class, the underlying byte [] is not copied, just referenced. The
+ * backing buffer is accessed when we go to serialize.
  */
 @InterfaceAudience.Public
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
-    justification="It has been like this forever")
-public class ImmutableBytesWritable
-implements WritableComparable<ImmutableBytesWritable> {
+    value = "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
+    justification = "It has been like this forever")
+public class ImmutableBytesWritable implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;
   private int offset;
   private int length;
@@ -64,8 +60,7 @@ implements WritableComparable<ImmutableBytesWritable> {
   }
 
   /**
-   * Set the new ImmutableBytesWritable to the contents of the passed
-   * <code>ibw</code>.
+   * Set the new ImmutableBytesWritable to the contents of the passed <code>ibw</code>.
    * @param ibw the value to set this ImmutableBytesWritable to.
    */
   public ImmutableBytesWritable(final ImmutableBytesWritable ibw) {
@@ -74,12 +69,11 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /**
    * Set the value to a given byte range
-   * @param bytes the new byte range to set to
+   * @param bytes  the new byte range to set to
    * @param offset the offset in newData to start at
    * @param length the number of bytes in the range
    */
-  public ImmutableBytesWritable(final byte[] bytes, final int offset,
-      final int length) {
+  public ImmutableBytesWritable(final byte[] bytes, final int offset, final int length) {
     this.bytes = bytes;
     this.offset = offset;
     this.length = length;
@@ -89,10 +83,10 @@ implements WritableComparable<ImmutableBytesWritable> {
    * Get the data from the BytesWritable.
    * @return The data is only valid between offset and offset+length.
    */
-  public byte [] get() {
+  public byte[] get() {
     if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-        "called w/o accompaying readFields invocation");
+      throw new IllegalStateException(
+        "Uninitialiized. Null constructor " + "called w/o accompaying readFields invocation");
     }
     return this.bytes;
   }
@@ -100,16 +94,14 @@ implements WritableComparable<ImmutableBytesWritable> {
   /**
    * @param b Use passed bytes as backing array for this instance.
    */
-  public void set(final byte [] b) {
+  public void set(final byte[] b) {
     set(b, 0, b.length);
   }
 
   /**
-   * @param b Use passed bytes as backing array for this instance.
-   * @param offset
-   * @param length
+   * @param b Use passed bytes as backing array for this instance. nn
    */
-  public void set(final byte [] b, final int offset, final int length) {
+  public void set(final byte[] b, final int offset, final int length) {
     this.bytes = b;
     this.offset = offset;
     this.length = length;
@@ -124,8 +116,8 @@ implements WritableComparable<ImmutableBytesWritable> {
   @Deprecated
   public int getSize() {
     if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-        "called w/o accompaying readFields invocation");
+      throw new IllegalStateException(
+        "Uninitialiized. Null constructor " + "called w/o accompaying readFields invocation");
     }
     return this.length;
   }
@@ -135,16 +127,16 @@ implements WritableComparable<ImmutableBytesWritable> {
    */
   public int getLength() {
     if (this.bytes == null) {
-      throw new IllegalStateException("Uninitialiized. Null constructor " +
-        "called w/o accompaying readFields invocation");
+      throw new IllegalStateException(
+        "Uninitialiized. Null constructor " + "called w/o accompaying readFields invocation");
     }
     return this.length;
   }
 
   /**
-   * @return offset
+   * n
    */
-  public int getOffset(){
+  public int getOffset() {
     return this.offset;
   }
 
@@ -167,33 +159,29 @@ implements WritableComparable<ImmutableBytesWritable> {
   public int hashCode() {
     int hash = 1;
     for (int i = offset; i < offset + length; i++)
-      hash = (31 * hash) + (int)bytes[i];
+      hash = (31 * hash) + (int) bytes[i];
     return hash;
   }
 
   /**
    * Define the sort order of the BytesWritable.
    * @param that The other bytes writable
-   * @return Positive if left is bigger than right, 0 if they are equal, and
-   *         negative if left is smaller than right.
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
    */
   @Override
   public int compareTo(ImmutableBytesWritable that) {
-    return WritableComparator.compareBytes(
-      this.bytes, this.offset, this.length,
-      that.bytes, that.offset, that.length);
+    return WritableComparator.compareBytes(this.bytes, this.offset, this.length, that.bytes,
+      that.offset, that.length);
   }
 
   /**
-   * Compares the bytes in this object to the specified byte array
-   * @param that
-   * @return Positive if left is bigger than right, 0 if they are equal, and
-   *         negative if left is smaller than right.
+   * Compares the bytes in this object to the specified byte array n * @return Positive if left is
+   * bigger than right, 0 if they are equal, and negative if left is smaller than right.
    */
-  public int compareTo(final byte [] that) {
-    return WritableComparator.compareBytes(
-      this.bytes, this.offset, this.length,
-      that, 0, that.length);
+  public int compareTo(final byte[] that) {
+    return WritableComparator.compareBytes(this.bytes, this.offset, this.length, that, 0,
+      that.length);
   }
 
   /**
@@ -201,11 +189,11 @@ implements WritableComparable<ImmutableBytesWritable> {
    */
   @Override
   public boolean equals(Object right_obj) {
-    if (right_obj instanceof byte []) {
-      return compareTo((byte [])right_obj) == 0;
+    if (right_obj instanceof byte[]) {
+      return compareTo((byte[]) right_obj) == 0;
     }
     if (right_obj instanceof ImmutableBytesWritable) {
-      return compareTo((ImmutableBytesWritable)right_obj) == 0;
+      return compareTo((ImmutableBytesWritable) right_obj) == 0;
     }
     return false;
   }
@@ -215,9 +203,9 @@ implements WritableComparable<ImmutableBytesWritable> {
    */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder(3*this.length);
+    StringBuilder sb = new StringBuilder(3 * this.length);
     final int endIdx = this.offset + this.length;
-    for (int idx = this.offset; idx < endIdx ; idx++) {
+    for (int idx = this.offset; idx < endIdx; idx++) {
       sb.append(' ');
       String num = Integer.toHexString(0xff & this.bytes[idx]);
       // if it is only one digit, add a leading 0.
@@ -229,12 +217,12 @@ implements WritableComparable<ImmutableBytesWritable> {
     return sb.length() > 0 ? sb.substring(1) : "";
   }
 
-  /** A Comparator optimized for ImmutableBytesWritable.
+  /**
+   * A Comparator optimized for ImmutableBytesWritable.
    */
   @InterfaceAudience.Public
   public static class Comparator extends WritableComparator {
-    private BytesWritable.Comparator comparator =
-      new BytesWritable.Comparator();
+    private BytesWritable.Comparator comparator = new BytesWritable.Comparator();
 
     /** constructor */
     public Comparator() {
@@ -258,7 +246,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @param array List of byte [].
    * @return Array of byte [].
    */
-  public static byte [][] toArray(final List<byte []> array) {
+  public static byte[][] toArray(final List<byte[]> array) {
     // List#toArray doesn't work on lists of byte [].
     byte[][] results = new byte[array.size()][];
     for (int i = 0; i < array.size(); i++) {
@@ -271,6 +259,6 @@ implements WritableComparable<ImmutableBytesWritable> {
    * Returns a copy of the bytes referred to by this writable
    */
   public byte[] copyBytes() {
-    return Arrays.copyOfRange(bytes, offset, offset+length);
+    return Arrays.copyOfRange(bytes, offset, offset + length);
   }
 }

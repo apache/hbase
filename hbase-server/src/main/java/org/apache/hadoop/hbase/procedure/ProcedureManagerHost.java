@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,9 +20,8 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.List;
-
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -30,35 +29,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Provides the common setup framework and runtime services for globally
- * barriered procedure invocation from HBase services.
- * @param <E> the specific procedure management extension that a concrete
- * implementation provides
+ * Provides the common setup framework and runtime services for globally barriered procedure
+ * invocation from HBase services.
+ * @param <E> the specific procedure management extension that a concrete implementation provides
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class ProcedureManagerHost<E extends ProcedureManager> {
 
   public static final String REGIONSERVER_PROCEDURE_CONF_KEY =
-      "hbase.procedure.regionserver.classes";
-  public static final String MASTER_PROCEDURE_CONF_KEY =
-      "hbase.procedure.master.classes";
+    "hbase.procedure.regionserver.classes";
+  public static final String MASTER_PROCEDURE_CONF_KEY = "hbase.procedure.master.classes";
 
   private static final Logger LOG = LoggerFactory.getLogger(ProcedureManagerHost.class);
 
   protected Set<E> procedures = new HashSet<>();
 
   /**
-   * Load system procedures. Read the class names from configuration.
-   * Called by constructor.
+   * Load system procedures. Read the class names from configuration. Called by constructor.
    */
   protected void loadUserProcedures(Configuration conf, String confKey) {
     Class<?> implClass = null;
 
     // load default procedures from configure file
     String[] defaultProcClasses = conf.getStrings(confKey);
-    if (defaultProcClasses == null || defaultProcClasses.length == 0)
-      return;
+    if (defaultProcClasses == null || defaultProcClasses.length == 0) return;
 
     List<E> configured = new ArrayList<>();
     for (String className : defaultProcClasses) {
@@ -70,11 +65,9 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
         configured.add(loadInstance(implClass));
         LOG.info("User procedure " + className + " was loaded successfully.");
       } catch (ClassNotFoundException e) {
-        LOG.warn("Class " + className + " cannot be found. " +
-            e.getMessage());
+        LOG.warn("Class " + className + " cannot be found. " + e.getMessage());
       } catch (IOException e) {
-        LOG.warn("Load procedure " + className + " failed. " +
-            e.getMessage());
+        LOG.warn("Load procedure " + className + " failed. " + e.getMessage());
       }
     }
 
@@ -89,7 +82,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
     Object o = null;
     try {
       o = implClass.getDeclaredConstructor().newInstance();
-      impl = (E)o;
+      impl = (E) o;
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -104,7 +97,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
 
   public Set<E> getProcedureManagers() {
     Set<E> returnValue = new HashSet<>();
-    for (E e: procedures) {
+    for (E e : procedures) {
       returnValue.add(e);
     }
     return returnValue;

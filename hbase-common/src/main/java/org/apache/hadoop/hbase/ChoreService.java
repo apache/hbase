@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,9 +86,8 @@ public class ChoreService {
   private final String coreThreadPoolPrefix;
 
   /**
-   *
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
-   *          spawned by this service
+   *                             spawned by this service
    */
   @InterfaceAudience.Private
   public ChoreService(final String coreThreadPoolPrefix) {
@@ -98,9 +96,9 @@ public class ChoreService {
 
   /**
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
-   *          spawned by this service
-   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
-   *               to true this will add -10% to 10% jitter.
+   *                             spawned by this service
+   * @param jitter               Should chore service add some jitter for all of the scheduled
+   *                             chores. When set to true this will add -10% to 10% jitter.
    */
   public ChoreService(final String coreThreadPoolPrefix, final boolean jitter) {
     this(coreThreadPoolPrefix, MIN_CORE_POOL_SIZE, jitter);
@@ -108,16 +106,17 @@ public class ChoreService {
 
   /**
    * @param coreThreadPoolPrefix Prefix that will be applied to the Thread name of all threads
-   *          spawned by this service
-   * @param corePoolSize The initial size to set the core pool of the ScheduledThreadPoolExecutor
-   *          to during initialization. The default size is 1, but specifying a larger size may be
-   *          beneficial if you know that 1 thread will not be enough.
-   * @param jitter Should chore service add some jitter for all of the scheduled chores. When set
-   *               to true this will add -10% to 10% jitter.
+   *                             spawned by this service
+   * @param corePoolSize         The initial size to set the core pool of the
+   *                             ScheduledThreadPoolExecutor to during initialization. The default
+   *                             size is 1, but specifying a larger size may be beneficial if you
+   *                             know that 1 thread will not be enough.
+   * @param jitter               Should chore service add some jitter for all of the scheduled
+   *                             chores. When set to true this will add -10% to 10% jitter.
    */
   public ChoreService(final String coreThreadPoolPrefix, int corePoolSize, boolean jitter) {
     this.coreThreadPoolPrefix = coreThreadPoolPrefix;
-    if (corePoolSize < MIN_CORE_POOL_SIZE)  {
+    if (corePoolSize < MIN_CORE_POOL_SIZE) {
       corePoolSize = MIN_CORE_POOL_SIZE;
     }
 
@@ -135,8 +134,8 @@ public class ChoreService {
 
   /**
    * @param chore Chore to be scheduled. If the chore is already scheduled with another ChoreService
-   *          instance, that schedule will be cancelled (i.e. a Chore can only ever be scheduled
-   *          with a single ChoreService instance).
+   *              instance, that schedule will be cancelled (i.e. a Chore can only ever be scheduled
+   *              with a single ChoreService instance).
    * @return true when the chore was successfully scheduled. false when the scheduling failed
    *         (typically occurs when a chore is scheduled during shutdown of service)
    */
@@ -178,7 +177,7 @@ public class ChoreService {
 
   /**
    * @param chore The Chore to be rescheduled. If the chore is not scheduled with this ChoreService
-   *          yet then this call is equivalent to a call to scheduleChore.
+   *              yet then this call is equivalent to a call to scheduleChore.
    */
   private void rescheduleChore(ScheduledChore chore) {
     if (scheduledChores.containsKey(chore)) {
@@ -198,7 +197,7 @@ public class ChoreService {
    * {@link ScheduledChore} from this {@link ChoreService}.
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
   public synchronized void cancelChore(ScheduledChore chore) {
     cancelChore(chore, true);
   }
@@ -211,7 +210,7 @@ public class ChoreService {
    * {@link ScheduledChore} from this {@link ChoreService}.
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/(ScheduledChore|ChoreService).java")
   synchronized void cancelChore(ScheduledChore chore, boolean mayInterruptIfRunning) {
     if (scheduledChores.containsKey(chore)) {
       ScheduledFuture<?> future = scheduledChores.get(chore);
@@ -233,7 +232,7 @@ public class ChoreService {
   @InterfaceAudience.Private
   public synchronized boolean isChoreScheduled(ScheduledChore chore) {
     return chore != null && scheduledChores.containsKey(chore)
-        && !scheduledChores.get(chore).isDone();
+      && !scheduledChores.get(chore).isDone();
   }
 
   /**
@@ -241,7 +240,7 @@ public class ChoreService {
    * this call, the chore will begin another execution as soon as the current execution finishes
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void triggerNow(ScheduledChore chore) {
     assert chore.getChoreService() == this;
     rescheduleChore(chore);
@@ -288,7 +287,7 @@ public class ChoreService {
     @Override
     public Thread newThread(Runnable r) {
       Thread thread =
-          new Thread(r, threadPrefix + THREAD_NAME_SUFFIX + threadNumber.getAndIncrement());
+        new Thread(r, threadPrefix + THREAD_NAME_SUFFIX + threadNumber.getAndIncrement());
       thread.setDaemon(true);
       return thread;
     }
@@ -333,7 +332,7 @@ public class ChoreService {
    * @param chore The chore that missed its start time
    */
   @RestrictedApi(explanation = "Should only be called in ScheduledChore", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void onChoreMissedStartTime(ScheduledChore chore) {
     if (!scheduledChores.containsKey(chore)) {
       return;

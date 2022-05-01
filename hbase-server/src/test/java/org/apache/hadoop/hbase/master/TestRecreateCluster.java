@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -57,14 +56,13 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Test reuse storefiles within data directory when cluster failover with a set of new region
- * servers with different hostnames with or without WALs and Zookeeper ZNodes support. For any
- * hbase system table and user table can be assigned normally after cluster restart.
- *
- * Turns out that it's difficult to write a negative test that the configuration property can be
- * disabled because MiniHBaseCluster won't fully start. In JVMClusterUtil (called by HBaseTestingUtility),
- * we wait for the active Master to complete its initialization. However, because we don't recover
- * these Regions on UNKNOWN servers (including hbase:namespace's Region), the Master will never
- * initialize on its own.
+ * servers with different hostnames with or without WALs and Zookeeper ZNodes support. For any hbase
+ * system table and user table can be assigned normally after cluster restart. Turns out that it's
+ * difficult to write a negative test that the configuration property can be disabled because
+ * MiniHBaseCluster won't fully start. In JVMClusterUtil (called by HBaseTestingUtility), we wait
+ * for the active Master to complete its initialization. However, because we don't recover these
+ * Regions on UNKNOWN servers (including hbase:namespace's Region), the Master will never initialize
+ * on its own.
  */
 @Category({ LargeTests.class })
 public class TestRecreateCluster {
@@ -72,7 +70,7 @@ public class TestRecreateCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRecreateCluster.class);
+    HBaseClassTestRule.forClass(TestRecreateCluster.class);
 
   @Rule
   public TestName name = new TestName();
@@ -138,8 +136,8 @@ public class TestRecreateCluster {
   }
 
   /**
-   * Stops HBase, removes the WALs, oldWALs, and MasterProcWALs directories and HBase
-   * zookeeper data. Then, HBase is restarted.
+   * Stops HBase, removes the WALs, oldWALs, and MasterProcWALs directories and HBase zookeeper
+   * data. Then, HBase is restarted.
    */
   private void restartAndCleanHBaseCluster() throws Exception {
     // flush cache so that everything is on disk
@@ -149,11 +147,12 @@ public class TestRecreateCluster {
       TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServersList();
 
     // make sure there is no procedures pending
-    TEST_UTIL.waitFor(TIMEOUT_MS, () -> TEST_UTIL.getHBaseCluster().getMaster()
-      .getProcedures().stream().filter(p -> p.isFinished()).findAny().isPresent());
+    TEST_UTIL.waitFor(TIMEOUT_MS, () -> TEST_UTIL.getHBaseCluster().getMaster().getProcedures()
+      .stream().filter(p -> p.isFinished()).findAny().isPresent());
 
     // shutdown and delete data if needed
-    Path walRootDir = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir();
+    Path walRootDir =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem().getWALRootDir();
     Path walArchiveDir = new Path(walRootDir, WALProcedureStore.MASTER_PROCEDURE_LOGDIR);
     Path walDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
@@ -182,8 +181,8 @@ public class TestRecreateCluster {
       .isPresent());
   }
 
-  private void prepareDataBeforeRecreate(
-      HBaseTestingUtility testUtil, TableName tableName) throws Exception {
+  private void prepareDataBeforeRecreate(HBaseTestingUtility testUtil, TableName tableName)
+    throws Exception {
     Table table = testUtil.createTable(tableName, "f");
     Put put = new Put(Bytes.toBytes(Integer.toString(1)));
     put.addColumn(Bytes.toBytes("f"), Bytes.toBytes("c"), Bytes.toBytes("v"));
@@ -192,7 +191,8 @@ public class TestRecreateCluster {
     ensureTableNotColocatedWithSystemTable(tableName, TableName.NAMESPACE_TABLE_NAME);
   }
 
-  private void preparePresplitTable(HBaseTestingUtility testUtil, TableName tableName, int numRegions) throws Exception {
+  private void preparePresplitTable(HBaseTestingUtility testUtil, TableName tableName,
+    int numRegions) throws Exception {
     DecimalStringSplit splitter = new RegionSplitter.DecimalStringSplit();
     byte[][] splitPoints = splitter.split(numRegions);
     for (byte[] split : splitPoints) {
@@ -208,10 +208,10 @@ public class TestRecreateCluster {
   }
 
   private void ensureTableNotColocatedWithSystemTable(TableName userTable, TableName systemTable)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
     assertTrue("Please start more than 1 regionserver",
-        hbaseCluster.getRegionServerThreads().size() > 1);
+      hbaseCluster.getRegionServerThreads().size() > 1);
 
     int userTableServerNum = getServerNumForTableWithOnlyOneRegion(userTable);
     int systemTableServerNum = getServerNumForTableWithOnlyOneRegion(systemTable);
@@ -229,21 +229,20 @@ public class TestRecreateCluster {
     assertTrue(!systemTableServer.equals(destServer));
     // make sure the dest server is live before moving region
     hbaseCluster.waitForRegionServerToStart(destServer.getServerName().getHostname(),
-        destServer.getServerName().getPort(), TIMEOUT_MS);
+      destServer.getServerName().getPort(), TIMEOUT_MS);
     // move region of userTable to a different regionserver not co-located with system table
     TEST_UTIL.moveRegionAndWait(TEST_UTIL.getAdmin().getRegions(userTable).get(0),
-        destServer.getServerName());
+      destServer.getServerName());
   }
 
   private int getServerNumForTableWithOnlyOneRegion(TableName tableName) throws IOException {
     List<RegionInfo> tableRegionInfos = TEST_UTIL.getAdmin().getRegions(tableName);
     assertEquals(1, tableRegionInfos.size());
-    return TEST_UTIL.getHBaseCluster()
-        .getServerWith(tableRegionInfos.get(0).getRegionName());
+    return TEST_UTIL.getHBaseCluster().getServerWith(tableRegionInfos.get(0).getRegionName());
   }
 
-  private void validateDataAfterRecreate(
-      HBaseTestingUtility testUtil, TableName tableName) throws Exception {
+  private void validateDataAfterRecreate(HBaseTestingUtility testUtil, TableName tableName)
+    throws Exception {
     Table t1 = testUtil.getConnection().getTable(tableName);
     Get get = new Get(Bytes.toBytes(Integer.toString(1)));
     get.addColumn(Bytes.toBytes("f"), Bytes.toBytes("c"));
@@ -252,8 +251,8 @@ public class TestRecreateCluster {
     assertArrayEquals(Bytes.toBytes("v"), result.getValue(Bytes.toBytes("f"), Bytes.toBytes("c")));
   }
 
-  private void validatePresplitTable(
-      HBaseTestingUtility testUtil, TableName tableName, int numRegions) throws Exception {
+  private void validatePresplitTable(HBaseTestingUtility testUtil, TableName tableName,
+    int numRegions) throws Exception {
     Table t1 = testUtil.getConnection().getTable(tableName);
     assertEquals(numRegions, testUtil.getAdmin().getRegions(tableName).size());
     for (int i = 0; i <= numRegions; i++) {
@@ -261,7 +260,8 @@ public class TestRecreateCluster {
       get.addColumn(Bytes.toBytes("f"), Bytes.toBytes("c"));
       Result result = t1.get(get);
       assertEquals("Failed to find row for " + get, 1, result.size());
-      assertArrayEquals(Bytes.toBytes("v"), result.getValue(Bytes.toBytes("f"), Bytes.toBytes("c")));
+      assertArrayEquals(Bytes.toBytes("v"),
+        result.getValue(Bytes.toBytes("f"), Bytes.toBytes("c")));
     }
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,17 +28,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Provides the globally barriered procedure framework and environment
- * for region server oriented operations.
- * {@link org.apache.hadoop.hbase.regionserver.HRegionServer} interacts
- * with the loaded procedure manager through this class.
+ * Provides the globally barriered procedure framework and environment for region server oriented
+ * operations. {@link org.apache.hadoop.hbase.regionserver.HRegionServer} interacts with the loaded
+ * procedure manager through this class.
  */
 @InterfaceAudience.Private
-public class RegionServerProcedureManagerHost extends
-    ProcedureManagerHost<RegionServerProcedureManager> {
+public class RegionServerProcedureManagerHost
+  extends ProcedureManagerHost<RegionServerProcedureManager> {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(RegionServerProcedureManagerHost.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RegionServerProcedureManagerHost.class);
 
   public void initialize(RegionServerServices rss) throws KeeperException {
     for (RegionServerProcedureManager proc : procedures) {
@@ -61,8 +59,7 @@ public class RegionServerProcedureManagerHost extends
       try {
         proc.stop(force);
       } catch (IOException e) {
-        LOG.warn("Failed to close procedure " + proc.getProcedureSignature()
-            + " cleanly", e);
+        LOG.warn("Failed to close procedure " + proc.getProcedureSignature() + " cleanly", e);
       }
     }
   }

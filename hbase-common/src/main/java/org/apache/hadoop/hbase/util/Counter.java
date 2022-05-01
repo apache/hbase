@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase.util;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * High scalable counter. Thread safe.
  * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
- *   {@link java.util.concurrent.atomic.LongAdder} instead.
+ *             {@link java.util.concurrent.atomic.LongAdder} instead.
  * @see java.util.concurrent.atomic.LongAdder
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7612">HBASE-7612</a>
  */
@@ -47,9 +46,10 @@ public class Counter {
     volatile long q0, q1, q2, q3, q4, q5, q6;
 
     static final AtomicLongFieldUpdater<Cell> valueUpdater =
-        AtomicLongFieldUpdater.newUpdater(Cell.class, "value");
+      AtomicLongFieldUpdater.newUpdater(Cell.class, "value");
 
-    Cell() {}
+    Cell() {
+    }
 
     Cell(long initValue) {
       value = initValue;
@@ -107,7 +107,7 @@ public class Counter {
     // in the low bits.
 
     h ^= (h >>> 20) ^ (h >>> 12); // Bit spreader, borrowed from Doug Lea
-    h ^= (h >>>  7) ^ (h >>>  4);
+    h ^= (h >>> 7) ^ (h >>> 4);
     return h;
   }
 
@@ -117,26 +117,27 @@ public class Counter {
     int mask = cells.length - 1;
 
     int baseIndex = hash();
-    if(cells[baseIndex & mask].add(delta)) {
+    if (cells[baseIndex & mask].add(delta)) {
       return;
     }
 
     int index = baseIndex + 1;
-    while(true) {
-      if(cells[index & mask].add(delta)) {
+    while (true) {
+      if (cells[index & mask].add(delta)) {
         break;
       }
       index++;
     }
 
-    if(index - baseIndex >= cells.length &&
-        cells.length < MAX_CELLS_LENGTH &&
-        container.demoted.compareAndSet(false, true)) {
+    if (
+      index - baseIndex >= cells.length && cells.length < MAX_CELLS_LENGTH
+        && container.demoted.compareAndSet(false, true)
+    ) {
 
-      if(containerRef.get() == container) {
+      if (containerRef.get() == container) {
         Cell[] newCells = new Cell[cells.length * 2];
         System.arraycopy(cells, 0, newCells, 0, cells.length);
-        for(int i = cells.length; i < newCells.length; i++) {
+        for (int i = cells.length; i < newCells.length; i++) {
           newCells[i] = new Cell();
           // Fill all of the elements with instances. Creating a cell on demand
           // and putting it into the array makes a concurrent problem about
@@ -163,7 +164,7 @@ public class Counter {
 
   public long get() {
     long sum = 0;
-    for(Cell cell : containerRef.get().cells) {
+    for (Cell cell : containerRef.get().cells) {
       sum += cell.get();
     }
     return sum;
@@ -177,18 +178,19 @@ public class Counter {
     long max = Long.MIN_VALUE;
     long sum = 0;
 
-    for(Cell cell : cells) {
+    for (Cell cell : cells) {
       long value = cell.get();
       sum += value;
-      if(min > value) { min = value; }
-      if(max < value) { max = value; }
+      if (min > value) {
+        min = value;
+      }
+      if (max < value) {
+        max = value;
+      }
     }
 
-    return new StringBuilder(100)
-    .append("[value=").append(sum)
-    .append(", cells=[length=").append(cells.length)
-    .append(", min=").append(min)
-    .append(", max=").append(max)
-    .append("]]").toString();
+    return new StringBuilder(100).append("[value=").append(sum).append(", cells=[length=")
+      .append(cells.length).append(", min=").append(min).append(", max=").append(max).append("]]")
+      .toString();
   }
 }

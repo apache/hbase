@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -71,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -102,25 +102,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
 /**
- * Test client behavior w/o setting up a cluster.
- * Mock up cluster emissions.
+ * Test client behavior w/o setting up a cluster. Mock up cluster emissions.
  */
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestClientNoCluster extends Configured implements Tool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientNoCluster.class);
+    HBaseClassTestRule.forClass(TestClientNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientNoCluster.class);
   private Configuration conf;
   public static final ServerName META_SERVERNAME =
-      ServerName.valueOf("meta.example.org", 16010, 12345);
+    ServerName.valueOf("meta.example.org", 16010, 12345);
 
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
-    // Run my Connection overrides.  Use my little ConnectionImplementation below which
+    // Run my Connection overrides. Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
@@ -139,7 +138,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public CompletableFuture<RegionLocations> getMetaRegionLocations() {
       return CompletableFuture.completedFuture(new RegionLocations(
-          new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
+        new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO, META_HOST)));
     }
 
     @Override
@@ -149,8 +148,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Remove the @Ignore to try out timeout and retry asettings
-   * @throws IOException
+   * Remove the @Ignore to try out timeout and retry asettings n
    */
   @Ignore
   @Test
@@ -170,7 +168,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       LOG.info("Got expected exception", e);
       t = e;
     } catch (RetriesExhaustedException e) {
-      // This is the old, unwanted behavior.  If we get here FAIL!!!
+      // This is the old, unwanted behavior. If we get here FAIL!!!
       fail();
     } finally {
       table.close();
@@ -181,8 +179,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Test that operation timeout prevails over rpc default timeout and retries, etc.
-   * @throws IOException
+   * Test that operation timeout prevails over rpc default timeout and retries, etc. n
    */
   @Test
   public void testRpcTimeout() throws IOException {
@@ -192,9 +189,9 @@ public class TestClientNoCluster extends Configured implements Tool {
     int pause = 10;
     localConfig.setInt("hbase.client.pause", pause);
     localConfig.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
-    // Set the operation timeout to be < the pause.  Expectation is that after first pause, we will
+    // Set the operation timeout to be < the pause. Expectation is that after first pause, we will
     // fail out of the rpc because the rpc timeout will have been set to the operation tiemout
-    // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
+    // and it has expired. Otherwise, if this functionality is broke, all retries will be run --
     // all ten of them -- and we'll get the RetriesExhaustedException exception.
     localConfig.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, pause - 1);
     Connection connection = ConnectionFactory.createConnection(localConfig);
@@ -208,7 +205,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       LOG.info("Got expected exception", e);
       t = e;
     } catch (RetriesExhaustedException e) {
-      // This is the old, unwanted behavior.  If we get here FAIL!!!
+      // This is the old, unwanted behavior. If we get here FAIL!!!
       fail();
     } finally {
       table.close();
@@ -231,7 +228,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
     // Go against meta else we will try to find first region for the table on construction which
-    // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
+    // means we'll have to do a bunch more mocking. Tests that go against meta only should be
     // good for a bit of testing.
     Connection connection = ConnectionFactory.createConnection(this.conf);
     Table table = connection.getTable(TableName.META_TABLE_NAME);
@@ -253,7 +250,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
     // Go against meta else we will try to find first region for the table on construction which
-    // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
+    // means we'll have to do a bunch more mocking. Tests that go against meta only should be
     // good for a bit of testing.
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(TableName.META_TABLE_NAME);
@@ -287,7 +284,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } catch (Exception e) {
       if (!(e instanceof DoNotRetryIOException)) {
         String errMsg =
-            "Should have thrown DoNotRetryException but actually " + e.getClass().getSimpleName();
+          "Should have thrown DoNotRetryException but actually " + e.getClass().getSimpleName();
         LOG.error(errMsg, e);
         fail(errMsg);
       }
@@ -299,24 +296,23 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Override to shutdown going to zookeeper for cluster id and meta location.
    */
-  static class RegionServerStoppedOnScannerOpenConnection
-  extends ConnectionImplementation {
+  static class RegionServerStoppedOnScannerOpenConnection extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RegionServerStoppedOnScannerOpenConnection(Configuration conf,
-        ExecutorService pool, User user) throws IOException {
+    RegionServerStoppedOnScannerOpenConnection(Configuration conf, ExecutorService pool, User user)
+      throws IOException {
       super(conf, pool, user);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
       long sid = 12345L;
       try {
-        Mockito.when(stub.scan((RpcController)Mockito.any(),
-            (ClientProtos.ScanRequest)Mockito.any())).
-          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build()).
-          thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
-          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
-              setMoreResults(false).build());
+        Mockito
+          .when(stub.scan((RpcController) Mockito.any(), (ClientProtos.ScanRequest) Mockito.any()))
+          .thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build())
+          .thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito")))
+          .thenReturn(
+            ClientProtos.ScanResponse.newBuilder().setScannerId(sid).setMoreResults(false).build());
       } catch (ServiceException e) {
         throw new IOException(e);
       }
@@ -331,19 +327,17 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Override to check we are setting rpc timeout right.
    */
-  static class RpcTimeoutConnection
-  extends ConnectionImplementation {
+  static class RpcTimeoutConnection extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RpcTimeoutConnection(Configuration conf, ExecutorService pool, User user)
-    throws IOException {
+    RpcTimeoutConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
       super(conf, pool, user);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
       try {
-        Mockito.when(stub.get((RpcController)Mockito.any(),
-            (ClientProtos.GetRequest)Mockito.any())).
-          thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito")));
+        Mockito
+          .when(stub.get((RpcController) Mockito.any(), (ClientProtos.GetRequest) Mockito.any()))
+          .thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito")));
       } catch (ServiceException e) {
         throw new IOException(e);
       }
@@ -358,29 +352,26 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Fake many regionservers and many regions on a connection implementation.
    */
-  static class ManyServersManyRegionsConnection
-  extends ConnectionImplementation {
+  static class ManyServersManyRegionsConnection extends ConnectionImplementation {
     // All access should be synchronized
     final Map<ServerName, ClientService.BlockingInterface> serversByClient;
 
     /**
      * Map of faked-up rows of a 'meta table'.
      */
-    final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta;
+    final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta;
     final AtomicLong sequenceids = new AtomicLong(0);
     private final Configuration conf;
 
-    ManyServersManyRegionsConnection(Configuration conf,
-        ExecutorService pool, User user)
-    throws IOException {
+    ManyServersManyRegionsConnection(Configuration conf, ExecutorService pool, User user)
+      throws IOException {
       super(conf, pool, user);
       int serverCount = conf.getInt("hbase.test.servers", 10);
       this.serversByClient = new HashMap<>(serverCount);
-      this.meta = makeMeta(Bytes.toBytes(
-        conf.get("hbase.test.tablename", Bytes.toString(BIG_USER_TABLE))),
-        conf.getInt("hbase.test.regions", 100),
-        conf.getLong("hbase.test.namespace.span", 1000),
-        serverCount);
+      this.meta =
+        makeMeta(Bytes.toBytes(conf.get("hbase.test.tablename", Bytes.toString(BIG_USER_TABLE))),
+          conf.getInt("hbase.test.regions", 100), conf.getLong("hbase.test.namespace.span", 1000),
+          serverCount);
       this.conf = conf;
     }
 
@@ -399,18 +390,17 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
   }
 
-  static MultiResponse doMultiResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
-      final AtomicLong sequenceids, final MultiRequest request) {
-    // Make a response to match the request.  Act like there were no failures.
+  static MultiResponse doMultiResponse(final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta,
+    final AtomicLong sequenceids, final MultiRequest request) {
+    // Make a response to match the request. Act like there were no failures.
     ClientProtos.MultiResponse.Builder builder = ClientProtos.MultiResponse.newBuilder();
     // Per Region.
-    RegionActionResult.Builder regionActionResultBuilder =
-        RegionActionResult.newBuilder();
+    RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
     ResultOrException.Builder roeBuilder = ResultOrException.newBuilder();
-    for (RegionAction regionAction: request.getRegionActionList()) {
+    for (RegionAction regionAction : request.getRegionActionList()) {
       regionActionResultBuilder.clear();
       // Per Action in a Region.
-      for (ClientProtos.Action action: regionAction.getActionList()) {
+      for (ClientProtos.Action action : regionAction.getActionList()) {
         roeBuilder.clear();
         // Return empty Result and proper index as result.
         roeBuilder.setResult(ClientProtos.Result.getDefaultInstance());
@@ -423,33 +413,31 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Fake 'server'.
-   * Implements the ClientService responding as though it were a 'server' (presumes a new
-   * ClientService.BlockingInterface made per server).
+   * Fake 'server'. Implements the ClientService responding as though it were a 'server' (presumes a
+   * new ClientService.BlockingInterface made per server).
    */
   static class FakeServer implements ClientService.BlockingInterface {
     private AtomicInteger multiInvocationsCount = new AtomicInteger(0);
-    private final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta;
+    private final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta;
     private final AtomicLong sequenceids;
     private final long multiPause;
     private final int tooManyMultiRequests;
 
-    FakeServer(final Configuration c, final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
-        final AtomicLong sequenceids) {
+    FakeServer(final Configuration c, final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta,
+      final AtomicLong sequenceids) {
       this.meta = meta;
       this.sequenceids = sequenceids;
 
-      // Pause to simulate the server taking time applying the edits.  This will drive up the
+      // Pause to simulate the server taking time applying the edits. This will drive up the
       // number of threads used over in client.
       this.multiPause = c.getLong("hbase.test.multi.pause.when.done", 0);
       this.tooManyMultiRequests = c.getInt("hbase.test.multi.too.many", 3);
     }
 
     @Override
-    public GetResponse get(RpcController controller, GetRequest request)
-    throws ServiceException {
-      boolean metaRegion = isMetaRegion(request.getRegion().getValue().toByteArray(),
-        request.getRegion().getType());
+    public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
+      boolean metaRegion =
+        isMetaRegion(request.getRegion().getValue().toByteArray(), request.getRegion().getType());
       if (!metaRegion) {
         return doGetResponse(request);
       }
@@ -466,41 +454,39 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
 
     @Override
-    public MutateResponse mutate(RpcController controller,
-        MutateRequest request) throws ServiceException {
+    public MutateResponse mutate(RpcController controller, MutateRequest request)
+      throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
-    public ScanResponse scan(RpcController controller,
-        ScanRequest request) throws ServiceException {
+    public ScanResponse scan(RpcController controller, ScanRequest request)
+      throws ServiceException {
       // Presume it is a scan of meta for now. Not all scans provide a region spec expecting
-      // the server to keep reference by scannerid.  TODO.
+      // the server to keep reference by scannerid. TODO.
       return doMetaScanResponse(meta, sequenceids, request);
     }
 
     @Override
-    public BulkLoadHFileResponse bulkLoadHFile(
-        RpcController controller, BulkLoadHFileRequest request)
-        throws ServiceException {
+    public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
+      BulkLoadHFileRequest request) throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
-    public CoprocessorServiceResponse execService(
-        RpcController controller, CoprocessorServiceRequest request)
-        throws ServiceException {
+    public CoprocessorServiceResponse execService(RpcController controller,
+      CoprocessorServiceRequest request) throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public MultiResponse multi(RpcController controller, MultiRequest request)
-    throws ServiceException {
+      throws ServiceException {
       int concurrentInvocations = this.multiInvocationsCount.incrementAndGet();
       try {
         if (concurrentInvocations >= tooManyMultiRequests) {
-          throw new ServiceException(new RegionTooBusyException("concurrentInvocations=" +
-           concurrentInvocations));
+          throw new ServiceException(
+            new RegionTooBusyException("concurrentInvocations=" + concurrentInvocations));
         }
         Threads.sleep(multiPause);
         return doMultiResponse(meta, sequenceids, request);
@@ -511,32 +497,33 @@ public class TestClientNoCluster extends Configured implements Tool {
 
     @Override
     public CoprocessorServiceResponse execRegionServerService(RpcController controller,
-        CoprocessorServiceRequest request) throws ServiceException {
+      CoprocessorServiceRequest request) throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
-        PrepareBulkLoadRequest request) throws ServiceException {
+      PrepareBulkLoadRequest request) throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
 
     @Override
     public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
-        CleanupBulkLoadRequest request) throws ServiceException {
+      CleanupBulkLoadRequest request) throws ServiceException {
       throw new NotImplementedException(HConstants.NOT_IMPLEMENTED);
     }
   }
 
-  static ScanResponse doMetaScanResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
-      final AtomicLong sequenceids, final ScanRequest request) {
+  static ScanResponse doMetaScanResponse(
+    final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta, final AtomicLong sequenceids,
+    final ScanRequest request) {
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     int max = request.getNumberOfRows();
     int count = 0;
-    Map<byte [], Pair<HRegionInfo, ServerName>> tail =
-      request.hasScan()? meta.tailMap(request.getScan().getStartRow().toByteArray()): meta;
-      ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
-    for (Map.Entry<byte [], Pair<HRegionInfo, ServerName>> e: tail.entrySet()) {
+    Map<byte[], Pair<HRegionInfo, ServerName>> tail =
+      request.hasScan() ? meta.tailMap(request.getScan().getStartRow().toByteArray()) : meta;
+    ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
+    for (Map.Entry<byte[], Pair<HRegionInfo, ServerName>> e : tail.entrySet()) {
       // Can be 0 on open of a scanner -- i.e. rpc to setup scannerid only.
       if (max <= 0) break;
       if (++count > max) break;
@@ -552,13 +539,13 @@ public class TestClientNoCluster extends Configured implements Tool {
       else builder.setMoreResults(true);
     }
     // If no scannerid, set one.
-    builder.setScannerId(request.hasScannerId()?
-      request.getScannerId(): sequenceids.incrementAndGet());
+    builder.setScannerId(
+      request.hasScannerId() ? request.getScannerId() : sequenceids.incrementAndGet());
     return builder.build();
   }
 
-  static GetResponse doMetaGetResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
-      final GetRequest request) {
+  static GetResponse doMetaGetResponse(final SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta,
+    final GetRequest request) {
     ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
     ByteString row = request.getGet().getRow();
     Pair<HRegionInfo, ServerName> p = meta.get(row.toByteArray());
@@ -573,26 +560,26 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * @param name region name or encoded region name.
-   * @param type
-   * @return True if we are dealing with a hbase:meta region.
+   * @param name region name or encoded region name. n * @return True if we are dealing with a
+   *             hbase:meta region.
    */
-  static boolean isMetaRegion(final byte [] name, final RegionSpecifierType type) {
+  static boolean isMetaRegion(final byte[] name, final RegionSpecifierType type) {
     switch (type) {
-    case REGION_NAME:
-      return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), name);
-    case ENCODED_REGION_NAME:
-      return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), name);
-    default: throw new UnsupportedOperationException();
+      case REGION_NAME:
+        return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), name);
+      case ENCODED_REGION_NAME:
+        return Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(), name);
+      default:
+        throw new UnsupportedOperationException();
     }
   }
 
   private final static ByteString CATALOG_FAMILY_BYTESTRING =
-      UnsafeByteOperations.unsafeWrap(HConstants.CATALOG_FAMILY);
+    UnsafeByteOperations.unsafeWrap(HConstants.CATALOG_FAMILY);
   private final static ByteString REGIONINFO_QUALIFIER_BYTESTRING =
-      UnsafeByteOperations.unsafeWrap(HConstants.REGIONINFO_QUALIFIER);
+    UnsafeByteOperations.unsafeWrap(HConstants.REGIONINFO_QUALIFIER);
   private final static ByteString SERVER_QUALIFIER_BYTESTRING =
-      UnsafeByteOperations.unsafeWrap(HConstants.SERVER_QUALIFIER);
+    UnsafeByteOperations.unsafeWrap(HConstants.SERVER_QUALIFIER);
 
   static CellProtos.Cell.Builder getBaseCellBuilder(final ByteString row) {
     CellProtos.Cell.Builder cellBuilder = CellProtos.Cell.newBuilder();
@@ -620,41 +607,37 @@ public class TestClientNoCluster extends Configured implements Tool {
     CellProtos.Cell.Builder cellBuilder = getBaseCellBuilder(row);
     cellBuilder.setQualifier(UnsafeByteOperations.unsafeWrap(HConstants.STARTCODE_QUALIFIER));
     // TODO:
-    cellBuilder.setValue(UnsafeByteOperations.unsafeWrap(
-        Bytes.toBytes(META_SERVERNAME.getStartcode())));
+    cellBuilder
+      .setValue(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(META_SERVERNAME.getStartcode())));
     return cellBuilder.build();
   }
 
-  private static final byte [] BIG_USER_TABLE = Bytes.toBytes("t");
+  private static final byte[] BIG_USER_TABLE = Bytes.toBytes("t");
 
   /**
-   * Format passed integer.  Zero-pad.
-   * Copied from hbase-server PE class and small amendment.  Make them share.
-   * @param number
-   * @return Returns zero-prefixed 10-byte wide decimal version of passed
-   * number (Does absolute in case number is negative).
+   * Format passed integer. Zero-pad. Copied from hbase-server PE class and small amendment. Make
+   * them share. n * @return Returns zero-prefixed 10-byte wide decimal version of passed number
+   * (Does absolute in case number is negative).
    */
-  private static byte [] format(final long number) {
-    byte [] b = new byte[10];
+  private static byte[] format(final long number) {
+    byte[] b = new byte[10];
     long d = number;
     for (int i = b.length - 1; i >= 0; i--) {
-      b[i] = (byte)((d % 10) + '0');
+      b[i] = (byte) ((d % 10) + '0');
       d /= 10;
     }
     return b;
   }
 
   /**
-   * @param count
-   * @param namespaceSpan
-   * @return <code>count</code> regions
+   * nn * @return <code>count</code> regions
    */
-  private static HRegionInfo [] makeHRegionInfos(final byte [] tableName, final int count,
-      final long namespaceSpan) {
-    byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
-    byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;
+  private static HRegionInfo[] makeHRegionInfos(final byte[] tableName, final int count,
+    final long namespaceSpan) {
+    byte[] startKey = HConstants.EMPTY_BYTE_ARRAY;
+    byte[] endKey = HConstants.EMPTY_BYTE_ARRAY;
     long interval = namespaceSpan / count;
-    HRegionInfo [] hris = new HRegionInfo[count];
+    HRegionInfo[] hris = new HRegionInfo[count];
     for (int i = 0; i < count; i++) {
       if (i == 0) {
         endKey = format(interval);
@@ -669,11 +652,10 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * @param count
-   * @return Return <code>count</code> servernames.
+   * n * @return Return <code>count</code> servernames.
    */
-  private static ServerName [] makeServerNames(final int count) {
-    ServerName [] sns = new ServerName[count];
+  private static ServerName[] makeServerNames(final int count) {
+    ServerName[] sns = new ServerName[count];
     for (int i = 0; i < count; i++) {
       sns[i] = ServerName.valueOf("" + i + ".example.org", 16010, i);
     }
@@ -683,8 +665,9 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Comparator for meta row keys.
    */
-  private static class MetaRowsComparator implements Comparator<byte []> {
+  private static class MetaRowsComparator implements Comparator<byte[]> {
     private final CellComparatorImpl delegate = MetaCellComparator.META_COMPARATOR;
+
     @Override
     public int compare(byte[] left, byte[] right) {
       return delegate.compareRows(new KeyValue.KeyOnlyKeyValue(left), right, 0, right.length);
@@ -696,16 +679,16 @@ public class TestClientNoCluster extends Configured implements Tool {
    * ServerName to return for this row.
    * @return Map with faked hbase:meta content in it.
    */
-  static SortedMap<byte [], Pair<HRegionInfo, ServerName>> makeMeta(final byte [] tableName,
-      final int regionCount, final long namespaceSpan, final int serverCount) {
+  static SortedMap<byte[], Pair<HRegionInfo, ServerName>> makeMeta(final byte[] tableName,
+    final int regionCount, final long namespaceSpan, final int serverCount) {
     // I need a comparator for meta rows so we sort properly.
-    SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta =
+    SortedMap<byte[], Pair<HRegionInfo, ServerName>> meta =
       new ConcurrentSkipListMap<>(new MetaRowsComparator());
-    HRegionInfo [] hris = makeHRegionInfos(tableName, regionCount, namespaceSpan);
-    ServerName [] serverNames = makeServerNames(serverCount);
+    HRegionInfo[] hris = makeHRegionInfos(tableName, regionCount, namespaceSpan);
+    ServerName[] serverNames = makeServerNames(serverCount);
     int per = regionCount / serverCount;
     int count = 0;
-    for (HRegionInfo hri: hris) {
+    for (HRegionInfo hri : hris) {
       Pair<HRegionInfo, ServerName> p = new Pair<>(hri, serverNames[count++ / per]);
       meta.put(hri.getRegionName(), p);
     }
@@ -713,14 +696,10 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Code for each 'client' to run.
-   *
-   * @param id
-   * @param c
-   * @param sharedConnection
-   * @throws IOException
+   * Code for each 'client' to run. nnnn
    */
-  static void cycle(int id, final Configuration c, final Connection sharedConnection) throws IOException {
+  static void cycle(int id, final Configuration c, final Connection sharedConnection)
+    throws IOException {
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();
     final int printInterval = 100000;
@@ -728,38 +707,40 @@ public class TestClientNoCluster extends Configured implements Tool {
     boolean get = c.getBoolean("hbase.test.do.gets", false);
     TableName tableName = TableName.valueOf(BIG_USER_TABLE);
     if (get) {
-      try (Table table = sharedConnection.getTable(tableName)){
+      try (Table table = sharedConnection.getTable(tableName)) {
         Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
-          byte [] b = format(rd.nextLong());
+          byte[] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
           if (i % printInterval == 0) {
-            LOG.info("Get " + printInterval + "/" + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
+            LOG.info("Get " + printInterval + "/"
+              + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
         }
-        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-            (System.currentTimeMillis() - startTime) + "ms");
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in "
+          + (System.currentTimeMillis() - startTime) + "ms");
       }
     } else {
       try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
         Stopwatch stopWatch = Stopwatch.createStarted();
         for (int i = 0; i < namespaceSpan; i++) {
-          byte [] b = format(rd.nextLong());
+          byte[] b = format(rd.nextLong());
           Put p = new Put(b);
           p.addColumn(HConstants.CATALOG_FAMILY, b, b);
           mutator.mutate(p);
           if (i % printInterval == 0) {
-            LOG.info("Put " + printInterval + "/" + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
+            LOG.info("Put " + printInterval + "/"
+              + stopWatch.elapsed(java.util.concurrent.TimeUnit.MILLISECONDS));
             stopWatch.reset();
             stopWatch.start();
           }
         }
-        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-            (System.currentTimeMillis() - startTime) + "ms");
-        }
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in "
+          + (System.currentTimeMillis() - startTime) + "ms");
+      }
     }
   }
 
@@ -778,16 +759,15 @@ public class TestClientNoCluster extends Configured implements Tool {
     final long multiPause = 0;
     // Check args make basic sense.
     if ((namespaceSpan < regions) || (regions < servers)) {
-      throw new IllegalArgumentException("namespaceSpan=" + namespaceSpan + " must be > regions=" +
-        regions + " which must be > servers=" + servers);
+      throw new IllegalArgumentException("namespaceSpan=" + namespaceSpan + " must be > regions="
+        + regions + " which must be > servers=" + servers);
     }
 
     // Set my many servers and many regions faking connection in place.
-    getConf().set("hbase.client.connection.impl",
-      ManyServersManyRegionsConnection.class.getName());
+    getConf().set("hbase.client.connection.impl", ManyServersManyRegionsConnection.class.getName());
     // Use simple kv registry rather than zk
     getConf().set("hbase.client.registry.impl", SimpleRegistry.class.getName());
-    // When to report fails.  Default is we report the 10th.  This means we'll see log everytime
+    // When to report fails. Default is we report the 10th. This means we'll see log everytime
     // an exception is thrown -- usually RegionTooBusyException when we have more than
     // hbase.test.multi.too.many requests outstanding at any time.
     getConf().setInt("hbase.client.start.log.errors.counter", 0);
@@ -804,14 +784,14 @@ public class TestClientNoCluster extends Configured implements Tool {
 
     // Have them all share the same connection so they all share the same instance of
     // ManyServersManyRegionsConnection so I can keep an eye on how many requests by server.
-    final ExecutorService pool = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setNameFormat("p-pool-%d")
+    final ExecutorService pool =
+      Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("p-pool-%d")
         .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
-      // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
+    // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
     // Share a connection so I can keep counts in the 'server' on concurrency.
-    final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/*, pool*/);
+    final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/* , pool */);
     try {
-      Thread [] ts = new Thread[clients];
+      Thread[] ts = new Thread[clients];
       for (int j = 0; j < ts.length; j++) {
         final int id = j;
         ts[j] = new Thread("" + j) {
@@ -839,8 +819,7 @@ public class TestClientNoCluster extends Configured implements Tool {
 
   /**
    * Run a client instance against a faked up server.
-   * @param args TODO
-   * @throws Exception
+   * @param args TODO n
    */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(HBaseConfiguration.create(), new TestClientNoCluster(), args));

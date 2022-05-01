@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,8 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
 
 /**
- * A very simple {@code }RpcScheduler} that serves incoming requests in order.
- *
- * This can be used for HMaster, where no prioritization is needed.
+ * A very simple {@code }RpcScheduler} that serves incoming requests in order. This can be used for
+ * HMaster, where no prioritization is needed.
  */
 @InterfaceAudience.Private
 public class FifoRpcScheduler extends RpcScheduler {
@@ -49,7 +48,7 @@ public class FifoRpcScheduler extends RpcScheduler {
   public FifoRpcScheduler(Configuration conf, int handlerCount) {
     this.handlerCount = handlerCount;
     this.maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
-        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+      handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
   }
 
   @Override
@@ -97,7 +96,7 @@ public class FifoRpcScheduler extends RpcScheduler {
   }
 
   protected boolean executeRpcCall(final ThreadPoolExecutor executor, final AtomicInteger queueSize,
-      final CallRunner task) {
+    final CallRunner task) {
     // Executors provide no offer, so make our own.
     int queued = queueSize.getAndIncrement();
     if (maxQueueLength > 0 && queued >= maxQueueLength) {
@@ -105,7 +104,7 @@ public class FifoRpcScheduler extends RpcScheduler {
       return false;
     }
 
-    executor.execute(new FifoCallRunner(task){
+    executor.execute(new FifoCallRunner(task) {
       @Override
       public void run() {
         task.setStatus(RpcServer.getStatus());
@@ -219,7 +218,7 @@ public class FifoRpcScheduler extends RpcScheduler {
   }
 
   protected void updateMethodCountAndSizeByQueue(BlockingQueue<Runnable> queue,
-      HashMap<String, Long> methodCount, HashMap<String, Long> methodSize) {
+    HashMap<String, Long> methodCount, HashMap<String, Long> methodSize) {
     for (Runnable r : queue) {
       FifoCallRunner mcr = (FifoCallRunner) r;
       RpcCall rpcCall = mcr.getCallRunner().getRpcCall();

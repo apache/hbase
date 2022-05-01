@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -103,7 +103,7 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     public ExecuteProceduresResponse executeProcedures(RpcController controller,
-        ExecuteProceduresRequest request) throws ServiceException {
+      ExecuteProceduresRequest request) throws ServiceException {
       if (request.getOpenRegionCount() > 0) {
         if (ARRIVE_EXEC_PROC != null) {
           SERVER_TO_KILL = regionServer.getServerName();
@@ -141,10 +141,12 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition rst = req.getTransition(0);
-      if (rst.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)) {
+      if (
+        rst.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)
+      ) {
         CountDownLatch arrive = ARRIVE_REPORT;
         if (ARRIVE_REPORT != null) {
           ARRIVE_REPORT = null;

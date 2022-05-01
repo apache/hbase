@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultCompactSelection.class);
+    HBaseClassTestRule.forClass(TestDefaultCompactSelection.class);
 
   @Override
   protected void config() {
@@ -51,49 +51,48 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     TimeOffsetEnvironmentEdge edge = new TimeOffsetEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(edge);
     /**
-     * NOTE: these tests are specific to describe the implementation of the
-     * current compaction algorithm.  Developed to ensure that refactoring
-     * doesn't implicitly alter this.
+     * NOTE: these tests are specific to describe the implementation of the current compaction
+     * algorithm. Developed to ensure that refactoring doesn't implicitly alter this.
      */
     long tooBig = maxSize + 1;
 
     // default case. preserve user ratio on size
-    compactEquals(sfCreate(100,50,23,12,12), 23, 12, 12);
+    compactEquals(sfCreate(100, 50, 23, 12, 12), 23, 12, 12);
     // less than compact threshold = don't compact
-    compactEquals(sfCreate(100,50,25,12,12) /* empty */);
+    compactEquals(sfCreate(100, 50, 25, 12, 12) /* empty */);
     // greater than compact size = skip those
     compactEquals(sfCreate(tooBig, tooBig, 700, 700, 700), 700, 700, 700);
     // big size + threshold
-    compactEquals(sfCreate(tooBig, tooBig, 700,700) /* empty */);
+    compactEquals(sfCreate(tooBig, tooBig, 700, 700) /* empty */);
     // small files = don't care about ratio
-    compactEquals(sfCreate(7,1,1), 7,1,1);
+    compactEquals(sfCreate(7, 1, 1), 7, 1, 1);
 
     // don't exceed max file compact threshold
-    // note:  file selection starts with largest to smallest.
+    // note: file selection starts with largest to smallest.
     compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
 
-    compactEquals(sfCreate(50, 10, 10 ,10, 10), 10, 10, 10, 10);
+    compactEquals(sfCreate(50, 10, 10, 10, 10), 10, 10, 10, 10);
 
     compactEquals(sfCreate(10, 10, 10, 10, 50), 10, 10, 10, 10);
 
-    compactEquals(sfCreate(251, 253, 251, maxSize -1), 251, 253, 251);
+    compactEquals(sfCreate(251, 253, 251, maxSize - 1), 251, 253, 251);
 
-    compactEquals(sfCreate(maxSize -1,maxSize -1,maxSize -1) /* empty */);
+    compactEquals(sfCreate(maxSize - 1, maxSize - 1, maxSize - 1) /* empty */);
 
     // Always try and compact something to get below blocking storefile count
     this.conf.setLong("hbase.hstore.compaction.min.size", 1);
     store.storeEngine.getCompactionPolicy().setConf(conf);
-    compactEquals(sfCreate(512,256,128,64,32,16,8,4,2,1), 4,2,1);
+    compactEquals(sfCreate(512, 256, 128, 64, 32, 16, 8, 4, 2, 1), 4, 2, 1);
     this.conf.setLong("hbase.hstore.compaction.min.size", minSize);
     store.storeEngine.getCompactionPolicy().setConf(conf);
 
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
-    compactEquals(sfCreate(50,25,12,12), true, 50, 25, 12, 12);
+    compactEquals(sfCreate(50, 25, 12, 12), true, 50, 25, 12, 12);
     // also choose files < threshold on major compaction
-    compactEquals(sfCreate(12,12), true, 12, 12);
+    compactEquals(sfCreate(12, 12), true, 12, 12);
     // even if one of those files is too big
-    compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
+    compactEquals(sfCreate(tooBig, 12, 12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
     store.forceMajor = true;
     compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
@@ -101,7 +100,7 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
     // if we exceed maxCompactSize, downgrade to minor
     // if not, it creates a 'snowball effect' when files >> maxCompactSize:
     // the last file in compaction is the aggregate of all previous compactions
-    compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
+    compactEquals(sfCreate(100, 50, 23, 12, 12), true, 23, 12, 12);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
     store.storeEngine.getCompactionPolicy().setConf(conf);
@@ -118,15 +117,15 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
       edge.increment(2);
       compactEquals(candidates, 23, 12, 12);
     } finally {
-      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
+      conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000 * 60 * 60 * 24);
       conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
     }
 
     /* REFERENCES == file is from a region that was split */
     // treat storefiles that have references like a major compaction
-    compactEquals(sfCreate(true, 100,50,25,12,12), 100, 50, 25, 12, 12);
+    compactEquals(sfCreate(true, 100, 50, 25, 12, 12), 100, 50, 25, 12, 12);
     // reference files shouldn't obey max threshold
-    compactEquals(sfCreate(true, tooBig, 12,12), tooBig, 12, 12);
+    compactEquals(sfCreate(true, tooBig, 12, 12), tooBig, 12, 12);
     // reference files should obey max file compact to avoid OOM
     compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
 
@@ -139,9 +138,8 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
   @Test
   public void testOffPeakCompactionRatio() throws IOException {
     /*
-     * NOTE: these tests are specific to describe the implementation of the
-     * current compaction algorithm.  Developed to ensure that refactoring
-     * doesn't implicitly alter this.
+     * NOTE: these tests are specific to describe the implementation of the current compaction
+     * algorithm. Developed to ensure that refactoring doesn't implicitly alter this.
      */
     // set an off-peak compaction threshold
     this.conf.setFloat("hbase.hstore.compaction.ratio.offpeak", 5.0F);
@@ -154,24 +152,24 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
   @Test
   public void testStuckStoreCompaction() throws IOException {
     // Select the smallest compaction if the store is stuck.
-    compactEquals(sfCreate(99,99,99,99,99,99, 30,30,30,30), 30, 30, 30);
+    compactEquals(sfCreate(99, 99, 99, 99, 99, 99, 30, 30, 30, 30), 30, 30, 30);
     // If not stuck, standard policy applies.
-    compactEquals(sfCreate(99,99,99,99,99, 30,30,30,30), 99, 30, 30, 30, 30);
+    compactEquals(sfCreate(99, 99, 99, 99, 99, 30, 30, 30, 30), 99, 30, 30, 30, 30);
 
     // Add sufficiently small files to compaction, though
-    compactEquals(sfCreate(99,99,99,99,99,99, 30,30,30,15), 30, 30, 30, 15);
+    compactEquals(sfCreate(99, 99, 99, 99, 99, 99, 30, 30, 30, 15), 30, 30, 30, 15);
     // Prefer earlier compaction to latter if the benefit is not significant
-    compactEquals(sfCreate(99,99,99,99, 30,26,26,29,25,25), 30, 26, 26);
+    compactEquals(sfCreate(99, 99, 99, 99, 30, 26, 26, 29, 25, 25), 30, 26, 26);
     // Prefer later compaction if the benefit is significant.
-    compactEquals(sfCreate(99,99,99,99, 27,27,27,20,20,20), 20, 20, 20);
+    compactEquals(sfCreate(99, 99, 99, 99, 27, 27, 27, 20, 20, 20), 20, 20, 20);
   }
 
   @Test
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
-    ScanInfo newScanInfo = oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600,
-        oldScanInfo.getKeepDeletedCells());
+    ScanInfo newScanInfo =
+      oldScanInfo.customize(oldScanInfo.getMaxVersions(), 600, oldScanInfo.getKeepDeletedCells());
     store.setScanInfo(newScanInfo);
     // Do not compact empty store file
     List<HStoreFile> candidates = sfCreate(0);
@@ -183,9 +181,9 @@ public class TestDefaultCompactSelection extends TestCompactionPolicy {
       }
     }
     // Test Default compactions
-    CompactionRequestImpl result = ((RatioBasedCompactionPolicy) store.storeEngine
-        .getCompactionPolicy()).selectCompaction(candidates,
-        new ArrayList<>(), false, false, false);
+    CompactionRequestImpl result =
+      ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy())
+        .selectCompaction(candidates, new ArrayList<>(), false, false, false);
     Assert.assertTrue(result.getFiles().isEmpty());
     store.setScanInfo(oldScanInfo);
   }

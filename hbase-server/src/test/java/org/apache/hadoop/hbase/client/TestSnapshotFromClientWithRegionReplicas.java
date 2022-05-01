@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,13 +26,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 @RunWith(Parameterized.class)
 public class TestSnapshotFromClientWithRegionReplicas extends TestSnapshotFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotFromClientWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestSnapshotFromClientWithRegionReplicas.class);
 
   public TestSnapshotFromClientWithRegionReplicas(StoreFileTrackerFactory.Trackers trackerImpl) {
     super(trackerImpl);

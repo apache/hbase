@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -31,25 +32,15 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Compress using:
- * - store size of common prefix
- * - save column family once, it is same within HFile
- * - use integer compression for key, value and prefix (7-bit encoding)
- * - use bits to avoid duplication key length, value length
- *   and type if it same as previous
- * - store in 3 bits length of timestamp field
- * - allow diff in timestamp instead of actual value
- *
- * Format:
- * - 1 byte:    flag
- * - 1-5 bytes: key length (only if FLAG_SAME_KEY_LENGTH is not set in flag)
- * - 1-5 bytes: value length (only if FLAG_SAME_VALUE_LENGTH is not set in flag)
- * - 1-5 bytes: prefix length
- * - ... bytes: rest of the row (if prefix length is small enough)
- * - ... bytes: qualifier (or suffix depending on prefix length)
- * - 1-8 bytes: timestamp or diff
- * - 1 byte:    type (only if FLAG_SAME_TYPE is not set in the flag)
- * - ... bytes: value
+ * Compress using: - store size of common prefix - save column family once, it is same within HFile
+ * - use integer compression for key, value and prefix (7-bit encoding) - use bits to avoid
+ * duplication key length, value length and type if it same as previous - store in 3 bits length of
+ * timestamp field - allow diff in timestamp instead of actual value Format: - 1 byte: flag - 1-5
+ * bytes: key length (only if FLAG_SAME_KEY_LENGTH is not set in flag) - 1-5 bytes: value length
+ * (only if FLAG_SAME_VALUE_LENGTH is not set in flag) - 1-5 bytes: prefix length - ... bytes: rest
+ * of the row (if prefix length is small enough) - ... bytes: qualifier (or suffix depending on
+ * prefix length) - 1-8 bytes: timestamp or diff - 1 byte: type (only if FLAG_SAME_TYPE is not set
+ * in the flag) - ... bytes: value
  */
 @InterfaceAudience.Private
 public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
@@ -78,18 +69,16 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
   }
 
-  private void uncompressSingleKeyValue(DataInputStream source,
-      ByteBuffer buffer,
-      DiffCompressionState state)
-          throws IOException, EncoderBufferTooSmallException {
+  private void uncompressSingleKeyValue(DataInputStream source, ByteBuffer buffer,
+    DiffCompressionState state) throws IOException, EncoderBufferTooSmallException {
     // read the column family at the beginning
     if (state.isFirst()) {
       state.familyLength = source.readByte();
       state.familyNameWithSize =
-          new byte[(state.familyLength & 0xff) + KeyValue.FAMILY_LENGTH_SIZE];
+        new byte[(state.familyLength & 0xff) + KeyValue.FAMILY_LENGTH_SIZE];
       state.familyNameWithSize[0] = state.familyLength;
-      int read = source.read(state.familyNameWithSize, KeyValue.FAMILY_LENGTH_SIZE,
-          state.familyLength);
+      int read =
+        source.read(state.familyNameWithSize, KeyValue.FAMILY_LENGTH_SIZE, state.familyLength);
       assert read == state.familyLength;
     }
 
@@ -119,14 +108,13 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
     // copy common from previous key
     if (commonPrefix > 0) {
-      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, state.prevOffset
-          + KeyValue.ROW_OFFSET, commonPrefix);
+      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, state.prevOffset + KeyValue.ROW_OFFSET,
+        commonPrefix);
     }
 
     // copy the rest of the key from the buffer
     int keyRestLength;
-    if (state.isFirst() || commonPrefix <
-        state.rowLength + KeyValue.ROW_LENGTH_SIZE) {
+    if (state.isFirst() || commonPrefix < state.rowLength + KeyValue.ROW_LENGTH_SIZE) {
       // omit the family part of the key, it is always the same
       short rowLength;
       int rowRestLength;
@@ -135,7 +123,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       if (commonPrefix < KeyValue.ROW_LENGTH_SIZE) {
         // not yet copied, do it now
         ByteBufferUtils.copyFromStreamToBuffer(buffer, source,
-            KeyValue.ROW_LENGTH_SIZE - commonPrefix);
+          KeyValue.ROW_LENGTH_SIZE - commonPrefix);
         ByteBufferUtils.skip(buffer, -KeyValue.ROW_LENGTH_SIZE);
         rowLength = buffer.getShort();
         rowRestLength = rowLength;
@@ -152,9 +140,8 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // copy the column family
       buffer.put(state.familyNameWithSize);
 
-      keyRestLength = keyLength - rowLength -
-          state.familyNameWithSize.length -
-          (KeyValue.ROW_LENGTH_SIZE + KeyValue.TIMESTAMP_TYPE_SIZE);
+      keyRestLength = keyLength - rowLength - state.familyNameWithSize.length
+        - (KeyValue.ROW_LENGTH_SIZE + KeyValue.TIMESTAMP_TYPE_SIZE);
     } else {
       // prevRowWithSizeLength is the same as on previous row
       keyRestLength = keyLength - commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE;
@@ -163,8 +150,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBufferUtils.copyFromStreamToBuffer(buffer, source, keyRestLength);
 
     // handle timestamp
-    int timestampFitsInBytes =
-        ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH) + 1;
+    int timestampFitsInBytes = ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH) + 1;
     long timestamp = ByteBufferUtils.readLong(source, timestampFitsInBytes);
     if ((flag & FLAG_TIMESTAMP_SIGN) != 0) {
       timestamp = -timestamp;
@@ -196,7 +182,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
-      DataOutputStream out) throws IOException {
+    DataOutputStream out) throws IOException {
     EncodingState state = encodingContext.getEncodingState();
     int size = compressSingleKeyValue(out, cell, state.prevCell);
     size += afterEncodingKeyValue(cell, out, encodingContext);
@@ -205,7 +191,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
-      throws IOException {
+    throws IOException {
     int flag = 0; // Do not use more bits that can fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
@@ -287,7 +273,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // common prefix, so we need not special-case it here.
       // What we write here is the non common part of the qualifier
       int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
-          - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+        - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
       PrivateCellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
         commonQualPrefix);
     }
@@ -311,7 +297,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     byte familyLength = block.get();
     block.skip(familyLength);
     byte flag = block.get();
-    int keyLength  = ByteBuff.readCompressedInt(block);
+    int keyLength = ByteBuff.readCompressedInt(block);
     // TODO : See if we can avoid these reads as the read values are not getting used
     ByteBuff.readCompressedInt(block); // valueLength
     ByteBuff.readCompressedInt(block); // commonLength
@@ -334,14 +320,12 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
     // copy qualifier
     block.position(savePosition);
-    int qualifierLength =
-        keyLength - pos + result.arrayOffset() - KeyValue.TIMESTAMP_TYPE_SIZE;
+    int qualifierLength = keyLength - pos + result.arrayOffset() - KeyValue.TIMESTAMP_TYPE_SIZE;
     block.get(result.array(), pos, qualifierLength);
     pos += qualifierLength;
 
     // copy the timestamp and type
-    int timestampFitInBytes =
-        ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH) + 1;
+    int timestampFitInBytes = ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH) + 1;
     long timestamp = ByteBuff.readLong(block, timestampFitInBytes);
     if ((flag & FLAG_TIMESTAMP_SIGN) != 0) {
       timestamp = -timestamp;
@@ -365,8 +349,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private long timestamp;
 
-    public DiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair,
-        boolean includeTags) {
+    public DiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       super(tmpPair, includeTags);
     }
 
@@ -386,10 +369,9 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   protected ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
-      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocateHeaderLength);
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize + allocateHeaderLength);
     buffer.position(allocateHeaderLength);
     DiffCompressionState state = new DiffCompressionState();
     while (source.available() > skipLastBytes) {
@@ -405,10 +387,9 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   private static class DiffSeekerStateBufferedEncodedSeeker
-      extends BufferedEncodedSeeker<DiffSeekerState> {
+    extends BufferedEncodedSeeker<DiffSeekerState> {
     private byte[] familyNameWithSize;
-    private static final int TIMESTAMP_WITH_TYPE_LENGTH =
-        Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE;
+    private static final int TIMESTAMP_WITH_TYPE_LENGTH = Bytes.SIZEOF_LONG + Bytes.SIZEOF_BYTE;
 
     private DiffSeekerStateBufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
       super(decodingCtx);
@@ -435,47 +416,42 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
         // copy the row size
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
-        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
-            Bytes.SIZEOF_SHORT;
+          Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
+        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) + Bytes.SIZEOF_SHORT;
 
         // copy the rest of row
         currentBuffer.get(current.keyBuffer, Bytes.SIZEOF_SHORT,
-            current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
+          current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
 
         // copy the column family
-        System.arraycopy(familyNameWithSize, 0, current.keyBuffer,
-            current.rowLengthWithSize, familyNameWithSize.length);
+        System.arraycopy(familyNameWithSize, 0, current.keyBuffer, current.rowLengthWithSize,
+          familyNameWithSize.length);
 
         // copy the qualifier
-        currentBuffer.get(current.keyBuffer,
-            current.rowLengthWithSize + familyNameWithSize.length,
-            current.keyLength - current.rowLengthWithSize -
-            familyNameWithSize.length - TIMESTAMP_WITH_TYPE_LENGTH);
+        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize + familyNameWithSize.length,
+          current.keyLength - current.rowLengthWithSize - familyNameWithSize.length
+            - TIMESTAMP_WITH_TYPE_LENGTH);
       } else if (current.lastCommonPrefix < current.rowLengthWithSize) {
         // we have to copy part of row and qualifier,
         // but column family is in right place
 
         // before column family (rest of row)
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.rowLengthWithSize - current.lastCommonPrefix);
+          current.rowLengthWithSize - current.lastCommonPrefix);
 
         // after column family (qualifier)
-        currentBuffer.get(current.keyBuffer,
-            current.rowLengthWithSize + familyNameWithSize.length,
-            current.keyLength - current.rowLengthWithSize -
-            familyNameWithSize.length - TIMESTAMP_WITH_TYPE_LENGTH);
+        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize + familyNameWithSize.length,
+          current.keyLength - current.rowLengthWithSize - familyNameWithSize.length
+            - TIMESTAMP_WITH_TYPE_LENGTH);
       } else {
         // copy just the ending
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.keyLength - TIMESTAMP_WITH_TYPE_LENGTH -
-            current.lastCommonPrefix);
+          current.keyLength - TIMESTAMP_WITH_TYPE_LENGTH - current.lastCommonPrefix);
       }
 
       // timestamp
       int pos = current.keyLength - TIMESTAMP_WITH_TYPE_LENGTH;
-      int timestampFitInBytes = 1 +
-          ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH);
+      int timestampFitInBytes = 1 + ((flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH);
       long timestampOrDiff = ByteBuff.readLong(currentBuffer, timestampFitInBytes);
       if ((flag & FLAG_TIMESTAMP_SIGN) != 0) {
         timestampOrDiff = -timestampOrDiff;
@@ -517,8 +493,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       byte familyNameLength = currentBuffer.get();
       familyNameWithSize = new byte[familyNameLength + Bytes.SIZEOF_BYTE];
       familyNameWithSize[0] = familyNameLength;
-      currentBuffer.get(familyNameWithSize, Bytes.SIZEOF_BYTE,
-          familyNameLength);
+      currentBuffer.get(familyNameWithSize, Bytes.SIZEOF_BYTE, familyNameLength);
       decode(true);
     }
 

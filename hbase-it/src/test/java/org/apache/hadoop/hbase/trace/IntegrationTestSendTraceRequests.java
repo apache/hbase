@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -47,14 +46,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+
 @Category(IntegrationTests.class)
 public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(IntegrationTestSendTraceRequests.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestSendTraceRequests.class);
   public static final String TABLE_ARG = "t";
   public static final String CF_ARG = "f";
 
@@ -119,7 +118,8 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
       Runnable runnable = new Runnable() {
         private final LinkedBlockingQueue<Long> rowKeyQueue = rks;
 
-        @Override public void run() {
+        @Override
+        public void run() {
           ResultScanner rs = null;
           Span span = TraceUtil.getGlobalTracer().spanBuilder("Scan").startSpan();
           try (Scope scope = span.makeCurrent()) {
@@ -159,14 +159,13 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   }
 
   private void doGets(ExecutorService service, final LinkedBlockingQueue<Long> rowKeys)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < 100; i++) {
       Runnable runnable = new Runnable() {
         private final LinkedBlockingQueue<Long> rowKeyQueue = rowKeys;
 
         @Override
         public void run() {
-
 
           Table ht = null;
           try {
@@ -190,7 +189,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
               }
               span.addEvent("Accum = " + accum);
 
-            } catch (IOException|InterruptedException ie) {
+            } catch (IOException | InterruptedException ie) {
               // IGNORED
             } finally {
               span.end();

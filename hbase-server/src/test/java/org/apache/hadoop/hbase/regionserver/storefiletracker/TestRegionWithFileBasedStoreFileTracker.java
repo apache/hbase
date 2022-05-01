@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,8 +72,8 @@ public class TestRegionWithFileBasedStoreFileTracker {
   public void setUp() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.set(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.FILE.name());
-    region =
-      HBaseTestingUtility.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()), conf, TD);
+    region = HBaseTestingUtility.createRegionAndWAL(RI, UTIL.getDataTestDir(name.getMethodName()),
+      conf, TD);
   }
 
   @After

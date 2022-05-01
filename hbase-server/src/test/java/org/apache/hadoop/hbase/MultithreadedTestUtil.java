@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,15 +23,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class MultithreadedTestUtil {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(MultithreadedTestUtil.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MultithreadedTestUtil.class);
 
   public static class TestContext {
     private final Configuration conf;
@@ -49,7 +46,7 @@ public abstract class MultithreadedTestUtil {
       return conf;
     }
 
-    public synchronized boolean shouldRun()  {
+    public synchronized boolean shouldRun() {
       return !stopped && err == null;
     }
 
@@ -74,6 +71,7 @@ public abstract class MultithreadedTestUtil {
         }
       }
     }
+
     private synchronized void checkException() throws Exception {
       if (err != null) {
         throw new RuntimeException("Deferred", err);
@@ -108,8 +106,7 @@ public abstract class MultithreadedTestUtil {
   }
 
   /**
-   * A thread that can be added to a test context, and properly
-   * passes exceptions through.
+   * A thread that can be added to a test context, and properly passes exceptions through.
    */
   public static abstract class TestThread extends Thread {
     protected final TestContext ctx;
@@ -156,13 +153,16 @@ public abstract class MultithreadedTestUtil {
     }
 
     public abstract void doAnAction() throws Exception;
-    public void workDone() throws IOException {}
+
+    public void workDone() throws IOException {
+    }
   }
 
   /**
-   * Verify that no assertions have failed inside a future.
-   * Used for unit tests that spawn threads. E.g.,
+   * Verify that no assertions have failed inside a future. Used for unit tests that spawn threads.
+   * E.g.,
    * <p>
+   *
    * <pre>
    *   List&lt;Future&lt;Void>> results = Lists.newArrayList();
    *   Future&lt;Void> f = executor.submit(new Callable&lt;Void> {
@@ -173,14 +173,14 @@ public abstract class MultithreadedTestUtil {
    *   results.add(f);
    *   assertOnFutures(results);
    * </pre>
+   *
    * @param threadResults A list of futures
-   * @throws InterruptedException If interrupted when waiting for a result
-   *                              from one of the futures
-   * @throws ExecutionException If an exception other than AssertionError
-   *                            occurs inside any of the futures
+   * @throws InterruptedException If interrupted when waiting for a result from one of the futures
+   * @throws ExecutionException   If an exception other than AssertionError occurs inside any of the
+   *                              futures
    */
   public static void assertOnFutures(List<Future<?>> threadResults)
-  throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     for (Future<?> threadResult : threadResults) {
       try {
         threadResult.get();

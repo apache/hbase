@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import javax.servlet.ServletContext;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -29,11 +26,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
+import org.apache.hadoop.hbase.rest.model.NamespacesModel;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.rest.model.NamespacesModel;
 
 /**
  * Implements REST GET list of all namespaces.
@@ -47,8 +43,7 @@ public class NamespacesResource extends ResourceBase {
   private static final Logger LOG = LoggerFactory.getLogger(NamespacesResource.class);
 
   /**
-   * Constructor
-   * @throws IOException
+   * Constructor n
    */
   public NamespacesResource() throws IOException {
     super();
@@ -61,8 +56,8 @@ public class NamespacesResource extends ResourceBase {
    * @return a response for a version request
    */
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context ServletContext context, final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
@@ -84,7 +79,7 @@ public class NamespacesResource extends ResourceBase {
    */
   @Path("{namespace}")
   public NamespacesInstanceResource getNamespaceInstanceResource(
-      final @PathParam("namespace") String namespace) throws IOException {
+    final @PathParam("namespace") String namespace) throws IOException {
     return new NamespacesInstanceResource(namespace);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ public class TestSnapshotWithAcl extends SnapshotWithAclTestBase {
 
   @Override
   protected void cloneSnapshot(String snapshotName, TableName tableName, boolean restoreAcl)
-      throws Exception {
+    throws Exception {
     TEST_UTIL.getAdmin().cloneSnapshot(snapshotName, tableName, restoreAcl);
   }
 

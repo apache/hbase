@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,20 +49,21 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamil
 public class ColumnFamilyDescriptorBuilder {
   // For future backward compatibility
 
-  // Version  3 was when column names become byte arrays and when we picked up
-  // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
-  // Version  5 was when bloom filter descriptors were removed.
-  // Version  6 adds metadata as a map where keys and values are byte[].
-  // Version  7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
-  // Version  8 -- reintroduction of bloom filters, changed from boolean to enum
-  // Version  9 -- add data block encoding
+  // Version 3 was when column names become byte arrays and when we picked up
+  // Time-to-live feature. Version 4 was when we moved to byte arrays, HBASE-82.
+  // Version 5 was when bloom filter descriptors were removed.
+  // Version 6 adds metadata as a map where keys and values are byte[].
+  // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
+  // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
+  // Version 9 -- add data block encoding
   // Version 10 -- change metadata to standard type.
   // Version 11 -- add column family level configuration.
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 11;
 
   @InterfaceAudience.Private
   public static final String IN_MEMORY_COMPACTION = "IN_MEMORY_COMPACTION";
-  private static final Bytes IN_MEMORY_COMPACTION_BYTES = new Bytes(Bytes.toBytes(IN_MEMORY_COMPACTION));
+  private static final Bytes IN_MEMORY_COMPACTION_BYTES =
+    new Bytes(Bytes.toBytes(IN_MEMORY_COMPACTION));
 
   @InterfaceAudience.Private
   public static final String IN_MEMORY = HConstants.IN_MEMORY;
@@ -74,49 +75,53 @@ public class ColumnFamilyDescriptorBuilder {
   private static final Bytes COMPRESSION_BYTES = new Bytes(Bytes.toBytes(COMPRESSION));
   @InterfaceAudience.Private
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
-  private static final Bytes COMPRESSION_COMPACT_BYTES = new Bytes(Bytes.toBytes(COMPRESSION_COMPACT));
+  private static final Bytes COMPRESSION_COMPACT_BYTES =
+    new Bytes(Bytes.toBytes(COMPRESSION_COMPACT));
   @InterfaceAudience.Private
   public static final String DATA_BLOCK_ENCODING = "DATA_BLOCK_ENCODING";
-  private static final Bytes DATA_BLOCK_ENCODING_BYTES = new Bytes(Bytes.toBytes(DATA_BLOCK_ENCODING));
+  private static final Bytes DATA_BLOCK_ENCODING_BYTES =
+    new Bytes(Bytes.toBytes(DATA_BLOCK_ENCODING));
   /**
-   * Key for the BLOCKCACHE attribute. A more exact name would be
-   * CACHE_DATA_ON_READ because this flag sets whether or not we cache DATA
-   * blocks. We always cache INDEX and BLOOM blocks; caching these blocks cannot
-   * be disabled.
+   * Key for the BLOCKCACHE attribute. A more exact name would be CACHE_DATA_ON_READ because this
+   * flag sets whether or not we cache DATA blocks. We always cache INDEX and BLOOM blocks; caching
+   * these blocks cannot be disabled.
    */
   @InterfaceAudience.Private
   public static final String BLOCKCACHE = "BLOCKCACHE";
   private static final Bytes BLOCKCACHE_BYTES = new Bytes(Bytes.toBytes(BLOCKCACHE));
   @InterfaceAudience.Private
   public static final String CACHE_DATA_ON_WRITE = "CACHE_DATA_ON_WRITE";
-  private static final Bytes CACHE_DATA_ON_WRITE_BYTES = new Bytes(Bytes.toBytes(CACHE_DATA_ON_WRITE));
+  private static final Bytes CACHE_DATA_ON_WRITE_BYTES =
+    new Bytes(Bytes.toBytes(CACHE_DATA_ON_WRITE));
   @InterfaceAudience.Private
   public static final String CACHE_INDEX_ON_WRITE = "CACHE_INDEX_ON_WRITE";
-  private static final Bytes CACHE_INDEX_ON_WRITE_BYTES = new Bytes(Bytes.toBytes(CACHE_INDEX_ON_WRITE));
+  private static final Bytes CACHE_INDEX_ON_WRITE_BYTES =
+    new Bytes(Bytes.toBytes(CACHE_INDEX_ON_WRITE));
   @InterfaceAudience.Private
   public static final String CACHE_BLOOMS_ON_WRITE = "CACHE_BLOOMS_ON_WRITE";
-  private static final Bytes CACHE_BLOOMS_ON_WRITE_BYTES = new Bytes(Bytes.toBytes(CACHE_BLOOMS_ON_WRITE));
+  private static final Bytes CACHE_BLOOMS_ON_WRITE_BYTES =
+    new Bytes(Bytes.toBytes(CACHE_BLOOMS_ON_WRITE));
   @InterfaceAudience.Private
   public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
-  private static final Bytes EVICT_BLOCKS_ON_CLOSE_BYTES = new Bytes(Bytes.toBytes(EVICT_BLOCKS_ON_CLOSE));
+  private static final Bytes EVICT_BLOCKS_ON_CLOSE_BYTES =
+    new Bytes(Bytes.toBytes(EVICT_BLOCKS_ON_CLOSE));
 
   /**
-   * Key for the PREFETCH_BLOCKS_ON_OPEN attribute. If set, all INDEX, BLOOM,
-   * and DATA blocks of HFiles belonging to this family will be loaded into the
-   * cache as soon as the file is opened. These loads will not count as cache
-   * misses.
+   * Key for the PREFETCH_BLOCKS_ON_OPEN attribute. If set, all INDEX, BLOOM, and DATA blocks of
+   * HFiles belonging to this family will be loaded into the cache as soon as the file is opened.
+   * These loads will not count as cache misses.
    */
   @InterfaceAudience.Private
   public static final String PREFETCH_BLOCKS_ON_OPEN = "PREFETCH_BLOCKS_ON_OPEN";
-  private static final Bytes PREFETCH_BLOCKS_ON_OPEN_BYTES = new Bytes(Bytes.toBytes(PREFETCH_BLOCKS_ON_OPEN));
+  private static final Bytes PREFETCH_BLOCKS_ON_OPEN_BYTES =
+    new Bytes(Bytes.toBytes(PREFETCH_BLOCKS_ON_OPEN));
 
   /**
-   * Size of storefile/hfile 'blocks'. Default is {@link #DEFAULT_BLOCKSIZE}.
-   * Use smaller block sizes for faster random-access at expense of larger
-   * indices (more memory consumption). Note that this is a soft limit and that
-   * blocks have overhead (metadata, CRCs) so blocks will tend to be the size
-   * specified here and then some; i.e. don't expect that setting BLOCKSIZE=4k
-   * means hbase data will align with an SSDs 4k page accesses (TODO).
+   * Size of storefile/hfile 'blocks'. Default is {@link #DEFAULT_BLOCKSIZE}. Use smaller block
+   * sizes for faster random-access at expense of larger indices (more memory consumption). Note
+   * that this is a soft limit and that blocks have overhead (metadata, CRCs) so blocks will tend to
+   * be the size specified here and then some; i.e. don't expect that setting BLOCKSIZE=4k means
+   * hbase data will align with an SSDs 4k page accesses (TODO).
    */
   @InterfaceAudience.Private
   public static final String BLOCKSIZE = "BLOCKSIZE";
@@ -137,13 +142,14 @@ public class ColumnFamilyDescriptorBuilder {
   public static final String MIN_VERSIONS = "MIN_VERSIONS";
   private static final Bytes MIN_VERSIONS_BYTES = new Bytes(Bytes.toBytes(MIN_VERSIONS));
   /**
-   * Retain all cells across flushes and compactions even if they fall behind a
-   * delete tombstone. To see all retained cells, do a 'raw' scan; see
-   * Scan#setRaw or pass RAW =&gt; true attribute in the shell.
+   * Retain all cells across flushes and compactions even if they fall behind a delete tombstone. To
+   * see all retained cells, do a 'raw' scan; see Scan#setRaw or pass RAW =&gt; true attribute in
+   * the shell.
    */
   @InterfaceAudience.Private
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
-  private static final Bytes KEEP_DELETED_CELLS_BYTES = new Bytes(Bytes.toBytes(KEEP_DELETED_CELLS));
+  private static final Bytes KEEP_DELETED_CELLS_BYTES =
+    new Bytes(Bytes.toBytes(KEEP_DELETED_CELLS));
   @InterfaceAudience.Private
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
   private static final Bytes COMPRESS_TAGS_BYTES = new Bytes(Bytes.toBytes(COMPRESS_TAGS));
@@ -164,9 +170,10 @@ public class ColumnFamilyDescriptorBuilder {
   public static final long DEFAULT_MOB_THRESHOLD = 100 * 1024; // 100k
   @InterfaceAudience.Private
   public static final String MOB_COMPACT_PARTITION_POLICY = "MOB_COMPACT_PARTITION_POLICY";
-  private static final Bytes MOB_COMPACT_PARTITION_POLICY_BYTES = new Bytes(Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY));
-  public static final MobCompactPartitionPolicy DEFAULT_MOB_COMPACT_PARTITION_POLICY
-          = MobCompactPartitionPolicy.DAILY;
+  private static final Bytes MOB_COMPACT_PARTITION_POLICY_BYTES =
+    new Bytes(Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY));
+  public static final MobCompactPartitionPolicy DEFAULT_MOB_COMPACT_PARTITION_POLICY =
+    MobCompactPartitionPolicy.DAILY;
   @InterfaceAudience.Private
   public static final String DFS_REPLICATION = "DFS_REPLICATION";
   private static final Bytes DFS_REPLICATION_BYTES = new Bytes(Bytes.toBytes(DFS_REPLICATION));
@@ -176,7 +183,8 @@ public class ColumnFamilyDescriptorBuilder {
   private static final Bytes STORAGE_POLICY_BYTES = new Bytes(Bytes.toBytes(STORAGE_POLICY));
 
   public static final String NEW_VERSION_BEHAVIOR = "NEW_VERSION_BEHAVIOR";
-  private static final Bytes NEW_VERSION_BEHAVIOR_BYTES = new Bytes(Bytes.toBytes(NEW_VERSION_BEHAVIOR));
+  private static final Bytes NEW_VERSION_BEHAVIOR_BYTES =
+    new Bytes(Bytes.toBytes(NEW_VERSION_BEHAVIOR));
   public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR = false;
   /**
    * Default compression type.
@@ -199,8 +207,7 @@ public class ColumnFamilyDescriptorBuilder {
   public static final int DEFAULT_MIN_VERSIONS = 0;
 
   /**
-   * Default setting for whether to try and serve this column family from memory
-   * or not.
+   * Default setting for whether to try and serve this column family from memory or not.
    */
   public static final boolean DEFAULT_IN_MEMORY = false;
 
@@ -215,14 +222,12 @@ public class ColumnFamilyDescriptorBuilder {
   public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
-   * Default setting for whether to cache data blocks on write if block caching
-   * is enabled.
+   * Default setting for whether to cache data blocks on write if block caching is enabled.
    */
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
 
   /**
-   * Default setting for whether to cache index blocks on write if block caching
-   * is enabled.
+   * Default setting for whether to cache index blocks on write if block caching is enabled.
    */
   public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE = false;
 
@@ -237,8 +242,7 @@ public class ColumnFamilyDescriptorBuilder {
   public static final BloomType DEFAULT_BLOOMFILTER = BloomType.ROW;
 
   /**
-   * Default setting for whether to cache bloom filter blocks on write if block
-   * caching is enabled.
+   * Default setting for whether to cache bloom filter blocks on write if block caching is enabled.
    */
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
 
@@ -253,8 +257,7 @@ public class ColumnFamilyDescriptorBuilder {
   public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
 
   /**
-   * Default setting for whether to evict cached blocks from the blockcache on
-   * close.
+   * Default setting for whether to evict cached blocks from the blockcache on close.
    */
   public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = false;
 
@@ -272,7 +275,8 @@ public class ColumnFamilyDescriptorBuilder {
 
   private static Map<Bytes, Bytes> getDefaultValuesBytes() {
     Map<Bytes, Bytes> values = new HashMap<>();
-    DEFAULT_VALUES.forEach((k, v) -> values.put(new Bytes(Bytes.toBytes(k)), new Bytes(Bytes.toBytes(v))));
+    DEFAULT_VALUES
+      .forEach((k, v) -> values.put(new Bytes(Bytes.toBytes(k)), new Bytes(Bytes.toBytes(v))));
     return values;
   }
 
@@ -320,10 +324,11 @@ public class ColumnFamilyDescriptorBuilder {
   /**
    * @param b Family name.
    * @return <code>b</code>
-   * @throws IllegalArgumentException If not null and not a legitimate family
-   * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
-   * <code>b</code> can be null when deserializing). Cannot start with a '.'
-   * either. Also Family can not be an empty value or equal "recovered.edits".
+   * @throws IllegalArgumentException If not null and not a legitimate family name: i.e. 'printable'
+   *                                  and ends in a ':' (Null passes are allowed because
+   *                                  <code>b</code> can be null when deserializing). Cannot start
+   *                                  with a '.' either. Also Family can not be an empty value or
+   *                                  equal "recovered.edits".
    */
   public static byte[] isLegalColumnFamilyName(final byte[] b) {
     if (b == null) {
@@ -331,27 +336,28 @@ public class ColumnFamilyDescriptorBuilder {
     }
     Preconditions.checkArgument(b.length != 0, "Column Family name can not be empty");
     if (b[0] == '.') {
-      throw new IllegalArgumentException("Column Family names cannot start with a "
-              + "period: " + Bytes.toString(b));
+      throw new IllegalArgumentException(
+        "Column Family names cannot start with a " + "period: " + Bytes.toString(b));
     }
     for (int i = 0; i < b.length; i++) {
       if (Character.isISOControl(b[i]) || b[i] == ':' || b[i] == '\\' || b[i] == '/') {
         throw new IllegalArgumentException("Illegal character <" + b[i]
-                + ">. Column Family names cannot contain control characters or colons: "
-                + Bytes.toString(b));
+          + ">. Column Family names cannot contain control characters or colons: "
+          + Bytes.toString(b));
       }
     }
     byte[] recoveredEdit = Bytes.toBytes(HConstants.RECOVERED_EDITS_DIR);
     if (Bytes.equals(recoveredEdit, b)) {
-      throw new IllegalArgumentException("Column Family name cannot be: "
-              + HConstants.RECOVERED_EDITS_DIR);
+      throw new IllegalArgumentException(
+        "Column Family name cannot be: " + HConstants.RECOVERED_EDITS_DIR);
     }
     return b;
   }
 
   private final ModifyableColumnFamilyDescriptor desc;
 
-  public static ColumnFamilyDescriptor parseFrom(final byte[] pbBytes) throws DeserializationException {
+  public static ColumnFamilyDescriptor parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     return ModifyableColumnFamilyDescriptor.parseFrom(pbBytes);
   }
 
@@ -511,7 +517,8 @@ public class ColumnFamilyDescriptorBuilder {
     return this;
   }
 
-  public ColumnFamilyDescriptorBuilder setMobCompactPartitionPolicy(final MobCompactPartitionPolicy value) {
+  public ColumnFamilyDescriptorBuilder
+    setMobCompactPartitionPolicy(final MobCompactPartitionPolicy value) {
     desc.setMobCompactPartitionPolicy(value);
     return this;
   }
@@ -572,21 +579,19 @@ public class ColumnFamilyDescriptorBuilder {
   }
 
   public ColumnFamilyDescriptorBuilder setVersionsWithTimeToLive(final int retentionInterval,
-      final int versionAfterInterval) {
+    final int versionAfterInterval) {
     desc.setVersionsWithTimeToLive(retentionInterval, versionAfterInterval);
     return this;
   }
 
   /**
-   * An ModifyableFamilyDescriptor contains information about a column family such as the
-   * number of versions, compression settings, etc.
-   *
-   * It is used as input when creating a table or adding a column.
-   * TODO: make this package-private after removing the HColumnDescriptor
+   * An ModifyableFamilyDescriptor contains information about a column family such as the number of
+   * versions, compression settings, etc. It is used as input when creating a table or adding a
+   * column. TODO: make this package-private after removing the HColumnDescriptor
    */
   @InterfaceAudience.Private
   public static class ModifyableColumnFamilyDescriptor
-      implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
+    implements ColumnFamilyDescriptor, Comparable<ModifyableColumnFamilyDescriptor> {
 
     // Column family name
     private final byte[] name;
@@ -595,20 +600,17 @@ public class ColumnFamilyDescriptorBuilder {
     private final Map<Bytes, Bytes> values = new HashMap<>();
 
     /**
-     * A map which holds the configuration specific to the column family. The
-     * keys of the map have the same names as config keys and override the
-     * defaults with cf-specific settings. Example usage may be for compactions,
-     * etc.
+     * A map which holds the configuration specific to the column family. The keys of the map have
+     * the same names as config keys and override the defaults with cf-specific settings. Example
+     * usage may be for compactions, etc.
      */
     private final Map<String, String> configuration = new HashMap<>();
 
     /**
-     * Construct a column descriptor specifying only the family name The other
-     * attributes are defaulted.
-     *
-     * @param name Column family name. Must be 'printable' -- digit or
-     * letter -- and may not contain a <code>:</code>
-     * TODO: make this private after the HCD is removed.
+     * Construct a column descriptor specifying only the family name The other attributes are
+     * defaulted.
+     * @param name Column family name. Must be 'printable' -- digit or letter -- and may not contain
+     *             a <code>:</code> TODO: make this private after the HCD is removed.
      */
     @InterfaceAudience.Private
     public ModifyableColumnFamilyDescriptor(final byte[] name) {
@@ -616,8 +618,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Constructor. Makes a deep copy of the supplied descriptor.
-     * TODO: make this private after the HCD is removed.
+     * Constructor. Makes a deep copy of the supplied descriptor. TODO: make this private after the
+     * HCD is removed.
      * @param desc The descriptor.
      */
     @InterfaceAudience.Private
@@ -625,7 +627,8 @@ public class ColumnFamilyDescriptorBuilder {
       this(desc.getName(), desc.getValues(), desc.getConfiguration());
     }
 
-    private ModifyableColumnFamilyDescriptor(byte[] name, Map<Bytes, Bytes> values, Map<String, String> config) {
+    private ModifyableColumnFamilyDescriptor(byte[] name, Map<Bytes, Bytes> values,
+      Map<String, String> config) {
       this.name = name;
       this.values.putAll(values);
       this.configuration.putAll(config);
@@ -664,12 +667,13 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param key The key.
+     * @param key   The key.
      * @param value The value.
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setValue(byte[] key, byte[] value) {
-      return setValue(toBytesOrNull(key, Function.identity()), toBytesOrNull(value, Function.identity()));
+      return setValue(toBytesOrNull(key, Function.identity()),
+        toBytesOrNull(value, Function.identity()));
     }
 
     public ModifyableColumnFamilyDescriptor setValue(String key, String value) {
@@ -679,8 +683,9 @@ public class ColumnFamilyDescriptorBuilder {
     private ModifyableColumnFamilyDescriptor setValue(Bytes key, String value) {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
+
     /**
-     * @param key The key.
+     * @param key   The key.
      * @param value The value.
      * @return this (for chained invocation)
      */
@@ -694,7 +699,6 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     *
      * @param key Key whose key and value we're to remove from HCD parameters.
      * @return this (for chained invocation)
      */
@@ -739,9 +743,9 @@ public class ColumnFamilyDescriptorBuilder {
         throw new IllegalArgumentException("Maximum versions must be positive");
       }
       if (maxVersions < this.getMinVersions()) {
-        throw new IllegalArgumentException("Set MaxVersion to " + maxVersions
-                + " while minVersion is " + this.getMinVersions()
-                + ". Maximum versions must be >= minimum versions ");
+        throw new IllegalArgumentException(
+          "Set MaxVersion to " + maxVersions + " while minVersion is " + this.getMinVersions()
+            + ". Maximum versions must be >= minimum versions ");
       }
       setValue(MAX_VERSIONS_BYTES, Integer.toString(maxVersions));
       return this;
@@ -749,7 +753,6 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set minimum and maximum versions to keep
-     *
      * @param minVersions minimal number of versions
      * @param maxVersions maximum number of versions
      * @return this (for chained invocation)
@@ -762,15 +765,14 @@ public class ColumnFamilyDescriptorBuilder {
       }
 
       if (maxVersions < minVersions) {
-        throw new IllegalArgumentException("Unable to set MaxVersion to " + maxVersions
-                + " and set MinVersion to " + minVersions
-                + ", as maximum versions must be >= minimum versions.");
+        throw new IllegalArgumentException(
+          "Unable to set MaxVersion to " + maxVersions + " and set MinVersion to " + minVersions
+            + ", as maximum versions must be >= minimum versions.");
       }
       setMinVersions(minVersions);
       setMaxVersions(maxVersions);
       return this;
     }
-
 
     @Override
     public int getBlocksize() {
@@ -778,8 +780,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param s Blocksize to use when writing out storefiles/hfiles on this
-     * column family.
+     * @param s Blocksize to use when writing out storefiles/hfiles on this column family.
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setBlocksize(int s) {
@@ -793,12 +794,9 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Compression types supported in hbase. LZO is not bundled as part of the
-     * hbase distribution. See
-     * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO
-     * Compression</a>
-     * for how to enable it.
-     *
+     * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
+     * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how
+     * to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */
@@ -814,20 +812,18 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set data block encoding algorithm used in block cache.
-     *
      * @param type What kind of data block encoding will be used.
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setDataBlockEncoding(DataBlockEncoding type) {
-      return setValue(DATA_BLOCK_ENCODING_BYTES, type == null ? DataBlockEncoding.NONE.name() : type.name());
+      return setValue(DATA_BLOCK_ENCODING_BYTES,
+        type == null ? DataBlockEncoding.NONE.name() : type.name());
     }
 
     /**
-     * Set whether the tags should be compressed along with DataBlockEncoding.
-     * When no DataBlockEncoding is been used, this is having no effect.
-     *
-     * @param compressTags
-     * @return this (for chained invocation)
+     * Set whether the tags should be compressed along with DataBlockEncoding. When no
+     * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
+     * invocation)
      */
     public ModifyableColumnFamilyDescriptor setCompressTags(boolean compressTags) {
       return setValue(COMPRESS_TAGS_BYTES, String.valueOf(compressTags));
@@ -835,8 +831,7 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isCompressTags() {
-      return getStringOrDefault(COMPRESS_TAGS_BYTES, Boolean::valueOf,
-              DEFAULT_COMPRESS_TAGS);
+      return getStringOrDefault(COMPRESS_TAGS_BYTES, Boolean::valueOf, DEFAULT_COMPRESS_TAGS);
     }
 
     @Override
@@ -846,17 +841,14 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Compression types supported in hbase. LZO is not bundled as part of the
-     * hbase distribution. See
-     * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO
-     * Compression</a>
-     * for how to enable it.
-     *
+     * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
+     * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how
+     * to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */
-    public ModifyableColumnFamilyDescriptor setCompactionCompressionType(
-            Compression.Algorithm type) {
+    public ModifyableColumnFamilyDescriptor
+      setCompactionCompressionType(Compression.Algorithm type) {
       return setValue(COMPRESSION_COMPACT_BYTES, type.name());
     }
 
@@ -866,8 +858,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param inMemory True if we are to favor keeping all values for this
-     * column family in the HRegionServer cache
+     * @param inMemory True if we are to favor keeping all values for this column family in the
+     *                 HRegionServer cache
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setInMemory(boolean inMemory) {
@@ -881,23 +873,22 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param inMemoryCompaction the prefered in-memory compaction policy for
-     * this column family
+     * @param inMemoryCompaction the prefered in-memory compaction policy for this column family
      * @return this (for chained invocation)
      */
-    public ModifyableColumnFamilyDescriptor setInMemoryCompaction(MemoryCompactionPolicy inMemoryCompaction) {
+    public ModifyableColumnFamilyDescriptor
+      setInMemoryCompaction(MemoryCompactionPolicy inMemoryCompaction) {
       return setValue(IN_MEMORY_COMPACTION_BYTES, inMemoryCompaction.name());
     }
 
     @Override
     public KeepDeletedCells getKeepDeletedCells() {
-      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES,
-          KeepDeletedCells::getValue, DEFAULT_KEEP_DELETED);
+      return getStringOrDefault(KEEP_DELETED_CELLS_BYTES, KeepDeletedCells::getValue,
+        DEFAULT_KEEP_DELETED);
     }
 
     /**
-     * @param keepDeletedCells True if deleted rows should not be collected
-     * immediately.
+     * @param keepDeletedCells True if deleted rows should not be collected immediately.
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
@@ -906,13 +897,13 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts
-     * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
-     * We will also consider mvcc in versions. See HBASE-15968 for details.
+     * will mask a later Put with lower ts. Set this to true to enable new semantics of versions. We
+     * will also consider mvcc in versions. See HBASE-15968 for details.
      */
     @Override
     public boolean isNewVersionBehavior() {
-      return getStringOrDefault(NEW_VERSION_BEHAVIOR_BYTES,
-          Boolean::parseBoolean, DEFAULT_NEW_VERSION_BEHAVIOR);
+      return getStringOrDefault(NEW_VERSION_BEHAVIOR_BYTES, Boolean::parseBoolean,
+        DEFAULT_NEW_VERSION_BEHAVIOR);
     }
 
     public ModifyableColumnFamilyDescriptor setNewVersionBehavior(boolean newVersionBehavior) {
@@ -947,8 +938,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param minVersions The minimum number of versions to keep. (used when
-     * timeToLive is set)
+     * @param minVersions The minimum number of versions to keep. (used when timeToLive is set)
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setMinVersions(int minVersions) {
@@ -956,15 +946,14 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Retain all versions for a given TTL(retentionInterval), and then only a specific number
-     * of versions(versionAfterInterval) after that interval elapses.
-     *
-     * @param retentionInterval Retain all versions for this interval
+     * Retain all versions for a given TTL(retentionInterval), and then only a specific number of
+     * versions(versionAfterInterval) after that interval elapses.
+     * @param retentionInterval    Retain all versions for this interval
      * @param versionAfterInterval Retain no of versions to retain after retentionInterval
      * @return this (for chained invocation)
      */
-    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(
-        final int retentionInterval, final int versionAfterInterval) {
+    public ModifyableColumnFamilyDescriptor setVersionsWithTimeToLive(final int retentionInterval,
+      final int versionAfterInterval) {
       ModifyableColumnFamilyDescriptor modifyableColumnFamilyDescriptor =
         setVersions(versionAfterInterval, Integer.MAX_VALUE);
       modifyableColumnFamilyDescriptor.setTimeToLive(retentionInterval);
@@ -978,8 +967,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * @param blockCacheEnabled True if hfile DATA type blocks should be cached
-     * (We always cache INDEX and BLOOM blocks; you cannot turn this off).
+     * @param blockCacheEnabled True if hfile DATA type blocks should be cached (We always cache
+     *                          INDEX and BLOOM blocks; you cannot turn this off).
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setBlockCacheEnabled(boolean blockCacheEnabled) {
@@ -998,7 +987,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public int getScope() {
-      return getStringOrDefault(REPLICATION_SCOPE_BYTES, Integer::valueOf, DEFAULT_REPLICATION_SCOPE);
+      return getStringOrDefault(REPLICATION_SCOPE_BYTES, Integer::valueOf,
+        DEFAULT_REPLICATION_SCOPE);
     }
 
     /**
@@ -1011,7 +1001,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isCacheDataOnWrite() {
-      return getStringOrDefault(CACHE_DATA_ON_WRITE_BYTES, Boolean::valueOf, DEFAULT_CACHE_DATA_ON_WRITE);
+      return getStringOrDefault(CACHE_DATA_ON_WRITE_BYTES, Boolean::valueOf,
+        DEFAULT_CACHE_DATA_ON_WRITE);
     }
 
     /**
@@ -1024,7 +1015,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isCacheIndexesOnWrite() {
-      return getStringOrDefault(CACHE_INDEX_ON_WRITE_BYTES, Boolean::valueOf, DEFAULT_CACHE_INDEX_ON_WRITE);
+      return getStringOrDefault(CACHE_INDEX_ON_WRITE_BYTES, Boolean::valueOf,
+        DEFAULT_CACHE_INDEX_ON_WRITE);
     }
 
     /**
@@ -1037,7 +1029,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isCacheBloomsOnWrite() {
-      return getStringOrDefault(CACHE_BLOOMS_ON_WRITE_BYTES, Boolean::valueOf, DEFAULT_CACHE_BLOOMS_ON_WRITE);
+      return getStringOrDefault(CACHE_BLOOMS_ON_WRITE_BYTES, Boolean::valueOf,
+        DEFAULT_CACHE_BLOOMS_ON_WRITE);
     }
 
     /**
@@ -1050,12 +1043,12 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isEvictBlocksOnClose() {
-      return getStringOrDefault(EVICT_BLOCKS_ON_CLOSE_BYTES, Boolean::valueOf, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
+      return getStringOrDefault(EVICT_BLOCKS_ON_CLOSE_BYTES, Boolean::valueOf,
+        DEFAULT_EVICT_BLOCKS_ON_CLOSE);
     }
 
     /**
-     * @param value true if we should evict cached blocks from the blockcache on
-     * close
+     * @param value true if we should evict cached blocks from the blockcache on close
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEvictBlocksOnClose(boolean value) {
@@ -1064,12 +1057,12 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public boolean isPrefetchBlocksOnOpen() {
-      return getStringOrDefault(PREFETCH_BLOCKS_ON_OPEN_BYTES, Boolean::valueOf, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
+      return getStringOrDefault(PREFETCH_BLOCKS_ON_OPEN_BYTES, Boolean::valueOf,
+        DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
     }
 
     /**
-     * @param value true if we should prefetch blocks into the blockcache on
-     * open
+     * @param value true if we should prefetch blocks into the blockcache on open
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setPrefetchBlocksOnOpen(boolean value) {
@@ -1088,7 +1081,6 @@ public class ColumnFamilyDescriptorBuilder {
       s.append('}');
       return s.toString();
     }
-
 
     @Override
     public String toStringCustomizedValues() {
@@ -1116,9 +1108,10 @@ public class ColumnFamilyDescriptorBuilder {
         }
         String key = Bytes.toString(entry.getKey().get());
         String value = Bytes.toStringBinary(entry.getValue().get());
-        if (printDefaults
-                || !DEFAULT_VALUES.containsKey(key)
-                || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        if (
+          printDefaults || !DEFAULT_VALUES.containsKey(key)
+            || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)
+        ) {
           s.append(", ");
           s.append(key);
           s.append(" => ");
@@ -1162,7 +1155,8 @@ public class ColumnFamilyDescriptorBuilder {
           printCommaForConfiguration = true;
           s.append('\'').append(e.getKey()).append('\'');
           s.append(" => ");
-          s.append('\'').append(PrettyPrinter.format(e.getValue(), getUnit(e.getKey()))).append('\'');
+          s.append('\'').append(PrettyPrinter.format(e.getValue(), getUnit(e.getKey())))
+            .append('\'');
         }
         s.append("}");
       }
@@ -1175,7 +1169,8 @@ public class ColumnFamilyDescriptorBuilder {
         return true;
       }
       if (obj instanceof ModifyableColumnFamilyDescriptor) {
-        return ColumnFamilyDescriptor.COMPARATOR.compare(this, (ModifyableColumnFamilyDescriptor) obj) == 0;
+        return ColumnFamilyDescriptor.COMPARATOR.compare(this,
+          (ModifyableColumnFamilyDescriptor) obj) == 0;
       }
       return false;
     }
@@ -1199,19 +1194,17 @@ public class ColumnFamilyDescriptorBuilder {
      * @see #parseFrom(byte[])
      */
     private byte[] toByteArray() {
-      return ProtobufUtil.prependPBMagic(ProtobufUtil.toColumnFamilySchema(this)
-                      .toByteArray());
+      return ProtobufUtil.prependPBMagic(ProtobufUtil.toColumnFamilySchema(this).toByteArray());
     }
 
     /**
-     * @param bytes A pb serialized {@link ModifyableColumnFamilyDescriptor} instance with pb
-     * magic prefix
-     * @return An instance of {@link ModifyableColumnFamilyDescriptor} made from
-     * <code>bytes</code>
-     * @throws DeserializationException
-     * @see #toByteArray()
+     * @param bytes A pb serialized {@link ModifyableColumnFamilyDescriptor} instance with pb magic
+     *              prefix
+     * @return An instance of {@link ModifyableColumnFamilyDescriptor} made from <code>bytes</code>
+     *         n * @see #toByteArray()
      */
-    private static ColumnFamilyDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
+    private static ColumnFamilyDescriptor parseFrom(final byte[] bytes)
+      throws DeserializationException {
       if (!ProtobufUtil.isPBMagicPrefix(bytes)) {
         throw new DeserializationException("No magic");
       }
@@ -1240,9 +1233,7 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Setter for storing a configuration setting in {@link #configuration} map.
-     *
-     * @param key Config key. Same as XML config key e.g.
-     * hbase.something.or.other.
+     * @param key   Config key. Same as XML config key e.g. hbase.something.or.other.
      * @param value String value. If null, removes the configuration.
      * @return this (for chained invocation)
      */
@@ -1256,11 +1247,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Remove a configuration setting represented by the key from the
-     * {@link #configuration} map.
-     *
-     * @param key
-     * @return this (for chained invocation)
+     * Remove a configuration setting represented by the key from the {@link #configuration} map. n
+     * * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor removeConfiguration(final String key) {
       return setConfiguration(key, null);
@@ -1272,10 +1260,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the encryption algorithm for use with this family
-     *
-     * @param algorithm
-     * @return this (for chained invocation)
+     * Set the encryption algorithm for use with this family n * @return this (for chained
+     * invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionType(String algorithm) {
       return setValue(ENCRYPTION_BYTES, algorithm);
@@ -1287,10 +1273,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the raw crypto key attribute for the family
-     *
-     * @param keyBytes
-     * @return this (for chained invocation)
+     * Set the raw crypto key attribute for the family n * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionKey(byte[] keyBytes) {
       return setValue(ENCRYPTION_KEY_BYTES, new Bytes(keyBytes));
@@ -1303,7 +1286,6 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Sets the mob threshold of the family.
-     *
      * @param threshold The mob threshold.
      * @return this (for chained invocation)
      */
@@ -1326,7 +1308,6 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Enables the mob for the family.
-     *
      * @param isMobEnabled Whether to enable the mob for the family.
      * @return this (for chained invocation)
      */
@@ -1343,32 +1324,30 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set the mob compact partition policy for the family.
-     *
      * @param policy policy type
      * @return this (for chained invocation)
      */
-    public ModifyableColumnFamilyDescriptor setMobCompactPartitionPolicy(MobCompactPartitionPolicy policy) {
+    public ModifyableColumnFamilyDescriptor
+      setMobCompactPartitionPolicy(MobCompactPartitionPolicy policy) {
       return setValue(MOB_COMPACT_PARTITION_POLICY_BYTES, policy.name());
     }
 
     @Override
     public short getDFSReplication() {
-      return getStringOrDefault(DFS_REPLICATION_BYTES,
-              Short::valueOf, DEFAULT_DFS_REPLICATION);
+      return getStringOrDefault(DFS_REPLICATION_BYTES, Short::valueOf, DEFAULT_DFS_REPLICATION);
     }
 
     /**
      * Set the replication factor to hfile(s) belonging to this family
-     *
-     * @param replication number of replicas the blocks(s) belonging to this CF
-     * should have, or {@link #DEFAULT_DFS_REPLICATION} for the default
-     * replication factor set in the filesystem
+     * @param replication number of replicas the blocks(s) belonging to this CF should have, or
+     *                    {@link #DEFAULT_DFS_REPLICATION} for the default replication factor set in
+     *                    the filesystem
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setDFSReplication(short replication) {
       if (replication < 1 && replication != DEFAULT_DFS_REPLICATION) {
         throw new IllegalArgumentException(
-                "DFS replication factor cannot be less than 1 if explicitly set.");
+          "DFS replication factor cannot be less than 1 if explicitly set.");
       }
       return setValue(DFS_REPLICATION_BYTES, Short.toString(replication));
     }
@@ -1380,11 +1359,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set the storage policy for use with this family
-     *
-     * @param policy the policy to set, valid setting includes:
-     * <i>"LAZY_PERSIST"</i>,
-     * <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>,
-     * <i>"COLD"</i>
+     * @param policy the policy to set, valid setting includes: <i>"LAZY_PERSIST"</i>,
+     *               <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>, <i>"COLD"</i>
      * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setStoragePolicy(String policy) {

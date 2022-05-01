@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,10 +35,9 @@ import org.slf4j.LoggerFactory;
  * currently being archived.
  * <p>
  * This only works properly if the
- * {@link org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner}
- *  is also enabled (it always should be), since it may take a little time
- *  for the ZK notification to propagate, in which case we may accidentally
- *  delete some files.
+ * {@link org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner} is also enabled (it always
+ * should be), since it may take a little time for the ZK notification to propagate, in which case
+ * we may accidentally delete some files.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
@@ -55,7 +54,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       if (fStat.isDirectory()) {
         return true;
       }
-      
+
       Path file = fStat.getPath();
       // check to see if
       FileStatus[] deleteStatus = CommonFSUtils.listStatus(this.fs, file, null);
@@ -72,8 +71,8 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
       String tableName = table.getName();
       boolean ret = !archiveTracker.keepHFiles(tableName);
-      LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" +
-          tableName);
+      LOG
+        .debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" + tableName);
       return ret;
     } catch (IOException e) {
       LOG.error("Failed to lookup status of:" + fStat.getPath() + ", keeping it just incase.", e);

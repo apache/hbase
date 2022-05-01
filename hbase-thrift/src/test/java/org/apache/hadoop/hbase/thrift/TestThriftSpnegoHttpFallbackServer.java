@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.nio.file.Paths;
 import java.security.Principal;
@@ -68,14 +69,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Start the HBase Thrift HTTP server on a random port through the command-line
- * interface and talk to it from client side with SPNEGO security enabled.
- *
- * Supplemental test to TestThriftSpnegoHttpServer which falls back to the original
- * Kerberos principal and keytab configuration properties, not the separate
- * SPNEGO-specific properties.
+ * Start the HBase Thrift HTTP server on a random port through the command-line interface and talk
+ * to it from client side with SPNEGO security enabled. Supplemental test to
+ * TestThriftSpnegoHttpServer which falls back to the original Kerberos principal and keytab
+ * configuration properties, not the separate SPNEGO-specific properties.
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -103,8 +102,7 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
     conf.set(Constants.THRIFT_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
     conf.set(Constants.THRIFT_KEYTAB_FILE_KEY, serverKeytab.getAbsolutePath());
 
-    HBaseKerberosUtils.setSecuredConfiguration(conf, spnegoServerPrincipal,
-      spnegoServerPrincipal);
+    HBaseKerberosUtils.setSecuredConfiguration(conf, spnegoServerPrincipal, spnegoServerPrincipal);
     conf.set("hadoop.proxyuser.HTTP.hosts", "*");
     conf.set("hadoop.proxyuser.HTTP.groups", "*");
     conf.set(Constants.THRIFT_KERBEROS_PRINCIPAL_KEY, spnegoServerPrincipal);
@@ -112,9 +110,8 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    kdc = SimpleKdcServerUtil.
-      getRunningSimpleKdcServer(new File(TEST_UTIL.getDataTestDir().toString()),
-        HBaseTestingUtility::randomFreePort);
+    kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(
+      new File(TEST_UTIL.getDataTestDir().toString()), HBaseTestingUtility::randomFreePort);
 
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
     assertTrue(keytabDir.mkdirs());
@@ -153,10 +150,8 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
   @Override
   protected void talkToThriftServer(String url, int customHeaderSize) throws Exception {
     // Close httpClient and THttpClient automatically on any failures
-    try (
-      CloseableHttpClient httpClient = createHttpClient();
-      THttpClient tHttpClient = new THttpClient(url, httpClient)
-    ) {
+    try (CloseableHttpClient httpClient = createHttpClient();
+      THttpClient tHttpClient = new THttpClient(url, httpClient)) {
       tHttpClient.open();
       if (customHeaderSize > 0) {
         StringBuilder sb = new StringBuilder();
@@ -178,15 +173,13 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(clientPrincipal, clientKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
     // Make sure the subject has a principal
-    assertFalse("Found no client principals in the clientSubject.",
-      clientPrincipals.isEmpty());
+    assertFalse("Found no client principals in the clientSubject.", clientPrincipals.isEmpty());
 
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
       clientSubject.getPrivateCredentials(KerberosTicket.class);
-    assertFalse("Found no private credentials in the clientSubject.",
-      privateCredentials.isEmpty());
+    assertFalse("Found no private credentials in the clientSubject.", privateCredentials.isEmpty());
     KerberosTicket tgt = privateCredentials.iterator().next();
     assertNotNull("No kerberos ticket found.", tgt);
 
@@ -202,33 +195,32 @@ public class TestThriftSpnegoHttpFallbackServer extends TestThriftHttpServer {
       GSSCredential credential = gssManager.createCredential(gssClient,
         GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-        .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-        .build();
+      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+        .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
 
       BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
       credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-      return HttpClients.custom()
-        .setDefaultAuthSchemeRegistry(authRegistry)
-        .setDefaultCredentialsProvider(credentialsProvider)
-        .build();
+      return HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
+        .setDefaultCredentialsProvider(credentialsProvider).build();
     });
   }
 
-  @Override protected Supplier<ThriftServer> getThriftServerSupplier() {
+  @Override
+  protected Supplier<ThriftServer> getThriftServerSupplier() {
     return () -> new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
   /**
-   * Block call through to this method. It is a messy test that fails because of bad config
-   * and then succeeds only the first attempt adds a table which the second attempt doesn't
-   * want to be in place to succeed. Let the super impl of this test be responsible for
-   * verifying we fail if bad header size.
+   * Block call through to this method. It is a messy test that fails because of bad config and then
+   * succeeds only the first attempt adds a table which the second attempt doesn't want to be in
+   * place to succeed. Let the super impl of this test be responsible for verifying we fail if bad
+   * header size.
    */
   @org.junit.Ignore
   @Test
-  @Override public void testRunThriftServerWithHeaderBufferLength() throws Exception {
+  @Override
+  public void testRunThriftServerWithHeaderBufferLength() throws Exception {
     super.testRunThriftServerWithHeaderBufferLength();
   }
 }

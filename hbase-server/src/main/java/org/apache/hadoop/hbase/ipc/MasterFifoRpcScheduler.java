@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
    * is "hbase.regionserver.handler.count" value minus RSReport handlers count, but at least 1 too.
    */
   public static final String MASTER_SERVER_REPORT_HANDLER_COUNT =
-      "hbase.master.server.report.handler.count";
+    "hbase.master.server.report.handler.count";
   private static final String REGION_SERVER_REPORT = "RegionServerReport";
   private final int rsReportHandlerCount;
   private final int rsRsreportMaxQueueLength;
@@ -57,7 +57,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   private ThreadPoolExecutor rsReportExecutor;
 
   public MasterFifoRpcScheduler(Configuration conf, int callHandlerCount,
-      int rsReportHandlerCount) {
+    int rsReportHandlerCount) {
     super(conf, callHandlerCount);
     this.rsReportHandlerCount = rsReportHandlerCount;
     this.rsRsreportMaxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
@@ -68,7 +68,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   public void start() {
     LOG.info(
       "Using {} as call queue; handlerCount={}; maxQueueLength={}; rsReportHandlerCount={}; "
-          + "rsReportMaxQueueLength={}",
+        + "rsReportMaxQueueLength={}",
       this.getClass().getSimpleName(), handlerCount, maxQueueLength, rsReportHandlerCount,
       rsRsreportMaxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   private final long operationTimeoutNs;
 
   RegionCoprocessorRpcChannelImpl(AsyncConnectionImpl conn, TableName tableName, RegionInfo region,
-      byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
+    byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
     this.conn = conn;
     this.tableName = tableName;
     this.region = region;
@@ -68,20 +68,22 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   }
 
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
-      Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
-      ClientService.Interface stub) {
+    Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
+    ClientService.Interface stub) {
     CompletableFuture<Message> future = new CompletableFuture<>();
-    if (region != null
-        && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())) {
+    if (
+      region != null && !Bytes.equals(loc.getRegionInfo().getRegionName(), region.getRegionName())
+    ) {
       future.completeExceptionally(new DoNotRetryIOException(
-          "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
-              + loc.getRegionInfo().getRegionNameAsString()));
+        "Region name is changed, expected " + region.getRegionNameAsString() + ", actual "
+          + loc.getRegionInfo().getRegionNameAsString()));
       return future;
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegionInfo().getRegionName());
     stub.execService(controller, csr,
-      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<
+        CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {
@@ -101,7 +103,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+    Message responsePrototype, RpcCallback<Message> done) {
     addListener(
       conn.callerFactory.<Message> single().table(tableName).row(row)
         .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)

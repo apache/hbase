@@ -15,9 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
+import java.util.EnumSet;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -30,8 +31,6 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.IOException;
-import java.util.EnumSet;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationStatusSink extends TestReplicationBase {
@@ -45,10 +44,10 @@ public class TestReplicationStatusSink extends TestReplicationBase {
     try (Admin admin = UTIL2.getConnection().getAdmin()) {
       ServerName server = UTIL2.getHBaseCluster().getRegionServer(0).getServerName();
       ReplicationLoadSink loadSink = getLatestSinkMetric(admin, server);
-      //First checks if status of timestamp of last applied op is same as RS start, since no edits
-      //were replicated yet
+      // First checks if status of timestamp of last applied op is same as RS start, since no edits
+      // were replicated yet
       Assert.assertEquals(loadSink.getTimestampStarted(), loadSink.getTimestampsOfLastAppliedOp());
-      //now insert some rows on source, so that it gets delivered to target
+      // now insert some rows on source, so that it gets delivered to target
       TestReplicationStatus.insertRowsOnSource();
       long wait =
         Waiter.waitFor(UTIL2.getConfiguration(), 10000, (Waiter.Predicate<Exception>) () -> {
@@ -60,7 +59,7 @@ public class TestReplicationStatusSink extends TestReplicationBase {
   }
 
   private ReplicationLoadSink getLatestSinkMetric(Admin admin, ServerName server)
-      throws IOException {
+    throws IOException {
     ClusterMetrics metrics =
       admin.getClusterMetrics(EnumSet.of(ClusterMetrics.Option.LIVE_SERVERS));
     ServerMetrics sm = metrics.getLiveServerMetrics().get(server);

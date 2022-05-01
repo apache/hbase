@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,14 +61,14 @@ import org.junit.runners.Parameterized;
 /**
  * Class to test asynchronous region admin operations.
  * @see TestAsyncRegionAdminApi2 This test and it used to be joined it was taking longer than our
- * ten minute timeout so they were split.
+ *      ten minute timeout so they were split.
  */
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncRegionAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncRegionAdminApi.class);
 
   @Test
   public void testAssignRegionAndUnassignRegion() throws Exception {
@@ -104,10 +104,9 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   RegionInfo createTableAndGetOneRegion(final TableName tableName)
-      throws IOException, InterruptedException, ExecutionException {
-    TableDescriptor desc =
-        TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+    throws IOException, InterruptedException, ExecutionException {
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5).get();
 
     // wait till the table is assigned
@@ -115,7 +114,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     long timeoutTime = System.currentTimeMillis() + 3000;
     while (true) {
       List<RegionInfo> regions =
-          master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
+        master.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName);
       if (regions.size() > 3) {
         return regions.get(2);
       }
@@ -132,11 +131,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     RegionInfo hri = createTableAndGetOneRegion(tableName);
 
     RegionStates regionStates =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
-    assertTrue(regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN)
-        .stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+    assertTrue(regionStates.getRegionByStateOfTable(tableName).get(RegionState.State.OPEN).stream()
+      .anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
     assertFalse(regionStates.getRegionByStateOfTable(TableName.valueOf("I_am_the_phantom"))
-        .get(RegionState.State.OPEN).stream().anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
+      .get(RegionState.State.OPEN).stream()
+      .anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
   }
 
   @Test
@@ -151,7 +151,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     ServerManager serverManager = master.getServerManager();
     ServerName destServerName = null;
     List<JVMClusterUtil.RegionServerThread> regionServers =
-        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
+      TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
     for (JVMClusterUtil.RegionServerThread regionServer : regionServers) {
       HRegionServer destServer = regionServer.getRegionServer();
       destServerName = destServer.getServerName();
@@ -199,18 +199,15 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   @Test
   public void testFlushTableAndRegion() throws Exception {
     RegionInfo hri = createTableAndGetOneRegion(tableName);
-    ServerName serverName =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-            .getRegionServerOfRegion(hri);
-    HRegionServer regionServer =
-        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-            .map(rsThread -> rsThread.getRegionServer())
-            .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
+    ServerName serverName = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getRegionServerOfRegion(hri);
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+      .map(rsThread -> rsThread.getRegionServer())
+      .filter(rs -> rs.getServerName().equals(serverName)).findFirst().get();
 
     // write a put into the specific region
     ASYNC_CONN.getTable(tableName)
-        .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1")))
-        .join();
+      .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-1"))).join();
     assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0);
     // flush region and wait flush operation finished.
     LOG.info("flushing region: " + Bytes.toStringBinary(hri.getRegionName()));
@@ -225,8 +222,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
     // write another put into the specific region
     ASYNC_CONN.getTable(tableName)
-        .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2")))
-        .join();
+      .put(new Put(hri.getStartKey()).addColumn(FAMILY, FAMILY_0, Bytes.toBytes("value-2"))).join();
     assertTrue(regionServer.getOnlineRegion(hri.getRegionName()).getMemStoreDataSize() > 0);
     admin.flush(tableName).get();
     Threads.sleepWithoutInterrupt(500);
@@ -238,7 +234,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   private void waitUntilMobCompactionFinished(TableName tableName)
-      throws ExecutionException, InterruptedException {
+    throws ExecutionException, InterruptedException {
     long finished = EnvironmentEdgeManager.currentTime() + 60000;
     CompactionState state = admin.getCompactionState(tableName, CompactType.MOB).get();
     while (EnvironmentEdgeManager.currentTime() < finished) {
@@ -253,12 +249,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testCompactMob() throws Exception {
-    ColumnFamilyDescriptor columnDescriptor =
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("mob"))
-            .setMobEnabled(true).setMobThreshold(0).build();
+    ColumnFamilyDescriptor columnDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes("mob")).setMobEnabled(true).setMobThreshold(0).build();
 
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(columnDescriptor).build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(columnDescriptor).build();
 
     admin.createTable(tableDescriptor).get();
 
@@ -279,9 +274,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     createTableWithDefaultConf(tableName, null, families);
     loadData(tableName, families, 3000, 8);
 
-    List<HRegionServer> rsList =
-        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
-            .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
+    List<HRegionServer> rsList = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().stream()
+      .map(rsThread -> rsThread.getRegionServer()).collect(Collectors.toList());
     List<Region> regions = new ArrayList<>();
     rsList.forEach(rs -> regions.addAll(rs.getRegions(tableName)));
     assertEquals(1, regions.size());
@@ -307,55 +301,48 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   public void testCompactionSwitchStates() throws Exception {
     // Create a table with regions
     byte[] family = Bytes.toBytes("family");
-    byte[][] families = {family, Bytes.add(family, Bytes.toBytes("2")),
-        Bytes.add(family, Bytes.toBytes("3"))};
+    byte[][] families =
+      { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
     createTableWithDefaultConf(tableName, null, families);
     loadData(tableName, families, 3000, 8);
     List<Region> regions = new ArrayList<>();
-    TEST_UTIL
-        .getHBaseCluster()
-        .getLiveRegionServerThreads()
-        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
+    TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads()
+      .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture =
-        admin.compactionSwitch(true, new ArrayList<>());
+      admin.compactionSwitch(true, new ArrayList<>());
     Map<ServerName, Boolean> pairs = listCompletableFuture.get();
     for (Map.Entry<ServerName, Boolean> p : pairs.entrySet()) {
-      assertEquals("Default compaction state, expected=enabled actual=disabled",
-          true, p.getValue());
+      assertEquals("Default compaction state, expected=enabled actual=disabled", true,
+        p.getValue());
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture1 =
-        admin.compactionSwitch(false, new ArrayList<>());
+      admin.compactionSwitch(false, new ArrayList<>());
     Map<ServerName, Boolean> pairs1 = listCompletableFuture1.get();
     for (Map.Entry<ServerName, Boolean> p : pairs1.entrySet()) {
-      assertEquals("Last compaction state, expected=enabled actual=disabled",
-          true, p.getValue());
+      assertEquals("Last compaction state, expected=enabled actual=disabled", true, p.getValue());
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture2 =
-        admin.compactionSwitch(true, new ArrayList<>());
+      admin.compactionSwitch(true, new ArrayList<>());
     Map<ServerName, Boolean> pairs2 = listCompletableFuture2.get();
     for (Map.Entry<ServerName, Boolean> p : pairs2.entrySet()) {
-      assertEquals("Last compaction state, expected=disabled actual=enabled",
-          false, p.getValue());
+      assertEquals("Last compaction state, expected=disabled actual=enabled", false, p.getValue());
     }
-    ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0)
-        .getServerName();
+    ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     List<String> serverNameList = new ArrayList<String>();
     serverNameList.add(serverName.getServerName());
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture3 =
-        admin.compactionSwitch(false, serverNameList);
+      admin.compactionSwitch(false, serverNameList);
     Map<ServerName, Boolean> pairs3 = listCompletableFuture3.get();
     assertEquals(pairs3.entrySet().size(), 1);
     for (Map.Entry<ServerName, Boolean> p : pairs3.entrySet()) {
-      assertEquals("Last compaction state, expected=enabled actual=disabled",
-          true, p.getValue());
+      assertEquals("Last compaction state, expected=enabled actual=disabled", true, p.getValue());
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture4 =
-        admin.compactionSwitch(true, serverNameList);
+      admin.compactionSwitch(true, serverNameList);
     Map<ServerName, Boolean> pairs4 = listCompletableFuture4.get();
     assertEquals(pairs4.entrySet().size(), 1);
     for (Map.Entry<ServerName, Boolean> p : pairs4.entrySet()) {
-      assertEquals("Last compaction state, expected=disabled actual=enabled",
-          false, p.getValue());
+      assertEquals("Last compaction state, expected=disabled actual=enabled", false, p.getValue());
     }
   }
 
@@ -383,11 +370,11 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   private void compactionTest(final TableName tableName, final int flushes,
-      final CompactionState expectedState, boolean singleFamily) throws Exception {
+    final CompactionState expectedState, boolean singleFamily) throws Exception {
     // Create a table with regions
     byte[] family = Bytes.toBytes("family");
     byte[][] families =
-        { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
+      { family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3")) };
     createTableWithDefaultConf(tableName, null, families);
 
     byte[][] singleFamilyArray = { family };
@@ -403,10 +390,8 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
 
     List<Region> regions = new ArrayList<>();
-    TEST_UTIL
-        .getHBaseCluster()
-        .getLiveRegionServerThreads()
-        .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
+    TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads()
+      .forEach(rsThread -> regions.addAll(rsThread.getRegionServer().getRegions(tableName)));
     assertEquals(1, regions.size());
 
     int countBefore = countStoreFilesInFamilies(regions, families);
@@ -507,12 +492,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
   }
 
   static void loadData(final TableName tableName, final byte[][] families, final int rows)
-      throws IOException {
+    throws IOException {
     loadData(tableName, families, rows, 1);
   }
 
   static void loadData(final TableName tableName, final byte[][] families, final int rows,
-      final int flushes) throws IOException {
+    final int flushes) throws IOException {
     AsyncTable<?> table = ASYNC_CONN.getTable(tableName);
     List<Put> puts = new ArrayList<>(rows);
     byte[] qualifier = Bytes.toBytes("val");

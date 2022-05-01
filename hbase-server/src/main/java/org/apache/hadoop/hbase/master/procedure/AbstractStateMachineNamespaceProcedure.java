@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.TableName;
@@ -23,13 +22,12 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for all the Namespace procedures that want to use a StateMachineProcedure.
- * It provide some basic helpers like basic locking and basic toStringClassDetails().
+ * Base class for all the Namespace procedures that want to use a StateMachineProcedure. It provide
+ * some basic helpers like basic locking and basic toStringClassDetails().
  */
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineNamespaceProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState>
-    implements TableProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, TState> implements TableProcedureInterface {
 
   private final ProcedurePrepareLatch syncLatch;
 
@@ -43,7 +41,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env,
-      final ProcedurePrepareLatch latch) {
+    final ProcedurePrepareLatch latch) {
     this.setOwner(env.getRequestUser());
     this.syncLatch = latch;
   }

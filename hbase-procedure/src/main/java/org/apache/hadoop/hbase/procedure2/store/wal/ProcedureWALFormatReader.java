@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,11 +56,10 @@ class ProcedureWALFormatReader {
   private final ProcedureWALFormat.Loader loader;
 
   /**
-   * Global tracker that will be used by the WALProcedureStore after load.
-   * If the last WAL was closed cleanly we already have a full tracker ready to be used.
-   * If the last WAL was truncated (e.g. master killed) the tracker will be empty
-   * and the 'partial' flag will be set. In this case, on WAL replay we are going
-   * to rebuild the tracker.
+   * Global tracker that will be used by the WALProcedureStore after load. If the last WAL was
+   * closed cleanly we already have a full tracker ready to be used. If the last WAL was truncated
+   * (e.g. master killed) the tracker will be empty and the 'partial' flag will be set. In this
+   * case, on WAL replay we are going to rebuild the tracker.
    */
   private final ProcedureStoreTracker tracker;
 
@@ -79,7 +78,7 @@ class ProcedureWALFormatReader {
   private long maxProcId = 0;
 
   public ProcedureWALFormatReader(final ProcedureStoreTracker tracker,
-      ProcedureWALFormat.Loader loader) {
+    ProcedureWALFormat.Loader loader) {
     this.tracker = tracker;
     this.loader = loader;
   }

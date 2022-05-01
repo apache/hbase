@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
@@ -37,12 +35,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * Base class for HBase integration tests that want to use the Chaos Monkey.
- * Usage: bin/hbase &lt;sub_class_of_IntegrationTestBase> &lt;options>
- * Options: -h,--help Show usage
- *          -m,--monkey &lt;arg> Which chaos monkey to run
- *          -monkeyProps &lt;arg> The properties file for specifying chaos monkey properties.
- *          -ncc Option to not clean up the cluster at the end.
+ * Base class for HBase integration tests that want to use the Chaos Monkey. Usage: bin/hbase
+ * &lt;sub_class_of_IntegrationTestBase> &lt;options> Options: -h,--help Show usage -m,--monkey
+ * &lt;arg> Which chaos monkey to run -monkeyProps &lt;arg> The properties file for specifying chaos
+ * monkey properties. -ncc Option to not clean up the cluster at the end.
  */
 public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
@@ -68,17 +64,15 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     addOptWithArg("m", MONKEY_LONG_OPT, "Which chaos monkey to run");
-    addOptNoArg("ncc", NO_CLUSTER_CLEANUP_LONG_OPT,
-      "Don't clean up the cluster at the end");
-    addOptWithArg(CHAOS_MONKEY_PROPS, "The properties file for specifying chaos "
-        + "monkey properties.");
+    addOptNoArg("ncc", NO_CLUSTER_CLEANUP_LONG_OPT, "Don't clean up the cluster at the end");
+    addOptWithArg(CHAOS_MONKEY_PROPS,
+      "The properties file for specifying chaos " + "monkey properties.");
   }
 
   /**
    * This allows tests that subclass children of this base class such as
-   * {@link org.apache.hadoop.hbase.test.IntegrationTestReplication} to
-   * include the base options without having to also include the options from the test.
-   *
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestReplication} to include the base options
+   * without having to also include the options from the test.
    * @param cmd the command line
    */
   protected void processBaseOptions(CommandLine cmd) {
@@ -97,8 +91,8 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
       String chaosMonkeyPropsFile = cmd.getOptionValue(CHAOS_MONKEY_PROPS);
       if (StringUtils.isNotEmpty(chaosMonkeyPropsFile)) {
         try {
-          monkeyProps.load(this.getClass().getClassLoader()
-              .getResourceAsStream(chaosMonkeyPropsFile));
+          monkeyProps
+            .load(this.getClass().getClassLoader().getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
           LOG.warn(e.toString(), e);
           System.exit(EXIT_FAILURE);
@@ -108,11 +102,11 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   }
 
   /**
-   * Loads entries from the provided {@code conf} into {@code props} when the configuration key
-   * is one that may be configuring ChaosMonkey actions.
+   * Loads entries from the provided {@code conf} into {@code props} when the configuration key is
+   * one that may be configuring ChaosMonkey actions.
    */
   public static void loadMonkeyProperties(Properties props, Configuration conf) {
-    for (Entry<String,String> entry : conf) {
+    for (Entry<String, String> entry : conf) {
       for (String prefix : MonkeyConstants.MONKEY_CONFIGURATION_KEY_PREFIXES) {
         if (entry.getKey().startsWith(prefix)) {
           props.put(entry.getKey(), entry.getValue());
@@ -184,10 +178,8 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
       fact = getDefaultMonkeyFactory();
     }
     LOG.info("Using chaos monkey factory: {}", fact.getClass());
-    monkey = fact.setUtil(util)
-                 .setTableName(getTablename())
-                 .setProperties(monkeyProps)
-                 .setColumnFamilies(getColumnFamilies()).build();
+    monkey = fact.setUtil(util).setTableName(getTablename()).setProperties(monkeyProps)
+      .setColumnFamilies(getColumnFamilies()).build();
     startMonkey();
   }
 
@@ -227,7 +219,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   public abstract void setUpCluster() throws Exception;
 
   public void cleanUpCluster() throws Exception {
-    if (util.isDistributedCluster() &&  (monkey == null || !monkey.isDestructive())) {
+    if (util.isDistributedCluster() && (monkey == null || !monkey.isDestructive())) {
       noClusterCleanUp = true;
     }
     if (noClusterCleanUp) {

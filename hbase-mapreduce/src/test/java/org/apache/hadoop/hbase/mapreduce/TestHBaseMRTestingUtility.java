@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -25,18 +31,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestHBaseMRTestingUtility {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseMRTestingUtility.class);
+    HBaseClassTestRule.forClass(TestHBaseMRTestingUtility.class);
 
   @Test
   public void testMRYarnConfigsPopulation() throws IOException {
@@ -55,17 +54,21 @@ public class TestHBaseMRTestingUtility {
       hbt.getConfiguration().set(entry.getKey(), entry.getValue());
     }
 
-    for (Map.Entry<String,String> entry : dummyProps.entrySet()) {
-      assertTrue("The Configuration for key " + entry.getKey() +" and value: " + entry.getValue() +
-          " is not populated correctly", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+    for (Map.Entry<String, String> entry : dummyProps.entrySet()) {
+      assertTrue(
+        "The Configuration for key " + entry.getKey() + " and value: " + entry.getValue()
+          + " is not populated correctly",
+        hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
     }
 
     hbt.startMiniMapReduceCluster();
 
     // Confirm that MiniMapReduceCluster overwrites the mr properties and updates the Configuration
-    for (Map.Entry<String,String> entry : dummyProps.entrySet()) {
-      assertFalse("The MR prop: " + entry.getValue() + " is not overwritten when map reduce mini"+
-          "cluster is started", hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+    for (Map.Entry<String, String> entry : dummyProps.entrySet()) {
+      assertFalse(
+        "The MR prop: " + entry.getValue() + " is not overwritten when map reduce mini"
+          + "cluster is started",
+        hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
     }
 
     hbt.shutdownMiniMapReduceCluster();

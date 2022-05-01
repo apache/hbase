@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool.coprocessor;
 
 import static org.junit.Assert.assertEquals;
@@ -35,7 +34,6 @@ import java.util.Optional;
 import java.util.jar.JarOutputStream;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -60,7 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 public class CoprocessorValidatorTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(CoprocessorValidatorTest.class);
+    HBaseClassTestRule.forClass(CoprocessorValidatorTest.class);
 
   private CoprocessorValidator validator;
 
@@ -104,17 +102,16 @@ public class CoprocessorValidatorTest {
     assertEquals(Severity.ERROR, violation.getSeverity());
 
     String stackTrace = Throwables.getStackTraceAsString(violation.getThrowable());
-    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: " +
-        "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$NoSuchClass"));
+    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: "
+      + "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$NoSuchClass"));
   }
 
   /*
-   * In this test case, we are validating MissingClass coprocessor, which
-   * references a missing class. With a special classloader, we prevent that
-   * class to be loaded at runtime. It simulates similar cases where a class
-   * is no more on our classpath.
-   * E.g. org.apache.hadoop.hbase.regionserver.wal.WALEdit was moved to
-   * org.apache.hadoop.hbase.wal, so class loading will fail on 2.0.
+   * In this test case, we are validating MissingClass coprocessor, which references a missing
+   * class. With a special classloader, we prevent that class to be loaded at runtime. It simulates
+   * similar cases where a class is no more on our classpath. E.g.
+   * org.apache.hadoop.hbase.regionserver.wal.WALEdit was moved to org.apache.hadoop.hbase.wal, so
+   * class loading will fail on 2.0.
    */
   private static class MissingClass {
   }
@@ -143,8 +140,8 @@ public class CoprocessorValidatorTest {
   @Test
   public void testMissingClass() throws IOException {
     MissingClassClassLoader missingClassClassLoader = new MissingClassClassLoader();
-    List<CoprocessorViolation> violations = validateClass(missingClassClassLoader,
-        "MissingClassObserver");
+    List<CoprocessorViolation> violations =
+      validateClass(missingClassClassLoader, "MissingClassObserver");
     assertEquals(1, violations.size());
 
     CoprocessorViolation violation = violations.get(0);
@@ -152,19 +149,19 @@ public class CoprocessorValidatorTest {
     assertEquals(Severity.ERROR, violation.getSeverity());
 
     String stackTrace = Throwables.getStackTraceAsString(violation.getThrowable());
-    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: " +
-        "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$MissingClass"));
+    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: "
+      + "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$MissingClass"));
   }
 
   /*
-   * ObsoleteMethod coprocessor implements preCreateTable method which has
-   * HRegionInfo parameters. In our current implementation, we pass only
-   * RegionInfo parameters, so this method won't be called by HBase at all.
+   * ObsoleteMethod coprocessor implements preCreateTable method which has HRegionInfo parameters.
+   * In our current implementation, we pass only RegionInfo parameters, so this method won't be
+   * called by HBase at all.
    */
   @SuppressWarnings("unused")
   private static class ObsoleteMethodObserver /* implements MasterObserver */ {
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     }
   }
 
@@ -180,7 +177,7 @@ public class CoprocessorValidatorTest {
   }
 
   private List<CoprocessorViolation> validateTable(String jarFile, String className)
-      throws IOException {
+    throws IOException {
     Pattern pattern = Pattern.compile(".*");
 
     Admin admin = mock(Admin.class);
@@ -190,8 +187,7 @@ public class CoprocessorValidatorTest {
     doReturn(tableDescriptors).when(admin).listTableDescriptors(pattern);
 
     CoprocessorDescriptor coprocessorDescriptor = mock(CoprocessorDescriptor.class);
-    List<CoprocessorDescriptor> coprocessorDescriptors =
-        Lists.newArrayList(coprocessorDescriptor);
+    List<CoprocessorDescriptor> coprocessorDescriptors = Lists.newArrayList(coprocessorDescriptor);
     doReturn(coprocessorDescriptors).when(tableDescriptor).getCoprocessorDescriptors();
 
     doReturn(getFullClassName(className)).when(coprocessorDescriptor).getClassName();
@@ -214,8 +210,8 @@ public class CoprocessorValidatorTest {
     assertEquals(Severity.ERROR, violation.getSeverity());
 
     String stackTrace = Throwables.getStackTraceAsString(violation.getThrowable());
-    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: " +
-        "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$NoSuchClass"));
+    assertTrue(stackTrace.contains("java.lang.ClassNotFoundException: "
+      + "org.apache.hadoop.hbase.tool.coprocessor.CoprocessorValidatorTest$NoSuchClass"));
   }
 
   @Test
@@ -240,8 +236,8 @@ public class CoprocessorValidatorTest {
 
     try {
       try (OutputStream fileStream = Files.newOutputStream(tempJarFile);
-          JarOutputStream jarStream = new JarOutputStream(fileStream);
-          InputStream classStream = Files.newInputStream(fullClassFile)) {
+        JarOutputStream jarStream = new JarOutputStream(fileStream);
+        InputStream classStream = Files.newInputStream(fullClassFile)) {
         ZipEntry entry = new ZipEntry(classFile.toString());
         jarStream.putNextEntry(entry);
 
@@ -251,7 +247,7 @@ public class CoprocessorValidatorTest {
       String tempJarFileUri = tempJarFile.toUri().toString();
 
       List<CoprocessorViolation> violations =
-          validateTable(tempJarFileUri, "ObsoleteMethodObserver");
+        validateTable(tempJarFileUri, "ObsoleteMethodObserver");
       assertEquals(1, violations.size());
 
       CoprocessorViolation violation = violations.get(0);

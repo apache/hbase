@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase;
+
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
@@ -38,12 +40,12 @@ import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestJMXListener {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestJMXListener.class);
+    HBaseClassTestRule.forClass(TestJMXListener.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXListener.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -60,7 +62,7 @@ public class TestJMXListener {
     // To test what happens when the jmx listener can't put up its port, uncomment the below.
     BoundSocketMaker bsm = null; // new BoundSocketMaker(HBaseTestingUtility::randomFreePort);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    CONNECTOR_PORT = bsm == null? HBaseTestingUtility.randomFreePort(): bsm.getPort();
+    CONNECTOR_PORT = bsm == null ? HBaseTestingUtility.randomFreePort() : bsm.getPort();
     // Make sure the JMX listener is up before we proceed. If it is not up, retry. It may not
     // come up if there is a port clash/bind exception except its called something else in rmi.
     for (int i = 0; i < 10; i++) {
@@ -70,8 +72,8 @@ public class TestJMXListener {
       // because of port clash/bind-exception. Deal with it here.
       JMXConnector connector = null;
       try {
-        connector = JMXConnectorFactory.
-          connect(JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT));
+        connector = JMXConnectorFactory
+          .connect(JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT));
         break;
       } catch (IOException ioe) {
         UTIL.shutdownMiniCluster();
@@ -94,20 +96,20 @@ public class TestJMXListener {
 
   @Test
   public void testStart() throws Exception {
-    JMXConnector connector = JMXConnectorFactory.connect(
-      JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT));
+    JMXConnector connector =
+      JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT));
 
     MBeanServerConnection mb = connector.getMBeanServerConnection();
     String domain = mb.getDefaultDomain();
-    Assert.assertTrue("default domain is not correct",
-      !domain.isEmpty());
+    Assert.assertTrue("default domain is not correct", !domain.isEmpty());
     connector.close();
 
   }
 
-  //shutdown hbase only. then try connect, IOException expected
+  // shutdown hbase only. then try connect, IOException expected
   @Rule
   public ExpectedException expectedEx = ExpectedException.none();
+
   @Test
   public void testStop() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -116,8 +118,8 @@ public class TestJMXListener {
     LOG.info("wait for the hbase cluster shutdown...");
     cluster.waitUntilShutDown();
 
-    JMXConnector connector = JMXConnectorFactory.newJMXConnector(
-      JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT), null);
+    JMXConnector connector = JMXConnectorFactory
+      .newJMXConnector(JMXListener.buildJMXServiceURL(CONNECTOR_PORT, CONNECTOR_PORT), null);
     expectedEx.expect(IOException.class);
     connector.connect();
 

@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
 import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -40,7 +41,7 @@ import org.mockito.MockitoAnnotations;
 /**
  * Cluster-backed correctness tests for the functionality provided by {@link MetaBrowser}.
  */
-@Category({ MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestMetaBrowserNoCluster {
 
   @ClassRule
@@ -70,21 +71,15 @@ public class TestMetaBrowserNoCluster {
 
   @Test
   public void buildFirstPageQueryStringNonNullParams() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(50)
-      .setRegionState(RegionState.State.ABNORMALLY_CLOSED)
-      .setTable("foo%3Abar")
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(50)
+      .setRegionState(RegionState.State.ABNORMALLY_CLOSED).setTable("foo%3Abar").build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 
     assertEquals(50, metaBrowser.getScanLimit().intValue());
     assertEquals(RegionState.State.ABNORMALLY_CLOSED, metaBrowser.getScanRegionState());
     assertEquals(TableName.valueOf("foo", "bar"), metaBrowser.getScanTable());
-    assertEquals(
-      "/table.jsp?name=hbase%3Ameta"
-        + "&scan_limit=50"
-        + "&scan_region_state=ABNORMALLY_CLOSED"
-        + "&scan_table=foo%3Abar",
+    assertEquals("/table.jsp?name=hbase%3Ameta" + "&scan_limit=50"
+      + "&scan_region_state=ABNORMALLY_CLOSED" + "&scan_table=foo%3Abar",
       metaBrowser.buildNextPageUrl(null));
   }
 
@@ -93,76 +88,60 @@ public class TestMetaBrowserNoCluster {
     final HttpServletRequest request = new MockRequestBuilder().build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
 
-    assertEquals(
-      "/table.jsp?name=hbase%3Ameta&scan_start=%255Cx80%255Cx00%255Cx7F",
+    assertEquals("/table.jsp?name=hbase%3Ameta&scan_start=%255Cx80%255Cx00%255Cx7F",
       metaBrowser.buildNextPageUrl(new byte[] { Byte.MIN_VALUE, (byte) 0, Byte.MAX_VALUE }));
   }
 
   @Test
   public void unparseableLimitParam() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit("foo")
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit("foo").build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
     assertNull(metaBrowser.getScanLimit());
-    assertThat(metaBrowser.getErrorMessages(), contains(
-      "Requested SCAN_LIMIT value 'foo' cannot be parsed as an integer."));
+    assertThat(metaBrowser.getErrorMessages(),
+      contains("Requested SCAN_LIMIT value 'foo' cannot be parsed as an integer."));
   }
 
   @Test
   public void zeroLimitParam() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(0)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(0).build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
     assertEquals(MetaBrowser.SCAN_LIMIT_DEFAULT, metaBrowser.getScanLimit().intValue());
-    assertThat(metaBrowser.getErrorMessages(), contains(
-      "Requested SCAN_LIMIT value 0 is <= 0."));
+    assertThat(metaBrowser.getErrorMessages(), contains("Requested SCAN_LIMIT value 0 is <= 0."));
   }
 
   @Test
   public void negativeLimitParam() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(-10)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(-10).build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
     assertEquals(MetaBrowser.SCAN_LIMIT_DEFAULT, metaBrowser.getScanLimit().intValue());
-    assertThat(metaBrowser.getErrorMessages(), contains(
-      "Requested SCAN_LIMIT value -10 is <= 0."));
+    assertThat(metaBrowser.getErrorMessages(), contains("Requested SCAN_LIMIT value -10 is <= 0."));
   }
 
   @Test
   public void excessiveLimitParam() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(10_001)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(10_001).build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
     assertEquals(MetaBrowser.SCAN_LIMIT_MAX, metaBrowser.getScanLimit().intValue());
-    assertThat(metaBrowser.getErrorMessages(), contains(
-      "Requested SCAN_LIMIT value 10001 exceeds maximum value 10000."));
+    assertThat(metaBrowser.getErrorMessages(),
+      contains("Requested SCAN_LIMIT value 10001 exceeds maximum value 10000."));
   }
 
   @Test
   public void invalidRegionStateParam() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setRegionState("foo")
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setRegionState("foo").build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
     assertNull(metaBrowser.getScanRegionState());
-    assertThat(metaBrowser.getErrorMessages(), contains(
-      "Requested SCAN_REGION_STATE value 'foo' cannot be parsed as a RegionState."));
+    assertThat(metaBrowser.getErrorMessages(),
+      contains("Requested SCAN_REGION_STATE value 'foo' cannot be parsed as a RegionState."));
   }
 
   @Test
   public void multipleErrorMessages() {
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit("foo")
-      .setRegionState("bar")
-      .build();
+    final HttpServletRequest request =
+      new MockRequestBuilder().setLimit("foo").setRegionState("bar").build();
     final MetaBrowser metaBrowser = new MetaBrowser(connection, request);
-    assertThat(metaBrowser.getErrorMessages(), containsInAnyOrder(
-      "Requested SCAN_LIMIT value 'foo' cannot be parsed as an integer.",
-      "Requested SCAN_REGION_STATE value 'bar' cannot be parsed as a RegionState."
-    ));
+    assertThat(metaBrowser.getErrorMessages(),
+      containsInAnyOrder("Requested SCAN_LIMIT value 'foo' cannot be parsed as an integer.",
+        "Requested SCAN_REGION_STATE value 'bar' cannot be parsed as a RegionState."));
   }
 }

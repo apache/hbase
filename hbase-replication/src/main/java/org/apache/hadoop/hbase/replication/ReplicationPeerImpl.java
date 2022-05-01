@@ -41,12 +41,12 @@ public class ReplicationPeerImpl implements ReplicationPeer {
   /**
    * Constructor that takes all the objects required to communicate with the specified peer, except
    * for the region server addresses.
-   * @param conf configuration object to this peer
-   * @param id string representation of this peer's identifier
+   * @param conf       configuration object to this peer
+   * @param id         string representation of this peer's identifier
    * @param peerConfig configuration for the replication peer
    */
   public ReplicationPeerImpl(Configuration conf, String id, boolean peerState,
-      ReplicationPeerConfig peerConfig) {
+    ReplicationPeerConfig peerConfig) {
     this.conf = conf;
     this.id = id;
     setPeerState(peerState);

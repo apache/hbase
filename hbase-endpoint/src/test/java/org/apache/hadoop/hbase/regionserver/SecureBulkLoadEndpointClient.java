@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -58,16 +57,15 @@ public class SecureBulkLoadEndpointClient {
     try {
       CoprocessorRpcChannel channel = table.coprocessorService(HConstants.EMPTY_START_ROW);
       SecureBulkLoadProtos.SecureBulkLoadService instance =
-          ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
+        ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
       ServerRpcController controller = new ServerRpcController();
 
       CoprocessorRpcUtils.BlockingRpcCallback<PrepareBulkLoadResponse> rpcCallback =
-          new CoprocessorRpcUtils.BlockingRpcCallback<>();
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
-      PrepareBulkLoadRequest request =
-          PrepareBulkLoadRequest.newBuilder()
-          .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
+      PrepareBulkLoadRequest request = PrepareBulkLoadRequest.newBuilder()
+        .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
 
       instance.prepareBulkLoad(controller, request, rpcCallback);
 
@@ -86,20 +84,17 @@ public class SecureBulkLoadEndpointClient {
     try {
       CoprocessorRpcChannel channel = table.coprocessorService(HConstants.EMPTY_START_ROW);
       SecureBulkLoadProtos.SecureBulkLoadService instance =
-          ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
+        ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
       ServerRpcController controller = new ServerRpcController();
 
       CoprocessorRpcUtils.BlockingRpcCallback<CleanupBulkLoadResponse> rpcCallback =
-          new CoprocessorRpcUtils.BlockingRpcCallback<>();
+        new CoprocessorRpcUtils.BlockingRpcCallback<>();
 
       CleanupBulkLoadRequest request =
-          CleanupBulkLoadRequest.newBuilder()
-              .setBulkToken(bulkToken).build();
+        CleanupBulkLoadRequest.newBuilder().setBulkToken(bulkToken).build();
 
-      instance.cleanupBulkLoad(controller,
-          request,
-          rpcCallback);
+      instance.cleanupBulkLoad(controller, request, rpcCallback);
 
       if (controller.failedOnException()) {
         throw controller.getFailedOn();
@@ -110,46 +105,39 @@ public class SecureBulkLoadEndpointClient {
   }
 
   public boolean bulkLoadHFiles(final List<Pair<byte[], String>> familyPaths,
-          final Token<?> userToken, final String bulkToken, final byte[] startRow)
-          throws IOException {
+    final Token<?> userToken, final String bulkToken, final byte[] startRow) throws IOException {
     // we never want to send a batch of HFiles to all regions, thus cannot call
     // HTable#coprocessorService methods that take start and end rowkeys; see HBASE-9639
     try {
       CoprocessorRpcChannel channel = table.coprocessorService(startRow);
       SecureBulkLoadProtos.SecureBulkLoadService instance =
-          ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
+        ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
-      DelegationToken protoDT =
-          DelegationToken.newBuilder().build();
-      if(userToken != null) {
+      DelegationToken protoDT = DelegationToken.newBuilder().build();
+      if (userToken != null) {
         protoDT =
-            DelegationToken.newBuilder()
-              .setIdentifier(ByteStringer.wrap(userToken.getIdentifier()))
-              .setPassword(ByteStringer.wrap(userToken.getPassword()))
-              .setKind(userToken.getKind().toString())
-              .setService(userToken.getService().toString()).build();
+          DelegationToken.newBuilder().setIdentifier(ByteStringer.wrap(userToken.getIdentifier()))
+            .setPassword(ByteStringer.wrap(userToken.getPassword()))
+            .setKind(userToken.getKind().toString()).setService(userToken.getService().toString())
+            .build();
       }
 
       List<ClientProtos.BulkLoadHFileRequest.FamilyPath> protoFamilyPaths =
-          new ArrayList<>(familyPaths.size());
-      for(Pair<byte[], String> el: familyPaths) {
+        new ArrayList<>(familyPaths.size());
+      for (Pair<byte[], String> el : familyPaths) {
         protoFamilyPaths.add(ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder()
-          .setFamily(ByteStringer.wrap(el.getFirst()))
-          .setPath(el.getSecond()).build());
+          .setFamily(ByteStringer.wrap(el.getFirst())).setPath(el.getSecond()).build());
       }
 
       SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request =
-          SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.newBuilder()
-            .setFsToken(protoDT)
-            .addAllFamilyPath(protoFamilyPaths)
-            .setBulkToken(bulkToken).build();
+        SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.newBuilder().setFsToken(protoDT)
+          .addAllFamilyPath(protoFamilyPaths).setBulkToken(bulkToken).build();
 
       ServerRpcController controller = new ServerRpcController();
-      CoprocessorRpcUtils.BlockingRpcCallback<SecureBulkLoadProtos.SecureBulkLoadHFilesResponse>
-            rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
-      instance.secureBulkLoadHFiles(controller,
-        request,
-        rpcCallback);
+      CoprocessorRpcUtils.BlockingRpcCallback<
+        SecureBulkLoadProtos.SecureBulkLoadHFilesResponse> rpcCallback =
+          new CoprocessorRpcUtils.BlockingRpcCallback<>();
+      instance.secureBulkLoadHFiles(controller, request, rpcCallback);
 
       SecureBulkLoadProtos.SecureBulkLoadHFilesResponse response = rpcCallback.get();
       if (controller.failedOnException()) {

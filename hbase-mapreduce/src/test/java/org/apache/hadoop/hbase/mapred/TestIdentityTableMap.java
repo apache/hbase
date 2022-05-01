@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +34,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestIdentityTableMap {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIdentityTableMap.class);
+    HBaseClassTestRule.forClass(TestIdentityTableMap.class);
 
   @Test
   @SuppressWarnings({ "deprecation", "unchecked" })
@@ -52,17 +52,14 @@ public class TestIdentityTableMap {
       identityTableMap = new IdentityTableMap();
       ImmutableBytesWritable bytesWritableMock = mock(ImmutableBytesWritable.class);
       OutputCollector<ImmutableBytesWritable, Result> outputCollectorMock =
-          mock(OutputCollector.class);
+        mock(OutputCollector.class);
 
       for (int i = 0; i < recordNumber; i++)
-        identityTableMap.map(bytesWritableMock, resultMock, outputCollectorMock,
-            reporterMock);
+        identityTableMap.map(bytesWritableMock, resultMock, outputCollectorMock, reporterMock);
 
-      verify(outputCollectorMock, times(recordNumber)).collect(
-          Mockito.any(), Mockito.any());
+      verify(outputCollectorMock, times(recordNumber)).collect(Mockito.any(), Mockito.any());
     } finally {
-      if (identityTableMap != null)
-        identityTableMap.close();
+      if (identityTableMap != null) identityTableMap.close();
     }
   }
 }

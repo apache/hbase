@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -30,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -47,33 +44,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class  allows a continuous flow of requests. It's written to be compatible with a
- * synchronous caller such as HTable.
+ * This class allows a continuous flow of requests. It's written to be compatible with a synchronous
+ * caller such as HTable.
  * <p>
- * The caller sends a buffer of operation, by calling submit. This class extract from this list
- * the operations it can send, i.e. the operations that are on region that are not considered
- * as busy. The process is asynchronous, i.e. it returns immediately when if has finished to
- * iterate on the list. If, and only if, the maximum number of current task is reached, the call
- * to submit will block. Alternatively, the caller can call submitAll, in which case all the
- * operations will be sent. Each call to submit returns a future-like object that can be used
- * to track operation progress.
+ * The caller sends a buffer of operation, by calling submit. This class extract from this list the
+ * operations it can send, i.e. the operations that are on region that are not considered as busy.
+ * The process is asynchronous, i.e. it returns immediately when if has finished to iterate on the
+ * list. If, and only if, the maximum number of current task is reached, the call to submit will
+ * block. Alternatively, the caller can call submitAll, in which case all the operations will be
+ * sent. Each call to submit returns a future-like object that can be used to track operation
+ * progress.
  * </p>
  * <p>
  * The class manages internally the retries.
  * </p>
  * <p>
- * The errors are tracked inside the Future object that is returned.
- * The results are always tracked inside the Future object and can be retrieved when the call
- * has finished. Partial results can also be retrieved if some part of multi-request failed.
+ * The errors are tracked inside the Future object that is returned. The results are always tracked
+ * inside the Future object and can be retrieved when the call has finished. Partial results can
+ * also be retrieved if some part of multi-request failed.
  * </p>
  * <p>
- * This class is thread safe.
- * Internally, the class is thread safe enough to manage simultaneously new submission and results
- * arising from older operations.
+ * This class is thread safe. Internally, the class is thread safe enough to manage simultaneously
+ * new submission and results arising from older operations.
  * </p>
  * <p>
- * Internally, this class works with {@link Row}, this mean it could be theoretically used for
- * gets as well.
+ * Internally, this class works with {@link Row}, this mean it could be theoretically used for gets
+ * as well.
  * </p>
  */
 @InterfaceAudience.Private
@@ -85,13 +81,13 @@ class AsyncProcess {
   public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout.multiget";
 
   /**
-   * Configure the number of failures after which the client will start logging. A few failures
-   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
-   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
-   * this stage.
+   * Configure the number of failures after which the client will start logging. A few failures is
+   * fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at this
+   * stage.
    */
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
-      "hbase.client.start.log.errors.counter";
+    "hbase.client.start.log.errors.counter";
   public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   /**
@@ -156,8 +152,9 @@ class AsyncProcess {
   public static final String LOG_DETAILS_PERIOD = "hbase.client.log.detail.period.ms";
   private static final int DEFAULT_LOG_DETAILS_PERIOD = 10000;
   private final int periodToLog;
-  AsyncProcess(ClusterConnection hc, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
+
+  AsyncProcess(ClusterConnection hc, Configuration conf, RpcRetryingCallerFactory rpcCaller,
+    RpcControllerFactory rpcFactory) {
     if (hc == null) {
       throw new IllegalArgumentException("ClusterConnection cannot be null.");
     }
@@ -166,23 +163,22 @@ class AsyncProcess {
 
     this.id = COUNTER.incrementAndGet();
 
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
-        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
     if (configuredPauseForCQTBE < pause) {
       LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
-          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
-          + ", will use " + pause + " instead.");
+        + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+        + ", will use " + pause + " instead.");
       this.pauseForCQTBE = pause;
     } else {
       this.pauseForCQTBE = configuredPauseForCQTBE;
     }
     // how many times we could try in total, one more than retry number
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
     this.primaryCallTimeoutMicroseconds = conf.getInt(PRIMARY_CALL_TIMEOUT_KEY, 10000);
     this.startLogErrorsCnt =
-        conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
+      conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.periodToLog = conf.getInt(LOG_DETAILS_PERIOD, DEFAULT_LOG_DETAILS_PERIOD);
     // Server tracker allows us to do faster, and yet useful (hopefully), retries.
     // However, if we are too useful, we might fail very quickly due to retry count limit.
@@ -204,18 +200,19 @@ class AsyncProcess {
   }
 
   /**
-   * The submitted task may be not accomplished at all if there are too many running tasks or
-   * other limits.
+   * The submitted task may be not accomplished at all if there are too many running tasks or other
+   * limits.
    * @param <CResult> The class to cast the result
-   * @param task The setting and data
-   * @return AsyncRequestFuture
+   * @param task      The setting and data n
    */
-  public <CResult> AsyncRequestFuture submit(AsyncProcessTask<CResult> task) throws InterruptedIOException {
+  public <CResult> AsyncRequestFuture submit(AsyncProcessTask<CResult> task)
+    throws InterruptedIOException {
     AsyncRequestFuture reqFuture = checkTask(task);
     if (reqFuture != null) {
       return reqFuture;
     }
-    SubmittedRows submittedRows = task.getSubmittedRows() == null ? SubmittedRows.ALL : task.getSubmittedRows();
+    SubmittedRows submittedRows =
+      task.getSubmittedRows() == null ? SubmittedRows.ALL : task.getSubmittedRows();
     switch (submittedRows) {
       case ALL:
         return submitAll(task);
@@ -227,15 +224,14 @@ class AsyncProcess {
   }
 
   /**
-   * Extract from the rows list what we can submit. The rows we can not submit are kept in the
-   * list. Does not send requests to replicas (not currently used for anything other
-   * than streaming puts anyway).
-   *
-   * @param task The setting and data
+   * Extract from the rows list what we can submit. The rows we can not submit are kept in the list.
+   * Does not send requests to replicas (not currently used for anything other than streaming puts
+   * anyway).
+   * @param task       The setting and data
    * @param atLeastOne true if we should submit at least a subset.
    */
-  private <CResult> AsyncRequestFuture submit(AsyncProcessTask<CResult> task,
-    boolean atLeastOne) throws InterruptedIOException {
+  private <CResult> AsyncRequestFuture submit(AsyncProcessTask<CResult> task, boolean atLeastOne)
+    throws InterruptedIOException {
     TableName tableName = task.getTableName();
     RowAccess<? extends Row> rows = task.getRowAccess();
     Map<ServerName, MultiAction> actionsByServer = new HashMap<>();
@@ -265,11 +261,11 @@ class AsyncProcess {
             throw new IllegalArgumentException("#" + id + ", row cannot be null");
           }
           // Make sure we get 0-s replica.
-          RegionLocations locs = connection.locateRegion(
-              tableName, r.getRow(), true, true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+          RegionLocations locs = connection.locateRegion(tableName, r.getRow(), true, true,
+            RegionReplicaUtil.DEFAULT_REPLICA_ID);
           if (locs == null || locs.isEmpty() || locs.getDefaultRegionLocation() == null) {
             throw new IOException("#" + id + ", no location found, aborting submit for"
-                + " tableName=" + tableName + " rowkey=" + Bytes.toStringBinary(r.getRow()));
+              + " tableName=" + tableName + " rowkey=" + Bytes.toStringBinary(r.getRow()));
           }
           loc = locs.getDefaultRegionLocation();
         } catch (IOException ex) {
@@ -312,21 +308,22 @@ class AsyncProcess {
 
     if (retainedActions.isEmpty()) return NO_REQS_RESULT;
 
-    return submitMultiActions(task, retainedActions, nonceGroup,
-        locationErrors, locationErrorRows, actionsByServer);
+    return submitMultiActions(task, retainedActions, nonceGroup, locationErrors, locationErrorRows,
+      actionsByServer);
   }
 
   <CResult> AsyncRequestFuture submitMultiActions(AsyncProcessTask task,
-      List<Action> retainedActions, long nonceGroup, List<Exception> locationErrors,
-      List<Integer> locationErrorRows, Map<ServerName, MultiAction> actionsByServer) {
-    AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(task, retainedActions, nonceGroup);
+    List<Action> retainedActions, long nonceGroup, List<Exception> locationErrors,
+    List<Integer> locationErrorRows, Map<ServerName, MultiAction> actionsByServer) {
+    AsyncRequestFutureImpl<CResult> ars =
+      createAsyncRequestFuture(task, retainedActions, nonceGroup);
     // Add location errors if any
     if (locationErrors != null) {
       for (int i = 0; i < locationErrors.size(); ++i) {
         int originalIndex = locationErrorRows.get(i);
         Row row = retainedActions.get(originalIndex).getAction();
-        ars.manageError(originalIndex, row,
-            AsyncRequestFutureImpl.Retry.NO_LOCATION_PROBLEM, locationErrors.get(i), null);
+        ars.manageError(originalIndex, row, AsyncRequestFutureImpl.Retry.NO_LOCATION_PROBLEM,
+          locationErrors.get(i), null);
       }
     }
     ars.sendMultiAction(actionsByServer, 1, null, false);
@@ -335,15 +332,14 @@ class AsyncProcess {
 
   /**
    * Helper that is used when grouping the actions per region server.
-   *
-   * @param server - server
-   * @param regionName - regionName
-   * @param action - the action to add to the multiaction
+   * @param server          - server
+   * @param regionName      - regionName
+   * @param action          - the action to add to the multiaction
    * @param actionsByServer the multiaction per server
-   * @param nonceGroup Nonce group.
+   * @param nonceGroup      Nonce group.
    */
   static void addAction(ServerName server, byte[] regionName, Action action,
-      Map<ServerName, MultiAction> actionsByServer, long nonceGroup) {
+    Map<ServerName, MultiAction> actionsByServer, long nonceGroup) {
     MultiAction multiAction = actionsByServer.get(server);
     if (multiAction == null) {
       multiAction = new MultiAction();
@@ -374,7 +370,8 @@ class AsyncProcess {
       if (r instanceof Put) {
         Put put = (Put) r;
         if (put.isEmpty()) {
-          throw new IllegalArgumentException("No columns to insert for #" + (posInList+1)+ " item");
+          throw new IllegalArgumentException(
+            "No columns to insert for #" + (posInList + 1) + " item");
         }
         highestPriority = Math.max(put.getPriority(), highestPriority);
       }
@@ -382,7 +379,8 @@ class AsyncProcess {
       setNonce(ng, r, action);
       actions.add(action);
     }
-    AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(task, actions, ng.getNonceGroup());
+    AsyncRequestFutureImpl<CResult> ars =
+      createAsyncRequestFuture(task, actions, ng.getNonceGroup());
     ars.groupAndSendMultiAction(actions, 1);
     return ars;
   }
@@ -425,11 +423,12 @@ class AsyncProcess {
 
   private int checkTimeout(String name, int timeout) {
     if (timeout < 0) {
-      throw new RuntimeException("The " + name + " must be bigger than zero,"
-        + "current value is" + timeout);
+      throw new RuntimeException(
+        "The " + name + " must be bigger than zero," + "current value is" + timeout);
     }
     return timeout;
   }
+
   private int checkOperationTimeout(int operationTimeout) {
     return checkTimeout("operation timeout", operationTimeout);
   }
@@ -438,31 +437,31 @@ class AsyncProcess {
     return checkTimeout("rpc timeout", rpcTimeout);
   }
 
-  <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(
-      AsyncProcessTask task, List<Action> actions, long nonceGroup) {
+  <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(AsyncProcessTask task,
+    List<Action> actions, long nonceGroup) {
     return new AsyncRequestFutureImpl<>(task, actions, nonceGroup, this);
   }
 
   /** Wait until the async does not have more than max tasks in progress. */
   protected void waitForMaximumCurrentTasks(int max, TableName tableName)
-      throws InterruptedIOException {
-    requestController.waitForMaximumCurrentTasks(max, id, periodToLog,
-      getLogger(tableName, max));
+    throws InterruptedIOException {
+    requestController.waitForMaximumCurrentTasks(max, id, periodToLog, getLogger(tableName, max));
   }
 
   private Consumer<Long> getLogger(TableName tableName, long max) {
     return (currentInProgress) -> {
-      LOG.info("#" + id + (max < 0 ?
-          ", waiting for any free slot" :
-          ", waiting for some tasks to finish. Expected max=" + max) + ", tasksInProgress="
-          + currentInProgress + (tableName == null ? "" : ", tableName=" + tableName));
+      LOG.info("#" + id
+        + (max < 0
+          ? ", waiting for any free slot"
+          : ", waiting for some tasks to finish. Expected max=" + max)
+        + ", tasksInProgress=" + currentInProgress
+        + (tableName == null ? "" : ", tableName=" + tableName));
     };
   }
 
   void incTaskCounters(Collection<byte[]> regions, ServerName sn) {
     requestController.incTaskCounters(regions, sn);
   }
-
 
   void decTaskCounters(Collection<byte[]> regions, ServerName sn) {
     requestController.decTaskCounters(regions, sn);
@@ -471,25 +470,25 @@ class AsyncProcess {
   /**
    * Create a caller. Isolated to be easily overridden in the tests.
    */
-  protected RpcRetryingCaller<AbstractResponse> createCaller(
-      CancellableRegionServerCallable callable, int rpcTimeout) {
+  protected RpcRetryingCaller<AbstractResponse>
+    createCaller(CancellableRegionServerCallable callable, int rpcTimeout) {
     return rpcCallerFactory.<AbstractResponse> newCaller(checkRpcTimeout(rpcTimeout));
   }
 
   /**
-   * Creates the server error tracker to use inside process.
-   * Currently, to preserve the main assumption about current retries, and to work well with
-   * the retry-limit-based calculation, the calculation is local per Process object.
-   * We may benefit from connection-wide tracking of server errors.
+   * Creates the server error tracker to use inside process. Currently, to preserve the main
+   * assumption about current retries, and to work well with the retry-limit-based calculation, the
+   * calculation is local per Process object. We may benefit from connection-wide tracking of server
+   * errors.
    * @return ServerErrorTracker to use, null if there is no ServerErrorTracker on this connection
    */
   ConnectionImplementation.ServerErrorTracker createServerErrorTracker() {
-    return new ConnectionImplementation.ServerErrorTracker(
-        this.serverTrackerTimeout, this.numTries);
+    return new ConnectionImplementation.ServerErrorTracker(this.serverTrackerTimeout,
+      this.numTries);
   }
 
   static boolean isReplicaGet(Row row) {
-    return (row instanceof Get) && (((Get)row).getConsistency() == Consistency.TIMELINE);
+    return (row instanceof Get) && (((Get) row).getConsistency() == Consistency.TIMELINE);
   }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,12 @@ import org.slf4j.LoggerFactory;
  * interfaces (i.e. ReplicationPeers, etc.). Each test case in this class should ensure that the
  * MiniZKCluster is cleaned and returned to it's initial state (i.e. nothing but the rsZNode).
  */
-@Category({ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationTrackerZKImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationTrackerZKImpl.class);
+    HBaseClassTestRule.forClass(TestReplicationTrackerZKImpl.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationTrackerZKImpl.class);
 
@@ -89,8 +89,8 @@ public class TestReplicationTrackerZKImpl {
   @Before
   public void setUp() throws Exception {
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
-    String fakeRs1 = ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode,
-            "hostname1.example.org:1234");
+    String fakeRs1 =
+      ZNodePaths.joinZNode(zkw.getZNodePaths().rsZNode, "hostname1.example.org:1234");
     try {
       ZKClusterId.setClusterId(zkw, new ClusterId());
       rp = ReplicationFactory.getReplicationPeers(zkw, conf);

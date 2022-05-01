@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,20 +32,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
 /**
- * Priority function specifically for the master.
- *
- * This doesn't make the super users always priority since that would make everything
- * to the master into high priority.
- *
- * Specifically when reporting that a region is in transition master will try and edit the meta
- * table. That edit will block the thread until successful. However if at the same time meta is
- * also moving then we need to ensure that the regular region that's moving isn't blocking
- * processing of the request to online meta. To accomplish this this priority function makes sure
- * that all requests to transition meta are handled in different threads from other report region
- * in transition calls.
- * After HBASE-21754, ReportRegionStateTransitionRequest for meta region will be assigned a META_QOS
- * , a separate executor called metaTransitionExecutor will execute it. Other transition request
- * will be executed in priorityExecutor to prevent being mixed with normal requests
+ * Priority function specifically for the master. This doesn't make the super users always priority
+ * since that would make everything to the master into high priority. Specifically when reporting
+ * that a region is in transition master will try and edit the meta table. That edit will block the
+ * thread until successful. However if at the same time meta is also moving then we need to ensure
+ * that the regular region that's moving isn't blocking processing of the request to online meta. To
+ * accomplish this this priority function makes sure that all requests to transition meta are
+ * handled in different threads from other report region in transition calls. After HBASE-21754,
+ * ReportRegionStateTransitionRequest for meta region will be assigned a META_QOS , a separate
+ * executor called metaTransitionExecutor will execute it. Other transition request will be executed
+ * in priorityExecutor to prevent being mixed with normal requests
  */
 @InterfaceAudience.Private
 public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPriorityFunction {
@@ -56,9 +52,8 @@ public class MasterAnnotationReadingPriorityFunction extends AnnotationReadingPr
     this(rpcServices, rpcServices.getClass());
   }
 
-
   public MasterAnnotationReadingPriorityFunction(RSRpcServices rpcServices,
-                                          Class<? extends RSRpcServices> clz) {
+    Class<? extends RSRpcServices> clz) {
     super(rpcServices, clz);
   }
 

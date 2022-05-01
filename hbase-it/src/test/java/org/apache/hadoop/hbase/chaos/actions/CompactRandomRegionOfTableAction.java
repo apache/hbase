@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -48,7 +47,8 @@ public class CompactRandomRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -58,16 +58,15 @@ public class CompactRandomRegionOfTableAction extends Action {
     Admin admin = util.getAdmin();
     boolean major = ThreadLocalRandom.current().nextInt(100) < majorRatio;
 
-    getLogger().info("Performing action: Compact random region of table "
-      + tableName + ", major=" + major);
+    getLogger()
+      .info("Performing action: Compact random region of table " + tableName + ", major=" + major);
     List<RegionInfo> regions = admin.getRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       getLogger().info("Table " + tableName + " doesn't have regions to compact");
       return;
     }
 
-    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
-      regions.toArray(new RegionInfo[0]));
+    RegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(regions.toArray(new RegionInfo[0]));
 
     try {
       if (major) {

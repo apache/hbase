@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -64,10 +63,12 @@ public abstract class AbstractTestAsyncTableScan {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    ASYNC_CONN.getTable(TABLE_NAME).putAll(IntStream.range(0, COUNT)
+    ASYNC_CONN.getTable(TABLE_NAME)
+      .putAll(IntStream.range(0, COUNT)
         .mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
-            .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
-        .collect(Collectors.toList())).get();
+          .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
+        .collect(Collectors.toList()))
+      .get();
   }
 
   @AfterClass
@@ -111,7 +112,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   protected static List<Object[]> getScanCreatorParams() {
     return getScanCreator().stream().map(p -> new Object[] { p.getFirst(), p.getSecond() })
-        .collect(Collectors.toList());
+      .collect(Collectors.toList());
   }
 
   private static List<Pair<String, Supplier<AsyncTable<?>>>> getTableCreator() {
@@ -123,9 +124,9 @@ public abstract class AbstractTestAsyncTableScan {
     List<Pair<String, Supplier<AsyncTable<?>>>> tableCreator = getTableCreator();
     List<Pair<String, Supplier<Scan>>> scanCreator = getScanCreator();
     return tableCreator.stream()
-        .flatMap(tp -> scanCreator.stream().map(
-          sp -> new Object[] { tp.getFirst(), tp.getSecond(), sp.getFirst(), sp.getSecond() }))
-        .collect(Collectors.toList());
+      .flatMap(tp -> scanCreator.stream()
+        .map(sp -> new Object[] { tp.getFirst(), tp.getSecond(), sp.getFirst(), sp.getSecond() }))
+      .collect(Collectors.toList());
   }
 
   protected abstract Scan createScan();
@@ -137,7 +138,7 @@ public abstract class AbstractTestAsyncTableScan {
     return IntStream.range(0, results.size() / 2).mapToObj(i -> {
       try {
         return Result
-            .createCompleteResult(Arrays.asList(results.get(2 * i), results.get(2 * i + 1)));
+          .createCompleteResult(Arrays.asList(results.get(2 * i), results.get(2 * i + 1)));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -149,11 +150,11 @@ public abstract class AbstractTestAsyncTableScan {
     List<Result> results = doScan(createScan());
     // make sure all scanners are closed at RS side
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
-        .forEach(
-          rs -> assertEquals(
-            "The scanner count of " + rs.getServerName() + " is " +
-              rs.getRSRpcServices().getScannersCount(),
-            0, rs.getRSRpcServices().getScannersCount()));
+      .forEach(
+        rs -> assertEquals(
+          "The scanner count of " + rs.getServerName() + " is "
+            + rs.getRSRpcServices().getScannersCount(),
+          0, rs.getRSRpcServices().getScannersCount()));
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> {
       Result result = results.get(i);
@@ -198,16 +199,16 @@ public abstract class AbstractTestAsyncTableScan {
     try {
       doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")));
     } catch (Exception e) {
-      assertTrue(e instanceof NoSuchColumnFamilyException ||
-        e.getCause() instanceof NoSuchColumnFamilyException);
+      assertTrue(e instanceof NoSuchColumnFamilyException
+        || e.getCause() instanceof NoSuchColumnFamilyException);
     }
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
+    int limit) throws Exception {
     Scan scan =
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
     if (limit > 0) {
       scan.setLimit(limit);
     }
@@ -223,10 +224,10 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
+    int limit) throws Exception {
     Scan scan =
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
     if (limit > 0) {
       scan.setLimit(limit);
     }

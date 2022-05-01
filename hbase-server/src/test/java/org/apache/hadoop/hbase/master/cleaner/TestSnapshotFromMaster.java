@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,25 +80,22 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterrupt
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .IsSnapshotCleanupEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .IsSnapshotCleanupEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-    .SetSnapshotCleanupRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSnapshotCleanupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
  * Test the master-related aspects of a snapshot
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSnapshotFromMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotFromMaster.class);
+    HBaseClassTestRule.forClass(TestSnapshotFromMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromMaster.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -110,8 +107,7 @@ public class TestSnapshotFromMaster {
   // for hfile archiving test.
   private static Path archiveDir;
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final TableName TABLE_NAME =
-      TableName.valueOf("test");
+  private static final TableName TABLE_NAME = TableName.valueOf("test");
   // refresh the cache every 1/2 second
   private static final long cacheRefreshPeriod = 500;
   private static final int blockingStoreFiles = 12;
@@ -196,8 +192,8 @@ public class TestSnapshotFromMaster {
       UnknownSnapshotException.class);
 
     // and that we get the same issue, even if we specify a name
-    SnapshotDescription desc = SnapshotDescription.newBuilder()
-      .setName(snapshotName).setTable(TABLE_NAME.getNameAsString()).build();
+    SnapshotDescription desc = SnapshotDescription.newBuilder().setName(snapshotName)
+      .setTable(TABLE_NAME.getNameAsString()).build();
     builder.setSnapshot(desc);
     SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
       UnknownSnapshotException.class);
@@ -210,8 +206,7 @@ public class TestSnapshotFromMaster {
     Mockito.when(mockHandler.getCompletionTimestamp())
       .thenReturn(EnvironmentEdgeManager.currentTime());
 
-    master.getSnapshotManager()
-        .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
+    master.getSnapshotManager().setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
 
     // if we do a lookup without a snapshot name, we should fail - you should always know your name
     builder = IsSnapshotDoneRequest.newBuilder();
@@ -275,8 +270,8 @@ public class TestSnapshotFromMaster {
     String snapshotName = "completed";
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
 
-    DeleteSnapshotRequest request = DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot)
-        .build();
+    DeleteSnapshotRequest request =
+      DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot).build();
     try {
       master.getMasterRpcServices().deleteSnapshot(null, request);
       fail("Master didn't throw exception when attempting to delete snapshot that doesn't exist");
@@ -295,13 +290,13 @@ public class TestSnapshotFromMaster {
   public void testGetCompletedSnapshotsWithCleanup() throws Exception {
     // Enable auto snapshot cleanup for the cluster
     SetSnapshotCleanupRequest setSnapshotCleanupRequest =
-        SetSnapshotCleanupRequest.newBuilder().setEnabled(true).build();
+      SetSnapshotCleanupRequest.newBuilder().setEnabled(true).build();
     master.getMasterRpcServices().switchSnapshotCleanup(null, setSnapshotCleanupRequest);
 
     // first check when there are no snapshots
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
     GetCompletedSnapshotsResponse response =
-        master.getMasterRpcServices().getCompletedSnapshots(null, request);
+      master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
     // NOTE: This is going to be flakey. Its timing based. For now made it more coarse
@@ -326,13 +321,13 @@ public class TestSnapshotFromMaster {
   public void testGetCompletedSnapshotsWithoutCleanup() throws Exception {
     // Disable auto snapshot cleanup for the cluster
     SetSnapshotCleanupRequest setSnapshotCleanupRequest =
-        SetSnapshotCleanupRequest.newBuilder().setEnabled(false).build();
+      SetSnapshotCleanupRequest.newBuilder().setEnabled(false).build();
     master.getMasterRpcServices().switchSnapshotCleanup(null, setSnapshotCleanupRequest);
 
     // first check when there are no snapshots
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
     GetCompletedSnapshotsResponse response =
-        master.getMasterRpcServices().getCompletedSnapshots(null, request);
+      master.getMasterRpcServices().getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
     // write one snapshot to the fs
@@ -353,28 +348,24 @@ public class TestSnapshotFromMaster {
   public void testSnapshotCleanupStatus() throws Exception {
     // Enable auto snapshot cleanup for the cluster
     SetSnapshotCleanupRequest setSnapshotCleanupRequest =
-        SetSnapshotCleanupRequest.newBuilder().setEnabled(true).build();
+      SetSnapshotCleanupRequest.newBuilder().setEnabled(true).build();
     master.getMasterRpcServices().switchSnapshotCleanup(null, setSnapshotCleanupRequest);
 
     // Check if auto snapshot cleanup is enabled
     IsSnapshotCleanupEnabledRequest isSnapshotCleanupEnabledRequest =
-        IsSnapshotCleanupEnabledRequest.newBuilder().build();
+      IsSnapshotCleanupEnabledRequest.newBuilder().build();
     IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabledResponse =
-        master.getMasterRpcServices().isSnapshotCleanupEnabled(null,
-            isSnapshotCleanupEnabledRequest);
+      master.getMasterRpcServices().isSnapshotCleanupEnabled(null, isSnapshotCleanupEnabledRequest);
     Assert.assertTrue(isSnapshotCleanupEnabledResponse.getEnabled());
 
     // Disable auto snapshot cleanup for the cluster
-    setSnapshotCleanupRequest = SetSnapshotCleanupRequest.newBuilder()
-        .setEnabled(false).build();
+    setSnapshotCleanupRequest = SetSnapshotCleanupRequest.newBuilder().setEnabled(false).build();
     master.getMasterRpcServices().switchSnapshotCleanup(null, setSnapshotCleanupRequest);
 
     // Check if auto snapshot cleanup is disabled
-    isSnapshotCleanupEnabledRequest = IsSnapshotCleanupEnabledRequest
-        .newBuilder().build();
+    isSnapshotCleanupEnabledRequest = IsSnapshotCleanupEnabledRequest.newBuilder().build();
     isSnapshotCleanupEnabledResponse =
-        master.getMasterRpcServices().isSnapshotCleanupEnabled(null,
-            isSnapshotCleanupEnabledRequest);
+      master.getMasterRpcServices().isSnapshotCleanupEnabled(null, isSnapshotCleanupEnabledRequest);
     Assert.assertFalse(isSnapshotCleanupEnabledResponse.getEnabled());
   }
 
@@ -393,13 +384,12 @@ public class TestSnapshotFromMaster {
     // snapshot, the call after snapshot will be a no-op and checks will fail
     UTIL.deleteTable(TABLE_NAME);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAM))
-            .setCompactionEnabled(false)
-            .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAM)).setCompactionEnabled(false)
+      .build();
     UTIL.getAdmin().createTable(td);
 
     // load the table
-    for (int i = 0; i < blockingStoreFiles / 2; i ++) {
+    for (int i = 0; i < blockingStoreFiles / 2; i++) {
       UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
       UTIL.flush(TABLE_NAME);
     }
@@ -418,9 +408,7 @@ public class TestSnapshotFromMaster {
     // ensure we only have one snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshotNameBytes, TABLE_NAME);
 
-    td = TableDescriptorBuilder.newBuilder(td)
-            .setCompactionEnabled(true)
-            .build();
+    td = TableDescriptorBuilder.newBuilder(td).setCompactionEnabled(true).build();
     // enable compactions now
     admin.modifyTable(td);
 
@@ -433,8 +421,8 @@ public class TestSnapshotFromMaster {
       region.waitForFlushesAndCompactions(); // enable can trigger a compaction, wait for it.
       region.compactStores(); // min is 2 so will compact and archive
     }
-    List<RegionServerThread> regionServerThreads = UTIL.getMiniHBaseCluster()
-        .getRegionServerThreads();
+    List<RegionServerThread> regionServerThreads =
+      UTIL.getMiniHBaseCluster().getRegionServerThreads();
     HRegionServer hrs = null;
     for (RegionServerThread rs : regionServerThreads) {
       if (!rs.getRegionServer().getRegions(TABLE_NAME).isEmpty()) {
@@ -455,8 +443,8 @@ public class TestSnapshotFromMaster {
 
     // get the snapshot files for the table
     Path snapshotTable = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    Set<String> snapshotHFiles = SnapshotReferenceUtil.getHFileNames(
-        UTIL.getConfiguration(), fs, snapshotTable);
+    Set<String> snapshotHFiles =
+      SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotTable);
     // check that the files in the archive contain the ones that we need for the snapshot
     LOG.debug("Have snapshot hfiles:");
     for (String fileName : snapshotHFiles) {
@@ -471,8 +459,8 @@ public class TestSnapshotFromMaster {
     // and make sure that there is a proper subset
     for (String fileName : snapshotHFiles) {
       boolean exist = archives.contains(fileName) || hfiles.contains(fileName);
-      assertTrue("Archived hfiles " + archives
-        + " and table hfiles " + hfiles + " is missing snapshot file:" + fileName, exist);
+      assertTrue("Archived hfiles " + archives + " and table hfiles " + hfiles
+        + " is missing snapshot file:" + fileName, exist);
     }
 
     // delete the existing snapshot
@@ -481,11 +469,11 @@ public class TestSnapshotFromMaster {
 
     // make sure that we don't keep around the hfiles that aren't in a snapshot
     // make sure we wait long enough to refresh the snapshot hfile
-    List<BaseHFileCleanerDelegate> delegates = UTIL.getMiniHBaseCluster().getMaster()
-        .getHFileCleaner().cleanersChain;
-    for (BaseHFileCleanerDelegate delegate: delegates) {
+    List<BaseHFileCleanerDelegate> delegates =
+      UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cleanersChain;
+    for (BaseHFileCleanerDelegate delegate : delegates) {
       if (delegate instanceof SnapshotHFileCleaner) {
-        ((SnapshotHFileCleaner)delegate).getFileCacheForTesting().triggerCacheRefreshForTesting();
+        ((SnapshotHFileCleaner) delegate).getFileCacheForTesting().triggerCacheRefreshForTesting();
       }
     }
     // run the cleaner again
@@ -516,7 +504,8 @@ public class TestSnapshotFromMaster {
    * @return all the HFiles for a given table in the specified dir
    * @throws IOException on expected failure
    */
-  private final Collection<String> getHFiles(Path dir, FileSystem fs, TableName tableName) throws IOException {
+  private final Collection<String> getHFiles(Path dir, FileSystem fs, TableName tableName)
+    throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(dir, tableName);
     return SnapshotTestingUtils.listHFileNames(fs, tableDir);
   }
@@ -538,11 +527,11 @@ public class TestSnapshotFromMaster {
   }
 
   private SnapshotDescription createSnapshotWithTtl(final String snapshotName, final long ttl)
-      throws IOException {
+    throws IOException {
     SnapshotTestingUtils.SnapshotMock snapshotMock =
-        new SnapshotTestingUtils.SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
+      new SnapshotTestingUtils.SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
     SnapshotTestingUtils.SnapshotMock.SnapshotBuilder builder =
-        snapshotMock.createSnapshotV2(snapshotName, "test", 0, ttl);
+      snapshotMock.createSnapshotV2(snapshotName, "test", 0, ttl);
     builder.commit();
     return builder.getSnapshotDescription();
   }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -34,14 +32,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Read rs group information from  <code>hbase:rsgroup</code>.
+ * Read rs group information from <code>hbase:rsgroup</code>.
  */
 @InterfaceAudience.Private
 public final class RSGroupTableAccessor {
 
-  //Assigned before user tables
+  // Assigned before user tables
   private static final TableName RSGROUP_TABLE_NAME =
-      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
+    TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "rsgroup");
   private static final byte[] META_FAMILY_BYTES = Bytes.toBytes("m");
   private static final byte[] META_QUALIFIER_BYTES = Bytes.toBytes("i");
 
@@ -52,8 +50,7 @@ public final class RSGroupTableAccessor {
     return connection.getAdmin().tableExists(RSGROUP_TABLE_NAME);
   }
 
-  public static List<RSGroupInfo> getAllRSGroupInfo(Connection connection)
-      throws IOException {
+  public static List<RSGroupInfo> getAllRSGroupInfo(Connection connection) throws IOException {
     try (Table rsGroupTable = connection.getTable(RSGROUP_TABLE_NAME)) {
       List<RSGroupInfo> rsGroupInfos = new ArrayList<>();
       for (Result result : rsGroupTable.getScanner(new Scan())) {
@@ -71,14 +68,13 @@ public final class RSGroupTableAccessor {
     if (rsGroupInfo == null) {
       return null;
     }
-    RSGroupProtos.RSGroupInfo proto =
-        RSGroupProtos.RSGroupInfo.parseFrom(rsGroupInfo);
+    RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo.parseFrom(rsGroupInfo);
     return ProtobufUtil.toGroupInfo(proto);
   }
 
   public static RSGroupInfo getRSGroupInfo(Connection connection, byte[] rsGroupName)
-      throws IOException {
-    try (Table rsGroupTable = connection.getTable(RSGROUP_TABLE_NAME)){
+    throws IOException {
+    try (Table rsGroupTable = connection.getTable(RSGROUP_TABLE_NAME)) {
       Result result = rsGroupTable.get(new Get(rsGroupName));
       return getRSGroupInfo(result);
     }

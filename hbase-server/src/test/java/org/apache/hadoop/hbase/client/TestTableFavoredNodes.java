@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,12 +68,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category({ClientTests.class, MediumTests.class})
+@Category({ ClientTests.class, MediumTests.class })
 public class TestTableFavoredNodes {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableFavoredNodes.class);
+    HBaseClassTestRule.forClass(TestTableFavoredNodes.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableFavoredNodes.class);
 
@@ -83,7 +83,7 @@ public class TestTableFavoredNodes {
   private FavoredNodesManager fnm;
   private Admin admin;
 
-  private final byte[][] splitKeys = new byte[][] {Bytes.toBytes(1), Bytes.toBytes(9)};
+  private final byte[][] splitKeys = new byte[][] { Bytes.toBytes(1), Bytes.toBytes(9) };
   private final int NUM_REGIONS = splitKeys.length + 1;
 
   @Rule
@@ -94,7 +94,7 @@ public class TestTableFavoredNodes {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Setting FavoredNodeBalancer will enable favored nodes
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
+      LoadOnlyFavoredStochasticBalancer.class, LoadBalancer.class);
     conf.set(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, "" + SLAVES);
 
     // This helps test if RS get the appropriate FN updates.
@@ -186,7 +186,7 @@ public class TestTableFavoredNodes {
     LOG.info("FINISHED WAITING ON RIT");
     waitUntilTableRegionCountReached(tableName, numberOfRegions + 1);
 
-    // All regions should have favored nodes    checkIfFavoredNodeInformationIsCorrect(tableName);
+    // All regions should have favored nodes checkIfFavoredNodeInformationIsCorrect(tableName);
 
     // Get the daughters of parent.
     HRegionInfo daughter1 = locator.getRegionLocation(parent.getStartKey(), true).getRegionInfo();
@@ -199,21 +199,21 @@ public class TestTableFavoredNodes {
     checkIfDaughterInherits2FN(parentFN, daughter2FN);
 
     assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
-        parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()));
+      parentFN.get(PRIMARY.ordinal()), daughter1FN.get(PRIMARY.ordinal()));
     assertEquals("Daughter's SECONDARY FN should be SECONDARY of parent",
-        parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()));
+      parentFN.get(SECONDARY.ordinal()), daughter1FN.get(SECONDARY.ordinal()));
 
     assertEquals("Daughter's PRIMARY FN should be PRIMARY of parent",
-        parentFN.get(PRIMARY.ordinal()), daughter2FN.get(PRIMARY.ordinal()));
+      parentFN.get(PRIMARY.ordinal()), daughter2FN.get(PRIMARY.ordinal()));
     assertEquals("Daughter's SECONDARY FN should be TERTIARY of parent",
-        parentFN.get(TERTIARY.ordinal()), daughter2FN.get(SECONDARY.ordinal()));
+      parentFN.get(TERTIARY.ordinal()), daughter2FN.get(SECONDARY.ordinal()));
 
     // Major compact table and run catalog janitor. Parent's FN should be removed
     TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
     admin.runCatalogScan();
     // Catalog cleanup is async. Wait on procedure to finish up.
-    ProcedureTestingUtility.waitAllProcedures(
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
+    ProcedureTestingUtility
+      .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     // assertEquals("Parent region should have been cleaned", 1, admin.runCatalogScan());
     assertNull("Parent FN should be null", fnm.getFavoredNodes(parent));
 
@@ -247,8 +247,8 @@ public class TestTableFavoredNodes {
     LOG.info("regionB: " + regionA.getEncodedName() + " with FN: " + fnm.getFavoredNodes(regionB));
 
     int countOfRegions = TEST_UTIL.getMiniHBaseCluster().getRegions(tableName).size();
-    admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(),
-        regionB.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
+    admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false)
+      .get(60, TimeUnit.SECONDS);
 
     TEST_UTIL.waitUntilNoRegionsInTransition(WAIT_TIMEOUT);
     waitUntilTableRegionCountReached(tableName, countOfRegions - 1);
@@ -260,15 +260,15 @@ public class TestTableFavoredNodes {
       locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
     List<ServerName> mergedFN = fnm.getFavoredNodes(mergedRegion);
 
-    assertArrayEquals("Merged region doesn't match regionA's FN",
-        regionAFN.toArray(), mergedFN.toArray());
+    assertArrayEquals("Merged region doesn't match regionA's FN", regionAFN.toArray(),
+      mergedFN.toArray());
 
     // Major compact table and run catalog janitor. Parent FN should be removed
     TEST_UTIL.getMiniHBaseCluster().compact(tableName, true);
     assertEquals("Merge parents should have been cleaned", 1, admin.runCatalogScan());
     // Catalog cleanup is async. Wait on procedure to finish up.
-    ProcedureTestingUtility.waitAllProcedures(
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
+    ProcedureTestingUtility
+      .waitAllProcedures(TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor());
     assertNull("Parent FN should be null", fnm.getFavoredNodes(regionA));
     assertNull("Parent FN should be null", fnm.getFavoredNodes(regionB));
 
@@ -287,26 +287,23 @@ public class TestTableFavoredNodes {
   }
 
   /*
-   * This checks the following:
-   *
-   * 1. Do all regions of the table have favored nodes updated in master?
-   * 2. Is the number of favored nodes correct for a region? Is the start code -1?
-   * 3. Is the FN information consistent between Master and the respective RegionServer?
+   * This checks the following: 1. Do all regions of the table have favored nodes updated in master?
+   * 2. Is the number of favored nodes correct for a region? Is the start code -1? 3. Is the FN
+   * information consistent between Master and the respective RegionServer?
    */
   private void checkIfFavoredNodeInformationIsCorrect(TableName tableName) throws Exception {
 
     /*
-     * Since we need HRegionServer to check for consistency of FN between Master and RS,
-     * lets construct a map for each serverName lookup. Makes it easy later.
+     * Since we need HRegionServer to check for consistency of FN between Master and RS, lets
+     * construct a map for each serverName lookup. Makes it easy later.
      */
     Map<ServerName, HRegionServer> snRSMap = Maps.newHashMap();
-    for (JVMClusterUtil.RegionServerThread rst :
-      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread rst : TEST_UTIL.getMiniHBaseCluster()
+      .getLiveRegionServerThreads()) {
       snRSMap.put(rst.getRegionServer().getServerName(), rst.getRegionServer());
     }
     // Also include master, since it can also host user regions.
-    for (JVMClusterUtil.MasterThread rst :
-      TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads()) {
+    for (JVMClusterUtil.MasterThread rst : TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads()) {
       snRSMap.put(rst.getMaster().getServerName(), rst.getMaster());
     }
 
@@ -333,11 +330,13 @@ public class TestTableFavoredNodes {
 
       InetSocketAddress[] rsFavNodes =
         regionServer.getFavoredNodesForRegion(regionInfo.getEncodedName());
-      assertNotNull("RS " + regionLocation.getServerName()
-        + " does not have FN for region: " + regionInfo, rsFavNodes);
-      assertEquals("Incorrect FN for region:" + regionInfo.getEncodedName() + " on server:" +
-        regionLocation.getServerName(), FavoredNodeAssignmentHelper.FAVORED_NODES_NUM,
-        rsFavNodes.length);
+      assertNotNull(
+        "RS " + regionLocation.getServerName() + " does not have FN for region: " + regionInfo,
+        rsFavNodes);
+      assertEquals(
+        "Incorrect FN for region:" + regionInfo.getEncodedName() + " on server:"
+          + regionLocation.getServerName(),
+        FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, rsFavNodes.length);
 
       // 4. Does DN port match all FN node list?
       for (ServerName sn : fnm.getFavoredNodesWithDNPort(regionInfo)) {
@@ -359,8 +358,8 @@ public class TestTableFavoredNodes {
     // All regions should have favored nodes
     checkIfFavoredNodeInformationIsCorrect(tableName);
 
-    for (TableName sysTable :
-        admin.listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+    for (TableName sysTable : admin
+      .listTableNamesByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
       List<HRegionInfo> regions = admin.getTableRegions(sysTable);
       for (HRegionInfo region : regions) {
         assertNull("FN should be null for sys region", fnm.getFavoredNodes(region));
@@ -379,16 +378,17 @@ public class TestTableFavoredNodes {
     favoredNodes.removeAll(parentFN);
 
     /*
-     * With a small cluster its likely some FN might accidentally get shared. Its likely the
-     * 3rd FN the balancer chooses might still belong to the parent in which case favoredNodes
-     * size would be 0.
+     * With a small cluster its likely some FN might accidentally get shared. Its likely the 3rd FN
+     * the balancer chooses might still belong to the parent in which case favoredNodes size would
+     * be 0.
      */
-    assertTrue("Daughter FN:" + daughterFN + " should have inherited 2 FN from parent FN:"
-      + parentFN, favoredNodes.size() <= 1);
+    assertTrue(
+      "Daughter FN:" + daughterFN + " should have inherited 2 FN from parent FN:" + parentFN,
+      favoredNodes.size() <= 1);
   }
 
   private void waitUntilTableRegionCountReached(final TableName tableName, final int numRegions)
-      throws Exception {
+    throws Exception {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Allows multiple concurrent clients to lock on a numeric id with a minimal
- * memory overhead. The intended usage is as follows:
+ * Allows multiple concurrent clients to lock on a numeric id with a minimal memory overhead. The
+ * intended usage is as follows:
  *
  * <pre>
  * IdLock.Entry lockEntry = idLock.getLockEntry(id);
@@ -37,7 +37,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  *   // User code.
  * } finally {
  *   idLock.releaseLockEntry(lockEntry);
- * }</pre>
+ * }
+ * </pre>
  */
 @InterfaceAudience.Private
 public class IdLock {
@@ -58,8 +59,8 @@ public class IdLock {
 
     @Override
     public String toString() {
-      return "id=" + id + ", numWaiter=" + numWaiters + ", isLocked="
-          + locked + ", holder=" + holder;
+      return "id=" + id + ", numWaiter=" + numWaiters + ", isLocked=" + locked + ", holder="
+        + holder;
     }
   }
 
@@ -67,10 +68,8 @@ public class IdLock {
 
   /**
    * Blocks until the lock corresponding to the given id is acquired.
-   *
    * @param id an arbitrary number to lock on
-   * @return an "entry" to pass to {@link #releaseLockEntry(Entry)} to release
-   *         the lock
+   * @return an "entry" to pass to {@link #releaseLockEntry(Entry)} to release the lock
    * @throws IOException if interrupted
    */
   public Entry getLockEntry(long id) throws IOException {
@@ -80,12 +79,12 @@ public class IdLock {
     while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
       synchronized (existing) {
         if (existing.locked) {
-          ++existing.numWaiters;  // Add ourselves to waiters.
+          ++existing.numWaiters; // Add ourselves to waiters.
           while (existing.locked) {
             try {
               existing.wait();
             } catch (InterruptedException e) {
-              --existing.numWaiters;  // Remove ourselves from waiters.
+              --existing.numWaiters; // Remove ourselves from waiters.
               // HBASE-21292
               // There is a rare case that interrupting and the lock owner thread call
               // releaseLockEntry at the same time. Since the owner thread found there
@@ -97,12 +96,11 @@ public class IdLock {
               if (!existing.locked && existing.numWaiters == 0) {
                 map.remove(existing.id);
               }
-              throw new InterruptedIOException(
-                  "Interrupted waiting to acquire sparse lock");
+              throw new InterruptedIOException("Interrupted waiting to acquire sparse lock");
             }
           }
 
-          --existing.numWaiters;  // Remove ourselves from waiters.
+          --existing.numWaiters; // Remove ourselves from waiters.
           existing.locked = true;
           existing.holder = currentThread;
           return existing;
@@ -117,11 +115,9 @@ public class IdLock {
 
   /**
    * Blocks until the lock corresponding to the given id is acquired.
-   *
-   * @param id an arbitrary number to lock on
+   * @param id   an arbitrary number to lock on
    * @param time time to wait in ms
-   * @return an "entry" to pass to {@link #releaseLockEntry(Entry)} to release
-   *         the lock
+   * @return an "entry" to pass to {@link #releaseLockEntry(Entry)} to release the lock
    * @throws IOException if interrupted
    */
   public Entry tryLockEntry(long id, long time) throws IOException {
@@ -134,7 +130,7 @@ public class IdLock {
     while ((existing = map.putIfAbsent(entry.id, entry)) != null) {
       synchronized (existing) {
         if (existing.locked) {
-          ++existing.numWaiters;  // Add ourselves to waiters.
+          ++existing.numWaiters; // Add ourselves to waiters.
           try {
             while (existing.locked) {
               existing.wait(remaining);
@@ -159,10 +155,9 @@ public class IdLock {
             if (!existing.locked && existing.numWaiters == 1) {
               map.remove(existing.id);
             }
-            throw new InterruptedIOException(
-                "Interrupted waiting to acquire sparse lock");
+            throw new InterruptedIOException("Interrupted waiting to acquire sparse lock");
           } finally {
-            --existing.numWaiters;  // Remove ourselves from waiters.
+            --existing.numWaiters; // Remove ourselves from waiters.
           }
           existing.locked = true;
           existing.holder = currentThread;

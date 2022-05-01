@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,14 +21,13 @@ import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A collection class that contains multiple sub-lists, which allows us to not copy lists.
- * This class does not support modification. The derived classes that add modifications are
- * not thread-safe.
- * NOTE: Doesn't implement list as it is not necessary for current usage, feel free to add.
+ * A collection class that contains multiple sub-lists, which allows us to not copy lists. This
+ * class does not support modification. The derived classes that add modifications are not
+ * thread-safe. NOTE: Doesn't implement list as it is not necessary for current usage, feel free to
+ * add.
  */
 @InterfaceAudience.Private
 public class ConcatenatedLists<T> extends AbstractCollection<T> {
@@ -59,9 +57,8 @@ public class ConcatenatedLists<T> extends AbstractCollection<T> {
     return new Iterator();
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
-    justification="nextWasCalled is using by StripeStoreFileManager")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+      justification = "nextWasCalled is using by StripeStoreFileManager")
   public class Iterator implements java.util.Iterator<T> {
     protected int currentComponent = 0;
     protected int indexWithinComponent = -1;
@@ -70,8 +67,8 @@ public class ConcatenatedLists<T> extends AbstractCollection<T> {
     @Override
     public boolean hasNext() {
       return (currentComponent + 1) < components.size()
-          || ((currentComponent + 1) == components.size()
-              && ((indexWithinComponent + 1) < components.get(currentComponent).size()));
+        || ((currentComponent + 1) == components.size()
+          && ((indexWithinComponent + 1) < components.get(currentComponent).size()));
     }
 
     @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CloseRegion
 /**
  * Tests on the region server, without the master.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionServerNoMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerNoMaster.class);
+    HBaseClassTestRule.forClass(TestRegionServerNoMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerNoMaster.class);
   private static final int NB_SERVERS = 1;
@@ -73,14 +73,13 @@ public class TestRegionServerNoMaster {
   private static byte[] regionName;
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
-
   @BeforeClass
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
     final TableName tableName = TableName.valueOf(TestRegionServerNoMaster.class.getSimpleName());
 
     // Create table then get the single region for our new table.
-    table = HTU.createTable(tableName,HConstants.CATALOG_FAMILY);
+    table = HTU.createTable(tableName, HConstants.CATALOG_FAMILY);
     Put p = new Put(row);
     p.addColumn(HConstants.CATALOG_FAMILY, row, row);
     table.put(p);
@@ -94,7 +93,7 @@ public class TestRegionServerNoMaster {
   }
 
   public static void stopMasterAndAssignMeta(HBaseTestingUtility HTU)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // Stop master
     HMaster master = HTU.getHBaseCluster().getMaster();
     Thread masterThread = HTU.getHBaseCluster().getMasterThread();
@@ -109,21 +108,21 @@ public class TestRegionServerNoMaster {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = true;
     // Master is down, so is the meta. We need to assign it somewhere
     // so that regions can be assigned during the mocking phase.
-    HRegionServer hrs = HTU.getHBaseCluster()
-      .getLiveRegionServerThreads().get(0).getRegionServer();
+    HRegionServer hrs = HTU.getHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
     ZKWatcher zkw = hrs.getZooKeeper();
     ServerName sn = MetaTableLocator.getMetaRegionLocation(zkw);
     if (sn != null && !masterAddr.equals(sn)) {
       return;
     }
 
-    ProtobufUtil.openRegion(null, hrs.getRSRpcServices(),
-      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+    ProtobufUtil.openRegion(null, hrs.getRSRpcServices(), hrs.getServerName(),
+      HRegionInfo.FIRST_META_REGIONINFO);
     while (true) {
       sn = MetaTableLocator.getMetaRegionLocation(zkw);
-      if (sn != null && sn.equals(hrs.getServerName())
-          && hrs.getOnlineRegions().containsKey(
-              HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+      if (
+        sn != null && sn.equals(hrs.getServerName())
+          && hrs.getOnlineRegions().containsKey(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())
+      ) {
         break;
       }
       Thread.sleep(100);
@@ -158,23 +157,21 @@ public class TestRegionServerNoMaster {
     return HTU.getHBaseCluster().getLiveRegionServerThreads().get(0).getRegionServer();
   }
 
-
   public static void openRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
-      throws Exception {
+    throws Exception {
     AdminProtos.OpenRegionRequest orr =
       RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = rs.rpcServices.openRegion(null, orr);
 
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
-    Assert.assertTrue(responseOpen.getOpeningState(0).
-        equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED));
-
+    Assert.assertTrue(responseOpen.getOpeningState(0)
+      .equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED));
 
     checkRegionIsOpened(HTU, rs, hri);
   }
 
-  public static void checkRegionIsOpened(HBaseTestingUtility HTU, HRegionServer rs,
-      HRegionInfo hri) throws Exception {
+  public static void checkRegionIsOpened(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
+    throws Exception {
     while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
@@ -183,16 +180,16 @@ public class TestRegionServerNoMaster {
   }
 
   public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
-      throws Exception {
-    AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      rs.getServerName(), hri.getRegionName());
+    throws Exception {
+    AdminProtos.CloseRegionRequest crr =
+      ProtobufUtil.buildCloseRegionRequest(rs.getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose = rs.rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
     checkRegionIsClosed(HTU, rs, hri);
   }
 
-  public static void checkRegionIsClosed(HBaseTestingUtility HTU, HRegionServer rs,
-      HRegionInfo hri) throws Exception {
+  public static void checkRegionIsClosed(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
+    throws Exception {
     while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
@@ -210,14 +207,13 @@ public class TestRegionServerNoMaster {
   private void closeRegionNoZK() throws Exception {
     // no transition in ZK
     AdminProtos.CloseRegionRequest crr =
-        ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
+      ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
     AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     // now waiting & checking. After a while, the transition should be done and the region closed
     checkRegionIsClosed(HTU, getRS(), hri);
   }
-
 
   @Test
   public void testCloseByRegionServer() throws Exception {
@@ -229,11 +225,11 @@ public class TestRegionServerNoMaster {
   public void testMultipleCloseFromMaster() throws Exception {
     for (int i = 0; i < 10; i++) {
       AdminProtos.CloseRegionRequest crr =
-          ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName, null);
+        ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName, null);
       try {
         AdminProtos.CloseRegionResponse responseClose = getRS().rpcServices.closeRegion(null, crr);
         Assert.assertTrue("request " + i + " failed",
-            responseClose.getClosed() || responseClose.hasClosed());
+          responseClose.getClosed() || responseClose.hasClosed());
       } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
         Assert.assertTrue("The next queries may throw an exception.", i > 0);
       }
@@ -258,7 +254,7 @@ public class TestRegionServerNoMaster {
 
     // That's a close without ZK.
     AdminProtos.CloseRegionRequest crr =
-        ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
+      ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
     try {
       getRS().rpcServices.closeRegion(null, crr);
       Assert.assertTrue(false);
@@ -266,8 +262,8 @@ public class TestRegionServerNoMaster {
     }
 
     // The state in RIT should have changed to close
-    Assert.assertEquals(Boolean.FALSE, getRS().getRegionsInTransitionInRS().get(
-        hri.getEncodedNameAsBytes()));
+    Assert.assertEquals(Boolean.FALSE,
+      getRS().getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()));
 
     // Let's start the open handler
     TableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
@@ -281,8 +277,8 @@ public class TestRegionServerNoMaster {
   }
 
   /**
-   * Tests an on-the-fly RPC that was scheduled for the earlier RS on the same port
-   * for openRegion. The region server should reject this RPC. (HBASE-9721)
+   * Tests an on-the-fly RPC that was scheduled for the earlier RS on the same port for openRegion.
+   * The region server should reject this RPC. (HBASE-9721)
    */
   @Test
   public void testOpenCloseRegionRPCIntendedForPreviousServer() throws Exception {
@@ -292,24 +288,27 @@ public class TestRegionServerNoMaster {
     ServerName earlierServerName = ServerName.valueOf(sn.getHostname(), sn.getPort(), 1);
 
     try {
-      CloseRegionRequest request = ProtobufUtil.buildCloseRegionRequest(earlierServerName, regionName);
+      CloseRegionRequest request =
+        ProtobufUtil.buildCloseRegionRequest(earlierServerName, regionName);
       getRS().getRSRpcServices().closeRegion(null, request);
       Assert.fail("The closeRegion should have been rejected");
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       Assert.assertTrue(se.getCause() instanceof IOException);
-      Assert.assertTrue(se.getCause().getMessage().contains("This RPC was intended for a different server"));
+      Assert.assertTrue(
+        se.getCause().getMessage().contains("This RPC was intended for a different server"));
     }
 
-    //actual close
+    // actual close
     closeRegionNoZK();
     try {
-      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-        earlierServerName, hri, null);
+      AdminProtos.OpenRegionRequest orr =
+        RequestConverter.buildOpenRegionRequest(earlierServerName, hri, null);
       getRS().getRSRpcServices().openRegion(null, orr);
       Assert.fail("The openRegion should have been rejected");
     } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException se) {
       Assert.assertTrue(se.getCause() instanceof IOException);
-      Assert.assertTrue(se.getCause().getMessage().contains("This RPC was intended for a different server"));
+      Assert.assertTrue(
+        se.getCause().getMessage().contains("This RPC was intended for a different server"));
     } finally {
       openRegion(HTU, getRS(), hri);
     }

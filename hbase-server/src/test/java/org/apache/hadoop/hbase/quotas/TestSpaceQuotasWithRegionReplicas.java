@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -36,16 +37,15 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 @Category(LargeTests.class)
 public class TestSpaceQuotasWithRegionReplicas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotasWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotasWithRegionReplicas.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestSpaceQuotasWithRegionReplicas.class);
+    LoggerFactory.getLogger(TestSpaceQuotasWithRegionReplicas.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Rule
@@ -99,14 +99,14 @@ public class TestSpaceQuotasWithRegionReplicas {
   }
 
   private void setQuotaAndVerifyForRegionReplication(int region, int replicatedRegion,
-      SpaceViolationPolicy policy) throws Exception {
+    SpaceViolationPolicy policy) throws Exception {
     TableName tn = helper.createTableWithRegions(TEST_UTIL.getAdmin(),
-        NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, region, replicatedRegion);
+      NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR, region, replicatedRegion);
     helper.setQuotaLimit(tn, policy, 5L);
     helper.writeData(tn, 5L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
     Put p = new Put(Bytes.toBytes("to_reject"));
     p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
     helper.verifyViolation(policy, tn, p);
   }
 }

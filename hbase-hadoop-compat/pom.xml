@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+  <!--
     /**
      * Licensed to the Apache Software Foundation (ASF) under one
      * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,80 @@
      * limitations under the License.
      */
     -->
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <artifactId>hbase-build-configuration</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>2.4.6.7.2.16.0-SNAPSHOT</version>
-        <relativePath>../hbase-build-configuration</relativePath>
-    </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
+    <version>2.4.6.7.2.16.0-SNAPSHOT</version>
+    <relativePath>../hbase-build-configuration</relativePath>
+  </parent>
 
-    <artifactId>hbase-hadoop-compat</artifactId>
-    <name>Apache HBase - Hadoop Compatibility</name>
-    <description>
-        Interfaces to be implemented in order to smooth
-        over hadoop version differences
-    </description>
+  <artifactId>hbase-hadoop-compat</artifactId>
+  <name>Apache HBase - Hadoop Compatibility</name>
+  <description>Interfaces to be implemented in order to smooth
+        over hadoop version differences</description>
 
-    <build>
-      <plugins>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-logging</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-miscellaneous</artifactId>
+    </dependency>
+    <!-- General dependencies -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-metrics-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
       <plugin>
         <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
@@ -43,117 +100,57 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-        <!-- Make a jar and put the sources in the jar -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
-          <plugin>
-              <groupId>net.revelc.code</groupId>
-              <artifactId>warbucks-maven-plugin</artifactId>
-          </plugin>
-        </plugins>
-    </build>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 
-    <dependencies>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-annotations</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-logging</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-common</artifactId>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase.thirdparty</groupId>
-        <artifactId>hbase-shaded-miscellaneous</artifactId>
-      </dependency>
-      <!-- General dependencies -->
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-metrics-api</artifactId>
-      </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jul-to-slf4j</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <scope>test</scope>
-      </dependency>
-    </dependencies>
-
-    <profiles>
-        <!-- Skip the tests in this module -->
-        <profile>
-            <id>skipHadoopCompatTests</id>
-            <activation>
-                <property>
-                    <name>skipHadoopCompatTests</name>
-                </property>
-            </activation>
-            <properties>
-                <surefire.skipFirstPart>true</surefire.skipFirstPart>
-                <surefire.skipSecondPart>true</surefire.skipSecondPart>
-            </properties>
-        </profile>
-      <profile>
-        <id>eclipse-specific</id>
-        <activation>
-          <property>
-            <name>m2e.version</name>
-          </property>
-        </activation>
-        <build>
-          <pluginManagement>
-            <plugins>
-              <!--This plugin's configuration is used to store Eclipse m2e settings
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipHadoopCompatTests</id>
+      <activation>
+        <property>
+          <name>skipHadoopCompatTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+    <profile>
+      <id>eclipse-specific</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings
                    only. It has no influence on the Maven build itself.-->
-              <plugin>
-                <groupId>org.eclipse.m2e</groupId>
-                <artifactId>lifecycle-mapping</artifactId>
-                <configuration>
-                  <lifecycleMappingMetadata>
-                    <pluginExecutions>
-                    </pluginExecutions>
-                  </lifecycleMappingMetadata>
-                </configuration>
-              </plugin>
-            </plugins>
-          </pluginManagement>
-        </build>
-      </profile>
-    </profiles>
+            <plugin>
+              <groupId>org.eclipse.m2e</groupId>
+              <artifactId>lifecycle-mapping</artifactId>
+              <configuration>
+                <lifecycleMappingMetadata>
+                  <pluginExecutions/>
+                </lifecycleMappingMetadata>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
 
 </project>

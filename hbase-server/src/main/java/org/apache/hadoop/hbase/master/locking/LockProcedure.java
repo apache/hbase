@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -12,18 +11,16 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUTKey WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.locking;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockProcedureData;
@@ -45,8 +43,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 /**
  * Procedure to allow blessed clients and external admin tools to take our internal Schema locks
  * used by the procedure framework isolating procedures doing creates/deletes etc. on
- * table/namespace/regions.
- * This procedure when scheduled, acquires specified locks, suspends itself and waits for:
+ * table/namespace/regions. This procedure when scheduled, acquires specified locks, suspends itself
+ * and waits for:
  * <ul>
  * <li>Call to unlock: if lock request came from the process itself, say master chore.</li>
  * <li>Timeout : if lock request came from RPC. On timeout, evaluates if it should continue holding
@@ -55,16 +53,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public final class LockProcedure extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface {
+  implements TableProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(LockProcedure.class);
 
-  public static final int DEFAULT_REMOTE_LOCKS_TIMEOUT_MS = 30000;  // timeout in ms
+  public static final int DEFAULT_REMOTE_LOCKS_TIMEOUT_MS = 30000; // timeout in ms
   public static final String REMOTE_LOCKS_TIMEOUT_MS_CONF =
-      "hbase.master.procedure.remote.locks.timeout.ms";
+    "hbase.master.procedure.remote.locks.timeout.ms";
   // 10 min. Same as old ZK lock timeout.
   public static final int DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS = 600000;
   public static final String LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF =
-      "hbase.master.procedure.local.master.locks.timeout.ms";
+    "hbase.master.procedure.local.master.locks.timeout.ms";
 
   private String namespace;
   private TableName tableName;
@@ -104,6 +102,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
 
   private interface LockInterface {
     boolean acquireLock(MasterProcedureEnv env);
+
     void releaseLock(MasterProcedureEnv env);
   }
 
@@ -111,16 +110,16 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     lockAcquireLatch = null;
   }
 
-  private LockProcedure(final Configuration conf, final LockType type,
-      final String description, final CountDownLatch lockAcquireLatch) {
+  private LockProcedure(final Configuration conf, final LockType type, final String description,
+    final CountDownLatch lockAcquireLatch) {
     this.type = type;
     this.description = description;
     this.lockAcquireLatch = lockAcquireLatch;
     if (lockAcquireLatch == null) {
       setTimeout(conf.getInt(REMOTE_LOCKS_TIMEOUT_MS_CONF, DEFAULT_REMOTE_LOCKS_TIMEOUT_MS));
     } else {
-      setTimeout(conf.getInt(LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF,
-          DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS));
+      setTimeout(
+        conf.getInt(LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF, DEFAULT_LOCAL_MASTER_LOCKS_TIMEOUT_MS));
     }
   }
 
@@ -129,8 +128,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    * @param lockAcquireLatch if not null, the latch is decreased when lock is acquired.
    */
   public LockProcedure(final Configuration conf, final String namespace, final LockType type,
-      final String description, final CountDownLatch lockAcquireLatch)
-      throws IllegalArgumentException {
+    final String description, final CountDownLatch lockAcquireLatch)
+    throws IllegalArgumentException {
     this(conf, type, description, lockAcquireLatch);
 
     if (namespace.isEmpty()) {
@@ -146,8 +145,8 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
    * @param lockAcquireLatch if not null, the latch is decreased when lock is acquired.
    */
   public LockProcedure(final Configuration conf, final TableName tableName, final LockType type,
-      final String description, final CountDownLatch lockAcquireLatch)
-      throws IllegalArgumentException {
+    final String description, final CountDownLatch lockAcquireLatch)
+    throws IllegalArgumentException {
     this(conf, type, description, lockAcquireLatch);
 
     this.tableName = tableName;
@@ -156,13 +155,13 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
 
   /**
    * Constructor for region lock(s).
-   * @param lockAcquireLatch if not null, the latch is decreased when lock is acquired.
-   *                        Useful for locks acquired locally from master process.
+   * @param lockAcquireLatch if not null, the latch is decreased when lock is acquired. Useful for
+   *                         locks acquired locally from master process.
    * @throws IllegalArgumentException if all regions are not from same table.
    */
   public LockProcedure(final Configuration conf, final RegionInfo[] regionInfos,
-      final LockType type, final String description, final CountDownLatch lockAcquireLatch)
-      throws IllegalArgumentException {
+    final LockType type, final String description, final CountDownLatch lockAcquireLatch)
+    throws IllegalArgumentException {
     this(conf, type, description, lockAcquireLatch);
 
     // Build RegionInfo from region names.
@@ -205,13 +204,13 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   protected synchronized boolean setTimeoutFailure(final MasterProcedureEnv env) {
     synchronized (event) {
       if (LOG.isDebugEnabled()) LOG.debug("Timeout failure " + this.event);
-      if (!event.isReady()) {  // Maybe unlock() awakened the event.
+      if (!event.isReady()) { // Maybe unlock() awakened the event.
         setState(ProcedureProtos.ProcedureState.RUNNABLE);
         if (LOG.isDebugEnabled()) LOG.debug("Calling wake on " + this.event);
         event.wake(env.getProcedureScheduler());
       }
     }
-    return false;  // false: do not mark the procedure as failed.
+    return false; // false: do not mark the procedure as failed.
   }
 
   // Can be called before procedure gets scheduled, in which case, the execute() will finish
@@ -231,7 +230,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(final MasterProcedureEnv env)
-  throws ProcedureSuspendedException {
+    throws ProcedureSuspendedException {
     // Local master locks don't store any state, so on recovery, simply finish this procedure
     // immediately.
     if (recoveredMasterLock) return null;
@@ -240,7 +239,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     }
     if (unlock.get() || hasHeartbeatExpired()) {
       locked.set(false);
-      LOG.debug((unlock.get()? "UNLOCKED " : "TIMED OUT ") + toString());
+      LOG.debug((unlock.get() ? "UNLOCKED " : "TIMED OUT ") + toString());
       return null;
     }
     synchronized (event) {
@@ -264,11 +263,9 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     final LockProcedureData.Builder builder = LockProcedureData.newBuilder()
-          .setLockType(LockServiceProtos.LockType.valueOf(type.name()))
-          .setDescription(description);
+      .setLockType(LockServiceProtos.LockType.valueOf(type.name())).setDescription(description);
     if (regionInfos != null) {
       for (int i = 0; i < regionInfos.length; ++i) {
         builder.addRegionInfo(ProtobufUtil.toRegionInfo(regionInfos[i]));
@@ -285,8 +282,7 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     final LockProcedureData state = serializer.deserialize(LockProcedureData.class);
     type = LockType.valueOf(state.getLockType().name());
     description = state.getDescription();
@@ -325,10 +321,10 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
   }
 
   /**
-   * On recovery, re-execute from start to acquire the locks.
-   * Need to explicitly set it to RUNNABLE because the procedure might have been in WAITING_TIMEOUT
-   * state when crash happened. In which case, it'll be sent back to timeout queue on recovery,
-   * which we don't want since we want to require locks.
+   * On recovery, re-execute from start to acquire the locks. Need to explicitly set it to RUNNABLE
+   * because the procedure might have been in WAITING_TIMEOUT state when crash happened. In which
+   * case, it'll be sent back to timeout queue on recovery, which we don't want since we want to
+   * require locks.
    */
   @Override
   protected void beforeReplay(MasterProcedureEnv env) {
@@ -460,14 +456,12 @@ public final class LockProcedure extends Procedure<MasterProcedureEnv>
     public boolean acquireLock(final MasterProcedureEnv env) {
       // We invert return from waitNamespaceExclusiveLock; it returns true if you HAVE TO WAIT
       // to get the lock and false if you don't; i.e. you got the lock.
-      return !env.getProcedureScheduler().waitNamespaceExclusiveLock(
-          LockProcedure.this, namespace);
+      return !env.getProcedureScheduler().waitNamespaceExclusiveLock(LockProcedure.this, namespace);
     }
 
     @Override
     public void releaseLock(final MasterProcedureEnv env) {
-      env.getProcedureScheduler().wakeNamespaceExclusiveLock(
-          LockProcedure.this, namespace);
+      env.getProcedureScheduler().wakeNamespaceExclusiveLock(LockProcedure.this, namespace);
     }
   }
 

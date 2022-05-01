@@ -129,14 +129,16 @@ public class CatalogJanitor extends ScheduledChore {
   protected void chore() {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
-      if (getEnabled() && !this.services.isInMaintenanceMode() &&
-        !this.services.getServerManager().isClusterShutdown() && isMetaLoaded(am)) {
+      if (
+        getEnabled() && !this.services.isInMaintenanceMode()
+          && !this.services.getServerManager().isClusterShutdown() && isMetaLoaded(am)
+      ) {
         scan();
       } else {
-        LOG.warn("CatalogJanitor is disabled! Enabled=" + getEnabled() + ", maintenanceMode=" +
-          this.services.isInMaintenanceMode() + ", am=" + am + ", metaLoaded=" + isMetaLoaded(am) +
-          ", hasRIT=" + isRIT(am) + " clusterShutDown=" +
-          this.services.getServerManager().isClusterShutdown());
+        LOG.warn("CatalogJanitor is disabled! Enabled=" + getEnabled() + ", maintenanceMode="
+          + this.services.isInMaintenanceMode() + ", am=" + am + ", metaLoaded=" + isMetaLoaded(am)
+          + ", hasRIT=" + isRIT(am) + " clusterShutDown="
+          + this.services.getServerManager().isClusterShutdown());
       }
     } catch (IOException e) {
       LOG.warn("Failed janitorial scan of hbase:meta table", e);
@@ -206,8 +208,10 @@ public class CatalogJanitor extends ScheduledChore {
           break;
         }
 
-        if (!parentNotCleaned.contains(e.getKey().getEncodedName()) &&
-          cleanParent(e.getKey(), e.getValue())) {
+        if (
+          !parentNotCleaned.contains(e.getKey().getEncodedName())
+            && cleanParent(e.getKey(), e.getValue())
+        ) {
           gcs++;
         } else {
           // We could not clean the parent, so it's daughters should not be
@@ -273,7 +277,7 @@ public class CatalogJanitor extends ScheduledChore {
       }
       ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
       GCMultipleMergedRegionsProcedure mergeRegionProcedure =
-          new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
+        new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
       pe.submitProcedure(mergeRegionProcedure);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Submitted procedure {} for merged region {}", mergeRegionProcedure,
@@ -340,8 +344,8 @@ public class CatalogJanitor extends ScheduledChore {
       String daughterB =
         daughters.getSecond() != null ? daughters.getSecond().getShortNameToLog() : "null";
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- " +
-          daughterA + ", " + daughterB + " -- no longer hold references");
+        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- "
+          + daughterA + ", " + daughterB + " -- no longer hold references");
       }
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
@@ -367,7 +371,7 @@ public class CatalogJanitor extends ScheduledChore {
 
   /**
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param parent RegionInfo of split offlined parent
+   * @param parent     RegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in <code>metaRegionName</code>
    * @return True if we removed <code>parent</code> from meta table and from the filesystem.
    */
@@ -387,7 +391,7 @@ public class CatalogJanitor extends ScheduledChore {
 
   /**
    * Checks if a daughter region -- either splitA or splitB -- still holds references to parent.
-   * @param parent Parent region
+   * @param parent   Parent region
    * @param daughter Daughter region
    * @return A pair where the first boolean says whether or not the daughter region directory exists
    *         in the filesystem and then the second boolean says whether the daughter has references
@@ -412,8 +416,8 @@ public class CatalogJanitor extends ScheduledChore {
         return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
-      LOG.error("Error trying to determine if daughter region exists, " +
-        "assuming exists and has references", ioe);
+      LOG.error("Error trying to determine if daughter region exists, "
+        + "assuming exists and has references", ioe);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
 
@@ -430,8 +434,8 @@ public class CatalogJanitor extends ScheduledChore {
         }
       }
     } catch (IOException e) {
-      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName() +
-        ", to: " + parent.getEncodedName() + " assuming has references", e);
+      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
+        + ", to: " + parent.getEncodedName() + " assuming has references", e);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
     return new Pair<>(Boolean.TRUE, references);
@@ -443,13 +447,13 @@ public class CatalogJanitor extends ScheduledChore {
 
   private void updateAssignmentManagerMetrics() {
     services.getAssignmentManager().getAssignmentManagerMetrics()
-        .updateHoles(lastReport.getHoles().size());
+      .updateHoles(lastReport.getHoles().size());
     services.getAssignmentManager().getAssignmentManagerMetrics()
-        .updateOverlaps(lastReport.getOverlaps().size());
+      .updateOverlaps(lastReport.getOverlaps().size());
     services.getAssignmentManager().getAssignmentManagerMetrics()
-        .updateUnknownServerRegions(lastReport.getUnknownServers().size());
+      .updateUnknownServerRegions(lastReport.getUnknownServers().size());
     services.getAssignmentManager().getAssignmentManagerMetrics()
-        .updateEmptyRegionInfoRegions(lastReport.getEmptyRegionInfo().size());
+      .updateEmptyRegionInfoRegions(lastReport.getEmptyRegionInfo().size());
   }
 
   private static void checkLog4jProperties() {

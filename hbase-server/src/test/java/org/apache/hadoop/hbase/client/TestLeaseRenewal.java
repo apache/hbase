@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class TestLeaseRenewal {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLeaseRenewal.class);
+    HBaseClassTestRule.forClass(TestLeaseRenewal.class);
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -61,7 +61,7 @@ public class TestLeaseRenewal {
   private final static byte[] VAL_BYTES = Bytes.toBytes("v1");
   private final static byte[] ROW_BYTES = Bytes.toBytes("r1");
   private final static int leaseTimeout =
-      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD / 4;
+    HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD / 4;
 
   @Rule
   public TestName name = new TestName();
@@ -120,11 +120,11 @@ public class TestLeaseRenewal {
     assertTrue(Arrays.equals(rs.next().getRow(), ANOTHERROW));
     // renew the lease a few times, long enough to be sure
     // the lease would have expired otherwise
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
-    Thread.sleep(leaseTimeout/2);
+    Thread.sleep(leaseTimeout / 2);
     assertTrue(rs.renewLease());
     // make sure we haven't advanced the scanner
     assertTrue(Arrays.equals(rs.next().getRow(), ROW_BYTES));
@@ -137,7 +137,7 @@ public class TestLeaseRenewal {
     rs.close();
     table.close();
     MetricsHBaseServerSource serverSource = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-        .getRpcServer().getMetrics().getMetricsSource();
+      .getRpcServer().getMetrics().getMetricsSource();
     HELPER.assertCounter("exceptions.OutOfOrderScannerNextException", 0, serverSource);
   }
 }

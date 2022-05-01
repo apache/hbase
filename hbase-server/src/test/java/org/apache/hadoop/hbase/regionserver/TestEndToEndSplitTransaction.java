@@ -133,8 +133,8 @@ public class TestEndToEndSplitTransaction {
             StoreFileReader reader = ((HStoreFile) sf).getReader();
             reader.getStoreFileScanner(true, false, false, 0, 0, false);
             scanner.put(r.getRegionInfo().getEncodedName(), reader);
-            LOG.info("Got reference to file = " + sf.getPath() + ",for region = " +
-              r.getRegionInfo().getEncodedName());
+            LOG.info("Got reference to file = " + sf.getPath() + ",for region = "
+              + r.getRegionInfo().getEncodedName());
           }));
       assertTrue("Regions did not split properly", regions.size() > 1);
       assertTrue("Could not get reference any of the store file", scanner.size() > 1);
@@ -353,8 +353,8 @@ public class TestEndToEndSplitTransaction {
       // ensure that we do not have any gaps
       for (int i = 0; i < startKeys.length; i++) {
         assertArrayEquals(
-          "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey) +
-            " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]),
+          "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey)
+            + " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]),
           prevEndKey, startKeys[i]);
         prevEndKey = endKeys[i];
       }
@@ -380,7 +380,7 @@ public class TestEndToEndSplitTransaction {
   /* some utility methods for split tests */
 
   public static void flushAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     log("flushing region: " + Bytes.toStringBinary(regionName));
     admin.flushRegion(regionName);
     log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
@@ -391,14 +391,15 @@ public class TestEndToEndSplitTransaction {
   }
 
   public static void compactAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     log("Compacting region: " + Bytes.toStringBinary(regionName));
     // Wait till its online before we do compact else it comes back with NoServerForRegionException
     try {
       TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-        @Override public boolean evaluate() throws Exception {
-          return rs.getServerName().equals(MetaTableAccessor.
-            getRegionLocation(admin.getConnection(), regionName).getServerName());
+        @Override
+        public boolean evaluate() throws Exception {
+          return rs.getServerName().equals(
+            MetaTableAccessor.getRegionLocation(admin.getConnection(), regionName).getServerName());
         }
       });
     } catch (Exception e) {
@@ -422,12 +423,12 @@ public class TestEndToEndSplitTransaction {
    * Blocks until the region split is complete in hbase:meta and region server opens the daughters
    */
   public static void blockUntilRegionSplit(Configuration conf, long timeout,
-      final byte[] regionName, boolean waitForDaughters) throws IOException, InterruptedException {
+    final byte[] regionName, boolean waitForDaughters) throws IOException, InterruptedException {
     long start = System.currentTimeMillis();
     log("blocking until region is split:" + Bytes.toStringBinary(regionName));
     RegionInfo daughterA = null, daughterB = null;
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
+      Table metaTable = conn.getTable(TableName.META_TABLE_NAME)) {
       Result result = null;
       RegionInfo region = null;
       while ((System.currentTimeMillis() - start) < timeout) {
@@ -447,9 +448,9 @@ public class TestEndToEndSplitTransaction {
         Threads.sleep(100);
       }
       if (daughterA == null || daughterB == null) {
-        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB=" +
-          daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName=" +
-          Bytes.toString(regionName) + ", region=" + region);
+        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB="
+          + daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName="
+          + Bytes.toString(regionName) + ", region=" + region);
       }
 
       // if we are here, this means the region split is complete or timed out
@@ -479,7 +480,7 @@ public class TestEndToEndSplitTransaction {
   }
 
   public static void removeCompactedFiles(Connection conn, long timeout, RegionInfo hri)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     log("remove compacted files for : " + hri.getRegionNameAsString());
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(hri.getTable());
     regions.stream().forEach(r -> {
@@ -492,7 +493,7 @@ public class TestEndToEndSplitTransaction {
   }
 
   public static void blockUntilRegionIsInMeta(Connection conn, long timeout, RegionInfo hri)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     log("blocking until region is in META: " + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timeout) {
@@ -506,11 +507,11 @@ public class TestEndToEndSplitTransaction {
   }
 
   public static void blockUntilRegionIsOpened(Configuration conf, long timeout, RegionInfo hri)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     log("blocking until region is opened for reading:" + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        Table table = conn.getTable(hri.getTable())) {
+      Table table = conn.getTable(hri.getTable())) {
       byte[] row = hri.getStartKey();
       // Check for null/empty row. If we find one, use a key that is likely to be in first region.
       if (row == null || row.length <= 0) {

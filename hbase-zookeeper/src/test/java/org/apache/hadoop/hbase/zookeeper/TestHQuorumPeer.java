@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,17 +44,16 @@ import org.junit.experimental.categories.Category;
 public class TestHQuorumPeer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHQuorumPeer.class);
+    HBaseClassTestRule.forClass(TestHQuorumPeer.class);
 
   private static final HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
   private static int PORT_NO = 21818;
   private Path dataDir;
 
-
-  @Before public void setup() throws IOException {
+  @Before
+  public void setup() throws IOException {
     // Set it to a non-standard port.
-    TEST_UTIL.getConfiguration().setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
-        PORT_NO);
+    TEST_UTIL.getConfiguration().setInt(HConstants.ZOOKEEPER_CLIENT_PORT, PORT_NO);
     this.dataDir = TEST_UTIL.getDataTestDir(this.getClass().getName());
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     if (fs.exists(this.dataDir)) {
@@ -67,13 +66,13 @@ public class TestHQuorumPeer {
     }
   }
 
-  @Test public void testMakeZKProps() {
+  @Test
+  public void testMakeZKProps() {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(HConstants.ZOOKEEPER_DATA_DIR, this.dataDir.toString());
     Properties properties = ZKConfig.makeZKProps(conf);
-    assertEquals(dataDir.toString(), (String)properties.get("dataDir"));
-    assertEquals(Integer.valueOf(PORT_NO),
-      Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals(dataDir.toString(), (String) properties.get("dataDir"));
+    assertEquals(Integer.valueOf(PORT_NO), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("127.0.0.1:2888:3888", properties.get("server.0"));
     assertNull(properties.get("server.1"));
 
@@ -81,8 +80,7 @@ public class TestHQuorumPeer {
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
     properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(PORT_NO),
-      Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals(Integer.valueOf(PORT_NO), Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
     assertEquals("b.foo.bar:2888:3888", properties.get("server.1"));
     assertEquals("c.foo.bar:2888:3888", properties.get("server.2"));
@@ -90,7 +88,8 @@ public class TestHQuorumPeer {
     conf.set(HConstants.ZOOKEEPER_QUORUM, oldValue);
   }
 
-  @Test public void testShouldAssignDefaultZookeeperClientPort() {
+  @Test
+  public void testShouldAssignDefaultZookeeperClientPort() {
     Configuration config = HBaseConfiguration.create();
     config.clear();
     Properties p = ZKConfig.makeZKProps(config);

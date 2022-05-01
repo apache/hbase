@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,10 +60,10 @@ public class TestBoundedRegionGroupingStrategy {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBoundedRegionGroupingStrategy.class);
+    HBaseClassTestRule.forClass(TestBoundedRegionGroupingStrategy.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
+    LoggerFactory.getLogger(TestBoundedRegionGroupingStrategy.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -137,9 +137,9 @@ public class TestBoundedRegionGroupingStrategy {
   @Test
   public void testMoreRegionsThanBound() throws Exception {
     final String parallelism = Integer.toString(DEFAULT_NUM_REGION_GROUPS * 2);
-    int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-      new String[] { "-threads", parallelism, "-verify", "-noclosefs", "-iterations", "3000",
-          "-regions", parallelism });
+    int errCode =
+      WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
+        parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
     assertEquals(0, errCode);
   }
 
@@ -149,9 +149,9 @@ public class TestBoundedRegionGroupingStrategy {
     try {
       CONF.setInt(NUM_REGION_GROUPS, temp * 4);
       final String parallelism = Integer.toString(temp * 4);
-      int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-        new String[] { "-threads", parallelism, "-verify", "-noclosefs", "-iterations", "3000",
-            "-regions", parallelism });
+      int errCode =
+        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
+          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
       assertEquals(0, errCode);
     } finally {
       CONF.setInt(NUM_REGION_GROUPS, temp);
@@ -164,9 +164,9 @@ public class TestBoundedRegionGroupingStrategy {
     try {
       CONF.setInt(NUM_REGION_GROUPS, temp * 4);
       final String parallelism = Integer.toString(temp * 4 * 2);
-      int errCode = WALPerformanceEvaluation.innerMain(new Configuration(CONF),
-        new String[] { "-threads", parallelism, "-verify", "-noclosefs", "-iterations", "3000",
-            "-regions", parallelism });
+      int errCode =
+        WALPerformanceEvaluation.innerMain(new Configuration(CONF), new String[] { "-threads",
+          parallelism, "-verify", "-noclosefs", "-iterations", "3000", "-regions", parallelism });
       assertEquals(0, errCode);
     } finally {
       CONF.setInt(NUM_REGION_GROUPS, temp);
@@ -191,16 +191,14 @@ public class TestBoundedRegionGroupingStrategy {
       // we know that this should see one of the wals more than once
       for (int i = 0; i < temp * 8; i++) {
         WAL maybeNewWAL = wals.getWAL(RegionInfoBuilder
-            .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt()))
-            .build());
+          .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt())).build());
         LOG.info("Iteration " + i + ", checking wal " + maybeNewWAL);
         if (seen.add(maybeNewWAL)) {
           count++;
         }
       }
       assertEquals("received back a different number of WALs that are not equal() to each other "
-          + "than the bound we placed.",
-        temp * 4, count);
+        + "than the bound we placed.", temp * 4, count);
     } finally {
       if (wals != null) {
         wals.close();

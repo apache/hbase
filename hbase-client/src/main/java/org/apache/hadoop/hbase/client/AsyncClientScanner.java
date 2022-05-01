@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,8 +86,8 @@ class AsyncClientScanner {
   private final ScanResultCache resultCache;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
-      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseForCQTBENs,
-      int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseForCQTBENs, int maxAttempts,
+    long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
     }
@@ -127,7 +127,7 @@ class AsyncClientScanner {
     public final ScanResponse resp;
 
     public OpenScannerResponse(HRegionLocation loc, boolean isRegionServerRemote, Interface stub,
-        HBaseRpcController controller, ScanResponse resp) {
+      HBaseRpcController controller, ScanResponse resp) {
       this.loc = loc;
       this.isRegionServerRemote = isRegionServerRemote;
       this.stub = stub;
@@ -139,7 +139,7 @@ class AsyncClientScanner {
   private final AtomicInteger openScannerTries = new AtomicInteger();
 
   private CompletableFuture<OpenScannerResponse> callOpenScanner(HBaseRpcController controller,
-      HRegionLocation loc, ClientService.Interface stub) {
+    HRegionLocation loc, ClientService.Interface stub) {
     boolean isRegionServerRemote = isRemote(loc.getHostname());
     incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
     if (openScannerTries.getAndIncrement() > 1) {
@@ -195,7 +195,8 @@ class AsyncClientScanner {
   }
 
   private long getPrimaryTimeoutNs() {
-    return TableName.isMetaTableName(tableName) ? conn.connConf.getPrimaryMetaScanTimeoutNs()
+    return TableName.isMetaTableName(tableName)
+      ? conn.connConf.getPrimaryMetaScanTimeoutNs()
       : conn.connConf.getPrimaryScanTimeoutNs();
   }
 

@@ -74,14 +74,14 @@ public final class ServerConnectionUtils {
     private final ClientService.BlockingInterface localClientServiceBlockingInterfaceWrapper;
 
     private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
-        ServerName serverName, AdminService.BlockingInterface admin,
-        ClientService.BlockingInterface client) throws IOException {
+      ServerName serverName, AdminService.BlockingInterface admin,
+      ClientService.BlockingInterface client) throws IOException {
       super(conf, pool, user);
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
       this.localClientServiceBlockingInterfaceWrapper =
-          new ClientServiceBlockingInterfaceWrapper(this.localHostClient);
+        new ClientServiceBlockingInterfaceWrapper(this.localHostClient);
     }
 
     @Override
@@ -91,15 +91,16 @@ public final class ServerConnectionUtils {
 
     @Override
     public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
-      return serverName.equals(sn) ? this.localClientServiceBlockingInterfaceWrapper
-          : super.getClient(sn);
+      return serverName.equals(sn)
+        ? this.localClientServiceBlockingInterfaceWrapper
+        : super.getClient(sn);
     }
 
     @Override
     public MasterKeepAliveConnection getMaster() throws IOException {
       if (this.localHostClient instanceof MasterService.BlockingInterface) {
         return new ShortCircuitMasterConnection(
-            (MasterService.BlockingInterface) this.localHostClient);
+          (MasterService.BlockingInterface) this.localHostClient);
       }
       return super.getMaster();
     }
@@ -117,8 +118,7 @@ public final class ServerConnectionUtils {
      * surround the scan and get method call,so the {@link RegionScanner} created for the directly
      * {@link RSRpcServices#get} could be closed immediately,see HBASE-26812 for more.
      */
-    static class ClientServiceBlockingInterfaceWrapper
-        implements ClientService.BlockingInterface {
+    static class ClientServiceBlockingInterfaceWrapper implements ClientService.BlockingInterface {
 
       private ClientService.BlockingInterface target;
 
@@ -135,7 +135,7 @@ public final class ServerConnectionUtils {
 
       @Override
       public MultiResponse multi(RpcController controller, MultiRequest request)
-          throws ServiceException {
+        throws ServiceException {
         /**
          * Here is for multiGet
          */
@@ -146,7 +146,7 @@ public final class ServerConnectionUtils {
 
       @Override
       public ScanResponse scan(RpcController controller, ScanRequest request)
-          throws ServiceException {
+        throws ServiceException {
         return this.doCall(controller, request, (c, r) -> {
           return target.scan(c, r);
         });
@@ -157,7 +157,7 @@ public final class ServerConnectionUtils {
       }
 
       private <REQUEST, RESPONSE> RESPONSE doCall(RpcController controller, REQUEST request,
-          Operation<REQUEST, RESPONSE> operation) throws ServiceException {
+        Operation<REQUEST, RESPONSE> operation) throws ServiceException {
         Optional<RpcCall> rpcCallOptional = RpcServer.unsetCurrentCall();
         try {
           return operation.call(controller, request);
@@ -168,37 +168,37 @@ public final class ServerConnectionUtils {
 
       @Override
       public MutateResponse mutate(RpcController controller, MutateRequest request)
-          throws ServiceException {
+        throws ServiceException {
         return target.mutate(controller, request);
       }
 
       @Override
       public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
-          BulkLoadHFileRequest request) throws ServiceException {
+        BulkLoadHFileRequest request) throws ServiceException {
         return target.bulkLoadHFile(controller, request);
       }
 
       @Override
       public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
-          PrepareBulkLoadRequest request) throws ServiceException {
+        PrepareBulkLoadRequest request) throws ServiceException {
         return target.prepareBulkLoad(controller, request);
       }
 
       @Override
       public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
-          CleanupBulkLoadRequest request) throws ServiceException {
+        CleanupBulkLoadRequest request) throws ServiceException {
         return target.cleanupBulkLoad(controller, request);
       }
 
       @Override
       public CoprocessorServiceResponse execService(RpcController controller,
-          CoprocessorServiceRequest request) throws ServiceException {
+        CoprocessorServiceRequest request) throws ServiceException {
         return target.execService(controller, request);
       }
 
       @Override
       public CoprocessorServiceResponse execRegionServerService(RpcController controller,
-          CoprocessorServiceRequest request) throws ServiceException {
+        CoprocessorServiceRequest request) throws ServiceException {
         return target.execRegionServerService(controller, request);
       }
     }
@@ -207,19 +207,19 @@ public final class ServerConnectionUtils {
   /**
    * Creates a short-circuit connection that can bypass the RPC layer (serialization,
    * deserialization, networking, etc..) when talking to a local server.
-   * @param conf the current configuration
-   * @param user the user the connection is for
+   * @param conf       the current configuration
+   * @param user       the user the connection is for
    * @param serverName the local server name
-   * @param admin the admin interface of the local server
-   * @param client the client interface of the local server
-   * @param registry the connection registry to be used, can be null
+   * @param admin      the admin interface of the local server
+   * @param client     the client interface of the local server
+   * @param registry   the connection registry to be used, can be null
    * @return an short-circuit connection.
    * @throws IOException if IO failure occurred
    */
   public static ClusterConnection createShortCircuitConnection(final Configuration conf,
-      ExecutorService pool, User user, final ServerName serverName,
-      final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
-      throws IOException {
+    ExecutorService pool, User user, final ServerName serverName,
+    final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
+    throws IOException {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }

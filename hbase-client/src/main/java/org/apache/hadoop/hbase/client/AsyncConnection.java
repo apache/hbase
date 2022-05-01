@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,8 +64,8 @@ public interface AsyncConnection extends Closeable {
   /**
    * Retrieve an {@link AsyncTable} implementation for accessing a table.
    * <p>
-   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if
-   * you want to customize some configs.
+   * The returned instance will use default configs. Use {@link #getTableBuilder(TableName)} if you
+   * want to customize some configs.
    * <p>
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
@@ -97,7 +97,7 @@ public interface AsyncConnection extends Closeable {
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
-   * @param pool the thread pool to use for executing callback
+   * @param pool      the thread pool to use for executing callback
    * @return an AsyncTable to use for interactions with this table
    */
   default AsyncTable<ScanResultConsumer> getTable(TableName tableName, ExecutorService pool) {
@@ -110,7 +110,7 @@ public interface AsyncConnection extends Closeable {
    * This method no longer checks table existence. An exception will be thrown if the table does not
    * exist only when the first operation is attempted.
    * @param tableName the name of the table
-   * @param pool the thread pool to use for executing callback
+   * @param pool      the thread pool to use for executing callback
    */
   AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName, ExecutorService pool);
 
@@ -181,7 +181,7 @@ public interface AsyncConnection extends Closeable {
    * {@link #getBufferedMutatorBuilder(TableName, ExecutorService)} if you want to customize some
    * configs.
    * @param tableName the name of the table
-   * @param pool the thread pool to use for executing callback
+   * @param pool      the thread pool to use for executing callback
    * @return an {@link AsyncBufferedMutator} for the supplied tableName.
    */
   default AsyncBufferedMutator getBufferedMutator(TableName tableName, ExecutorService pool) {
@@ -191,7 +191,7 @@ public interface AsyncConnection extends Closeable {
   /**
    * Returns an {@link AsyncBufferedMutatorBuilder} for creating {@link AsyncBufferedMutator}.
    * @param tableName the name of the table
-   * @param pool the thread pool to use for executing callback
+   * @param pool      the thread pool to use for executing callback
    */
   AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName, ExecutorService pool);
 

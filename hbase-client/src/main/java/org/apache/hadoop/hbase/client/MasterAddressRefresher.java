@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -48,10 +49,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMeta
 public class MasterAddressRefresher implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(MasterAddressRefresher.class);
   public static final String PERIODIC_REFRESH_INTERVAL_SECS =
-      "hbase.client.master_registry.refresh_interval_secs";
+    "hbase.client.master_registry.refresh_interval_secs";
   private static final int PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT = 300;
   public static final String MIN_SECS_BETWEEN_REFRESHES =
-      "hbase.client.master_registry.min_secs_between_refreshes";
+    "hbase.client.master_registry.min_secs_between_refreshes";
   private static final int MIN_SECS_BETWEEN_REFRESHES_DEFAULT = 60;
 
   private final ExecutorService pool;
@@ -103,11 +104,11 @@ public class MasterAddressRefresher implements Closeable {
 
   MasterAddressRefresher(Configuration conf, MasterRegistry registry) {
     pool = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-        .setNameFormat("master-registry-refresh-end-points").setDaemon(true).build());
-    periodicRefreshMs = TimeUnit.SECONDS.toMillis(conf.getLong(PERIODIC_REFRESH_INTERVAL_SECS,
-        PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
-    timeBetweenRefreshesMs = TimeUnit.SECONDS.toMillis(conf.getLong(MIN_SECS_BETWEEN_REFRESHES,
-        MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
+      .setNameFormat("master-registry-refresh-end-points").setDaemon(true).build());
+    periodicRefreshMs = TimeUnit.SECONDS.toMillis(
+      conf.getLong(PERIODIC_REFRESH_INTERVAL_SECS, PERIODIC_REFRESH_INTERVAL_SECS_DEFAULT));
+    timeBetweenRefreshesMs = TimeUnit.SECONDS
+      .toMillis(conf.getLong(MIN_SECS_BETWEEN_REFRESHES, MIN_SECS_BETWEEN_REFRESHES_DEFAULT));
     Preconditions.checkArgument(periodicRefreshMs > 0);
     Preconditions.checkArgument(timeBetweenRefreshesMs < periodicRefreshMs);
     this.registry = registry;

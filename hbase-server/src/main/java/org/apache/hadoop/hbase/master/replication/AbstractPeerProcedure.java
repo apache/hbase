@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.P
  */
 @InterfaceAudience.Private
 public abstract class AbstractPeerProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState> implements PeerProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, TState> implements PeerProcedureInterface {
 
   protected String peerId;
 

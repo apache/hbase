@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test {@link FSUtils}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestFSVisitor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSVisitor.class);
+    HBaseClassTestRule.forClass(TestFSVisitor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSVisitor.class);
 
@@ -85,7 +85,7 @@ public class TestFSVisitor {
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       @Override
       public void storeFile(final String region, final String family, final String hfileName)
-          throws IOException {
+        throws IOException {
         regions.add(region);
         families.add(family);
         hfiles.add(hfileName);
@@ -97,17 +97,13 @@ public class TestFSVisitor {
   }
 
   /*
-   * |-testtb/
-   * |----f1d3ff8443297732862df21dc4e57262/
-   * |-------f1/
-   * |----------d0be84935ba84b66b1e866752ec5d663
-   * |----------9fc9d481718f4878b29aad0a597ecb94
-   * |-------f2/
-   * |----------4b0fe6068c564737946bcf4fd4ab8ae1
+   * |-testtb/ |----f1d3ff8443297732862df21dc4e57262/ |-------f1/
+   * |----------d0be84935ba84b66b1e866752ec5d663 |----------9fc9d481718f4878b29aad0a597ecb94
+   * |-------f2/ |----------4b0fe6068c564737946bcf4fd4ab8ae1
    */
   private Path createTableFiles(final Path rootDir, final String tableName,
-      final Set<String> tableRegions, final Set<String> tableFamilies,
-      final Set<String> tableHFiles) throws IOException {
+    final Set<String> tableRegions, final Set<String> tableFamilies, final Set<String> tableHFiles)
+    throws IOException {
     Path tableDir = new Path(rootDir, tableName);
     for (int r = 0; r < 10; ++r) {
       String regionName = MD5Hash.getMD5AsHex(Bytes.toBytes(r));

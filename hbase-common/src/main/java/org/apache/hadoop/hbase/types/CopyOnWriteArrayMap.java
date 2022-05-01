@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.types;
 
 import java.util.AbstractMap;
@@ -28,22 +27,19 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * A Map that keeps a sorted array in order to provide the concurrent map interface.
- * Keeping a sorted array means that it's much more cache line friendly, making reads faster
- * than the tree version.
- *
- * In order to make concurrent reads and writes safe this does a copy on write.
- * There can only be one concurrent write at a time.
+ * A Map that keeps a sorted array in order to provide the concurrent map interface. Keeping a
+ * sorted array means that it's much more cache line friendly, making reads faster than the tree
+ * version. In order to make concurrent reads and writes safe this does a copy on write. There can
+ * only be one concurrent write at a time.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
-    implements Map<K, V>, ConcurrentNavigableMap<K, V> {
+  implements Map<K, V>, ConcurrentNavigableMap<K, V> {
   private final Comparator<? super K> keyComparator;
   private volatile ArrayHolder<K, V> holder;
 
@@ -72,13 +68,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
   }
 
   /*
-    Un synchronized read operations.
-
-    No locking.
-    No waiting
-    No copying.
-
-    These should all be FAST.
+   * Un synchronized read operations. No locking. No waiting No copying. These should all be FAST.
    */
 
   @Override
@@ -96,14 +86,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     } else if (index < 0) {
       index = -(index + 1);
     }
-    return new CopyOnWriteArrayMap<>(
-        this.keyComparator,
-        new ArrayHolder<>(
-            current.entries,
-            index,
-            current.endIndex,
-            current.keyComparator,
-            current.comparator));
+    return new CopyOnWriteArrayMap<>(this.keyComparator, new ArrayHolder<>(current.entries, index,
+      current.endIndex, current.keyComparator, current.comparator));
   }
 
   @Override
@@ -304,14 +288,9 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
   }
 
   /*
-     Synchronized write methods.
-
-     Every method should be synchronized.
-     Only one modification at a time.
-
-     These will be slow.
+   * Synchronized write methods. Every method should be synchronized. Only one modification at a
+   * time. These will be slow.
    */
-
 
   @Override
   public synchronized V put(K key, V value) {
@@ -426,10 +405,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
   }
 
   @Override
-  public ConcurrentNavigableMap<K, V> subMap(K fromKey,
-                                             boolean fromInclusive,
-                                             K toKey,
-                                             boolean toInclusive) {
+  public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey,
+    boolean toInclusive) {
     throw new UnsupportedOperationException();
   }
 
@@ -519,10 +496,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     @Override
-    public NavigableSet<K> subSet(K fromElement,
-                                  boolean fromInclusive,
-                                  K toElement,
-                                  boolean toInclusive) {
+    public NavigableSet<K> subSet(K fromElement, boolean fromInclusive, K toElement,
+      boolean toInclusive) {
       throw new UnsupportedOperationException();
     }
 
@@ -694,8 +669,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_ALWAYS_FALSE",
-      justification="Intentional")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_ALWAYS_FALSE",
+        justification = "Intentional")
     public boolean equals(Object o) {
       return false; // FindBugs: Causes EQ_ALWAYS_FALSE. Suppressed.
     }
@@ -714,7 +689,6 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
       this.holder = holder;
       index = holder.startIndex;
     }
-
 
     @Override
     public boolean hasNext() {
@@ -740,7 +714,6 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
       this.holder = holder;
       index = holder.startIndex;
     }
-
 
     @Override
     public boolean hasNext() {
@@ -774,8 +747,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
-      justification="Intentional")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IT_NO_SUCH_ELEMENT",
+        justification = "Intentional")
     public Entry<K, V> next() {
       if (!hasNext()) {
         throw new NoSuchElementException();
@@ -869,17 +842,15 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     private final Comparator<? super K> keyComparator;
     private final Comparator<Map.Entry<K, V>> comparator;
 
-
     int getLength() {
       return endIndex - startIndex;
     }
 
-
     /**
      * Binary search for a given key
      * @param needle The key to look for in all of the entries
-     * @return Same return value as Arrays.binarySearch.
-     *         Positive numbers mean the index. Otherwise (-1 * insertion point) - 1
+     * @return Same return value as Arrays.binarySearch. Positive numbers mean the index. Otherwise
+     *         (-1 * insertion point) - 1
      */
     int find(K needle) {
       int begin = startIndex;
@@ -887,7 +858,7 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
 
       while (begin <= end) {
         int mid = begin + ((end - begin) / 2);
-        K midKey = entries[ mid].key;
+        K midKey = entries[mid].key;
         int compareRes = keyComparator.compare(midKey, needle);
 
         // 0 means equals
@@ -916,23 +887,22 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     }
 
     ArrayHolder<K, V> remove(int index) {
-      COWEntry<K,V>[] newEntries = new COWEntry[getLength() - 1];
+      COWEntry<K, V>[] newEntries = new COWEntry[getLength() - 1];
       System.arraycopy(this.entries, startIndex, newEntries, 0, index - startIndex);
       System.arraycopy(this.entries, index + 1, newEntries, index, entries.length - index - 1);
       return new ArrayHolder<>(newEntries, 0, newEntries.length, keyComparator, comparator);
     }
 
     ArrayHolder<K, V> insert(int index, COWEntry<K, V> newEntry) {
-      COWEntry<K,V>[] newEntries = new COWEntry[getLength() + 1];
+      COWEntry<K, V>[] newEntries = new COWEntry[getLength() + 1];
       System.arraycopy(this.entries, startIndex, newEntries, 0, index - startIndex);
       newEntries[index] = newEntry;
       System.arraycopy(this.entries, index, newEntries, index + 1, getLength() - index);
       return new ArrayHolder<>(newEntries, 0, newEntries.length, keyComparator, comparator);
     }
 
-    private ArrayHolder(
-        final Comparator<? super K> keyComparator,
-        final Comparator<Map.Entry<K, V>> comparator) {
+    private ArrayHolder(final Comparator<? super K> keyComparator,
+      final Comparator<Map.Entry<K, V>> comparator) {
       this.endIndex = 0;
       this.startIndex = 0;
       this.entries = new COWEntry[] {};
@@ -940,10 +910,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
       this.comparator = comparator;
     }
 
-    private ArrayHolder(COWEntry[] entries,
-                        int startIndex, int endIndex,
-                        final Comparator<? super K> keyComparator,
-                        Comparator<Map.Entry<K, V>> comparator) {
+    private ArrayHolder(COWEntry[] entries, int startIndex, int endIndex,
+      final Comparator<? super K> keyComparator, Comparator<Map.Entry<K, V>> comparator) {
       this.entries = entries;
       this.startIndex = startIndex;
       this.endIndex = endIndex;

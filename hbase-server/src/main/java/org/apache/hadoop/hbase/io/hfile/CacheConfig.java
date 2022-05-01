@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -46,14 +45,13 @@ public class CacheConfig {
   public static final String CACHE_DATA_ON_READ_KEY = "hbase.block.data.cacheonread";
 
   /**
-   * Configuration key to cache data blocks on write. There are separate
-   * switches for bloom blocks and non-root index blocks.
+   * Configuration key to cache data blocks on write. There are separate switches for bloom blocks
+   * and non-root index blocks.
    */
   public static final String CACHE_BLOCKS_ON_WRITE_KEY = "hbase.rs.cacheblocksonwrite";
 
   /**
-   * Configuration key to cache leaf and intermediate-level index blocks on
-   * write.
+   * Configuration key to cache leaf and intermediate-level index blocks on write.
    */
   public static final String CACHE_INDEX_BLOCKS_ON_WRITE_KEY = "hfile.block.index.cacheonwrite";
 
@@ -68,14 +66,14 @@ public class CacheConfig {
   public static final String CACHE_DATA_BLOCKS_COMPRESSED_KEY = "hbase.block.data.cachecompressed";
 
   /**
-   * Configuration key to evict all blocks of a given file from the block cache
-   * when the file is closed.
+   * Configuration key to evict all blocks of a given file from the block cache when the file is
+   * closed.
    */
   public static final String EVICT_BLOCKS_ON_CLOSE_KEY = "hbase.rs.evictblocksonclose";
 
   /**
-   * Configuration key to prefetch all blocks of a given file into the block cache
-   * when the file is opened.
+   * Configuration key to prefetch all blocks of a given file into the block cache when the file is
+   * opened.
    */
   public static final String PREFETCH_BLOCKS_ON_OPEN_KEY = "hbase.rs.prefetchblocksonopen";
 
@@ -83,17 +81,17 @@ public class CacheConfig {
    * Configuration key to cache blocks when a compacted file is written
    */
   public static final String CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY =
-      "hbase.rs.cachecompactedblocksonwrite";
+    "hbase.rs.cachecompactedblocksonwrite";
 
   /**
    * Configuration key to determine total size in bytes of compacted files beyond which we do not
    * cache blocks on compaction
    */
   public static final String CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY =
-      "hbase.rs.cachecompactedblocksonwrite.threshold";
+    "hbase.rs.cachecompactedblocksonwrite.threshold";
 
   public static final String DROP_BEHIND_CACHE_COMPACTION_KEY =
-      "hbase.hfile.drop.behind.compaction";
+    "hbase.hfile.drop.behind.compaction";
 
   // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
@@ -109,10 +107,9 @@ public class CacheConfig {
   public static final long DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD = Long.MAX_VALUE;
 
   /**
-   * Whether blocks should be cached on read (default is on if there is a
-   * cache but this can be turned off on a per-family or per-request basis).
-   * If off we will STILL cache meta blocks; i.e. INDEX and BLOOM types.
-   * This cannot be disabled.
+   * Whether blocks should be cached on read (default is on if there is a cache but this can be
+   * turned off on a per-family or per-request basis). If off we will STILL cache meta blocks; i.e.
+   * INDEX and BLOOM types. This cannot be disabled.
    */
   private final boolean cacheDataOnRead;
 
@@ -155,8 +152,8 @@ public class CacheConfig {
   private final ByteBuffAllocator byteBuffAllocator;
 
   /**
-   * Create a cache configuration using the specified configuration object and
-   * defaults for family level settings. Only use if no column family context.
+   * Create a cache configuration using the specified configuration object and defaults for family
+   * level settings. Only use if no column family context.
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
@@ -168,37 +165,35 @@ public class CacheConfig {
   }
 
   /**
-   * Create a cache configuration using the specified configuration object and
-   * family descriptor.
-   * @param conf hbase configuration
+   * Create a cache configuration using the specified configuration object and family descriptor.
+   * @param conf   hbase configuration
    * @param family column family configuration
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
-      ByteBuffAllocator byteBuffAllocator) {
-    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ) &&
-        (family == null ? true : family.isBlockCacheEnabled());
+    ByteBuffAllocator byteBuffAllocator) {
+    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
+      && (family == null ? true : family.isBlockCacheEnabled());
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
     this.cacheDataCompressed =
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
+      conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
     this.dropBehindCompaction =
-        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
+      conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
     // For the following flags we enable them regardless of per-schema settings
     // if they are enabled in the global configuration.
-    this.cacheDataOnWrite =
-        conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE) ||
-            (family == null ? false : family.isCacheDataOnWrite());
+    this.cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE)
+      || (family == null ? false : family.isCacheDataOnWrite());
     this.cacheIndexesOnWrite =
-        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE) ||
-            (family == null ? false : family.isCacheIndexesOnWrite());
+      conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE)
+        || (family == null ? false : family.isCacheIndexesOnWrite());
     this.cacheBloomsOnWrite =
-        conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE) ||
-            (family == null ? false : family.isCacheBloomsOnWrite());
-    this.evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE) ||
-        (family == null ? false : family.isEvictBlocksOnClose());
-    this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN) ||
-        (family == null ? false : family.isPrefetchBlocksOnOpen());
-    this.cacheCompactedDataOnWrite = conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY,
-      DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
+      conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE)
+        || (family == null ? false : family.isCacheBloomsOnWrite());
+    this.evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE)
+      || (family == null ? false : family.isEvictBlocksOnClose());
+    this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
+      || (family == null ? false : family.isPrefetchBlocksOnOpen());
+    this.cacheCompactedDataOnWrite =
+      conf.getBoolean(CACHE_COMPACTED_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE);
     this.cacheCompactedDataOnWriteThreshold = getCacheCompactedBlocksOnWriteThreshold(conf);
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
@@ -239,8 +234,8 @@ public class CacheConfig {
   }
 
   /**
-   * Returns whether the DATA blocks of this HFile should be cached on read or not (we always
-   * cache the meta blocks, the INDEX and BLOOM blocks).
+   * Returns whether the DATA blocks of this HFile should be cached on read or not (we always cache
+   * the meta blocks, the INDEX and BLOOM blocks).
    * @return true if blocks should be cached on read, false if not
    */
   public boolean shouldCacheDataOnRead() {
@@ -252,13 +247,12 @@ public class CacheConfig {
   }
 
   /**
-   * Should we cache a block of a particular category? We always cache
-   * important blocks such as index blocks, as long as the block cache is
-   * available.
+   * Should we cache a block of a particular category? We always cache important blocks such as
+   * index blocks, as long as the block cache is available.
    */
   public boolean shouldCacheBlockOnRead(BlockCategory category) {
-    return cacheDataOnRead || category == BlockCategory.INDEX || category == BlockCategory.BLOOM ||
-        (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
+    return cacheDataOnRead || category == BlockCategory.INDEX || category == BlockCategory.BLOOM
+      || (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
   /**
@@ -269,26 +263,23 @@ public class CacheConfig {
   }
 
   /**
-   * @return true if data blocks should be written to the cache when an HFile is
-   *         written, false if not
+   * @return true if data blocks should be written to the cache when an HFile is written, false if
+   *         not
    */
   public boolean shouldCacheDataOnWrite() {
     return this.cacheDataOnWrite;
   }
 
   /**
-   * @param cacheDataOnWrite whether data blocks should be written to the cache
-   *                         when an HFile is written
+   * @param cacheDataOnWrite whether data blocks should be written to the cache when an HFile is
+   *                         written
    */
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
   }
 
   /**
-   * Enable cache on write including:
-   * cacheDataOnWrite
-   * cacheIndexesOnWrite
-   * cacheBloomsOnWrite
+   * Enable cache on write including: cacheDataOnWrite cacheIndexesOnWrite cacheBloomsOnWrite
    */
   public void enableCacheOnWrite() {
     this.cacheDataOnWrite = true;
@@ -297,24 +288,24 @@ public class CacheConfig {
   }
 
   /**
-   * @return true if index blocks should be written to the cache when an HFile
-   *         is written, false if not
+   * @return true if index blocks should be written to the cache when an HFile is written, false if
+   *         not
    */
   public boolean shouldCacheIndexesOnWrite() {
     return this.cacheIndexesOnWrite;
   }
 
   /**
-   * @return true if bloom blocks should be written to the cache when an HFile
-   *         is written, false if not
+   * @return true if bloom blocks should be written to the cache when an HFile is written, false if
+   *         not
    */
   public boolean shouldCacheBloomsOnWrite() {
     return this.cacheBloomsOnWrite;
   }
 
   /**
-   * @return true if blocks should be evicted from the cache when an HFile
-   *         reader is closed, false if not
+   * @return true if blocks should be evicted from the cache when an HFile reader is closed, false
+   *         if not
    */
   public boolean shouldEvictOnClose() {
     return this.evictOnClose;
@@ -322,8 +313,8 @@ public class CacheConfig {
 
   /**
    * Only used for testing.
-   * @param evictOnClose whether blocks should be evicted from the cache when an
-   *                     HFile reader is closed
+   * @param evictOnClose whether blocks should be evicted from the cache when an HFile reader is
+   *                     closed
    */
   public void setEvictOnClose(boolean evictOnClose) {
     this.evictOnClose = evictOnClose;
@@ -368,6 +359,7 @@ public class CacheConfig {
   public long getCacheCompactedBlocksOnWriteThreshold() {
     return this.cacheCompactedDataOnWriteThreshold;
   }
+
   /**
    * Return true if we may find this type of block in block cache.
    * <p>
@@ -389,16 +381,18 @@ public class CacheConfig {
     if (blockType == null) {
       return true;
     }
-    if (blockType.getCategory() == BlockCategory.BLOOM ||
-        blockType.getCategory() == BlockCategory.INDEX) {
+    if (
+      blockType.getCategory() == BlockCategory.BLOOM
+        || blockType.getCategory() == BlockCategory.INDEX
+    ) {
       return true;
     }
     return false;
   }
 
   /**
-   * If we make sure the block could not be cached, we will not acquire the lock
-   * otherwise we will acquire lock
+   * If we make sure the block could not be cached, we will not acquire the lock otherwise we will
+   * acquire lock
    */
   public boolean shouldLockOnCacheMiss(BlockType blockType) {
     if (blockType == null) {
@@ -409,7 +403,6 @@ public class CacheConfig {
 
   /**
    * Returns the block cache.
-   *
    * @return the block cache, or null if caching is completely disabled
    */
   public Optional<BlockCache> getBlockCache() {
@@ -425,8 +418,8 @@ public class CacheConfig {
   }
 
   private long getCacheCompactedBlocksOnWriteThreshold(Configuration conf) {
-    long cacheCompactedBlocksOnWriteThreshold = conf
-      .getLong(CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
+    long cacheCompactedBlocksOnWriteThreshold =
+      conf.getLong(CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD_KEY,
         DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD);
 
     if (cacheCompactedBlocksOnWriteThreshold < 0) {
@@ -442,9 +435,9 @@ public class CacheConfig {
   @Override
   public String toString() {
     return "cacheDataOnRead=" + shouldCacheDataOnRead() + ", cacheDataOnWrite="
-        + shouldCacheDataOnWrite() + ", cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite()
-        + ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + ", cacheEvictOnClose="
-        + shouldEvictOnClose() + ", cacheDataCompressed=" + shouldCacheDataCompressed()
-        + ", prefetchOnOpen=" + shouldPrefetchOnOpen();
+      + shouldCacheDataOnWrite() + ", cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite()
+      + ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + ", cacheEvictOnClose="
+      + shouldEvictOnClose() + ", cacheDataCompressed=" + shouldCacheDataCompressed()
+      + ", prefetchOnOpen=" + shouldPrefetchOnOpen();
   }
 }

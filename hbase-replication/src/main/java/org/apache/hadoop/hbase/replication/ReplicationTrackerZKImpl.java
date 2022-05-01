@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -185,15 +184,16 @@ public class ReplicationTrackerZKImpl implements ReplicationTracker {
     List<String> result = null;
     try {
       if (watch) {
-        result = ZKUtil.listChildrenAndWatchThem(this.zookeeper,
-                this.zookeeper.getZNodePaths().rsZNode);
+        result =
+          ZKUtil.listChildrenAndWatchThem(this.zookeeper, this.zookeeper.getZNodePaths().rsZNode);
       } else {
         result = ZKUtil.listChildrenNoWatch(this.zookeeper, this.zookeeper.getZNodePaths().rsZNode);
       }
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }
-    return result == null ? null :
-      result.stream().map(ServerName::parseServerName).collect(Collectors.toList());
+    return result == null
+      ? null
+      : result.stream().map(ServerName::parseServerName).collect(Collectors.toList());
   }
 }

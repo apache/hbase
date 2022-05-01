@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +41,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestDeadServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeadServer.class);
+    HBaseClassTestRule.forClass(TestDeadServer.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -65,7 +65,8 @@ public class TestDeadServer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test public void testIsDead() {
+  @Test
+  public void testIsDead() {
     DeadServer ds = new DeadServer();
     ds.putIfAbsent(hostname123);
     ds.processing(hostname123);
@@ -85,8 +86,8 @@ public class TestDeadServer {
     ds.finish(hostname12345);
     assertFalse(ds.areDeadServersInProgress());
 
-    // Already dead =       127.0.0.1,9090,112321
-    // Coming back alive =  127.0.0.1,9090,223341
+    // Already dead = 127.0.0.1,9090,112321
+    // Coming back alive = 127.0.0.1,9090,223341
 
     final ServerName deadServer = ServerName.valueOf("127.0.0.1", 9090, 112321L);
     assertFalse(ds.cleanPreviousInstance(deadServer));
@@ -96,8 +97,7 @@ public class TestDeadServer {
     for (ServerName eachDeadServer : deadServerNames) {
       Assert.assertNotNull(ds.getTimeOfDeath(eachDeadServer));
     }
-    final ServerName deadServerHostComingAlive =
-        ServerName.valueOf("127.0.0.1", 9090, 223341L);
+    final ServerName deadServerHostComingAlive = ServerName.valueOf("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
     assertFalse(ds.isDeadServer(deadServer));
     assertFalse(ds.cleanPreviousInstance(deadServerHostComingAlive));
@@ -107,8 +107,8 @@ public class TestDeadServer {
   public void testCrashProcedureReplay() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final ProcedureExecutor<MasterProcedureEnv> pExecutor = master.getMasterProcedureExecutor();
-    ServerCrashProcedure proc = new ServerCrashProcedure(
-      pExecutor.getEnvironment(), hostname123, false, false);
+    ServerCrashProcedure proc =
+      new ServerCrashProcedure(pExecutor.getEnvironment(), hostname123, false, false);
 
     ProcedureTestingUtility.submitAndWait(pExecutor, proc);
 
@@ -116,7 +116,7 @@ public class TestDeadServer {
   }
 
   @Test
-  public void testSortExtract(){
+  public void testSortExtract() {
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(mee);
     mee.setValue(1);
@@ -142,7 +142,7 @@ public class TestDeadServer {
   }
 
   @Test
-  public void testClean(){
+  public void testClean() {
     DeadServer d = new DeadServer();
     d.putIfAbsent(hostname123);
 
@@ -157,7 +157,7 @@ public class TestDeadServer {
   }
 
   @Test
-  public void testClearDeadServer(){
+  public void testClearDeadServer() {
     DeadServer d = new DeadServer();
     d.putIfAbsent(hostname123);
     d.putIfAbsent(hostname1234);
@@ -178,4 +178,3 @@ public class TestDeadServer {
     Assert.assertTrue(d.isEmpty());
   }
 }
-

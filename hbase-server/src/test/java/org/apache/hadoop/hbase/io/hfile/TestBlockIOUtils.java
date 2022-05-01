@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +52,7 @@ public class TestBlockIOUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlockIOUtils.class);
+    HBaseClassTestRule.forClass(TestBlockIOUtils.class);
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -198,8 +197,7 @@ public class TestBlockIOUtils {
   }
 
   @Test
-  public void testPositionalReadShortReadCompletesNecessaryAndExtraBytes()
-      throws IOException {
+  public void testPositionalReadShortReadCompletesNecessaryAndExtraBytes() throws IOException {
     long position = 0;
     int bufOffset = 0;
     int necessaryLen = 10;

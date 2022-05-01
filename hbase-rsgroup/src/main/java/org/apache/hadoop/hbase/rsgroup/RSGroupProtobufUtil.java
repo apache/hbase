@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -38,34 +36,34 @@ final class RSGroupProtobufUtil {
 
   static RSGroupInfo toGroupInfo(RSGroupProtos.RSGroupInfo proto) {
     RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
-    for(HBaseProtos.ServerName el: proto.getServersList()) {
+    for (HBaseProtos.ServerName el : proto.getServersList()) {
       rsGroupInfo.addServer(Address.fromParts(el.getHostName(), el.getPort()));
     }
-    for(TableProtos.TableName pTableName: proto.getTablesList()) {
+    for (TableProtos.TableName pTableName : proto.getTablesList()) {
       rsGroupInfo.addTable(ProtobufUtil.toTableName(pTableName));
     }
-    proto.getConfigurationList().forEach(pair ->
-        rsGroupInfo.setConfiguration(pair.getName(), pair.getValue()));
+    proto.getConfigurationList()
+      .forEach(pair -> rsGroupInfo.setConfiguration(pair.getName(), pair.getValue()));
     return rsGroupInfo;
   }
 
   static RSGroupProtos.RSGroupInfo toProtoGroupInfo(RSGroupInfo pojo) {
     List<TableProtos.TableName> tables = new ArrayList<>(pojo.getTables().size());
-    for(TableName arg: pojo.getTables()) {
+    for (TableName arg : pojo.getTables()) {
       tables.add(ProtobufUtil.toProtoTableName(arg));
     }
     List<HBaseProtos.ServerName> hostports = new ArrayList<>(pojo.getServers().size());
-    for(Address el: pojo.getServers()) {
-      hostports.add(HBaseProtos.ServerName.newBuilder()
-          .setHostName(el.getHostname())
-          .setPort(el.getPort())
-          .build());
+    for (Address el : pojo.getServers()) {
+      hostports.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+        .setPort(el.getPort()).build());
     }
-    List<NameStringPair> configuration = pojo.getConfiguration().entrySet()
-        .stream().map(entry -> NameStringPair.newBuilder()
+    List<
+      NameStringPair> configuration =
+        pojo
+          .getConfiguration().entrySet().stream().map(entry -> NameStringPair.newBuilder()
             .setName(entry.getKey()).setValue(entry.getValue()).build())
-        .collect(Collectors.toList());
-    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName())
-        .addAllServers(hostports).addAllTables(tables).addAllConfiguration(configuration).build();
+          .collect(Collectors.toList());
+    return RSGroupProtos.RSGroupInfo.newBuilder().setName(pojo.getName()).addAllServers(hostports)
+      .addAllTables(tables).addAllConfiguration(configuration).build();
   }
 }

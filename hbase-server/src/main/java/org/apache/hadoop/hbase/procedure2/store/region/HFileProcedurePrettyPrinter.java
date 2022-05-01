@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,7 +84,8 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
   }
 
   private void addAllHFiles() throws IOException {
-    Path masterProcDir = new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
+    Path masterProcDir =
+      new Path(CommonFSUtils.getRootDir(conf), MasterRegionFactory.MASTER_STORE_DIR);
     Path tableDir = CommonFSUtils.getTableDir(masterProcDir, MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(conf);
     Path regionDir =
@@ -138,8 +139,9 @@ public class HFileProcedurePrettyPrinter extends AbstractHBaseTool {
     try (HFile.Reader reader = HFile.createReader(fs, file, CacheConfig.DISABLED, true, conf);
       HFileScanner scanner = reader.getScanner(false, false, false)) {
       if (procId != null) {
-        if (scanner
-          .seekTo(PrivateCellUtil.createFirstOnRow(Bytes.toBytes(procId.longValue()))) != -1) {
+        if (
+          scanner.seekTo(PrivateCellUtil.createFirstOnRow(Bytes.toBytes(procId.longValue()))) != -1
+        ) {
           do {
             Cell cell = scanner.getCell();
             long currentProcId =

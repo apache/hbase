@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,10 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
- * Keeps track of live procedures.
- *
- * It can be used by the ProcedureStore to identify which procedures are already
- * deleted/completed to avoid the deserialization step on restart
+ * Keeps track of live procedures. It can be used by the ProcedureStore to identify which procedures
+ * are already deleted/completed to avoid the deserialization step on restart
  * @deprecated Since 2.3.0, will be removed in 4.0.0. Keep here only for rolling upgrading, now we
  *             use the new region based procedure store.
  */
@@ -48,29 +46,32 @@ class ProcedureStoreTracker {
   private final TreeMap<Long, BitSetNode> map = new TreeMap<>();
 
   /**
-   * If true, do not remove bits corresponding to deleted procedures. Note that this can result
-   * in huge bitmaps overtime.
-   * Currently, it's set to true only when building tracker state from logs during recovery. During
-   * recovery, if we are sure that a procedure has been deleted, reading its old update entries
-   * can be skipped.
+   * If true, do not remove bits corresponding to deleted procedures. Note that this can result in
+   * huge bitmaps overtime. Currently, it's set to true only when building tracker state from logs
+   * during recovery. During recovery, if we are sure that a procedure has been deleted, reading its
+   * old update entries can be skipped.
    */
   private boolean keepDeletes = false;
   /**
-   * If true, it means tracker has incomplete information about the active/deleted procedures.
-   * It's set to true only when recovering from old logs. See {@link #isDeleted(long)} docs to
-   * understand it's real use.
+   * If true, it means tracker has incomplete information about the active/deleted procedures. It's
+   * set to true only when recovering from old logs. See {@link #isDeleted(long)} docs to understand
+   * it's real use.
    */
   boolean partial = false;
 
   private long minModifiedProcId = Long.MAX_VALUE;
   private long maxModifiedProcId = Long.MIN_VALUE;
 
-  public enum DeleteState { YES, NO, MAYBE }
+  public enum DeleteState {
+    YES,
+    NO,
+    MAYBE
+  }
 
   public void resetToProto(ProcedureProtos.ProcedureStoreTracker trackerProtoBuf) {
     reset();
-    for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode :
-            trackerProtoBuf.getNodeList()) {
+    for (ProcedureProtos.ProcedureStoreTracker.TrackerNode protoNode : trackerProtoBuf
+      .getNodeList()) {
       final BitSetNode node = new BitSetNode(protoNode);
       map.put(node.getStart(), node);
     }
@@ -182,6 +183,7 @@ class ProcedureStoreTracker {
     this.minModifiedProcId = min;
     this.maxModifiedProcId = max;
   }
+
   /**
    * This method is used when restarting where we need to rebuild the ProcedureStoreTracker. The
    * {@link #delete(long)} method above assume that the {@link BitSetNode} exists, but when restart
@@ -212,7 +214,7 @@ class ProcedureStoreTracker {
   }
 
   private void setDeleteIf(ProcedureStoreTracker tracker,
-      BiFunction<BitSetNode, Long, Boolean> func) {
+    BiFunction<BitSetNode, Long, Boolean> func) {
     BitSetNode trackerNode = null;
     for (BitSetNode node : map.values()) {
       long minProcId = node.getStart();
@@ -236,8 +238,8 @@ class ProcedureStoreTracker {
    * @see #setDeletedIfModifiedInBoth(ProcedureStoreTracker)
    */
   public void setDeletedIfDeletedByThem(ProcedureStoreTracker tracker) {
-    setDeleteIf(tracker, (node, procId) -> node == null || !node.contains(procId) ||
-      node.isDeleted(procId) == DeleteState.YES);
+    setDeleteIf(tracker, (node, procId) -> node == null || !node.contains(procId)
+      || node.isDeleted(procId) == DeleteState.YES);
   }
 
   /**
@@ -252,7 +254,7 @@ class ProcedureStoreTracker {
 
   /**
    * lookup the node containing the specified procId.
-   * @param node cached node to check before doing a lookup
+   * @param node   cached node to check before doing a lookup
    * @param procId the procId to lookup
    * @return the node that may contains the procId or null
    */
@@ -288,16 +290,15 @@ class ProcedureStoreTracker {
 
   public boolean isModified(long procId) {
     final Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
-    return entry != null && entry.getValue().contains(procId) &&
-      entry.getValue().isModified(procId);
+    return entry != null && entry.getValue().contains(procId)
+      && entry.getValue().isModified(procId);
   }
 
   /**
    * If {@link #partial} is false, returns state from the bitmap. If no state is found for
-   * {@code procId}, returns YES.
-   * If partial is true, tracker doesn't have complete view of system state, so it returns MAYBE
-   * if there is no update for the procedure or if it doesn't have a state in bitmap. Otherwise,
-   * returns state from the bitmap.
+   * {@code procId}, returns YES. If partial is true, tracker doesn't have complete view of system
+   * state, so it returns MAYBE if there is no update for the procedure or if it doesn't have a
+   * state in bitmap. Otherwise, returns state from the bitmap.
    */
   public DeleteState isDeleted(long procId) {
     Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
@@ -378,8 +379,8 @@ class ProcedureStoreTracker {
   }
 
   /**
-   * Clears the list of updated procedure ids. This doesn't affect global list of active
-   * procedure ids.
+   * Clears the list of updated procedure ids. This doesn't affect global list of active procedure
+   * ids.
    */
   public void resetModified() {
     for (Map.Entry<Long, BitSetNode> entry : map.entrySet()) {
@@ -472,17 +473,16 @@ class ProcedureStoreTracker {
   }
 
   // ========================================================================
-  //  Convert to/from Protocol Buffer.
+  // Convert to/from Protocol Buffer.
   // ========================================================================
 
   /**
-   * Builds
-   * org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker
+   * Builds org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker
    * protocol buffer from current state.
    */
   public ProcedureProtos.ProcedureStoreTracker toProto() throws IOException {
     ProcedureProtos.ProcedureStoreTracker.Builder builder =
-        ProcedureProtos.ProcedureStoreTracker.newBuilder();
+      ProcedureProtos.ProcedureStoreTracker.newBuilder();
     for (Map.Entry<Long, BitSetNode> entry : map.entrySet()) {
       builder.addNode(entry.getValue().convert());
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,8 +83,8 @@ public class TestAsyncClientPauseForCallQueueTooBig {
   public static final class CQTBERpcScheduler extends SimpleRpcScheduler {
 
     public CQTBERpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
-        int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
-        Abortable server, int highPriorityLevel) {
+      int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
+      Abortable server, int highPriorityLevel) {
       super(conf, handlerCount, priorityHandlerCount, replicationHandlerCount,
         metaTransitionHandler, priority, server, highPriorityLevel);
     }

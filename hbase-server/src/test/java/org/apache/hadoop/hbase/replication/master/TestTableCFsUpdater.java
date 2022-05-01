@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,12 +46,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ReplicationTests.class, SmallTests.class})
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableCFsUpdater.class);
+    HBaseClassTestRule.forClass(TestTableCFsUpdater.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableCFsUpdater.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -115,7 +115,7 @@ public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
     ZKUtil.createWithParents(zkw, tableCFsNode, Bytes.toBytes(tableCFs));
 
     ReplicationPeerConfig actualRpc =
-        ReplicationPeerConfigUtil.parsePeerFrom(ZKUtil.getData(zkw, peerNode));
+      ReplicationPeerConfigUtil.parsePeerFrom(ZKUtil.getData(zkw, peerNode));
     String actualTableCfs = Bytes.toString(ZKUtil.getData(zkw, tableCFsNode));
 
     assertEquals(rpc.getClusterKey(), actualRpc.getClusterKey());

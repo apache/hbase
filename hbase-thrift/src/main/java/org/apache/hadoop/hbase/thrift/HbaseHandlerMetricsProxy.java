@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Converts a Hbase.Iface using InvocationHandler so that it reports process
- * time of each call to ThriftMetrics.
+ * Converts a Hbase.Iface using InvocationHandler so that it reports process time of each call to
+ * ThriftMetrics.
  */
 @InterfaceAudience.Private
 public class HbaseHandlerMetricsProxy implements InvocationHandler {
@@ -38,34 +36,27 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
   private final Object handler;
   private final ThriftMetrics metrics;
 
-  public static Hbase.Iface newInstance(Hbase.Iface handler,
-                                        ThriftMetrics metrics,
-                                        Configuration conf) {
-    return (Hbase.Iface) Proxy.newProxyInstance(
-        handler.getClass().getClassLoader(),
-        new Class[]{Hbase.Iface.class},
-        new HbaseHandlerMetricsProxy(handler, metrics, conf));
+  public static Hbase.Iface newInstance(Hbase.Iface handler, ThriftMetrics metrics,
+    Configuration conf) {
+    return (Hbase.Iface) Proxy.newProxyInstance(handler.getClass().getClassLoader(),
+      new Class[] { Hbase.Iface.class }, new HbaseHandlerMetricsProxy(handler, metrics, conf));
   }
 
   // for thrift 2
-  public static THBaseService.Iface newInstance(THBaseService.Iface handler,
-      ThriftMetrics metrics,
-      Configuration conf) {
-    return (THBaseService.Iface) Proxy.newProxyInstance(
-        handler.getClass().getClassLoader(),
-        new Class[]{THBaseService.Iface.class},
-        new HbaseHandlerMetricsProxy(handler, metrics, conf));
+  public static THBaseService.Iface newInstance(THBaseService.Iface handler, ThriftMetrics metrics,
+    Configuration conf) {
+    return (THBaseService.Iface) Proxy.newProxyInstance(handler.getClass().getClassLoader(),
+      new Class[] { THBaseService.Iface.class },
+      new HbaseHandlerMetricsProxy(handler, metrics, conf));
   }
 
-  private HbaseHandlerMetricsProxy(
-      Object handler, ThriftMetrics metrics, Configuration conf) {
+  private HbaseHandlerMetricsProxy(Object handler, ThriftMetrics metrics, Configuration conf) {
     this.handler = handler;
     this.metrics = metrics;
   }
 
   @Override
-  public Object invoke(Object proxy, Method m, Object[] args)
-      throws Throwable {
+  public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
     Object result;
     long start = now();
     try {
@@ -75,15 +66,14 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
       throw e.getTargetException();
     } catch (Exception e) {
       metrics.exception(e);
-      throw new RuntimeException(
-          "unexpected invocation exception: " + e.getMessage());
+      throw new RuntimeException("unexpected invocation exception: " + e.getMessage());
     } finally {
       long processTime = now() - start;
       metrics.incMethodTime(m.getName(), processTime);
     }
     return result;
   }
-  
+
   private static long now() {
     return System.nanoTime();
   }

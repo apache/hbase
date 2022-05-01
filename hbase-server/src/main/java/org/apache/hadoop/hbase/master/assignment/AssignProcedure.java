@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -27,11 +26,12 @@ import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AssignRegionStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Leave here only for checking if we can successfully start the master.
@@ -97,35 +97,35 @@ public class AssignProcedure extends RegionTransitionProcedure {
 
   @Override
   protected boolean startTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
-      throws IOException {
+    throws IOException {
     return true;
   }
 
   @Override
   protected boolean updateTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
-      throws IOException, ProcedureSuspendedException {
+    throws IOException, ProcedureSuspendedException {
     return true;
   }
 
   @Override
   protected void finishTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
-      throws IOException {
+    throws IOException {
   }
 
   @Override
   protected void reportTransition(final MasterProcedureEnv env, final RegionStateNode regionNode,
-      final TransitionCode code, final long openSeqNum) throws UnexpectedStateException {
+    final TransitionCode code, final long openSeqNum) throws UnexpectedStateException {
   }
 
   @Override
   public Optional<RemoteOperation> remoteCallBuild(final MasterProcedureEnv env,
-      final ServerName serverName) {
+    final ServerName serverName) {
     return Optional.empty();
   }
 
   @Override
   protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
-      final IOException exception) {
+    final IOException exception) {
     return true;
   }
 

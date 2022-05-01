@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,12 +26,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestImportExport extends org.apache.hadoop.hbase.mapreduce.TestImportExport {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImportExport.class);
+    HBaseClassTestRule.forClass(TestImportExport.class);
 
   @BeforeClass
   public static void beforeClass() throws Throwable {

@@ -21,22 +21,18 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 
 /**
- * A cache of {@link SyncFuture}s.  This class supports two methods
- * {@link SyncFutureCache#getIfPresentOrNew()} and {@link SyncFutureCache#offer(SyncFuture)}.
- *
- * Usage pattern:
- *   SyncFuture sf = syncFutureCache.getIfPresentOrNew();
- *   sf.reset(...);
- *   // Use the sync future
- *   finally: syncFutureCache.offer(sf);
- *
- * Offering the sync future back to the cache makes it eligible for reuse within the same thread
- * context. Cache keyed by the accessing thread instance and automatically invalidated if it remains
- * unused for {@link SyncFutureCache#SYNC_FUTURE_INVALIDATION_TIMEOUT_MINS} minutes.
+ * A cache of {@link SyncFuture}s. This class supports two methods
+ * {@link SyncFutureCache#getIfPresentOrNew()} and {@link SyncFutureCache#offer(SyncFuture)}. Usage
+ * pattern: SyncFuture sf = syncFutureCache.getIfPresentOrNew(); sf.reset(...); // Use the sync
+ * future finally: syncFutureCache.offer(sf); Offering the sync future back to the cache makes it
+ * eligible for reuse within the same thread context. Cache keyed by the accessing thread instance
+ * and automatically invalidated if it remains unused for
+ * {@link SyncFutureCache#SYNC_FUTURE_INVALIDATION_TIMEOUT_MINS} minutes.
  */
 @InterfaceAudience.Private
 public final class SyncFutureCache {
@@ -47,9 +43,9 @@ public final class SyncFutureCache {
 
   public SyncFutureCache(final Configuration conf) {
     final int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
     syncFutureCache = CacheBuilder.newBuilder().initialCapacity(handlerCount)
-        .expireAfterWrite(SYNC_FUTURE_INVALIDATION_TIMEOUT_MINS, TimeUnit.MINUTES).build();
+      .expireAfterWrite(SYNC_FUTURE_INVALIDATION_TIMEOUT_MINS, TimeUnit.MINUTES).build();
   }
 
   public SyncFuture getIfPresentOrNew() {

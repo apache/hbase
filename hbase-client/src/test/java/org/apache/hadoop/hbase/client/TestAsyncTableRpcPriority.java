@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -186,7 +186,7 @@ public class TestAsyncTableRpcPriority {
 
             @Override
             public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-                throws Throwable {
+              throws Throwable {
               TableName tableName = invocation.getArgument(0);
               RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
               ServerName serverName = ServerName.valueOf("rs", 16010, 12345);

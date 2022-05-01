@@ -84,12 +84,12 @@ public interface AsyncAdmin {
 
   /**
    * List all the tables matching the given pattern.
-   * @param pattern The compiled regular expression to match against
+   * @param pattern          The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
-      boolean includeSysTables);
+    boolean includeSysTables);
 
   /**
    * List specific tables including system tables.
@@ -123,7 +123,7 @@ public interface AsyncAdmin {
 
   /**
    * List all of the names of userspace tables.
-   * @param pattern The regular expression to match against
+   * @param pattern          The regular expression to match against
    * @param includeSysTables False to match only against userspace tables
    * @return a list of table names wrapped by a {@link CompletableFuture}.
    */
@@ -155,19 +155,19 @@ public interface AsyncAdmin {
    * key of the last region of the table (the first region has a null start key and the last region
    * has a null end key). BigInteger math will be used to divide the key range specified into enough
    * segments to make the required number of total regions.
-   * @param desc table descriptor for table
-   * @param startKey beginning of key range
-   * @param endKey end of key range
+   * @param desc       table descriptor for table
+   * @param startKey   beginning of key range
+   * @param endKey     end of key range
    * @param numRegions the total number of regions to create
    */
   CompletableFuture<Void> createTable(TableDescriptor desc, byte[] startKey, byte[] endKey,
-      int numRegions);
+    int numRegions);
 
   /**
    * Creates a new table with an initial set of empty regions defined by the specified split keys.
-   * The total number of regions created will be the number of split keys plus one.
-   * Note : Avoid passing empty split key.
-   * @param desc table descriptor for table
+   * The total number of regions created will be the number of split keys plus one. Note : Avoid
+   * passing empty split key.
+   * @param desc      table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    */
   CompletableFuture<Void> createTable(TableDescriptor desc, byte[][] splitKeys);
@@ -181,7 +181,7 @@ public interface AsyncAdmin {
   /**
    * Change the store file tracker of the given table.
    * @param tableName the table you want to change
-   * @param dstSFT the destination store file tracker
+   * @param dstSFT    the destination store file tracker
    */
   CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT);
 
@@ -193,7 +193,7 @@ public interface AsyncAdmin {
 
   /**
    * Truncate a table.
-   * @param tableName name of table to truncate
+   * @param tableName      name of table to truncate
    * @param preserveSplits True if the splits should be preserved
    */
   CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits);
@@ -205,8 +205,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> enableTable(TableName tableName);
 
   /**
-   * Disable a table. The table has to be in enabled state for it to be disabled.
-   * @param tableName
+   * Disable a table. The table has to be in enabled state for it to be disabled. n
    */
   CompletableFuture<Void> disableTable(TableName tableName);
 
@@ -245,32 +244,31 @@ public interface AsyncAdmin {
 
   /**
    * Add a column family to an existing table.
-   * @param tableName name of the table to add column family to
+   * @param tableName    name of the table to add column family to
    * @param columnFamily column family descriptor of column family to be added
    */
-  CompletableFuture<Void> addColumnFamily(TableName tableName,
-      ColumnFamilyDescriptor columnFamily);
+  CompletableFuture<Void> addColumnFamily(TableName tableName, ColumnFamilyDescriptor columnFamily);
 
   /**
    * Delete a column family from a table.
-   * @param tableName name of table
+   * @param tableName    name of table
    * @param columnFamily name of column family to be deleted
    */
   CompletableFuture<Void> deleteColumnFamily(TableName tableName, byte[] columnFamily);
 
   /**
    * Modify an existing column family on a table.
-   * @param tableName name of table
+   * @param tableName    name of table
    * @param columnFamily new column family descriptor to use
    */
   CompletableFuture<Void> modifyColumnFamily(TableName tableName,
-      ColumnFamilyDescriptor columnFamily);
+    ColumnFamilyDescriptor columnFamily);
 
   /**
    * Change the store file tracker of the given table's given family.
    * @param tableName the table you want to change
-   * @param family the family you want to change
-   * @param dstSFT the destination store file tracker
+   * @param family    the family you want to change
+   * @param dstSFT    the destination store file tracker
    */
   CompletableFuture<Void> modifyColumnFamilyStoreFileTracker(TableName tableName, byte[] family,
     String dstSFT);
@@ -329,9 +327,9 @@ public interface AsyncAdmin {
   CompletableFuture<Void> flush(TableName tableName);
 
   /**
-   * Flush the specified column family stores on all regions of the passed table.
-   * This runs as a synchronous operation.
-   * @param tableName table to flush
+   * Flush the specified column family stores on all regions of the passed table. This runs as a
+   * synchronous operation.
+   * @param tableName    table to flush
    * @param columnFamily column family within a table
    */
   CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily);
@@ -344,9 +342,9 @@ public interface AsyncAdmin {
 
   /**
    * Flush a column family within a region.
-   * @param regionName region to flush
+   * @param regionName   region to flush
    * @param columnFamily column family within a region. If not present, flush the region's all
-   *          column families.
+   *                     column families.
    */
   CompletableFuture<Void> flushRegion(byte[] regionName, byte[] columnFamily);
 
@@ -358,8 +356,8 @@ public interface AsyncAdmin {
 
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
-   * was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to compact
    */
   default CompletableFuture<Void> compact(TableName tableName) {
@@ -369,11 +367,10 @@ public interface AsyncAdmin {
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
-   * @param tableName table to compact
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * @param tableName    table to compact
    * @param columnFamily column family within a table. If not present, compact the table's all
-   *          column families.
+   *                     column families.
    */
   default CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily) {
     return compact(tableName, columnFamily, CompactType.NORMAL);
@@ -381,10 +378,10 @@ public interface AsyncAdmin {
 
   /**
    * Compact a table. When the returned CompletableFuture is done, it only means the compact request
-   * was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
-   * normal compaction type.
-   * @param tableName table to compact
+   * was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for normal compaction
+   * type.
+   * @param tableName   table to compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
   CompletableFuture<Void> compact(TableName tableName, CompactType compactType);
@@ -392,15 +389,14 @@ public interface AsyncAdmin {
   /**
    * Compact a column family within a table. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
    * normal compaction type.
-   * @param tableName table to compact
+   * @param tableName    table to compact
    * @param columnFamily column family within a table
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   * @param compactType  {@link org.apache.hadoop.hbase.client.CompactType}
    */
   CompletableFuture<Void> compact(TableName tableName, byte[] columnFamily,
-      CompactType compactType);
+    CompactType compactType);
 
   /**
    * Compact an individual region. When the returned CompletableFuture is done, it only means the
@@ -413,16 +409,16 @@ public interface AsyncAdmin {
    * Compact a column family within a region. When the returned CompletableFuture is done, it only
    * means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
-   * @param regionName region to compact
+   * @param regionName   region to compact
    * @param columnFamily column family within a region. If not present, compact the region's all
-   *          column families.
+   *                     column families.
    */
   CompletableFuture<Void> compactRegion(byte[] regionName, byte[] columnFamily);
 
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
-   * request was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * request was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
    * @param tableName table to major compact
    */
   default CompletableFuture<Void> majorCompact(TableName tableName) {
@@ -432,12 +428,11 @@ public interface AsyncAdmin {
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
    * normal compaction. type.
-   * @param tableName table to major compact
+   * @param tableName    table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
-   *          column families.
+   *                     column families.
    */
   default CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily) {
     return majorCompact(tableName, columnFamily, CompactType.NORMAL);
@@ -445,10 +440,10 @@ public interface AsyncAdmin {
 
   /**
    * Major compact a table. When the returned CompletableFuture is done, it only means the compact
-   * request was sent to HBase and may need some time to finish the compact operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for
-   * normal compaction type.
-   * @param tableName table to major compact
+   * request was sent to HBase and may need some time to finish the compact operation. Throws
+   * {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found for normal compaction
+   * type.
+   * @param tableName   table to major compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    */
   CompletableFuture<Void> majorCompact(TableName tableName, CompactType compactType);
@@ -456,15 +451,14 @@ public interface AsyncAdmin {
   /**
    * Major compact a column family within a table. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
-   * operation.
-   * Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
-   * @param tableName table to major compact
+   * operation. Throws {@link org.apache.hadoop.hbase.TableNotFoundException} if table not found.
+   * @param tableName    table to major compact
    * @param columnFamily column family within a table. If not present, major compact the table's all
-   *          column families.
-   * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
+   *                     column families.
+   * @param compactType  {@link org.apache.hadoop.hbase.client.CompactType}
    */
   CompletableFuture<Void> majorCompact(TableName tableName, byte[] columnFamily,
-      CompactType compactType);
+    CompactType compactType);
 
   /**
    * Major compact a region. When the returned CompletableFuture is done, it only means the compact
@@ -477,9 +471,9 @@ public interface AsyncAdmin {
    * Major compact a column family within region. When the returned CompletableFuture is done, it
    * only means the compact request was sent to HBase and may need some time to finish the compact
    * operation.
-   * @param regionName region to major compact
+   * @param regionName   region to major compact
    * @param columnFamily column family within a region. If not present, major compact the region's
-   *          all column families.
+   *                     all column families.
    */
   CompletableFuture<Void> majorCompactRegion(byte[] regionName, byte[] columnFamily);
 
@@ -510,9 +504,9 @@ public interface AsyncAdmin {
    * Notice that, the method itself is always non-blocking, which means it will always return
    * immediately. The {@code drainMerges} parameter only effects when will we complete the returned
    * {@link CompletableFuture}.
-   * @param enabled enabled or not
+   * @param enabled     enabled or not
    * @param drainMerges If <code>true</code>, it waits until current merge() call, if outstanding,
-   *          to return.
+   *                    to return.
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> mergeSwitch(boolean enabled, boolean drainMerges);
@@ -539,9 +533,9 @@ public interface AsyncAdmin {
    * Notice that, the method itself is always non-blocking, which means it will always return
    * immediately. The {@code drainSplits} parameter only effects when will we complete the returned
    * {@link CompletableFuture}.
-   * @param enabled enabled or not
+   * @param enabled     enabled or not
    * @param drainSplits If <code>true</code>, it waits until current split() call, if outstanding,
-   *          to return.
+   *                    to return.
    * @return Previous switch value wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> splitSwitch(boolean enabled, boolean drainSplits);
@@ -557,22 +551,22 @@ public interface AsyncAdmin {
    * Merge two regions.
    * @param nameOfRegionA encoded or full name of region a
    * @param nameOfRegionB encoded or full name of region b
-   * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
-   *          regions
+   * @param forcible      true if do a compulsory merge, otherwise we will only merge two adjacent
+   *                      regions
    * @deprecated since 2.3.0 and will be removed in 4.0.0.Use {@link #mergeRegions(List, boolean)}
    *             instead.
    */
   @Deprecated
   default CompletableFuture<Void> mergeRegions(byte[] nameOfRegionA, byte[] nameOfRegionB,
-      boolean forcible) {
+    boolean forcible) {
     return mergeRegions(Arrays.asList(nameOfRegionA, nameOfRegionB), forcible);
   }
 
   /**
    * Merge multiple regions (>=2).
    * @param nameOfRegionsToMerge encoded or full name of daughter regions
-   * @param forcible true if do a compulsory merge, otherwise we will only merge two adjacent
-   *          regions
+   * @param forcible             true if do a compulsory merge, otherwise we will only merge two
+   *                             adjacent regions
    */
   CompletableFuture<Void> mergeRegions(List<byte[]> nameOfRegionsToMerge, boolean forcible);
 
@@ -590,7 +584,7 @@ public interface AsyncAdmin {
 
   /**
    * Split a table.
-   * @param tableName table to split
+   * @param tableName  table to split
    * @param splitPoint the explicit position to split on
    */
   CompletableFuture<Void> split(TableName tableName, byte[] splitPoint);
@@ -599,7 +593,7 @@ public interface AsyncAdmin {
    * Split an individual region.
    * @param regionName region to split
    * @param splitPoint the explicit position to split on. If not present, it will decide by region
-   *          server.
+   *                   server.
    */
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
@@ -618,12 +612,11 @@ public interface AsyncAdmin {
    * regionserver chosen at random. Region could be reassigned back to the same server. Use
    * {@link #move(byte[], ServerName)} if you want to control the region movement.
    * @param regionName Encoded or full name of region to unassign. Will clear any existing
-   *          RegionPlan if one found.
-   * @param forcible If true, force unassign (Will remove region from regions-in-transition too if
-   *          present. If results in double assignment use hbck -fix to resolve. To be used by
-   *          experts).
-   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])}
-   *   instead.
+   *                   RegionPlan if one found.
+   * @param forcible   If true, force unassign (Will remove region from regions-in-transition too if
+   *                   present. If results in double assignment use hbck -fix to resolve. To be used
+   *                   by experts).
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link #unassign(byte[])} instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24875">HBASE-24875</a>
    */
   @Deprecated
@@ -649,10 +642,11 @@ public interface AsyncAdmin {
 
   /**
    * Move the region <code>r</code> to <code>dest</code>.
-   * @param regionName Encoded or full name of region to move.
+   * @param regionName     Encoded or full name of region to move.
    * @param destServerName The servername of the destination regionserver. If not present, we'll
-   *          assign to a random server. A server name is made of host, port and startcode. Here is
-   *          an example: <code> host187.example.com,60020,1289493121758</code>
+   *                       assign to a random server. A server name is made of host, port and
+   *                       startcode. Here is an example:
+   *                       <code> host187.example.com,60020,1289493121758</code>
    */
   CompletableFuture<Void> move(byte[] regionName, ServerName destServerName);
 
@@ -671,22 +665,22 @@ public interface AsyncAdmin {
 
   /**
    * Add a new replication peer for replicating data to slave cluster
-   * @param peerId a short name that identifies the peer
+   * @param peerId     a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
    */
   default CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig) {
+    ReplicationPeerConfig peerConfig) {
     return addReplicationPeer(peerId, peerConfig, true);
   }
 
   /**
    * Add a new replication peer for replicating data to slave cluster
-   * @param peerId a short name that identifies the peer
+   * @param peerId     a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
-   * @param enabled peer state, true if ENABLED and false if DISABLED
+   * @param enabled    peer state, true if ENABLED and false if DISABLED
    */
-  CompletableFuture<Void> addReplicationPeer(String peerId,
-      ReplicationPeerConfig peerConfig, boolean enabled);
+  CompletableFuture<Void> addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig,
+    boolean enabled);
 
   /**
    * Remove a peer and stop the replication
@@ -715,27 +709,27 @@ public interface AsyncAdmin {
 
   /**
    * Update the peerConfig for the specified peer
-   * @param peerId a short name that identifies the peer
+   * @param peerId     a short name that identifies the peer
    * @param peerConfig new config for the peer
    */
   CompletableFuture<Void> updateReplicationPeerConfig(String peerId,
-      ReplicationPeerConfig peerConfig);
+    ReplicationPeerConfig peerConfig);
 
   /**
    * Append the replicable table-cf config of the specified peer
-   * @param peerId a short that identifies the cluster
+   * @param peerId   a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    */
   CompletableFuture<Void> appendReplicationPeerTableCFs(String peerId,
-      Map<TableName, List<String>> tableCfs);
+    Map<TableName, List<String>> tableCfs);
 
   /**
    * Remove some table-cfs from config of the specified peer
-   * @param peerId a short name that identifies the cluster
+   * @param peerId   a short name that identifies the cluster
    * @param tableCfs A map from tableName to column family names
    */
   CompletableFuture<Void> removeReplicationPeerTableCFs(String peerId,
-      Map<TableName, List<String>> tableCfs);
+    Map<TableName, List<String>> tableCfs);
 
   /**
    * Return a list of replication peers.
@@ -780,7 +774,7 @@ public interface AsyncAdmin {
    * naming. Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
    * @param snapshotName name of the snapshot to be created
-   * @param tableName name of the table for which snapshot is created
+   * @param tableName    name of the table for which snapshot is created
    */
   default CompletableFuture<Void> snapshot(String snapshotName, TableName tableName) {
     return snapshot(snapshotName, tableName, SnapshotType.FLUSH);
@@ -794,12 +788,12 @@ public interface AsyncAdmin {
    * naming. Snapshot names follow the same naming constraints as tables in HBase. See
    * {@link org.apache.hadoop.hbase.TableName#isLegalFullyQualifiedTableName(byte[])}.
    * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
-   *          snapshots stored on the cluster
-   * @param tableName name of the table to snapshot
-   * @param type type of snapshot to take
+   *                     snapshots stored on the cluster
+   * @param tableName    name of the table to snapshot
+   * @param type         type of snapshot to take
    */
   default CompletableFuture<Void> snapshot(String snapshotName, TableName tableName,
-      SnapshotType type) {
+    SnapshotType type) {
     return snapshot(new SnapshotDescription(snapshotName, tableName, type));
   }
 
@@ -851,11 +845,11 @@ public interface AsyncAdmin {
    * restored. If the restore completes without problem the failsafe snapshot is deleted. The
    * failsafe snapshot name is configurable by using the property
    * "hbase.snapshot.restore.failsafe.name".
-   * @param snapshotName name of the snapshot to restore
+   * @param snapshotName         name of the snapshot to restore
    * @param takeFailSafeSnapshot true if the failsafe snapshot should be taken
    */
   default CompletableFuture<Void> restoreSnapshot(String snapshotName,
-      boolean takeFailSafeSnapshot) {
+    boolean takeFailSafeSnapshot) {
     return restoreSnapshot(snapshotName, takeFailSafeSnapshot, false);
   }
 
@@ -866,17 +860,17 @@ public interface AsyncAdmin {
    * restored. If the restore completes without problem the failsafe snapshot is deleted. The
    * failsafe snapshot name is configurable by using the property
    * "hbase.snapshot.restore.failsafe.name".
-   * @param snapshotName name of the snapshot to restore
+   * @param snapshotName         name of the snapshot to restore
    * @param takeFailSafeSnapshot true if the failsafe snapshot should be taken
-   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   * @param restoreAcl           <code>true</code> to restore acl of snapshot
    */
   CompletableFuture<Void> restoreSnapshot(String snapshotName, boolean takeFailSafeSnapshot,
-      boolean restoreAcl);
+    boolean restoreAcl);
 
   /**
    * Create a new table by cloning the snapshot content.
    * @param snapshotName name of the snapshot to be cloned
-   * @param tableName name of the table where the snapshot will be restored
+   * @param tableName    name of the table where the snapshot will be restored
    */
   default CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName) {
     return cloneSnapshot(snapshotName, tableName, false);
@@ -885,23 +879,23 @@ public interface AsyncAdmin {
   /**
    * Create a new table by cloning the snapshot content.
    * @param snapshotName name of the snapshot to be cloned
-   * @param tableName name of the table where the snapshot will be restored
-   * @param restoreAcl <code>true</code> to restore acl of snapshot
+   * @param tableName    name of the table where the snapshot will be restored
+   * @param restoreAcl   <code>true</code> to restore acl of snapshot
    */
   default CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl) {
+    boolean restoreAcl) {
     return cloneSnapshot(snapshotName, tableName, restoreAcl, null);
   }
 
   /**
    * Create a new table by cloning the snapshot content.
    * @param snapshotName name of the snapshot to be cloned
-   * @param tableName name of the table where the snapshot will be restored
-   * @param restoreAcl <code>true</code> to restore acl of snapshot
-   * @param customSFT specify the StroreFileTracker used for the table
+   * @param tableName    name of the table where the snapshot will be restored
+   * @param restoreAcl   <code>true</code> to restore acl of snapshot
+   * @param customSFT    specify the StroreFileTracker used for the table
    */
   CompletableFuture<Void> cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl, String customSFT);
+    boolean restoreAcl, String customSFT);
 
   /**
    * List completed snapshots.
@@ -928,13 +922,13 @@ public interface AsyncAdmin {
   /**
    * List all the completed snapshots matching the given table name regular expression and snapshot
    * name regular expression.
-   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param tableNamePattern    The compiled table name regular expression to match against
    * @param snapshotNamePattern The compiled snapshot name regular expression to match against
    * @return - returns a List of completed SnapshotDescription wrapped by a
    *         {@link CompletableFuture}
    */
   CompletableFuture<List<SnapshotDescription>> listTableSnapshots(Pattern tableNamePattern,
-      Pattern snapshotNamePattern);
+    Pattern snapshotNamePattern);
 
   /**
    * Delete an existing snapshot.
@@ -962,34 +956,34 @@ public interface AsyncAdmin {
   /**
    * Delete all existing snapshots matching the given table name regular expression and snapshot
    * name regular expression.
-   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param tableNamePattern    The compiled table name regular expression to match against
    * @param snapshotNamePattern The compiled snapshot name regular expression to match against
    */
   CompletableFuture<Void> deleteTableSnapshots(Pattern tableNamePattern,
-      Pattern snapshotNamePattern);
+    Pattern snapshotNamePattern);
 
   /**
    * Execute a distributed procedure on a cluster.
    * @param signature A distributed procedure is uniquely identified by its signature (default the
-   *          root ZK node name of the procedure).
-   * @param instance The instance name of the procedure. For some procedures, this parameter is
-   *          optional.
-   * @param props Property/Value pairs of properties passing to the procedure
+   *                  root ZK node name of the procedure).
+   * @param instance  The instance name of the procedure. For some procedures, this parameter is
+   *                  optional.
+   * @param props     Property/Value pairs of properties passing to the procedure
    */
   CompletableFuture<Void> execProcedure(String signature, String instance,
-      Map<String, String> props);
+    Map<String, String> props);
 
   /**
    * Execute a distributed procedure on a cluster.
    * @param signature A distributed procedure is uniquely identified by its signature (default the
-   *          root ZK node name of the procedure).
-   * @param instance The instance name of the procedure. For some procedures, this parameter is
-   *          optional.
-   * @param props Property/Value pairs of properties passing to the procedure
+   *                  root ZK node name of the procedure).
+   * @param instance  The instance name of the procedure. For some procedures, this parameter is
+   *                  optional.
+   * @param props     Property/Value pairs of properties passing to the procedure
    * @return data returned after procedure execution. null if no return data.
    */
   CompletableFuture<byte[]> execProcedureWithReturn(String signature, String instance,
-      Map<String, String> props);
+    Map<String, String> props);
 
   /**
    * Check the current state of the specified procedure. There are three possible states:
@@ -999,18 +993,18 @@ public interface AsyncAdmin {
    * <li>finished with error - throws the exception that caused the procedure to fail</li>
    * </ol>
    * @param signature The signature that uniquely identifies a procedure
-   * @param instance The instance name of the procedure
-   * @param props Property/Value pairs of properties passing to the procedure
+   * @param instance  The instance name of the procedure
+   * @param props     Property/Value pairs of properties passing to the procedure
    * @return true if the specified procedure is finished successfully, false if it is still running.
    *         The value is wrapped by {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isProcedureFinished(String signature, String instance,
-      Map<String, String> props);
+    Map<String, String> props);
 
   /**
-   * Abort a procedure
-   * Do not use. Usually it is ignored but if not, it can do more damage than good. See hbck2.
-   * @param procId ID of the procedure to abort
+   * Abort a procedure Do not use. Usually it is ignored but if not, it can do more damage than
+   * good. See hbck2.
+   * @param procId                ID of the procedure to abort
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
    * @return true if aborted, false if procedure already completed or does not exist. the value is
    *         wrapped by {@link CompletableFuture}
@@ -1033,10 +1027,10 @@ public interface AsyncAdmin {
   CompletableFuture<String> getLocks();
 
   /**
-   * Mark region server(s) as decommissioned to prevent additional regions from getting
-   * assigned to them. Optionally unload the regions on the servers. If there are multiple servers
-   * to be decommissioned, decommissioning them at the same time can prevent wasteful region
-   * movements. Region unloading is asynchronous.
+   * Mark region server(s) as decommissioned to prevent additional regions from getting assigned to
+   * them. Optionally unload the regions on the servers. If there are multiple servers to be
+   * decommissioned, decommissioning them at the same time can prevent wasteful region movements.
+   * Region unloading is asynchronous.
    * @param servers The list of servers to decommission.
    * @param offload True to offload the regions from the decommissioned servers
    */
@@ -1051,11 +1045,11 @@ public interface AsyncAdmin {
   /**
    * Remove decommission marker from a region server to allow regions assignments. Load regions onto
    * the server if a list of regions is given. Region loading is asynchronous.
-   * @param server The server to recommission.
+   * @param server             The server to recommission.
    * @param encodedRegionNames Regions to load onto the server.
    */
   CompletableFuture<Void> recommissionRegionServer(ServerName server,
-      List<byte[]> encodedRegionNames);
+    List<byte[]> encodedRegionNames);
 
   /**
    * @return cluster status wrapped by {@link CompletableFuture}
@@ -1087,11 +1081,11 @@ public interface AsyncAdmin {
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
-        .thenApply(ClusterMetrics::getServersName);
+      .thenApply(ClusterMetrics::getServersName);
   }
 
-  default CompletableFuture<Collection<ServerName>> getRegionServers(
-    boolean excludeDecommissionedRS) {
+  default CompletableFuture<Collection<ServerName>>
+    getRegionServers(boolean excludeDecommissionedRS) {
     CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
     addListener(
       getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).thenApply(ClusterMetrics::getServersName),
@@ -1121,7 +1115,7 @@ public interface AsyncAdmin {
    */
   default CompletableFuture<List<String>> getMasterCoprocessorNames() {
     return getClusterMetrics(EnumSet.of(Option.MASTER_COPROCESSORS))
-        .thenApply(ClusterMetrics::getMasterCoprocessorNames);
+      .thenApply(ClusterMetrics::getMasterCoprocessorNames);
   }
 
   /**
@@ -1129,8 +1123,8 @@ public interface AsyncAdmin {
    * @return master info port
    */
   default CompletableFuture<Integer> getMasterInfoPort() {
-    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT)).thenApply(
-      ClusterMetrics::getMasterInfoPort);
+    return getClusterMetrics(EnumSet.of(Option.MASTER_INFO_PORT))
+      .thenApply(ClusterMetrics::getMasterInfoPort);
   }
 
   /**
@@ -1144,8 +1138,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> stopMaster();
 
   /**
-   * Stop the designated regionserver.
-   * @param serverName
+   * Stop the designated regionserver. n
    */
   CompletableFuture<Void> stopRegionServer(ServerName serverName);
 
@@ -1173,24 +1166,19 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
-   * Clear compacting queues on a region server.
-   * @param serverName
-   * @param queues the set of queue name
+   * Clear compacting queues on a region server. n * @param queues the set of queue name
    */
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver.
-   * @param serverName
-   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver. n * @return a
+   * list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table.
-   * @param serverName
-   * @param tableName
-   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table. nn
+   * * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
     TableName tableName);
@@ -1215,12 +1203,12 @@ public interface AsyncAdmin {
   /**
    * Get the current compaction state of a table. It could be in a major compaction, a minor
    * compaction, both, or none.
-   * @param tableName table to examine
+   * @param tableName   table to examine
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
    * @return the current compaction state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<CompactionState> getCompactionState(TableName tableName,
-      CompactType compactType);
+    CompactType compactType);
 
   /**
    * Get the current compaction state of region. It could be in a major compaction, a minor
@@ -1271,9 +1259,9 @@ public interface AsyncAdmin {
    * Notice that, the method itself is always non-blocking, which means it will always return
    * immediately. The {@code drainRITs} parameter only effects when will we complete the returned
    * {@link CompletableFuture}.
-   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param on        Set to <code>true</code> to enable, <code>false</code> to disable.
    * @param drainRITs If <code>true</code>, it waits until current balance() call, if outstanding,
-   *          to return.
+   *                  to return.
    * @return Previous balancer value wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> balancerSwitch(boolean on, boolean drainRITs);
@@ -1300,8 +1288,8 @@ public interface AsyncAdmin {
 
   /**
    * Query the current state of the balancer.
-   * @return true if the balance switch is on, false otherwise. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * @return true if the balance switch is on, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isBalancerEnabled();
 
@@ -1337,16 +1325,15 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
-   * Turn the cleaner chore on/off.
-   * @param on
-   * @return Previous cleaner state wrapped by a {@link CompletableFuture}
+   * Turn the cleaner chore on/off. n * @return Previous cleaner state wrapped by a
+   * {@link CompletableFuture}
    */
   CompletableFuture<Boolean> cleanerChoreSwitch(boolean on);
 
   /**
    * Query the current state of the cleaner chore.
-   * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by
-   *         a {@link CompletableFuture}
+   * @return true if cleaner chore is on, false otherwise. The return value will be wrapped by a
+   *         {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isCleanerChoreEnabled();
 
@@ -1358,16 +1345,15 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> runCleanerChore();
 
   /**
-   * Turn the catalog janitor on/off.
-   * @param on
-   * @return the previous state wrapped by a {@link CompletableFuture}
+   * Turn the catalog janitor on/off. n * @return the previous state wrapped by a
+   * {@link CompletableFuture}
    */
   CompletableFuture<Boolean> catalogJanitorSwitch(boolean on);
 
   /**
    * Query on the catalog janitor state.
-   * @return true if the catalog janitor is on, false otherwise. The return value will be
-   *         wrapped by a {@link CompletableFuture}
+   * @return true if the catalog janitor is on, false otherwise. The return value will be wrapped by
+   *         a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> isCatalogJanitorEnabled();
 
@@ -1389,16 +1375,17 @@ public interface AsyncAdmin {
    * channel -> xxxService.newStub(channel)
    * </code>
    * </pre>
+   *
    * @param stubMaker a delegation to the actual {@code newStub} call.
-   * @param callable a delegation to the actual protobuf rpc call. See the comment of
-   *          {@link ServiceCaller} for more details.
-   * @param <S> the type of the asynchronous stub
-   * @param <R> the type of the return value
+   * @param callable  a delegation to the actual protobuf rpc call. See the comment of
+   *                  {@link ServiceCaller} for more details.
+   * @param <S>       the type of the asynchronous stub
+   * @param <R>       the type of the return value
    * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
    * @see ServiceCaller
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable);
+    ServiceCaller<S, R> callable);
 
   /**
    * Execute the given coprocessor call on the given region server.
@@ -1411,12 +1398,13 @@ public interface AsyncAdmin {
    * channel -> xxxService.newStub(channel)
    * </code>
    * </pre>
-   * @param stubMaker a delegation to the actual {@code newStub} call.
-   * @param callable a delegation to the actual protobuf rpc call. See the comment of
-   *          {@link ServiceCaller} for more details.
+   *
+   * @param stubMaker  a delegation to the actual {@code newStub} call.
+   * @param callable   a delegation to the actual protobuf rpc call. See the comment of
+   *                   {@link ServiceCaller} for more details.
    * @param serverName the given region server
-   * @param <S> the type of the asynchronous stub
-   * @param <R> the type of the return value
+   * @param <S>        the type of the asynchronous stub
+   * @param <R>        the type of the return value
    * @return the return value of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
    * @see ServiceCaller
    */
@@ -1428,7 +1416,7 @@ public interface AsyncAdmin {
    */
   default CompletableFuture<List<ServerName>> listDeadServers() {
     return this.getClusterMetrics(EnumSet.of(Option.DEAD_SERVERS))
-        .thenApply(ClusterMetrics::getDeadServerNames);
+      .thenApply(ClusterMetrics::getDeadServerNames);
   }
 
   /**
@@ -1450,26 +1438,24 @@ public interface AsyncAdmin {
 
   /**
    * Create a new table by cloning the existent table schema.
-   *
-   * @param tableName name of the table to be cloned
-   * @param newTableName name of the new table where the table will be created
+   * @param tableName      name of the table to be cloned
+   * @param newTableName   name of the new table where the table will be created
    * @param preserveSplits True if the splits should be preserved
    */
-  CompletableFuture<Void>  cloneTableSchema(final TableName tableName,
-      final TableName newTableName, final boolean preserveSplits);
+  CompletableFuture<Void> cloneTableSchema(final TableName tableName, final TableName newTableName,
+    final boolean preserveSplits);
 
   /**
    * Turn the compaction on or off. Disabling compactions will also interrupt any currently ongoing
-   * compactions. This state is ephemeral. The setting will be lost on restart. Compaction
-   * can also be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled
-   * in hbase-site.xml.
-   *
+   * compactions. This state is ephemeral. The setting will be lost on restart. Compaction can also
+   * be enabled/disabled by modifying configuration hbase.regionserver.compaction.enabled in
+   * hbase-site.xml.
    * @param switchState     Set to <code>true</code> to enable, <code>false</code> to disable.
    * @param serverNamesList list of region servers.
    * @return Previous compaction states for region servers
    */
   CompletableFuture<Map<ServerName, Boolean>> compactionSwitch(boolean switchState,
-      List<String> serverNamesList);
+    List<String> serverNamesList);
 
   /**
    * Switch the rpc throttle enabled state.
@@ -1485,8 +1471,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> isRpcThrottleEnabled();
 
   /**
-   * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota
-   * can be exceeded if region server has availble quota.
+   * Switch the exceed throttle quota. If enabled, user/table/namespace throttle quota can be
+   * exceeded if region server has availble quota.
    * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
    * @return Previous exceed throttle enabled value
    */
@@ -1501,28 +1487,28 @@ public interface AsyncAdmin {
    * Fetches the observed {@link SpaceQuotaSnapshotView}s observed by a RegionServer.
    */
   CompletableFuture<? extends Map<TableName, ? extends SpaceQuotaSnapshotView>>
-      getRegionServerSpaceQuotaSnapshots(ServerName serverName);
+    getRegionServerSpaceQuotaSnapshots(ServerName serverName);
 
   /**
    * Returns the Master's view of a quota on the given {@code namespace} or null if the Master has
    * no quota information on that namespace.
    */
   CompletableFuture<? extends SpaceQuotaSnapshotView>
-      getCurrentSpaceQuotaSnapshot(String namespace);
+    getCurrentSpaceQuotaSnapshot(String namespace);
 
   /**
    * Returns the Master's view of a quota on the given {@code tableName} or null if the Master has
    * no quota information on that table.
    */
-  CompletableFuture<? extends SpaceQuotaSnapshotView> getCurrentSpaceQuotaSnapshot(
-      TableName tableName);
+  CompletableFuture<? extends SpaceQuotaSnapshotView>
+    getCurrentSpaceQuotaSnapshot(TableName tableName);
 
   /**
    * Grants user specific permissions
-   * @param userPermission user name and the specific permission
+   * @param userPermission           user name and the specific permission
    * @param mergeExistingPermissions If set to false, later granted permissions will override
-   *          previous granted permissions. otherwise, it'll merge with previous granted
-   *          permissions.
+   *                                 previous granted permissions. otherwise, it'll merge with
+   *                                 previous granted permissions.
    */
   CompletableFuture<Void> grant(UserPermission userPermission, boolean mergeExistingPermissions);
 
@@ -1535,20 +1521,20 @@ public interface AsyncAdmin {
   /**
    * Get the global/namespace/table permissions for user
    * @param getUserPermissionsRequest A request contains which user, global, namespace or table
-   *          permissions needed
+   *                                  permissions needed
    * @return The user and permission list
    */
   CompletableFuture<List<UserPermission>>
-      getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest);
+    getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest);
 
   /**
    * Check if the user has specific permissions
-   * @param userName the user name
+   * @param userName    the user name
    * @param permissions the specific permission list
    * @return True if user has the specific permissions
    */
   CompletableFuture<List<Boolean>> hasUserPermissions(String userName,
-      List<Permission> permissions);
+    List<Permission> permissions);
 
   /**
    * Check if call user has specific permissions
@@ -1565,35 +1551,31 @@ public interface AsyncAdmin {
    * Notice that, the method itself is always non-blocking, which means it will always return
    * immediately. The {@code sync} parameter only effects when will we complete the returned
    * {@link CompletableFuture}.
-   *
-   * @param on Set to <code>true</code> to enable, <code>false</code> to disable.
-   * @param sync If <code>true</code>, it waits until current snapshot cleanup is completed,
-   *   if outstanding.
+   * @param on   Set to <code>true</code> to enable, <code>false</code> to disable.
+   * @param sync If <code>true</code>, it waits until current snapshot cleanup is completed, if
+   *             outstanding.
    * @return Previous auto snapshot cleanup value wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> snapshotCleanupSwitch(boolean on, boolean sync);
 
   /**
    * Query the current state of the auto snapshot cleanup based on TTL.
-   *
-   * @return true if the auto snapshot cleanup is enabled, false otherwise.
-   *   The return value will be wrapped by a {@link CompletableFuture}.
+   * @return true if the auto snapshot cleanup is enabled, false otherwise. The return value will be
+   *         wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isSnapshotCleanupEnabled();
 
   /**
-   * Retrieves online slow RPC logs from the provided list of
-   * RegionServers
-   *
-   * @param serverNames Server names to get slowlog responses from
+   * Retrieves online slow RPC logs from the provided list of RegionServers
+   * @param serverNames    Server names to get slowlog responses from
    * @param logQueryFilter filter to be used if provided
    * @return Online slowlog response list. The return value wrapped by a {@link CompletableFuture}
-   * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   *   Use {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use
+   *             {@link #getLogEntries(Set, String, ServerType, int, Map)} instead.
    */
   @Deprecated
-  default CompletableFuture<List<OnlineLogRecord>> getSlowLogResponses(
-      final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
+  default CompletableFuture<List<OnlineLogRecord>>
+    getSlowLogResponses(final Set<ServerName> serverNames, final LogQueryFilter logQueryFilter) {
     String logType;
     if (LogQueryFilter.Type.LARGE_LOG.equals(logQueryFilter.getType())) {
       logType = "LARGE_LOG";
@@ -1606,34 +1588,29 @@ public interface AsyncAdmin {
     filterParams.put("tableName", logQueryFilter.getTableName());
     filterParams.put("userName", logQueryFilter.getUserName());
     filterParams.put("filterByOperator", logQueryFilter.getFilterByOperator().toString());
-    CompletableFuture<List<LogEntry>> logEntries =
-      getLogEntries(serverNames, logType, ServerType.REGION_SERVER, logQueryFilter.getLimit(),
-        filterParams);
-    return logEntries.thenApply(
-      logEntryList -> logEntryList.stream().map(logEntry -> (OnlineLogRecord) logEntry)
-        .collect(Collectors.toList()));
+    CompletableFuture<List<LogEntry>> logEntries = getLogEntries(serverNames, logType,
+      ServerType.REGION_SERVER, logQueryFilter.getLimit(), filterParams);
+    return logEntries.thenApply(logEntryList -> logEntryList.stream()
+      .map(logEntry -> (OnlineLogRecord) logEntry).collect(Collectors.toList()));
   }
 
   /**
-   * Clears online slow RPC logs from the provided list of
-   * RegionServers
-   *
+   * Clears online slow RPC logs from the provided list of RegionServers
    * @param serverNames Set of Server names to clean slowlog responses from
-   * @return List of booleans representing if online slowlog response buffer is cleaned
-   *   from each RegionServer. The return value wrapped by a {@link CompletableFuture}
+   * @return List of booleans representing if online slowlog response buffer is cleaned from each
+   *         RegionServer. The return value wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<List<Boolean>> clearSlowLogResponses(final Set<ServerName> serverNames);
 
   /**
-   * Retrieve recent online records from HMaster / RegionServers.
-   * Examples include slow/large RPC logs, balancer decisions by master.
-   *
-   * @param serverNames servers to retrieve records from, useful in case of records maintained
-   *   by RegionServer as we can select specific server. In case of servertype=MASTER, logs will
-   *   only come from the currently active master.
-   * @param logType string representing type of log records
-   * @param serverType enum for server type: HMaster or RegionServer
-   * @param limit put a limit to list of records that server should send in response
+   * Retrieve recent online records from HMaster / RegionServers. Examples include slow/large RPC
+   * logs, balancer decisions by master.
+   * @param serverNames  servers to retrieve records from, useful in case of records maintained by
+   *                     RegionServer as we can select specific server. In case of
+   *                     servertype=MASTER, logs will only come from the currently active master.
+   * @param logType      string representing type of log records
+   * @param serverType   enum for server type: HMaster or RegionServer
+   * @param limit        put a limit to list of records that server should send in response
    * @param filterParams additional filter params
    * @return Log entries representing online records from servers
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 
 public class DummyRegionProcedure
-    extends AbstractStateMachineRegionProcedure<DummyRegionProcedureState> {
+  extends AbstractStateMachineRegionProcedure<DummyRegionProcedureState> {
 
   private final CountDownLatch arrive = new CountDownLatch(1);
 
@@ -46,7 +46,7 @@ public class DummyRegionProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, DummyRegionProcedureState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     arrive.countDown();
     resume.await();
     return Flow.NO_MORE_STATE;
@@ -54,7 +54,7 @@ public class DummyRegionProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, DummyRegionProcedureState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
   }
 
   @Override

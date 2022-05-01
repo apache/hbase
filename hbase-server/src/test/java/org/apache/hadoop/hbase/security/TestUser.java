@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
-@Category({SecurityTests.class, SmallTests.class})
+@Category({ SecurityTests.class, SmallTests.class })
 public class TestUser {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestUser.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestUser.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUser.class);
 
@@ -75,7 +74,7 @@ public class TestUser {
     User uTwo = up.create(ugiTwo);
 
     // Make sure that we didn't break groups and everything worked well.
-    assertArrayEquals(uOne.getGroupNames(),uTwo.getGroupNames());
+    assertArrayEquals(uOne.getGroupNames(), uTwo.getGroupNames());
 
     // Check that they are referentially equal.
     // Since getting a group for a users that doesn't exist creates a new string array
@@ -93,7 +92,6 @@ public class TestUser {
       Configuration conf = HBaseConfiguration.create();
       UserProvider up = UserProvider.instantiate(conf);
 
-
       String rootUserName = "root";
 
       // Create two UGI's for this username
@@ -105,17 +103,16 @@ public class TestUser {
       User uTwo = up.create(ugiTwo);
 
       // Make sure that we didn't break groups and everything worked well.
-      assertArrayEquals(uOne.getGroupNames(),uTwo.getGroupNames());
+      assertArrayEquals(uOne.getGroupNames(), uTwo.getGroupNames());
       String[] groupNames = ugiOne.getGroupNames();
       assertTrue(groupNames.length > 0);
     }
   }
 
-
   @Test
   public void testBasicAttributes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    User user = User.createUserForTesting(conf, "simple", new String[]{"foo"});
+    User user = User.createUserForTesting(conf, "simple", new String[] { "foo" });
     assertEquals("Username should match", "simple", user.getName());
     assertEquals("Short username should match", "simple", user.getShortName());
     // don't test shortening of kerberos names because regular Hadoop doesn't support them
@@ -124,27 +121,25 @@ public class TestUser {
   @Test
   public void testRunAs() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    final User user = User.createUserForTesting(conf, "testuser", new String[]{"foo"});
-    final PrivilegedExceptionAction<String> action = new PrivilegedExceptionAction<String>(){
+    final User user = User.createUserForTesting(conf, "testuser", new String[] { "foo" });
+    final PrivilegedExceptionAction<String> action = new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws IOException {
-          User u = User.getCurrent();
-          return u.getName();
+        User u = User.getCurrent();
+        return u.getName();
       }
     };
 
     String username = user.runAs(action);
-    assertEquals("Current user within runAs() should match",
-        "testuser", username);
+    assertEquals("Current user within runAs() should match", "testuser", username);
 
     // ensure the next run is correctly set
-    User user2 = User.createUserForTesting(conf, "testuser2", new String[]{"foo"});
+    User user2 = User.createUserForTesting(conf, "testuser2", new String[] { "foo" });
     String username2 = user2.runAs(action);
-    assertEquals("Second username should match second user",
-        "testuser2", username2);
+    assertEquals("Second username should match second user", "testuser2", username2);
 
     // check the exception version
-    username = user.runAs(new PrivilegedExceptionAction<String>(){
+    username = user.runAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
         return User.getCurrent().getName();
@@ -153,19 +148,20 @@ public class TestUser {
     assertEquals("User name in runAs() should match", "testuser", username);
 
     // verify that nested contexts work
-    user2.runAs(new PrivilegedExceptionAction<Object>(){
+    user2.runAs(new PrivilegedExceptionAction<Object>() {
       @Override
-      public Object run() throws IOException, InterruptedException{
+      public Object run() throws IOException, InterruptedException {
         String nestedName = user.runAs(action);
         assertEquals("Nest name should match nested user", "testuser", nestedName);
-        assertEquals("Current name should match current user",
-            "testuser2", User.getCurrent().getName());
+        assertEquals("Current name should match current user", "testuser2",
+          User.getCurrent().getName());
         return null;
       }
     });
 
-    username = user.runAs(new PrivilegedAction<String>(){
+    username = user.runAs(new PrivilegedAction<String>() {
       String result = null;
+
       @Override
       public String run() {
         try {
@@ -177,22 +173,20 @@ public class TestUser {
       }
     });
 
-    assertEquals("Current user within runAs() should match",
-        "testuser", username);
+    assertEquals("Current user within runAs() should match", "testuser", username);
   }
 
   /**
-   * Make sure that we're returning a result for the current user.
-   * Previously getCurrent() was returning null if not initialized on
-   * non-secure Hadoop variants.
+   * Make sure that we're returning a result for the current user. Previously getCurrent() was
+   * returning null if not initialized on non-secure Hadoop variants.
    */
   @Test
   public void testGetCurrent() throws Exception {
     User user1 = User.getCurrent();
     assertNotNull(user1.ugi);
-    LOG.debug("User1 is "+user1.getName());
+    LOG.debug("User1 is " + user1.getName());
 
-    for (int i =0 ; i< 100; i++) {
+    for (int i = 0; i < 100; i++) {
       User u = User.getCurrent();
       assertNotNull(u);
       assertEquals(user1.getName(), u.getName());
@@ -207,19 +201,19 @@ public class TestUser {
     final ImmutableSet<String> singleGroups = ImmutableSet.of("group");
     final Configuration conf = HBaseConfiguration.create();
     User user = User.createUserForTesting(conf, username,
-        singleGroups.toArray(new String[singleGroups.size()]));
+      singleGroups.toArray(new String[singleGroups.size()]));
     assertUserGroup(user, singleGroups);
 
     final ImmutableSet<String> multiGroups = ImmutableSet.of("group", "group1", "group2");
     user = User.createUserForTesting(conf, username,
-        multiGroups.toArray(new String[multiGroups.size()]));
+      multiGroups.toArray(new String[multiGroups.size()]));
     assertUserGroup(user, multiGroups);
   }
 
   private void assertUserGroup(User user, ImmutableSet<String> groups) {
     assertNotNull("GroupNames should be not null", user.getGroupNames());
     assertTrue("UserGroupNames length should be == " + groups.size(),
-        user.getGroupNames().length == groups.size());
+      user.getGroupNames().length == groups.size());
 
     for (String group : user.getGroupNames()) {
       assertTrue("groupName should be in set ", groups.contains(group));
@@ -228,8 +222,7 @@ public class TestUser {
 
   @Test
   public void testSecurityForNonSecureHadoop() {
-    assertFalse("Security should be disable in non-secure Hadoop",
-        User.isSecurityEnabled());
+    assertFalse("Security should be disable in non-secure Hadoop", User.isSecurityEnabled());
 
     Configuration conf = HBaseConfiguration.create();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
@@ -238,13 +231,12 @@ public class TestUser {
 
     conf = HBaseConfiguration.create();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    assertFalse("HBase security should not be enabled if "
-        + User.HBASE_SECURITY_CONF_KEY + " is not set accordingly",
-        User.isHBaseSecurityEnabled(conf));
+    assertFalse("HBase security should not be enabled if " + User.HBASE_SECURITY_CONF_KEY
+      + " is not set accordingly", User.isHBaseSecurityEnabled(conf));
 
     conf = HBaseConfiguration.create();
     conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
-    assertTrue("HBase security should be enabled regardless of underlying "
-        + "HDFS settings", User.isHBaseSecurityEnabled(conf));
+    assertTrue("HBase security should be enabled regardless of underlying " + "HDFS settings",
+      User.isHBaseSecurityEnabled(conf));
   }
 }

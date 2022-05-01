@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestCachedMobFile {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCachedMobFile.class);
+    HBaseClassTestRule.forClass(TestCachedMobFile.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestCachedMobFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -66,9 +66,9 @@ public class TestCachedMobFile {
     String caseName = testName.getMethodName();
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(8*1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(testDir).withFileContext(meta).build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
+      .withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile = CachedMobFile.create(fs, writer.getPath(), conf, cacheConf);
     assertEquals(EXPECTED_REFERENCE_ZERO, cachedMobFile.getReferenceCount());
@@ -91,14 +91,12 @@ public class TestCachedMobFile {
     Path outputDir1 = new Path(testDir, FAMILY1);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     StoreFileWriter writer1 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(outputDir1).withFileContext(meta).build();
+      .withOutputDir(outputDir1).withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer1, caseName);
     CachedMobFile cachedMobFile1 = CachedMobFile.create(fs, writer1.getPath(), conf, cacheConf);
     Path outputDir2 = new Path(testDir, FAMILY2);
     StoreFileWriter writer2 = new StoreFileWriter.Builder(conf, cacheConf, fs)
-        .withOutputDir(outputDir2)
-        .withFileContext(meta)
-        .build();
+      .withOutputDir(outputDir2).withFileContext(meta).build();
     MobTestUtil.writeStoreFile(writer2, caseName);
     CachedMobFile cachedMobFile2 = CachedMobFile.create(fs, writer2.getPath(), conf, cacheConf);
     cachedMobFile1.access(1);
@@ -114,7 +112,7 @@ public class TestCachedMobFile {
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
-        .withFileContext(meta).build();
+      .withFileContext(meta).build();
     String caseName = testName.getMethodName();
     MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile = CachedMobFile.create(fs, writer.getPath(), conf, cacheConf);
@@ -123,7 +121,7 @@ public class TestCachedMobFile {
     // Test the start key
     byte[] startKey = Bytes.toBytes("aa"); // The start key bytes
     KeyValue expectedKey =
-        new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
+      new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     KeyValue seekKey = expectedKey.createKeyOnly(false);
     Cell cell = cachedMobFile.readCell(seekKey, false).getCell();
     MobTestUtil.assertCellEquals(expectedKey, cell);

@@ -17,27 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Message;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.wal.WALEdit;
-
-import com.google.protobuf.Message;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Base class for RowProcessor with some default implementations.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public abstract class BaseRowProcessor<S extends Message,T extends Message> 
-implements RowProcessor<S,T> {
+public abstract class BaseRowProcessor<S extends Message, T extends Message>
+  implements RowProcessor<S, T> {
 
   @Override
   public void preProcess(HRegion region, WALEdit walEdit) throws IOException {

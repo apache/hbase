@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class BlockWithScanInfo {
   private final HFileBlock hFileBlock;
   /**
-   * The first key in the next block following this one in the HFile.
-   * If this key is unknown, this is reference-equal with HConstants.NO_NEXT_INDEXED_KEY
+   * The first key in the next block following this one in the HFile. If this key is unknown, this
+   * is reference-equal with HConstants.NO_NEXT_INDEXED_KEY
    */
   private final Cell nextIndexedKey;
 
@@ -42,7 +42,7 @@ public class BlockWithScanInfo {
     return hFileBlock;
   }
 
-  public  Cell getNextIndexedKey() {
+  public Cell getNextIndexedKey() {
     return nextIndexedKey;
   }
 }

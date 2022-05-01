@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertNotEquals;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
@@ -55,22 +56,18 @@ public class TestAsyncTableRSCrashPublish {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
-    /* Below is code for choosing a NetworkInterface and then setting it into
-      configs so can be picked up by the client and server.
-    String niName = UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_NI_NAME);
-    NetworkInterface ni;
-    if (niName != null) {
-      ni = NetworkInterface.getByName(niName);
-    } else {
-      String mcAddress = UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_ADDRESS,
-        HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
-      InetAddress ina = InetAddress.getByName(mcAddress);
-      boolean inet6Address = ina instanceof Inet6Address;
-      ni = NetworkInterface.getByInetAddress(inet6Address?
-        Addressing.getIp6Address(): Addressing.getIp4Address());
-    }
-    UTIL.getConfiguration().set(HConstants.STATUS_MULTICAST_NI_NAME, ni.getName());
-    */
+    /*
+     * Below is code for choosing a NetworkInterface and then setting it into configs so can be
+     * picked up by the client and server. String niName =
+     * UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_NI_NAME); NetworkInterface ni; if
+     * (niName != null) { ni = NetworkInterface.getByName(niName); } else { String mcAddress =
+     * UTIL.getConfiguration().get(HConstants.STATUS_MULTICAST_ADDRESS,
+     * HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS); InetAddress ina =
+     * InetAddress.getByName(mcAddress); boolean inet6Address = ina instanceof Inet6Address; ni =
+     * NetworkInterface.getByInetAddress(inet6Address? Addressing.getIp6Address():
+     * Addressing.getIp4Address()); }
+     * UTIL.getConfiguration().set(HConstants.STATUS_MULTICAST_NI_NAME, ni.getName());
+     */
     UTIL.startMiniCluster(2);
     UTIL.createTable(TABLE_NAME, FAMILY);
     UTIL.waitTableAvailable(TABLE_NAME);
@@ -81,7 +78,8 @@ public class TestAsyncTableRSCrashPublish {
     UTIL.shutdownMiniCluster();
   }
 
-  @Ignore @Test
+  @Ignore
+  @Test
   public void test() throws IOException, ExecutionException, InterruptedException {
     Configuration conf = UTIL.getHBaseCluster().getMaster().getConfiguration();
     try (AsyncConnection connection = ConnectionFactory.createAsyncConnection(conf).get()) {
@@ -90,7 +88,7 @@ public class TestAsyncTableRSCrashPublish {
       connection.getTable(TABLE_NAME).get(new Get(Bytes.toBytes(0))).join();
       ServerName serverName =
         locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW)
-        .getDefaultRegionLocation().getServerName();
+          .getDefaultRegionLocation().getServerName();
       UTIL.getMiniHBaseCluster().stopRegionServer(serverName);
       UTIL.waitFor(60000,
         () -> locator.getRegionLocationInCache(TABLE_NAME, HConstants.EMPTY_START_ROW) == null);

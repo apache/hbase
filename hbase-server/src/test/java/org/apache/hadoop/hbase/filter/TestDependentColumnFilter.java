@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,28 +51,22 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestDependentColumnFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDependentColumnFilter.class);
+    HBaseClassTestRule.forClass(TestDependentColumnFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDependentColumnFilter.class);
-  private static final byte[][] ROWS = {
-    Bytes.toBytes("test1"),Bytes.toBytes("test2")
-  };
-  private static final byte[][] FAMILIES = {
-    Bytes.toBytes("familyOne"),Bytes.toBytes("familyTwo")
-  };
+  private static final byte[][] ROWS = { Bytes.toBytes("test1"), Bytes.toBytes("test2") };
+  private static final byte[][] FAMILIES =
+    { Bytes.toBytes("familyOne"), Bytes.toBytes("familyTwo") };
   private static final long STAMP_BASE = System.currentTimeMillis();
-  private static final long[] STAMPS = {
-    STAMP_BASE-100, STAMP_BASE-200, STAMP_BASE-300
-  };
+  private static final long[] STAMPS = { STAMP_BASE - 100, STAMP_BASE - 200, STAMP_BASE - 300 };
   private static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
-  private static final byte[][] BAD_VALS = {
-    Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
-  };
+  private static final byte[][] BAD_VALS =
+    { Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3") };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -92,7 +86,7 @@ public class TestDependentColumnFilter {
     htd.addFamily(hcd1);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+      TEST_UTIL.getConfiguration(), htd);
     addData();
   }
 
@@ -140,37 +134,29 @@ public class TestDependentColumnFilter {
   }
 
   /**
-   * This shouldn't be confused with TestFilter#verifyScan
-   * as expectedKeys is not the per row total, but the scan total
-   *
-   * @param s
-   * @param expectedRows
-   * @param expectedCells
-   * @throws IOException
+   * This shouldn't be confused with TestFilter#verifyScan as expectedKeys is not the per row total,
+   * but the scan total nnnn
    */
-  private void verifyScan(Scan s, long expectedRows, long expectedCells)
-  throws IOException {
+  private void verifyScan(Scan s, long expectedRows, long expectedCells) throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<Cell> results = new ArrayList<>();
     int i = 0;
     int cells = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      Arrays.sort(results.toArray(new Cell[results.size()]),
-          CellComparatorImpl.COMPARATOR);
+      Arrays.sort(results.toArray(new Cell[results.size()]), CellComparatorImpl.COMPARATOR);
       LOG.info("counter=" + i + ", " + results);
       if (results.isEmpty()) break;
       cells += results.size();
-      assertTrue("Scanned too many rows! Only expected " + expectedRows +
-          " total but already scanned " + (i+1), expectedRows > i);
-      assertTrue("Expected " + expectedCells + " cells total but " +
-          "already scanned " + cells, expectedCells >= cells);
+      assertTrue("Scanned too many rows! Only expected " + expectedRows
+        + " total but already scanned " + (i + 1), expectedRows > i);
+      assertTrue("Expected " + expectedCells + " cells total but " + "already scanned " + cells,
+        expectedCells >= cells);
       results.clear();
     }
-    assertEquals("Expected " + expectedRows + " rows but scanned " + i +
-        " rows", expectedRows, i);
-    assertEquals("Expected " + expectedCells + " cells but scanned " + cells +
-            " cells", expectedCells, cells);
+    assertEquals("Expected " + expectedRows + " rows but scanned " + i + " rows", expectedRows, i);
+    assertEquals("Expected " + expectedCells + " cells but scanned " + cells + " cells",
+      expectedCells, cells);
   }
 
   /**
@@ -195,69 +181,64 @@ public class TestDependentColumnFilter {
     verifyScan(scan, 2, 3);
 
     // include a comparator operation
-    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, false,
-    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, false, CompareOperator.EQUAL,
+      new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
 
     /*
-     * expecting to get the following 3 cells
-     * row 0
-     *   put.add(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
-     *   put.add(FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]);
-     * row 1
-     *   put.add(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
+     * expecting to get the following 3 cells row 0 put.add(FAMILIES[0], QUALIFIER, STAMPS[2],
+     * MATCH_VAL); put.add(FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]); row 1
+     * put.add(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
      */
     verifyScan(scan, 2, 3);
 
     // include a comparator operation and drop comparator
-    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true,
-    CompareOperator.EQUAL, new BinaryComparator(MATCH_VAL));
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
+      new BinaryComparator(MATCH_VAL));
     scan = new Scan();
     scan.setFilter(filter);
     scan.setMaxVersions(Integer.MAX_VALUE);
 
     /*
-     * expecting to get the following 1 cell
-     * row 0
-     *   put.add(FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]);
+     * expecting to get the following 1 cell row 0 put.add(FAMILIES[1], QUALIFIER, STAMPS[2],
+     * BAD_VALS[2]);
      */
     verifyScan(scan, 1, 1);
 
   }
 
   /**
-   * Test that the filter correctly drops rows without a corresponding timestamp
-   *
-   * @throws Exception
+   * Test that the filter correctly drops rows without a corresponding timestamp n
    */
   @Test
   public void testFilterDropping() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     List<Cell> accepted = new ArrayList<>();
-    for(Cell val : testVals) {
-      if(filter.filterCell(val) == ReturnCode.INCLUDE) {
+    for (Cell val : testVals) {
+      if (filter.filterCell(val) == ReturnCode.INCLUDE) {
         accepted.add(val);
       }
     }
     assertEquals("check all values accepted from filterCell", 5, accepted.size());
 
     filter.filterRowCells(accepted);
-    assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry", 4, accepted.size());
+    assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry",
+      4, accepted.size());
 
     // start do it again with dependent column dropping on
     filter = new DependentColumnFilter(FAMILIES[1], QUALIFIER, true);
     accepted.clear();
-    for(KeyValue val : testVals) {
-        if(filter.filterCell(val) == ReturnCode.INCLUDE) {
-          accepted.add(val);
-        }
+    for (KeyValue val : testVals) {
+      if (filter.filterCell(val) == ReturnCode.INCLUDE) {
+        accepted.add(val);
       }
-      assertEquals("check the filtering column cells got dropped", 2, accepted.size());
+    }
+    assertEquals("check the filtering column cells got dropped", 2, accepted.size());
 
-      filter.filterRowCells(accepted);
-      assertEquals("check cell retention", 2, accepted.size());
+    filter.filterRowCells(accepted);
+    assertEquals("check cell retention", 2, accepted.size());
   }
 
   /**
@@ -280,12 +261,10 @@ public class TestDependentColumnFilter {
 
   @Test
   public void testToStringWithNonNullComparator() {
-    Filter filter =
-        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
-            new BinaryComparator(MATCH_VAL));
+    Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOperator.EQUAL,
+      new BinaryComparator(MATCH_VAL));
     assertNotNull(filter.toString());
     assertTrue("check string contains comparator value", filter.toString().contains("match"));
   }
 
 }
-

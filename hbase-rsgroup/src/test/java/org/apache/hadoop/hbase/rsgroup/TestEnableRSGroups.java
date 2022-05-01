@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static java.lang.Thread.sleep;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -44,7 +43,7 @@ public class TestEnableRSGroups {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEnableRSGroups.class);
+    HBaseClassTestRule.forClass(TestEnableRSGroups.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestEnableRSGroups.class);
 
@@ -71,8 +70,7 @@ public class TestEnableRSGroups {
     LOG.info("stopped master...");
     final Configuration conf = TEST_UTIL.getMiniHBaseCluster().getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, RSGroupAdminEndpoint.class.getName());
-    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-      RSGroupBasedLoadBalancer.class.getName());
+    conf.set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, RSGroupBasedLoadBalancer.class.getName());
 
     TEST_UTIL.getMiniHBaseCluster().startMaster();
     TEST_UTIL.getMiniHBaseCluster().waitForActiveAndReadyMaster(60000);
@@ -83,7 +81,7 @@ public class TestEnableRSGroups {
 
     // wait RSGroupBasedLoadBalancer online
     RSGroupBasedLoadBalancer loadBalancer =
-        (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
+      (RSGroupBasedLoadBalancer) TEST_UTIL.getMiniHBaseCluster().getMaster().getLoadBalancer();
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start <= 60000 && !loadBalancer.isOnline()) {
       LOG.info("waiting for rsgroup load balancer onLine...");

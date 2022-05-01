@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 @Deprecated
 @InterfaceAudience.Private
 public class RecoverMetaProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.RecoverMetaState>
-    implements MetaProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, MasterProcedureProtos.RecoverMetaState>
+  implements MetaProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(RecoverMetaProcedure.class);
 
   private ServerName failedMetaServer;
@@ -60,15 +60,15 @@ public class RecoverMetaProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env,
-      MasterProcedureProtos.RecoverMetaState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    MasterProcedureProtos.RecoverMetaState state)
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     return Flow.NO_MORE_STATE;
   }
 
   @Override
   protected void rollbackState(MasterProcedureEnv env,
-      MasterProcedureProtos.RecoverMetaState recoverMetaState)
-      throws IOException, InterruptedException {
+    MasterProcedureProtos.RecoverMetaState recoverMetaState)
+    throws IOException, InterruptedException {
     // Can't rollback
     throw new UnsupportedOperationException("unhandled state=" + recoverMetaState);
   }

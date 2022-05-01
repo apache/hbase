@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -36,20 +34,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 
 /**
- * The {@link HFile} has a fixed trailer which contains offsets to other
- * variable parts of the file. Also includes basic metadata on this file. The
- * trailer size is fixed within a given {@link HFile} format version only, but
- * we always store the version number as the last four-byte integer of the file.
- * The version number itself is split into two portions, a major
- * version and a minor version. The last three bytes of a file are the major
- * version and a single preceding byte is the minor number. The major version
- * determines which readers/writers to use to read/write a hfile while a minor
- * version determines smaller changes in hfile format that do not need a new
- * reader/writer type.
+ * The {@link HFile} has a fixed trailer which contains offsets to other variable parts of the file.
+ * Also includes basic metadata on this file. The trailer size is fixed within a given {@link HFile}
+ * format version only, but we always store the version number as the last four-byte integer of the
+ * file. The version number itself is split into two portions, a major version and a minor version.
+ * The last three bytes of a file are the major version and a single preceding byte is the minor
+ * number. The major version determines which readers/writers to use to read/write a hfile while a
+ * minor version determines smaller changes in hfile format that do not need a new reader/writer
+ * type.
  */
 @InterfaceAudience.Private
 public class FixedFileTrailer {
@@ -61,17 +59,16 @@ public class FixedFileTrailer {
   private static final int MAX_COMPARATOR_NAME_LENGTH = 128;
 
   /**
-   * Offset to the fileinfo data, a small block of vitals. Necessary in v1 but
-   * only potentially useful for pretty-printing in v2.
+   * Offset to the fileinfo data, a small block of vitals. Necessary in v1 but only potentially
+   * useful for pretty-printing in v2.
    */
   private long fileInfoOffset;
 
   /**
-   * In version 1, the offset to the data block index. Starting from version 2,
-   * the meaning of this field is the offset to the section of the file that
-   * should be loaded at the time the file is being opened: i.e. on open we load
-   * the root index, file info, etc. See http://hbase.apache.org/book.html#_hfile_format_2
-   * in the reference guide.
+   * In version 1, the offset to the data block index. Starting from version 2, the meaning of this
+   * field is the offset to the section of the file that should be loaded at the time the file is
+   * being opened: i.e. on open we load the root index, file info, etc. See
+   * http://hbase.apache.org/book.html#_hfile_format_2 in the reference guide.
    */
   private long loadOnOpenDataOffset;
 
@@ -96,8 +93,7 @@ public class FixedFileTrailer {
   private long totalUncompressedBytes;
 
   /**
-   * The number of key/value pairs in the file. This field was int in version 1,
-   * but is now long.
+   * The number of key/value pairs in the file. This field was int in version 1, but is now long.
    */
   private long entryCount;
 
@@ -107,8 +103,7 @@ public class FixedFileTrailer {
   private Compression.Algorithm compressionCodec = Compression.Algorithm.NONE;
 
   /**
-   * The number of levels in the potentially multi-level data index. Used from
-   * version 2 onwards.
+   * The number of levels in the potentially multi-level data index. Used from version 2 onwards.
    */
   private int numDataIndexLevels;
 
@@ -118,8 +113,7 @@ public class FixedFileTrailer {
   private long firstDataBlockOffset;
 
   /**
-   * It is guaranteed that no key/value data blocks start after this offset in
-   * the file.
+   * It is guaranteed that no key/value data blocks start after this offset in the file.
    */
   private long lastDataBlockOffset;
 
@@ -185,9 +179,8 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Write the trailer to a data stream. We support writing version 1 for
-   * testing and for determining version 1 trailer size. It is also easy to see
-   * what fields changed in version 2.
+   * Write the trailer to a data stream. We support writing version 1 for testing and for
+   * determining version 1 trailer size. It is also easy to see what fields changed in version 2.
    */
   void serialize(DataOutputStream outputStream) throws IOException {
     HFile.checkFormatVersion(majorVersion);
@@ -206,15 +199,11 @@ public class FixedFileTrailer {
 
   HFileProtos.FileTrailerProto toProtobuf() {
     HFileProtos.FileTrailerProto.Builder builder = HFileProtos.FileTrailerProto.newBuilder()
-      .setFileInfoOffset(fileInfoOffset)
-      .setLoadOnOpenDataOffset(loadOnOpenDataOffset)
+      .setFileInfoOffset(fileInfoOffset).setLoadOnOpenDataOffset(loadOnOpenDataOffset)
       .setUncompressedDataIndexSize(uncompressedDataIndexSize)
-      .setTotalUncompressedBytes(totalUncompressedBytes)
-      .setDataIndexCount(dataIndexCount)
-      .setMetaIndexCount(metaIndexCount)
-      .setEntryCount(entryCount)
-      .setNumDataIndexLevels(numDataIndexLevels)
-      .setFirstDataBlockOffset(firstDataBlockOffset)
+      .setTotalUncompressedBytes(totalUncompressedBytes).setDataIndexCount(dataIndexCount)
+      .setMetaIndexCount(metaIndexCount).setEntryCount(entryCount)
+      .setNumDataIndexLevels(numDataIndexLevels).setFirstDataBlockOffset(firstDataBlockOffset)
       .setLastDataBlockOffset(lastDataBlockOffset)
       .setComparatorClassName(getHBase1CompatibleName(comparatorClassName))
       .setCompressionCodec(compressionCodec.ordinal());
@@ -225,9 +214,8 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Write trailer data as protobuf.
-   * NOTE: we run a translation on the comparator name and will serialize the old hbase-1.x where
-   * it makes sense. See {@link #getHBase1CompatibleName(String)}.
+   * Write trailer data as protobuf. NOTE: we run a translation on the comparator name and will
+   * serialize the old hbase-1.x where it makes sense. See {@link #getHBase1CompatibleName(String)}.
    */
   void serializeAsPB(DataOutputStream output) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -249,17 +237,18 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Deserialize the fixed file trailer from the given stream. The version needs
-   * to already be specified. Make sure this is consistent with
-   * {@link #serialize(DataOutputStream)}.
+   * Deserialize the fixed file trailer from the given stream. The version needs to already be
+   * specified. Make sure this is consistent with {@link #serialize(DataOutputStream)}.
    */
   void deserialize(DataInputStream inputStream) throws IOException {
     HFile.checkFormatVersion(majorVersion);
 
     BlockType.TRAILER.readAndCheck(inputStream);
 
-    if (majorVersion > 2
-      || (majorVersion == 2 && minorVersion >= HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION)) {
+    if (
+      majorVersion > 2
+        || (majorVersion == 2 && minorVersion >= HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION)
+    ) {
       deserializeFromPB(inputStream);
     } else {
       deserializeFromWritable(inputStream);
@@ -342,10 +331,10 @@ public class FixedFileTrailer {
     numDataIndexLevels = input.readInt();
     firstDataBlockOffset = input.readLong();
     lastDataBlockOffset = input.readLong();
-    // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+    // TODO this is a classname encoded into an HFile's trailer. We are going to need to have
     // some compat code here.
-    setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
-      MAX_COMPARATOR_NAME_LENGTH)));
+    setComparatorClass(
+      getComparatorClass(Bytes.readStringFixedSize(input, MAX_COMPARATOR_NAME_LENGTH)));
   }
 
   private void append(StringBuilder sb, String s) {
@@ -381,19 +370,16 @@ public class FixedFileTrailer {
 
   /**
    * Reads a file trailer from the given file.
-   *
-   * @param istream  the input stream with the ability to seek. Does not have to
-   *                 be buffered, as only one read operation is made.
+   * @param istream  the input stream with the ability to seek. Does not have to be buffered, as
+   *                 only one read operation is made.
    * @param fileSize the file size. Can be obtained using
-   *                 {@link org.apache.hadoop.fs.FileSystem#getFileStatus(
-   *org.apache.hadoop.fs.Path)}.
+   *                 {@link org.apache.hadoop.fs.FileSystem#getFileStatus( org.apache.hadoop.fs.Path)}.
    * @return the fixed file trailer read
-   * @throws IOException if failed to read from the underlying stream, or the
-   *                     trailer is corrupted, or the version of the trailer is
-   *                     unsupported
+   * @throws IOException if failed to read from the underlying stream, or the trailer is corrupted,
+   *                     or the version of the trailer is unsupported
    */
-  public static FixedFileTrailer readFromStream(FSDataInputStream istream,
-                                                long fileSize) throws IOException {
+  public static FixedFileTrailer readFromStream(FSDataInputStream istream, long fileSize)
+    throws IOException {
     int bufferSize = MAX_TRAILER_SIZE;
     long seekPoint = fileSize - bufferSize;
     if (seekPoint < 0) {
@@ -405,8 +391,7 @@ public class FixedFileTrailer {
     HFileUtil.seekOnMultipleSources(istream, seekPoint);
 
     ByteBuffer buf = ByteBuffer.allocate(bufferSize);
-    istream.readFully(buf.array(), buf.arrayOffset(),
-      buf.arrayOffset() + buf.limit());
+    istream.readFully(buf.array(), buf.arrayOffset(), buf.arrayOffset() + buf.limit());
 
     // Read the version from the last int of the file.
     buf.position(buf.limit() - Bytes.SIZEOF_INT);
@@ -428,23 +413,21 @@ public class FixedFileTrailer {
 
   public void expectMajorVersion(int expected) {
     if (majorVersion != expected) {
-      throw new IllegalArgumentException("Invalid HFile major version: "
-        + majorVersion
-        + " (expected: " + expected + ")");
+      throw new IllegalArgumentException(
+        "Invalid HFile major version: " + majorVersion + " (expected: " + expected + ")");
     }
   }
 
   public void expectMinorVersion(int expected) {
     if (minorVersion != expected) {
-      throw new IllegalArgumentException("Invalid HFile minor version: "
-        + minorVersion + " (expected: " + expected + ")");
+      throw new IllegalArgumentException(
+        "Invalid HFile minor version: " + minorVersion + " (expected: " + expected + ")");
     }
   }
 
   public void expectAtLeastMajorVersion(int lowerBound) {
     if (majorVersion < lowerBound) {
-      throw new IllegalArgumentException("Invalid HFile major version: "
-        + majorVersion
+      throw new IllegalArgumentException("Invalid HFile major version: " + majorVersion
         + " (expected: " + lowerBound + " or higher).");
     }
   }
@@ -569,21 +552,20 @@ public class FixedFileTrailer {
   }
 
   /**
-   * If a 'standard' Comparator, write the old name for the Comparator when we serialize rather
-   * than the new name; writing the new name will make it so newly-written hfiles are not parseable
-   * by hbase-1.x, a facility we'd like to preserve across rolling upgrade and hbase-1.x clusters
+   * If a 'standard' Comparator, write the old name for the Comparator when we serialize rather than
+   * the new name; writing the new name will make it so newly-written hfiles are not parseable by
+   * hbase-1.x, a facility we'd like to preserve across rolling upgrade and hbase-1.x clusters
    * reading hbase-2.x produce.
    * <p>
-   * The Comparators in hbase-2.x work the same as they did in hbase-1.x; they compare
-   * KeyValues. In hbase-2.x they were renamed making use of the more generic 'Cell'
-   * nomenclature to indicate that we intend to move away from KeyValues post hbase-2. A naming
-   * change is not reason enough to make it so hbase-1.x cannot read hbase-2.x files given the
-   * structure goes unchanged (hfile v3). So, lets write the old names for Comparators into the
-   * hfile tails in hbase-2. Here is where we do the translation.
-   * {@link #getComparatorClass(String)} does translation going the other way.
-   *
-   * <p>The translation is done on the serialized Protobuf only.</p>
-   *
+   * The Comparators in hbase-2.x work the same as they did in hbase-1.x; they compare KeyValues. In
+   * hbase-2.x they were renamed making use of the more generic 'Cell' nomenclature to indicate that
+   * we intend to move away from KeyValues post hbase-2. A naming change is not reason enough to
+   * make it so hbase-1.x cannot read hbase-2.x files given the structure goes unchanged (hfile v3).
+   * So, lets write the old names for Comparators into the hfile tails in hbase-2. Here is where we
+   * do the translation. {@link #getComparatorClass(String)} does translation going the other way.
+   * <p>
+   * The translation is done on the serialized Protobuf only.
+   * </p>
    * @param comparator String class name of the Comparator used in this hfile.
    * @return What to store in the trailer as our comparator name.
    * @see #getComparatorClass(String)
@@ -606,16 +588,22 @@ public class FixedFileTrailer {
     throws IOException {
     Class<? extends CellComparator> comparatorKlass;
     // for BC
-    if (comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
-      || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
-      || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))) {
+    if (
+      comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
+        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())
+        || (comparatorClassName.equals("org.apache.hadoop.hbase.CellComparator"))
+    ) {
       comparatorKlass = CellComparatorImpl.class;
-    } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
-      || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
-      || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))) {
+    } else if (
+      comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
+        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())
+        || (comparatorClassName.equals("org.apache.hadoop.hbase.MetaCellComparator"))
+    ) {
       comparatorKlass = MetaCellComparator.class;
-    } else if (comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")
-      || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")) {
+    } else if (
+      comparatorClassName.equals("org.apache.hadoop.hbase.KeyValue$RawBytesComparator")
+        || comparatorClassName.equals("org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator")
+    ) {
       // When the comparator to be used is Bytes.BYTES_RAWCOMPARATOR, we just return null from here
       // Bytes.BYTES_RAWCOMPARATOR is not a CellComparator
       comparatorKlass = null;
@@ -633,10 +621,10 @@ public class FixedFileTrailer {
   static CellComparator createComparator(String comparatorClassName) throws IOException {
     if (comparatorClassName.equals(CellComparatorImpl.COMPARATOR.getClass().getName())) {
       return CellComparatorImpl.COMPARATOR;
-    } else if (comparatorClassName.equals(
-      MetaCellComparator.META_COMPARATOR.getClass().getName())) {
-      return MetaCellComparator.META_COMPARATOR;
-    }
+    } else
+      if (comparatorClassName.equals(MetaCellComparator.META_COMPARATOR.getClass().getName())) {
+        return MetaCellComparator.META_COMPARATOR;
+      }
     try {
       Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);
       if (comparatorClass != null) {
@@ -658,8 +646,7 @@ public class FixedFileTrailer {
     return uncompressedDataIndexSize;
   }
 
-  public void setUncompressedDataIndexSize(
-    long uncompressedDataIndexSize) {
+  public void setUncompressedDataIndexSize(long uncompressedDataIndexSize) {
     expectAtLeastMajorVersion(2);
     this.uncompressedDataIndexSize = uncompressedDataIndexSize;
   }
@@ -676,24 +663,23 @@ public class FixedFileTrailer {
   }
 
   /**
-   * Extracts the major version for a 4-byte serialized version data.
-   * The major version is the 3 least significant bytes
+   * Extracts the major version for a 4-byte serialized version data. The major version is the 3
+   * least significant bytes
    */
   private static int extractMajorVersion(int serializedVersion) {
     return (serializedVersion & 0x00ffffff);
   }
 
   /**
-   * Extracts the minor version for a 4-byte serialized version data.
-   * The major version are the 3 the most significant bytes
+   * Extracts the minor version for a 4-byte serialized version data. The major version are the 3
+   * the most significant bytes
    */
   private static int extractMinorVersion(int serializedVersion) {
     return (serializedVersion >>> 24);
   }
 
   /**
-   * Create a 4 byte serialized version number by combining the
-   * minor and major version numbers.
+   * Create a 4 byte serialized version number by combining the minor and major version numbers.
    */
   static int materializeVersion(int majorVersion, int minorVersion) {
     return ((majorVersion & 0x00ffffff) | (minorVersion << 24));

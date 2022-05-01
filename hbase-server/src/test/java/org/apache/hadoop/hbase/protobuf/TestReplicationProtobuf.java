@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,16 +33,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestReplicationProtobuf {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationProtobuf.class);
+    HBaseClassTestRule.forClass(TestReplicationProtobuf.class);
 
   /**
-   * Little test to check we can basically convert list of a list of KVs into a CellScanner
-   * @throws IOException
+   * Little test to check we can basically convert list of a list of KVs into a CellScanner n
    */
   @Test
   public void testGetCellScanner() throws IOException {
@@ -76,7 +75,6 @@ public class TestReplicationProtobuf {
   private void testAdvancetHasSameRow(CellScanner scanner, final KeyValue kv) throws IOException {
     scanner.advance();
     assertTrue(Bytes.equals(scanner.current().getRowArray(), scanner.current().getRowOffset(),
-        scanner.current().getRowLength(),
-      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
+      scanner.current().getRowLength(), kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
   }
 }

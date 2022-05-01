@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -259,7 +259,8 @@ public final class MasterRegion {
         }
         Path deadWALDir;
         if (!walDir.getPath().getName().endsWith(DEAD_WAL_DIR_SUFFIX)) {
-          deadWALDir = new Path(walDir.getPath().getParent(), walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
+          deadWALDir = new Path(walDir.getPath().getParent(),
+            walDir.getPath().getName() + DEAD_WAL_DIR_SUFFIX);
           if (!walFs.rename(walDir.getPath(), deadWALDir)) {
             throw new IOException("Can not rename " + walDir + " to " + deadWALDir
               + " when recovering lease of proc store");
@@ -282,8 +283,9 @@ public final class MasterRegion {
         walFs.delete(deadWALDir, true);
       }
     } else {
-      LOG.warn("UNEXPECTED: WAL directory for MasterRegion is missing."
-        + " {} is unexpectedly missing.", walsDir);
+      LOG.warn(
+        "UNEXPECTED: WAL directory for MasterRegion is missing." + " {} is unexpectedly missing.",
+        walsDir);
     }
 
     WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
@@ -418,8 +420,8 @@ public final class MasterRegion {
     walRoller.setFlusherAndCompactor(flusherAndCompactor);
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     if (!fs.mkdirs(archiveDir)) {
-      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will" +
-        " be created again when we actually archive the hfiles later, so continue", archiveDir);
+      LOG.warn("Failed to create archive directory {}. Usually this should not happen but it will"
+        + " be created again when we actually archive the hfiles later, so continue", archiveDir);
     }
     return new MasterRegion(region, walFactory, flusherAndCompactor, walRoller);
   }

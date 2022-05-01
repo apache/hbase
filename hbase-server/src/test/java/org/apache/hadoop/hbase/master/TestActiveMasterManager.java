@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,12 +59,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the {@link ActiveMasterManager}.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestActiveMasterManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestActiveMasterManager.class);
+    HBaseClassTestRule.forClass(TestActiveMasterManager.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -79,9 +79,10 @@ public class TestActiveMasterManager {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  @Test public void testRestartMaster() throws IOException, KeeperException {
-    try (ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
-      "testActiveMasterManagerFromZK", null, true)) {
+  @Test
+  public void testRestartMaster() throws IOException, KeeperException {
+    try (ZKWatcher zk =
+      new ZKWatcher(TEST_UTIL.getConfiguration(), "testActiveMasterManagerFromZK", null, true)) {
       try {
         ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
         ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
@@ -92,10 +93,8 @@ public class TestActiveMasterManager {
       ServerName master = ServerName.valueOf("localhost", 1, System.currentTimeMillis());
       // Should not have a master yet
       DummyMaster dummyMaster = new DummyMaster(zk, master);
-      ClusterStatusTracker clusterStatusTracker =
-          dummyMaster.getClusterStatusTracker();
-      ActiveMasterManager activeMasterManager =
-          dummyMaster.getActiveMasterManager();
+      ClusterStatusTracker clusterStatusTracker = dummyMaster.getClusterStatusTracker();
+      ActiveMasterManager activeMasterManager = dummyMaster.getActiveMasterManager();
       assertFalse(activeMasterManager.clusterHasActiveMaster.get());
       assertFalse(activeMasterManager.getActiveMasterServerName().isPresent());
 
@@ -110,8 +109,7 @@ public class TestActiveMasterManager {
 
       // Now pretend master restart
       DummyMaster secondDummyMaster = new DummyMaster(zk, master);
-      ActiveMasterManager secondActiveMasterManager =
-          secondDummyMaster.getActiveMasterManager();
+      ActiveMasterManager secondActiveMasterManager = secondDummyMaster.getActiveMasterManager();
       assertFalse(secondActiveMasterManager.clusterHasActiveMaster.get());
       activeMasterManager.blockUntilBecomingActiveMaster(100, status);
       assertTrue(activeMasterManager.clusterHasActiveMaster.get());
@@ -122,14 +120,13 @@ public class TestActiveMasterManager {
   }
 
   /**
-   * Unit tests that uses ZooKeeper but does not use the master-side methods
-   * but rather acts directly on ZK.
-   * @throws Exception
+   * Unit tests that uses ZooKeeper but does not use the master-side methods but rather acts
+   * directly on ZK. n
    */
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {
-    try (ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
-      "testActiveMasterManagerFromZK", null, true)) {
+    try (ZKWatcher zk =
+      new ZKWatcher(TEST_UTIL.getConfiguration(), "testActiveMasterManagerFromZK", null, true)) {
       try {
         ZKUtil.deleteNode(zk, zk.getZNodePaths().masterAddressZNode);
         ZKUtil.deleteNode(zk, zk.getZNodePaths().clusterStateZNode);
@@ -138,23 +135,20 @@ public class TestActiveMasterManager {
 
       // Create the master node with a dummy address
       ServerName firstMasterAddress =
-          ServerName.valueOf("localhost", 1, System.currentTimeMillis());
+        ServerName.valueOf("localhost", 1, System.currentTimeMillis());
       ServerName secondMasterAddress =
-          ServerName.valueOf("localhost", 2, System.currentTimeMillis());
+        ServerName.valueOf("localhost", 2, System.currentTimeMillis());
 
       // Should not have a master yet
       DummyMaster ms1 = new DummyMaster(zk, firstMasterAddress);
-      ActiveMasterManager activeMasterManager =
-          ms1.getActiveMasterManager();
+      ActiveMasterManager activeMasterManager = ms1.getActiveMasterManager();
       assertFalse(activeMasterManager.clusterHasActiveMaster.get());
       assertFalse(activeMasterManager.getActiveMasterServerName().isPresent());
 
       // First test becoming the active master uninterrupted
-      ClusterStatusTracker clusterStatusTracker =
-          ms1.getClusterStatusTracker();
+      ClusterStatusTracker clusterStatusTracker = ms1.getClusterStatusTracker();
       clusterStatusTracker.setClusterUp();
-      activeMasterManager.blockUntilBecomingActiveMaster(100,
-          Mockito.mock(MonitoredTask.class));
+      activeMasterManager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
       assertTrue(activeMasterManager.clusterHasActiveMaster.get());
       assertMaster(zk, firstMasterAddress);
       assertMaster(zk, activeMasterManager.getActiveMasterServerName().get());
@@ -182,8 +176,8 @@ public class TestActiveMasterManager {
       ms1.stop("stopping first server");
 
       // Use a listener to capture when the node is actually deleted
-      NodeDeletionListener listener = new NodeDeletionListener(zk,
-          zk.getZNodePaths().masterAddressZNode);
+      NodeDeletionListener listener =
+        new NodeDeletionListener(zk, zk.getZNodePaths().masterAddressZNode);
       zk.registerListener(listener);
 
       LOG.info("Deleting master node");
@@ -220,16 +214,15 @@ public class TestActiveMasterManager {
       ServerName sn1 = ServerName.valueOf("localhost", 1, -1);
       DummyMaster master1 = new DummyMaster(zk, sn1);
       ActiveMasterManager activeMasterManager = master1.getActiveMasterManager();
-      activeMasterManager.blockUntilBecomingActiveMaster(100,
-          Mockito.mock(MonitoredTask.class));
+      activeMasterManager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
       assertEquals(sn1, activeMasterManager.getActiveMasterServerName().get());
       assertEquals(0, activeMasterManager.getBackupMasters().size());
       // Add backup masters
       List<String> backupZNodes = new ArrayList<>();
       for (int i = 1; i <= 10; i++) {
         ServerName backupSn = ServerName.valueOf("localhost", 1000 + i, -1);
-        String backupZn = ZNodePaths.joinZNode(
-            zk.getZNodePaths().backupMasterAddressesZNode, backupSn.toString());
+        String backupZn =
+          ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupSn.toString());
         backupZNodes.add(backupZn);
         MasterAddressTracker.setMasterAddress(zk, backupZn, backupSn, 1234);
         TEST_UTIL.waitFor(10000,
@@ -237,7 +230,7 @@ public class TestActiveMasterManager {
       }
       // Remove backup masters
       int numBackups = backupZNodes.size();
-      for (String backupZNode: backupZNodes) {
+      for (String backupZNode : backupZNodes) {
         ZKUtil.deleteNode(zk, backupZNode);
         final int currentBackups = --numBackups;
         TEST_UTIL.waitFor(10000,
@@ -248,13 +241,13 @@ public class TestActiveMasterManager {
 
   /**
    * Assert there is an active master and that it has the specified address.
-   * @param zk single Zookeeper watcher
+   * @param zk              single Zookeeper watcher
    * @param expectedAddress the expected address of the master
    * @throws KeeperException unexpected Zookeeper exception
-   * @throws IOException if an IO problem is encountered
+   * @throws IOException     if an IO problem is encountered
    */
-  private void assertMaster(ZKWatcher zk, ServerName expectedAddress) throws
-      KeeperException, IOException {
+  private void assertMaster(ZKWatcher zk, ServerName expectedAddress)
+    throws KeeperException, IOException {
     ServerName readAddress = MasterAddressTracker.getMasterAddress(zk);
     assertNotNull(readAddress);
     assertEquals(expectedAddress, readAddress);
@@ -267,15 +260,14 @@ public class TestActiveMasterManager {
     boolean isActiveMaster;
 
     public WaitToBeMasterThread(ZKWatcher zk, ServerName address) throws InterruptedIOException {
-      this.dummyMaster = new DummyMaster(zk,address);
+      this.dummyMaster = new DummyMaster(zk, address);
       this.manager = this.dummyMaster.getActiveMasterManager();
       isActiveMaster = false;
     }
 
     @Override
     public void run() {
-      manager.blockUntilBecomingActiveMaster(100,
-          Mockito.mock(MonitoredTask.class));
+      manager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
       LOG.info("Second master has become the active master!");
       isActiveMaster = true;
     }
@@ -295,7 +287,7 @@ public class TestActiveMasterManager {
 
     @Override
     public void nodeDeleted(String path) {
-      if(path.equals(node)) {
+      if (path.equals(node)) {
         LOG.debug("nodeDeleted(" + path + ")");
         lock.release();
       }
@@ -315,17 +307,16 @@ public class TestActiveMasterManager {
     private ActiveMasterManager activeMasterManager;
 
     public DummyMaster(ZKWatcher zk, ServerName master) throws InterruptedIOException {
-      this.clusterStatusTracker =
-        new ClusterStatusTracker(zk, this);
+      this.clusterStatusTracker = new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
 
-      this.activeMasterManager =
-        new ActiveMasterManager(zk, master, this);
+      this.activeMasterManager = new ActiveMasterManager(zk, master, this);
       zk.registerListener(activeMasterManager);
     }
 
     @Override
-    public void abort(final String msg, final Throwable t) {}
+    public void abort(final String msg, final Throwable t) {
+    }
 
     @Override
     public boolean isAborted() {

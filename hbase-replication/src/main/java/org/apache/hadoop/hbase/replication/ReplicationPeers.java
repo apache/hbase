@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,8 +65,7 @@ public class ReplicationPeers {
    * Method called after a peer has been connected. It will create a ReplicationPeer to track the
    * newly connected cluster.
    * @param peerId a short that identifies the cluster
-   * @return whether a ReplicationPeer was successfully created
-   * @throws ReplicationException
+   * @return whether a ReplicationPeer was successfully created n
    */
   public boolean addPeer(String peerId) throws ReplicationException {
     if (this.peerCache.containsKey(peerId)) {
@@ -132,6 +131,6 @@ public class ReplicationPeers {
     ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
     boolean enabled = peerStorage.isPeerEnabled(peerId);
     return new ReplicationPeerImpl(ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf),
-        peerId, enabled, peerConfig);
+      peerId, enabled, peerConfig);
   }
 }

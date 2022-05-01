@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,26 +39,24 @@ import org.junit.experimental.categories.Category;
 /**
  * Test scan/get offset and limit settings within one row through HRegion API.
  */
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestIntraRowPagination {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIntraRowPagination.class);
+    HBaseClassTestRule.forClass(TestIntraRowPagination.class);
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**
-   * Test from client side for scan with maxResultPerCF set
-   *
-   * @throws Exception
+   * Test from client side for scan with maxResultPerCF set n
    */
   @Test
   public void testScanLimitAndOffset() throws Exception {
-    //byte [] TABLE = HTestConst.DEFAULT_TABLE_BYTES;
-    byte [][] ROWS = HTestConst.makeNAscii(HTestConst.DEFAULT_ROW_BYTES, 2);
-    byte [][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
-    byte [][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
+    // byte [] TABLE = HTestConst.DEFAULT_TABLE_BYTES;
+    byte[][] ROWS = HTestConst.makeNAscii(HTestConst.DEFAULT_ROW_BYTES, 2);
+    byte[][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
 
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
     HRegionInfo info = new HRegionInfo(HTestConst.DEFAULT_TABLE, null, null, false);
@@ -67,7 +65,7 @@ public class TestIntraRowPagination {
       htd.addFamily(hcd);
     }
     HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+      TEST_UTIL.getConfiguration(), htd);
     try {
       Put put;
       Scan scan;
@@ -82,8 +80,8 @@ public class TestIntraRowPagination {
         put = new Put(ROWS[r]);
         for (int c = 0; c < FAMILIES.length; c++) {
           for (int q = 0; q < QUALIFIERS.length; q++) {
-            KeyValue kv = new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1,
-                HTestConst.DEFAULT_VALUE_BYTES);
+            KeyValue kv =
+              new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1, HTestConst.DEFAULT_VALUE_BYTES);
             put.add(kv);
             if (storeOffset <= q && q < storeOffset + storeLimit) {
               kvListExp.add(kv);
@@ -105,7 +103,7 @@ public class TestIntraRowPagination {
       }
       result = Result.create(kvListScan);
       TestScannersFromClientSide.verifyResult(result, kvListExp, toLog,
-          "Testing scan with storeOffset and storeLimit");
+        "Testing scan with storeOffset and storeLimit");
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);
     }

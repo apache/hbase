@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,12 +64,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestBaseLoadBalancer extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
+    HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
 
   private static LoadBalancer loadBalancer;
   private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
@@ -79,11 +79,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   private static ServerName[] servers = new ServerName[NUM_SERVERS];
 
   int[][] regionsAndServersMocks = new int[][] {
-      // { num regions, num servers }
-      new int[] { 0, 0 }, new int[] { 0, 1 }, new int[] { 1, 1 }, new int[] { 2, 1 },
-      new int[] { 10, 1 }, new int[] { 1, 2 }, new int[] { 2, 2 }, new int[] { 3, 2 },
-      new int[] { 1, 3 }, new int[] { 2, 3 }, new int[] { 3, 3 }, new int[] { 25, 3 },
-      new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
+    // { num regions, num servers }
+    new int[] { 0, 0 }, new int[] { 0, 1 }, new int[] { 1, 1 }, new int[] { 2, 1 },
+    new int[] { 10, 1 }, new int[] { 1, 2 }, new int[] { 2, 2 }, new int[] { 3, 2 },
+    new int[] { 1, 3 }, new int[] { 2, 3 }, new int[] { 3, 3 }, new int[] { 25, 3 },
+    new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
 
   @Rule
   public TestName name = new TestName();
@@ -101,7 +101,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // Set up the rack topologies (5 machines per rack)
     rackManager = Mockito.mock(RackManager.class);
     for (int i = 0; i < NUM_SERVERS; i++) {
-      servers[i] = ServerName.valueOf("foo"+i+":1234",-1);
+      servers[i] = ServerName.valueOf("foo" + i + ":1234", -1);
       if (i < 5) {
         Mockito.when(rackManager.getRack(servers[i])).thenReturn("rack1");
       }
@@ -117,37 +117,31 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   public static class MockBalancer extends BaseLoadBalancer {
     @Override
     public List<RegionPlan>
-        balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+      balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
       return null;
     }
 
     @Override
     public List<RegionPlan> balanceTable(TableName tableName,
-        Map<ServerName, List<RegionInfo>> loadOfOneTable) {
+      Map<ServerName, List<RegionInfo>> loadOfOneTable) {
       return null;
     }
   }
 
   /**
-   * All regions have an assignment.
-   * @param regions
-   * @param servers
-   * @param assignments
+   * All regions have an assignment. nnn
    */
   private void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
-      Map<RegionInfo, ServerName> assignments) {
+    Map<RegionInfo, ServerName> assignments) {
     for (RegionInfo region : regions) {
       assertTrue(assignments.containsKey(region));
     }
   }
 
   /**
-   * Tests the bulk assignment used during cluster startup.
-   *
-   * Round-robin. Should yield a balanced cluster so same invariant as the load
-   * balancer holds, all servers holding either floor(avg) or ceiling(avg).
-   *
-   * @throws Exception
+   * Tests the bulk assignment used during cluster startup. Round-robin. Should yield a balanced
+   * cluster so same invariant as the load balancer holds, all servers holding either floor(avg) or
+   * ceiling(avg). n
    */
   @Test
   public void testBulkAssignment() throws Exception {
@@ -161,7 +155,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       assertEquals(1, plans.get(master).size());
     }
     int totalRegion = 0;
-    for (List<RegionInfo> regions: plans.values()) {
+    for (List<RegionInfo> regions : plans.values()) {
       totalRegion += regions.size();
     }
     assertEquals(hris.size(), totalRegion);
@@ -171,7 +165,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       List<ServerAndLoad> servers = randomServers(mock[1], 0);
       List<ServerName> list = getListOfServerNames(servers);
       Map<ServerName, List<RegionInfo>> assignments =
-          loadBalancer.roundRobinAssignment(regions, list);
+        loadBalancer.roundRobinAssignment(regions, list);
       float average = (float) regions.size() / servers.size();
       int min = (int) Math.floor(average);
       int max = (int) Math.ceil(average);
@@ -186,9 +180,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Test the cluster startup bulk assignment which attempts to retain
-   * assignment info.
-   * @throws Exception
+   * Test the cluster startup bulk assignment which attempts to retain assignment info. n
    */
   @Test
   public void testRetainAssignment() throws Exception {
@@ -201,12 +193,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       // The old server would have had same host and port, but different
       // start code!
       ServerName snWithOldStartCode =
-          ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10);
+        ServerName.valueOf(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10);
       existing.put(regions.get(i), snWithOldStartCode);
     }
     List<ServerName> listOfServerNames = getListOfServerNames(servers);
     Map<ServerName, List<RegionInfo>> assignment =
-        loadBalancer.retainAssignment(existing, listOfServerNames);
+      loadBalancer.retainAssignment(existing, listOfServerNames);
     assertRetainedAssignment(existing, listOfServerNames, assignment);
 
     // Include two new servers that were not there before
@@ -253,17 +245,16 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     balancer.setConf(conf);
     ServerManager sm = Mockito.mock(ServerManager.class);
-    Mockito.when(sm.getOnlineServersListWithPredicator(allServers, BaseLoadBalancer.IDLE_SERVER_PREDICATOR))
-           .thenReturn(idleServers);
+    Mockito
+      .when(
+        sm.getOnlineServersListWithPredicator(allServers, BaseLoadBalancer.IDLE_SERVER_PREDICATOR))
+      .thenReturn(idleServers);
     MasterServices services = Mockito.mock(MasterServices.class);
     Mockito.when(services.getServerManager()).thenReturn(sm);
     balancer.setMasterServices(services);
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey("key1".getBytes())
-        .setEndKey("key2".getBytes())
-        .setSplit(false)
-        .setRegionId(100)
-        .build();
+      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
+      .build();
     assertNull(balancer.randomAssignment(hri1, Collections.EMPTY_LIST));
     assertNull(balancer.randomAssignment(hri1, null));
     for (int i = 0; i != 3; ++i) {
@@ -284,27 +275,21 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey("key1".getBytes())
-        .setEndKey("key2".getBytes())
-        .setSplit(false)
-        .setRegionId(100)
-        .build();
+      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
+      .build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
     RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey("key2".getBytes())
-        .setEndKey("key3".getBytes())
-        .setSplit(false)
-        .setRegionId(101)
-        .build();
-    list0.add(hri1); //only region1
-    list1.add(hri2); //only replica_of_region1
-    list2.add(hri3); //only region2
+      .setStartKey("key2".getBytes()).setEndKey("key3".getBytes()).setSplit(false).setRegionId(101)
+      .build();
+    list0.add(hri1); // only region1
+    list1.add(hri2); // only replica_of_region1
+    list2.add(hri3); // only region2
     Map<ServerName, List<RegionInfo>> clusterState = new LinkedHashMap<>();
-    clusterState.put(servers[0], list0); //servers[0] hosts region1
-    clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
-    clusterState.put(servers[2], list2); //servers[2] hosts region2
+    clusterState.put(servers[0], list0); // servers[0] hosts region1
+    clusterState.put(servers[1], list1); // servers[1] hosts replica_of_region1
+    clusterState.put(servers[2], list2); // servers[2] hosts region2
     // create a cluster with the above clusterState. The way in which the
     // cluster is created (constructor code) would make sure the indices of
     // the servers are in the order in which it is inserted in the clusterState
@@ -333,10 +318,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // start over again
     clusterState.clear();
-    clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
-    clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1 and replica_of_region2
-    clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
-    clusterState.put(servers[10], new ArrayList<>()); //servers[10], rack3 hosts no region
+    clusterState.put(servers[0], list0); // servers[0], rack1 hosts region1
+    clusterState.put(servers[5], list1); // servers[5], rack2 hosts replica_of_region1 and
+                                         // replica_of_region2
+    clusterState.put(servers[6], list2); // servers[6], rack2 hosts region2
+    clusterState.put(servers[10], new ArrayList<>()); // servers[10], rack3 hosts no region
     // create a cluster with the above clusterState
     cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of region1 from servers[0],rack1 to servers[6],rack2 would
@@ -358,27 +344,21 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
     RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey("key1".getBytes())
-        .setEndKey("key2".getBytes())
-        .setSplit(false)
-        .setRegionId(100)
-        .build();
+      .setStartKey("key1".getBytes()).setEndKey("key2".getBytes()).setSplit(false).setRegionId(100)
+      .build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
     RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setStartKey("key2".getBytes())
-        .setEndKey("key3".getBytes())
-        .setSplit(false)
-        .setRegionId(101)
-        .build();
-    list0.add(hri1); //only region1
-    list1.add(hri2); //only replica_of_region1
-    list2.add(hri3); //only region2
+      .setStartKey("key2".getBytes()).setEndKey("key3".getBytes()).setSplit(false).setRegionId(101)
+      .build();
+    list0.add(hri1); // only region1
+    list1.add(hri2); // only replica_of_region1
+    list2.add(hri3); // only region2
     Map<ServerName, List<RegionInfo>> clusterState = new LinkedHashMap<>();
-    clusterState.put(servers[0], list0); //servers[0] hosts region1
-    clusterState.put(servers[1], list1); //servers[1] hosts replica_of_region1
-    clusterState.put(servers[2], list2); //servers[2] hosts region2
+    clusterState.put(servers[0], list0); // servers[0] hosts region1
+    clusterState.put(servers[1], list1); // servers[1] hosts replica_of_region1
+    clusterState.put(servers[2], list2); // servers[2] hosts region2
     // create a cluster with the above clusterState. The way in which the
     // cluster is created (constructor code) would make sure the indices of
     // the servers are in the order in which it is inserted in the clusterState
@@ -398,10 +378,10 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list3 = new ArrayList<>();
     RegionInfo hri4 = RegionReplicaUtil.getRegionInfoForReplica(hri3, 1);
     list3.add(hri4);
-    clusterState.put(servers[0], list0); //servers[0], rack1 hosts region1
-    clusterState.put(servers[5], list1); //servers[5], rack2 hosts replica_of_region1
-    clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
-    clusterState.put(servers[12], list3); //servers[12], rack3 hosts replica_of_region2
+    clusterState.put(servers[0], list0); // servers[0], rack1 hosts region1
+    clusterState.put(servers[5], list1); // servers[5], rack2 hosts replica_of_region1
+    clusterState.put(servers[6], list2); // servers[6], rack2 hosts region2
+    clusterState.put(servers[12], list3); // servers[12], rack3 hosts replica_of_region2
     // create a cluster with the above clusterState
     cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
@@ -424,15 +404,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * Must meet the following conditions:
    * <ul>
    * <li>Every input region has an assignment, and to an online server
-   * <li>If a region had an existing assignment to a server with the same
-   * address a a currently online server, it will be assigned to it
+   * <li>If a region had an existing assignment to a server with the same address a a currently
+   * online server, it will be assigned to it
    * </ul>
-   * @param existing
-   * @param servers
-   * @param assignment
+   * nnn
    */
   private void assertRetainedAssignment(Map<RegionInfo, ServerName> existing,
-      List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment) {
+    List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment) {
     // Verify condition 1, every region assigned, and to online server
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
@@ -498,7 +476,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   private void assignRegions(List<RegionInfo> regions, List<ServerName> servers,
-      Map<ServerName, List<RegionInfo>> clusterState) {
+    Map<ServerName, List<RegionInfo>> clusterState) {
     for (int i = 0; i < regions.size(); i++) {
       ServerName sn = servers.get(i % servers.size());
       List<RegionInfo> regionsOfServer = clusterState.get(sn);
@@ -522,17 +500,18 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     // mock block locality for some regions
     RegionLocationFinder locationFinder = mock(RegionLocationFinder.class);
-    // block locality: region:0   => {server:0}
-    //                 region:1   => {server:0, server:1}
-    //                 region:42 => {server:4, server:9, server:5}
-    when(locationFinder.getTopBlockLocations(regions.get(0))).thenReturn(
-        Lists.newArrayList(servers.get(0)));
-    when(locationFinder.getTopBlockLocations(regions.get(1))).thenReturn(
-        Lists.newArrayList(servers.get(0), servers.get(1)));
-    when(locationFinder.getTopBlockLocations(regions.get(42))).thenReturn(
-        Lists.newArrayList(servers.get(4), servers.get(9), servers.get(5)));
-    when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
-        Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
+    // block locality: region:0 => {server:0}
+    // region:1 => {server:0, server:1}
+    // region:42 => {server:4, server:9, server:5}
+    when(locationFinder.getTopBlockLocations(regions.get(0)))
+      .thenReturn(Lists.newArrayList(servers.get(0)));
+    when(locationFinder.getTopBlockLocations(regions.get(1)))
+      .thenReturn(Lists.newArrayList(servers.get(0), servers.get(1)));
+    when(locationFinder.getTopBlockLocations(regions.get(42)))
+      .thenReturn(Lists.newArrayList(servers.get(4), servers.get(9), servers.get(5)));
+    when(locationFinder.getTopBlockLocations(regions.get(43)))
+      .thenReturn(Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not
+                                                                        // exists in clusterStatus
 
     BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, locationFinder, null);
 
