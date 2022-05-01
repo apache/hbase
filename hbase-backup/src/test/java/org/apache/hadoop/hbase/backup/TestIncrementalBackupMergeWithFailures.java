@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,13 +56,16 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementalBackupMergeWithFailures.class);
+    HBaseClassTestRule.forClass(TestIncrementalBackupMergeWithFailures.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestIncrementalBackupMergeWithFailures.class);
+    LoggerFactory.getLogger(TestIncrementalBackupMergeWithFailures.class);
 
   enum FailurePhase {
-    PHASE1, PHASE2, PHASE3, PHASE4
+    PHASE1,
+    PHASE2,
+    PHASE3,
+    PHASE4
   }
 
   public final static String FAILURE_PHASE_KEY = "failurePhase";
@@ -82,8 +85,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     }
 
     /**
-     * This is the exact copy of parent's run() with injections
-     * of different types of failures
+     * This is the exact copy of parent's run() with injections of different types of failures
      */
     @Override
     public void run(String[] backupIds) throws IOException {
@@ -128,9 +130,8 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           // Find input directories for table
           Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
           String dirs = StringUtils.join(dirPaths, ",");
-          Path bulkOutputPath =
-              BackupUtils.getBulkOutputDir(BackupUtils.getFileNameCompatibleString(tableNames[i]),
-                getConf(), false);
+          Path bulkOutputPath = BackupUtils.getBulkOutputDir(
+            BackupUtils.getFileNameCompatibleString(tableNames[i]), getConf(), false);
           // Delete content if exists
           if (fs.exists(bulkOutputPath)) {
             if (!fs.delete(bulkOutputPath, true)) {
@@ -150,7 +151,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
             processedTableList.add(new Pair<>(tableNames[i], bulkOutputPath));
           } else {
             throw new IOException("Can not merge backup images for " + dirs
-                + " (check Hadoop/MR and HBase logs). Player return code =" + result);
+              + " (check Hadoop/MR and HBase logs). Player return code =" + result);
           }
           LOG.debug("Merge Job finished:" + result);
         }
@@ -163,13 +164,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         // (modification of a backup file system)
         // Move existing mergedBackupId data into tmp directory
         // we will need it later in case of a failure
-        Path tmpBackupDir =  HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot,
-          mergedBackupId);
+        Path tmpBackupDir =
+          HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot, mergedBackupId);
         Path backupDirPath = HBackupFileSystem.getBackupPath(backupRoot, mergedBackupId);
         if (!fs.rename(backupDirPath, tmpBackupDir)) {
-          throw new IOException("Failed to rename "+ backupDirPath +" to "+tmpBackupDir);
+          throw new IOException("Failed to rename " + backupDirPath + " to " + tmpBackupDir);
         } else {
-          LOG.debug("Renamed "+ backupDirPath +" to "+ tmpBackupDir);
+          LOG.debug("Renamed " + backupDirPath + " to " + tmpBackupDir);
         }
         // Move new data into backup dest
         for (Pair<TableName, Path> tn : processedTableList) {
@@ -184,7 +185,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         // Delete tmp dir (Rename back during repair)
         if (!fs.delete(tmpBackupDir, true)) {
           // WARN and ignore
-          LOG.warn("Could not delete tmp dir: "+ tmpBackupDir);
+          LOG.warn("Could not delete tmp dir: " + tmpBackupDir);
         }
         // Delete old data
         deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
@@ -206,8 +207,8 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         } else {
           // backup repair must be run
           throw new IOException(
-              "Backup merge operation failed, run backup repair tool to restore system's integrity",
-              e);
+            "Backup merge operation failed, run backup repair tool to restore system's integrity",
+            e);
         }
       } finally {
         table.close();
@@ -274,7 +275,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple2));
-        // #4 Merge backup images with failures
+    // #4 Merge backup images with failures
 
     for (FailurePhase phase : FailurePhase.values()) {
       Configuration conf = conn.getConfiguration();
@@ -287,14 +288,14 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         Assert.fail("Expected IOException");
       } catch (IOException e) {
         BackupSystemTable table = new BackupSystemTable(conn);
-        if(phase.ordinal() < FailurePhase.PHASE4.ordinal()) {
+        if (phase.ordinal() < FailurePhase.PHASE4.ordinal()) {
           // No need to repair:
           // Both Merge and backup exclusive operations are finished
           assertFalse(table.isMergeInProgress());
           try {
             table.finishBackupExclusiveOperation();
             Assert.fail("IOException is expected");
-          } catch(IOException ee) {
+          } catch (IOException ee) {
             // Expected
           }
         } else {
@@ -303,14 +304,14 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           try {
             table.startBackupExclusiveOperation();
             Assert.fail("IOException is expected");
-          } catch(IOException ee) {
+          } catch (IOException ee) {
             // Expected - clean up before proceeding
-            //table.finishMergeOperation();
-            //table.finishBackupExclusiveOperation();
+            // table.finishMergeOperation();
+            // table.finishBackupExclusiveOperation();
           }
         }
         table.close();
-        LOG.debug("Expected :"+ e.getMessage());
+        LOG.debug("Expected :" + e.getMessage());
       }
     }
     // Now merge w/o failures

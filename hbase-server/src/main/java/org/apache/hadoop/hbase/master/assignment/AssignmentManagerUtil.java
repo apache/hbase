@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.assignment;
+
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,7 +43,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS;
 
 /**
  * Utility for this assignment package only.
@@ -58,13 +59,13 @@ final class AssignmentManagerUtil {
    * @throws IOException Let it out so can report this IOE as reason for failure
    */
   static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
-      final ServerName regionLocation, final RegionInfo hri) throws IOException {
+    final ServerName regionLocation, final RegionInfo hri) throws IOException {
     return getRegionInfoResponse(env, regionLocation, hri, false);
   }
 
   static GetRegionInfoResponse getRegionInfoResponse(final MasterProcedureEnv env,
-      final ServerName regionLocation, final RegionInfo hri, boolean includeBestSplitRow)
-      throws IOException {
+    final ServerName regionLocation, final RegionInfo hri, boolean includeBestSplitRow)
+    throws IOException {
     AsyncRegionServerAdmin admin =
       env.getMasterServices().getAsyncClusterConnection().getRegionServerAdmin(regionLocation);
     GetRegionInfoRequest request = null;
@@ -88,8 +89,7 @@ final class AssignmentManagerUtil {
   }
 
   static TransitRegionStateProcedure[] createUnassignProceduresForSplitOrMerge(
-      MasterProcedureEnv env, Stream<RegionInfo> regions, int regionReplication)
-      throws IOException {
+    MasterProcedureEnv env, Stream<RegionInfo> regions, int regionReplication) throws IOException {
     List<RegionStateNode> regionNodes = regions
       .flatMap(hri -> IntStream.range(0, regionReplication)
         .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i)))
@@ -139,12 +139,12 @@ final class AssignmentManagerUtil {
    * rollback state, so when we arrive here the second time, it is possible that some regions have
    * already been associated with a TRSP.
    * @param ignoreIfInTransition if true, will skip creating TRSP for the given region if it is
-   *          already in transition, otherwise we will add an assert that it should not in
-   *          transition.
+   *                             already in transition, otherwise we will add an assert that it
+   *                             should not in transition.
    */
   private static TransitRegionStateProcedure[] createAssignProcedures(MasterProcedureEnv env,
-      List<RegionInfo> regions, int regionReplication, ServerName targetServer,
-      boolean ignoreIfInTransition) {
+    List<RegionInfo> regions, int regionReplication, ServerName targetServer,
+    boolean ignoreIfInTransition) {
     // create the assign procs only for the primary region using the targetServer
     TransitRegionStateProcedure[] primaryRegionProcs =
       regions.stream().map(env.getAssignmentManager().getRegionStates()::getOrCreateRegionStateNode)
@@ -176,14 +176,16 @@ final class AssignmentManagerUtil {
     }
     // collect the replica region infos
     List<RegionInfo> replicaRegionInfos =
-        new ArrayList<RegionInfo>(regions.size() * (regionReplication - 1));
+      new ArrayList<RegionInfo>(regions.size() * (regionReplication - 1));
     for (RegionInfo hri : regions) {
       // start the index from 1
       for (int i = 1; i < regionReplication; i++) {
         RegionInfo ri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
         // apply ignoreRITs to replica regions as well.
-        if (!ignoreIfInTransition || !env.getAssignmentManager().getRegionStates().
-          getOrCreateRegionStateNode(ri).isInTransition()) {
+        if (
+          !ignoreIfInTransition || !env.getAssignmentManager().getRegionStates()
+            .getOrCreateRegionStateNode(ri).isInTransition()
+        ) {
           replicaRegionInfos.add(ri);
         }
       }
@@ -191,23 +193,23 @@ final class AssignmentManagerUtil {
 
     // create round robin procs. Note that we exclude the primary region's target server
     TransitRegionStateProcedure[] replicaRegionAssignProcs =
-        env.getAssignmentManager().createRoundRobinAssignProcedures(replicaRegionInfos,
-          Collections.singletonList(targetServer));
+      env.getAssignmentManager().createRoundRobinAssignProcedures(replicaRegionInfos,
+        Collections.singletonList(targetServer));
     // combine both the procs and return the result
     return ArrayUtils.addAll(primaryRegionProcs, replicaRegionAssignProcs);
   }
 
   /**
-   * Create round robin assign procedures for the given regions,
-   * according to the {@code regionReplication}.
+   * Create round robin assign procedures for the given regions, according to the
+   * {@code regionReplication}.
    * <p/>
    * For rolling back, we will submit procedures directly to the {@code ProcedureExecutor}, so it is
    * possible that we persist the newly scheduled procedures, and then crash before persisting the
    * rollback state, so when we arrive here the second time, it is possible that some regions have
    * already been associated with a TRSP.
    * @param ignoreIfInTransition if true, will skip creating TRSP for the given region if it is
-   *          already in transition, otherwise we will add an assert that it should not in
-   *          transition.
+   *                             already in transition, otherwise we will add an assert that it
+   *                             should not in transition.
    */
   private static TransitRegionStateProcedure[] createRoundRobinAssignProcedures(
     MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
@@ -228,26 +230,29 @@ final class AssignmentManagerUtil {
     }
     if (ignoreIfInTransition) {
       for (RegionInfo region : regionsAndReplicas) {
-        if (env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(region)
-          .isInTransition()) {
+        if (
+          env.getAssignmentManager().getRegionStates().getOrCreateRegionStateNode(region)
+            .isInTransition()
+        ) {
           return null;
         }
       }
     }
     // create round robin procs. Note that we exclude the primary region's target server
-    return env.getAssignmentManager()
-      .createRoundRobinAssignProcedures(regionsAndReplicas, serversToExclude);
+    return env.getAssignmentManager().createRoundRobinAssignProcedures(regionsAndReplicas,
+      serversToExclude);
   }
 
   static TransitRegionStateProcedure[] createAssignProceduresForSplitDaughters(
     MasterProcedureEnv env, List<RegionInfo> daughters, int regionReplication,
     ServerName parentServer) {
-    if(env.getMasterConfiguration().getBoolean(HConstants.HBASE_ENABLE_SEPARATE_CHILD_REGIONS,
-      DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS)){
+    if (
+      env.getMasterConfiguration().getBoolean(HConstants.HBASE_ENABLE_SEPARATE_CHILD_REGIONS,
+        DEFAULT_HBASE_ENABLE_SEPARATE_CHILD_REGIONS)
+    ) {
       // keep one daughter on the parent region server
-      TransitRegionStateProcedure[] daughterOne =
-        createAssignProcedures(env, Collections.singletonList(daughters.get(0)),
-          regionReplication, parentServer, false);
+      TransitRegionStateProcedure[] daughterOne = createAssignProcedures(env,
+        Collections.singletonList(daughters.get(0)), regionReplication, parentServer, false);
       // round robin assign the other daughter
       TransitRegionStateProcedure[] daughterTwo =
         createRoundRobinAssignProcedures(env, Collections.singletonList(daughters.get(1)),
@@ -259,22 +264,22 @@ final class AssignmentManagerUtil {
   }
 
   static TransitRegionStateProcedure[] createAssignProceduresForOpeningNewRegions(
-      MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
-      ServerName targetServer) {
+    MasterProcedureEnv env, List<RegionInfo> regions, int regionReplication,
+    ServerName targetServer) {
     return createAssignProcedures(env, regions, regionReplication, targetServer, false);
   }
 
   static void reopenRegionsForRollback(MasterProcedureEnv env, List<RegionInfo> regions,
-      int regionReplication, ServerName targetServer) {
+    int regionReplication, ServerName targetServer) {
     TransitRegionStateProcedure[] procs =
-        createAssignProcedures(env, regions, regionReplication, targetServer, true);
+      createAssignProcedures(env, regions, regionReplication, targetServer, true);
     if (procs.length > 0) {
       env.getMasterServices().getMasterProcedureExecutor().submitProcedures(procs);
     }
   }
 
   static void removeNonDefaultReplicas(MasterProcedureEnv env, Stream<RegionInfo> regions,
-      int regionReplication) {
+    int regionReplication) {
     // Remove from in-memory states
     regions.flatMap(hri -> IntStream.range(1, regionReplication)
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i))).forEach(hri -> {
@@ -289,8 +294,8 @@ final class AssignmentManagerUtil {
 
   static void checkClosedRegion(MasterProcedureEnv env, RegionInfo regionInfo) throws IOException {
     if (WALSplitUtil.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
-      throw new IOException("Recovered.edits are found in Region: " + regionInfo +
-        ", abort split/merge to prevent data loss");
+      throw new IOException("Recovered.edits are found in Region: " + regionInfo
+        + ", abort split/merge to prevent data loss");
     }
   }
 }

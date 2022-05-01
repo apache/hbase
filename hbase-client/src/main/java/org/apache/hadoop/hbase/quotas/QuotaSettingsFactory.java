@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -37,7 +36,7 @@ public class QuotaSettingsFactory {
     private final boolean bypassGlobals;
 
     QuotaGlobalsSettingsBypass(final String userName, final TableName tableName,
-        final String namespace, final String regionServer, final boolean bypassGlobals) {
+      final String namespace, final String regionServer, final boolean bypassGlobals) {
       super(userName, tableName, namespace, regionServer);
       this.bypassGlobals = bypassGlobals;
     }
@@ -76,20 +75,21 @@ public class QuotaSettingsFactory {
     }
   }
 
-  /* ==========================================================================
-   *  QuotaSettings from the Quotas object
+  /*
+   * ========================================================================== QuotaSettings from
+   * the Quotas object
    */
   static List<QuotaSettings> fromUserQuotas(final String userName, final Quotas quotas) {
     return fromQuotas(userName, null, null, null, quotas);
   }
 
   static List<QuotaSettings> fromUserQuotas(final String userName, final TableName tableName,
-      final Quotas quotas) {
+    final Quotas quotas) {
     return fromQuotas(userName, tableName, null, null, quotas);
   }
 
   static List<QuotaSettings> fromUserQuotas(final String userName, final String namespace,
-      final Quotas quotas) {
+    final Quotas quotas) {
     return fromQuotas(userName, null, namespace, null, quotas);
   }
 
@@ -102,20 +102,20 @@ public class QuotaSettingsFactory {
   }
 
   static List<QuotaSettings> fromRegionServerQuotas(final String regionServer,
-      final Quotas quotas) {
+    final Quotas quotas) {
     return fromQuotas(null, null, null, regionServer, quotas);
   }
 
   private static List<QuotaSettings> fromQuotas(final String userName, final TableName tableName,
-      final String namespace, final String regionServer, final Quotas quotas) {
+    final String namespace, final String regionServer, final Quotas quotas) {
     List<QuotaSettings> settings = new ArrayList<>();
     if (quotas.hasThrottle()) {
       settings
-          .addAll(fromThrottle(userName, tableName, namespace, regionServer, quotas.getThrottle()));
+        .addAll(fromThrottle(userName, tableName, namespace, regionServer, quotas.getThrottle()));
     }
     if (quotas.getBypassGlobals() == true) {
       settings
-          .add(new QuotaGlobalsSettingsBypass(userName, tableName, namespace, regionServer, true));
+        .add(new QuotaGlobalsSettingsBypass(userName, tableName, namespace, regionServer, true));
     }
     if (quotas.hasSpace()) {
       settings.add(fromSpace(tableName, namespace, quotas.getSpace()));
@@ -124,13 +124,13 @@ public class QuotaSettingsFactory {
   }
 
   public static List<ThrottleSettings> fromTableThrottles(final TableName tableName,
-      final QuotaProtos.Throttle throttle) {
+    final QuotaProtos.Throttle throttle) {
     return fromThrottle(null, tableName, null, null, throttle);
   }
 
   protected static List<ThrottleSettings> fromThrottle(final String userName,
-      final TableName tableName, final String namespace, final String regionServer,
-      final QuotaProtos.Throttle throttle) {
+    final TableName tableName, final String namespace, final String regionServer,
+    final QuotaProtos.Throttle throttle) {
     List<ThrottleSettings> settings = new ArrayList<>();
     if (throttle.hasReqNum()) {
       settings.add(ThrottleSettings.fromTimedQuota(userName, tableName, namespace, regionServer,
@@ -177,7 +177,7 @@ public class QuotaSettingsFactory {
     }
     if ((table == null && namespace == null) || (table != null && namespace != null)) {
       throw new IllegalArgumentException(
-          "Can only construct SpaceLimitSettings for a table or namespace.");
+        "Can only construct SpaceLimitSettings for a table or namespace.");
     }
     if (table != null) {
       if (protoQuota.getRemove()) {
@@ -193,101 +193,97 @@ public class QuotaSettingsFactory {
     }
   }
 
-  /* ==========================================================================
-   *  RPC Throttle
+  /*
+   * ========================================================================== RPC Throttle
    */
 
   /**
    * Throttle the specified user.
-   *
    * @param userName the user to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
+   * @param type     the type of throttling
+   * @param limit    the allowed number of request/data per timeUnit
    * @param timeUnit the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit) {
+    final long limit, final TimeUnit timeUnit) {
     return throttleUser(userName, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified user.
    * @param userName the user to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
+   * @param type     the type of throttling
+   * @param limit    the allowed number of request/data per timeUnit
    * @param timeUnit the limit time unit
-   * @param scope the scope of throttling
+   * @param scope    the scope of throttling
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit, QuotaScope scope) {
+    final long limit, final TimeUnit timeUnit, QuotaScope scope) {
     return throttle(userName, null, null, null, type, limit, timeUnit, scope);
   }
 
   /**
    * Throttle the specified user on the specified table.
-   *
-   * @param userName the user to throttle
+   * @param userName  the user to throttle
    * @param tableName the table to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final TableName tableName,
-      final ThrottleType type, final long limit, final TimeUnit timeUnit) {
+    final ThrottleType type, final long limit, final TimeUnit timeUnit) {
     return throttleUser(userName, tableName, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified user on the specified table.
-   * @param userName the user to throttle
+   * @param userName  the user to throttle
    * @param tableName the table to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
-   * @param scope the scope of throttling
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
+   * @param scope     the scope of throttling
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final TableName tableName,
-      final ThrottleType type, final long limit, final TimeUnit timeUnit, QuotaScope scope) {
+    final ThrottleType type, final long limit, final TimeUnit timeUnit, QuotaScope scope) {
     return throttle(userName, tableName, null, null, type, limit, timeUnit, scope);
   }
 
   /**
    * Throttle the specified user on the specified namespace.
-   *
-   * @param userName the user to throttle
+   * @param userName  the user to throttle
    * @param namespace the namespace to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final String namespace,
-      final ThrottleType type, final long limit, final TimeUnit timeUnit) {
+    final ThrottleType type, final long limit, final TimeUnit timeUnit) {
     return throttleUser(userName, namespace, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified user on the specified namespace.
-   * @param userName the user to throttle
+   * @param userName  the user to throttle
    * @param namespace the namespace to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
-   * @param scope the scope of throttling
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
+   * @param scope     the scope of throttling
    * @return the quota settings
    */
   public static QuotaSettings throttleUser(final String userName, final String namespace,
-      final ThrottleType type, final long limit, final TimeUnit timeUnit, QuotaScope scope) {
+    final ThrottleType type, final long limit, final TimeUnit timeUnit, QuotaScope scope) {
     return throttle(userName, null, namespace, null, type, limit, timeUnit, scope);
   }
 
   /**
    * Remove the throttling for the specified user.
-   *
    * @param userName the user
    * @return the quota settings
    */
@@ -297,20 +293,18 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user.
-   *
    * @param userName the user
-   * @param type the type of throttling
+   * @param type     the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUserByThrottleType(final String userName,
-      final ThrottleType type) {
+    final ThrottleType type) {
     return throttle(userName, null, null, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
    * Remove the throttling for the specified user on the specified table.
-   *
-   * @param userName the user
+   * @param userName  the user
    * @param tableName the table
    * @return the quota settings
    */
@@ -320,21 +314,19 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified table.
-   *
-   * @param userName the user
+   * @param userName  the user
    * @param tableName the table
-   * @param type the type of throttling
+   * @param type      the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUserByThrottleType(final String userName,
-      final TableName tableName, final ThrottleType type) {
+    final TableName tableName, final ThrottleType type) {
     return throttle(userName, tableName, null, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
    * Remove the throttling for the specified user on the specified namespace.
-   *
-   * @param userName the user
+   * @param userName  the user
    * @param namespace the namespace
    * @return the quota settings
    */
@@ -344,48 +336,45 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified user on the specified namespace.
-   *
-   * @param userName the user
+   * @param userName  the user
    * @param namespace the namespace
-   * @param type the type of throttling
+   * @param type      the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleUserByThrottleType(final String userName,
-      final String namespace, final ThrottleType type) {
+    final String namespace, final ThrottleType type) {
     return throttle(userName, null, namespace, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified table.
-   *
    * @param tableName the table to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleTable(final TableName tableName, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit) {
+    final long limit, final TimeUnit timeUnit) {
     return throttleTable(tableName, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified table.
    * @param tableName the table to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
-   * @param scope the scope of throttling
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
+   * @param scope     the scope of throttling
    * @return the quota settings
    */
   public static QuotaSettings throttleTable(final TableName tableName, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit, QuotaScope scope) {
+    final long limit, final TimeUnit timeUnit, QuotaScope scope) {
     return throttle(null, tableName, null, null, type, limit, timeUnit, scope);
   }
 
   /**
    * Remove the throttling for the specified table.
-   *
    * @param tableName the table
    * @return the quota settings
    */
@@ -395,47 +384,44 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified table.
-   *
    * @param tableName the table
-   * @param type the type of throttling
+   * @param type      the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleTableByThrottleType(final TableName tableName,
-      final ThrottleType type) {
+    final ThrottleType type) {
     return throttle(null, tableName, null, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified namespace.
-   *
    * @param namespace the namespace to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleNamespace(final String namespace, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit) {
+    final long limit, final TimeUnit timeUnit) {
     return throttleNamespace(namespace, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified namespace.
    * @param namespace the namespace to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
-   * @param scope the scope of throttling
+   * @param type      the type of throttling
+   * @param limit     the allowed number of request/data per timeUnit
+   * @param timeUnit  the limit time unit
+   * @param scope     the scope of throttling
    * @return the quota settings
    */
   public static QuotaSettings throttleNamespace(final String namespace, final ThrottleType type,
-      final long limit, final TimeUnit timeUnit, QuotaScope scope) {
+    final long limit, final TimeUnit timeUnit, QuotaScope scope) {
     return throttle(null, null, namespace, null, type, limit, timeUnit, scope);
   }
 
   /**
    * Remove the throttling for the specified namespace.
-   *
    * @param namespace the namespace
    * @return the quota settings
    */
@@ -445,33 +431,30 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified namespace by throttle type.
-   *
    * @param namespace the namespace
-   * @param type the type of throttling
+   * @param type      the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleNamespaceByThrottleType(final String namespace,
-      final ThrottleType type) {
+    final ThrottleType type) {
     return throttle(null, null, namespace, null, type, 0, null, QuotaScope.MACHINE);
   }
 
   /**
    * Throttle the specified region server.
-   *
    * @param regionServer the region server to throttle
-   * @param type the type of throttling
-   * @param limit the allowed number of request/data per timeUnit
-   * @param timeUnit the limit time unit
+   * @param type         the type of throttling
+   * @param limit        the allowed number of request/data per timeUnit
+   * @param timeUnit     the limit time unit
    * @return the quota settings
    */
   public static QuotaSettings throttleRegionServer(final String regionServer,
-      final ThrottleType type, final long limit, final TimeUnit timeUnit) {
+    final ThrottleType type, final long limit, final TimeUnit timeUnit) {
     return throttle(null, null, null, regionServer, type, limit, timeUnit, QuotaScope.MACHINE);
   }
 
   /**
    * Remove the throttling for the specified region server.
-   *
    * @param regionServer the region Server
    * @return the quota settings
    */
@@ -481,20 +464,19 @@ public class QuotaSettingsFactory {
 
   /**
    * Remove the throttling for the specified region server by throttle type.
-   *
-   * @param regionServer  the region Server
-   * @param type the type of throttling
+   * @param regionServer the region Server
+   * @param type         the type of throttling
    * @return the quota settings
    */
   public static QuotaSettings unthrottleRegionServerByThrottleType(final String regionServer,
-      final ThrottleType type) {
+    final ThrottleType type) {
     return throttle(null, null, null, regionServer, type, 0, null, QuotaScope.MACHINE);
   }
 
   /* Throttle helper */
   private static QuotaSettings throttle(final String userName, final TableName tableName,
-      final String namespace, final String regionServer, final ThrottleType type, final long limit,
-      final TimeUnit timeUnit, QuotaScope scope) {
+    final String namespace, final String regionServer, final ThrottleType type, final long limit,
+    final TimeUnit timeUnit, QuotaScope scope) {
     QuotaProtos.ThrottleRequest.Builder builder = QuotaProtos.ThrottleRequest.newBuilder();
     if (type != null) {
       builder.setType(ProtobufUtil.toProtoThrottleType(type));
@@ -505,44 +487,42 @@ public class QuotaSettingsFactory {
     return new ThrottleSettings(userName, tableName, namespace, regionServer, builder.build());
   }
 
-  /* ==========================================================================
-   *  Global Settings
+  /*
+   * ========================================================================== Global Settings
    */
 
   /**
    * Set the "bypass global settings" for the specified user
-   *
-   * @param userName the user to throttle
+   * @param userName      the user to throttle
    * @param bypassGlobals true if the global settings should be bypassed
    * @return the quota settings
    */
   public static QuotaSettings bypassGlobals(final String userName, final boolean bypassGlobals) {
-    return new QuotaGlobalsSettingsBypass(userName, null, null, null,  bypassGlobals);
+    return new QuotaGlobalsSettingsBypass(userName, null, null, null, bypassGlobals);
   }
 
-  /* ==========================================================================
-   *  FileSystem Space Settings
+  /*
+   * ========================================================================== FileSystem Space
+   * Settings
    */
 
   /**
    * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given table
    * to the given size in bytes. When the space usage is exceeded by the table, the provided
    * {@link SpaceViolationPolicy} is enacted on the table.
-   *
-   * @param tableName The name of the table on which the quota should be applied.
-   * @param sizeLimit The limit of a table's size in bytes.
+   * @param tableName       The name of the table on which the quota should be applied.
+   * @param sizeLimit       The limit of a table's size in bytes.
    * @param violationPolicy The action to take when the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitTableSpace(
-      final TableName tableName, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitTableSpace(final TableName tableName, long sizeLimit,
+    final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(tableName, sizeLimit, violationPolicy);
   }
 
   /**
    * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
    * table.
-   *
    * @param tableName The name of the table to remove the quota for.
    * @return A {@link QuotaSettings} object.
    */
@@ -554,21 +534,19 @@ public class QuotaSettingsFactory {
    * Creates a {@link QuotaSettings} object to limit the FileSystem space usage for the given
    * namespace to the given size in bytes. When the space usage is exceeded by all tables in the
    * namespace, the provided {@link SpaceViolationPolicy} is enacted on all tables in the namespace.
-   *
-   * @param namespace The namespace on which the quota should be applied.
-   * @param sizeLimit The limit of the namespace's size in bytes.
+   * @param namespace       The namespace on which the quota should be applied.
+   * @param sizeLimit       The limit of the namespace's size in bytes.
    * @param violationPolicy The action to take when the the quota is exceeded.
    * @return An {@link QuotaSettings} object.
    */
-  public static QuotaSettings limitNamespaceSpace(
-      final String namespace, long sizeLimit, final SpaceViolationPolicy violationPolicy) {
+  public static QuotaSettings limitNamespaceSpace(final String namespace, long sizeLimit,
+    final SpaceViolationPolicy violationPolicy) {
     return new SpaceLimitSettings(namespace, sizeLimit, violationPolicy);
   }
 
   /**
    * Creates a {@link QuotaSettings} object to remove the FileSystem space quota for the given
    * namespace.
-   *
    * @param namespace The namespace to remove the quota on.
    * @return A {@link QuotaSettings} object.
    */

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
-
-import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.Iterator;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The MemStoreSegmentsIterator is designed to perform one iteration over given list of segments
- * For another iteration new instance of MemStoreSegmentsIterator needs to be created
- * The iterator is not thread-safe and must have only one instance per MemStore
- * in each period of time
+ * The MemStoreSegmentsIterator is designed to perform one iteration over given list of segments For
+ * another iteration new instance of MemStoreSegmentsIterator needs to be created The iterator is
+ * not thread-safe and must have only one instance per MemStore in each period of time
  */
 @InterfaceAudience.Private
 public abstract class MemStoreSegmentsIterator implements Iterator<Cell> {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import java.io.IOException;
@@ -53,13 +52,13 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class MajorCompactorTTL extends MajorCompactor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(MajorCompactorTTL .class);
+  private static final Logger LOG = LoggerFactory.getLogger(MajorCompactorTTL.class);
 
   private TableDescriptor htd;
 
   @InterfaceAudience.Private
   public MajorCompactorTTL(Configuration conf, TableDescriptor htd, int concurrency,
-      long sleepForMs) throws IOException {
+    long sleepForMs) throws IOException {
     this.connection = ConnectionFactory.createConnection(conf);
     this.htd = htd;
     this.tableName = htd.getTableName();
@@ -75,19 +74,18 @@ public class MajorCompactorTTL extends MajorCompactor {
 
   @Override
   protected Optional<MajorCompactionRequest> getMajorCompactionRequest(RegionInfo hri)
-      throws IOException {
+    throws IOException {
     return MajorCompactionTTLRequest.newRequest(connection, hri, htd);
   }
 
   @Override
   protected Set<String> getStoresRequiringCompaction(MajorCompactionRequest request)
-      throws IOException {
-    return ((MajorCompactionTTLRequest)request).getStoresRequiringCompaction(htd).keySet();
+    throws IOException {
+    return ((MajorCompactionTTLRequest) request).getStoresRequiringCompaction(htd).keySet();
   }
 
-  public int compactRegionsTTLOnTable(Configuration conf, String table, int concurrency,
-      long sleep, int numServers, int numRegions, boolean dryRun, boolean skipWait)
-      throws Exception {
+  public int compactRegionsTTLOnTable(Configuration conf, String table, int concurrency, long sleep,
+    int numServers, int numRegions, boolean dryRun, boolean skipWait) throws Exception {
 
     Connection conn = ConnectionFactory.createConnection(conf);
     TableName tableName = TableName.valueOf(table);
@@ -124,13 +122,7 @@ public class MajorCompactorTTL extends MajorCompactor {
   private Options getOptions() {
     Options options = getCommonOptions();
 
-    options.addOption(
-        Option.builder("table")
-            .required()
-            .desc("table name")
-            .hasArg()
-            .build()
-    );
+    options.addOption(Option.builder("table").required().desc("table name").hasArg().build());
 
     return options;
   }
@@ -144,9 +136,8 @@ public class MajorCompactorTTL extends MajorCompactor {
     try {
       commandLine = cmdLineParser.parse(options, args);
     } catch (ParseException parseException) {
-      System.out.println(
-          "ERROR: Unable to parse command-line arguments " + Arrays.toString(args) + " due to: "
-              + parseException);
+      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args)
+        + " due to: " + parseException);
       printUsage(options);
       return -1;
     }
@@ -165,7 +156,7 @@ public class MajorCompactorTTL extends MajorCompactor {
     boolean skipWait = commandLine.hasOption("skipWait");
 
     return compactRegionsTTLOnTable(HBaseConfiguration.create(), table, concurrency, sleep,
-        numServers, numRegions, dryRun, skipWait);
+      numServers, numRegions, dryRun, skipWait);
   }
 
   public static void main(String[] args) throws Exception {

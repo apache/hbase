@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * In-Memory state of table or namespace quotas
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-  justification="FindBugs seems confused; says globalLimiter and lastUpdate " +
-  "are mostly synchronized...but to me it looks like they are totally synchronized")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "FindBugs seems confused; says globalLimiter and lastUpdate "
+      + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public class QuotaState {
   protected long lastUpdate = 0;
   protected long lastQuery = 0;
@@ -61,7 +61,7 @@ public class QuotaState {
       builder.append(" bypass");
     } else {
       if (globalLimiter != NoopQuotaLimiter.get()) {
-        //builder.append(" global-limiter");
+        // builder.append(" global-limiter");
         builder.append(" " + globalLimiter);
       }
     }
@@ -77,8 +77,7 @@ public class QuotaState {
   }
 
   /**
-   * Setup the global quota information.
-   * (This operation is part of the QuotaState setup)
+   * Setup the global quota information. (This operation is part of the QuotaState setup)
    */
   public synchronized void setQuotas(final Quotas quotas) {
     if (quotas.hasThrottle()) {
@@ -89,8 +88,8 @@ public class QuotaState {
   }
 
   /**
-   * Perform an update of the quota info based on the other quota info object.
-   * (This operation is executed by the QuotaCache)
+   * Perform an update of the quota info based on the other quota info object. (This operation is
+   * executed by the QuotaCache)
    */
   public synchronized void update(final QuotaState other) {
     if (globalLimiter == NoopQuotaLimiter.get()) {

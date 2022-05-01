@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ class WALProcedureMap {
    *         See HBASE-18152.
    */
   private static boolean isIncreasing(ProcedureProtos.Procedure current,
-      ProcedureProtos.Procedure candidate) {
+    ProcedureProtos.Procedure candidate) {
     // Check that the procedures we see are 'increasing'. We used to compare
     // procedure id first and then update time but it can legitimately go backwards if the
     // procedure is failed or rolled back so that was unreliable. Was going to compare

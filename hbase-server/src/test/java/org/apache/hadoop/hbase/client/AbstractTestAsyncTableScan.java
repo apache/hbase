@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
+
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -65,10 +66,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   protected static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
   protected static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-    .setMiniClusterOption(StartTestingClusterOption.builder()
-      .numWorkers(3)
-      .build())
-    .build();
+    .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
 
   protected static final ConnectionRule connectionRule =
     ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
@@ -88,8 +86,7 @@ public abstract class AbstractTestAsyncTableScan {
       conn.getTable(TABLE_NAME)
         .putAll(IntStream.range(0, COUNT)
           .mapToObj(i -> new Put(Bytes.toBytes(String.format("%03d", i)))
-            .addColumn(FAMILY, CQ1, Bytes.toBytes(i))
-            .addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
+            .addColumn(FAMILY, CQ1, Bytes.toBytes(i)).addColumn(FAMILY, CQ2, Bytes.toBytes(i * i)))
           .collect(Collectors.toList()))
         .get();
     }
@@ -97,9 +94,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   @ClassRule
   public static final TestRule classRule = RuleChain.outerRule(otelClassRule)
-    .around(miniClusterRule)
-    .around(connectionRule)
-    .around(new Setup());
+    .around(miniClusterRule).around(connectionRule).around(new Setup());
 
   @Rule
   public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
@@ -152,7 +147,7 @@ public abstract class AbstractTestAsyncTableScan {
 
   protected static List<Object[]> getScanCreatorParams() {
     return getScanCreator().stream().map(p -> new Object[] { p.getFirst(), p.getSecond() })
-        .collect(Collectors.toList());
+      .collect(Collectors.toList());
   }
 
   private static List<Pair<String, Supplier<AsyncTable<?>>>> getTableCreator() {
@@ -164,9 +159,9 @@ public abstract class AbstractTestAsyncTableScan {
     List<Pair<String, Supplier<AsyncTable<?>>>> tableCreator = getTableCreator();
     List<Pair<String, Supplier<Scan>>> scanCreator = getScanCreator();
     return tableCreator.stream()
-        .flatMap(tp -> scanCreator.stream().map(
-          sp -> new Object[] { tp.getFirst(), tp.getSecond(), sp.getFirst(), sp.getSecond() }))
-        .collect(Collectors.toList());
+      .flatMap(tp -> scanCreator.stream()
+        .map(sp -> new Object[] { tp.getFirst(), tp.getSecond(), sp.getFirst(), sp.getSecond() }))
+      .collect(Collectors.toList());
   }
 
   protected abstract Scan createScan();
@@ -188,7 +183,7 @@ public abstract class AbstractTestAsyncTableScan {
     return IntStream.range(0, results.size() / 2).mapToObj(i -> {
       try {
         return Result
-            .createCompleteResult(Arrays.asList(results.get(2 * i), results.get(2 * i + 1)));
+          .createCompleteResult(Arrays.asList(results.get(2 * i), results.get(2 * i + 1)));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -205,15 +200,12 @@ public abstract class AbstractTestAsyncTableScan {
   public void testScanAll() throws Exception {
     List<Result> results = doScan(createScan(), -1);
     // make sure all scanners are closed at RS side
-    miniClusterRule.getTestingUtility()
-      .getHBaseCluster()
-      .getRegionServerThreads()
-      .stream()
-      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .forEach(rs -> assertEquals(
-        "The scanner count of " + rs.getServerName() + " is " +
-          rs.getRSRpcServices().getScannersCount(),
-        0, rs.getRSRpcServices().getScannersCount()));
+    miniClusterRule.getTestingUtility().getHBaseCluster().getRegionServerThreads().stream()
+      .map(JVMClusterUtil.RegionServerThread::getRegionServer).forEach(
+        rs -> assertEquals(
+          "The scanner count of " + rs.getServerName() + " is "
+            + rs.getRSRpcServices().getScannersCount(),
+          0, rs.getRSRpcServices().getScannersCount()));
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> {
       Result result = results.get(i);
@@ -230,8 +222,8 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testReversedScanAll() throws Exception {
-    List<Result> results = TraceUtil.trace(
-      () -> doScan(createScan().setReversed(true), -1), testName.getMethodName());
+    List<Result> results =
+      TraceUtil.trace(() -> doScan(createScan().setReversed(true), -1), testName.getMethodName());
     assertEquals(COUNT, results.size());
     IntStream.range(0, COUNT).forEach(i -> assertResultEquals(results.get(i), COUNT - i - 1));
     assertTraceContinuity();
@@ -240,8 +232,8 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testScanNoStopKey() throws Exception {
     int start = 345;
-    List<Result> results = TraceUtil.trace(() ->
-      doScan(createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))), -1),
+    List<Result> results = TraceUtil.trace(
+      () -> doScan(createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))), -1),
       testName.getMethodName());
     assertEquals(COUNT - start, results.size());
     IntStream.range(0, COUNT - start).forEach(i -> assertResultEquals(results.get(i), start + i));
@@ -251,9 +243,8 @@ public abstract class AbstractTestAsyncTableScan {
   @Test
   public void testReverseScanNoStopKey() throws Exception {
     int start = 765;
-    final Scan scan = createScan()
-      .withStartRow(Bytes.toBytes(String.format("%03d", start)))
-      .setReversed(true);
+    final Scan scan =
+      createScan().withStartRow(Bytes.toBytes(String.format("%03d", start))).setReversed(true);
     List<Result> results = TraceUtil.trace(() -> doScan(scan, -1), testName.getMethodName());
     assertEquals(start + 1, results.size());
     IntStream.range(0, start + 1).forEach(i -> assertResultEquals(results.get(i), start - i));
@@ -262,9 +253,10 @@ public abstract class AbstractTestAsyncTableScan {
 
   @Test
   public void testScanWrongColumnFamily() {
-    final Exception e = assertThrows(Exception.class, () -> TraceUtil.trace(
-      () -> doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")), -1),
-      testName.getMethodName()));
+    final Exception e = assertThrows(Exception.class,
+      () -> TraceUtil.trace(
+        () -> doScan(createScan().addFamily(Bytes.toBytes("WrongColumnFamily")), -1),
+        testName.getMethodName()));
     // hamcrest generic enforcement for `anyOf` is a pain; skip it
     // but -- don't we always unwrap ExecutionExceptions -- bug?
     if (e instanceof NoSuchColumnFamilyException) {
@@ -272,8 +264,7 @@ public abstract class AbstractTestAsyncTableScan {
       assertThat(ex, isA(NoSuchColumnFamilyException.class));
     } else if (e instanceof ExecutionException) {
       final ExecutionException ex = (ExecutionException) e;
-      assertThat(ex, allOf(
-        isA(ExecutionException.class),
+      assertThat(ex, allOf(isA(ExecutionException.class),
         hasProperty("cause", isA(NoSuchColumnFamilyException.class))));
     } else {
       fail("Found unexpected Exception " + e);
@@ -287,10 +278,10 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit, int closeAfter) throws Exception {
+    int limit, int closeAfter) throws Exception {
     Scan scan =
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive);
     if (limit > 0) {
       scan.setLimit(limit);
     }
@@ -309,10 +300,10 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   private void testReversedScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
-      int limit) throws Exception {
+    int limit) throws Exception {
     Scan scan =
       createScan().withStartRow(Bytes.toBytes(String.format("%03d", start)), startInclusive)
-          .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
+        .withStopRow(Bytes.toBytes(String.format("%03d", stop)), stopInclusive).setReversed(true);
     if (limit > 0) {
       scan.setLimit(limit);
     }

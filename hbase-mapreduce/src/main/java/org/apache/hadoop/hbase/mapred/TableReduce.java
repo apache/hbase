@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,20 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.Reducer;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Write a table, sorting by the input key
- *
  * @param <K> key class
  * @param <V> value class
  */
 @InterfaceAudience.Public
 @SuppressWarnings("unchecked")
 public interface TableReduce<K extends WritableComparable, V>
-extends Reducer<K, V, ImmutableBytesWritable, Put> {
+  extends Reducer<K, V, ImmutableBytesWritable, Put> {
 
 }

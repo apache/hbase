@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,8 +37,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * Maintain information about a particular region.  It gathers information
- * from three places -- HDFS, META, and region servers.
+ * Maintain information about a particular region. It gathers information from three places -- HDFS,
+ * META, and region servers.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -59,24 +59,24 @@ public class HbckRegionInfo implements KeyRange {
   }
 
   public synchronized int getReplicaId() {
-    return metaEntry != null? metaEntry.hri.getReplicaId(): deployedReplicaId;
+    return metaEntry != null ? metaEntry.hri.getReplicaId() : deployedReplicaId;
   }
 
   public synchronized void addServer(RegionInfo regionInfo, ServerName serverName) {
-    OnlineEntry rse = new OnlineEntry(regionInfo, serverName) ;
+    OnlineEntry rse = new OnlineEntry(regionInfo, serverName);
     this.deployedEntries.add(rse);
     this.deployedOn.add(serverName);
     // save the replicaId that we see deployed in the cluster
     this.deployedReplicaId = regionInfo.getReplicaId();
     this.primaryHRIForDeployedReplica =
-        RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo);
+      RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo);
   }
 
   @Override
   public synchronized String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("{ meta => ");
-    sb.append((metaEntry != null)? metaEntry.hri.getRegionNameAsString() : "null");
+    sb.append((metaEntry != null) ? metaEntry.hri.getRegionNameAsString() : "null");
     sb.append(", hdfs => " + getHdfsRegionDir());
     sb.append(", deployed => " + Joiner.on(", ").join(deployedEntries));
     sb.append(", replicaId => " + getReplicaId());
@@ -133,8 +133,8 @@ public class HbckRegionInfo implements KeyRange {
   }
 
   /**
-   * Read the .regioninfo file from the file system.  If there is no
-   * .regioninfo, add it to the orphan hdfs region list.
+   * Read the .regioninfo file from the file system. If there is no .regioninfo, add it to the
+   * orphan hdfs region list.
    */
   public void loadHdfsRegioninfo(Configuration conf) throws IOException {
     Path regionDir = getHdfsRegionDir();
@@ -264,16 +264,16 @@ public class HbckRegionInfo implements KeyRange {
    */
   public static class MetaEntry {
     RegionInfo hri;
-    ServerName regionServer;   // server hosting this region
-    long modTime;          // timestamp of most recent modification metadata
-    RegionInfo splitA, splitB; //split daughters
+    ServerName regionServer; // server hosting this region
+    long modTime; // timestamp of most recent modification metadata
+    RegionInfo splitA, splitB; // split daughters
 
     public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime) {
       this(rinfo, regionServer, modTime, null, null);
     }
 
-    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime,
-        RegionInfo splitA, RegionInfo splitB) {
+    public MetaEntry(RegionInfo rinfo, ServerName regionServer, long modTime, RegionInfo splitA,
+      RegionInfo splitB) {
       this.hri = rinfo;
       this.regionServer = regionServer;
       this.modTime = modTime;
@@ -371,8 +371,8 @@ public class HbckRegionInfo implements KeyRange {
         return tableCompare;
       }
 
-      int startComparison = RegionSplitCalculator.BYTES_COMPARATOR.compare(
-          l.getStartKey(), r.getStartKey());
+      int startComparison =
+        RegionSplitCalculator.BYTES_COMPARATOR.compare(l.getStartKey(), r.getStartKey());
       if (startComparison != 0) {
         return startComparison;
       }
@@ -382,8 +382,7 @@ public class HbckRegionInfo implements KeyRange {
       endKey = (endKey.length == 0) ? null : endKey;
       byte[] endKey2 = l.getEndKey();
       endKey2 = (endKey2.length == 0) ? null : endKey2;
-      int endComparison = RegionSplitCalculator.BYTES_COMPARATOR.compare(
-          endKey2,  endKey);
+      int endComparison = RegionSplitCalculator.BYTES_COMPARATOR.compare(endKey2, endKey);
 
       if (endComparison != 0) {
         return endComparison;

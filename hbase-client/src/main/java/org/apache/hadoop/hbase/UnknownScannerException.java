@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +20,9 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown if a region server is passed an unknown scanner ID.
- * This usually means that the client has taken too long between checkins and so the
- * scanner lease on the server-side has expired OR the server-side is closing
- * down and has cancelled all leases.
+ * Thrown if a region server is passed an unknown scanner ID. This usually means that the client has
+ * taken too long between checkins and so the scanner lease on the server-side has expired OR the
+ * server-side is closing down and has cancelled all leases.
  */
 @InterfaceAudience.Public
 public class UnknownScannerException extends DoNotRetryIOException {
@@ -42,7 +40,7 @@ public class UnknownScannerException extends DoNotRetryIOException {
   }
 
   /**
-   * @param message the message for this exception
+   * @param message   the message for this exception
    * @param exception the exception to grab data from
    */
   public UnknownScannerException(String message, Exception exception) {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The basic building block for the {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter}
@@ -56,8 +53,7 @@ public class BloomFilterChunk implements BloomFilterBase {
    * @param meta stored bloom meta data
    * @throws IllegalArgumentException meta data is invalid
    */
-  public BloomFilterChunk(DataInput meta)
-      throws IOException, IllegalArgumentException {
+  public BloomFilterChunk(DataInput meta) throws IOException, IllegalArgumentException {
     this.byteSize = meta.readInt();
     this.hashCount = meta.readInt();
     this.hashType = meta.readInt();
@@ -72,12 +68,10 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   /**
-   * Computes the error rate for this Bloom filter, taking into account the
-   * actual number of hash functions and keys inserted. The return value of
-   * this function changes as a Bloom filter is being populated. Used for
-   * reporting the actual error rate of compound Bloom filters when writing
-   * them out.
-   *
+   * Computes the error rate for this Bloom filter, taking into account the actual number of hash
+   * functions and keys inserted. The return value of this function changes as a Bloom filter is
+   * being populated. Used for reporting the actual error rate of compound Bloom filters when
+   * writing them out.
    * @return error rate for this particular Bloom filter
    */
   public double actualErrorRate() {
@@ -93,21 +87,16 @@ public class BloomFilterChunk implements BloomFilterBase {
   /**
    * Determines &amp; initializes bloom filter meta data from user config. Call
    * {@link #allocBloom()} to allocate bloom filter data.
-   *
-   * @param maxKeys Maximum expected number of keys that will be stored in this
-   *          bloom
-   * @param errorRate Desired false positive error rate. Lower rate = more
-   *          storage required
-   * @param hashType Type of hash function to use
-   * @param foldFactor When finished adding entries, you may be able to 'fold'
-   *          this bloom to save space. Tradeoff potentially excess bytes in
-   *          bloom for ability to fold if keyCount is exponentially greater
-   *          than maxKeys.
-   * @throws IllegalArgumentException
+   * @param maxKeys    Maximum expected number of keys that will be stored in this bloom
+   * @param errorRate  Desired false positive error rate. Lower rate = more storage required
+   * @param hashType   Type of hash function to use
+   * @param foldFactor When finished adding entries, you may be able to 'fold' this bloom to save
+   *                   space. Tradeoff potentially excess bytes in bloom for ability to fold if
+   *                   keyCount is exponentially greater than maxKeys. n
    */
   // Used only in testcases
-  public BloomFilterChunk(int maxKeys, double errorRate, int hashType,
-      int foldFactor) throws IllegalArgumentException {
+  public BloomFilterChunk(int maxKeys, double errorRate, int hashType, int foldFactor)
+    throws IllegalArgumentException {
     this(hashType, BloomType.ROW);
 
     long bitSize = BloomFilterUtil.computeBitSize(maxKeys, errorRate);
@@ -121,9 +110,8 @@ public class BloomFilterChunk implements BloomFilterBase {
   }
 
   /**
-   * Creates another similar Bloom filter. Does not copy the actual bits, and
-   * sets the new filter's key count to zero.
-   *
+   * Creates another similar Bloom filter. Does not copy the actual bits, and sets the new filter's
+   * key count to zero.
    * @return a Bloom filter with the same configuration as this
    */
   public BloomFilterChunk createAnother() {
@@ -138,16 +126,16 @@ public class BloomFilterChunk implements BloomFilterBase {
     if (this.bloom != null) {
       throw new IllegalArgumentException("can only create bloom once.");
     }
-    this.bloom = ByteBuffer.allocate((int)this.byteSize);
+    this.bloom = ByteBuffer.allocate((int) this.byteSize);
     assert this.bloom.hasArray();
   }
 
   void sanityCheck() throws IllegalArgumentException {
-    if(0 >= this.byteSize || this.byteSize > Integer.MAX_VALUE) {
+    if (0 >= this.byteSize || this.byteSize > Integer.MAX_VALUE) {
       throw new IllegalArgumentException("Invalid byteSize: " + this.byteSize);
     }
 
-    if(this.hashCount <= 0) {
+    if (this.hashCount <= 0) {
       throw new IllegalArgumentException("Hash function count must be > 0");
     }
 
@@ -160,15 +148,14 @@ public class BloomFilterChunk implements BloomFilterBase {
     }
   }
 
-  void bloomCheck(ByteBuffer bloom)  throws IllegalArgumentException {
+  void bloomCheck(ByteBuffer bloom) throws IllegalArgumentException {
     if (this.byteSize != bloom.limit()) {
-      throw new IllegalArgumentException(
-          "Configured bloom length should match actual length");
+      throw new IllegalArgumentException("Configured bloom length should match actual length");
     }
   }
 
   // Used only by tests
-  void add(byte [] buf, int offset, int len) {
+  void add(byte[] buf, int offset, int len) {
     /*
      * For faster hashing, use combinatorial generation
      * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
@@ -208,17 +195,16 @@ public class BloomFilterChunk implements BloomFilterBase {
     ++this.keyCount;
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   /** Private helpers */
 
   /**
    * Set the bit at the specified index to 1.
-   *
    * @param pos index of bit
    */
   void set(long pos) {
-    int bytePos = (int)(pos / 8);
-    int bitPos = (int)(pos % 8);
+    int bytePos = (int) (pos / 8);
+    int bitPos = (int) (pos % 8);
     byte curByte = bloom.get(bytePos);
     curByte |= BloomFilterUtil.bitvals[bitPos];
     bloom.put(bytePos, curByte);
@@ -226,13 +212,12 @@ public class BloomFilterChunk implements BloomFilterBase {
 
   /**
    * Check if bit at specified index is 1.
-   *
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
   static boolean get(int pos, ByteBuffer bloomBuf, int bloomOffset) {
-    int bytePos = pos >> 3; //pos / 8
-    int bitPos = pos & 0x7; //pos % 8
+    int bytePos = pos >> 3; // pos / 8
+    int bitPos = pos & 0x7; // pos % 8
     // TODO access this via Util API which can do Unsafe access if possible(?)
     byte curByte = bloomBuf.get(bloomOffset + bytePos);
     curByte &= BloomFilterUtil.bitvals[bitPos];
@@ -262,11 +247,11 @@ public class BloomFilterChunk implements BloomFilterBase {
     // see if the actual size is exponentially smaller than expected.
     if (this.keyCount > 0 && this.bloom.hasArray()) {
       int pieces = 1;
-      int newByteSize = (int)this.byteSize;
+      int newByteSize = (int) this.byteSize;
       int newMaxKeys = this.maxKeys;
 
       // while exponentially smaller & folding is lossless
-      while ((newByteSize & 1) == 0 && newMaxKeys > (this.keyCount<<1)) {
+      while ((newByteSize & 1) == 0 && newMaxKeys > (this.keyCount << 1)) {
         pieces <<= 1;
         newByteSize >>= 1;
         newMaxKeys >>= 1;
@@ -278,8 +263,8 @@ public class BloomFilterChunk implements BloomFilterBase {
         int start = this.bloom.arrayOffset();
         int end = start + newByteSize;
         int off = end;
-        for(int p = 1; p < pieces; ++p) {
-          for(int pos = start; pos < end; ++pos) {
+        for (int p = 1; p < pieces; ++p) {
+          for (int pos = start; pos < end; ++pos) {
             array[pos] |= array[off++];
           }
         }
@@ -298,8 +283,7 @@ public class BloomFilterChunk implements BloomFilterBase {
    * @param out OutputStream to place bloom
    * @throws IOException Error writing bloom array
    */
-  public void writeBloom(final DataOutput out)
-      throws IOException {
+  public void writeBloom(final DataOutput out) throws IOException {
     if (!this.bloom.hasArray()) {
       throw new IOException("Only writes ByteBuffer with underlying array.");
     }

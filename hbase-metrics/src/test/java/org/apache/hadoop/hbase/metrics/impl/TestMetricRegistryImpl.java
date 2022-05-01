@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class TestMetricRegistryImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricRegistryImpl.class);
+    HBaseClassTestRule.forClass(TestMetricRegistryImpl.class);
 
   private MetricRegistryInfo info;
   private MetricRegistryImpl registry;
@@ -59,7 +59,7 @@ public class TestMetricRegistryImpl {
     counter.increment(42L);
     Optional<Metric> metric = registry.get("mycounter");
     assertTrue(metric.isPresent());
-    assertEquals(42L, (long)((Counter)metric.get()).getCount());
+    assertEquals(42L, (long) ((Counter) metric.get()).getCount());
   }
 
   @Test
@@ -72,7 +72,7 @@ public class TestMetricRegistryImpl {
     });
     Optional<Metric> metric = registry.get("mygauge");
     assertTrue(metric.isPresent());
-    assertEquals(42L, (long)((Gauge<Long>)metric.get()).getValue());
+    assertEquals(42L, (long) ((Gauge<Long>) metric.get()).getValue());
   }
 
   @Test
@@ -81,7 +81,7 @@ public class TestMetricRegistryImpl {
     registry.register("gaugeLambda", () -> 42L);
     Optional<Metric> metric = registry.get("gaugeLambda");
     assertTrue(metric.isPresent());
-    assertEquals(42L, (long)((Gauge<Long>)metric.get()).getValue());
+    assertEquals(42L, (long) ((Gauge<Long>) metric.get()).getValue());
   }
 
   @Test
@@ -106,7 +106,7 @@ public class TestMetricRegistryImpl {
 
     Optional<Metric> metric = registry.get("mycounter");
     assertTrue(metric.isPresent());
-    assertEquals(42L, (long)((Counter)metric.get()).getCount());
+    assertEquals(42L, (long) ((Counter) metric.get()).getCount());
   }
 
   @Test
@@ -119,8 +119,7 @@ public class TestMetricRegistryImpl {
 
     Optional<Metric> metric = registry.get("mygauge");
     assertTrue(metric.isPresent());
-    assertEquals(42L, (long)((Gauge<Long>)metric.get()).getValue());
-
+    assertEquals(42L, (long) ((Gauge<Long>) metric.get()).getValue());
 
     Counter c1 = registry.counter("mycounter");
     Counter c2 = registry.counter("mycounter");

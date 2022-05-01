@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +61,7 @@ public class TestBackupSystemTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupSystemTable.class);
+    HBaseClassTestRule.forClass(TestBackupSystemTable.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static Configuration conf = UTIL.getConfiguration();
@@ -354,8 +355,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+        new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -377,8 +378,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table3", "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+        new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -471,15 +472,14 @@ public class TestBackupSystemTable {
 
   private boolean compare(BackupInfo one, BackupInfo two) {
     return one.getBackupId().equals(two.getBackupId()) && one.getType().equals(two.getType())
-        && one.getBackupRootDir().equals(two.getBackupRootDir())
-        && one.getStartTs() == two.getStartTs() && one.getCompleteTs() == two.getCompleteTs();
+      && one.getBackupRootDir().equals(two.getBackupRootDir())
+      && one.getStartTs() == two.getStartTs() && one.getCompleteTs() == two.getCompleteTs();
   }
 
   private BackupInfo createBackupInfo() {
-    BackupInfo ctxt =
-        new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
-            TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
-            "/hbase/backup");
+    BackupInfo ctxt = new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL,
+      new TableName[] { TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
+      "/hbase/backup");
     ctxt.setStartTs(EnvironmentEdgeManager.currentTime());
     ctxt.setCompleteTs(EnvironmentEdgeManager.currentTime() + 1);
     return ctxt;

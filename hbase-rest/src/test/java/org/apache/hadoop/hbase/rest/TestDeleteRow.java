@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestDeleteRow extends RowResourceBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeleteRow.class);
+    HBaseClassTestRule.forClass(TestDeleteRow.class);
 
   @Test
   public void testDeleteNonExistentColumn() throws Exception {
@@ -91,11 +91,11 @@ public class TestDeleteRow extends RowResourceBase {
     response = getValueXML(TABLE, ROW_1, COLUMN_2);
     assertEquals(404, response.getCode());
 
-    //Delete a row in non existent table
+    // Delete a row in non existent table
     response = deleteValue("dummy", ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //Delete non existent column
+    // Delete non existent column
     response = deleteValue(TABLE, ROW_1, "dummy");
     assertEquals(404, response.getCode());
   }

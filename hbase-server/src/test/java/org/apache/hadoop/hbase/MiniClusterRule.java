@@ -83,8 +83,10 @@ public final class MiniClusterRule extends ExternalResource {
     }
 
     public MiniClusterRule build() {
-      return new MiniClusterRule(conf, miniClusterOption != null ? miniClusterOption :
-        StartTestingClusterOption.builder().build());
+      return new MiniClusterRule(conf,
+        miniClusterOption != null
+          ? miniClusterOption
+          : StartTestingClusterOption.builder().build());
     }
   }
 
@@ -111,8 +113,8 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
-   * Create a {@link Connection} to the managed {@link SingleProcessHBaseCluster}. It's up to
-   * the caller to {@link Connection#close() close()} the connection when finished.
+   * Create a {@link Connection} to the managed {@link SingleProcessHBaseCluster}. It's up to the
+   * caller to {@link Connection#close() close()} the connection when finished.
    */
   public Connection createConnection() {
     try {

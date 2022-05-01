@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,8 +70,8 @@ public class TestModifyPeerProcedureRetryBackoff {
     }
 
     @Override
-    protected <T extends Procedure<MasterProcedureEnv>> void addChildProcedure(
-        @SuppressWarnings("unchecked") T... subProcedure) {
+    protected <T extends Procedure<MasterProcedureEnv>> void
+      addChildProcedure(@SuppressWarnings("unchecked") T... subProcedure) {
       // Make it a no-op
     }
 
@@ -87,7 +87,7 @@ public class TestModifyPeerProcedureRetryBackoff {
 
     @Override
     protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
-        throws IOException, ReplicationException {
+      throws IOException, ReplicationException {
       tryFail();
     }
 
@@ -107,7 +107,7 @@ public class TestModifyPeerProcedureRetryBackoff {
 
     @Override
     protected void prePeerModification(MasterProcedureEnv env)
-        throws IOException, ReplicationException {
+      throws IOException, ReplicationException {
       tryFail();
     }
 
@@ -118,7 +118,7 @@ public class TestModifyPeerProcedureRetryBackoff {
 
     @Override
     protected void postPeerModification(MasterProcedureEnv env)
-        throws IOException, ReplicationException {
+      throws IOException, ReplicationException {
       tryFail();
     }
   }

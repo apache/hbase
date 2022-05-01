@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests for the hostname specification by region server
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRegionServerHostname {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerHostname.class);
+    HBaseClassTestRule.forClass(TestRegionServerHostname.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerHostname.class);
 
@@ -81,9 +81,8 @@ public class TestRegionServerHostname {
     try {
       hrs = new HRegionServer(TEST_UTIL.getConfiguration());
     } catch (IllegalArgumentException iae) {
-      assertTrue(iae.getMessage(),
-        iae.getMessage().contains("Failed resolve of " + invalidHostname) ||
-        iae.getMessage().contains("Problem binding to " + invalidHostname));
+      assertTrue(iae.getMessage(), iae.getMessage().contains("Failed resolve of " + invalidHostname)
+        || iae.getMessage().contains("Problem binding to " + invalidHostname));
     }
     assertNull("Failed to validate against invalid hostname", hrs);
   }
@@ -97,8 +96,10 @@ public class TestRegionServerHostname {
       // iterate through host addresses and use each as hostname
       while (addrList.hasMoreElements()) {
         InetAddress addr = addrList.nextElement();
-        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress() ||
-            !addr.isSiteLocalAddress()) {
+        if (
+          addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress()
+            || !addr.isSiteLocalAddress()
+        ) {
           continue;
         }
         String hostName = addr.getHostName();
@@ -107,7 +108,7 @@ public class TestRegionServerHostname {
         TEST_UTIL.getConfiguration().set(DNS.MASTER_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().set(DNS.UNSAFE_RS_HOSTNAME_KEY, hostName);
         StartTestingClusterOption option = StartTestingClusterOption.builder()
-            .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+          .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
         TEST_UTIL.startMiniCluster(option);
         try {
           ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
@@ -115,7 +116,7 @@ public class TestRegionServerHostname {
           assertEquals(NUM_RS, servers.size());
           for (String server : servers) {
             assertTrue("From zookeeper: " + server + " hostname: " + hostName,
-              server.startsWith(hostName.toLowerCase(Locale.ROOT)+","));
+              server.startsWith(hostName.toLowerCase(Locale.ROOT) + ","));
           }
           zkw.close();
         } finally {
@@ -130,9 +131,11 @@ public class TestRegionServerHostname {
     Configuration conf = TEST_UTIL.getConfiguration();
     new HRegionServer(conf);
     conf.setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false);
-    assertFalse(conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true));
+    assertFalse(
+      conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true));
     conf.setBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
-    assertTrue(conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
+    assertTrue(
+      conf.getBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
     conf.setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
     assertTrue(conf.getBoolean(HRegionServer.RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false));
     conf.setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, false);
@@ -164,20 +167,22 @@ public class TestRegionServerHostname {
         LOG.info("Found " + hostName + " on " + ni);
 
         TEST_UTIL.getConfiguration().set(DNS.MASTER_HOSTNAME_KEY, hostName);
-        // "hbase.unsafe.regionserver.hostname" and "hbase.unsafe.regionserver.hostname.disable.master.reversedns"
+        // "hbase.unsafe.regionserver.hostname" and
+        // "hbase.unsafe.regionserver.hostname.disable.master.reversedns"
         // are mutually exclusive. Exception should be thrown if both are used.
         TEST_UTIL.getConfiguration().set(DNS.UNSAFE_RS_HOSTNAME_KEY, hostName);
-        TEST_UTIL.getConfiguration().setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
+        TEST_UTIL.getConfiguration()
+          .setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
         try {
           StartTestingClusterOption option = StartTestingClusterOption.builder()
-              .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+            .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
           TEST_UTIL.startMiniCluster(option);
         } catch (Exception e) {
           Throwable t1 = e.getCause();
           Throwable t2 = t1.getCause();
-          assertTrue(t1.getMessage()+" - "+t2.getMessage(), t2.getMessage().contains(
-            HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and " +
-                DNS.UNSAFE_RS_HOSTNAME_KEY + " are mutually exclusive"));
+          assertTrue(t1.getMessage() + " - " + t2.getMessage(),
+            t2.getMessage().contains(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY
+              + " and " + DNS.UNSAFE_RS_HOSTNAME_KEY + " are mutually exclusive"));
           return;
         } finally {
           TEST_UTIL.shutdownMiniCluster();
@@ -189,10 +194,10 @@ public class TestRegionServerHostname {
 
   @Test
   public void testRegionServerHostnameReportedToMaster() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY,
-    true);
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+    TEST_UTIL.getConfiguration()
+      .setBoolean(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY, true);
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(NUM_MASTERS)
+      .numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
     TEST_UTIL.startMiniCluster(option);
     int expectedRS = NUM_RS;
     try (ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher()) {

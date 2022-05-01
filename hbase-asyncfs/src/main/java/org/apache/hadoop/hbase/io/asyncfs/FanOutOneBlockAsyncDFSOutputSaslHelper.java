@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -104,7 +104,7 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 @InterfaceAudience.Private
 public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private static final Logger LOG =
-      LoggerFactory.getLogger(FanOutOneBlockAsyncDFSOutputSaslHelper.class);
+    LoggerFactory.getLogger(FanOutOneBlockAsyncDFSOutputSaslHelper.class);
 
   private FanOutOneBlockAsyncDFSOutputSaslHelper() {
   }
@@ -129,21 +129,21 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   private interface TransparentCryptoHelper {
 
     Encryptor createEncryptor(Configuration conf, FileEncryptionInfo feInfo, DFSClient client)
-        throws IOException;
+      throws IOException;
   }
 
   private static final TransparentCryptoHelper TRANSPARENT_CRYPTO_HELPER;
 
   private static SaslAdaptor createSaslAdaptor()
-      throws NoSuchFieldException, NoSuchMethodException {
+    throws NoSuchFieldException, NoSuchMethodException {
     Field saslPropsResolverField =
-        SaslDataTransferClient.class.getDeclaredField("saslPropsResolver");
+      SaslDataTransferClient.class.getDeclaredField("saslPropsResolver");
     saslPropsResolverField.setAccessible(true);
     Field trustedChannelResolverField =
-        SaslDataTransferClient.class.getDeclaredField("trustedChannelResolver");
+      SaslDataTransferClient.class.getDeclaredField("trustedChannelResolver");
     trustedChannelResolverField.setAccessible(true);
     Field fallbackToSimpleAuthField =
-        SaslDataTransferClient.class.getDeclaredField("fallbackToSimpleAuth");
+      SaslDataTransferClient.class.getDeclaredField("fallbackToSimpleAuth");
     fallbackToSimpleAuthField.setAccessible(true);
     return new SaslAdaptor() {
 
@@ -177,7 +177,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   }
 
   private static TransparentCryptoHelper createTransparentCryptoHelperWithoutHDFS12396()
-      throws NoSuchMethodException {
+    throws NoSuchMethodException {
     Method decryptEncryptedDataEncryptionKeyMethod = DFSClient.class
       .getDeclaredMethod("decryptEncryptedDataEncryptionKey", FileEncryptionInfo.class);
     decryptEncryptedDataEncryptionKeyMethod.setAccessible(true);
@@ -185,7 +185,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
       @Override
       public Encryptor createEncryptor(Configuration conf, FileEncryptionInfo feInfo,
-          DFSClient client) throws IOException {
+        DFSClient client) throws IOException {
         try {
           KeyVersion decryptedKey =
             (KeyVersion) decryptEncryptedDataEncryptionKeyMethod.invoke(client, feInfo);
@@ -206,7 +206,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   }
 
   private static TransparentCryptoHelper createTransparentCryptoHelperWithHDFS12396()
-      throws ClassNotFoundException, NoSuchMethodException {
+    throws ClassNotFoundException, NoSuchMethodException {
     Class<?> hdfsKMSUtilCls = Class.forName("org.apache.hadoop.hdfs.HdfsKMSUtil");
     Method decryptEncryptedDataEncryptionKeyMethod = hdfsKMSUtilCls.getDeclaredMethod(
       "decryptEncryptedDataEncryptionKey", FileEncryptionInfo.class, KeyProvider.class);
@@ -215,7 +215,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
       @Override
       public Encryptor createEncryptor(Configuration conf, FileEncryptionInfo feInfo,
-          DFSClient client) throws IOException {
+        DFSClient client) throws IOException {
         try {
           KeyVersion decryptedKey = (KeyVersion) decryptEncryptedDataEncryptionKeyMethod
             .invoke(null, feInfo, client.getKeyProvider());
@@ -236,12 +236,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   }
 
   private static TransparentCryptoHelper createTransparentCryptoHelper()
-      throws NoSuchMethodException, ClassNotFoundException {
+    throws NoSuchMethodException, ClassNotFoundException {
     try {
       return createTransparentCryptoHelperWithoutHDFS12396();
     } catch (NoSuchMethodException e) {
-      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient," +
-        " should be hadoop version with HDFS-12396", e);
+      LOG.debug("No decryptEncryptedDataEncryptionKey method in DFSClient,"
+        + " should be hadoop version with HDFS-12396", e);
     }
     return createTransparentCryptoHelperWithHDFS12396();
   }
@@ -252,8 +252,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       TRANSPARENT_CRYPTO_HELPER = createTransparentCryptoHelper();
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please "
-          + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
-          + "HBASE-16110 for more information.";
+        + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
+        + "HBASE-16110 for more information.";
       LOG.error(msg, e);
       throw new Error(msg, e);
     }
@@ -324,8 +324,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private int step = 0;
 
     public SaslNegotiateHandler(Configuration conf, String username, char[] password,
-        Map<String, String> saslProps, int timeoutMs, Promise<Void> promise,
-        DFSClient dfsClient) throws SaslException {
+      Map<String, String> saslProps, int timeoutMs, Promise<Void> promise, DFSClient dfsClient)
+      throws SaslException {
       this.conf = conf;
       this.saslProps = saslProps;
       this.saslClient = Sasl.createSaslClient(new String[] { MECHANISM }, username, PROTOCOL,
@@ -355,8 +355,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     /**
-     * The asyncfs subsystem emulates a HDFS client by sending protobuf messages via netty.
-     * After Hadoop 3.3.0, the protobuf classes are relocated to org.apache.hadoop.thirdparty.protobuf.*.
+     * The asyncfs subsystem emulates a HDFS client by sending protobuf messages via netty. After
+     * Hadoop 3.3.0, the protobuf classes are relocated to org.apache.hadoop.thirdparty.protobuf.*.
      * Use Reflection to check which ones to use.
      */
     private static class BuilderPayloadSetter {
@@ -366,13 +366,11 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       /**
        * Create a ByteString from byte array without copying (wrap), and then set it as the payload
        * for the builder.
-       *
        * @param builder builder for HDFS DataTransferEncryptorMessage.
-       * @param payload byte array of payload.
-       * @throws IOException
+       * @param payload byte array of payload. n
        */
-      static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder, byte[] payload)
-        throws IOException {
+      static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder,
+        byte[] payload) throws IOException {
         Object byteStringObject;
         try {
           // byteStringObject = new LiteralByteString(payload);
@@ -396,18 +394,18 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         try {
           // See if it can load the relocated ByteString, which comes from hadoop-thirdparty.
           byteStringClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString");
-          LOG.debug("Found relocated ByteString class from hadoop-thirdparty." +
-            " Assuming this is Hadoop 3.3.0+.");
+          LOG.debug("Found relocated ByteString class from hadoop-thirdparty."
+            + " Assuming this is Hadoop 3.3.0+.");
         } catch (ClassNotFoundException e) {
-          LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty." +
-            " Assuming this is below Hadoop 3.3.0", e);
+          LOG.debug("Did not find relocated ByteString class from hadoop-thirdparty."
+            + " Assuming this is below Hadoop 3.3.0", e);
         }
 
         // LiteralByteString is a package private class in protobuf. Make it accessible.
         Class<?> literalByteStringClass;
         try {
-          literalByteStringClass = Class.forName(
-            "org.apache.hadoop.thirdparty.protobuf.ByteString$LiteralByteString");
+          literalByteStringClass =
+            Class.forName("org.apache.hadoop.thirdparty.protobuf.ByteString$LiteralByteString");
           LOG.debug("Shaded LiteralByteString from hadoop-thirdparty is found.");
         } catch (ClassNotFoundException e) {
           try {
@@ -435,9 +433,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload,
-        List<CipherOption> options) throws IOException {
+      List<CipherOption> options) throws IOException {
       DataTransferEncryptorMessageProto.Builder builder =
-          DataTransferEncryptorMessageProto.newBuilder();
+        DataTransferEncryptorMessageProto.newBuilder();
       builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
       if (payload != null) {
         BuilderPayloadSetter.wrapAndSetPayload(builder, payload);
@@ -486,7 +484,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
     private boolean requestedQopContainsPrivacy() {
       Set<String> requestedQop =
-          ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
+        ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
       return requestedQop.contains("auth-conf");
     }
 
@@ -495,15 +493,14 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         throw new IOException("Failed to complete SASL handshake");
       }
       Set<String> requestedQop =
-          ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
+        ImmutableSet.copyOf(Arrays.asList(saslProps.get(Sasl.QOP).split(",")));
       String negotiatedQop = getNegotiatedQop();
       LOG.debug(
         "Verifying QOP, requested QOP = " + requestedQop + ", negotiated QOP = " + negotiatedQop);
       if (!requestedQop.contains(negotiatedQop)) {
         throw new IOException(String.format("SASL handshake completed, but "
-            + "channel does not have acceptable quality of protection, "
-            + "requested = %s, negotiated = %s",
-          requestedQop, negotiatedQop));
+          + "channel does not have acceptable quality of protection, "
+          + "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
       }
     }
 
@@ -522,13 +519,13 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         outKey = saslClient.unwrap(outKey, 0, outKey.length);
       }
       return new CipherOption(option.getCipherSuite(), inKey, option.getInIv(), outKey,
-          option.getOutIv());
+        option.getOutIv());
     }
 
     private CipherOption getCipherOption(DataTransferEncryptorMessageProto proto,
-        boolean isNegotiatedQopPrivacy, SaslClient saslClient) throws IOException {
+      boolean isNegotiatedQopPrivacy, SaslClient saslClient) throws IOException {
       List<CipherOption> cipherOptions =
-          PBHelperClient.convertCipherOptionProtos(proto.getCipherOptionList());
+        PBHelperClient.convertCipherOptionProtos(proto.getCipherOptionList());
       if (cipherOptions == null || cipherOptions.isEmpty()) {
         return null;
       }
@@ -558,7 +555,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
             assert response == null;
             checkSaslComplete();
             CipherOption cipherOption =
-                getCipherOption(proto, isNegotiatedQopPrivacy(), saslClient);
+              getCipherOption(proto, isNegotiatedQopPrivacy(), saslClient);
             ChannelPipeline p = ctx.pipeline();
             while (p.first() != null) {
               p.removeFirst();
@@ -639,7 +636,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-        throws Exception {
+      throws Exception {
       if (msg instanceof ByteBuf) {
         ByteBuf buf = (ByteBuf) msg;
         cBuf.addComponent(buf);
@@ -676,7 +673,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private final Decryptor decryptor;
 
     public DecryptHandler(CryptoCodec codec, byte[] key, byte[] iv)
-        throws GeneralSecurityException, IOException {
+      throws GeneralSecurityException, IOException {
       this.decryptor = codec.createDecryptor();
       this.decryptor.init(key, Arrays.copyOf(iv, iv.length));
     }
@@ -709,14 +706,14 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     private final Encryptor encryptor;
 
     public EncryptHandler(CryptoCodec codec, byte[] key, byte[] iv)
-        throws GeneralSecurityException, IOException {
+      throws GeneralSecurityException, IOException {
       this.encryptor = codec.createEncryptor();
       this.encryptor.init(key, Arrays.copyOf(iv, iv.length));
     }
 
     @Override
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect)
-        throws Exception {
+      throws Exception {
       if (preferDirect) {
         return ctx.alloc().directBuffer(msg.readableBytes());
       } else {
@@ -747,7 +744,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
 
   private static String getUserNameFromEncryptionKey(DataEncryptionKey encryptionKey) {
     return encryptionKey.keyId + NAME_DELIMITER + encryptionKey.blockPoolId + NAME_DELIMITER
-        + Base64.getEncoder().encodeToString(encryptionKey.nonce);
+      + Base64.getEncoder().encodeToString(encryptionKey.nonce);
   }
 
   private static char[] encryptionKeyToPassword(byte[] encryptionKey) {
@@ -771,26 +768,26 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
   }
 
   private static void doSaslNegotiation(Configuration conf, Channel channel, int timeoutMs,
-      String username, char[] password, Map<String, String> saslProps, Promise<Void> saslPromise,
-      DFSClient dfsClient) {
+    String username, char[] password, Map<String, String> saslProps, Promise<Void> saslPromise,
+    DFSClient dfsClient) {
     try {
       channel.pipeline().addLast(new IdleStateHandler(timeoutMs, 0, 0, TimeUnit.MILLISECONDS),
         new ProtobufVarint32FrameDecoder(),
         new ProtobufDecoder(DataTransferEncryptorMessageProto.getDefaultInstance()),
         new SaslNegotiateHandler(conf, username, password, saslProps, timeoutMs, saslPromise,
-            dfsClient));
+          dfsClient));
     } catch (SaslException e) {
       saslPromise.tryFailure(e);
     }
   }
 
   static void trySaslNegotiate(Configuration conf, Channel channel, DatanodeInfo dnInfo,
-      int timeoutMs, DFSClient client, Token<BlockTokenIdentifier> accessToken,
-      Promise<Void> saslPromise) throws IOException {
+    int timeoutMs, DFSClient client, Token<BlockTokenIdentifier> accessToken,
+    Promise<Void> saslPromise) throws IOException {
     SaslDataTransferClient saslClient = client.getSaslDataTransferClient();
     SaslPropertiesResolver saslPropsResolver = SASL_ADAPTOR.getSaslPropsResolver(saslClient);
     TrustedChannelResolver trustedChannelResolver =
-        SASL_ADAPTOR.getTrustedChannelResolver(saslClient);
+      SASL_ADAPTOR.getTrustedChannelResolver(saslClient);
     AtomicBoolean fallbackToSimpleAuth = SASL_ADAPTOR.getFallbackToSimpleAuth(saslClient);
     InetAddress addr = ((InetSocketAddress) channel.remoteAddress()).getAddress();
     if (trustedChannelResolver.isTrusted() || trustedChannelResolver.isTrusted(addr)) {
@@ -805,24 +802,23 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       doSaslNegotiation(conf, channel, timeoutMs, getUserNameFromEncryptionKey(encryptionKey),
         encryptionKeyToPassword(encryptionKey.encryptionKey),
-        createSaslPropertiesForEncryption(encryptionKey.encryptionAlgorithm), saslPromise,
-          client);
+        createSaslPropertiesForEncryption(encryptionKey.encryptionAlgorithm), saslPromise, client);
     } else if (!UserGroupInformation.isSecurityEnabled()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client skipping handshake in unsecured configuration for addr = " + addr
-            + ", datanodeId = " + dnInfo);
+          + ", datanodeId = " + dnInfo);
       }
       saslPromise.trySuccess(null);
     } else if (dnInfo.getXferPort() < 1024) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client skipping handshake in secured configuration with "
-            + "privileged port for addr = " + addr + ", datanodeId = " + dnInfo);
+          + "privileged port for addr = " + addr + ", datanodeId = " + dnInfo);
       }
       saslPromise.trySuccess(null);
     } else if (fallbackToSimpleAuth != null && fallbackToSimpleAuth.get()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client skipping handshake in secured configuration with "
-            + "unsecured cluster for addr = " + addr + ", datanodeId = " + dnInfo);
+          + "unsecured cluster for addr = " + addr + ", datanodeId = " + dnInfo);
       }
       saslPromise.trySuccess(null);
     } else if (saslPropsResolver != null) {
@@ -832,21 +828,21 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
       doSaslNegotiation(conf, channel, timeoutMs, buildUsername(accessToken),
         buildClientPassword(accessToken), saslPropsResolver.getClientProperties(addr), saslPromise,
-          client);
+        client);
     } else {
       // It's a secured cluster using non-privileged ports, but no SASL. The only way this can
       // happen is if the DataNode has ignore.secure.ports.for.testing configured, so this is a rare
       // edge case.
       if (LOG.isDebugEnabled()) {
         LOG.debug("SASL client skipping handshake in secured configuration with no SASL "
-            + "protection configured for addr = " + addr + ", datanodeId = " + dnInfo);
+          + "protection configured for addr = " + addr + ", datanodeId = " + dnInfo);
       }
       saslPromise.trySuccess(null);
     }
   }
 
   static Encryptor createEncryptor(Configuration conf, HdfsFileStatus stat, DFSClient client)
-      throws IOException {
+    throws IOException {
     FileEncryptionInfo feInfo = stat.getFileEncryptionInfo();
     if (feInfo == null) {
       return null;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
@@ -48,13 +47,13 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final MoveRegionState state)
-      throws InterruptedException {
+    throws InterruptedException {
     return Flow.NO_MORE_STATE;
   }
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final MoveRegionState state)
-      throws IOException {
+    throws IOException {
     // no-op
   }
 
@@ -96,13 +95,12 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     final MoveRegionStateData.Builder state = MoveRegionStateData.newBuilder()
-        // No need to serialize the RegionInfo. The super class has the region.
-        .setSourceServer(ProtobufUtil.toServerName(plan.getSource()));
+      // No need to serialize the RegionInfo. The super class has the region.
+      .setSourceServer(ProtobufUtil.toServerName(plan.getSource()));
     if (plan.getDestination() != null) {
       state.setDestinationServer(ProtobufUtil.toServerName(plan.getDestination()));
     }
@@ -111,15 +109,14 @@ public class MoveRegionProcedure extends AbstractStateMachineRegionProcedure<Mov
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     final MoveRegionStateData state = serializer.deserialize(MoveRegionStateData.class);
     final RegionInfo regionInfo = getRegion(); // Get it from super class deserialization.
     final ServerName sourceServer = ProtobufUtil.toServerName(state.getSourceServer());
-    final ServerName destinationServer = state.hasDestinationServer() ?
-        ProtobufUtil.toServerName(state.getDestinationServer()) : null;
+    final ServerName destinationServer =
+      state.hasDestinationServer() ? ProtobufUtil.toServerName(state.getDestinationServer()) : null;
     this.plan = new RegionPlan(regionInfo, sourceServer, destinationServer);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,7 +69,6 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
 
   /**
    * Waits until there is only one log(the current writing one) in the replication queue
-   *
    * @param numRs number of region servers
    */
   private void waitForLogAdvance(int numRs) {
@@ -88,9 +89,11 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
             // We are making sure that there is only one log queue and that is for the
             // current WAL of region server
             String logPrefix = source.getQueues().keySet().stream().findFirst().get();
-            if (!currentFile.equals(source.getCurrentPath())
-              || source.getQueues().keySet().size() != 1
-              || source.getQueues().get(logPrefix).size() != 1) {
+            if (
+              !currentFile.equals(source.getCurrentPath())
+                || source.getQueues().keySet().size() != 1
+                || source.getQueues().get(logPrefix).size() != 1
+            ) {
               return false;
             }
           }

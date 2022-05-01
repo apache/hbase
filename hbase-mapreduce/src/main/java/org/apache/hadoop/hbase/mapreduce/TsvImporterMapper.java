@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,14 +21,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
@@ -39,6 +37,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +45,7 @@ import org.slf4j.LoggerFactory;
  * Write table content out to files in hdfs.
  */
 @InterfaceAudience.Public
-public class TsvImporterMapper
-    extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
+public class TsvImporterMapper extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put> {
   private static final Logger LOG = LoggerFactory.getLogger(TsvImporterMapper.class);
 
   /** Timestamp for all inserted rows */
@@ -58,7 +56,7 @@ public class TsvImporterMapper
 
   /** Should skip bad lines */
   private boolean skipBadLines;
-  /** Should skip empty columns*/
+  /** Should skip empty columns */
   private boolean skipEmptyColumns;
   private Counter badLineCount;
   private boolean logBadLines;
@@ -95,20 +93,17 @@ public class TsvImporterMapper
   }
 
   /**
-   * Handles initializing this class with objects specific to it (i.e., the parser).
-   * Common initialization that might be leveraged by a subsclass is done in
-   * <code>doSetup</code>. Hence a subclass may choose to override this method
-   * and call <code>doSetup</code> as well before handling it's own custom params.
-   *
-   * @param context
+   * Handles initializing this class with objects specific to it (i.e., the parser). Common
+   * initialization that might be leveraged by a subsclass is done in <code>doSetup</code>. Hence a
+   * subclass may choose to override this method and call <code>doSetup</code> as well before
+   * handling it's own custom params. n
    */
   @Override
   protected void setup(Context context) {
     doSetup(context);
 
     conf = context.getConfiguration();
-    parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY),
-                           separator);
+    parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY), separator);
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
@@ -117,8 +112,7 @@ public class TsvImporterMapper
   }
 
   /**
-   * Handles common parameter initialization that a subclass might want to leverage.
-   * @param context
+   * Handles common parameter initialization that a subclass might want to leverage. n
    */
   protected void doSetup(Context context) {
     Configuration conf = context.getConfiguration();
@@ -135,10 +129,8 @@ public class TsvImporterMapper
     // configuration.
     ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, 0);
 
-    skipEmptyColumns = context.getConfiguration().getBoolean(
-        ImportTsv.SKIP_EMPTY_COLUMNS, false);
-    skipBadLines = context.getConfiguration().getBoolean(
-        ImportTsv.SKIP_LINES_CONF_KEY, true);
+    skipEmptyColumns = context.getConfiguration().getBoolean(ImportTsv.SKIP_EMPTY_COLUMNS, false);
+    skipBadLines = context.getConfiguration().getBoolean(ImportTsv.SKIP_LINES_CONF_KEY, true);
     badLineCount = context.getCounter("ImportTsv", "Bad Lines");
     logBadLines = context.getConfiguration().getBoolean(ImportTsv.LOG_BAD_LINES_CONF_KEY, false);
     hfileOutPath = conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY);
@@ -148,18 +140,13 @@ public class TsvImporterMapper
    * Convert a line of TSV text into an HBase table row.
    */
   @Override
-  public void map(LongWritable offset, Text value,
-    Context context)
-  throws IOException {
+  public void map(LongWritable offset, Text value, Context context) throws IOException {
     byte[] lineBytes = value.getBytes();
 
     try {
-      ImportTsv.TsvParser.ParsedLine parsed = parser.parse(
-          lineBytes, value.getLength());
+      ImportTsv.TsvParser.ParsedLine parsed = parser.parse(lineBytes, value.getLength());
       ImmutableBytesWritable rowKey =
-        new ImmutableBytesWritable(lineBytes,
-            parsed.getRowKeyOffset(),
-            parsed.getRowKeyLength());
+        new ImmutableBytesWritable(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength());
       // Retrieve timestamp if exists
       ts = parsed.getTimestamp(ts);
       cellVisibilityExpr = parsed.getCellVisibility();
@@ -169,8 +156,8 @@ public class TsvImporterMapper
       if (hfileOutPath != null) {
         tags.clear();
         if (cellVisibilityExpr != null) {
-          tags.addAll(kvCreator.getVisibilityExpressionResolver().createVisibilityExpTags(
-            cellVisibilityExpr));
+          tags.addAll(kvCreator.getVisibilityExpressionResolver()
+            .createVisibilityExpTags(cellVisibilityExpr));
         }
         // Add TTL directly to the KV so we can vary them when packing more than one KV
         // into puts
@@ -180,17 +167,19 @@ public class TsvImporterMapper
       }
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
-        if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
-            || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()
-            || i == parser.getCellTTLColumnIndex() || (skipEmptyColumns
-            && parsed.getColumnLength(i) == 0)) {
+        if (
+          i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
+            || i == parser.getAttributesKeyColumnIndex()
+            || i == parser.getCellVisibilityColumnIndex() || i == parser.getCellTTLColumnIndex()
+            || (skipEmptyColumns && parsed.getColumnLength(i) == 0)
+        ) {
           continue;
         }
         populatePut(lineBytes, parsed, put, i);
       }
       context.write(rowKey, put);
     } catch (ImportTsv.TsvParser.BadTsvLineException | IllegalArgumentException
-        | InvalidLabelException badLine) {
+      | InvalidLabelException badLine) {
       if (logBadLines) {
         System.err.println(value);
       }
@@ -207,13 +196,13 @@ public class TsvImporterMapper
   }
 
   protected void populatePut(byte[] lineBytes, ImportTsv.TsvParser.ParsedLine parsed, Put put,
-      int i) throws BadTsvLineException, IOException {
+    int i) throws BadTsvLineException, IOException {
     Cell cell = null;
     if (hfileOutPath == null) {
       cell = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-          parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
-          parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
-          parsed.getColumnOffset(i), parsed.getColumnLength(i));
+        parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+        parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes, parsed.getColumnOffset(i),
+        parsed.getColumnLength(i));
       if (cellVisibilityExpr != null) {
         // We won't be validating the expression here. The Visibility CP will do
         // the validation
@@ -226,9 +215,9 @@ public class TsvImporterMapper
       // Creating the KV which needs to be directly written to HFiles. Using the Facade
       // KVCreator for creation of kvs.
       cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-          parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
-          parser.getQualifier(i).length, ts, lineBytes, parsed.getColumnOffset(i),
-          parsed.getColumnLength(i), tags);
+        parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+        parser.getQualifier(i).length, ts, lineBytes, parsed.getColumnOffset(i),
+        parsed.getColumnLength(i), tags);
     }
     put.add(cell);
   }

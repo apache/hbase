@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestCleanerChore {
 
   @ClassRule
@@ -491,7 +491,7 @@ public class TestCleanerChore {
     conf.set(confKey, AlwaysDelete.class.getName());
     conf.set(CleanerChore.LOG_CLEANER_CHORE_SIZE, String.valueOf(initPoolSize));
     final AllValidPaths chore =
-        new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, pool);
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, pool);
     chore.setEnabled(true);
     // Create subdirs under testDir
     int dirNums = 6;

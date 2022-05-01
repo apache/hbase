@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,11 +65,11 @@ class AsyncConnectionConfiguration {
   private static final Logger LOG = LoggerFactory.getLogger(AsyncConnectionConfiguration.class);
 
   /**
-    * Parameter name for client pause when server is overloaded, denoted by
-    * {@link org.apache.hadoop.hbase.HBaseServerException#isServerOverloaded()}
-    */
+   * Parameter name for client pause when server is overloaded, denoted by
+   * {@link org.apache.hadoop.hbase.HBaseServerException#isServerOverloaded()}
+   */
   public static final String HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED =
-      "hbase.client.pause.server.overloaded";
+    "hbase.client.pause.server.overloaded";
 
   static {
     // This is added where the configs are referenced. It may be too late to happen before
@@ -77,18 +77,18 @@ class AsyncConnectionConfiguration {
     // to handle checking both properties in parsing below. The benefit of calling this is
     // that it should still cause Configuration to log a warning if we do end up falling
     // through to the old deprecated config.
-    Configuration.addDeprecation(
-      HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED);
+    Configuration.addDeprecation(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE,
+      HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED);
   }
 
   /**
-   * Configure the number of failures after which the client will start logging. A few failures
-   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
-   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at
-   * this stage.
+   * Configure the number of failures after which the client will start logging. A few failures is
+   * fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 5 was chosen because we wait for 1s at this
+   * stage.
    */
   public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
-      "hbase.client.start.log.errors.counter";
+    "hbase.client.start.log.errors.counter";
   public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 5;
 
   private final long metaOperationTimeoutNs;
@@ -159,8 +159,8 @@ class AsyncConnectionConfiguration {
     if (pauseMsForServerOverloaded < pauseMs) {
       LOG.warn(
         "The {} setting: {} ms is less than the {} setting: {} ms, use the greater one instead",
-        HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, pauseMsForServerOverloaded,
-        HBASE_CLIENT_PAUSE, pauseMs);
+        HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED, pauseMsForServerOverloaded, HBASE_CLIENT_PAUSE,
+        pauseMs);
       pauseMsForServerOverloaded = pauseMs;
     }
     this.pauseNs = TimeUnit.MILLISECONDS.toNanos(pauseMs);
@@ -168,9 +168,8 @@ class AsyncConnectionConfiguration {
     this.maxRetries = conf.getInt(HBASE_CLIENT_RETRIES_NUMBER, DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.startLogErrorsCnt =
       conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
-    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-        conf.getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-            DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
+    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf
+      .getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
     this.scannerCaching =
       conf.getInt(HBASE_CLIENT_SCANNER_CACHING, DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
     this.metaScannerCaching =

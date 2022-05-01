@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -207,7 +207,7 @@ public class TestChoreService {
 
     /**
      * @param failThreshold Number of times the Chore fails when trying to execute initialChore
-     *          before succeeding.
+     *                      before succeeding.
      */
     public FailInitialChore(String name, int period, int failThreshold) {
       this(name, new SampleStopper(), period, failThreshold);

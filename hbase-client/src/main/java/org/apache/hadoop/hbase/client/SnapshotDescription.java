@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.Map;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -58,25 +57,23 @@ public class SnapshotDescription {
 
   /**
    * SnapshotDescription Parameterized Constructor
-   *
-   * @param name Name of the snapshot
-   * @param table TableName associated with the snapshot
-   * @param type Type of the snapshot - enum SnapshotType
-   * @param owner Snapshot Owner
+   * @param name         Name of the snapshot
+   * @param table        TableName associated with the snapshot
+   * @param type         Type of the snapshot - enum SnapshotType
+   * @param owner        Snapshot Owner
    * @param creationTime Creation time for Snapshot
-   * @param version Snapshot Version
+   * @param version      Snapshot Version
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)}
+   *             {@link #SnapshotDescription(String, TableName, SnapshotType, String, long, int, Map)}
    */
   @Deprecated
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
-      long creationTime, int version) {
+    long creationTime, int version) {
     this(name, table, type, owner, creationTime, version, null);
   }
 
   /**
    * SnapshotDescription Parameterized Constructor
-   *
    * @param name          Name of the snapshot
    * @param table         TableName associated with the snapshot
    * @param type          Type of the snapshot - enum SnapshotType
@@ -86,7 +83,7 @@ public class SnapshotDescription {
    * @param snapshotProps Additional properties for snapshot e.g. TTL
    */
   public SnapshotDescription(String name, TableName table, SnapshotType type, String owner,
-      long creationTime, int version, Map<String, Object> snapshotProps) {
+    long creationTime, int version, Map<String, Object> snapshotProps) {
     this.name = name;
     this.table = table;
     this.snapShotType = type;
@@ -101,18 +98,15 @@ public class SnapshotDescription {
     return MapUtils.getLongValue(snapshotProps, property, -1);
   }
 
-
-
   /**
    * SnapshotDescription Parameterized Constructor
-   *
    * @param snapshotName  Name of the snapshot
    * @param tableName     TableName associated with the snapshot
    * @param type          Type of the snapshot - enum SnapshotType
    * @param snapshotProps Additional properties for snapshot e.g. TTL
    */
   public SnapshotDescription(String snapshotName, TableName tableName, SnapshotType type,
-                             Map<String, Object> snapshotProps) {
+    Map<String, Object> snapshotProps) {
     this(snapshotName, tableName, type, null, -1, -1, snapshotProps);
   }
 
@@ -149,19 +143,15 @@ public class SnapshotDescription {
     return this.version;
   }
 
-  public long getMaxFileSize() { return maxFileSize; }
+  public long getMaxFileSize() {
+    return maxFileSize;
+  }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("name", name)
-      .append("table", table)
-      .append("snapShotType", snapShotType)
-      .append("owner", owner)
-      .append("creationTime", creationTime)
-      .append("ttl", ttl)
-      .append("version", version)
-      .append("maxFileSize", maxFileSize)
-      .toString();
+    return new ToStringBuilder(this).append("name", name).append("table", table)
+      .append("snapShotType", snapShotType).append("owner", owner)
+      .append("creationTime", creationTime).append("ttl", ttl).append("version", version)
+      .append("maxFileSize", maxFileSize).toString();
   }
 }

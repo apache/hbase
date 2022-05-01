@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,9 +27,9 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Defines a curated set of shared functions implemented by HBase servers (Masters
- * and RegionServers). For use internally only. Be judicious adding API. Changes cause ripples
- * through the code base.
+ * Defines a curated set of shared functions implemented by HBase servers (Masters and
+ * RegionServers). For use internally only. Be judicious adding API. Changes cause ripples through
+ * the code base.
  */
 @InterfaceAudience.Private
 public interface Server extends Abortable, Stoppable {
@@ -44,10 +44,9 @@ public interface Server extends Abortable, Stoppable {
   ZKWatcher getZooKeeper();
 
   /**
-   * Returns a reference to the servers' connection.
-   *
-   * Important note: this method returns a reference to Connection which is managed
-   * by Server itself, so callers must NOT attempt to close connection obtained.
+   * Returns a reference to the servers' connection. Important note: this method returns a reference
+   * to Connection which is managed by Server itself, so callers must NOT attempt to close
+   * connection obtained.
    */
   default Connection getConnection() {
     return getAsyncConnection().toConnection();

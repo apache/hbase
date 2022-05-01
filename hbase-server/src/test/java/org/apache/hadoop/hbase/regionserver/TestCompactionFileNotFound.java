@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestCompactionFileNotFound {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionFileNotFound.class);
+    HBaseClassTestRule.forClass(TestCompactionFileNotFound.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionFileNotFound.class);
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
@@ -77,8 +77,7 @@ public class TestCompactionFileNotFound {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = util.getConfiguration();
-    conf.setInt("hbase.hfile.compaction.discharger.interval",
-      Integer.MAX_VALUE);
+    conf.setInt("hbase.hfile.compaction.discharger.interval", Integer.MAX_VALUE);
     util.startMiniCluster(3);
   }
 
@@ -126,7 +125,7 @@ public class TestCompactionFileNotFound {
       }
       table.put(putb);
       HRegion hr1 = (HRegion) util.getRSForFirstRegionInTable(TEST_TABLE)
-          .getRegionByEncodedName(admin.getRegions(TEST_TABLE).get(0).getEncodedName());
+        .getRegionByEncodedName(admin.getRegions(TEST_TABLE).get(0).getEncodedName());
       // Refresh store files post compaction, this should not open already compacted files
       hr1.refreshStoreFiles(true);
       int numRegionsBeforeSplit = admin.getRegions(TEST_TABLE).size();
@@ -143,7 +142,7 @@ public class TestCompactionFileNotFound {
           }
           // Make sure that the split went through and all the regions are assigned
           return (numRegionsAfterSplit == numRegionsBeforeSplit + 1
-              && admin.isTableAvailable(TEST_TABLE));
+            && admin.isTableAvailable(TEST_TABLE));
         }
       });
       // Split at this point should not result in the RS being aborted
@@ -182,7 +181,7 @@ public class TestCompactionFileNotFound {
       }
       table.put(putb);
       HRegion hr1 = (HRegion) util.getRSForFirstRegionInTable(TEST_TABLE)
-          .getRegionByEncodedName(admin.getRegions(TEST_TABLE).get(0).getEncodedName());
+        .getRegionByEncodedName(admin.getRegions(TEST_TABLE).get(0).getEncodedName());
       // Refresh store files post compaction, this should not open already compacted files
       hr1.refreshStoreFiles(true);
       // Archive the store files and try another compaction to see if all is good

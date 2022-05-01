@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,20 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.Mapper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Scan an HBase table to sort by a specified sort column.
- * If the column does not exist, the record is not passed to Reduce.
- *
+ * Scan an HBase table to sort by a specified sort column. If the column does not exist, the record
+ * is not passed to Reduce.
  * @param <K> WritableComparable key class
  * @param <V> Writable value class
  */
 @InterfaceAudience.Public
 public interface TableMap<K extends WritableComparable<? super K>, V>
-extends Mapper<ImmutableBytesWritable, Result, K, V> {
+  extends Mapper<ImmutableBytesWritable, Result, K, V> {
 
 }

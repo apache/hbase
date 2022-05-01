@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -44,17 +43,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckMOB.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckMOB.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        MasterSyncCoprocessor.class.getName());
+      MasterSyncCoprocessor.class.getName());
 
     conf.setInt("hbase.regionserver.handler.count", 2);
     conf.setInt("hbase.regionserver.metahandler.count", 30);
@@ -72,7 +73,7 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
     AssignmentManager assignmentManager =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
 
     connection = TEST_UTIL.getConnection();
@@ -96,9 +97,8 @@ public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
     EnvironmentEdgeManager.reset();
   }
 
-
   /**
-   * This creates a table and then corrupts a mob file.  Hbck should quarantine the file.
+   * This creates a table and then corrupts a mob file. Hbck should quarantine the file.
    */
   @SuppressWarnings("deprecation")
   @Test

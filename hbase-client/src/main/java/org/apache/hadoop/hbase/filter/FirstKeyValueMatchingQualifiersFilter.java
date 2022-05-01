@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This filter was deprecated in 2.0.0 and should be removed in 3.0.0. We keep the code here
- * to prevent the proto serialization exceptions puzzle those users who use older version clients
- * to communicate with newer version servers.
- *
+ * This filter was deprecated in 2.0.0 and should be removed in 3.0.0. We keep the code here to
+ * prevent the proto serialization exceptions puzzle those users who use older version clients to
+ * communicate with newer version servers.
  * @deprecated Deprecated in 2.0.0 and will be removed in 3.0.0.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-13347">HBASE-13347</a>
  */
@@ -36,12 +33,11 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   /**
    * @param pbBytes A pb serialized {@link FirstKeyValueMatchingQualifiersFilter} instance
-   * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray
+   * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from
+   *         <code>bytes</code> n * @see #toByteArray
    */
-  public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     throw new DeserializationException(
       "Stop using FirstKeyValueMatchingQualifiersFilter, which has been permanently removed");
   }

@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
+
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,6 +27,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class SystemTableWALEntryFilter implements WALEntryFilter {
   @Override
   public Entry filter(Entry entry) {
-    return entry.getKey().getTableName().isSystemTable()? null: entry;
+    return entry.getKey().getTableName().isSystemTable() ? null : entry;
   }
 }

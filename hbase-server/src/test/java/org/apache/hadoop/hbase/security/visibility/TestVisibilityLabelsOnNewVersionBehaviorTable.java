@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,23 +28,22 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-
 @Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsOnNewVersionBehaviorTable
-    extends VisibilityLabelsWithDeletesTestBase {
+  extends VisibilityLabelsWithDeletesTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsOnNewVersionBehaviorTable.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsOnNewVersionBehaviorTable.class);
 
   @Override
   protected Table createTable(byte[] fam) throws IOException {
     TableName tableName = TableName.valueOf(testName.getMethodName());
     TEST_UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(
-              ColumnFamilyDescriptorBuilder.newBuilder(fam).setNewVersionBehavior(true).build())
-            .build());
+      .createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(fam).setNewVersionBehavior(true).build())
+        .build());
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 }

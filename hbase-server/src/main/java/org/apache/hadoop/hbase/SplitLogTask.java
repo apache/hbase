@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +18,22 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * State of a WAL log split during distributed splitting.  State is kept up in zookeeper.
- * Encapsulates protobuf serialization/deserialization so we don't leak generated pb outside of
- * this class.  Used by regionserver and master packages.
- * <p>Immutable
+ * State of a WAL log split during distributed splitting. State is kept up in zookeeper.
+ * Encapsulates protobuf serialization/deserialization so we don't leak generated pb outside of this
+ * class. Used by regionserver and master packages.
+ * <p>
+ * Immutable
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALManager
+ *             distributed WAL splitter, see SplitWALManager
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -132,7 +133,7 @@ public class SplitLogTask {
   @Override
   public boolean equals(Object obj) {
     if (!(obj instanceof SplitLogTask)) return false;
-    SplitLogTask other = (SplitLogTask)obj;
+    SplitLogTask other = (SplitLogTask) obj;
     return other.state.equals(this.state) && other.originServer.equals(this.originServer);
   }
 
@@ -145,11 +146,10 @@ public class SplitLogTask {
 
   /**
    * @param data Serialized date to parse.
-   * @return An SplitLogTaskState instance made of the passed <code>data</code>
-   * @throws DeserializationException
-   * @see #toByteArray()
+   * @return An SplitLogTaskState instance made of the passed <code>data</code> n * @see
+   *         #toByteArray()
    */
-  public static SplitLogTask parseFrom(final byte [] data) throws DeserializationException {
+  public static SplitLogTask parseFrom(final byte[] data) throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(data);
     try {
       int prefixLen = ProtobufUtil.lengthOfPBMagic();
@@ -165,9 +165,9 @@ public class SplitLogTask {
    * @return This instance serialized into a byte array
    * @see #parseFrom(byte[])
    */
-  public byte [] toByteArray() {
-    // First create a pb ServerName.  Then create a ByteString w/ the TaskState
-    // bytes in it.  Finally create a SplitLogTaskState passing in the two
+  public byte[] toByteArray() {
+    // First create a pb ServerName. Then create a ByteString w/ the TaskState
+    // bytes in it. Finally create a SplitLogTaskState passing in the two
     // pbs just created.
     HBaseProtos.ServerName snpb = ProtobufUtil.toServerName(this.originServer);
     ZooKeeperProtos.SplitLogTask slts =

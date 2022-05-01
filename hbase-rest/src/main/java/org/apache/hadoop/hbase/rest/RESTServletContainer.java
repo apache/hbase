@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
+
+import static org.apache.hadoop.hbase.http.ProxyUserAuthenticationFilter.toLowerCase;
 
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -31,11 +31,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.org.glassfish.jersey.server.ResourceConfig;
 import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer;
-import static org.apache.hadoop.hbase.http.ProxyUserAuthenticationFilter.toLowerCase;
 
 /**
- * REST servlet container. It is used to get the remote request user
- * without going through @HttpContext, so that we can minimize code changes.
+ * REST servlet container. It is used to get the remote request user without going
+ * through @HttpContext, so that we can minimize code changes.
  */
 @InterfaceAudience.Private
 public class RESTServletContainer extends ServletContainer {
@@ -46,13 +45,12 @@ public class RESTServletContainer extends ServletContainer {
   }
 
   /**
-   * This container is used only if authentication and
-   * impersonation is enabled. The remote request user is used
-   * as a proxy user for impersonation in invoking any REST service.
+   * This container is used only if authentication and impersonation is enabled. The remote request
+   * user is used as a proxy user for impersonation in invoking any REST service.
    */
   @Override
-  public void service(final HttpServletRequest request,
-      final HttpServletResponse response) throws ServletException, IOException {
+  public void service(final HttpServletRequest request, final HttpServletResponse response)
+    throws ServletException, IOException {
     final HttpServletRequest lowerCaseRequest = toLowerCase(request);
     final String doAsUserFromQuery = lowerCaseRequest.getParameter("doas");
     RESTServlet servlet = RESTServlet.getInstance();
@@ -69,7 +67,7 @@ public class RESTServletContainer extends ServletContainer {
       // validate the proxy user authorization
       try {
         ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
-      } catch(AuthorizationException e) {
+      } catch (AuthorizationException e) {
         throw new ServletException(e.getMessage());
       }
       servlet.setEffectiveUser(doAsUserFromQuery);

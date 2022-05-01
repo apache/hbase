@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Get, remove and modify table descriptors.
@@ -66,10 +65,10 @@ public interface TableDescriptors {
 
   /**
    * Add or update descriptor
-   * @param htd Descriptor to set into TableDescriptors
+   * @param htd       Descriptor to set into TableDescriptors
    * @param cacheOnly only add the given {@code htd} to cache, without updating the storage. For
-   *          example, when creating table, we will write the descriptor to fs when creating the fs
-   *          layout, so we do not need to update the fs again.
+   *                  example, when creating table, we will write the descriptor to fs when creating
+   *                  the fs layout, so we do not need to update the fs again.
    */
   void update(TableDescriptor htd, boolean cacheOnly) throws IOException;
 

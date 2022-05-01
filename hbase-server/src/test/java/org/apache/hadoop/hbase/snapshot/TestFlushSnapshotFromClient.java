@@ -68,17 +68,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Test creating/using/deleting snapshots from the client
  * <p>
- * This is an end-to-end test for the snapshot utility
- *
- * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
- * because there will be a few more flavors of snapshots that need to run these tests.
+ * This is an end-to-end test for the snapshot utility TODO This is essentially a clone of
+ * TestSnapshotFromClient. This is worth refactoring this because there will be a few more flavors
+ * of snapshots that need to run these tests.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestFlushSnapshotFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFlushSnapshotFromClient.class);
+    HBaseClassTestRule.forClass(TestFlushSnapshotFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushSnapshotFromClient.class);
 
@@ -109,7 +108,7 @@ public class TestFlushSnapshotFromClient {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
+      ConstantSizeRegionSplitPolicy.class.getName());
   }
 
   @Before
@@ -161,7 +160,7 @@ public class TestFlushSnapshotFromClient {
 
     // make sure we have the snapshot
     List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+      SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
@@ -171,7 +170,7 @@ public class TestFlushSnapshotFromClient {
       ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM);
   }
 
-   /**
+  /**
    * Test snapshotting a table that is online without flushing
    */
   @Test
@@ -195,7 +194,7 @@ public class TestFlushSnapshotFromClient {
 
     // make sure we have the snapshot
     List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+      SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
@@ -208,7 +207,6 @@ public class TestFlushSnapshotFromClient {
     snapshots = admin.listSnapshots();
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
-
 
   /**
    * Test simple flush snapshotting a table that is online
@@ -229,15 +227,14 @@ public class TestFlushSnapshotFromClient {
     byte[] snapshot = Bytes.toBytes(snapshotString);
     Map<String, String> props = new HashMap<>();
     props.put("table", TABLE_NAME.getNameAsString());
-    admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION,
-        snapshotString, props);
-
+    admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, snapshotString,
+      props);
 
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
-    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
-      snapshot, TABLE_NAME);
+    List<SnapshotDescription> snapshots =
+      SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     LOG.debug("FS state after snapshot:");
@@ -278,12 +275,12 @@ public class TestFlushSnapshotFromClient {
   /**
    * Helper method for testing async snapshot operations. Just waits for the given snapshot to
    * complete on the server by repeatedly checking the master.
-   * @param master the master running the snapshot
-   * @param snapshot the snapshot to check
+   * @param master       the master running the snapshot
+   * @param snapshot     the snapshot to check
    * @param timeoutNanos the timeout in nano between checks to see if the snapshot is done
    */
   private static void waitForSnapshotToComplete(HMaster master,
-      SnapshotProtos.SnapshotDescription snapshot, long timeoutNanos) throws Exception {
+    SnapshotProtos.SnapshotDescription snapshot, long timeoutNanos) throws Exception {
     final IsSnapshotDoneRequest request =
       IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build();
     long start = System.nanoTime();
@@ -310,12 +307,11 @@ public class TestFlushSnapshotFromClient {
   @Test
   public void testAsyncFlushSnapshot() throws Exception {
     SnapshotProtos.SnapshotDescription snapshot = SnapshotProtos.SnapshotDescription.newBuilder()
-        .setName("asyncSnapshot").setTable(TABLE_NAME.getNameAsString())
-        .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).build();
+      .setName("asyncSnapshot").setTable(TABLE_NAME.getNameAsString())
+      .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).build();
 
     // take the snapshot async
-    admin.snapshotAsync(
-      new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH));
+    admin.snapshotAsync(new SnapshotDescription("asyncSnapshot", TABLE_NAME, SnapshotType.FLUSH));
 
     // constantly loop, looking for the snapshot to complete
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
@@ -356,9 +352,9 @@ public class TestFlushSnapshotFromClient {
     int numRegions = admin.getRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
-        regions.get(2).getEncodedNameAsBytes(), true);
+      regions.get(2).getEncodedNameAsBytes(), true);
     admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
-        regions.get(5).getEncodedNameAsBytes(), true);
+      regions.get(5).getEncodedNameAsBytes(), true);
 
     // Verify that there's one region less
     waitRegionsAfterMerge(numRegionsAfterMerge);
@@ -398,9 +394,9 @@ public class TestFlushSnapshotFromClient {
     int numRegions = admin.getRegions(TABLE_NAME).size();
     int numRegionsAfterMerge = numRegions - 2;
     admin.mergeRegionsAsync(regions.get(1).getEncodedNameAsBytes(),
-        regions.get(2).getEncodedNameAsBytes(), true);
+      regions.get(2).getEncodedNameAsBytes(), true);
     admin.mergeRegionsAsync(regions.get(4).getEncodedNameAsBytes(),
-        regions.get(5).getEncodedNameAsBytes(), true);
+      regions.get(5).getEncodedNameAsBytes(), true);
 
     waitRegionsAfterMerge(numRegionsAfterMerge);
     assertEquals(numRegionsAfterMerge, admin.getRegions(TABLE_NAME).size());
@@ -440,7 +436,7 @@ public class TestFlushSnapshotFromClient {
   }
 
   private void waitRegionsAfterMerge(final long numRegionsAfterMerge)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // Verify that there's one region less
     long startTime = EnvironmentEdgeManager.currentTime();
     while (admin.getRegions(TABLE_NAME).size() != numRegionsAfterMerge) {
@@ -455,7 +451,7 @@ public class TestFlushSnapshotFromClient {
   }
 
   protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
-      long expectedRows) throws IOException {
+    long expectedRows) throws IOException {
     SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }
 

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -42,7 +41,8 @@ public class DecreaseMaxHFileSizeAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -63,9 +63,8 @@ public class DecreaseMaxHFileSizeAction extends Action {
     // If configs are really weird this might not work.
     // That's ok. We're trying to cause chaos.
     if (currentValue <= 0) {
-      currentValue =
-          context.getHBaseCluster().getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
-              HConstants.DEFAULT_MAX_FILE_SIZE);
+      currentValue = context.getHBaseCluster().getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
+        HConstants.DEFAULT_MAX_FILE_SIZE);
     }
 
     // Decrease by 10% at a time.
@@ -73,12 +72,11 @@ public class DecreaseMaxHFileSizeAction extends Action {
 
     // We don't want to go too far below 1gb.
     // So go to about 1gb +/- 512 on each side.
-    newValue = Math.max(minFileSize, newValue) -
-        (512 - ThreadLocalRandom.current().nextInt(1024));
+    newValue = Math.max(minFileSize, newValue) - (512 - ThreadLocalRandom.current().nextInt(1024));
 
     // Change the table descriptor.
     TableDescriptor modifiedTable =
-        TableDescriptorBuilder.newBuilder(td).setMaxFileSize(newValue).build();
+      TableDescriptorBuilder.newBuilder(td).setMaxFileSize(newValue).build();
 
     // Don't try the modify if we're stopping
     if (context.isStopping()) {

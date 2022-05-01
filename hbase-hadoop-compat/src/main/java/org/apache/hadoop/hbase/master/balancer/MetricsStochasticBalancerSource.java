@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This interface extends the basic metrics balancer source to add a function
- * to report metrics that related to stochastic load balancer. The purpose is to
- * offer an insight to the internal cost calculations that can be useful to tune
- * the balancer. For details, refer to HBASE-13965
+ * This interface extends the basic metrics balancer source to add a function to report metrics that
+ * related to stochastic load balancer. The purpose is to offer an insight to the internal cost
+ * calculations that can be useful to tune the balancer. For details, refer to HBASE-13965
  */
 @InterfaceAudience.Private
 public interface MetricsStochasticBalancerSource extends MetricsBalancerSource {
@@ -38,5 +36,5 @@ public interface MetricsStochasticBalancerSource extends MetricsBalancerSource {
    * Reports stochastic load balancer costs to JMX
    */
   public void updateStochasticCost(String tableName, String costFunctionName,
-      String costFunctionDesc, Double value);
+    String costFunctionDesc, Double value);
 }

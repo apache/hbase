@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,7 +77,7 @@ public class TestRegionReplicaReplicationError {
 
     @Override
     public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
-        ReplicateWALEntryRequest request) throws ServiceException {
+      ReplicateWALEntryRequest request) throws ServiceException {
       List<WALEntry> entries = request.getEntryList();
       if (CollectionUtils.isEmpty(entries)) {
         return ReplicateWALEntryResponse.getDefaultInstance();

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,25 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
- * Represents the result of an authorization check for logging and error
- * reporting.
+ * Represents the result of an authorization check for logging and error reporting.
  */
 @InterfaceAudience.Private
 public class AuthResult {
@@ -52,7 +49,7 @@ public class AuthResult {
   private final Map<byte[], ? extends Collection<?>> families;
 
   public AuthResult(boolean allowed, String request, String reason, User user,
-      Permission.Action action, TableName table, byte[] family, byte[] qualifier) {
+    Permission.Action action, TableName table, byte[] family, byte[] qualifier) {
     this.allowed = allowed;
     this.request = request;
     this.reason = reason;
@@ -67,8 +64,7 @@ public class AuthResult {
   }
 
   public AuthResult(boolean allowed, String request, String reason, User user,
-        Permission.Action action, TableName table,
-        Map<byte[], ? extends Collection<?>> families) {
+    Permission.Action action, TableName table, Map<byte[], ? extends Collection<?>> families) {
     this.allowed = allowed;
     this.request = request;
     this.reason = reason;
@@ -83,7 +79,7 @@ public class AuthResult {
   }
 
   public AuthResult(boolean allowed, String request, String reason, User user,
-        Permission.Action action, String namespace) {
+    Permission.Action action, String namespace) {
     this.allowed = allowed;
     this.request = request;
     this.reason = reason;
@@ -129,7 +125,9 @@ public class AuthResult {
     return request;
   }
 
-  public Params getParams() { return this.params;}
+  public Params getParams() {
+    return this.params;
+  }
 
   public void setAllowed(boolean allowed) {
     this.allowed = allowed;
@@ -140,7 +138,7 @@ public class AuthResult {
   }
 
   private static String toFamiliesString(Map<byte[], ? extends Collection<?>> families,
-      byte[] family, byte[] qual) {
+    byte[] family, byte[] qual) {
     StringBuilder sb = new StringBuilder();
     if (families != null) {
       boolean first = true;
@@ -150,11 +148,11 @@ public class AuthResult {
           for (Object o : entry.getValue()) {
             String qualifier;
             if (o instanceof byte[]) {
-              qualifier = Bytes.toString((byte[])o);
+              qualifier = Bytes.toString((byte[]) o);
             } else if (o instanceof Cell) {
               Cell c = (Cell) o;
               qualifier = Bytes.toString(c.getQualifierArray(), c.getQualifierOffset(),
-                  c.getQualifierLength());
+                c.getQualifierLength());
             } else {
               // Shouldn't really reach this?
               qualifier = o.toString();
@@ -185,27 +183,20 @@ public class AuthResult {
   public String toContextString() {
     StringBuilder sb = new StringBuilder();
     String familiesString = toFamiliesString(families, family, qualifier);
-    sb.append("(user=")
-        .append(user != null ? user.getName() : "UNKNOWN")
-        .append(", ");
+    sb.append("(user=").append(user != null ? user.getName() : "UNKNOWN").append(", ");
     sb.append("scope=")
-        .append(namespace != null ? namespace :
-            table == null ? "GLOBAL" : table.getNameWithNamespaceInclAsString())
-        .append(", ");
-    if(namespace == null && familiesString.length() > 0) {
-      sb.append("family=")
-        .append(familiesString)
-        .append(", ");
+      .append(namespace != null ? namespace
+        : table == null ? "GLOBAL"
+        : table.getNameWithNamespaceInclAsString())
+      .append(", ");
+    if (namespace == null && familiesString.length() > 0) {
+      sb.append("family=").append(familiesString).append(", ");
     }
     String paramsString = params.toString();
-    if(paramsString.length() > 0) {
-      sb.append("params=[")
-          .append(paramsString)
-          .append("],");
+    if (paramsString.length() > 0) {
+      sb.append("params=[").append(paramsString).append("],");
     }
-    sb.append("action=")
-        .append(action != null ? action.toString() : "")
-        .append(")");
+    sb.append("action=").append(action != null ? action.toString() : "").append(")");
     return sb.toString();
   }
 
@@ -214,35 +205,33 @@ public class AuthResult {
     return "AuthResult" + toContextString();
   }
 
-  public static AuthResult allow(String request, String reason, User user,
-      Permission.Action action, String namespace) {
+  public static AuthResult allow(String request, String reason, User user, Permission.Action action,
+    String namespace) {
     return new AuthResult(true, request, reason, user, action, namespace);
   }
 
-  public static AuthResult allow(String request, String reason, User user,
-      Permission.Action action, TableName table, byte[] family, byte[] qualifier) {
+  public static AuthResult allow(String request, String reason, User user, Permission.Action action,
+    TableName table, byte[] family, byte[] qualifier) {
     return new AuthResult(true, request, reason, user, action, table, family, qualifier);
   }
 
-  public static AuthResult allow(String request, String reason, User user,
-      Permission.Action action, TableName table,
-      Map<byte[], ? extends Collection<?>> families) {
+  public static AuthResult allow(String request, String reason, User user, Permission.Action action,
+    TableName table, Map<byte[], ? extends Collection<?>> families) {
     return new AuthResult(true, request, reason, user, action, table, families);
   }
 
-  public static AuthResult deny(String request, String reason, User user,
-      Permission.Action action, String namespace) {
+  public static AuthResult deny(String request, String reason, User user, Permission.Action action,
+    String namespace) {
     return new AuthResult(false, request, reason, user, action, namespace);
   }
 
-  public static AuthResult deny(String request, String reason, User user,
-      Permission.Action action, TableName table, byte[] family, byte[] qualifier) {
+  public static AuthResult deny(String request, String reason, User user, Permission.Action action,
+    TableName table, byte[] family, byte[] qualifier) {
     return new AuthResult(false, request, reason, user, action, table, family, qualifier);
   }
 
-  public static AuthResult deny(String request, String reason, User user,
-        Permission.Action action, TableName table,
-        Map<byte[], ? extends Collection<?>> families) {
+  public static AuthResult deny(String request, String reason, User user, Permission.Action action,
+    TableName table, Map<byte[], ? extends Collection<?>> families) {
     return new AuthResult(false, request, reason, user, action, table, families);
   }
 
@@ -292,12 +281,10 @@ public class AuthResult {
     @Override
     public String toString() {
       String familiesString = toFamiliesString(families, family, qualifier);
-      String[] params = new String[] {
-          namespace != null ? "namespace=" + namespace : null,
-          tableName != null ? "table=" + tableName.getNameWithNamespaceInclAsString() : null,
-          familiesString.length() > 0 ? "family=" + familiesString : null,
-          extraParams.isEmpty() ? null : concatenateExtraParams()
-      };
+      String[] params = new String[] { namespace != null ? "namespace=" + namespace : null,
+        tableName != null ? "table=" + tableName.getNameWithNamespaceInclAsString() : null,
+        familiesString.length() > 0 ? "family=" + familiesString : null,
+        extraParams.isEmpty() ? null : concatenateExtraParams() };
       return Joiner.on(",").skipNulls().join(params);
     }
 

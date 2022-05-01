@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,9 +50,9 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
   private volatile boolean markerEditOnly = false;
 
   public DualAsyncFSWAL(FileSystem fs, FileSystem remoteFs, Path rootDir, Path remoteWALDir,
-      String logDir, String archiveDir, Configuration conf, List<WALActionsListener> listeners,
-      boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
+    String logDir, String archiveDir, Configuration conf, List<WALActionsListener> listeners,
+    boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
+    Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
     super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
       eventLoopGroup, channelClass);
     this.remoteFs = remoteFs;
@@ -61,7 +61,7 @@ public class DualAsyncFSWAL extends AsyncFSWAL {
 
   // will be overridden in testcase
   protected AsyncWriter createCombinedAsyncWriter(AsyncWriter localWriter,
-      AsyncWriter remoteWriter) {
+    AsyncWriter remoteWriter) {
     return CombinedAsyncWriter.create(remoteWriter, localWriter);
   }
 

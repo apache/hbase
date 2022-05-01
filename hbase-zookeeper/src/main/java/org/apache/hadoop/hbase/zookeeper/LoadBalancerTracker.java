@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,8 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LoadBalancerProtos;
 public class LoadBalancerTracker extends ZKNodeTracker {
   private static final Logger LOG = LoggerFactory.getLogger(LoadBalancerTracker.class);
 
-  public LoadBalancerTracker(ZKWatcher watcher,
-      Abortable abortable) {
+  public LoadBalancerTracker(ZKWatcher watcher, Abortable abortable) {
     super(watcher, watcher.getZNodePaths().balancerZNode, abortable);
   }
 
@@ -46,7 +44,7 @@ public class LoadBalancerTracker extends ZKNodeTracker {
    * Return true if the balance switch is on, false otherwise
    */
   public boolean isBalancerOn() {
-    byte [] upData = super.getData(false);
+    byte[] upData = super.getData(false);
     try {
       // if data in ZK is null, use default of on.
       return upData == null || parseFrom(upData).getBalancerOn();
@@ -59,29 +57,28 @@ public class LoadBalancerTracker extends ZKNodeTracker {
 
   /**
    * Set the balancer on/off.
-   *
    * @param balancerOn true if the balancher should be on, false otherwise
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public void setBalancerOn(boolean balancerOn) throws KeeperException {
-    byte [] upData = toByteArray(balancerOn);
+    byte[] upData = toByteArray(balancerOn);
 
     try {
       ZKUtil.setData(watcher, watcher.getZNodePaths().balancerZNode, upData);
-    } catch(KeeperException.NoNodeException nne) {
+    } catch (KeeperException.NoNodeException nne) {
       ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().balancerZNode, upData);
     }
     super.nodeDataChanged(watcher.getZNodePaths().balancerZNode);
   }
 
-  private byte [] toByteArray(boolean isBalancerOn) {
+  private byte[] toByteArray(boolean isBalancerOn) {
     LoadBalancerProtos.LoadBalancerState.Builder builder =
       LoadBalancerProtos.LoadBalancerState.newBuilder();
     builder.setBalancerOn(isBalancerOn);
     return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }
 
-  private LoadBalancerProtos.LoadBalancerState parseFrom(byte [] pbBytes)
+  private LoadBalancerProtos.LoadBalancerState parseFrom(byte[] pbBytes)
     throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(pbBytes);
     LoadBalancerProtos.LoadBalancerState.Builder builder =

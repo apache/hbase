@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.ByteArrayOutputStream;
@@ -41,10 +40,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Context that holds the various dictionaries for compression in WAL.
  * <p>
- * CompressionContexts are not expected to be shared among threads. Multithreaded use may
- * produce unexpected results.
+ * CompressionContexts are not expected to be shared among threads. Multithreaded use may produce
+ * unexpected results.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 public class CompressionContext {
 
   private static final Logger LOG = LoggerFactory.getLogger(CompressionContext.class);
@@ -59,12 +58,16 @@ public class CompressionContext {
     "hbase.regionserver.wal.value.compression.type";
 
   public enum DictionaryIndex {
-    REGION, TABLE, FAMILY, QUALIFIER, ROW
+    REGION,
+    TABLE,
+    FAMILY,
+    QUALIFIER,
+    ROW
   }
 
   /**
-   * Encapsulates the compression algorithm and its streams that we will use for value
-   * compression in this WAL.
+   * Encapsulates the compression algorithm and its streams that we will use for value compression
+   * in this WAL.
    */
   static class ValueCompressor {
 
@@ -86,16 +89,14 @@ public class CompressionContext {
       return algorithm;
     }
 
-    public byte[] compress(byte[] valueArray, int valueOffset, int valueLength)
-        throws IOException {
+    public byte[] compress(byte[] valueArray, int valueOffset, int valueLength) throws IOException {
       if (compressedOut == null) {
         // Create the output streams here the first time around.
         lowerOut = new ByteArrayOutputStream();
         if (compressor == null) {
           compressor = algorithm.getCompressor();
         }
-        compressedOut = algorithm.createCompressionStream(lowerOut, compressor,
-          IO_BUFFER_SIZE);
+        compressedOut = algorithm.createCompressionStream(lowerOut, compressor, IO_BUFFER_SIZE);
       } else {
         lowerOut.reset();
       }
@@ -105,7 +106,7 @@ public class CompressionContext {
     }
 
     public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
-        int outLength) throws IOException {
+      int outLength) throws IOException {
 
       // Our input is a sequence of bounded byte ranges (call them segments), with
       // BoundedDelegatingInputStream providing a way to switch in a new segment when the
@@ -117,8 +118,7 @@ public class CompressionContext {
         if (decompressor == null) {
           decompressor = algorithm.getDecompressor();
         }
-        compressedIn = algorithm.createDecompressionStream(lowerIn, decompressor,
-          IO_BUFFER_SIZE);
+        compressedIn = algorithm.createDecompressionStream(lowerIn, decompressor, IO_BUFFER_SIZE);
       } else {
         lowerIn.setDelegate(in, inLength);
       }
@@ -173,23 +173,21 @@ public class CompressionContext {
   }
 
   private final Map<DictionaryIndex, Dictionary> dictionaries =
-      new EnumMap<>(DictionaryIndex.class);
+    new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
   ValueCompressor valueCompressor = null;
 
-  public CompressionContext(Class<? extends Dictionary> dictType,
-      boolean recoveredEdits, boolean hasTagCompression, boolean hasValueCompression,
-      Compression.Algorithm valueCompressionType)
-      throws SecurityException, NoSuchMethodException, InstantiationException,
-        IllegalAccessException, InvocationTargetException, IOException {
-    Constructor<? extends Dictionary> dictConstructor =
-        dictType.getConstructor();
+  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
+    boolean hasTagCompression, boolean hasValueCompression,
+    Compression.Algorithm valueCompressionType) throws SecurityException, NoSuchMethodException,
+    InstantiationException, IllegalAccessException, InvocationTargetException, IOException {
+    Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
     for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
       Dictionary newDictionary = dictConstructor.newInstance();
       dictionaries.put(dictionaryIndex, newDictionary);
     }
-    if(recoveredEdits) {
+    if (recoveredEdits) {
       getDictionary(DictionaryIndex.REGION).init(1);
       getDictionary(DictionaryIndex.TABLE).init(1);
     } else {
@@ -210,9 +208,8 @@ public class CompressionContext {
   }
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      boolean hasTagCompression)
-      throws SecurityException, NoSuchMethodException, InstantiationException,
-        IllegalAccessException, InvocationTargetException, IOException {
+    boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
+    InstantiationException, IllegalAccessException, InvocationTargetException, IOException {
     this(dictType, recoveredEdits, hasTagCompression, false, null);
   }
 
@@ -233,7 +230,7 @@ public class CompressionContext {
   }
 
   void clear() {
-    for(Dictionary dictionary : dictionaries.values()){
+    for (Dictionary dictionary : dictionaries.values()) {
       dictionary.clear();
     }
     if (tagCompressionContext != null) {

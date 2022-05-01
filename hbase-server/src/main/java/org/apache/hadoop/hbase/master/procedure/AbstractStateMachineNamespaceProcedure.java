@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -35,7 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineNamespaceProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState> implements TableProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, TState> implements TableProcedureInterface {
 
   private final ProcedurePrepareLatch syncLatch;
 
@@ -49,7 +48,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
   }
 
   protected AbstractStateMachineNamespaceProcedure(final MasterProcedureEnv env,
-      final ProcedurePrepareLatch latch) {
+    final ProcedurePrepareLatch latch) {
     this.setOwner(env.getRequestUser());
     this.syncLatch = latch;
   }
@@ -94,7 +93,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
    * @param env MasterProcedureEnv
    */
   protected static void addOrUpdateNamespace(MasterProcedureEnv env, NamespaceDescriptor ns)
-      throws IOException {
+    throws IOException {
     getTableNamespaceManager(env).addOrUpdateNamespace(ns);
   }
 
@@ -104,11 +103,11 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
 
   /**
    * Create the namespace directory
-   * @param env MasterProcedureEnv
+   * @param env          MasterProcedureEnv
    * @param nsDescriptor NamespaceDescriptor
    */
   protected static void createDirectory(MasterProcedureEnv env, NamespaceDescriptor nsDescriptor)
-      throws IOException {
+    throws IOException {
     createDirectory(env.getMasterServices().getMasterFileSystem(), nsDescriptor);
   }
 

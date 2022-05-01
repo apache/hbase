@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,22 +25,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Adaptive LIFO blocking queue utilizing CoDel algorithm to prevent queue overloading.
- *
- * Implementing {@link BlockingQueue} interface to be compatible with {@link RpcExecutor}.
- *
- * Currently uses milliseconds internally, need to look into whether we should use
- * nanoseconds for timeInterval and minDelay.
- *
+ * Adaptive LIFO blocking queue utilizing CoDel algorithm to prevent queue overloading. Implementing
+ * {@link BlockingQueue} interface to be compatible with {@link RpcExecutor}. Currently uses
+ * milliseconds internally, need to look into whether we should use nanoseconds for timeInterval and
+ * minDelay.
  * @see <a href="http://queue.acm.org/detail.cfm?id=2839461">Fail at Scale paper</a>
- *
- * @see <a href="https://github.com/facebook/wangle/blob/master/wangle/concurrent/Codel.cpp">
- *   CoDel version for generic job queues in Wangle library</a>
+ * @see <a href="https://github.com/facebook/wangle/blob/master/wangle/concurrent/Codel.cpp"> CoDel
+ *      version for generic job queues in Wangle library</a>
  */
 @InterfaceAudience.Private
 public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
@@ -76,7 +71,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private AtomicBoolean isOverloaded = new AtomicBoolean(false);
 
   public AdaptiveLifoCoDelCallQueue(int capacity, int targetDelay, int interval,
-      double lifoThreshold, LongAdder numGeneralCallsDropped, LongAdder numLifoModeSwitches) {
+    double lifoThreshold, LongAdder numGeneralCallsDropped, LongAdder numLifoModeSwitches) {
     this.maxCapacity = capacity;
     this.queue = new LinkedBlockingDeque<>(capacity);
     this.codelTargetDelay = targetDelay;
@@ -88,29 +83,27 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
 
   /**
    * Update tunables.
-   *
    * @param newCodelTargetDelay new CoDel target delay
-   * @param newCodelInterval new CoDel interval
-   * @param newLifoThreshold new Adaptive Lifo threshold
+   * @param newCodelInterval    new CoDel interval
+   * @param newLifoThreshold    new Adaptive Lifo threshold
    */
   public void updateTunables(int newCodelTargetDelay, int newCodelInterval,
-                             double newLifoThreshold) {
+    double newLifoThreshold) {
     this.codelTargetDelay = newCodelTargetDelay;
     this.codelInterval = newCodelInterval;
     this.lifoThreshold = newLifoThreshold;
   }
 
   /**
-   * Behaves as {@link LinkedBlockingQueue#take()}, except it will silently
-   * skip all calls which it thinks should be dropped.
-   *
+   * Behaves as {@link LinkedBlockingQueue#take()}, except it will silently skip all calls which it
+   * thinks should be dropped.
    * @return the head of this queue
    * @throws InterruptedException if interrupted while waiting
    */
   @Override
   public CallRunner take() throws InterruptedException {
     CallRunner cr;
-    while(true) {
+    while (true) {
       if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
         numLifoModeSwitches.increment();
         cr = queue.takeLast();
@@ -130,7 +123,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   public CallRunner poll() {
     CallRunner cr;
     boolean switched = false;
-    while(true) {
+    while (true) {
       if (((double) queue.size() / this.maxCapacity) > lifoThreshold) {
         // Only count once per switch.
         if (!switched) {
@@ -156,8 +149,8 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
 
   /**
    * @param callRunner to validate
-   * @return true if this call needs to be skipped based on call timestamp
-   *   and internal queue state (deemed overloaded).
+   * @return true if this call needs to be skipped based on call timestamp and internal queue state
+   *         (deemed overloaded).
    */
   private boolean needToDrop(CallRunner callRunner) {
     long now = EnvironmentEdgeManager.currentTime();
@@ -167,9 +160,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
 
     // Try and determine if we should reset
     // the delay time and determine overload
-    if (now > intervalTime &&
-        !resetDelay.get() &&
-        !resetDelay.getAndSet(true)) {
+    if (now > intervalTime && !resetDelay.get() && !resetDelay.getAndSet(true)) {
       intervalTime = now + codelInterval;
 
       isOverloaded.set(localMinDelay > codelTargetDelay);
@@ -209,129 +200,128 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
 
   @Override
   public CallRunner poll(long timeout, TimeUnit unit) throws InterruptedException {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
-
 
   @Override
   public CallRunner peek() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean remove(Object o) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean contains(Object o) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public Object[] toArray() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public <T> T[] toArray(T[] a) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public void clear() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public int drainTo(Collection<? super CallRunner> c) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public int drainTo(Collection<? super CallRunner> c, int maxElements) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public Iterator<CallRunner> iterator() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean add(CallRunner callRunner) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public CallRunner remove() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public CallRunner element() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean addAll(Collection<? extends CallRunner> c) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean isEmpty() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean containsAll(Collection<?> c) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean removeAll(Collection<?> c) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean retainAll(Collection<?> c) {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public int remainingCapacity() {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public void put(CallRunner callRunner) throws InterruptedException {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 
   @Override
   public boolean offer(CallRunner callRunner, long timeout, TimeUnit unit)
-      throws InterruptedException {
-    throw new UnsupportedOperationException("This class doesn't support anything,"
-      + " but take() and offer() methods");
+    throws InterruptedException {
+    throw new UnsupportedOperationException(
+      "This class doesn't support anything," + " but take() and offer() methods");
   }
 }

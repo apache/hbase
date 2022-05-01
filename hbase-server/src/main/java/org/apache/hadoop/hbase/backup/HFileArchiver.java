@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,13 +67,12 @@ public class HFileArchiver {
   /** Number of retries in case of fs operation failure */
   private static final int DEFAULT_RETRIES_NUMBER = 3;
 
-  private static final Function<File, Path> FUNC_FILE_TO_PATH =
-      new Function<File, Path>() {
-        @Override
-        public Path apply(File file) {
-          return file == null ? null : file.getPath();
-        }
-      };
+  private static final Function<File, Path> FUNC_FILE_TO_PATH = new Function<File, Path>() {
+    @Override
+    public Path apply(File file) {
+      return file == null ? null : file.getPath();
+    }
+  };
 
   private static ThreadPoolExecutor archiveExecutor;
 
@@ -85,7 +84,7 @@ public class HFileArchiver {
    * @return True if the Region exits in the filesystem.
    */
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
-      throws IOException {
+    throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, info);
     return fs.exists(regionDir);
@@ -94,11 +93,11 @@ public class HFileArchiver {
   /**
    * Cleans up all the files for a HRegion by archiving the HFiles to the archive directory
    * @param conf the configuration to use
-   * @param fs the file system object
+   * @param fs   the file system object
    * @param info RegionInfo for region to be deleted
    */
   public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info)
-      throws IOException {
+    throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     archiveRegion(fs, rootDir, CommonFSUtils.getTableDir(rootDir, info.getTable()),
       FSUtils.getRegionDirFromRootDir(rootDir, info));
@@ -106,22 +105,23 @@ public class HFileArchiver {
 
   /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
-   * @param fs {@link FileSystem} from which to remove the region
-   * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
-   *          the archive path)
-   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
+   * @param fs        {@link FileSystem} from which to remove the region
+   * @param rootdir   {@link Path} to the root directory where hbase files are stored (for building
+   *                  the archive path)
+   * @param tableDir  {@link Path} to where the table is being stored (for building the archive
+   *                  path)
    * @param regionDir {@link Path} to where a region is being stored (for building the archive path)
    * @return <tt>true</tt> if the region was successfully deleted. <tt>false</tt> if the filesystem
    *         operations could not complete.
    * @throws IOException if the request cannot be completed
    */
   public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
-      throws IOException {
+    throws IOException {
     // otherwise, we archive the files
     // make sure we can archive
     if (tableDir == null || regionDir == null) {
       LOG.error("No archive directory could be found because tabledir (" + tableDir
-          + ") or regiondir (" + regionDir + "was null. Deleting files instead.");
+        + ") or regiondir (" + regionDir + "was null. Deleting files instead.");
       if (regionDir != null) {
         deleteRegionWithoutArchiving(fs, regionDir);
       }
@@ -159,12 +159,12 @@ public class HFileArchiver {
     // convert the files in the region to a File
     Stream.of(storeDirs).map(getAsFile).forEachOrdered(toArchive::add);
     LOG.debug("Archiving " + toArchive);
-    List<File> failedArchive = resolveAndArchive(fs, regionArchiveDir, toArchive,
-        EnvironmentEdgeManager.currentTime());
+    List<File> failedArchive =
+      resolveAndArchive(fs, regionArchiveDir, toArchive, EnvironmentEdgeManager.currentTime());
     if (!failedArchive.isEmpty()) {
       throw new FailedArchiveException(
-        "Failed to archive/delete all the files for region:" + regionDir.getName() + " into " +
-          regionArchiveDir + ". Something is probably awry on the filesystem.",
+        "Failed to archive/delete all the files for region:" + regionDir.getName() + " into "
+          + regionArchiveDir + ". Something is probably awry on the filesystem.",
         failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
     // if that was successful, then we delete the region
@@ -173,20 +173,20 @@ public class HFileArchiver {
 
   /**
    * Archive the specified regions in parallel.
-   * @param conf the configuration to use
-   * @param fs {@link FileSystem} from which to remove the region
-   * @param rootDir {@link Path} to the root directory where hbase files are stored (for building
-   *                            the archive path)
-   * @param tableDir {@link Path} to where the table is being stored (for building the archive
-   *                             path)
+   * @param conf          the configuration to use
+   * @param fs            {@link FileSystem} from which to remove the region
+   * @param rootDir       {@link Path} to the root directory where hbase files are stored (for
+   *                      building the archive path)
+   * @param tableDir      {@link Path} to where the table is being stored (for building the archive
+   *                      path)
    * @param regionDirList {@link Path} to where regions are being stored (for building the archive
-   *                                  path)
+   *                      path)
    * @throws IOException if the request cannot be completed
    */
   public static void archiveRegions(Configuration conf, FileSystem fs, Path rootDir, Path tableDir,
     List<Path> regionDirList) throws IOException {
     List<Future<Void>> futures = new ArrayList<>(regionDirList.size());
-    for (Path regionDir: regionDirList) {
+    for (Path regionDir : regionDirList) {
       Future<Void> future = getArchiveExecutor(conf).submit(() -> {
         archiveRegion(fs, rootDir, tableDir, regionDir);
         return null;
@@ -194,7 +194,7 @@ public class HFileArchiver {
       futures.add(future);
     }
     try {
-      for (Future<Void> future: futures) {
+      for (Future<Void> future : futures) {
         future.get();
       }
     } catch (InterruptedException e) {
@@ -207,8 +207,8 @@ public class HFileArchiver {
   private static synchronized ThreadPoolExecutor getArchiveExecutor(final Configuration conf) {
     if (archiveExecutor == null) {
       int maxThreads = conf.getInt("hbase.hfilearchiver.thread.pool.max", 8);
-      archiveExecutor = Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-        getThreadFactory());
+      archiveExecutor =
+        Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS, getThreadFactory());
 
       // Shutdown this ThreadPool in a shutdown hook
       Runtime.getRuntime().addShutdownHook(new Thread(() -> archiveExecutor.shutdown()));
@@ -235,37 +235,37 @@ public class HFileArchiver {
   }
 
   /**
-   * Remove from the specified region the store files of the specified column family,
-   * either by archiving them or outright deletion
-   * @param fs the filesystem where the store files live
-   * @param conf {@link Configuration} to examine to determine the archive directory
-   * @param parent Parent region hosting the store files
+   * Remove from the specified region the store files of the specified column family, either by
+   * archiving them or outright deletion
+   * @param fs       the filesystem where the store files live
+   * @param conf     {@link Configuration} to examine to determine the archive directory
+   * @param parent   Parent region hosting the store files
    * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
-   * @param family the family hosting the store files
+   * @param family   the family hosting the store files
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveFamily(FileSystem fs, Configuration conf,
-      RegionInfo parent, Path tableDir, byte[] family) throws IOException {
+  public static void archiveFamily(FileSystem fs, Configuration conf, RegionInfo parent,
+    Path tableDir, byte[] family) throws IOException {
     Path familyDir = new Path(tableDir, new Path(parent.getEncodedName(), Bytes.toString(family)));
     archiveFamilyByFamilyDir(fs, conf, parent, familyDir, family);
   }
 
   /**
-   * Removes from the specified region the store files of the specified column family,
-   * either by archiving them or outright deletion
-   * @param fs the filesystem where the store files live
-   * @param conf {@link Configuration} to examine to determine the archive directory
-   * @param parent Parent region hosting the store files
+   * Removes from the specified region the store files of the specified column family, either by
+   * archiving them or outright deletion
+   * @param fs        the filesystem where the store files live
+   * @param conf      {@link Configuration} to examine to determine the archive directory
+   * @param parent    Parent region hosting the store files
    * @param familyDir {@link Path} to where the family is being stored
-   * @param family the family hosting the store files
+   * @param family    the family hosting the store files
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf,
-      RegionInfo parent, Path familyDir, byte[] family) throws IOException {
+  public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf, RegionInfo parent,
+    Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
       LOG.debug("No files to dispose of in {}, family={}", parent.getRegionNameAsString(),
-          Bytes.toString(family));
+        Bytes.toString(family));
       return;
     }
 
@@ -274,29 +274,29 @@ public class HFileArchiver {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
 
     // do the actual archive
-    List<File> failedArchive = resolveAndArchive(fs, storeArchiveDir, toArchive,
-        EnvironmentEdgeManager.currentTime());
-    if (!failedArchive.isEmpty()){
-      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
-          + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family)
-          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
-          failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
+    List<File> failedArchive =
+      resolveAndArchive(fs, storeArchiveDir, toArchive, EnvironmentEdgeManager.currentTime());
+    if (!failedArchive.isEmpty()) {
+      throw new FailedArchiveException(
+        "Failed to archive/delete all the files for region:"
+          + Bytes.toString(parent.getRegionName()) + ", family:" + Bytes.toString(family) + " into "
+          + storeArchiveDir + ". Something is probably awry on the filesystem.",
+        failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
   }
 
   /**
    * Remove the store files, either by archiving them or outright deletion
-   * @param conf {@link Configuration} to examine to determine the archive directory
-   * @param fs the filesystem where the store files live
-   * @param regionInfo {@link RegionInfo} of the region hosting the store files
-   * @param family the family hosting the store files
+   * @param conf           {@link Configuration} to examine to determine the archive directory
+   * @param fs             the filesystem where the store files live
+   * @param regionInfo     {@link RegionInfo} of the region hosting the store files
+   * @param family         the family hosting the store files
    * @param compactedFiles files to be disposed of. No further reading of these files should be
-   *          attempted; otherwise likely to cause an {@link IOException}
+   *                       attempted; otherwise likely to cause an {@link IOException}
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveStoreFiles(Configuration conf, FileSystem fs, RegionInfo regionInfo,
-      Path tableDir, byte[] family, Collection<HStoreFile> compactedFiles)
-      throws IOException {
+    Path tableDir, byte[] family, Collection<HStoreFile> compactedFiles) throws IOException {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
     archive(fs, regionInfo, family, compactedFiles, storeArchiveDir);
   }
@@ -304,30 +304,29 @@ public class HFileArchiver {
   /**
    * Archive recovered edits using existing logic for archiving store files. This is currently only
    * relevant when <b>hbase.region.archive.recovered.edits</b> is true, as recovered edits shouldn't
-   * be kept after replay. In theory, we could use very same method available for archiving
-   * store files, but supporting WAL dir and store files on different FileSystems added the need for
-   * extra validation of the passed FileSystem instance and the path where the archiving edits
-   * should be placed.
-   * @param conf {@link Configuration} to determine the archive directory.
-   * @param fs the filesystem used for storing WAL files.
-   * @param regionInfo {@link RegionInfo} a pseudo region representation for the archiving logic.
-   * @param family a pseudo familiy representation for the archiving logic.
+   * be kept after replay. In theory, we could use very same method available for archiving store
+   * files, but supporting WAL dir and store files on different FileSystems added the need for extra
+   * validation of the passed FileSystem instance and the path where the archiving edits should be
+   * placed.
+   * @param conf          {@link Configuration} to determine the archive directory.
+   * @param fs            the filesystem used for storing WAL files.
+   * @param regionInfo    {@link RegionInfo} a pseudo region representation for the archiving logic.
+   * @param family        a pseudo familiy representation for the archiving logic.
    * @param replayedEdits the recovered edits to be archived.
    * @throws IOException if files can't be achived due to some internal error.
    */
   public static void archiveRecoveredEdits(Configuration conf, FileSystem fs, RegionInfo regionInfo,
-    byte[] family, Collection<HStoreFile> replayedEdits)
-    throws IOException {
+    byte[] family, Collection<HStoreFile> replayedEdits) throws IOException {
     String workingDir = conf.get(CommonFSUtils.HBASE_WAL_DIR, conf.get(HConstants.HBASE_DIR));
-    //extra sanity checks for the right FS
+    // extra sanity checks for the right FS
     Path path = new Path(workingDir);
-    if(path.isAbsoluteAndSchemeAuthorityNull()){
-      //no schema specified on wal dir value, so it's on same FS as StoreFiles
+    if (path.isAbsoluteAndSchemeAuthorityNull()) {
+      // no schema specified on wal dir value, so it's on same FS as StoreFiles
       path = new Path(conf.get(HConstants.HBASE_DIR));
     }
-    if(path.toUri().getScheme()!=null && !path.toUri().getScheme().equals(fs.getScheme())){
-      throw new IOException("Wrong file system! Should be " + path.toUri().getScheme() +
-        ", but got " +  fs.getScheme());
+    if (path.toUri().getScheme() != null && !path.toUri().getScheme().equals(fs.getScheme())) {
+      throw new IOException(
+        "Wrong file system! Should be " + path.toUri().getScheme() + ", but got " + fs.getScheme());
     }
     path = HFileArchiveUtil.getStoreArchivePathForRootDir(path, regionInfo, family);
     archive(fs, regionInfo, family, replayedEdits, path);
@@ -337,8 +336,9 @@ public class HFileArchiver {
     Collection<HStoreFile> compactedFiles, Path storeArchiveDir) throws IOException {
     // sometimes in testing, we don't have rss, so we need to check for that
     if (fs == null) {
-      LOG.warn("Passed filesystem is null, so just deleting files without archiving for {}," +
-              "family={}", Bytes.toString(regionInfo.getRegionName()), Bytes.toString(family));
+      LOG.warn(
+        "Passed filesystem is null, so just deleting files without archiving for {}," + "family={}",
+        Bytes.toString(regionInfo.getRegionName()), Bytes.toString(family));
       deleteStoreFilesWithoutArchiving(compactedFiles);
       return;
     }
@@ -350,12 +350,12 @@ public class HFileArchiver {
     }
 
     // build the archive path
-    if (regionInfo == null || family == null) throw new IOException(
-        "Need to have a region and a family to archive from.");
+    if (regionInfo == null || family == null)
+      throw new IOException("Need to have a region and a family to archive from.");
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
-          + Bytes.toString(family) + ", deleting compacted files instead.");
+        + Bytes.toString(family) + ", deleting compacted files instead.");
     }
 
     // otherwise we attempt to archive the store files
@@ -370,31 +370,33 @@ public class HFileArchiver {
     List<File> failedArchive =
       resolveAndArchive(fs, storeArchiveDir, storeFiles, EnvironmentEdgeManager.currentTime());
 
-    if (!failedArchive.isEmpty()){
-      throw new FailedArchiveException("Failed to archive/delete all the files for region:"
+    if (!failedArchive.isEmpty()) {
+      throw new FailedArchiveException(
+        "Failed to archive/delete all the files for region:"
           + Bytes.toString(regionInfo.getRegionName()) + ", family:" + Bytes.toString(family)
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
-          failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
+        failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
   }
 
   /**
    * Archive the store file
-   * @param fs the filesystem where the store files live
+   * @param fs         the filesystem where the store files live
    * @param regionInfo region hosting the store files
-   * @param conf {@link Configuration} to examine to determine the archive directory
-   * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
-   * @param family the family hosting the store files
-   * @param storeFile file to be archived
+   * @param conf       {@link Configuration} to examine to determine the archive directory
+   * @param tableDir   {@link Path} to where the table is being stored (for building the archive
+   *                   path)
+   * @param family     the family hosting the store files
+   * @param storeFile  file to be archived
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveStoreFile(Configuration conf, FileSystem fs, RegionInfo regionInfo,
-      Path tableDir, byte[] family, Path storeFile) throws IOException {
+    Path tableDir, byte[] family, Path storeFile) throws IOException {
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, tableDir, family);
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
-          + Bytes.toString(family) + ", deleting compacted files instead.");
+        + Bytes.toString(family) + ", deleting compacted files instead.");
     }
 
     // do the actual archive
@@ -402,27 +404,25 @@ public class HFileArchiver {
     File file = new FileablePath(fs, storeFile);
     if (!resolveAndArchiveFile(storeArchiveDir, file, Long.toString(start))) {
       throw new IOException("Failed to archive/delete the file for region:"
-          + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family)
-          + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.");
+        + regionInfo.getRegionNameAsString() + ", family:" + Bytes.toString(family) + " into "
+        + storeArchiveDir + ". Something is probably awry on the filesystem.");
     }
   }
 
   /**
-   * Resolve any conflict with an existing archive file via timestamp-append
-   * renaming of the existing file and then archive the passed in files.
-   * @param fs {@link FileSystem} on which to archive the files
-   * @param baseArchiveDir base archive directory to store the files. If any of
-   *          the files to archive are directories, will append the name of the
-   *          directory to the base archive directory name, creating a parallel
-   *          structure.
-   * @param toArchive files/directories that need to be archvied
-   * @param start time the archiving started - used for resolving archive
-   *          conflicts.
+   * Resolve any conflict with an existing archive file via timestamp-append renaming of the
+   * existing file and then archive the passed in files.
+   * @param fs             {@link FileSystem} on which to archive the files
+   * @param baseArchiveDir base archive directory to store the files. If any of the files to archive
+   *                       are directories, will append the name of the directory to the base
+   *                       archive directory name, creating a parallel structure.
+   * @param toArchive      files/directories that need to be archvied
+   * @param start          time the archiving started - used for resolving archive conflicts.
    * @return the list of failed to archive files.
    * @throws IOException if an unexpected file operation exception occurred
    */
   private static List<File> resolveAndArchive(FileSystem fs, Path baseArchiveDir,
-      Collection<File> toArchive, long start) throws IOException {
+    Collection<File> toArchive, long start) throws IOException {
     // short circuit if no files to move
     if (toArchive.isEmpty()) {
       return Collections.emptyList();
@@ -434,7 +434,7 @@ public class HFileArchiver {
     if (!fs.exists(baseArchiveDir)) {
       if (!fs.mkdirs(baseArchiveDir)) {
         throw new IOException("Failed to create the archive directory:" + baseArchiveDir
-            + ", quitting archive attempt.");
+          + ", quitting archive attempt.");
       }
       LOG.trace("Created archive directory {}", baseArchiveDir);
     }
@@ -474,15 +474,15 @@ public class HFileArchiver {
    * <p>
    * If the same file already exists in the archive, it is moved to a timestamped directory under
    * the archive directory and the new file is put in its place.
-   * @param archiveDir {@link Path} to the directory that stores the archives of the hfiles
-   * @param currentFile {@link Path} to the original HFile that will be archived
+   * @param archiveDir       {@link Path} to the directory that stores the archives of the hfiles
+   * @param currentFile      {@link Path} to the original HFile that will be archived
    * @param archiveStartTime time the archiving started, to resolve naming conflicts
    * @return <tt>true</tt> if the file is successfully archived. <tt>false</tt> if there was a
    *         problem, but the operation still completed.
    * @throws IOException on failure to complete {@link FileSystem} operations.
    */
   private static boolean resolveAndArchiveFile(Path archiveDir, File currentFile,
-      String archiveStartTime) throws IOException {
+    String archiveStartTime) throws IOException {
     // build path as it should be in the archive
     String filename = currentFile.getName();
     Path archiveFile = new Path(archiveDir, filename);
@@ -514,14 +514,16 @@ public class HFileArchiver {
       long curMtime = curStatus.getModificationTime();
       long archiveMtime = archiveStatus.getModificationTime();
       if (curLen != archiveLen) {
-        LOG.error("{} already exists in archive with different size than current {}."
+        LOG.error(
+          "{} already exists in archive with different size than current {}."
             + " archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
           archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
-        throw new IOException(archiveFile + " already exists in archive with different size" +
-          " than " + currentFile);
+        throw new IOException(
+          archiveFile + " already exists in archive with different size" + " than " + currentFile);
       }
 
-      LOG.error("{} already exists in archive, moving to timestamped backup and overwriting"
+      LOG.error(
+        "{} already exists in archive, moving to timestamped backup and overwriting"
           + " current {}. archiveLen: {} currentLen: {} archiveMtime: {} currentMtime: {}",
         archiveFile, currentFile, archiveLen, curLen, archiveMtime, curMtime);
 
@@ -529,12 +531,12 @@ public class HFileArchiver {
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
       if (!fs.rename(archiveFile, backedupArchiveFile)) {
         LOG.error("Could not rename archive file to backup: " + backedupArchiveFile
-            + ", deleting existing file in favor of newer.");
+          + ", deleting existing file in favor of newer.");
         // try to delete the existing file, if we can't rename it
         if (!fs.delete(archiveFile, false)) {
           throw new IOException("Couldn't delete existing archive file (" + archiveFile
-              + ") or rename it to the backup file (" + backedupArchiveFile
-              + ") to make room for similarly named file.");
+            + ") or rename it to the backup file (" + backedupArchiveFile
+            + ") to make room for similarly named file.");
         }
       } else {
         LOG.info("Backed up archive file from {} to {}.", archiveFile, backedupArchiveFile);
@@ -565,8 +567,8 @@ public class HFileArchiver {
       try {
         success = currentFile.moveAndClose(archiveFile);
       } catch (FileNotFoundException fnfe) {
-        LOG.warn("Failed to archive " + currentFile +
-            " because it does not exist! Skipping and continuing on.", fnfe);
+        LOG.warn("Failed to archive " + currentFile
+          + " because it does not exist! Skipping and continuing on.", fnfe);
         success = true;
       } catch (IOException e) {
         LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
@@ -586,12 +588,12 @@ public class HFileArchiver {
   /**
    * Without regard for backup, delete a region. Should be used with caution.
    * @param regionDir {@link Path} to the region to be deleted.
-   * @param fs FileSystem from which to delete the region
+   * @param fs        FileSystem from which to delete the region
    * @return <tt>true</tt> on successful deletion, <tt>false</tt> otherwise
    * @throws IOException on filesystem operation failure
    */
   private static boolean deleteRegionWithoutArchiving(FileSystem fs, Path regionDir)
-      throws IOException {
+    throws IOException {
     if (fs.delete(regionDir, true)) {
       LOG.debug("Deleted {}", regionDir);
       return true;
@@ -607,10 +609,10 @@ public class HFileArchiver {
    * <p>
    * @param compactedFiles store files to delete from the file system.
    * @throws IOException if a file cannot be deleted. All files will be attempted to deleted before
-   *           throwing the exception, rather than failing at the first file.
+   *                     throwing the exception, rather than failing at the first file.
    */
   private static void deleteStoreFilesWithoutArchiving(Collection<HStoreFile> compactedFiles)
-      throws IOException {
+    throws IOException {
     LOG.debug("Deleting files without archiving.");
     List<IOException> errors = new ArrayList<>(0);
     for (HStoreFile hsf : compactedFiles) {
@@ -654,8 +656,7 @@ public class HFileArchiver {
   }
 
   /**
-   * Convert the {@link HStoreFile} into something we can manage in the archive
-   * methods
+   * Convert the {@link HStoreFile} into something we can manage in the archive methods
    */
   private static class StoreToFile extends FileConverter<HStoreFile> {
     public StoreToFile(FileSystem fs) {
@@ -692,21 +693,18 @@ public class HFileArchiver {
     abstract boolean isFile() throws IOException;
 
     /**
-     * @return if this is a directory, returns all the children in the
-     *         directory, otherwise returns an empty list
-     * @throws IOException
+     * @return if this is a directory, returns all the children in the directory, otherwise returns
+     *         an empty list n
      */
     abstract Collection<File> getChildren() throws IOException;
 
     /**
-     * close any outside readers of the file
-     * @throws IOException
+     * close any outside readers of the file n
      */
     abstract void close() throws IOException;
 
     /**
-     * @return the name of the file (not the full fs path, just the individual
-     *         file name)
+     * @return the name of the file (not the full fs path, just the individual file name)
      */
     abstract String getName();
 
@@ -716,10 +714,7 @@ public class HFileArchiver {
     abstract Path getPath();
 
     /**
-     * Move the file to the given destination
-     * @param dest
-     * @return <tt>true</tt> on success
-     * @throws IOException
+     * Move the file to the given destination n * @return <tt>true</tt> on success n
      */
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
@@ -788,8 +783,7 @@ public class HFileArchiver {
   }
 
   /**
-   * {@link File} adapter for a {@link HStoreFile} living on a {@link FileSystem}
-   * .
+   * {@link File} adapter for a {@link HStoreFile} living on a {@link FileSystem} .
    */
   private static class FileableStoreFile extends File {
     HStoreFile file;

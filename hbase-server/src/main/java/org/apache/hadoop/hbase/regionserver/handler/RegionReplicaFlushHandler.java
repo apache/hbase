@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
@@ -41,12 +40,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegion
 /**
  * HBASE-11580: With the async wal approach (HBASE-11568), the edits are not persisted to WAL in
  * secondary region replicas. This means that a secondary region replica can serve some edits from
- * it's memstore that are still not flushed from primary. We do not want to allow secondary
- * region's seqId to go back in time, when this secondary region is opened elsewhere after a
- * crash or region move. We will trigger a flush cache in the primary region replica and wait
- * for observing a complete flush cycle before marking the region readsEnabled. This handler does
- * the flushing of the primary region replica and ensures that regular region opening is not
- * blocked while the secondary replica is blocked on flush.
+ * it's memstore that are still not flushed from primary. We do not want to allow secondary region's
+ * seqId to go back in time, when this secondary region is opened elsewhere after a crash or region
+ * move. We will trigger a flush cache in the primary region replica and wait for observing a
+ * complete flush cycle before marking the region readsEnabled. This handler does the flushing of
+ * the primary region replica and ensures that regular region opening is not blocked while the
+ * secondary replica is blocked on flush.
  */
 @InterfaceAudience.Private
 public class RegionReplicaFlushHandler extends EventHandler {
@@ -97,15 +96,17 @@ public class RegionReplicaFlushHandler extends EventHandler {
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
 
     int maxAttempts = getRetriesCount(connection.getConfiguration());
-    RetryCounter counter = new RetryCounterFactory(maxAttempts, (int)pause).create();
+    RetryCounter counter = new RetryCounterFactory(maxAttempts, (int) pause).create();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("RPC'ing to primary " + ServerRegionReplicaUtil.
-          getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionNameAsString() +
-        " from " + region.getRegionInfo().getRegionNameAsString() + " to trigger FLUSH");
+      LOG.debug("RPC'ing to primary "
+        + ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+          .getRegionNameAsString()
+        + " from " + region.getRegionInfo().getRegionNameAsString() + " to trigger FLUSH");
     }
-    while (!region.isClosing() && !region.isClosed()
-        && !server.isAborted() && !server.isStopped()) {
+    while (
+      !region.isClosing() && !region.isClosed() && !server.isAborted() && !server.isStopped()
+    ) {
       // TODO: flushRegion() is a blocking call waiting for the flush to complete. Ideally we
       // do not have to wait for the whole flush here, just initiate it.
       FlushRegionResponse response;
@@ -113,8 +114,10 @@ public class RegionReplicaFlushHandler extends EventHandler {
         response = FutureUtils.get(connection.flush(ServerRegionReplicaUtil
           .getRegionInfoForDefaultReplica(region.getRegionInfo()).getRegionName(), true));
       } catch (IOException e) {
-        if (e instanceof TableNotFoundException || FutureUtils
-          .get(connection.getAdmin().isTableDisabled(region.getRegionInfo().getTable()))) {
+        if (
+          e instanceof TableNotFoundException || FutureUtils
+            .get(connection.getAdmin().isTableDisabled(region.getRegionInfo().getTable()))
+        ) {
           return;
         }
         if (!counter.shouldRetry()) {
@@ -141,11 +144,11 @@ public class RegionReplicaFlushHandler extends EventHandler {
         // then we have to wait for seeing the flush entry. All reads will be rejected until we see
         // a complete flush cycle or replay a region open event
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Triggered flush of primary region replica " +
-            ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
-              .getRegionNameAsString() +
-                " for " + region.getRegionInfo().getEncodedName() +
-              "; now waiting and blocking reads until completes a full flush cycle");
+          LOG.debug("Triggered flush of primary region replica "
+            + ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+              .getRegionNameAsString()
+            + " for " + region.getRegionInfo().getEncodedName()
+            + "; now waiting and blocking reads until completes a full flush cycle");
         }
         region.setReadsEnabled(true);
         break;
@@ -153,10 +156,11 @@ public class RegionReplicaFlushHandler extends EventHandler {
         if (response.hasWroteFlushWalMarker()) {
           if (response.getWroteFlushWalMarker()) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Triggered empty flush marker (memstore empty) on primary region replica " +
-                ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo()).
-                getRegionNameAsString() + " for " + region.getRegionInfo().getEncodedName() +
-                "; now waiting and blocking reads until observing a flush marker");
+              LOG.debug("Triggered empty flush marker (memstore empty) on primary region replica "
+                + ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
+                  .getRegionNameAsString()
+                + " for " + region.getRegionInfo().getEncodedName()
+                + "; now waiting and blocking reads until observing a flush marker");
             }
             region.setReadsEnabled(true);
             break;
@@ -164,13 +168,13 @@ public class RegionReplicaFlushHandler extends EventHandler {
             // somehow we were not able to get the primary to write the flush request. It may be
             // closing or already flushing. Retry flush again after some sleep.
             if (!counter.shouldRetry()) {
-              throw new IOException("Cannot cause primary to flush or drop a wal marker after " +
-                counter.getAttemptTimes() + " retries. Failing opening of this region replica " +
-                region.getRegionInfo().getRegionNameAsString());
+              throw new IOException("Cannot cause primary to flush or drop a wal marker after "
+                + counter.getAttemptTimes() + " retries. Failing opening of this region replica "
+                + region.getRegionInfo().getRegionNameAsString());
             } else {
               LOG.warn(
-                "Cannot cause primary replica {} to flush or drop a wal marker " +
-                  "for region replica {}, retry={}",
+                "Cannot cause primary replica {} to flush or drop a wal marker "
+                  + "for region replica {}, retry={}",
                 ServerRegionReplicaUtil.getRegionInfoForDefaultReplica(region.getRegionInfo())
                   .getRegionNameAsString(),
                 region.getRegionInfo().getRegionNameAsString(), counter.getAttemptTimes());
@@ -178,10 +182,9 @@ public class RegionReplicaFlushHandler extends EventHandler {
           }
         } else {
           // nothing to do. Are we dealing with an old server?
-          LOG.warn(
-            "Was not able to trigger a flush from primary region due to old server version? " +
-              "Continuing to open the secondary region replica: " +
-              region.getRegionInfo().getRegionNameAsString());
+          LOG.warn("Was not able to trigger a flush from primary region due to old server version? "
+            + "Continuing to open the secondary region replica: "
+            + region.getRegionInfo().getRegionNameAsString());
           break;
         }
       }

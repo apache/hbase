@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,15 +46,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Test if Filter is incompatible with scan-limits
  */
-@Category({FilterTests.class, LargeTests.class})
+@Category({ FilterTests.class, LargeTests.class })
 public class TestFilterWithScanLimits extends FilterTestingCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFilterWithScanLimits.class);
+    HBaseClassTestRule.forClass(TestFilterWithScanLimits.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestFilterWithScanLimits.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestFilterWithScanLimits.class);
 
   private static final TableName tableName = TableName.valueOf("scanWithLimit");
   private static final String columnFamily = "f1";
@@ -66,9 +65,8 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
       Scan scan = new Scan();
       // set batch number as 2, which means each Result should contain 2 KVs at most
       scan.setBatch(2);
-      SingleColumnValueFilter filter = new SingleColumnValueFilter(
-          Bytes.toBytes(columnFamily), Bytes.toBytes("c5"),
-      CompareOperator .EQUAL, new SubstringComparator("2_c5"));
+      SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes.toBytes(columnFamily),
+        Bytes.toBytes("c5"), CompareOperator.EQUAL, new SubstringComparator("2_c5"));
 
       // add filter after batch defined
       scan.setFilter(filter);

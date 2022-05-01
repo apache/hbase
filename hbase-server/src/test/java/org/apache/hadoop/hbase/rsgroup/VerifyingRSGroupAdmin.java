@@ -825,7 +825,8 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     verify();
   }
 
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     return admin.balanceRSGroup(groupName, request);
   }
 
@@ -837,7 +838,7 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
 
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
-      throws IOException {
+    throws IOException {
     admin.updateRSGroupConfig(groupName, configuration);
     verify();
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,8 +43,8 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   private final SerialReplicationChecker checker;
 
   public SerialReplicationSourceWALReader(FileSystem fs, Configuration conf,
-      ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
-      ReplicationSource source, String walGroupId) {
+    ReplicationSourceLogQueue logQueue, long startPosition, WALEntryFilter filter,
+    ReplicationSource source, String walGroupId) {
     super(fs, conf, logQueue, startPosition, filter, source, walGroupId);
     checker = new SerialReplicationChecker(conf, source);
   }
@@ -108,7 +108,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
   }
 
   private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch)
-      throws IOException {
+    throws IOException {
     entryStream.next();
     firstCellInEntryBeforeFiltering = null;
     batch.setLastWalPosition(entryStream.getPosition());

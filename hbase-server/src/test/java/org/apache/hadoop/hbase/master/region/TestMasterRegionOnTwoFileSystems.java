@@ -140,8 +140,8 @@ public class TestMasterRegionOnTwoFileSystems {
     Path walRootDir = WAL_UTIL.getDataTestDirOnTestFS();
     FileSystem walFs = WAL_UTIL.getTestFileSystem();
     walFs.delete(walRootDir, true);
-    region = createMasterRegion(ServerName.valueOf("localhost", 12345,
-      EnvironmentEdgeManager.currentTime()));
+    region = createMasterRegion(
+      ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
   }
 
   @After
@@ -189,7 +189,7 @@ public class TestMasterRegionOnTwoFileSystems {
     LOG.info("wal archive dir {}", walArchiveDir);
     AbstractFSWAL<?> wal = (AbstractFSWAL<?>) region.region.getWAL();
     Path currentWALFile = wal.getCurrentFileName();
-    for (int i = 0; ; i++) {
+    for (int i = 0;; i++) {
       region.requestRollAll();
       region.waitUntilWalRollFinished();
       Path newWALFile = wal.getCurrentFileName();

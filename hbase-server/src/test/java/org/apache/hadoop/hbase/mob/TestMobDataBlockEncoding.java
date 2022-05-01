@@ -44,13 +44,13 @@ public class TestMobDataBlockEncoding {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
+    HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private final static byte [] row1 = Bytes.toBytes("row1");
-  private final static byte [] family = Bytes.toBytes("family");
-  private final static byte [] qf1 = Bytes.toBytes("qualifier1");
-  private final static byte [] qf2 = Bytes.toBytes("qualifier2");
+  private final static byte[] row1 = Bytes.toBytes("row1");
+  private final static byte[] family = Bytes.toBytes("family");
+  private final static byte[] qf1 = Bytes.toBytes("qualifier1");
+  private final static byte[] qf2 = Bytes.toBytes("qualifier2");
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
@@ -68,8 +68,7 @@ public class TestMobDataBlockEncoding {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public void setUp(long threshold, String TN, DataBlockEncoding encoding)
-      throws Exception {
+  public void setUp(long threshold, String TN, DataBlockEncoding encoding) throws Exception {
     columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
       .setMobThreshold(threshold).setMaxVersions(4).setDataBlockEncoding(encoding).build();
     tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(TN))
@@ -82,7 +81,6 @@ public class TestMobDataBlockEncoding {
 
   /**
    * Generate the mob value.
-   *
    * @param size the size of the value
    * @return the mob value generated
    */

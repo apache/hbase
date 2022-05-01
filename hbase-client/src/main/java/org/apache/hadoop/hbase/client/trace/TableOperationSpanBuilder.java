@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.CONTAINER_DB_OPERATIONS_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_OPERATION;
+
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -96,8 +96,7 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
   // contained within the provided "batch" object.
 
   public TableOperationSpanBuilder setContainerOperations(final RowMutations mutations) {
-    final Operation[] ops = mutations.getMutations()
-      .stream()
+    final Operation[] ops = mutations.getMutations().stream()
       .flatMap(row -> Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream()))
       .toArray(Operation[]::new);
     return setContainerOperations(ops);
@@ -106,13 +105,12 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
   public TableOperationSpanBuilder setContainerOperations(final Row row) {
     final Operation[] ops =
       Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream())
-      .toArray(Operation[]::new);
+        .toArray(Operation[]::new);
     return setContainerOperations(ops);
   }
 
-  public TableOperationSpanBuilder setContainerOperations(
-    final Collection<? extends Row> operations
-  ) {
+  public TableOperationSpanBuilder
+    setContainerOperations(final Collection<? extends Row> operations) {
     final Operation[] ops = operations.stream()
       .flatMap(row -> Stream.concat(Stream.of(valueFrom(row)), unpackRowOperations(row).stream()))
       .toArray(Operation[]::new);
@@ -127,10 +125,8 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     }
     if (row instanceof RowMutations) {
       final RowMutations mutations = (RowMutations) row;
-      final List<Operation> operations = mutations.getMutations()
-        .stream()
-        .map(TableOperationSpanBuilder::valueFrom)
-        .collect(Collectors.toList());
+      final List<Operation> operations = mutations.getMutations().stream()
+        .map(TableOperationSpanBuilder::valueFrom).collect(Collectors.toList());
       ops.addAll(operations);
     }
     return ops;
@@ -150,14 +146,9 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
     return ops;
   }
 
-  public TableOperationSpanBuilder setContainerOperations(
-    final Operation... operations
-  ) {
-    final List<String> ops = Arrays.stream(operations)
-      .map(op -> op == null ? unknown : op.name())
-      .sorted()
-      .distinct()
-      .collect(Collectors.toList());
+  public TableOperationSpanBuilder setContainerOperations(final Operation... operations) {
+    final List<String> ops = Arrays.stream(operations).map(op -> op == null ? unknown : op.name())
+      .sorted().distinct().collect(Collectors.toList());
     attributes.put(CONTAINER_DB_OPERATIONS_KEY, ops);
     return this;
   }
@@ -170,11 +161,9 @@ public class TableOperationSpanBuilder implements Supplier<Span> {
 
   @SuppressWarnings("unchecked")
   public Span build() {
-    final String name = attributes.getOrDefault(DB_OPERATION, unknown)
-        + " "
-        + (tableName != null ? tableName.getNameWithNamespaceInclAsString() : unknown);
-    final SpanBuilder builder = TraceUtil.getGlobalTracer()
-      .spanBuilder(name)
+    final String name = attributes.getOrDefault(DB_OPERATION, unknown) + " "
+      + (tableName != null ? tableName.getNameWithNamespaceInclAsString() : unknown);
+    final SpanBuilder builder = TraceUtil.getGlobalTracer().spanBuilder(name)
       // TODO: what about clients embedded in Master/RegionServer/Gateways/&c?
       .setSpanKind(SpanKind.CLIENT);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));

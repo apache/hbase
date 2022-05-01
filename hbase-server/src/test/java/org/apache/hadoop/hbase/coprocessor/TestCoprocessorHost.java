@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -37,12 +36,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestCoprocessorHost {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorHost.class);
+    HBaseClassTestRule.forClass(TestCoprocessorHost.class);
 
   private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
 
@@ -74,12 +73,11 @@ public class TestCoprocessorHost {
     host = new CoprocessorHostForTest<>(conf);
     int overridePriority = Integer.MAX_VALUE - 1;
 
-    final String coprocessor_v3 =
-      SimpleRegionObserverV3.class.getName() + "|" + overridePriority;
+    final String coprocessor_v3 = SimpleRegionObserverV3.class.getName() + "|" + overridePriority;
 
     // Try and load a coprocessor three times
     conf.setStrings(key, coprocessor, coprocessor, coprocessor,
-        SimpleRegionObserverV2.class.getName(), coprocessor_v3);
+      SimpleRegionObserverV2.class.getName(), coprocessor_v3);
     host.loadSystemCoprocessors(conf, key);
 
     // Three coprocessors(SimpleRegionObserver, SimpleRegionObserverV2,
@@ -87,12 +85,12 @@ public class TestCoprocessorHost {
     Assert.assertEquals(3, host.coprocEnvironments.size());
 
     // Check the priority value
-    CoprocessorEnvironment<?> simpleEnv = host.findCoprocessorEnvironment(
-        SimpleRegionObserver.class.getName());
-    CoprocessorEnvironment<?> simpleEnv_v2 = host.findCoprocessorEnvironment(
-        SimpleRegionObserverV2.class.getName());
-    CoprocessorEnvironment<?> simpleEnv_v3 = host.findCoprocessorEnvironment(
-      SimpleRegionObserverV3.class.getName());
+    CoprocessorEnvironment<?> simpleEnv =
+      host.findCoprocessorEnvironment(SimpleRegionObserver.class.getName());
+    CoprocessorEnvironment<?> simpleEnv_v2 =
+      host.findCoprocessorEnvironment(SimpleRegionObserverV2.class.getName());
+    CoprocessorEnvironment<?> simpleEnv_v3 =
+      host.findCoprocessorEnvironment(SimpleRegionObserverV3.class.getName());
 
     assertNotNull(simpleEnv);
     assertNotNull(simpleEnv_v2);
@@ -124,8 +122,8 @@ public class TestCoprocessorHost {
       final String coprocessorWithPath =
         String.format("%s|%s|%s", testClassName, "", jarFile.getAbsolutePath());
       // make a string of coprocessor with priority and path
-      final String coprocessorWithPriorityAndPath = String
-        .format("%s|%s|%s", testClassNameWithPriorityAndPath, (overridePriority - 1),
+      final String coprocessorWithPriorityAndPath =
+        String.format("%s|%s|%s", testClassNameWithPriorityAndPath, (overridePriority - 1),
           jarFileWithPriorityAndPath.getAbsolutePath());
 
       // Try and load a system coprocessors
@@ -204,14 +202,15 @@ public class TestCoprocessorHost {
     host.loadSystemCoprocessors(conf, key);
   }
 
-  public static class SimpleRegionObserverV2 extends SimpleRegionObserver { }
+  public static class SimpleRegionObserverV2 extends SimpleRegionObserver {
+  }
 
   public static class SimpleRegionObserverV3 extends SimpleRegionObserver {
 
   }
 
-  private static class CoprocessorHostForTest<E extends Coprocessor> extends
-      CoprocessorHost<E, CoprocessorEnvironment<E>> {
+  private static class CoprocessorHostForTest<E extends Coprocessor>
+    extends CoprocessorHost<E, CoprocessorEnvironment<E>> {
     final Configuration cpHostConf;
 
     public CoprocessorHostForTest(Configuration conf) {
@@ -221,7 +220,7 @@ public class TestCoprocessorHost {
 
     @Override
     public E checkAndGetInstance(Class<?> implClass)
-        throws InstantiationException, IllegalAccessException {
+      throws InstantiationException, IllegalAccessException {
       try {
         return (E) implClass.getDeclaredConstructor().newInstance();
       } catch (InvocationTargetException | NoSuchMethodException e) {
@@ -231,7 +230,7 @@ public class TestCoprocessorHost {
 
     @Override
     public CoprocessorEnvironment<E> createEnvironment(final E instance, final int priority,
-        int sequence, Configuration conf) {
+      int sequence, Configuration conf) {
       return new BaseEnvironment<>(instance, priority, 0, cpHostConf);
     }
   }

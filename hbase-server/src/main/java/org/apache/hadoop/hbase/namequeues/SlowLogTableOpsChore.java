@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -37,14 +35,14 @@ public class SlowLogTableOpsChore extends ScheduledChore {
 
   /**
    * Chore Constructor
-   *
-   * @param stopper The stopper - When {@link Stoppable#isStopped()} is true, this chore will
-   *   cancel and cleanup
-   * @param period Period in millis with which this Chore repeats execution when scheduled
+   * @param stopper            The stopper - When {@link Stoppable#isStopped()} is true, this chore
+   *                           will cancel and cleanup
+   * @param period             Period in millis with which this Chore repeats execution when
+   *                           scheduled
    * @param namedQueueRecorder {@link NamedQueueRecorder} instance
    */
   public SlowLogTableOpsChore(final Stoppable stopper, final int period,
-      final NamedQueueRecorder namedQueueRecorder) {
+    final NamedQueueRecorder namedQueueRecorder) {
     super("SlowLogTableOpsChore", stopper, period);
     this.namedQueueRecorder = namedQueueRecorder;
   }

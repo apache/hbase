@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,19 +45,19 @@ import org.slf4j.LoggerFactory;
 public class ExpiredMobFileCleaner extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(ExpiredMobFileCleaner.class);
+
   /**
-   * Cleans the MOB files when they're expired and their min versions are 0.
-   * If the latest timestamp of Cells in a MOB file is older than the TTL in the column family,
-   * it's regarded as expired. This cleaner deletes them.
-   * At a time T0, the cells in a mob file M0 are expired. If a user starts a scan before T0, those
-   * mob cells are visible, this scan still runs after T0. At that time T1, this mob file M0
-   * is expired, meanwhile a cleaner starts, the M0 is archived and can be read in the archive
-   * directory.
+   * Cleans the MOB files when they're expired and their min versions are 0. If the latest timestamp
+   * of Cells in a MOB file is older than the TTL in the column family, it's regarded as expired.
+   * This cleaner deletes them. At a time T0, the cells in a mob file M0 are expired. If a user
+   * starts a scan before T0, those mob cells are visible, this scan still runs after T0. At that
+   * time T1, this mob file M0 is expired, meanwhile a cleaner starts, the M0 is archived and can be
+   * read in the archive directory.
    * @param tableName The current table name.
-   * @param family The current family.
+   * @param family    The current family.
    */
   public void cleanExpiredMobFiles(String tableName, ColumnFamilyDescriptor family)
-      throws IOException {
+    throws IOException {
     Configuration conf = getConf();
     TableName tn = TableName.valueOf(tableName);
     FileSystem fs = FileSystem.get(conf);
@@ -78,13 +77,13 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
 
   private void printUsage() {
     System.err.println("Usage:\n" + "--------------------------\n"
-        + ExpiredMobFileCleaner.class.getName() + " tableName familyName");
+      + ExpiredMobFileCleaner.class.getName() + " tableName familyName");
     System.err.println(" tableName        The table name");
     System.err.println(" familyName       The column family name");
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-      justification="Intentional")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
+      justification = "Intentional")
   @Override
   public int run(String[] args) throws Exception {
     if (args.length != 2) {
@@ -104,7 +103,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
       }
       if (family.getMinVersions() > 0) {
         throw new IOException(
-            "The minVersions of the column family is not 0, could not be handled by this cleaner");
+          "The minVersions of the column family is not 0, could not be handled by this cleaner");
       }
       cleanExpiredMobFiles(tableName, family);
       return 0;

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,8 +85,7 @@ public abstract class AbstractTestProtobufLog {
   }
 
   /**
-   * Reads the WAL with and without WALTrailer.
-   * @throws IOException
+   * Reads the WAL with and without WALTrailer. n
    */
   @Test
   public void testWALTrailer() throws IOException {
@@ -100,11 +98,10 @@ public abstract class AbstractTestProtobufLog {
   /**
    * Appends entries in the WAL and reads it.
    * @param withTrailer If 'withTrailer' is true, it calls a close on the WALwriter before reading
-   *          so that a trailer is appended to the WAL. Otherwise, it starts reading after the sync
-   *          call. This means that reader is not aware of the trailer. In this scenario, if the
-   *          reader tries to read the trailer in its next() call, it returns false from
-   *          ProtoBufLogReader.
-   * @throws IOException
+   *                    so that a trailer is appended to the WAL. Otherwise, it starts reading after
+   *                    the sync call. This means that reader is not aware of the trailer. In this
+   *                    scenario, if the reader tries to read the trailer in its next() call, it
+   *                    returns false from ProtoBufLogReader. n
    */
   private void doRead(boolean withTrailer) throws IOException {
     int columnCount = 5;

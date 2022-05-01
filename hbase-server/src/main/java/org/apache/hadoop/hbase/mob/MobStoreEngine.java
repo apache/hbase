@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -31,6 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MobStoreEngine extends DefaultStoreEngine {
   public final static String MOB_COMPACTOR_CLASS_KEY = "hbase.hstore.mobengine.compactor.class";
+
   @Override
   protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
     // When using MOB, we use DefaultMobStoreFlusher always
@@ -44,8 +44,7 @@ public class MobStoreEngine extends DefaultStoreEngine {
    */
   @Override
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
-    String className =
-        conf.get(MOB_COMPACTOR_CLASS_KEY, DefaultMobStoreCompactor.class.getName());
+    String className = conf.get(MOB_COMPACTOR_CLASS_KEY, DefaultMobStoreCompactor.class.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
         new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });

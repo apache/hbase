@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
@@ -78,67 +77,77 @@ public class MetricsReplicationGlobalSourceSourceImpl
     shippedHFilesCounter = rms.getMetricsRegistry().getCounter(SOURCE_SHIPPED_HFILES, 0L);
 
     sizeOfHFileRefsQueueGauge =
-        rms.getMetricsRegistry().getGauge(SOURCE_SIZE_OF_HFILE_REFS_QUEUE, 0L);
+      rms.getMetricsRegistry().getGauge(SOURCE_SIZE_OF_HFILE_REFS_QUEUE, 0L);
 
-    unknownFileLengthForClosedWAL = rms.getMetricsRegistry()
-            .getCounter(SOURCE_CLOSED_LOGS_WITH_UNKNOWN_LENGTH, 0L);
+    unknownFileLengthForClosedWAL =
+      rms.getMetricsRegistry().getCounter(SOURCE_CLOSED_LOGS_WITH_UNKNOWN_LENGTH, 0L);
     uncleanlyClosedWAL = rms.getMetricsRegistry().getCounter(SOURCE_UNCLEANLY_CLOSED_LOGS, 0L);
-    uncleanlyClosedSkippedBytes = rms.getMetricsRegistry()
-            .getCounter(SOURCE_UNCLEANLY_CLOSED_IGNORED_IN_BYTES, 0L);
+    uncleanlyClosedSkippedBytes =
+      rms.getMetricsRegistry().getCounter(SOURCE_UNCLEANLY_CLOSED_IGNORED_IN_BYTES, 0L);
     restartWALReading = rms.getMetricsRegistry().getCounter(SOURCE_RESTARTED_LOG_READING, 0L);
     repeatedFileBytes = rms.getMetricsRegistry().getCounter(SOURCE_REPEATED_LOG_FILE_BYTES, 0L);
     completedWAL = rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_LOGS, 0L);
-    completedRecoveryQueue = rms.getMetricsRegistry()
-            .getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
-    failedRecoveryQueue = rms.getMetricsRegistry()
-            .getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
+    completedRecoveryQueue =
+      rms.getMetricsRegistry().getCounter(SOURCE_COMPLETED_RECOVERY_QUEUES, 0L);
+    failedRecoveryQueue = rms.getMetricsRegistry().getCounter(SOURCE_FAILED_RECOVERY_QUEUES, 0L);
 
-    walReaderBufferUsageBytes = rms.getMetricsRegistry()
-        .getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
+    walReaderBufferUsageBytes =
+      rms.getMetricsRegistry().getGauge(SOURCE_WAL_READER_EDITS_BUFFER, 0L);
     sourceInitializing = rms.getMetricsRegistry().getGaugeInt(SOURCE_INITIALIZING, 0);
   }
 
-  @Override public void setLastShippedAge(long age) {
+  @Override
+  public void setLastShippedAge(long age) {
     ageOfLastShippedOpHist.add(age);
   }
 
-  @Override public void incrSizeOfLogQueue(int size) {
+  @Override
+  public void incrSizeOfLogQueue(int size) {
     sizeOfLogQueueGauge.incr(size);
   }
 
-  @Override public void decrSizeOfLogQueue(int size) {
+  @Override
+  public void decrSizeOfLogQueue(int size) {
     sizeOfLogQueueGauge.decr(size);
   }
 
-  @Override public void incrLogReadInEdits(long size) {
+  @Override
+  public void incrLogReadInEdits(long size) {
     logReadInEditsCounter.incr(size);
   }
 
-  @Override public void incrLogEditsFiltered(long size) {
+  @Override
+  public void incrLogEditsFiltered(long size) {
     walEditsFilteredCounter.incr(size);
   }
 
-  @Override public void incrBatchesShipped(int batches) {
+  @Override
+  public void incrBatchesShipped(int batches) {
     shippedBatchesCounter.incr(batches);
   }
 
-  @Override public void incrFailedBatches() {
+  @Override
+  public void incrFailedBatches() {
     failedBatchesCounter.incr();
   }
 
-  @Override public void incrOpsShipped(long ops) {
+  @Override
+  public void incrOpsShipped(long ops) {
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedBytes(long size) {
+  @Override
+  public void incrShippedBytes(long size) {
     shippedBytesCounter.incr(size);
   }
 
-  @Override public void incrLogReadInBytes(long size) {
+  @Override
+  public void incrLogReadInBytes(long size) {
     logReadInBytesCounter.incr(size);
   }
 
-  @Override public void clear() {
+  @Override
+  public void clear() {
   }
 
   @Override
@@ -146,7 +155,8 @@ public class MetricsReplicationGlobalSourceSourceImpl
     return ageOfLastShippedOpHist.getMax();
   }
 
-  @Override public void incrHFilesShipped(long hfiles) {
+  @Override
+  public void incrHFilesShipped(long hfiles) {
     shippedHFilesCounter.incr(hfiles);
   }
 
@@ -162,13 +172,14 @@ public class MetricsReplicationGlobalSourceSourceImpl
 
   @Override
   public int getSizeOfLogQueue() {
-    return (int)sizeOfLogQueueGauge.value();
+    return (int) sizeOfLogQueueGauge.value();
   }
 
   @Override
   public void incrUnknownFileLengthForClosedWAL() {
     unknownFileLengthForClosedWAL.incr(1L);
   }
+
   @Override
   public void incrUncleanlyClosedWALs() {
     uncleanlyClosedWAL.incr(1L);
@@ -183,22 +194,27 @@ public class MetricsReplicationGlobalSourceSourceImpl
   public void incrBytesSkippedInUncleanlyClosedWALs(final long bytes) {
     uncleanlyClosedSkippedBytes.incr(bytes);
   }
+
   @Override
   public void incrRestartedWALReading() {
     restartWALReading.incr(1L);
   }
+
   @Override
   public void incrRepeatedFileBytes(final long bytes) {
     repeatedFileBytes.incr(bytes);
   }
+
   @Override
   public void incrCompletedWAL() {
     completedWAL.incr(1L);
   }
+
   @Override
   public void incrCompletedRecoveryQueue() {
     completedRecoveryQueue.incr(1L);
   }
+
   @Override
   public void incrFailedRecoveryQueue() {
     failedRecoveryQueue.incr(1L);

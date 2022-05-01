@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Comparator;
 import org.apache.hadoop.fs.Path;
@@ -28,7 +29,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALProvider {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -39,18 +40,18 @@ public class TestWALProvider {
    */
   @Test
   public void testWALStartTimeComparator() throws IOException {
-    Path metaPath1 = new Path("hdfs://localhost:59875/user/stack/test-data/" +
-      "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/" +
-      "localhost%2C59908%2C1600304600425.meta.1600304604319.meta");
-    Path metaPath2 = new Path("hdfs://localhost:59875/user/stack/test-data/" +
-      "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/" +
-      "localhost%2C59908%2C1600304600425.meta.1600304604320.meta");
-    Path path3 = new Path("hdfs://localhost:59875/user/stack/test-data/" +
-      "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/" +
-      "localhost%2C59908%2C1600304600425.1600304604321");
-    Path metaPath4 = new Path("hdfs://localhost:59875/user/stack/test-data/" +
-      "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/" +
-      "localhost%2C59908%2C1600304600425.meta.1600304604321.meta");
+    Path metaPath1 = new Path("hdfs://localhost:59875/user/stack/test-data/"
+      + "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/"
+      + "localhost%2C59908%2C1600304600425.meta.1600304604319.meta");
+    Path metaPath2 = new Path("hdfs://localhost:59875/user/stack/test-data/"
+      + "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/"
+      + "localhost%2C59908%2C1600304600425.meta.1600304604320.meta");
+    Path path3 = new Path("hdfs://localhost:59875/user/stack/test-data/"
+      + "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/"
+      + "localhost%2C59908%2C1600304600425.1600304604321");
+    Path metaPath4 = new Path("hdfs://localhost:59875/user/stack/test-data/"
+      + "f4cb8ffa-6ff7-59a6-f167-6cc00f24899a/WALs/localhost,59908,1600304600425/"
+      + "localhost%2C59908%2C1600304600425.meta.1600304604321.meta");
     Comparator c = new AbstractFSWALProvider.WALStartTimeComparator();
     assertTrue(c.compare(metaPath1, metaPath1) == 0);
     assertTrue(c.compare(metaPath2, metaPath2) == 0);

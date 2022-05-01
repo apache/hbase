@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This is a {@link Tag} implementation in which value is backed by
- * {@link java.nio.ByteBuffer}
+ * This is a {@link Tag} implementation in which value is backed by {@link java.nio.ByteBuffer}
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -67,7 +63,7 @@ public class ByteBufferTag implements Tag {
   @Override
   public byte[] getValueArray() {
     throw new UnsupportedOperationException(
-        "Tag is backed by an off heap buffer. Use getValueByteBuffer()");
+      "Tag is backed by an off heap buffer. Use getValueByteBuffer()");
   }
 
   @Override
@@ -78,6 +74,6 @@ public class ByteBufferTag implements Tag {
   @Override
   public String toString() {
     return "[Tag type : " + this.type + ", value : "
-        + ByteBufferUtils.toStringBinary(buffer, getValueOffset(), getValueLength()) + "]";
+      + ByteBufferUtils.toStringBinary(buffer, getValueOffset(), getValueLength()) + "]";
   }
 }

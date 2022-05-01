@@ -30,7 +30,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -77,14 +76,14 @@ public class HbckTableInfo {
 
   // region split calculator
   final RegionSplitCalculator<HbckRegionInfo> sc =
-      new RegionSplitCalculator<>(HbckRegionInfo.COMPARATOR);
+    new RegionSplitCalculator<>(HbckRegionInfo.COMPARATOR);
 
-  // Histogram of different TableDescriptors found.  Ideally there is only one!
+  // Histogram of different TableDescriptors found. Ideally there is only one!
   final Set<TableDescriptor> htds = new HashSet<>();
 
   // key = start split, values = set of splits in problem group
   final Multimap<byte[], HbckRegionInfo> overlapGroups =
-      TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, HbckRegionInfo.COMPARATOR);
+    TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, HbckRegionInfo.COMPARATOR);
 
   // list of regions derived from meta entries.
   private ImmutableList<RegionInfo> regionsFromMeta = null;
@@ -98,14 +97,14 @@ public class HbckTableInfo {
   }
 
   /**
-   * @return descriptor common to all regions.  null if are none or multiple!
+   * @return descriptor common to all regions. null if are none or multiple!
    */
   TableDescriptor getTableDescriptor() {
     if (htds.size() == 1) {
-      return (TableDescriptor)htds.toArray()[0];
+      return (TableDescriptor) htds.toArray()[0];
     } else {
-      LOG.error("None/Multiple table descriptors found for table '"
-          + tableName + "' regions: " + htds);
+      LOG.error(
+        "None/Multiple table descriptors found for table '" + tableName + "' regions: " + htds);
     }
     return null;
   }
@@ -122,10 +121,11 @@ public class HbckTableInfo {
 
     // if not the absolute end key, check for cycle
     if (Bytes.compareTo(hir.getStartKey(), hir.getEndKey()) > 0) {
-      hbck.getErrors().reportError(HbckErrorReporter.ERROR_CODE.REGION_CYCLE, String.format(
+      hbck.getErrors().reportError(HbckErrorReporter.ERROR_CODE.REGION_CYCLE,
+        String.format(
           "The endkey for this region comes before the " + "startkey, startkey=%s, endkey=%s",
-          Bytes.toStringBinary(hir.getStartKey()), Bytes.toStringBinary(hir.getEndKey())), this,
-          hir);
+          Bytes.toStringBinary(hir.getStartKey()), Bytes.toStringBinary(hir.getEndKey())),
+        this, hir);
       backwards.add(hir);
       return;
     }
@@ -149,8 +149,8 @@ public class HbckTableInfo {
     return sc.getStarts().size() + backwards.size();
   }
 
-  public synchronized ImmutableList<RegionInfo> getRegionsFromMeta(
-      TreeMap<String, HbckRegionInfo> regionInfoMap) {
+  public synchronized ImmutableList<RegionInfo>
+    getRegionsFromMeta(TreeMap<String, HbckRegionInfo> regionInfoMap) {
     // lazy loaded, synchronized to ensure a single load
     if (regionsFromMeta == null) {
       List<RegionInfo> regions = new ArrayList<>();
@@ -178,22 +178,23 @@ public class HbckTableInfo {
     @Override
     public void handleRegionStartKeyNotEmpty(HbckRegionInfo hi) throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-          "First region should start with an empty key.  You need to "
-              + " create a new region and regioninfo in HDFS to plug the hole.",
-          getTableInfo(), hi);
+        "First region should start with an empty key.  You need to "
+          + " create a new region and regioninfo in HDFS to plug the hole.",
+        getTableInfo(), hi);
     }
 
     @Override
     public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
-          "Last region should end with an empty key. You need to "
-              + "create a new region and regioninfo in HDFS to plug the hole.", getTableInfo());
+        "Last region should end with an empty key. You need to "
+          + "create a new region and regioninfo in HDFS to plug the hole.",
+        getTableInfo());
     }
 
     @Override
-    public void handleDegenerateRegion(HbckRegionInfo hi) throws IOException{
+    public void handleDegenerateRegion(HbckRegionInfo hi) throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.DEGENERATE_REGION,
-          "Region has the same start and end key.", getTableInfo(), hi);
+        "Region has the same start and end key.", getTableInfo(), hi);
     }
 
     @Override
@@ -201,55 +202,47 @@ public class HbckTableInfo {
       byte[] key = r1.getStartKey();
       // dup start key
       errors.reportError(HbckErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
-          "Multiple regions have the same startkey: " + Bytes.toStringBinary(key), getTableInfo(),
-          r1);
+        "Multiple regions have the same startkey: " + Bytes.toStringBinary(key), getTableInfo(),
+        r1);
       errors.reportError(HbckErrorReporter.ERROR_CODE.DUPE_STARTKEYS,
-          "Multiple regions have the same startkey: " + Bytes.toStringBinary(key), getTableInfo(),
-          r2);
+        "Multiple regions have the same startkey: " + Bytes.toStringBinary(key), getTableInfo(),
+        r2);
     }
 
     @Override
-    public void handleSplit(HbckRegionInfo r1, HbckRegionInfo r2) throws IOException{
+    public void handleSplit(HbckRegionInfo r1, HbckRegionInfo r2) throws IOException {
       byte[] key = r1.getStartKey();
       // dup start key
       errors.reportError(HbckErrorReporter.ERROR_CODE.DUPE_ENDKEYS,
-          "Multiple regions have the same regionID: "
-              + Bytes.toStringBinary(key), getTableInfo(), r1);
+        "Multiple regions have the same regionID: " + Bytes.toStringBinary(key), getTableInfo(),
+        r1);
       errors.reportError(HbckErrorReporter.ERROR_CODE.DUPE_ENDKEYS,
-          "Multiple regions have the same regionID: "
-              + Bytes.toStringBinary(key), getTableInfo(), r2);
+        "Multiple regions have the same regionID: " + Bytes.toStringBinary(key), getTableInfo(),
+        r2);
     }
 
     @Override
     public void handleOverlapInRegionChain(HbckRegionInfo hi1, HbckRegionInfo hi2)
-        throws IOException {
+      throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
-          "There is an overlap in the region chain.", getTableInfo(), hi1, hi2);
+        "There is an overlap in the region chain.", getTableInfo(), hi1, hi2);
     }
 
     @Override
     public void handleHoleInRegionChain(byte[] holeStart, byte[] holeStop) throws IOException {
-      errors.reportError(
-          HbckErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN,
-          "There is a hole in the region chain between "
-              + Bytes.toStringBinary(holeStart) + " and "
-              + Bytes.toStringBinary(holeStop)
-              + ".  You need to create a new .regioninfo and region "
-              + "dir in hdfs to plug the hole.");
+      errors.reportError(HbckErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN,
+        "There is a hole in the region chain between " + Bytes.toStringBinary(holeStart) + " and "
+          + Bytes.toStringBinary(holeStop) + ".  You need to create a new .regioninfo and region "
+          + "dir in hdfs to plug the hole.");
     }
   }
 
   /**
-   * This handler fixes integrity errors from hdfs information.  There are
-   * basically three classes of integrity problems 1) holes, 2) overlaps, and
-   * 3) invalid regions.
-   *
-   * This class overrides methods that fix holes and the overlap group case.
-   * Individual cases of particular overlaps are handled by the general
-   * overlap group merge repair case.
-   *
-   * If hbase is online, this forces regions offline before doing merge
-   * operations.
+   * This handler fixes integrity errors from hdfs information. There are basically three classes of
+   * integrity problems 1) holes, 2) overlaps, and 3) invalid regions. This class overrides methods
+   * that fix holes and the overlap group case. Individual cases of particular overlaps are handled
+   * by the general overlap group merge repair case. If hbase is online, this forces regions offline
+   * before doing merge operations.
    */
   class HDFSIntegrityFixer extends IntegrityFixSuggester {
     Configuration conf;
@@ -257,7 +250,7 @@ public class HbckTableInfo {
     boolean fixOverlaps = true;
 
     HDFSIntegrityFixer(HbckTableInfo ti, HbckErrorReporter errors, Configuration conf,
-        boolean fixHoles, boolean fixOverlaps) {
+      boolean fixHoles, boolean fixOverlaps) {
       super(ti, errors);
       this.conf = conf;
       this.fixOverlaps = fixOverlaps;
@@ -265,84 +258,74 @@ public class HbckTableInfo {
     }
 
     /**
-     * This is a special case hole -- when the first region of a table is
-     * missing from META, HBase doesn't acknowledge the existance of the
-     * table.
+     * This is a special case hole -- when the first region of a table is missing from META, HBase
+     * doesn't acknowledge the existance of the table.
      */
     @Override
     public void handleRegionStartKeyNotEmpty(HbckRegionInfo next) throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-          "First region should start with an empty key.  Creating a new " +
-              "region and regioninfo in HDFS to plug the hole.",
-          getTableInfo(), next);
+        "First region should start with an empty key.  Creating a new "
+          + "region and regioninfo in HDFS to plug the hole.",
+        getTableInfo(), next);
       TableDescriptor htd = getTableInfo().getTableDescriptor();
       // from special EMPTY_START_ROW to next region's startKey
       RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-          .setStartKey(HConstants.EMPTY_START_ROW)
-          .setEndKey(next.getStartKey())
-          .build();
+        .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(next.getStartKey()).build();
 
       // TODO test
       HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-      LOG.info("Table region start key was not empty.  Created new empty region: "
-          + newRegion + " " +region);
+      LOG.info("Table region start key was not empty.  Created new empty region: " + newRegion + " "
+        + region);
       hbck.fixes++;
     }
 
     @Override
     public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
-          "Last region should end with an empty key.  Creating a new "
-              + "region and regioninfo in HDFS to plug the hole.", getTableInfo());
+        "Last region should end with an empty key.  Creating a new "
+          + "region and regioninfo in HDFS to plug the hole.",
+        getTableInfo());
       TableDescriptor htd = getTableInfo().getTableDescriptor();
       // from curEndKey to EMPTY_START_ROW
-      RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-          .setStartKey(curEndKey)
-          .setEndKey(HConstants.EMPTY_START_ROW)
-          .build();
+      RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(curEndKey)
+        .setEndKey(HConstants.EMPTY_START_ROW).build();
 
       HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-      LOG.info("Table region end key was not empty.  Created new empty region: " + newRegion
-          + " " + region);
+      LOG.info("Table region end key was not empty.  Created new empty region: " + newRegion + " "
+        + region);
       hbck.fixes++;
     }
 
     /**
-     * There is a hole in the hdfs regions that violates the table integrity
-     * rules.  Create a new empty region that patches the hole.
+     * There is a hole in the hdfs regions that violates the table integrity rules. Create a new
+     * empty region that patches the hole.
      */
     @Override
     public void handleHoleInRegionChain(byte[] holeStartKey, byte[] holeStopKey)
-        throws IOException {
+      throws IOException {
       errors.reportError(HbckErrorReporter.ERROR_CODE.HOLE_IN_REGION_CHAIN,
-          "There is a hole in the region chain between " + Bytes.toStringBinary(holeStartKey) +
-              " and " + Bytes.toStringBinary(holeStopKey) +
-              ".  Creating a new regioninfo and region " + "dir in hdfs to plug the hole.");
+        "There is a hole in the region chain between " + Bytes.toStringBinary(holeStartKey)
+          + " and " + Bytes.toStringBinary(holeStopKey) + ".  Creating a new regioninfo and region "
+          + "dir in hdfs to plug the hole.");
       TableDescriptor htd = getTableInfo().getTableDescriptor();
-      RegionInfo newRegion =
-          RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(holeStartKey)
-              .setEndKey(holeStopKey).build();
+      RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
+        .setStartKey(holeStartKey).setEndKey(holeStopKey).build();
       HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
       LOG.info("Plugged hole by creating new empty region: " + newRegion + " " + region);
       hbck.fixes++;
     }
 
     /**
-     * This takes set of overlapping regions and merges them into a single
-     * region.  This covers cases like degenerate regions, shared start key,
-     * general overlaps, duplicate ranges, and partial overlapping regions.
-     *
-     * Cases:
-     * - Clean regions that overlap
-     * - Only .oldlogs regions (can't find start/stop range, or figure out)
-     *
-     * This is basically threadsafe, except for the fixer increment in mergeOverlaps.
+     * This takes set of overlapping regions and merges them into a single region. This covers cases
+     * like degenerate regions, shared start key, general overlaps, duplicate ranges, and partial
+     * overlapping regions. Cases: - Clean regions that overlap - Only .oldlogs regions (can't find
+     * start/stop range, or figure out) This is basically threadsafe, except for the fixer increment
+     * in mergeOverlaps.
      */
     @Override
-    public void handleOverlapGroup(Collection<HbckRegionInfo> overlap)
-        throws IOException {
+    public void handleOverlapGroup(Collection<HbckRegionInfo> overlap) throws IOException {
       Preconditions.checkNotNull(overlap);
-      Preconditions.checkArgument(overlap.size() >0);
+      Preconditions.checkArgument(overlap.size() > 0);
 
       if (!this.fixOverlaps) {
         LOG.warn("Not attempting to repair overlaps.");
@@ -350,9 +333,9 @@ public class HbckTableInfo {
       }
 
       if (overlap.size() > hbck.getMaxMerge()) {
-        LOG.warn("Overlap group has " + overlap.size() + " overlapping " +
-            "regions which is greater than " + hbck.getMaxMerge() +
-            ", the max number of regions to merge");
+        LOG.warn(
+          "Overlap group has " + overlap.size() + " overlapping " + "regions which is greater than "
+            + hbck.getMaxMerge() + ", the max number of regions to merge");
         if (hbck.shouldSidelineBigOverlaps()) {
           // we only sideline big overlapped groups that exceeds the max number of regions to merge
           sidelineBigOverlaps(overlap);
@@ -385,24 +368,28 @@ public class HbckTableInfo {
         if (range == null) {
           range = new Pair<byte[], byte[]>(hi.getStartKey(), hi.getEndKey());
         } else {
-          if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getStartKey(), range.getFirst()) < 0) {
+          if (
+            RegionSplitCalculator.BYTES_COMPARATOR.compare(hi.getStartKey(), range.getFirst()) < 0
+          ) {
             range.setFirst(hi.getStartKey());
           }
-          if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getEndKey(), range.getSecond()) > 0) {
+          if (
+            RegionSplitCalculator.BYTES_COMPARATOR.compare(hi.getEndKey(), range.getSecond()) > 0
+          ) {
             range.setSecond(hi.getEndKey());
           }
         }
       }
 
       LOG.info("This group range is [" + Bytes.toStringBinary(range.getFirst()) + ", "
-          + Bytes.toStringBinary(range.getSecond()) + "]");
+        + Bytes.toStringBinary(range.getSecond()) + "]");
 
       // attempt to find a possible parent for the edge case of a split
       for (HbckRegionInfo hi : overlap) {
-        if (Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0
-            && Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0) {
+        if (
+          Bytes.compareTo(hi.getHdfsHRI().getStartKey(), range.getFirst()) == 0
+            && Bytes.compareTo(hi.getHdfsHRI().getEndKey(), range.getSecond()) == 0
+        ) {
           LOG.info("This is a parent for this group: " + hi.toString());
           parent = hi;
         }
@@ -429,8 +416,10 @@ public class HbckTableInfo {
       }
 
       // daughters must share the same regionID and we should have a parent too
-      if (daughterA.getHdfsHRI().getRegionId() != daughterB.getHdfsHRI().getRegionId() ||
-          parent == null) {
+      if (
+        daughterA.getHdfsHRI().getRegionId() != daughterB.getHdfsHRI().getRegionId()
+          || parent == null
+      ) {
         return;
       }
 
@@ -453,7 +442,7 @@ public class HbckTableInfo {
         hbck.offline(parent.getRegionName());
       } catch (IOException ioe) {
         LOG.warn("Unable to offline parent region: " + parent.getRegionNameAsString()
-            + ".  Just continuing with regular merge... ", ioe);
+          + ".  Just continuing with regular merge... ", ioe);
         return;
       }
 
@@ -461,14 +450,13 @@ public class HbckTableInfo {
         HBaseFsckRepair.removeParentInMeta(conf, parent.getHdfsHRI());
       } catch (IOException ioe) {
         LOG.warn("Unable to remove parent region in META: " + parent.getRegionNameAsString()
-            + ".  Just continuing with regular merge... ", ioe);
+          + ".  Just continuing with regular merge... ", ioe);
         return;
       }
 
       hbck.sidelineRegionDir(fs, parent);
-      LOG.info(
-          "[" + thread + "] Sidelined parent region dir " + parent.getHdfsRegionDir() + " into " +
-              hbck.getSidelineDir());
+      LOG.info("[" + thread + "] Sidelined parent region dir " + parent.getHdfsRegionDir()
+        + " into " + hbck.getSidelineDir());
       hbck.debugLsr(parent.getHdfsRegionDir());
 
       // Make sure we don't have the parents and daughters around
@@ -480,39 +468,40 @@ public class HbckTableInfo {
 
     }
 
-    void mergeOverlaps(Collection<HbckRegionInfo> overlap)
-        throws IOException {
+    void mergeOverlaps(Collection<HbckRegionInfo> overlap) throws IOException {
       String thread = Thread.currentThread().getName();
-      LOG.info("== [" + thread + "] Merging regions into one region: "
-          + Joiner.on(",").join(overlap));
+      LOG.info(
+        "== [" + thread + "] Merging regions into one region: " + Joiner.on(",").join(overlap));
       // get the min / max range and close all concerned regions
       Pair<byte[], byte[]> range = null;
       for (HbckRegionInfo hi : overlap) {
         if (range == null) {
           range = new Pair<>(hi.getStartKey(), hi.getEndKey());
         } else {
-          if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getStartKey(), range.getFirst()) < 0) {
+          if (
+            RegionSplitCalculator.BYTES_COMPARATOR.compare(hi.getStartKey(), range.getFirst()) < 0
+          ) {
             range.setFirst(hi.getStartKey());
           }
-          if (RegionSplitCalculator.BYTES_COMPARATOR
-              .compare(hi.getEndKey(), range.getSecond()) > 0) {
+          if (
+            RegionSplitCalculator.BYTES_COMPARATOR.compare(hi.getEndKey(), range.getSecond()) > 0
+          ) {
             range.setSecond(hi.getEndKey());
           }
         }
         // need to close files so delete can happen.
-        LOG.debug("[" + thread + "] Closing region before moving data around: " +  hi);
+        LOG.debug("[" + thread + "] Closing region before moving data around: " + hi);
         LOG.debug("[" + thread + "] Contained region dir before close");
         hbck.debugLsr(hi.getHdfsRegionDir());
         try {
           LOG.info("[" + thread + "] Closing region: " + hi);
           hbck.closeRegion(hi);
         } catch (IOException ioe) {
-          LOG.warn("[" + thread + "] Was unable to close region " + hi
-              + ".  Just continuing... ", ioe);
+          LOG.warn("[" + thread + "] Was unable to close region " + hi + ".  Just continuing... ",
+            ioe);
         } catch (InterruptedException e) {
-          LOG.warn("[" + thread + "] Was unable to close region " + hi
-              + ".  Just continuing... ", e);
+          LOG.warn("[" + thread + "] Was unable to close region " + hi + ".  Just continuing... ",
+            e);
         }
 
         try {
@@ -520,7 +509,7 @@ public class HbckTableInfo {
           hbck.offline(hi.getRegionName());
         } catch (IOException ioe) {
           LOG.warn("[" + thread + "] Unable to offline region from master: " + hi
-              + ".  Just continuing... ", ioe);
+            + ".  Just continuing... ", ioe);
         }
       }
 
@@ -528,19 +517,17 @@ public class HbckTableInfo {
       TableDescriptor htd = getTableInfo().getTableDescriptor();
       // from start key to end Key
       RegionInfo newRegion = RegionInfoBuilder.newBuilder(htd.getTableName())
-          .setStartKey(range.getFirst())
-          .setEndKey(range.getSecond())
-          .build();
+        .setStartKey(range.getFirst()).setEndKey(range.getSecond()).build();
       HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-      LOG.info("[" + thread + "] Created new empty container region: " +
-          newRegion + " to contain regions: " + Joiner.on(",").join(overlap));
+      LOG.info("[" + thread + "] Created new empty container region: " + newRegion
+        + " to contain regions: " + Joiner.on(",").join(overlap));
       hbck.debugLsr(region.getRegionFileSystem().getRegionDir());
 
       // all target regions are closed, should be able to safely cleanup.
-      boolean didFix= false;
+      boolean didFix = false;
       Path target = region.getRegionFileSystem().getRegionDir();
       for (HbckRegionInfo contained : overlap) {
-        LOG.info("[" + thread + "] Merging " + contained  + " into " + target);
+        LOG.info("[" + thread + "] Merging " + contained + " into " + target);
         int merges = hbck.mergeRegionDirs(target, contained);
         if (merges > 0) {
           didFix = true;
@@ -552,9 +539,8 @@ public class HbckTableInfo {
     }
 
     /**
-     * Sideline some regions in a big overlap group so that it
-     * will have fewer regions, and it is easier to merge them later on.
-     *
+     * Sideline some regions in a big overlap group so that it will have fewer regions, and it is
+     * easier to merge them later on.
      * @param bigOverlap the overlapped group with regions more than maxMerge
      */
     void sidelineBigOverlaps(Collection<HbckRegionInfo> bigOverlap) throws IOException {
@@ -563,26 +549,26 @@ public class HbckTableInfo {
         overlapsToSideline = hbck.getMaxOverlapsToSideline();
       }
       List<HbckRegionInfo> regionsToSideline =
-          RegionSplitCalculator.findBigRanges(bigOverlap, overlapsToSideline);
+        RegionSplitCalculator.findBigRanges(bigOverlap, overlapsToSideline);
       FileSystem fs = FileSystem.get(conf);
-      for (HbckRegionInfo regionToSideline: regionsToSideline) {
+      for (HbckRegionInfo regionToSideline : regionsToSideline) {
         try {
           LOG.info("Closing region: " + regionToSideline);
           hbck.closeRegion(regionToSideline);
         } catch (IOException ioe) {
-          LOG.warn("Was unable to close region " + regionToSideline
-              + ".  Just continuing... ", ioe);
+          LOG.warn("Was unable to close region " + regionToSideline + ".  Just continuing... ",
+            ioe);
         } catch (InterruptedException e) {
-          LOG.warn("Was unable to close region " + regionToSideline
-              + ".  Just continuing... ", e);
+          LOG.warn("Was unable to close region " + regionToSideline + ".  Just continuing... ", e);
         }
 
         try {
           LOG.info("Offlining region: " + regionToSideline);
           hbck.offline(regionToSideline.getRegionName());
         } catch (IOException ioe) {
-          LOG.warn("Unable to offline region from master: " + regionToSideline
-              + ".  Just continuing... ", ioe);
+          LOG.warn(
+            "Unable to offline region from master: " + regionToSideline + ".  Just continuing... ",
+            ioe);
         }
 
         LOG.info("Before sideline big overlapped region: " + regionToSideline.toString());
@@ -590,8 +576,7 @@ public class HbckTableInfo {
         if (sidelineRegionDir != null) {
           sidelinedRegions.put(sidelineRegionDir, regionToSideline);
           LOG.info("After sidelined big overlapped region: "
-              + regionToSideline.getRegionNameAsString()
-              + " to " + sidelineRegionDir.toString());
+            + regionToSideline.getRegionNameAsString() + " to " + sidelineRegionDir.toString());
           hbck.fixes++;
         }
       }
@@ -599,8 +584,8 @@ public class HbckTableInfo {
   }
 
   /**
-   * Check the region chain (from META) of this table.  We are looking for
-   * holes, overlaps, and cycles.
+   * Check the region chain (from META) of this table. We are looking for holes, overlaps, and
+   * cycles.
    * @return false if there are errors
    */
   public boolean checkRegionChain(TableIntegrityErrorHandler handler) throws IOException {
@@ -635,7 +620,7 @@ public class HbckTableInfo {
         // special endkey case converts '' to null
         byte[] endKey = rng.getEndKey();
         endKey = (endKey.length == 0) ? null : endKey;
-        if (Bytes.equals(rng.getStartKey(),endKey)) {
+        if (Bytes.equals(rng.getStartKey(), endKey)) {
           handler.handleDegenerateRegion(rng);
         }
       }
@@ -658,7 +643,7 @@ public class HbckTableInfo {
 
         // record errors
         ArrayList<HbckRegionInfo> subRange = new ArrayList<>(ranges);
-        //  this dumb and n^2 but this shouldn't happen often
+        // this dumb and n^2 but this shouldn't happen often
         for (HbckRegionInfo r1 : ranges) {
           if (r1.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
             continue;
@@ -669,10 +654,12 @@ public class HbckTableInfo {
               continue;
             }
             // general case of same start key
-            if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
-              handler.handleDuplicateStartKeys(r1,r2);
-            } else if (Bytes.compareTo(r1.getEndKey(), r2.getStartKey())==0 &&
-                r1.getHdfsHRI().getRegionId() == r2.getHdfsHRI().getRegionId()) {
+            if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey()) == 0) {
+              handler.handleDuplicateStartKeys(r1, r2);
+            } else if (
+              Bytes.compareTo(r1.getEndKey(), r2.getStartKey()) == 0
+                && r1.getHdfsHRI().getRegionId() == r2.getHdfsHRI().getRegionId()
+            ) {
               LOG.info("this is a split, log to splits");
               handler.handleSplit(r1, r2);
             } else {
@@ -718,28 +705,25 @@ public class HbckTableInfo {
 
     if (HBaseFsck.shouldDisplayFullReport()) {
       // do full region split map dump
-      hbck.getErrors().print("---- Table '"  +  this.tableName
-          + "': region split map");
+      hbck.getErrors().print("---- Table '" + this.tableName + "': region split map");
       dump(splits, regions);
-      hbck.getErrors().print("---- Table '"  +  this.tableName
-          + "': overlap groups");
+      hbck.getErrors().print("---- Table '" + this.tableName + "': overlap groups");
       dumpOverlapProblems(overlapGroups);
-      hbck.getErrors().print("There are " + overlapGroups.keySet().size()
-          + " overlap groups with " + overlapGroups.size()
-          + " overlapping regions");
+      hbck.getErrors().print("There are " + overlapGroups.keySet().size() + " overlap groups with "
+        + overlapGroups.size() + " overlapping regions");
     }
     if (!sidelinedRegions.isEmpty()) {
       LOG.warn("Sidelined big overlapped regions, please bulk load them!");
-      hbck.getErrors().print("---- Table '"  +  this.tableName
-          + "': sidelined big overlapped regions");
+      hbck.getErrors()
+        .print("---- Table '" + this.tableName + "': sidelined big overlapped regions");
       dumpSidelinedRegions(sidelinedRegions);
     }
     return hbck.getErrors().getErrorList().size() == originalErrorsCount;
   }
 
   private boolean handleOverlapsParallel(TableIntegrityErrorHandler handler, byte[] prevKey)
-      throws IOException {
-    // we parallelize overlap handler for the case we have lots of groups to fix.  We can
+    throws IOException {
+    // we parallelize overlap handler for the case we have lots of groups to fix. We can
     // safely assume each group is independent.
     List<HBaseFsck.WorkItemOverlapMerge> merges = new ArrayList<>(overlapGroups.size());
     List<Future<Void>> rets;
@@ -753,12 +737,12 @@ public class HbckTableInfo {
       LOG.error("Overlap merges were interrupted", e);
       return false;
     }
-    for(int i=0; i<merges.size(); i++) {
+    for (int i = 0; i < merges.size(); i++) {
       HBaseFsck.WorkItemOverlapMerge work = merges.get(i);
       Future<Void> f = rets.get(i);
       try {
         f.get();
-      } catch(ExecutionException e) {
+      } catch (ExecutionException e) {
         LOG.warn("Failed to merge overlap group" + work, e.getCause());
       } catch (InterruptedException e) {
         LOG.error("Waiting for overlap merges was interrupted", e);
@@ -778,8 +762,7 @@ public class HbckTableInfo {
       sb.setLength(0); // clear out existing buffer, if any.
       sb.append(Bytes.toStringBinary(k) + ":\t");
       for (HbckRegionInfo r : regions.get(k)) {
-        sb.append("[ "+ r.toString() + ", "
-            + Bytes.toStringBinary(r.getEndKey())+ "]\t");
+        sb.append("[ " + r.toString() + ", " + Bytes.toStringBinary(r.getEndKey()) + "]\t");
       }
       hbck.getErrors().print(sb.toString());
     }
@@ -791,8 +774,8 @@ public class HbckTableInfo {
     for (byte[] k : regions.keySet()) {
       hbck.getErrors().print(Bytes.toStringBinary(k) + ":");
       for (HbckRegionInfo r : regions.get(k)) {
-        hbck.getErrors().print("[ " + r.toString() + ", "
-            + Bytes.toStringBinary(r.getEndKey()) + "]");
+        hbck.getErrors()
+          .print("[ " + r.toString() + ", " + Bytes.toStringBinary(r.getEndKey()) + "]");
       }
       hbck.getErrors().print("----");
     }
@@ -803,8 +786,8 @@ public class HbckTableInfo {
       TableName tableName = entry.getValue().getTableName();
       Path path = entry.getKey();
       hbck.getErrors().print("This sidelined region dir should be bulk loaded: " + path.toString());
-      hbck.getErrors().print("Bulk load command looks like: " + BulkLoadHFilesTool.NAME + " " +
-          path.toUri().getPath() + " " + tableName);
+      hbck.getErrors().print("Bulk load command looks like: " + BulkLoadHFilesTool.NAME + " "
+        + path.toUri().getPath() + " " + tableName);
     }
   }
 }

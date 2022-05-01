@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,35 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.io.Writable;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Specifies methods needed to add elements to a Bloom filter and serialize the
- * resulting Bloom filter as a sequence of bytes.
+ * Specifies methods needed to add elements to a Bloom filter and serialize the resulting Bloom
+ * filter as a sequence of bytes.
  */
 @InterfaceAudience.Private
 public interface BloomFilterWriter extends BloomFilterBase, CellSink, ShipperListener {
 
   /** Compact the Bloom filter before writing metadata &amp; data to disk. */
   void compactBloom();
+
   /**
    * Get a writable interface into bloom filter meta data.
-   *
    * @return a writable instance that can be later written to a stream
    */
   Writable getMetaWriter();
 
   /**
-   * Get a writable interface into bloom filter data (the actual Bloom bits).
-   * Not used for compound Bloom filters.
-   *
+   * Get a writable interface into bloom filter data (the actual Bloom bits). Not used for compound
+   * Bloom filters.
    * @return a writable instance that can be later written to a stream
    */
   Writable getDataWriter();

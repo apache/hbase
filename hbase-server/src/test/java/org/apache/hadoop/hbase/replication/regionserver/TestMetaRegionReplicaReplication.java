@@ -99,8 +99,8 @@ public class TestMetaRegionReplicaReplication {
     // Enable hbase:meta replication.
     HBaseTestingUtil.setReplicas(HTU.getAdmin(), TableName.META_TABLE_NAME, numOfMetaReplica);
 
-    HTU.waitFor(30000, () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME)
-      .size() >= numOfMetaReplica);
+    HTU.waitFor(30000, () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
+        >= numOfMetaReplica);
   }
 
   @After

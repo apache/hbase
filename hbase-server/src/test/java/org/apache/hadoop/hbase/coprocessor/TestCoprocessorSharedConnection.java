@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestCoprocessorSharedConnection {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorSharedConnection.class);
+    HBaseClassTestRule.forClass(TestCoprocessorSharedConnection.class);
 
   @Rule
   public TestName name = new TestName();
@@ -59,11 +59,11 @@ public class TestCoprocessorSharedConnection {
     // Set my test Coprocessors into the Configuration before we start up the cluster.
     Configuration conf = HTU.getConfiguration();
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        TestMasterCoprocessor.class.getName());
+      TestMasterCoprocessor.class.getName());
     conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        TestRegionServerCoprocessor.class.getName());
+      TestRegionServerCoprocessor.class.getName());
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        TestRegionCoprocessor.class.getName());
+      TestRegionCoprocessor.class.getName());
     HTU.startMiniCluster();
   }
 

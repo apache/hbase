@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,15 +35,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestRowComparator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRowComparator.class);
+    HBaseClassTestRule.forClass(TestRowComparator.class);
 
-  private static final List<byte[]> DEFAULT_ROWS = IntStream.range(1, 9)
-    .mapToObj(String::valueOf).map(Bytes::toBytes).collect(Collectors.toList());
+  private static final List<byte[]> DEFAULT_ROWS = IntStream.range(1, 9).mapToObj(String::valueOf)
+    .map(Bytes::toBytes).collect(Collectors.toList());
 
   @Test
   public void testPut() {
@@ -71,8 +71,7 @@ public class TestRowComparator {
   }
 
   private static <T extends Row> void test(Function<byte[], T> f) {
-    List<T> rows = new ArrayList<T>(DEFAULT_ROWS.stream()
-      .map(f).collect(Collectors.toList()));
+    List<T> rows = new ArrayList<T>(DEFAULT_ROWS.stream().map(f).collect(Collectors.toList()));
     do {
       Collections.shuffle(rows);
     } while (needShuffle(rows));

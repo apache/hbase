@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +33,10 @@ public class CoprocessorException extends DoNotRetryIOException {
   }
 
   /**
-   * Constructor with a Class object and exception message.
-   * @param clazz
-   * @param s
+   * Constructor with a Class object and exception message. nn
    */
   public CoprocessorException(Class<?> clazz, String s) {
-    super( "Coprocessor [" + clazz.getName() + "]: " + s);
+    super("Coprocessor [" + clazz.getName() + "]: " + s);
   }
 
   /**

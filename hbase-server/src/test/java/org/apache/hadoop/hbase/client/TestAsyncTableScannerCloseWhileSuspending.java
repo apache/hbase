@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestAsyncTableScannerCloseWhileSuspending {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScannerCloseWhileSuspending.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScannerCloseWhileSuspending.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -62,7 +62,7 @@ public class TestAsyncTableScannerCloseWhileSuspending {
     TABLE = CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     TABLE.putAll(IntStream.range(0, 100).mapToObj(
       i -> new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
-        .collect(Collectors.toList())).get();
+      .collect(Collectors.toList())).get();
   }
 
   @AfterClass
@@ -73,8 +73,7 @@ public class TestAsyncTableScannerCloseWhileSuspending {
 
   private int getScannersCount() {
     return TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .map(t -> t.getRegionServer()).mapToInt(rs -> rs.getRSRpcServices().getScannersCount())
-        .sum();
+      .map(t -> t.getRegionServer()).mapToInt(rs -> rs.getRSRpcServices().getScannersCount()).sum();
   }
 
   @Test

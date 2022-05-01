@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security;
 
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,7 +29,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 import org.apache.hbase.thirdparty.io.netty.channel.CoalescingBufferQueue;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
-
 
 /**
  * wrap sasl messages.
@@ -53,7 +51,7 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-      throws Exception {
+    throws Exception {
     if (msg instanceof ByteBuf) {
       queue.add((ByteBuf) msg, promise);
     } else {

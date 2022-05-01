@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.hbtop.terminal.Attributes;
 import org.apache.hadoop.hbase.hbtop.terminal.Color;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Represents a single text cell of the terminal.

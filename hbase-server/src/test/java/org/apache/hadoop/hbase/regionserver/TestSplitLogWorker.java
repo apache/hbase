@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -60,18 +59,17 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestSplitLogWorker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitLogWorker.class);
+    HBaseClassTestRule.forClass(TestSplitLogWorker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogWorker.class);
   private static final int WAIT_TIME = 15000;
   private final ServerName MANAGER = ServerName.valueOf("manager,1,1");
-  private final static HBaseTestingUtil TEST_UTIL =
-    new HBaseTestingUtil();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private DummyServer ds;
   private ZKWatcher zkw;
   private SplitLogWorker slw;
@@ -105,29 +103,29 @@ public class TestSplitLogWorker {
   }
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
-      throws Exception {
+    throws Exception {
     assertTrue("ctr=" + ctr.sum() + ", oldval=" + oldval + ", newval=" + newval,
       waitForCounterBoolean(ctr, oldval, newval, timems));
   }
 
   private boolean waitForCounterBoolean(final LongAdder ctr, final long oldval, long newval,
-      long timems) throws Exception {
+    long timems) throws Exception {
 
     return waitForCounterBoolean(ctr, oldval, newval, timems, true);
   }
 
   private boolean waitForCounterBoolean(final LongAdder ctr, final long oldval, final long newval,
-      long timems, boolean failIfTimeout) throws Exception {
+    long timems, boolean failIfTimeout) throws Exception {
 
-    long timeWaited = TEST_UTIL.waitFor(timems, 10, failIfTimeout,
-      new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-            return (ctr.sum() >= newval);
-      }
-    });
+    long timeWaited =
+      TEST_UTIL.waitFor(timems, 10, failIfTimeout, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return (ctr.sum() >= newval);
+        }
+      });
 
-    if( timeWaited > 0) {
+    if (timeWaited > 0) {
       // when not timed out
       assertEquals(newval, ctr.sum());
     }
@@ -138,8 +136,7 @@ public class TestSplitLogWorker {
   public void setup() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
-    zkw = new ZKWatcher(TEST_UTIL.getConfiguration(),
-        "split-log-worker-tests", null);
+    zkw = new ZKWatcher(TEST_UTIL.getConfiguration(), "split-log-worker-tests", null);
     ds = new DummyServer(zkw, conf);
     ZKUtil.deleteChildrenRecursively(zkw, zkw.getZNodePaths().baseZNode);
     ZKUtil.createAndFailSilent(zkw, zkw.getZNodePaths().baseZNode);
@@ -154,8 +151,8 @@ public class TestSplitLogWorker {
 
     SplitLogCounters.resetCounters();
     executorService = new ExecutorService("TestSplitLogWorker");
-    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
-        ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(10));
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(10));
   }
 
   @After
@@ -166,22 +163,21 @@ public class TestSplitLogWorker {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  SplitLogWorker.TaskExecutor neverEndingTask =
-    new SplitLogWorker.TaskExecutor() {
+  SplitLogWorker.TaskExecutor neverEndingTask = new SplitLogWorker.TaskExecutor() {
 
-      @Override
-      public Status exec(String name, CancelableProgressable p) {
-        while (true) {
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException e) {
-            return Status.PREEMPTED;
-          }
-          if (!p.progress()) {
-            return Status.PREEMPTED;
-          }
+    @Override
+    public Status exec(String name, CancelableProgressable p) {
+      while (true) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          return Status.PREEMPTED;
+        }
+        if (!p.progress()) {
+          return Status.PREEMPTED;
         }
       }
+    }
 
   };
 
@@ -193,25 +189,23 @@ public class TestSplitLogWorker {
     final ServerName RS = ServerName.valueOf("rs,1,1");
     RegionServerServices mockedRS = getRegionServer(RS);
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TATAS),
-      new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1")).toByteArray(),
-        Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT);
+      new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1")).toByteArray(), Ids.OPEN_ACL_UNSAFE,
+      CreateMode.PERSISTENT);
 
     SplitLogWorker slw =
-        new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
+      new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
     slw.start();
     try {
       waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, WAIT_TIME);
-      byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS));
+      byte[] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(RS));
     } finally {
-     stopSplitLogWorker(slw);
+      stopSplitLogWorker(slw);
     }
   }
 
-  private void stopSplitLogWorker(final SplitLogWorker slw)
-  throws InterruptedException {
+  private void stopSplitLogWorker(final SplitLogWorker slw) throws InterruptedException {
     if (slw != null) {
       slw.stop();
       slw.worker.join(WAIT_TIME);
@@ -229,14 +223,14 @@ public class TestSplitLogWorker {
     final ServerName SVR1 = ServerName.valueOf("svr1,1,1");
     final ServerName SVR2 = ServerName.valueOf("svr2,1,1");
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TRFT),
-      new SplitLogTask.Unassigned(MANAGER).toByteArray(),
-        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      new SplitLogTask.Unassigned(MANAGER).toByteArray(), Ids.OPEN_ACL_UNSAFE,
+      CreateMode.PERSISTENT);
     RegionServerServices mockedRS1 = getRegionServer(SVR1);
     RegionServerServices mockedRS2 = getRegionServer(SVR2);
     SplitLogWorker slw1 =
-        new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS1, neverEndingTask);
+      new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS1, neverEndingTask);
     SplitLogWorker slw2 =
-        new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS2, neverEndingTask);
+      new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS2, neverEndingTask);
     slw1.start();
     slw2.start();
     try {
@@ -244,9 +238,8 @@ public class TestSplitLogWorker {
       // Assert that either the tot_wkr_failed_to_grab_task_owned count was set of if
       // not it, that we fell through to the next counter in line and it was set.
       assertTrue(waitForCounterBoolean(SplitLogCounters.tot_wkr_failed_to_grab_task_owned, 0, 1,
-          WAIT_TIME, false) ||
-        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.sum() == 1);
-      byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TRFT));
+        WAIT_TIME, false) || SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.sum() == 1);
+      byte[] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TRFT));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(SVR1) || slt.isOwned(SVR2));
     } finally {
@@ -263,7 +256,7 @@ public class TestSplitLogWorker {
     final String PATH = ZKSplitLog.getEncodedNodeName(zkw, "tpt_task");
     RegionServerServices mockedRS = getRegionServer(SRV);
     SplitLogWorker slw =
-        new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
+      new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
     slw.start();
     try {
       Thread.yield(); // let the worker start
@@ -271,13 +264,12 @@ public class TestSplitLogWorker {
       waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, WAIT_TIME);
 
       // this time create a task node after starting the splitLogWorker
-      zkw.getRecoverableZooKeeper().create(PATH,
-        new SplitLogTask.Unassigned(MANAGER).toByteArray(),
+      zkw.getRecoverableZooKeeper().create(PATH, new SplitLogTask.Unassigned(MANAGER).toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
       waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, WAIT_TIME);
       assertEquals(1, slw.getTaskReadySeq());
-      byte [] bytes = ZKUtil.getData(zkw, PATH);
+      byte[] bytes = ZKUtil.getData(zkw, PATH);
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(SRV));
       slt = new SplitLogTask.Owned(MANAGER);
@@ -296,15 +288,14 @@ public class TestSplitLogWorker {
     final String PATH1 = ZKSplitLog.getEncodedNodeName(zkw, "tmt_task");
     RegionServerServices mockedRS = getRegionServer(SRV);
     SplitLogWorker slw =
-        new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
+      new SplitLogWorker(ds, TEST_UTIL.getConfiguration(), mockedRS, neverEndingTask);
     slw.start();
     try {
       Thread.yield(); // let the worker start
       Thread.sleep(100);
       waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, WAIT_TIME);
 
-      SplitLogTask unassignedManager =
-        new SplitLogTask.Unassigned(MANAGER);
+      SplitLogTask unassignedManager = new SplitLogTask.Unassigned(MANAGER);
       zkw.getRecoverableZooKeeper().create(PATH1, unassignedManager.toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
@@ -324,7 +315,7 @@ public class TestSplitLogWorker {
 
       waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 1, 2, WAIT_TIME);
       assertEquals(2, slw.getTaskReadySeq());
-      byte [] bytes = ZKUtil.getData(zkw, PATH2);
+      byte[] bytes = ZKUtil.getData(zkw, PATH2);
       slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(SRV));
     } finally {
@@ -345,7 +336,7 @@ public class TestSplitLogWorker {
 
     String task = ZKSplitLog.getEncodedNodeName(zkw, "task");
     SplitLogTask slt = new SplitLogTask.Unassigned(MANAGER);
-    zkw.getRecoverableZooKeeper().create(task,slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
+    zkw.getRecoverableZooKeeper().create(task, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
       CreateMode.PERSISTENT);
 
     waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, WAIT_TIME);
@@ -376,8 +367,8 @@ public class TestSplitLogWorker {
       if (node.startsWith("RESCAN")) {
         String name = ZKSplitLog.getEncodedNodeName(zkw, node);
         String fn = ZKSplitLog.getFileName(name);
-        byte [] data = ZKUtil.getData(zkw,
-                ZNodePaths.joinZNode(zkw.getZNodePaths().splitLogZNode, fn));
+        byte[] data =
+          ZKUtil.getData(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().splitLogZNode, fn));
         slt = SplitLogTask.parseFrom(data);
         assertTrue(slt.toString(), slt.isDone(SRV));
       }
@@ -398,7 +389,7 @@ public class TestSplitLogWorker {
     for (int i = 0; i < maxTasks; i++) {
       zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, TATAS + i),
         new SplitLogTask.Unassigned(ServerName.valueOf("mgr,1,1")).toByteArray(),
-          Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
 
     SplitLogWorker slw = new SplitLogWorker(ds, testConf, mockedRS, neverEndingTask);

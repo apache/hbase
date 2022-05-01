@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,19 +41,18 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestTaskMonitor {
   private static final Logger LOG = LoggerFactory.getLogger(TestTaskMonitor.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTaskMonitor.class);
+    HBaseClassTestRule.forClass(TestTaskMonitor.class);
 
   @Test
   public void testTaskMonitorBasics() {
     TaskMonitor tm = new TaskMonitor(new Configuration());
-    assertTrue("Task monitor should start empty",
-        tm.getTasks().isEmpty());
+    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
 
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
@@ -80,8 +80,7 @@ public class TestTaskMonitor {
   @Test
   public void testTasksGetAbortedOnLeak() throws InterruptedException {
     final TaskMonitor tm = new TaskMonitor(new Configuration());
-    assertTrue("Task monitor should start empty",
-        tm.getTasks().isEmpty());
+    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
 
     final AtomicBoolean threadSuccess = new AtomicBoolean(false);
     // Make a task in some other thread and leak it
@@ -128,15 +127,15 @@ public class TestTaskMonitor {
   public void testDoNotPurgeRPCTask() throws Exception {
     int RPCTaskNums = 10;
     TaskMonitor tm = TaskMonitor.get();
-    for(int i = 0; i < RPCTaskNums; i++) {
+    for (int i = 0; i < RPCTaskNums; i++) {
       tm.createRPCStatus("PRCTask" + i);
     }
-    for(int i = 0; i < TaskMonitor.DEFAULT_MAX_TASKS; i++) {
+    for (int i = 0; i < TaskMonitor.DEFAULT_MAX_TASKS; i++) {
       tm.createStatus("otherTask" + i);
     }
     int remainRPCTask = 0;
-    for(MonitoredTask task: tm.getTasks()) {
-      if(task instanceof MonitoredRPCHandler) {
+    for (MonitoredTask task : tm.getTasks()) {
+      if (task instanceof MonitoredRPCHandler) {
         remainRPCTask++;
       }
     }
@@ -187,11 +186,11 @@ public class TestTaskMonitor {
     Mutation m = new Put(row);
     Query q = new Scan();
     String notOperation = "for test";
-    rpcHandlers.get(0).setRPC("operations", new Object[]{ m, q }, 3000);
-    rpcHandlers.get(1).setRPC("operations", new Object[]{ m, q }, 3000);
-    rpcHandlers.get(2).setRPC("operations", new Object[]{ m, q }, 3000);
-    rpcHandlers.get(3).setRPC("operations", new Object[]{ notOperation }, 3000);
-    rpcHandlers.get(4).setRPC("operations", new Object[]{ m, q }, 3000);
+    rpcHandlers.get(0).setRPC("operations", new Object[] { m, q }, 3000);
+    rpcHandlers.get(1).setRPC("operations", new Object[] { m, q }, 3000);
+    rpcHandlers.get(2).setRPC("operations", new Object[] { m, q }, 3000);
+    rpcHandlers.get(3).setRPC("operations", new Object[] { notOperation }, 3000);
+    rpcHandlers.get(4).setRPC("operations", new Object[] { m, q }, 3000);
     MonitoredRPCHandler completed = rpcHandlers.get(4);
     completed.markComplete("Completed!");
     // Test get tasks with filter
@@ -238,7 +237,7 @@ public class TestTaskMonitor {
     MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl();
     monitor.abort("abort RPC");
     TestParam testParam = new TestParam("param1");
-    monitor.setRPC("method1", new Object[]{ testParam }, 0);
+    monitor.setRPC("method1", new Object[] { testParam }, 0);
     MonitoredRPCHandlerImpl clone = monitor.clone();
     assertEquals(clone.getDescription(), monitor.getDescription());
     assertEquals(clone.getState(), monitor.getState());
@@ -265,10 +264,9 @@ public class TestTaskMonitor {
       String.valueOf(((Map<String, Object>) clone.toMap().get("rpcCall")).get("params")));
 
     monitor.resume("resume");
-    monitor.setRPC("method2", new Object[]{new TestParam("param2")}, 1);
+    monitor.setRPC("method2", new Object[] { new TestParam("param2") }, 1);
     assertNotEquals(((Map<String, Object>) clone.toMap().get("rpcCall")).get("params"),
-      ((Map<String, Object>) monitor.toMap().get("rpcCall")).get(
-        "params"));
+      ((Map<String, Object>) monitor.toMap().get("rpcCall")).get("params"));
     LOG.info(String.valueOf(clone.toMap()));
     LOG.info(String.valueOf(monitor.toMap()));
     assertNotEquals(clone.toString(), monitor.toString());
@@ -294,4 +292,3 @@ public class TestTaskMonitor {
     }
   }
 }
-

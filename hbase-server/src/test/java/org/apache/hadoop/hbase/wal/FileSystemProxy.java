@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.wal;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,10 +29,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
 /**
- * Create a non-abstract "proxy" for FileSystem because FileSystem is an
- * abstract class and not an interface. Only interfaces can be used with the
- * Java Proxy class to override functionality via an InvocationHandler.
- *
+ * Create a non-abstract "proxy" for FileSystem because FileSystem is an abstract class and not an
+ * interface. Only interfaces can be used with the Java Proxy class to override functionality via an
+ * InvocationHandler.
  */
 public class FileSystemProxy extends FileSystem {
   private final FileSystem real;
@@ -58,13 +56,14 @@ public class FileSystemProxy extends FileSystem {
   }
 
   @Override
-  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable progress) throws IOException {
+  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite,
+    int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
     return real.create(f, permission, overwrite, bufferSize, replication, blockSize, progress);
   }
 
   @Override
-  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
+  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress)
+    throws IOException {
     return real.append(f, bufferSize, progress);
   }
 

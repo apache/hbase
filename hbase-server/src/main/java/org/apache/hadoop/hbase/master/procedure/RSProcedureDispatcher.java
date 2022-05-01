@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,13 +57,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RemoteProce
  * A remote procecdure dispatcher for regionservers.
  */
 @InterfaceAudience.Private
-public class RSProcedureDispatcher
-    extends RemoteProcedureDispatcher<MasterProcedureEnv, ServerName>
-    implements ServerListener {
+public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProcedureEnv, ServerName>
+  implements ServerListener {
   private static final Logger LOG = LoggerFactory.getLogger(RSProcedureDispatcher.class);
 
   public static final String RS_RPC_STARTUP_WAIT_TIME_CONF_KEY =
-      "hbase.regionserver.rpc.startup.waittime";
+    "hbase.regionserver.rpc.startup.waittime";
   private static final int DEFAULT_RS_RPC_STARTUP_WAIT_TIME = 60000;
 
   protected final MasterServices master;
@@ -74,8 +73,8 @@ public class RSProcedureDispatcher
     super(master.getConfiguration());
 
     this.master = master;
-    this.rsStartupWaitTime = master.getConfiguration().getLong(
-      RS_RPC_STARTUP_WAIT_TIME_CONF_KEY, DEFAULT_RS_RPC_STARTUP_WAIT_TIME);
+    this.rsStartupWaitTime = master.getConfiguration().getLong(RS_RPC_STARTUP_WAIT_TIME_CONF_KEY,
+      DEFAULT_RS_RPC_STARTUP_WAIT_TIME);
   }
 
   @Override
@@ -146,7 +145,7 @@ public class RSProcedureDispatcher
 
   @Override
   protected void remoteDispatch(final ServerName serverName,
-      final Set<RemoteProcedure> remoteProcedures) {
+    final Set<RemoteProcedure> remoteProcedures) {
     if (!master.getServerManager().isServerOnline(serverName)) {
       // fail fast
       submitTask(new DeadRSRemoteCall(serverName, remoteProcedures));
@@ -157,10 +156,10 @@ public class RSProcedureDispatcher
 
   @Override
   protected void abortPendingOperations(final ServerName serverName,
-      final Set<RemoteProcedure> operations) {
+    final Set<RemoteProcedure> operations) {
     // TODO: Replace with a ServerNotOnlineException()
     final IOException e = new DoNotRetryIOException("server not online " + serverName);
-    for (RemoteProcedure proc: operations) {
+    for (RemoteProcedure proc : operations) {
       proc.remoteCallFailed(procedureEnv, serverName, e);
     }
   }
@@ -190,10 +189,10 @@ public class RSProcedureDispatcher
    * {@link RegionCloseOperation}s.
    * @param serverName RegionServer to which the remote operations are sent
    * @param operations Remote procedures which are dispatched to the given server
-   * @param resolver Used to dispatch remote procedures to given server.
+   * @param resolver   Used to dispatch remote procedures to given server.
    */
   public void splitAndResolveOperation(ServerName serverName, Set<RemoteProcedure> operations,
-      RemoteProcedureResolver resolver) {
+    RemoteProcedureResolver resolver) {
     MasterProcedureEnv env = master.getMasterProcedureExecutor().getEnvironment();
     ArrayListMultimap<Class<?>, RemoteOperation> reqsByType =
       buildAndGroupRequestByType(env, serverName, operations);
@@ -232,7 +231,7 @@ public class RSProcedureDispatcher
   }
 
   // ==========================================================================
-  //  Compatibility calls
+  // Compatibility calls
   // ==========================================================================
   protected class ExecuteProceduresRemoteCall implements RemoteProcedureResolver, Runnable {
 
@@ -245,20 +244,20 @@ public class RSProcedureDispatcher
 
     private final long rsRpcRetryInterval;
     private static final String RS_RPC_RETRY_INTERVAL_CONF_KEY =
-        "hbase.regionserver.rpc.retry.interval";
+      "hbase.regionserver.rpc.retry.interval";
     private static final int DEFAULT_RS_RPC_RETRY_INTERVAL = 100;
 
     private ExecuteProceduresRequest.Builder request = null;
 
     public ExecuteProceduresRemoteCall(final ServerName serverName,
-        final Set<RemoteProcedure> remoteProcedures) {
+      final Set<RemoteProcedure> remoteProcedures) {
       this.serverName = serverName;
       this.remoteProcedures = remoteProcedures;
       this.rsRpcRetryInterval = master.getConfiguration().getLong(RS_RPC_RETRY_INTERVAL_CONF_KEY,
         DEFAULT_RS_RPC_RETRY_INTERVAL);
     }
 
-    private AsyncRegionServerAdmin  getRsAdmin() throws IOException {
+    private AsyncRegionServerAdmin getRsAdmin() throws IOException {
       return master.getAsyncClusterConnection().getRegionServerAdmin(serverName);
     }
 
@@ -272,8 +271,8 @@ public class RSProcedureDispatcher
       if (e instanceof ServerNotRunningYetException) {
         long remainingTime = getMaxWaitTime() - EnvironmentEdgeManager.currentTime();
         if (remainingTime > 0) {
-          LOG.warn("Waiting a little before retrying {}, try={}, can wait up to {}ms",
-            serverName, numberOfAttemptsSoFar, remainingTime);
+          LOG.warn("Waiting a little before retrying {}, try={}, can wait up to {}ms", serverName,
+            numberOfAttemptsSoFar, remainingTime);
           numberOfAttemptsSoFar++;
           // Retry every rsRpcRetryInterval millis up to maximum wait time.
           submitTask(this, rsRpcRetryInterval, TimeUnit.MILLISECONDS);
@@ -284,8 +283,8 @@ public class RSProcedureDispatcher
         return false;
       }
       if (e instanceof DoNotRetryIOException) {
-        LOG.warn("{} tells us DoNotRetry due to {}, try={}, give up", serverName,
-          e.toString(), numberOfAttemptsSoFar);
+        LOG.warn("{} tells us DoNotRetry due to {}, try={}, give up", serverName, e.toString(),
+          numberOfAttemptsSoFar);
         return false;
       }
       // This exception is thrown in the rpc framework, where we can make sure that the call has not
@@ -297,8 +296,8 @@ public class RSProcedureDispatcher
       // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
       // double assign...
       if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
-        LOG.warn("request to {} failed due to {}, try={}, this usually because" +
-          " server is overloaded, give up", serverName, e.toString(), numberOfAttemptsSoFar);
+        LOG.warn("request to {} failed due to {}, try={}, this usually because"
+          + " server is overloaded, give up", serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
       // Always retry for other exception types if the region server is not dead yet.
@@ -312,11 +311,11 @@ public class RSProcedureDispatcher
         // background task to check whether the region server is dead. And if it is dead, call
         // remoteCallFailed to tell the upper layer. Keep retrying here does not lead to incorrect
         // result, but waste some resources.
-        LOG.warn("{} is aborted or stopped, for safety we still need to" +
-          " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
+        LOG.warn("{} is aborted or stopped, for safety we still need to"
+          + " wait until it is fully dead, try={}", serverName, numberOfAttemptsSoFar);
       } else {
-        LOG.warn("request to {} failed due to {}, try={}, retrying...", serverName,
-          e.toString(), numberOfAttemptsSoFar);
+        LOG.warn("request to {} failed due to {}, try={}, retrying...", serverName, e.toString(),
+          numberOfAttemptsSoFar);
       }
       numberOfAttemptsSoFar++;
       // Add some backoff here as the attempts rise otherwise if a stuck condition, will fill logs
@@ -341,7 +340,7 @@ public class RSProcedureDispatcher
 
     private IOException unwrapException(IOException e) {
       if (e instanceof RemoteException) {
-        e = ((RemoteException)e).unwrapRemoteException();
+        e = ((RemoteException) e).unwrapRemoteException();
       }
       return e;
     }
@@ -368,14 +367,14 @@ public class RSProcedureDispatcher
 
     @Override
     public void dispatchOpenRequests(final MasterProcedureEnv env,
-        final List<RegionOpenOperation> operations) {
+      final List<RegionOpenOperation> operations) {
       request.addOpenRegion(buildOpenRegionRequest(env, getServerName(), operations));
     }
 
     @Override
     public void dispatchCloseRequests(final MasterProcedureEnv env,
-        final List<RegionCloseOperation> operations) {
-      for (RegionCloseOperation op: operations) {
+      final List<RegionCloseOperation> operations) {
+      for (RegionCloseOperation op : operations) {
         request.addCloseRegion(op.buildCloseRegionRequest(getServerName()));
       }
     }
@@ -387,7 +386,7 @@ public class RSProcedureDispatcher
 
     // will be overridden in test.
     protected ExecuteProceduresResponse sendRequest(final ServerName serverName,
-        final ExecuteProceduresRequest request) throws IOException {
+      final ExecuteProceduresRequest request) throws IOException {
       return FutureUtils.get(getRsAdmin().executeProcedures(request));
     }
 
@@ -399,20 +398,20 @@ public class RSProcedureDispatcher
   }
 
   private static OpenRegionRequest buildOpenRegionRequest(final MasterProcedureEnv env,
-      final ServerName serverName, final List<RegionOpenOperation> operations) {
+    final ServerName serverName, final List<RegionOpenOperation> operations) {
     final OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
     builder.setServerStartCode(serverName.getStartcode());
     builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
-    for (RegionOpenOperation op: operations) {
+    for (RegionOpenOperation op : operations) {
       builder.addOpenInfo(op.buildRegionOpenInfoRequest(env));
     }
     return builder.build();
   }
 
   // ==========================================================================
-  //  RPC Messages
-  //  - ServerOperation: refreshConfig, grant, revoke, ... (TODO)
-  //  - RegionOperation: open, close, flush, snapshot, ...
+  // RPC Messages
+  // - ServerOperation: refreshConfig, grant, revoke, ... (TODO)
+  // - RegionOperation: open, close, flush, snapshot, ...
   // ==========================================================================
 
   public static final class ServerOperation extends RemoteOperation {
@@ -424,7 +423,7 @@ public class RSProcedureDispatcher
     private final byte[] rsProcData;
 
     public ServerOperation(RemoteProcedure remoteProcedure, long procId, Class<?> rsProcClass,
-        byte[] rsProcData) {
+      byte[] rsProcData) {
       super(remoteProcedure);
       this.procId = procId;
       this.rsProcClass = rsProcClass;
@@ -433,7 +432,7 @@ public class RSProcedureDispatcher
 
     public RemoteProcedureRequest buildRequest() {
       return RemoteProcedureRequest.newBuilder().setProcId(procId)
-          .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData)).build();
+        .setProcClass(rsProcClass.getName()).setProcData(ByteString.copyFrom(rsProcData)).build();
     }
   }
 
@@ -451,12 +450,12 @@ public class RSProcedureDispatcher
   public static class RegionOpenOperation extends RegionOperation {
 
     public RegionOpenOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo,
-        long procId) {
+      long procId) {
       super(remoteProcedure, regionInfo, procId);
     }
 
-    public OpenRegionRequest.RegionOpenInfo buildRegionOpenInfoRequest(
-        final MasterProcedureEnv env) {
+    public OpenRegionRequest.RegionOpenInfo
+      buildRegionOpenInfoRequest(final MasterProcedureEnv env) {
       return RequestConverter.buildRegionOpenInfo(regionInfo,
         env.getAssignmentManager().getFavoredNodes(regionInfo), procId);
     }
@@ -466,7 +465,7 @@ public class RSProcedureDispatcher
     private final ServerName destinationServer;
 
     public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
-        ServerName destinationServer) {
+      ServerName destinationServer) {
       super(remoteProcedure, regionInfo, procId);
       this.destinationServer = destinationServer;
     }

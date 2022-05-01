@@ -27,16 +27,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsReplicationSourceFactoryImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsReplicationSourceFactoryImpl.class);
+    HBaseClassTestRule.forClass(TestMetricsReplicationSourceFactoryImpl.class);
 
   @Test
   public void testGetInstance() {
-    MetricsReplicationSourceFactory rms = CompatibilitySingletonFactory
-        .getInstance(MetricsReplicationSourceFactory.class);
+    MetricsReplicationSourceFactory rms =
+      CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class);
     assertTrue(rms instanceof MetricsReplicationSourceFactoryImpl);
   }
 }

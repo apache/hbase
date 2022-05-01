@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,25 +31,24 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests various scan start and stop row scenarios. This is set in a scan and
- * tested in a MapReduce job to see if that is handed over and done properly
- * too.
+ * Tests various scan start and stop row scenarios. This is set in a scan and tested in a MapReduce
+ * job to see if that is handed over and done properly too.
  */
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestMultiTableInputFormat extends MultiTableInputFormatTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiTableInputFormat.class);
+    HBaseClassTestRule.forClass(TestMultiTableInputFormat.class);
 
   @BeforeClass
   public static void setupLogging() {
     Log4jUtils.enableDebug(MultiTableInputFormat.class);
   }
 
-    @Override
+  @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
-    TableMapReduceUtil.initTableMapperJob(scans, ScanMapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+    TableMapReduceUtil.initTableMapperJob(scans, ScanMapper.class, ImmutableBytesWritable.class,
+      ImmutableBytesWritable.class, job);
   }
 }

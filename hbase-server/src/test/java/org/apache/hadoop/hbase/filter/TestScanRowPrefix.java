@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,15 +44,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Test if Scan.setStartStopRowForPrefixScan works as intended.
  */
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestScanRowPrefix extends FilterTestingCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanRowPrefix.class);
+    HBaseClassTestRule.forClass(TestScanRowPrefix.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestScanRowPrefix.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScanRowPrefix.class);
 
   @Rule
   public TestName name = new TestName();
@@ -60,29 +59,28 @@ public class TestScanRowPrefix extends FilterTestingCluster {
   @Test
   public void testPrefixScanning() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    createTable(tableName,"F");
+    createTable(tableName, "F");
     Table table = openTable(tableName);
 
     /**
-     * Note that about half of these tests were relevant for a different implementation approach
-     * of setStartStopRowForPrefixScan. These test cases have been retained to ensure that also the
+     * Note that about half of these tests were relevant for a different implementation approach of
+     * setStartStopRowForPrefixScan. These test cases have been retained to ensure that also the
      * edge cases found there are still covered.
      */
 
-    final byte[][] rowIds = {
-        {(byte) 0x11},                                                      //  0
-        {(byte) 0x12},                                                      //  1
-        {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFE},               //  2
-        {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF},               //  3
-        {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF, (byte) 0x00},  //  4
-        {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF, (byte) 0x01},  //  5
-        {(byte) 0x12, (byte) 0x24},                                         //  6
-        {(byte) 0x12, (byte) 0x24, (byte) 0x00},                            //  7
-        {(byte) 0x12, (byte) 0x24, (byte) 0x00, (byte) 0x00},               //  8
-        {(byte) 0x12, (byte) 0x25},                                         //  9
-        {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF},  // 10
+    final byte[][] rowIds = { { (byte) 0x11 }, // 0
+      { (byte) 0x12 }, // 1
+      { (byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFE }, // 2
+      { (byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF }, // 3
+      { (byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF, (byte) 0x00 }, // 4
+      { (byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF, (byte) 0x01 }, // 5
+      { (byte) 0x12, (byte) 0x24 }, // 6
+      { (byte) 0x12, (byte) 0x24, (byte) 0x00 }, // 7
+      { (byte) 0x12, (byte) 0x24, (byte) 0x00, (byte) 0x00 }, // 8
+      { (byte) 0x12, (byte) 0x25 }, // 9
+      { (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF }, // 10
     };
-    for (byte[] rowId: rowIds) {
+    for (byte[] rowId : rowIds) {
       Put p = new Put(rowId);
       // Use the rowId as the column qualifier
       p.addColumn(Bytes.toBytes("F"), rowId, Bytes.toBytes("Dummy value"));
@@ -93,26 +91,26 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     List<byte[]> expected0 = new ArrayList<>(16);
     expected0.addAll(Arrays.asList(rowIds)); // Expect all rows
 
-    byte[] prefix1 = {(byte) 0x12, (byte) 0x23};
+    byte[] prefix1 = { (byte) 0x12, (byte) 0x23 };
     List<byte[]> expected1 = new ArrayList<>(16);
     expected1.add(rowIds[2]);
     expected1.add(rowIds[3]);
     expected1.add(rowIds[4]);
     expected1.add(rowIds[5]);
 
-    byte[] prefix2 = {(byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF};
+    byte[] prefix2 = { (byte) 0x12, (byte) 0x23, (byte) 0xFF, (byte) 0xFF };
     List<byte[]> expected2 = new ArrayList<>();
     expected2.add(rowIds[3]);
     expected2.add(rowIds[4]);
     expected2.add(rowIds[5]);
 
-    byte[] prefix3 = {(byte) 0x12, (byte) 0x24};
+    byte[] prefix3 = { (byte) 0x12, (byte) 0x24 };
     List<byte[]> expected3 = new ArrayList<>();
     expected3.add(rowIds[6]);
     expected3.add(rowIds[7]);
     expected3.add(rowIds[8]);
 
-    byte[] prefix4 = {(byte) 0xFF, (byte) 0xFF};
+    byte[] prefix4 = { (byte) 0xFF, (byte) 0xFF };
     List<byte[]> expected4 = new ArrayList<>();
     expected4.add(rowIds[10]);
 
@@ -216,15 +214,11 @@ public class TestScanRowPrefix extends FilterTestingCluster {
 
       String fullMessage = message;
       if (LOG.isDebugEnabled()) {
-        fullMessage = message + "\n" + tableOfTwoListsOfByteArrays(
-                "Expected", expectedKeys,
-                "Actual  ", actualKeys);
+        fullMessage = message + "\n"
+          + tableOfTwoListsOfByteArrays("Expected", expectedKeys, "Actual  ", actualKeys);
       }
 
-      Assert.assertArrayEquals(
-              fullMessage,
-              expectedKeys.toArray(),
-              actualKeys.toArray());
+      Assert.assertArrayEquals(fullMessage, expectedKeys.toArray(), actualKeys.toArray());
     } catch (IOException e) {
       e.printStackTrace();
       Assert.fail();
@@ -239,9 +233,8 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     return sb.toString();
   }
 
-  private String tableOfTwoListsOfByteArrays(
-          String label1, List<byte[]> listOfBytes1,
-          String label2, List<byte[]> listOfBytes2) {
+  private String tableOfTwoListsOfByteArrays(String label1, List<byte[]> listOfBytes1,
+    String label2, List<byte[]> listOfBytes2) {
     int margin1 = calculateWidth(label1, listOfBytes1);
     int margin2 = calculateWidth(label2, listOfBytes2);
 
@@ -261,11 +254,8 @@ public class TestScanRowPrefix extends FilterTestingCluster {
   }
 
   private String printLine(String leftValue, int leftWidth1, String rightValue, int rightWidth) {
-    return "| " +
-           leftValue  + printMultiple(' ', leftWidth1 - leftValue.length() ) +
-           " | " +
-           rightValue + printMultiple(' ', rightWidth - rightValue.length()) +
-           " |";
+    return "| " + leftValue + printMultiple(' ', leftWidth1 - leftValue.length()) + " | "
+      + rightValue + printMultiple(' ', rightWidth - rightValue.length()) + " |";
   }
 
   private int calculateWidth(String label1, List<byte[]> listOfBytes1) {

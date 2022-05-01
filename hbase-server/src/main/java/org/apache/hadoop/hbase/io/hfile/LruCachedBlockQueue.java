@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,17 +24,15 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
- * A memory-bound queue that will grow until an element brings
- * total size &gt;= maxSize.  From then on, only entries that are sorted larger
- * than the smallest current entry will be inserted/replaced.
- *
- * <p>Use this when you want to find the largest elements (according to their
- * ordering, not their heap size) that consume as close to the specified
- * maxSize as possible.  Default behavior is to grow just above rather than
- * just below specified max.
- *
- * <p>Object used in this queue must implement {@link HeapSize} as well as
- * {@link Comparable}.
+ * A memory-bound queue that will grow until an element brings total size &gt;= maxSize. From then
+ * on, only entries that are sorted larger than the smallest current entry will be
+ * inserted/replaced.
+ * <p>
+ * Use this when you want to find the largest elements (according to their ordering, not their heap
+ * size) that consume as close to the specified maxSize as possible. Default behavior is to grow
+ * just above rather than just below specified max.
+ * <p>
+ * Object used in this queue must implement {@link HeapSize} as well as {@link Comparable}.
  */
 @InterfaceAudience.Private
 public class LruCachedBlockQueue implements HeapSize {
@@ -46,7 +43,7 @@ public class LruCachedBlockQueue implements HeapSize {
   private long maxSize;
 
   /**
-   * @param maxSize the target size of elements in the queue
+   * @param maxSize   the target size of elements in the queue
    * @param blockSize expected average size of blocks
    */
   public LruCachedBlockQueue(long maxSize, long blockSize) {
@@ -63,16 +60,16 @@ public class LruCachedBlockQueue implements HeapSize {
 
   /**
    * Attempt to add the specified cached block to this queue.
-   *
-   * <p>If the queue is smaller than the max size, or if the specified element
-   * is ordered before the smallest element in the queue, the element will be
-   * added to the queue.  Otherwise, there is no side effect of this call.
+   * <p>
+   * If the queue is smaller than the max size, or if the specified element is ordered before the
+   * smallest element in the queue, the element will be added to the queue. Otherwise, there is no
+   * side effect of this call.
    * @param cb block to try to add to the queue
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-    justification = "head can not be null as heapSize is greater than maxSize,"
-      + " which means we have something in the queue")
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "head can not be null as heapSize is greater than maxSize,"
+        + " which means we have something in the queue")
   public void add(LruCachedBlock cb) {
     if (heapSize < maxSize) {
       queue.add(cb);
@@ -93,16 +90,14 @@ public class LruCachedBlockQueue implements HeapSize {
   }
 
   /**
-   * @return The next element in this queue, or {@code null} if the queue is
-   * empty.
+   * @return The next element in this queue, or {@code null} if the queue is empty.
    */
   public LruCachedBlock poll() {
     return queue.poll();
   }
 
   /**
-   * @return The last element in this queue, or {@code null} if the queue is
-   * empty.
+   * @return The last element in this queue, or {@code null} if the queue is empty.
    */
   public LruCachedBlock pollLast() {
     return queue.pollLast();

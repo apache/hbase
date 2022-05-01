@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,23 +48,22 @@ import org.junit.experimental.categories.Category;
 /**
  * Simple testing of a few WAL methods.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALMethods {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALMethods.class);
+    HBaseClassTestRule.forClass(TestWALMethods.class);
 
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");
-  private static final TableName TEST_TABLE =
-      TableName.valueOf("test_table");
+  private static final TableName TEST_TABLE = TableName.valueOf("test_table");
 
   private final HBaseTestingUtil util = new HBaseTestingUtil();
 
   @Test
   public void testServerNameFromWAL() throws Exception {
     Path walPath = new Path("/hbase/WALs/regionserver-2.example.com,22101,1487767381290",
-        "regionserver-2.example.com%2C22101%2C1487767381290.null0.1487785392316");
+      "regionserver-2.example.com%2C22101%2C1487767381290.null0.1487785392316");
     ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
     assertEquals(ServerName.valueOf("regionserver-2.example.com", 22101, 1487767381290L), name);
   }
@@ -72,18 +71,18 @@ public class TestWALMethods {
   @Test
   public void testServerNameFromTestWAL() throws Exception {
     Path walPath = new Path(
-        "/user/example/test-data/12ff1404-68c6-4715-a4b9-775e763842bc/WALs/TestWALRecordReader",
-        "TestWALRecordReader.default.1487787939118");
+      "/user/example/test-data/12ff1404-68c6-4715-a4b9-775e763842bc/WALs/TestWALRecordReader",
+      "TestWALRecordReader.default.1487787939118");
     ServerName name = AbstractFSWALProvider.getServerNameFromWALDirectoryName(walPath);
     assertNull(name);
   }
 
   /**
-   * Assert that getSplitEditFilesSorted returns files in expected order and
-   * that it skips moved-aside files.
-   * @throws IOException
+   * Assert that getSplitEditFilesSorted returns files in expected order and that it skips
+   * moved-aside files. n
    */
-  @Test public void testGetSplitEditFilesSorted() throws IOException {
+  @Test
+  public void testGetSplitEditFilesSorted() throws IOException {
     FileSystem fs = FileSystem.get(util.getConfiguration());
     Path regiondir = util.getDataTestDir("regiondir");
     fs.delete(regiondir, true);
@@ -93,11 +92,9 @@ public class TestWALMethods {
     createFile(fs, recoverededits, first);
     createFile(fs, recoverededits, WALSplitUtil.formatRecoveredEditsFileName(0));
     createFile(fs, recoverededits, WALSplitUtil.formatRecoveredEditsFileName(1));
-    createFile(fs, recoverededits, WALSplitUtil
-        .formatRecoveredEditsFileName(11));
+    createFile(fs, recoverededits, WALSplitUtil.formatRecoveredEditsFileName(11));
     createFile(fs, recoverededits, WALSplitUtil.formatRecoveredEditsFileName(2));
-    createFile(fs, recoverededits, WALSplitUtil
-        .formatRecoveredEditsFileName(50));
+    createFile(fs, recoverededits, WALSplitUtil.formatRecoveredEditsFileName(50));
     String last = WALSplitUtil.formatRecoveredEditsFileName(Long.MAX_VALUE);
     createFile(fs, recoverededits, last);
     createFile(fs, recoverededits,
@@ -111,31 +108,22 @@ public class TestWALMethods {
     assertEquals(7, files.size());
     assertEquals(files.pollFirst().getName(), first);
     assertEquals(files.pollLast().getName(), last);
-    assertEquals(files.pollFirst().getName(),
-        WALSplitUtil
-        .formatRecoveredEditsFileName(0));
-    assertEquals(files.pollFirst().getName(),
-        WALSplitUtil
-        .formatRecoveredEditsFileName(1));
-    assertEquals(files.pollFirst().getName(),
-        WALSplitUtil
-        .formatRecoveredEditsFileName(2));
-    assertEquals(files.pollFirst().getName(),
-        WALSplitUtil
-        .formatRecoveredEditsFileName(11));
+    assertEquals(files.pollFirst().getName(), WALSplitUtil.formatRecoveredEditsFileName(0));
+    assertEquals(files.pollFirst().getName(), WALSplitUtil.formatRecoveredEditsFileName(1));
+    assertEquals(files.pollFirst().getName(), WALSplitUtil.formatRecoveredEditsFileName(2));
+    assertEquals(files.pollFirst().getName(), WALSplitUtil.formatRecoveredEditsFileName(11));
   }
 
-  private void createFile(final FileSystem fs, final Path testdir,
-      final String name)
-  throws IOException {
+  private void createFile(final FileSystem fs, final Path testdir, final String name)
+    throws IOException {
     FSDataOutputStream fdos = fs.create(new Path(testdir, name), true);
     fdos.close();
   }
 
   @Test
   public void testRegionEntryBuffer() throws Exception {
-    EntryBuffers.RegionEntryBuffer reb = new EntryBuffers.RegionEntryBuffer(
-        TEST_TABLE, TEST_REGION);
+    EntryBuffers.RegionEntryBuffer reb =
+      new EntryBuffers.RegionEntryBuffer(TEST_TABLE, TEST_REGION);
     assertEquals(0, reb.heapSize());
 
     reb.appendEntry(createTestLogEntry(1));
@@ -144,7 +132,7 @@ public class TestWALMethods {
 
   @Test
   public void testEntrySink() throws Exception {
-    EntryBuffers sink = new EntryBuffers(new PipelineController(), 1*1024*1024);
+    EntryBuffers sink = new EntryBuffers(new PipelineController(), 1 * 1024 * 1024);
     for (int i = 0; i < 1000; i++) {
       WAL.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);
@@ -189,11 +177,10 @@ public class TestWALMethods {
 
     WALEdit edit = new WALEdit();
     edit.add(KeyValueTestUtil.create("row", "fam", "qual", 1234, "val"));
-    WALKeyImpl key = new WALKeyImpl(TEST_REGION, TEST_TABLE, seq, now,
-        HConstants.DEFAULT_CLUSTER_ID);
+    WALKeyImpl key =
+      new WALKeyImpl(TEST_REGION, TEST_TABLE, seq, now, HConstants.DEFAULT_CLUSTER_ID);
     WAL.Entry entry = new WAL.Entry(key, edit);
     return entry;
   }
 
 }
-

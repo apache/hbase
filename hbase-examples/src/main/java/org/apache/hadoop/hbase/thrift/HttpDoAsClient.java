@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +73,7 @@ public class HttpDoAsClient {
     if (args.length < 3 || args.length > 6) {
       System.out.println("Invalid arguments!");
       System.out.println(
-          "Usage: HttpDoAsClient host port doAsUserName [security=true] [principal] [keytab]");
+        "Usage: HttpDoAsClient host port doAsUserName [security=true] [principal] [keytab]");
       System.exit(-1);
     }
 
@@ -96,14 +95,13 @@ public class HttpDoAsClient {
     }
 
     final HttpDoAsClient client = new HttpDoAsClient();
-    Subject.doAs(getSubject(),
-        new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            client.run();
-            return null;
-          }
-        });
+    Subject.doAs(getSubject(), new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        client.run();
+        return null;
+      }
+    });
   }
 
   HttpDoAsClient() {
@@ -166,11 +164,11 @@ public class HttpDoAsClient {
     }
 
     System.out.println("column families in " + ClientUtils.utf8(t) + ": ");
-    Map<ByteBuffer, ColumnDescriptor> columnMap = refresh(client, httpClient)
-        .getColumnDescriptors(ByteBuffer.wrap(t));
+    Map<ByteBuffer, ColumnDescriptor> columnMap =
+      refresh(client, httpClient).getColumnDescriptors(ByteBuffer.wrap(t));
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
-          + col2.maxVersions);
+      System.out.println(
+        "  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
     }
 
     transport.close();
@@ -194,19 +192,14 @@ public class HttpDoAsClient {
     // Oid for kerberos principal name
     Oid krb5PrincipalOid = new Oid("1.2.840.113554.1.2.2.1");
     Oid KERB_V5_OID = new Oid("1.2.840.113554.1.2.2");
-    final GSSName clientName = manager.createName(principal,
-        krb5PrincipalOid);
-    final GSSCredential clientCred = manager.createCredential(clientName,
-        8 * 3600,
-        KERB_V5_OID,
-        GSSCredential.INITIATE_ONLY);
+    final GSSName clientName = manager.createName(principal, krb5PrincipalOid);
+    final GSSCredential clientCred =
+      manager.createCredential(clientName, 8 * 3600, KERB_V5_OID, GSSCredential.INITIATE_ONLY);
 
     final GSSName serverName = manager.createName(principal, krb5PrincipalOid);
 
-    final GSSContext context = manager.createContext(serverName,
-        KERB_V5_OID,
-        clientCred,
-        GSSContext.DEFAULT_LIFETIME);
+    final GSSContext context =
+      manager.createContext(serverName, KERB_V5_OID, clientCred, GSSContext.DEFAULT_LIFETIME);
     context.requestMutualAuth(true);
     context.requestConf(false);
     context.requestInteg(true);
@@ -238,8 +231,8 @@ public class HttpDoAsClient {
     }
 
     /*
-     * To authenticate the DemoClient, kinit should be invoked ahead.
-     * Here we try to get the Kerberos credential from the ticket cache.
+     * To authenticate the DemoClient, kinit should be invoked ahead. Here we try to get the
+     * Kerberos credential from the ticket cache.
      */
     LoginContext context;
 
@@ -247,14 +240,13 @@ public class HttpDoAsClient {
       // To authenticate the HttpDoAsClient using principal and keyTab
       Set<Principal> principals = new HashSet<>();
       principals.add(new KerberosPrincipal(principal));
-      Subject subject =
-          new Subject(false, principals, new HashSet<>(), new HashSet<>());
+      Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
 
       context = new LoginContext("", subject, null, new KerberosConfiguration(principal, keyTab));
     } else {
       /*
-       * To authenticate the HttpDoAsClient, kinit should be invoked ahead. Here we try to
-       * get the Kerberos credential from the ticket cache.
+       * To authenticate the HttpDoAsClient, kinit should be invoked ahead. Here we try to get the
+       * Kerberos credential from the ticket cache.
        */
       context = new LoginContext("", new Subject(), null, new KerberosConfiguration());
     }

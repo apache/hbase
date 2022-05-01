@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +21,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ExpressionParser {
@@ -39,6 +38,7 @@ public class ExpressionParser {
   private static final char NOT = '!';
   private static final char SPACE = ' ';
   private static final char DOUBLE_QUOTES = '"';
+
   public ExpressionNode parse(String expS) throws ParseException {
     expS = expS.trim();
     Stack<ExpressionNode> expStack = new Stack<>();
@@ -66,28 +66,28 @@ public class ExpressionParser {
           break;
         case DOUBLE_QUOTES:
           int labelOffset = ++index;
-          // We have to rewrite the expression within double quotes as incase of expressions 
+          // We have to rewrite the expression within double quotes as incase of expressions
           // with escape characters we may have to avoid them as the original expression did
           // not have them
           List<Byte> list = new ArrayList<>();
           while (index < endPos && !endDoubleQuotesFound(exp[index])) {
             if (exp[index] == '\\') {
               index++;
-              if (exp[index] != '\\' && exp[index] != '"')
-                throw new ParseException("invalid escaping with quotes " + expS + " at column : "
-                    + index);
+              if (exp[index] != '\\' && exp[index] != '"') throw new ParseException(
+                "invalid escaping with quotes " + expS + " at column : " + index);
             }
             list.add(exp[index]);
             index++;
           }
-          // The expression has come to the end. still no double quotes found 
-          if(index == endPos) {
+          // The expression has come to the end. still no double quotes found
+          if (index == endPos) {
             throw new ParseException("No terminating quotes " + expS + " at column : " + index);
           }
           // This could be costly. but do we have any alternative?
           // If we don't do this way then we may have to handle while checking the authorizations.
           // Better to do it here.
-          byte[] array = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
+          byte[] array =
+            org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.toArray(list);
           String leafExp = Bytes.toString(array).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
@@ -99,13 +99,13 @@ public class ExpressionParser {
           labelOffset = index;
           do {
             if (!VisibilityLabelsValidator.isValidAuthChar(exp[index])) {
-              throw new ParseException("Error parsing expression " 
-                 + expS + " at column : " + index);
+              throw new ParseException(
+                "Error parsing expression " + expS + " at column : " + index);
             }
             index++;
           } while (index < endPos && !isEndOfLabel(exp[index]));
           leafExp =
-              new String(exp, labelOffset, index - labelOffset, StandardCharsets.UTF_8).trim();
+            new String(exp, labelOffset, index - labelOffset, StandardCharsets.UTF_8).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
           }
@@ -137,14 +137,14 @@ public class ExpressionParser {
   }
 
   private int skipSpaces(byte[] exp, int index) {
-    while (index < exp.length -1 && exp[index+1] == SPACE) {
+    while (index < exp.length - 1 && exp[index + 1] == SPACE) {
       index++;
     }
     return index;
   }
 
   private void processCloseParan(Stack<ExpressionNode> expStack, String expS, int index)
-      throws ParseException {
+    throws ParseException {
     if (expStack.size() < 2) {
       // When ) comes we expect atleast a ( node and another leaf/non leaf node
       // in stack.
@@ -154,8 +154,9 @@ public class ExpressionParser {
       ExpressionNode secondTop = expStack.pop();
       // The second top must be a ( node and top should not be a ). Top can be
       // any thing else
-      if (top == LeafExpressionNode.OPEN_PARAN_NODE
-          || secondTop != LeafExpressionNode.OPEN_PARAN_NODE) {
+      if (
+        top == LeafExpressionNode.OPEN_PARAN_NODE || secondTop != LeafExpressionNode.OPEN_PARAN_NODE
+      ) {
         throw new ParseException("Error parsing expression " + expS + " at column : " + index);
       }
       // a&(b|) is not valid.
@@ -164,8 +165,10 @@ public class ExpressionParser {
       // (a&) is not valid.
       if (top instanceof NonLeafExpressionNode) {
         NonLeafExpressionNode nlTop = (NonLeafExpressionNode) top;
-        if ((nlTop.getOperator() == Operator.NOT && nlTop.getChildExps().size() != 1)
-            || (nlTop.getOperator() != Operator.NOT && nlTop.getChildExps().size() != 2)) {
+        if (
+          (nlTop.getOperator() == Operator.NOT && nlTop.getChildExps().size() != 1)
+            || (nlTop.getOperator() != Operator.NOT && nlTop.getChildExps().size() != 2)
+        ) {
           throw new ParseException("Error parsing expression " + expS + " at column : " + index);
         }
       }
@@ -204,7 +207,7 @@ public class ExpressionParser {
   }
 
   private void processOpenParan(Stack<ExpressionNode> expStack, String expS, int index)
-      throws ParseException {
+    throws ParseException {
     if (!expStack.isEmpty()) {
       ExpressionNode top = expStack.peek();
       // Top can not be a Label Node. a(.. is not valid. but ((a.. is fine.
@@ -217,8 +220,10 @@ public class ExpressionParser {
         // a&b( is not valid.
         // a&( is valid though. Also !( is valid
         NonLeafExpressionNode nlTop = (NonLeafExpressionNode) top;
-        if ((nlTop.getOperator() == Operator.NOT && nlTop.getChildExps().size() != 0)
-            || (nlTop.getOperator() != Operator.NOT && nlTop.getChildExps().size() != 1)) {
+        if (
+          (nlTop.getOperator() == Operator.NOT && nlTop.getChildExps().size() != 0)
+            || (nlTop.getOperator() != Operator.NOT && nlTop.getChildExps().size() != 1)
+        ) {
           throw new ParseException("Error parsing expression " + expS + " at column : " + index);
         }
       }
@@ -227,7 +232,7 @@ public class ExpressionParser {
   }
 
   private void processLabelExpNode(LeafExpressionNode node, Stack<ExpressionNode> expStack,
-      String expS, int index) throws ParseException {
+    String expS, int index) throws ParseException {
     if (expStack.isEmpty()) {
       expStack.push(node);
     } else {
@@ -254,7 +259,7 @@ public class ExpressionParser {
   }
 
   private void processANDorOROp(Operator op, Stack<ExpressionNode> expStack, String expS, int index)
-      throws ParseException {
+    throws ParseException {
     if (expStack.isEmpty()) {
       throw new ParseException("Error parsing expression " + expS + " at column : " + index);
     }
@@ -274,7 +279,7 @@ public class ExpressionParser {
   }
 
   private void processNOTOp(Stack<ExpressionNode> expStack, String expS, int index)
-      throws ParseException {
+    throws ParseException {
     // When ! comes, the stack can be empty or top ( or top can be some exp like
     // a&
     // !!.., a!, a&b!, !a! are invalid
@@ -293,21 +298,21 @@ public class ExpressionParser {
   private static boolean endDoubleQuotesFound(byte b) {
     return (b == DOUBLE_QUOTES);
   }
+
   private static boolean isEndOfLabel(byte b) {
-    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || 
-        b == NOT || b == SPACE);
+    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || b == NOT || b == SPACE);
   }
 
   private static Operator getOperator(byte op) {
     switch (op) {
-    case AND:
-      return Operator.AND;
-    case OR:
-      return Operator.OR;
-    case NOT:
-      return Operator.NOT;
-    default:
-      return null;
+      case AND:
+        return Operator.AND;
+      case OR:
+        return Operator.OR;
+      case NOT:
+        return Operator.NOT;
+      default:
+        return null;
     }
   }
 }

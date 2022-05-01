@@ -21,10 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An on heap block cache implementation extended LruBlockCache and only cache index block.
- * This block cache should be only used by
- * {@link org.apache.hadoop.hbase.client.ClientSideRegionScanner} that normally considers to be
- * used by client resides out of the region server, e.g. a container of a map reduce job.
+ * An on heap block cache implementation extended LruBlockCache and only cache index block. This
+ * block cache should be only used by {@link org.apache.hadoop.hbase.client.ClientSideRegionScanner}
+ * that normally considers to be used by client resides out of the region server, e.g. a container
+ * of a map reduce job.
  **/
 @InterfaceAudience.Private
 public class IndexOnlyLruBlockCache extends LruBlockCache {

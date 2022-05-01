@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionRemoteProcedureBaseStateData;
@@ -55,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @InterfaceAudience.Private
 public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+  implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionRemoteProcedureBase.class);
 
@@ -76,7 +77,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   protected RegionRemoteProcedureBase(TransitRegionStateProcedure parent, RegionInfo region,
-      ServerName targetServer) {
+    ServerName targetServer) {
     this.region = region;
     this.targetServer = targetServer;
     parent.attachRemoteProc(this);
@@ -84,7 +85,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
-      ServerName remote) {
+    ServerName remote) {
     // REPORT_SUCCEED means that this remote open/close request already executed in RegionServer.
     // So return empty operation and RSProcedureDispatcher no need to send it again.
     if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
@@ -169,11 +170,11 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   // do some checks to see if the report is valid
   protected abstract void checkTransition(RegionStateNode regionNode, TransitionCode transitionCode,
-      long seqId) throws UnexpectedStateException;
+    long seqId) throws UnexpectedStateException;
 
   // change the in memory state of the regionNode, but do not update meta.
   protected abstract void updateTransitionWithoutPersistingToMeta(MasterProcedureEnv env,
-      RegionStateNode regionNode, TransitionCode transitionCode, long seqId) throws IOException;
+    RegionStateNode regionNode, TransitionCode transitionCode, long seqId) throws IOException;
 
   // A bit strange but the procedure store will throw RuntimeException if we can not persist the
   // state, so upper layer should take care of this...
@@ -184,14 +185,14 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   // should be called with RegionStateNode locked, to avoid race with the execute method below
   void reportTransition(MasterProcedureEnv env, RegionStateNode regionNode, ServerName serverName,
-      TransitionCode transitionCode, long seqId) throws IOException {
+    TransitionCode transitionCode, long seqId) throws IOException {
     if (state != RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_DISPATCH) {
       // should be a retry
       return;
     }
     if (!targetServer.equals(serverName)) {
-      throw new UnexpectedStateException("Received report from " + serverName + ", expected " +
-        targetServer + ", " + regionNode + ", proc=" + this);
+      throw new UnexpectedStateException("Received report from " + serverName + ", expected "
+        + targetServer + ", " + regionNode + ", proc=" + this);
     }
     checkTransition(regionNode, transitionCode, seqId);
     // this state means we have received the report from RS, does not mean the result is fine, as we
@@ -245,7 +246,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   protected abstract void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
-      long seqId) throws IOException;
+    long seqId) throws IOException;
 
   void stateLoaded(AssignmentManager am, RegionStateNode regionNode) {
     if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
@@ -269,7 +270,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
 
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode = getRegionNode(env);
     regionNode.lock();
     try {
@@ -282,9 +283,9 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
           try {
             env.getRemoteDispatcher().addOperationToNode(targetServer, this);
           } catch (FailedRemoteDispatchException e) {
-            LOG.warn("Can not add remote operation {} for region {} to server {}, this usually " +
-              "because the server is alread dead, give up and mark the procedure as complete, " +
-              "the parent procedure will take care of this.", this, region, targetServer, e);
+            LOG.warn("Can not add remote operation {} for region {} to server {}, this usually "
+              + "because the server is alread dead, give up and mark the procedure as complete, "
+              + "the parent procedure will take care of this.", this, region, targetServer, e);
             unattach(env);
             return null;
           }
@@ -367,11 +368,13 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
     getParent(env).attachRemoteProc(this);
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + region.getEncodedName();
   }
 
-  @Override protected void toStringClassDetails(StringBuilder builder) {
+  @Override
+  protected void toStringClassDetails(StringBuilder builder) {
     builder.append(getProcName());
     if (targetServer != null) {
       builder.append(", server=");

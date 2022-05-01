@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,14 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class represents a split policy which makes the split decision based
- * on how busy a region is. The metric that is used here is the fraction of
- * total write requests that are blocked due to high memstore utilization.
- * This fractional rate is calculated over a running window of
- * "hbase.busy.policy.aggWindow" milliseconds. The rate is a time-weighted
- * aggregated average of the rate in the current window and the
- * true average rate in the previous window.
- *
+ * This class represents a split policy which makes the split decision based on how busy a region
+ * is. The metric that is used here is the fraction of total write requests that are blocked due to
+ * high memstore utilization. This fractional rate is calculated over a running window of
+ * "hbase.busy.policy.aggWindow" milliseconds. The rate is a time-weighted aggregated average of the
+ * rate in the current window and the true average rate in the previous window.
  */
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -47,11 +43,11 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
 
   // Minimum age of the region in milliseconds before it is considered for split
   private long minAge = -1;
-  public static final long DEFAULT_MIN_AGE_MS = 600000;  // 10 minutes
+  public static final long DEFAULT_MIN_AGE_MS = 600000; // 10 minutes
 
   // The window time in milliseconds over which the blocked requests rate is calculated
   private long aggregationWindow;
-  public static final long DEFAULT_AGGREGATION_WINDOW = 300000;  // 5 minutes
+  public static final long DEFAULT_AGGREGATION_WINDOW = 300000; // 5 minutes
 
   private HRegion region;
   private long prevTime;
@@ -72,21 +68,20 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
     this.region = region;
     Configuration conf = getConf();
 
-    maxBlockedRequests = conf.getFloat("hbase.busy.policy.blockedRequests",
-        DEFAULT_MAX_BLOCKED_REQUESTS);
+    maxBlockedRequests =
+      conf.getFloat("hbase.busy.policy.blockedRequests", DEFAULT_MAX_BLOCKED_REQUESTS);
     minAge = conf.getLong("hbase.busy.policy.minAge", DEFAULT_MIN_AGE_MS);
-    aggregationWindow = conf.getLong("hbase.busy.policy.aggWindow",
-        DEFAULT_AGGREGATION_WINDOW);
+    aggregationWindow = conf.getLong("hbase.busy.policy.aggWindow", DEFAULT_AGGREGATION_WINDOW);
 
     if (maxBlockedRequests < 0.00001f || maxBlockedRequests > 0.99999f) {
       LOG.warn("Threshold for maximum blocked requests is set too low or too high, "
-          + " resetting to default of " + DEFAULT_MAX_BLOCKED_REQUESTS);
+        + " resetting to default of " + DEFAULT_MAX_BLOCKED_REQUESTS);
       maxBlockedRequests = DEFAULT_MAX_BLOCKED_REQUESTS;
     }
 
     if (aggregationWindow <= 0) {
       LOG.warn("Aggregation window size is too low: " + aggregationWindow
-          + ". Resetting it to default of " + DEFAULT_AGGREGATION_WINDOW);
+        + ". Resetting it to default of " + DEFAULT_AGGREGATION_WINDOW);
       aggregationWindow = DEFAULT_AGGREGATION_WINDOW;
     }
 
@@ -107,11 +102,11 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
       return true;
     }
 
-    if (EnvironmentEdgeManager.currentTime() <  startTime + minAge) {
+    if (EnvironmentEdgeManager.currentTime() < startTime + minAge) {
       return false;
     }
 
-    for (HStore store: region.getStores()) {
+    for (HStore store : region.getStores()) {
       if (!store.canSplit()) {
         return false;
       }
@@ -120,7 +115,7 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
     if (blockedReqRate >= maxBlockedRequests) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Going to split region " + region.getRegionInfo().getRegionNameAsString()
-            + " because it's too busy. Blocked Request rate: " + blockedReqRate);
+          + " because it's too busy. Blocked Request rate: " + blockedReqRate);
       }
       return true;
     }
@@ -129,10 +124,9 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
   }
 
   /**
-   * Update the blocked request rate based on number of blocked and total write requests in the
-   * last aggregation window, or since last call to this method, whichever is farthest in time.
-   * Uses weighted rate calculation based on the previous rate and new data.
-   *
+   * Update the blocked request rate based on number of blocked and total write requests in the last
+   * aggregation window, or since last call to this method, whichever is farthest in time. Uses
+   * weighted rate calculation based on the previous rate and new data.
    * @return Updated blocked request rate.
    */
   private synchronized float updateRate() {
@@ -143,7 +137,7 @@ public class BusyRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPoli
     long newWriteReqs = region.getWriteRequestsCount();
 
     aggBlockedRate =
-        (newBlockedReqs - blockedRequestCount) / (newWriteReqs - writeRequestCount + 0.00001f);
+      (newBlockedReqs - blockedRequestCount) / (newWriteReqs - writeRequestCount + 0.00001f);
 
     if (curTime - prevTime >= aggregationWindow) {
       blockedRate = aggBlockedRate;

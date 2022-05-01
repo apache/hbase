@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -106,8 +106,9 @@ abstract class Queue<TKey extends Comparable<TKey>> extends AvlLinkedNode<Queue<
   @Override
   public String toString() {
     return String.format("%s(%s, xlock=%s sharedLock=%s size=%s)", getClass().getSimpleName(), key,
-      lockStatus.hasExclusiveLock() ? "true (" + lockStatus.getExclusiveLockProcIdOwner() + ")"
-          : "false",
+      lockStatus.hasExclusiveLock()
+        ? "true (" + lockStatus.getExclusiveLockProcIdOwner() + ")"
+        : "false",
       lockStatus.getSharedLockCount(), size());
   }
 }

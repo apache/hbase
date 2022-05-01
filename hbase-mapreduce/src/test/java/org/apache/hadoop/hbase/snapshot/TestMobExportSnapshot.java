@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +34,12 @@ import org.junit.experimental.categories.Category;
  * Test Export Snapshot Tool
  */
 @Ignore // HBASE-24493
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 public class TestMobExportSnapshot extends TestExportSnapshot {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobExportSnapshot.class);
+    HBaseClassTestRule.forClass(TestMobExportSnapshot.class);
 
   public static void setUpBaseConf(Configuration conf) {
     TestExportSnapshot.setUpBaseConf(conf);

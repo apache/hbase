@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,40 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Simple rate limiter.
- *
- * Usage Example:
- *    // At this point you have a unlimited resource limiter
- *   RateLimiter limiter = new AverageIntervalRateLimiter();
- *                         or new FixedIntervalRateLimiter();
- *   limiter.set(10, TimeUnit.SECONDS);       // set 10 resources/sec
- *
- *   while (true) {
- *     // call canExecute before performing resource consuming operation
- *     bool canExecute = limiter.canExecute();
- *     // If there are no available resources, wait until one is available
- *     if (!canExecute) Thread.sleep(limiter.waitInterval());
- *     // ...execute the work and consume the resource...
- *     limiter.consume();
- *   }
+ * Simple rate limiter. Usage Example: // At this point you have a unlimited resource limiter
+ * RateLimiter limiter = new AverageIntervalRateLimiter(); or new FixedIntervalRateLimiter();
+ * limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec while (true) { // call canExecute
+ * before performing resource consuming operation bool canExecute = limiter.canExecute(); // If
+ * there are no available resources, wait until one is available if (!canExecute)
+ * Thread.sleep(limiter.waitInterval()); // ...execute the work and consume the resource...
+ * limiter.consume(); }
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-  justification="FindBugs seems confused; says limit and tlimit " +
-  "are mostly synchronized...but to me it looks like they are totally synchronized")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "FindBugs seems confused; says limit and tlimit "
+      + "are mostly synchronized...but to me it looks like they are totally synchronized")
 public abstract class RateLimiter {
   public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
-  private long tunit = 1000;           // Timeunit factor for translating to ms.
+  private long tunit = 1000; // Timeunit factor for translating to ms.
   private long limit = Long.MAX_VALUE; // The max value available resource units can be refilled to.
   private long avail = Long.MAX_VALUE; // Currently available resource units
 
@@ -61,38 +50,37 @@ public abstract class RateLimiter {
 
   /**
    * Time in milliseconds to wait for before requesting to consume 'amount' resource.
-   * @param limit Maximum available resource units that can be refilled to.
+   * @param limit     Maximum available resource units that can be refilled to.
    * @param available Currently available resource units
-   * @param amount Resources for which time interval to calculate for
+   * @param amount    Resources for which time interval to calculate for
    * @return estimate of the ms required to wait before being able to provide 'amount' resources.
    */
   abstract long getWaitInterval(long limit, long available, long amount);
 
-
   /**
    * Set the RateLimiter max available resources and refill period.
-   * @param limit The max value available resource units can be refilled to.
+   * @param limit    The max value available resource units can be refilled to.
    * @param timeUnit Timeunit factor for translating to ms.
    */
   public synchronized void set(final long limit, final TimeUnit timeUnit) {
     switch (timeUnit) {
-    case MILLISECONDS:
-      tunit = 1;
-      break;
-    case SECONDS:
-      tunit = 1000;
-      break;
-    case MINUTES:
-      tunit = 60 * 1000;
-      break;
-    case HOURS:
-      tunit = 60 * 60 * 1000;
-      break;
-    case DAYS:
-      tunit = 24 * 60 * 60 * 1000;
-      break;
-    default:
-      throw new RuntimeException("Unsupported " + timeUnit.name() + " TimeUnit.");
+      case MILLISECONDS:
+        tunit = 1;
+        break;
+      case SECONDS:
+        tunit = 1000;
+        break;
+      case MINUTES:
+        tunit = 60 * 1000;
+        break;
+      case HOURS:
+        tunit = 60 * 60 * 1000;
+        break;
+      case DAYS:
+        tunit = 24 * 60 * 60 * 1000;
+        break;
+      default:
+        throw new RuntimeException("Unsupported " + timeUnit.name() + " TimeUnit.");
     }
     this.limit = limit;
     this.avail = limit;
@@ -104,15 +92,14 @@ public abstract class RateLimiter {
     if (getLimit() == Long.MAX_VALUE) {
       return rateLimiter + "(Bypass)";
     }
-    return rateLimiter + "(avail=" + getAvailable() + " limit=" + getLimit() +
-        " tunit=" + getTimeUnitInMillis() + ")";
+    return rateLimiter + "(avail=" + getAvailable() + " limit=" + getLimit() + " tunit="
+      + getTimeUnitInMillis() + ")";
   }
 
   /**
-   * Sets the current instance of RateLimiter to a new values.
-   *
-   * if current limit is smaller than the new limit, bump up the available resources.
-   * Otherwise allow clients to use up the previously available resources.
+   * Sets the current instance of RateLimiter to a new values. if current limit is smaller than the
+   * new limit, bump up the available resources. Otherwise allow clients to use up the previously
+   * available resources.
    */
   public synchronized void update(final RateLimiter other) {
     this.tunit = other.tunit;
@@ -197,7 +184,7 @@ public abstract class RateLimiter {
       return;
     }
 
-    if (amount >= 0 ) {
+    if (amount >= 0) {
       this.avail -= amount;
       if (this.avail < 0) {
         this.avail = 0;

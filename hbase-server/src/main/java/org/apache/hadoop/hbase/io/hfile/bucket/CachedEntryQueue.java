@@ -1,43 +1,38 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-
 import java.util.Comparator;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
- * A memory-bound queue that will grow until an element brings total size larger
- * than maxSize. From then on, only entries that are sorted larger than the
- * smallest current entry will be inserted/replaced.
- * 
+ * A memory-bound queue that will grow until an element brings total size larger than maxSize. From
+ * then on, only entries that are sorted larger than the smallest current entry will be
+ * inserted/replaced.
  * <p>
- * Use this when you want to find the largest elements (according to their
- * ordering, not their heap size) that consume as close to the specified maxSize
- * as possible. Default behavior is to grow just above rather than just below
- * specified max.
+ * Use this when you want to find the largest elements (according to their ordering, not their heap
+ * size) that consume as close to the specified maxSize as possible. Default behavior is to grow
+ * just above rather than just below specified max.
  */
 @InterfaceAudience.Private
 public class CachedEntryQueue {
@@ -51,7 +46,7 @@ public class CachedEntryQueue {
   private long maxSize;
 
   /**
-   * @param maxSize the target size of elements in the queue
+   * @param maxSize   the target size of elements in the queue
    * @param blockSize expected average size of blocks
    */
   public CachedEntryQueue(long maxSize, long blockSize) {
@@ -69,15 +64,15 @@ public class CachedEntryQueue {
   /**
    * Attempt to add the specified entry to this queue.
    * <p>
-   * If the queue is smaller than the max size, or if the specified element is
-   * ordered after the smallest element in the queue, the element will be added
-   * to the queue. Otherwise, there is no side effect of this call.
+   * If the queue is smaller than the max size, or if the specified element is ordered after the
+   * smallest element in the queue, the element will be added to the queue. Otherwise, there is no
+   * side effect of this call.
    * @param entry a bucket entry with key to try to add to the queue
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-    justification = "head can not be null as cacheSize is greater than maxSize,"
-      + " which means we have something in the queue")
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "head can not be null as cacheSize is greater than maxSize,"
+        + " which means we have something in the queue")
   public void add(Map.Entry<BlockCacheKey, BucketEntry> entry) {
     if (cacheSize < maxSize) {
       queue.add(entry);
@@ -98,16 +93,14 @@ public class CachedEntryQueue {
   }
 
   /**
-   * @return The next element in this queue, or {@code null} if the queue is
-   *         empty.
+   * @return The next element in this queue, or {@code null} if the queue is empty.
    */
   public Map.Entry<BlockCacheKey, BucketEntry> poll() {
     return queue.poll();
   }
 
   /**
-   * @return The last element in this queue, or {@code null} if the queue is
-   *         empty.
+   * @return The last element in this queue, or {@code null} if the queue is empty.
    */
   public Map.Entry<BlockCacheKey, BucketEntry> pollLast() {
     return queue.pollLast();

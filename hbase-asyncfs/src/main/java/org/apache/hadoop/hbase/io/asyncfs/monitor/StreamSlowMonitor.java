@@ -38,18 +38,16 @@ import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 
 /**
- * Class for monitor the wal file flush performance.
- * Each active wal file has a StreamSlowMonitor.
+ * Class for monitor the wal file flush performance. Each active wal file has a StreamSlowMonitor.
  */
 @InterfaceAudience.Private
 public class StreamSlowMonitor implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(StreamSlowMonitor.class);
 
   /**
-   * Configure for the min count for a datanode detected slow.
-   * If a datanode is detected slow times up to this count, then it will be added to the exclude
-   * datanode cache by {@link ExcludeDatanodeManager#tryAddExcludeDN(DatanodeInfo, String)}
-   * of this regionsever.
+   * Configure for the min count for a datanode detected slow. If a datanode is detected slow times
+   * up to this count, then it will be added to the exclude datanode cache by
+   * {@link ExcludeDatanodeManager#tryAddExcludeDN(DatanodeInfo, String)} of this regionsever.
    */
   private static final String WAL_SLOW_DETECT_MIN_COUNT_KEY =
     "hbase.regionserver.async.wal.min.slow.detect.count";
@@ -63,9 +61,9 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private static final long DEFAULT_WAL_SLOW_DETECT_DATA_TTL = 10 * 60 * 1000; // 10min in ms
 
   /**
-   * Configure for the speed check of packet min length.
-   * For packets whose data length smaller than this value, check slow by processing time.
-   * While for packets whose data length larger than this value, check slow by flushing speed.
+   * Configure for the speed check of packet min length. For packets whose data length smaller than
+   * this value, check slow by processing time. While for packets whose data length larger than this
+   * value, check slow by flushing speed.
    */
   private static final String DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY =
     "hbase.regionserver.async.wal.datanode.slow.check.speed.packet.data.length.min";
@@ -73,8 +71,8 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private static final long DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH = 64 * 1024;
 
   /**
-   * Configure for the slow packet process time, a duration from send to ACK.
-   * The processing time check is for packets that data length smaller than
+   * Configure for the slow packet process time, a duration from send to ACK. The processing time
+   * check is for packets that data length smaller than
    * {@link StreamSlowMonitor#DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY}
    */
   public static final String DATANODE_SLOW_PACKET_PROCESS_TIME_KEY =
@@ -105,15 +103,16 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private long minLengthForSpeedCheck;
 
   public StreamSlowMonitor(Configuration conf, String name,
-      ExcludeDatanodeManager excludeDatanodeManager) {
+    ExcludeDatanodeManager excludeDatanodeManager) {
     setConf(conf);
     this.name = name;
     this.excludeDatanodeManager = excludeDatanodeManager;
     this.datanodeSlowDataQueue = CacheBuilder.newBuilder()
       .maximumSize(conf.getInt(WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT_KEY,
         DEFAULT_WAL_MAX_EXCLUDE_SLOW_DATANODE_COUNT))
-      .expireAfterWrite(conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY,
-        DEFAULT_WAL_EXCLUDE_DATANODE_TTL), TimeUnit.HOURS)
+      .expireAfterWrite(
+        conf.getLong(WAL_EXCLUDE_DATANODE_TTL_KEY, DEFAULT_WAL_EXCLUDE_DATANODE_TTL),
+        TimeUnit.HOURS)
       .build(new CacheLoader<DatanodeInfo, Deque<PacketAckData>>() {
         @Override
         public Deque<PacketAckData> load(DatanodeInfo key) throws Exception {
@@ -129,30 +128,33 @@ public class StreamSlowMonitor implements ConfigurationObserver {
 
   /**
    * Check if the packet process time shows that the relevant datanode is a slow node.
-   * @param datanodeInfo the datanode that processed the packet
-   * @param packetDataLen the data length of the packet (in bytes)
-   * @param processTimeMs the process time (in ms) of the packet on the datanode,
+   * @param datanodeInfo     the datanode that processed the packet
+   * @param packetDataLen    the data length of the packet (in bytes)
+   * @param processTimeMs    the process time (in ms) of the packet on the datanode,
    * @param lastAckTimestamp the last acked timestamp of the packet on another datanode
-   * @param unfinished if the packet is unfinished flushed to the datanode replicas
+   * @param unfinished       if the packet is unfinished flushed to the datanode replicas
    */
   public void checkProcessTimeAndSpeed(DatanodeInfo datanodeInfo, long packetDataLen,
-      long processTimeMs, long lastAckTimestamp, int unfinished) {
+    long processTimeMs, long lastAckTimestamp, int unfinished) {
     long current = EnvironmentEdgeManager.currentTime();
     // Here are two conditions used to determine whether a datanode is slow,
     // 1. For small packet, we just have a simple time limit, without considering
     // the size of the packet.
     // 2. For large packet, we will calculate the speed, and check if the speed is too slow.
-    boolean slow = (packetDataLen <= minLengthForSpeedCheck && processTimeMs > slowPacketAckMs) || (
-      packetDataLen > minLengthForSpeedCheck
+    boolean slow = (packetDataLen <= minLengthForSpeedCheck && processTimeMs > slowPacketAckMs)
+      || (packetDataLen > minLengthForSpeedCheck
         && (double) packetDataLen / processTimeMs < minPacketFlushSpeedKBs);
     if (slow) {
       // Check if large diff ack timestamp between replicas,
       // should try to avoid misjudgments that caused by GC STW.
-      if ((lastAckTimestamp > 0 && current - lastAckTimestamp > slowPacketAckMs / 2) || (
-          lastAckTimestamp <= 0 && unfinished == 0)) {
-        LOG.info("Slow datanode: {}, data length={}, duration={}ms, unfinishedReplicas={}, "
-            + "lastAckTimestamp={}, monitor name: {}", datanodeInfo, packetDataLen, processTimeMs,
-          unfinished, lastAckTimestamp, this.name);
+      if (
+        (lastAckTimestamp > 0 && current - lastAckTimestamp > slowPacketAckMs / 2)
+          || (lastAckTimestamp <= 0 && unfinished == 0)
+      ) {
+        LOG.info(
+          "Slow datanode: {}, data length={}, duration={}ms, unfinishedReplicas={}, "
+            + "lastAckTimestamp={}, monitor name: {}",
+          datanodeInfo, packetDataLen, processTimeMs, unfinished, lastAckTimestamp, this.name);
         if (addSlowAckData(datanodeInfo, packetDataLen, processTimeMs)) {
           excludeDatanodeManager.tryAddExcludeDN(datanodeInfo, "slow packet ack");
         }
@@ -168,8 +170,10 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   private boolean addSlowAckData(DatanodeInfo datanodeInfo, long dataLength, long processTime) {
     Deque<PacketAckData> slowDNQueue = datanodeSlowDataQueue.getUnchecked(datanodeInfo);
     long current = EnvironmentEdgeManager.currentTime();
-    while (!slowDNQueue.isEmpty() && (current - slowDNQueue.getFirst().getTimestamp() > slowDataTtl
-      || slowDNQueue.size() >= minSlowDetectCount)) {
+    while (
+      !slowDNQueue.isEmpty() && (current - slowDNQueue.getFirst().getTimestamp() > slowDataTtl
+        || slowDNQueue.size() >= minSlowDetectCount)
+    ) {
       slowDNQueue.removeFirst();
     }
     slowDNQueue.addLast(new PacketAckData(dataLength, processTime));
@@ -177,13 +181,13 @@ public class StreamSlowMonitor implements ConfigurationObserver {
   }
 
   private void setConf(Configuration conf) {
-    this.minSlowDetectCount = conf.getInt(WAL_SLOW_DETECT_MIN_COUNT_KEY,
-        DEFAULT_WAL_SLOW_DETECT_MIN_COUNT);
+    this.minSlowDetectCount =
+      conf.getInt(WAL_SLOW_DETECT_MIN_COUNT_KEY, DEFAULT_WAL_SLOW_DETECT_MIN_COUNT);
     this.slowDataTtl = conf.getLong(WAL_SLOW_DETECT_DATA_TTL_KEY, DEFAULT_WAL_SLOW_DETECT_DATA_TTL);
     this.slowPacketAckMs = conf.getLong(DATANODE_SLOW_PACKET_PROCESS_TIME_KEY,
-        DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME);
-    this.minLengthForSpeedCheck = conf.getLong(
-        DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY,
+      DEFAULT_DATANODE_SLOW_PACKET_PROCESS_TIME);
+    this.minLengthForSpeedCheck =
+      conf.getLong(DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH_KEY,
         DEFAULT_DATANODE_PACKET_FLUSH_CHECK_SPEED_MIN_DATA_LENGTH);
     this.minPacketFlushSpeedKBs = conf.getDouble(DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED_KEY,
       DEFAULT_DATANODE_SLOW_PACKET_FLUSH_MIN_SPEED);

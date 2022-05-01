@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface CachedBlock extends Comparable<CachedBlock> {
   BlockPriority getBlockPriority();
+
   BlockType getBlockType();
+
   long getOffset();
+
   long getSize();
+
   long getCachedTime();
+
   String getFilename();
 }

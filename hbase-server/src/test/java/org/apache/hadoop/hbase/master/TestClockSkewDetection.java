@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,15 +35,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestClockSkewDetection {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClockSkewDetection.class);
+    HBaseClassTestRule.forClass(TestClockSkewDetection.class);
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestClockSkewDetection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestClockSkewDetection.class);
 
   @Test
   public void testClockSkewDetection() throws Exception {
@@ -64,7 +63,7 @@ public class TestClockSkewDetection {
     long warningSkew = c.getLong("hbase.master.warningclockskew", 1000);
 
     try {
-      //Master Time > Region Server Time
+      // Master Time > Region Server Time
       LOG.debug("Test: Master Time > Region Server Time");
       LOG.debug("regionServerStartup 2");
       InetAddress ia2 = InetAddress.getLocalHost();
@@ -74,9 +73,9 @@ public class TestClockSkewDetection {
       request.setServerCurrentTime(EnvironmentEdgeManager.currentTime() - maxSkew * 2);
       sm.regionServerStartup(request.build(), 0, "0.0.0", ia2);
       fail("HMaster should have thrown a ClockOutOfSyncException but didn't.");
-    } catch(ClockOutOfSyncException e) {
-      //we want an exception
-      LOG.info("Received expected exception: "+e);
+    } catch (ClockOutOfSyncException e) {
+      // we want an exception
+      LOG.info("Received expected exception: " + e);
     }
 
     try {

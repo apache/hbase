@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without
  * the hasNext() or remove() methods. The hasNext() method is problematic because it may require
  * actually loading the next object, which in turn requires storing the previous object somewhere.
- *
- * <p>The core data block decoder should be as fast as possible, so we push the complexity and
+ * <p>
+ * The core data block decoder should be as fast as possible, so we push the complexity and
  * performance expense of concurrently tracking multiple cells to layers above the CellScanner.
  * <p>
  * The {@link #current()} method will return a reference to a Cell implementation. This reference
@@ -42,7 +41,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  *   // do something
  * }
  * </pre>
- * <p>Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
+ * <p>
+ * Often used reading {@link org.apache.hadoop.hbase.Cell}s written by
  * {@link org.apache.hadoop.hbase.io.CellOutputStream}.
  */
 @InterfaceAudience.Public

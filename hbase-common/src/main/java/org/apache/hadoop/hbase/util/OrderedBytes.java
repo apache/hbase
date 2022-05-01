@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,241 +24,272 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.nio.charset.Charset;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Utility class that handles ordered byte arrays. That is, unlike
- * {@link Bytes}, these methods produce byte arrays which maintain the sort
- * order of the original values.
+ * Utility class that handles ordered byte arrays. That is, unlike {@link Bytes}, these methods
+ * produce byte arrays which maintain the sort order of the original values.
  * <h3>Encoding Format summary</h3>
  * <p>
- * Each value is encoded as one or more bytes. The first byte of the encoding,
- * its meaning, and a terse description of the bytes that follow is given by
- * the following table:
+ * Each value is encoded as one or more bytes. The first byte of the encoding, its meaning, and a
+ * terse description of the bytes that follow is given by the following table:
  * </p>
  * <table summary="Encodings">
- * <tr><th>Content Type</th><th>Encoding</th></tr>
- * <tr><td>NULL</td><td>0x05</td></tr>
- * <tr><td>negative infinity</td><td>0x07</td></tr>
- * <tr><td>negative large</td><td>0x08, ~E, ~M</td></tr>
- * <tr><td>negative medium</td><td>0x13-E, ~M</td></tr>
- * <tr><td>negative small</td><td>0x14, -E, ~M</td></tr>
- * <tr><td>zero</td><td>0x15</td></tr>
- * <tr><td>positive small</td><td>0x16, ~-E, M</td></tr>
- * <tr><td>positive medium</td><td>0x17+E, M</td></tr>
- * <tr><td>positive large</td><td>0x22, E, M</td></tr>
- * <tr><td>positive infinity</td><td>0x23</td></tr>
- * <tr><td>NaN</td><td>0x25</td></tr>
- * <tr><td>fixed-length 32-bit integer</td><td>0x27, I</td></tr>
- * <tr><td>fixed-length 64-bit integer</td><td>0x28, I</td></tr>
- * <tr><td>fixed-length 8-bit integer</td><td>0x29</td></tr>
- * <tr><td>fixed-length 16-bit integer</td><td>0x2a</td></tr>
- * <tr><td>fixed-length 32-bit float</td><td>0x30, F</td></tr>
- * <tr><td>fixed-length 64-bit float</td><td>0x31, F</td></tr>
- * <tr><td>TEXT</td><td>0x33, T</td></tr>
- * <tr><td>variable length BLOB</td><td>0x35, B</td></tr>
- * <tr><td>byte-for-byte BLOB</td><td>0x36, X</td></tr>
+ * <tr>
+ * <th>Content Type</th>
+ * <th>Encoding</th>
+ * </tr>
+ * <tr>
+ * <td>NULL</td>
+ * <td>0x05</td>
+ * </tr>
+ * <tr>
+ * <td>negative infinity</td>
+ * <td>0x07</td>
+ * </tr>
+ * <tr>
+ * <td>negative large</td>
+ * <td>0x08, ~E, ~M</td>
+ * </tr>
+ * <tr>
+ * <td>negative medium</td>
+ * <td>0x13-E, ~M</td>
+ * </tr>
+ * <tr>
+ * <td>negative small</td>
+ * <td>0x14, -E, ~M</td>
+ * </tr>
+ * <tr>
+ * <td>zero</td>
+ * <td>0x15</td>
+ * </tr>
+ * <tr>
+ * <td>positive small</td>
+ * <td>0x16, ~-E, M</td>
+ * </tr>
+ * <tr>
+ * <td>positive medium</td>
+ * <td>0x17+E, M</td>
+ * </tr>
+ * <tr>
+ * <td>positive large</td>
+ * <td>0x22, E, M</td>
+ * </tr>
+ * <tr>
+ * <td>positive infinity</td>
+ * <td>0x23</td>
+ * </tr>
+ * <tr>
+ * <td>NaN</td>
+ * <td>0x25</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 32-bit integer</td>
+ * <td>0x27, I</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 64-bit integer</td>
+ * <td>0x28, I</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 8-bit integer</td>
+ * <td>0x29</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 16-bit integer</td>
+ * <td>0x2a</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 32-bit float</td>
+ * <td>0x30, F</td>
+ * </tr>
+ * <tr>
+ * <td>fixed-length 64-bit float</td>
+ * <td>0x31, F</td>
+ * </tr>
+ * <tr>
+ * <td>TEXT</td>
+ * <td>0x33, T</td>
+ * </tr>
+ * <tr>
+ * <td>variable length BLOB</td>
+ * <td>0x35, B</td>
+ * </tr>
+ * <tr>
+ * <td>byte-for-byte BLOB</td>
+ * <td>0x36, X</td>
+ * </tr>
  * </table>
- *
  * <h3>Null Encoding</h3>
  * <p>
- * Each value that is a NULL encodes as a single byte of 0x05. Since every
- * other value encoding begins with a byte greater than 0x05, this forces NULL
- * values to sort first.
+ * Each value that is a NULL encodes as a single byte of 0x05. Since every other value encoding
+ * begins with a byte greater than 0x05, this forces NULL values to sort first.
  * </p>
  * <h3>Text Encoding</h3>
  * <p>
- * Each text value begins with a single byte of 0x33 and ends with a single
- * byte of 0x00. There are zero or more intervening bytes that encode the text
- * value. The intervening bytes are chosen so that the encoding will sort in
- * the desired collating order. The intervening bytes may not contain a 0x00
- * character; the only 0x00 byte allowed in a text encoding is the final byte.
+ * Each text value begins with a single byte of 0x33 and ends with a single byte of 0x00. There are
+ * zero or more intervening bytes that encode the text value. The intervening bytes are chosen so
+ * that the encoding will sort in the desired collating order. The intervening bytes may not contain
+ * a 0x00 character; the only 0x00 byte allowed in a text encoding is the final byte.
  * </p>
  * <p>
- * The text encoding ends in 0x00 in order to ensure that when there are two
- * strings where one is a prefix of the other that the shorter string will
- * sort first.
+ * The text encoding ends in 0x00 in order to ensure that when there are two strings where one is a
+ * prefix of the other that the shorter string will sort first.
  * </p>
  * <h3>Binary Encoding</h3>
  * <p>
- * There are two encoding strategies for binary fields, referred to as
- * "BlobVar" and "BlobCopy". BlobVar is less efficient in both space and
- * encoding time. It has no limitations on the range of encoded values.
- * BlobCopy is a byte-for-byte copy of the input data followed by a
- * termination byte. It is extremely fast to encode and decode. It carries the
- * restriction of not allowing a 0x00 value in the input byte[] as this value
- * is used as the termination byte.
+ * There are two encoding strategies for binary fields, referred to as "BlobVar" and "BlobCopy".
+ * BlobVar is less efficient in both space and encoding time. It has no limitations on the range of
+ * encoded values. BlobCopy is a byte-for-byte copy of the input data followed by a termination
+ * byte. It is extremely fast to encode and decode. It carries the restriction of not allowing a
+ * 0x00 value in the input byte[] as this value is used as the termination byte.
  * </p>
  * <h4>BlobVar</h4>
  * <p>
- * "BlobVar" encodes the input byte[] in a manner similar to a variable length
- * integer encoding. As with the other {@code OrderedBytes} encodings,
- * the first encoded byte is used to indicate what kind of value follows. This
- * header byte is 0x37 for BlobVar encoded values. As with the traditional
- * varint encoding, the most significant bit of each subsequent encoded
- * {@code byte} is used as a continuation marker. The 7 remaining bits
- * contain the 7 most significant bits of the first unencoded byte. The next
- * encoded byte starts with a continuation marker in the MSB. The least
- * significant bit from the first unencoded byte follows, and the remaining 6
- * bits contain the 6 MSBs of the second unencoded byte. The encoding
- * continues, encoding 7 bytes on to 8 encoded bytes. The MSB of the final
- * encoded byte contains a termination marker rather than a continuation
- * marker, and any remaining bits from the final input byte. Any trailing bits
- * in the final encoded byte are zeros.
+ * "BlobVar" encodes the input byte[] in a manner similar to a variable length integer encoding. As
+ * with the other {@code OrderedBytes} encodings, the first encoded byte is used to indicate what
+ * kind of value follows. This header byte is 0x37 for BlobVar encoded values. As with the
+ * traditional varint encoding, the most significant bit of each subsequent encoded {@code byte} is
+ * used as a continuation marker. The 7 remaining bits contain the 7 most significant bits of the
+ * first unencoded byte. The next encoded byte starts with a continuation marker in the MSB. The
+ * least significant bit from the first unencoded byte follows, and the remaining 6 bits contain the
+ * 6 MSBs of the second unencoded byte. The encoding continues, encoding 7 bytes on to 8 encoded
+ * bytes. The MSB of the final encoded byte contains a termination marker rather than a continuation
+ * marker, and any remaining bits from the final input byte. Any trailing bits in the final encoded
+ * byte are zeros.
  * </p>
  * <h4>BlobCopy</h4>
  * <p>
- * "BlobCopy" is a simple byte-for-byte copy of the input data. It uses 0x38
- * as the header byte, and is terminated by 0x00 in the DESCENDING case. This
- * alternative encoding is faster and more space-efficient, but it cannot
- * accept values containing a 0x00 byte in DESCENDING order.
+ * "BlobCopy" is a simple byte-for-byte copy of the input data. It uses 0x38 as the header byte, and
+ * is terminated by 0x00 in the DESCENDING case. This alternative encoding is faster and more
+ * space-efficient, but it cannot accept values containing a 0x00 byte in DESCENDING order.
  * </p>
  * <h3>Variable-length Numeric Encoding</h3>
  * <p>
- * Numeric values must be coded so as to sort in numeric order. We assume that
- * numeric values can be both integer and floating point values. Clients must
- * be careful to use inspection methods for encoded values (such as
- * {@link #isNumericInfinite(PositionedByteRange)} and
- * {@link #isNumericNaN(PositionedByteRange)} to protect against decoding
- * values into object which do not support these numeric concepts (such as
- * {@link Long} and {@link BigDecimal}).
+ * Numeric values must be coded so as to sort in numeric order. We assume that numeric values can be
+ * both integer and floating point values. Clients must be careful to use inspection methods for
+ * encoded values (such as {@link #isNumericInfinite(PositionedByteRange)} and
+ * {@link #isNumericNaN(PositionedByteRange)} to protect against decoding values into object which
+ * do not support these numeric concepts (such as {@link Long} and {@link BigDecimal}).
  * </p>
  * <p>
- * Simplest cases first: If the numeric value is a NaN, then the encoding is a
- * single byte of 0x25. This causes NaN values to sort after every other
- * numeric value.
+ * Simplest cases first: If the numeric value is a NaN, then the encoding is a single byte of 0x25.
+ * This causes NaN values to sort after every other numeric value.
  * </p>
  * <p>
- * If the numeric value is a negative infinity then the encoding is a single
- * byte of 0x07. Since every other numeric value except NaN has a larger
- * initial byte, this encoding ensures that negative infinity will sort prior
- * to every other numeric value other than NaN.
+ * If the numeric value is a negative infinity then the encoding is a single byte of 0x07. Since
+ * every other numeric value except NaN has a larger initial byte, this encoding ensures that
+ * negative infinity will sort prior to every other numeric value other than NaN.
  * </p>
  * <p>
- * If the numeric value is a positive infinity then the encoding is a single
- * byte of 0x23. Every other numeric value encoding begins with a smaller
- * byte, ensuring that positive infinity always sorts last among numeric
- * values. 0x23 is also smaller than 0x33, the initial byte of a text value,
- * ensuring that every numeric value sorts before every text value.
+ * If the numeric value is a positive infinity then the encoding is a single byte of 0x23. Every
+ * other numeric value encoding begins with a smaller byte, ensuring that positive infinity always
+ * sorts last among numeric values. 0x23 is also smaller than 0x33, the initial byte of a text
+ * value, ensuring that every numeric value sorts before every text value.
  * </p>
  * <p>
- * If the numeric value is exactly zero then it is encoded as a single byte of
- * 0x15. Finite negative values will have initial bytes of 0x08 through 0x14
- * and finite positive values will have initial bytes of 0x16 through 0x22.
+ * If the numeric value is exactly zero then it is encoded as a single byte of 0x15. Finite negative
+ * values will have initial bytes of 0x08 through 0x14 and finite positive values will have initial
+ * bytes of 0x16 through 0x22.
  * </p>
  * <p>
- * For all numeric values, we compute a mantissa M and an exponent E. The
- * mantissa is a base-100 representation of the value. The exponent E
- * determines where to put the decimal point.
+ * For all numeric values, we compute a mantissa M and an exponent E. The mantissa is a base-100
+ * representation of the value. The exponent E determines where to put the decimal point.
  * </p>
  * <p>
- * Each centimal digit of the mantissa is stored in a byte. If the value of
- * the centimal digit is X (hence X&ge;0 and X&le;99) then the byte value will
- * be 2*X+1 for every byte of the mantissa, except for the last byte which
- * will be 2*X+0. The mantissa must be the minimum number of bytes necessary
- * to represent the value; trailing X==0 digits are omitted. This means that
- * the mantissa will never contain a byte with the value 0x00.
+ * Each centimal digit of the mantissa is stored in a byte. If the value of the centimal digit is X
+ * (hence X&ge;0 and X&le;99) then the byte value will be 2*X+1 for every byte of the mantissa,
+ * except for the last byte which will be 2*X+0. The mantissa must be the minimum number of bytes
+ * necessary to represent the value; trailing X==0 digits are omitted. This means that the mantissa
+ * will never contain a byte with the value 0x00.
  * </p>
  * <p>
- * If we assume all digits of the mantissa occur to the right of the decimal
- * point, then the exponent E is the power of one hundred by which one must
- * multiply the mantissa to recover the original value.
+ * If we assume all digits of the mantissa occur to the right of the decimal point, then the
+ * exponent E is the power of one hundred by which one must multiply the mantissa to recover the
+ * original value.
  * </p>
  * <p>
- * Values are classified as large, medium, or small according to the value of
- * E. If E is 11 or more, the value is large. For E between 0 and 10, the
- * value is medium. For E less than zero, the value is small.
+ * Values are classified as large, medium, or small according to the value of E. If E is 11 or more,
+ * the value is large. For E between 0 and 10, the value is medium. For E less than zero, the value
+ * is small.
  * </p>
  * <p>
- * Large positive values are encoded as a single byte 0x22 followed by E as a
- * varint and then M. Medium positive values are a single byte of 0x17+E
- * followed by M. Small positive values are encoded as a single byte 0x16
- * followed by the ones-complement of the varint for -E followed by M.
+ * Large positive values are encoded as a single byte 0x22 followed by E as a varint and then M.
+ * Medium positive values are a single byte of 0x17+E followed by M. Small positive values are
+ * encoded as a single byte 0x16 followed by the ones-complement of the varint for -E followed by M.
  * </p>
  * <p>
- * Small negative values are encoded as a single byte 0x14 followed by -E as a
- * varint and then the ones-complement of M. Medium negative values are
- * encoded as a byte 0x13-E followed by the ones-complement of M. Large
- * negative values consist of the single byte 0x08 followed by the
- * ones-complement of the varint encoding of E followed by the ones-complement
- * of M.
+ * Small negative values are encoded as a single byte 0x14 followed by -E as a varint and then the
+ * ones-complement of M. Medium negative values are encoded as a byte 0x13-E followed by the
+ * ones-complement of M. Large negative values consist of the single byte 0x08 followed by the
+ * ones-complement of the varint encoding of E followed by the ones-complement of M.
  * </p>
  * <h3>Fixed-length Integer Encoding</h3>
  * <p>
- * All 4-byte integers are serialized to a 5-byte, fixed-width, sortable byte
- * format. All 8-byte integers are serialized to the equivelant 9-byte format.
- * Serialization is performed by writing a header byte, inverting the integer
- * sign bit and writing the resulting bytes to the byte array in big endian
- * order.
+ * All 4-byte integers are serialized to a 5-byte, fixed-width, sortable byte format. All 8-byte
+ * integers are serialized to the equivelant 9-byte format. Serialization is performed by writing a
+ * header byte, inverting the integer sign bit and writing the resulting bytes to the byte array in
+ * big endian order.
  * </p>
  * <h3>Fixed-length Floating Point Encoding</h3>
  * <p>
- * 32-bit and 64-bit floating point numbers are encoded to a 5-byte and 9-byte
- * encoding format, respectively. The format is identical, save for the
- * precision respected in each step of the operation.
+ * 32-bit and 64-bit floating point numbers are encoded to a 5-byte and 9-byte encoding format,
+ * respectively. The format is identical, save for the precision respected in each step of the
+ * operation.
  * <p>
  * This format ensures the following total ordering of floating point values:
- * Float.NEGATIVE_INFINITY &lt; -Float.MAX_VALUE &lt; ... &lt;
- * -Float.MIN_VALUE &lt; -0.0 &lt; +0.0; &lt; Float.MIN_VALUE &lt; ... &lt;
- * Float.MAX_VALUE &lt; Float.POSITIVE_INFINITY &lt; Float.NaN
+ * Float.NEGATIVE_INFINITY &lt; -Float.MAX_VALUE &lt; ... &lt; -Float.MIN_VALUE &lt; -0.0 &lt; +0.0;
+ * &lt; Float.MIN_VALUE &lt; ... &lt; Float.MAX_VALUE &lt; Float.POSITIVE_INFINITY &lt; Float.NaN
  * </p>
  * <p>
- * Floating point numbers are encoded as specified in IEEE 754. A 32-bit
- * single precision float consists of a sign bit, 8-bit unsigned exponent
- * encoded in offset-127 notation, and a 23-bit significand. The format is
- * described further in the <a
- * href="http://en.wikipedia.org/wiki/Single_precision"> Single Precision
- * Floating Point Wikipedia page</a>
+ * Floating point numbers are encoded as specified in IEEE 754. A 32-bit single precision float
+ * consists of a sign bit, 8-bit unsigned exponent encoded in offset-127 notation, and a 23-bit
+ * significand. The format is described further in the
+ * <a href="http://en.wikipedia.org/wiki/Single_precision"> Single Precision Floating Point
+ * Wikipedia page</a>
  * </p>
  * <p>
- * The value of a normal float is -1 <sup>sign bit</sup> &times;
- * 2<sup>exponent - 127</sup> &times; 1.significand
+ * The value of a normal float is -1 <sup>sign bit</sup> &times; 2<sup>exponent - 127</sup> &times;
+ * 1.significand
  * </p>
  * <p>
- * The IEE754 floating point format already preserves sort ordering for
- * positive floating point numbers when the raw bytes are compared in most
- * significant byte order. This is discussed further at <a href=
- * "http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm">
+ * The IEE754 floating point format already preserves sort ordering for positive floating point
+ * numbers when the raw bytes are compared in most significant byte order. This is discussed further
+ * at <a href= "http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm">
  * http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm</a>
  * </p>
  * <p>
- * Thus, we need only ensure that negative numbers sort in the the exact
- * opposite order as positive numbers (so that say, negative infinity is less
- * than negative 1), and that all negative numbers compare less than any
- * positive number. To accomplish this, we invert the sign bit of all floating
- * point numbers, and we also invert the exponent and significand bits if the
- * floating point number was negative.
+ * Thus, we need only ensure that negative numbers sort in the the exact opposite order as positive
+ * numbers (so that say, negative infinity is less than negative 1), and that all negative numbers
+ * compare less than any positive number. To accomplish this, we invert the sign bit of all floating
+ * point numbers, and we also invert the exponent and significand bits if the floating point number
+ * was negative.
  * </p>
  * <p>
- * More specifically, we first store the floating point bits into a 32-bit int
- * {@code j} using {@link Float#floatToIntBits}. This method collapses
- * all NaNs into a single, canonical NaN value but otherwise leaves the bits
- * unchanged. We then compute
+ * More specifically, we first store the floating point bits into a 32-bit int {@code j} using
+ * {@link Float#floatToIntBits}. This method collapses all NaNs into a single, canonical NaN value
+ * but otherwise leaves the bits unchanged. We then compute
  * </p>
  *
  * <pre>
  * j &circ;= (j &gt;&gt; (Integer.SIZE - 1)) | Integer.MIN_SIZE
  * </pre>
  * <p>
- * which inverts the sign bit and XOR's all other bits with the sign bit
- * itself. Comparing the raw bytes of {@code j} in most significant byte
- * order is equivalent to performing a single precision floating point
- * comparison on the underlying bits (ignoring NaN comparisons, as NaNs don't
- * compare equal to anything when performing floating point comparisons).
+ * which inverts the sign bit and XOR's all other bits with the sign bit itself. Comparing the raw
+ * bytes of {@code j} in most significant byte order is equivalent to performing a single precision
+ * floating point comparison on the underlying bits (ignoring NaN comparisons, as NaNs don't compare
+ * equal to anything when performing floating point comparisons).
  * </p>
  * <p>
- * The resulting integer is then converted into a byte array by serializing
- * the integer one byte at a time in most significant byte order. The
- * serialized integer is prefixed by a single header byte. All serialized
- * values are 5 bytes in length.
+ * The resulting integer is then converted into a byte array by serializing the integer one byte at
+ * a time in most significant byte order. The serialized integer is prefixed by a single header
+ * byte. All serialized values are 5 bytes in length.
  * </p>
  * <p>
  * {@code OrderedBytes} encodings are heavily influenced by the
- * <a href="http://sqlite.org/src4/doc/trunk/www/key_encoding.wiki">SQLite4 Key
- * Encoding</a>. Slight deviations are make in the interest of order
- * correctness and user extensibility. Fixed-width {@code Long} and
- * {@link Double} encodings are based on implementations from the now defunct
+ * <a href="http://sqlite.org/src4/doc/trunk/www/key_encoding.wiki">SQLite4 Key Encoding</a>. Slight
+ * deviations are make in the interest of order correctness and user extensibility. Fixed-width
+ * {@code Long} and {@link Double} encodings are based on implementations from the now defunct
  * Orderly library.
  * </p>
  */
@@ -266,11 +297,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class OrderedBytes {
 
   /*
-   * These constants define header bytes used to identify encoded values. Note
-   * that the values here are not exhaustive as the Numeric format encodes
-   * portions of its value within the header byte. The values listed here are
-   * directly applied to persisted data -- DO NOT modify the values specified
-   * here. Instead, gaps are placed intentionally between values so that new
+   * These constants define header bytes used to identify encoded values. Note that the values here
+   * are not exhaustive as the Numeric format encodes portions of its value within the header byte.
+   * The values listed here are directly applied to persisted data -- DO NOT modify the values
+   * specified here. Instead, gaps are placed intentionally between values so that new
    * implementations can be inserted into the total ordering enforced here.
    */
   private static final byte NULL = 0x05;
@@ -318,7 +348,7 @@ public class OrderedBytes {
    * The context used to normalize {@link BigDecimal} values.
    */
   public static final MathContext DEFAULT_MATH_CONTEXT =
-      new MathContext(MAX_PRECISION, RoundingMode.HALF_UP);
+    new MathContext(MAX_PRECISION, RoundingMode.HALF_UP);
 
   /**
    * Creates the standard exception when the encoded header byte is unexpected for the decoding
@@ -326,8 +356,8 @@ public class OrderedBytes {
    * @param header value used in error message.
    */
   private static IllegalArgumentException unexpectedHeader(byte header) {
-    throw new IllegalArgumentException("unexpected value in first byte: 0x"
-        + Long.toHexString(header));
+    throw new IllegalArgumentException(
+      "unexpected value in first byte: 0x" + Long.toHexString(header));
   }
 
   /**
@@ -347,17 +377,14 @@ public class OrderedBytes {
    * @return number of bytes written.
    */
   private static int putUint32(PositionedByteRange dst, int val) {
-    dst.put((byte) (val >>> 24))
-       .put((byte) (val >>> 16))
-       .put((byte) (val >>> 8))
-       .put((byte) val);
+    dst.put((byte) (val >>> 24)).put((byte) (val >>> 16)).put((byte) (val >>> 8)).put((byte) val);
     return 4;
   }
 
   /**
    * Encode an unsigned 64-bit unsigned integer {@code val} into {@code dst}.
-   * @param dst The destination to which encoded bytes are written.
-   * @param val The value to write.
+   * @param dst  The destination to which encoded bytes are written.
+   * @param val  The value to write.
    * @param comp Compliment the encoded value when {@code comp} is true.
    * @return number of bytes written.
    */
@@ -374,17 +401,14 @@ public class OrderedBytes {
     }
     if (-1 == unsignedCmp(val, 2288L)) {
       y = (int) (val - 240);
-      dst.put((byte) (y / 256 + 241))
-         .put((byte) (y % 256));
+      dst.put((byte) (y / 256 + 241)).put((byte) (y % 256));
       len = dst.getPosition() - start;
       ord.apply(a, offset + start, len);
       return len;
     }
     if (-1 == unsignedCmp(val, 67824L)) {
       y = (int) (val - 2288);
-      dst.put((byte) 249)
-         .put((byte) (y / 256))
-         .put((byte) (y % 256));
+      dst.put((byte) 249).put((byte) (y / 256)).put((byte) (y % 256));
       len = dst.getPosition() - start;
       ord.apply(a, offset + start, len);
       return len;
@@ -393,10 +417,7 @@ public class OrderedBytes {
     w = (int) (val >>> 32);
     if (w == 0) {
       if (-1 == unsignedCmp(y, 16777216L)) {
-        dst.put((byte) 250)
-           .put((byte) (y >>> 16))
-           .put((byte) (y >>> 8))
-           .put((byte) y);
+        dst.put((byte) 250).put((byte) (y >>> 16)).put((byte) (y >>> 8)).put((byte) y);
         len = dst.getPosition() - start;
         ord.apply(a, offset + start, len);
         return len;
@@ -408,27 +429,21 @@ public class OrderedBytes {
       return len;
     }
     if (-1 == unsignedCmp(w, 256L)) {
-      dst.put((byte) 252)
-         .put((byte) w);
+      dst.put((byte) 252).put((byte) w);
       putUint32(dst, y);
       len = dst.getPosition() - start;
       ord.apply(a, offset + start, len);
       return len;
     }
     if (-1 == unsignedCmp(w, 65536L)) {
-      dst.put((byte) 253)
-         .put((byte) (w >>> 8))
-         .put((byte) w);
+      dst.put((byte) 253).put((byte) (w >>> 8)).put((byte) w);
       putUint32(dst, y);
       len = dst.getPosition() - start;
       ord.apply(a, offset + start, len);
       return len;
     }
     if (-1 == unsignedCmp(w, 16777216L)) {
-      dst.put((byte) 254)
-         .put((byte) (w >>> 16))
-         .put((byte) (w >>> 8))
-         .put((byte) w);
+      dst.put((byte) 254).put((byte) (w >>> 16)).put((byte) (w >>> 8)).put((byte) w);
       putUint32(dst, y);
       len = dst.getPosition() - start;
       ord.apply(a, offset + start, len);
@@ -443,9 +458,9 @@ public class OrderedBytes {
   }
 
   /**
-   * Inspect {@code src} for an encoded varuint64 for its length in bytes.
-   * Preserves the state of {@code src}.
-   * @param src source buffer
+   * Inspect {@code src} for an encoded varuint64 for its length in bytes. Preserves the state of
+   * {@code src}.
+   * @param src  source buffer
    * @param comp if true, parse the compliment of the value.
    * @return the number of bytes consumed by this value.
    */
@@ -476,8 +491,8 @@ public class OrderedBytes {
   }
 
   /**
-   * Decode a sequence of bytes in {@code src} as a varuint64. Compliment the
-   * encoded value when {@code comp} is true.
+   * Decode a sequence of bytes in {@code src} as a varuint64. Compliment the encoded value when
+   * {@code comp} is true.
    * @return the decoded value.
    */
   static long getVaruint64(PositionedByteRange src, boolean comp) {
@@ -531,9 +546,8 @@ public class OrderedBytes {
   }
 
   /**
-   * Strip all trailing zeros to ensure that no digit will be zero and round
-   * using our default context to ensure precision doesn't exceed max allowed.
-   * From Phoenix's {@code NumberUtil}.
+   * Strip all trailing zeros to ensure that no digit will be zero and round using our default
+   * context to ensure precision doesn't exceed max allowed. From Phoenix's {@code NumberUtil}.
    * @return new {@link BigDecimal} instance
    */
   static BigDecimal normalize(BigDecimal val) {
@@ -541,14 +555,12 @@ public class OrderedBytes {
   }
 
   /**
-   * Read significand digits from {@code src} according to the magnitude
-   * of {@code e}.
-   * @param src The source from which to read encoded digits.
-   * @param e The magnitude of the first digit read.
+   * Read significand digits from {@code src} according to the magnitude of {@code e}.
+   * @param src  The source from which to read encoded digits.
+   * @param e    The magnitude of the first digit read.
    * @param comp Treat encoded bytes as compliments when {@code comp} is true.
    * @return The decoded value.
-   * @throws IllegalArgumentException when read exceeds the remaining length
-   *     of {@code src}.
+   * @throws IllegalArgumentException when read exceeds the remaining length of {@code src}.
    */
   private static BigDecimal decodeSignificand(PositionedByteRange src, int e, boolean comp) {
     // TODO: can this be made faster?
@@ -562,8 +574,8 @@ public class OrderedBytes {
         // we've exceeded this range's window
         src.setPosition(start);
         throw new IllegalArgumentException(
-            "Read exceeds range before termination byte found. offset: " + offset + " position: "
-                + (start + i));
+          "Read exceeds range before termination byte found. offset: " + offset + " position: "
+            + (start + i));
       }
       // one byte -> 2 digits
       // base-100 digits are encoded as val * 2 + 1 except for the termination digit.
@@ -586,7 +598,7 @@ public class OrderedBytes {
 
   /**
    * Skip {@code src} over the significand bytes.
-   * @param src The source from which to read encoded digits.
+   * @param src  The source from which to read encoded digits.
    * @param comp Treat encoded bytes as compliments when {@code comp} is true.
    * @return the number of bytes skipped.
    */
@@ -602,20 +614,19 @@ public class OrderedBytes {
 
   /**
    * <p>
-   * Encode the small magnitude floating point number {@code val} using the
-   * key encoding. The caller guarantees that 1.0 > abs(val) > 0.0.
+   * Encode the small magnitude floating point number {@code val} using the key encoding. The caller
+   * guarantees that 1.0 > abs(val) > 0.0.
    * </p>
    * <p>
-   * A floating point value is encoded as an integer exponent {@code E} and a
-   * mantissa {@code M}. The original value is equal to {@code (M * 100^E)}.
-   * {@code E} is set to the smallest value possible without making {@code M}
-   * greater than or equal to 1.0.
+   * A floating point value is encoded as an integer exponent {@code E} and a mantissa {@code M}.
+   * The original value is equal to {@code (M * 100^E)}. {@code E} is set to the smallest value
+   * possible without making {@code M} greater than or equal to 1.0.
    * </p>
    * <p>
-   * For this routine, {@code E} will always be zero or negative, since the
-   * original value is less than one. The encoding written by this routine is
-   * the ones-complement of the varint of the negative of {@code E} followed
-   * by the mantissa:
+   * For this routine, {@code E} will always be zero or negative, since the original value is less
+   * than one. The encoding written by this routine is the ones-complement of the varint of the
+   * negative of {@code E} followed by the mantissa:
+   *
    * <pre>
    *   Encoding:   ~-E  M
    * </pre>
@@ -642,8 +653,8 @@ public class OrderedBytes {
 
     // normalize abs(val) to determine E
     int zerosBeforeFirstNonZero = abs.scale() - abs.precision();
-    int lengthToMoveRight = zerosBeforeFirstNonZero % 2 ==
-      0 ? zerosBeforeFirstNonZero : zerosBeforeFirstNonZero - 1;
+    int lengthToMoveRight =
+      zerosBeforeFirstNonZero % 2 == 0 ? zerosBeforeFirstNonZero : zerosBeforeFirstNonZero - 1;
     e = lengthToMoveRight / 2;
     abs = abs.movePointRight(lengthToMoveRight);
 
@@ -662,31 +673,26 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode the large magnitude floating point number {@code val} using
-   * the key encoding. The caller guarantees that {@code val} will be
-   * finite and abs(val) >= 1.0.
+   * Encode the large magnitude floating point number {@code val} using the key encoding. The caller
+   * guarantees that {@code val} will be finite and abs(val) >= 1.0.
    * <p>
-   * A floating point value is encoded as an integer exponent {@code E}
-   * and a mantissa {@code M}. The original value is equal to
-   * {@code (M * 100^E)}. {@code E} is set to the smallest value
+   * A floating point value is encoded as an integer exponent {@code E} and a mantissa {@code M}.
+   * The original value is equal to {@code (M * 100^E)}. {@code E} is set to the smallest value
    * possible without making {@code M} greater than or equal to 1.0.
    * </p>
    * <p>
-   * Each centimal digit of the mantissa is stored in a byte. If the value of
-   * the centimal digit is {@code X} (hence {@code X>=0} and
-   * {@code X<=99}) then the byte value will be {@code 2*X+1} for
-   * every byte of the mantissa, except for the last byte which will be
-   * {@code 2*X+0}. The mantissa must be the minimum number of bytes
-   * necessary to represent the value; trailing {@code X==0} digits are
-   * omitted. This means that the mantissa will never contain a byte with the
-   * value {@code 0x00}.
+   * Each centimal digit of the mantissa is stored in a byte. If the value of the centimal digit is
+   * {@code X} (hence {@code X>=0} and {@code X<=99}) then the byte value will be {@code 2*X+1} for
+   * every byte of the mantissa, except for the last byte which will be {@code 2*X+0}. The mantissa
+   * must be the minimum number of bytes necessary to represent the value; trailing {@code X==0}
+   * digits are omitted. This means that the mantissa will never contain a byte with the value
+   * {@code 0x00}.
    * </p>
    * <p>
-   * If {@code E > 10}, then this routine writes of {@code E} as a
-   * varint followed by the mantissa as described above. Otherwise, if
-   * {@code E <= 10}, this routine only writes the mantissa and leaves
-   * the {@code E} value to be encoded as part of the opening byte of the
-   * field by the calling function.
+   * If {@code E > 10}, then this routine writes of {@code E} as a varint followed by the mantissa
+   * as described above. Otherwise, if {@code E <= 10}, this routine only writes the mantissa and
+   * leaves the {@code E} value to be encoded as part of the opening byte of the field by the
+   * calling function.
    *
    * <pre>
    *   Encoding:  M       (if E<=10)
@@ -741,9 +747,9 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a value val in [0.01, 1.0) into Centimals.
-   * Util function for {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal)
-   * and {@link OrderedBytes#encodeNumericSmall(PositionedByteRange, BigDecimal)}
+   * Encode a value val in [0.01, 1.0) into Centimals. Util function for
+   * {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal) and
+   * {@link OrderedBytes#encodeNumericSmall(PositionedByteRange, BigDecimal)}
    * @param dst The destination to which encoded digits are written.
    * @param val A BigDecimal after the normalization. The value must be in [0.01, 1.0).
    */
@@ -806,9 +812,9 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a numerical value using the variable-length encoding.
-   * If the number of significant digits of the value exceeds the
-   * {@link OrderedBytes#MAX_PRECISION}, the exceeding part will be lost.
+   * Encode a numerical value using the variable-length encoding. If the number of significant
+   * digits of the value exceeds the {@link OrderedBytes#MAX_PRECISION}, the exceeding part will be
+   * lost.
    * @param dst The destination to which encoded digits are written.
    * @param val The value to encode.
    * @param ord The {@link Order} to respect while encoding {@code val}.
@@ -833,10 +839,9 @@ public class OrderedBytes {
   }
 
   /**
-   * Decode a {@link BigDecimal} from {@code src}. Assumes {@code src} encodes
-   * a value in Numeric encoding and is within the valid range of
-   * {@link BigDecimal} values. {@link BigDecimal} does not support {@code NaN}
-   * or {@code Infinte} values.
+   * Decode a {@link BigDecimal} from {@code src}. Assumes {@code src} encodes a value in Numeric
+   * encoding and is within the valid range of {@link BigDecimal} values. {@link BigDecimal} does
+   * not support {@code NaN} or {@code Infinte} values.
    * @see #decodeNumericAsDouble(PositionedByteRange)
    */
   private static BigDecimal decodeNumericValue(PositionedByteRange src) {
@@ -879,12 +884,11 @@ public class OrderedBytes {
   }
 
   /**
-   * Decode a primitive {@code double} value from the Numeric encoding. Numeric
-   * encoding is based on {@link BigDecimal}; in the event the encoded value is
-   * larger than can be represented in a {@code double}, this method performs
-   * an implicit narrowing conversion as described in
+   * Decode a primitive {@code double} value from the Numeric encoding. Numeric encoding is based on
+   * {@link BigDecimal}; in the event the encoded value is larger than can be represented in a
+   * {@code double}, this method performs an implicit narrowing conversion as described in
    * {@link BigDecimal#doubleValue()}.
-   * @throws NullPointerException when the encoded value is {@code NULL}.
+   * @throws NullPointerException     when the encoded value is {@code NULL}.
    * @throws IllegalArgumentException when the encoded value is not a Numeric.
    * @see #encodeNumeric(PositionedByteRange, double, Order)
    * @see BigDecimal#doubleValue()
@@ -917,12 +921,11 @@ public class OrderedBytes {
   }
 
   /**
-   * Decode a primitive {@code long} value from the Numeric encoding. Numeric
-   * encoding is based on {@link BigDecimal}; in the event the encoded value is
-   * larger than can be represented in a {@code long}, this method performs an
-   * implicit narrowing conversion as described in
+   * Decode a primitive {@code long} value from the Numeric encoding. Numeric encoding is based on
+   * {@link BigDecimal}; in the event the encoded value is larger than can be represented in a
+   * {@code long}, this method performs an implicit narrowing conversion as described in
    * {@link BigDecimal#doubleValue()}.
-   * @throws NullPointerException when the encoded value is {@code NULL}.
+   * @throws NullPointerException     when the encoded value is {@code NULL}.
    * @throws IllegalArgumentException when the encoded value is not a Numeric.
    * @see #encodeNumeric(PositionedByteRange, long, Order)
    * @see BigDecimal#longValue()
@@ -958,8 +961,8 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a String value. String encoding is 0x00-terminated and so it does
-   * not support {@code \u0000} codepoints in the value.
+   * Encode a String value. String encoding is 0x00-terminated and so it does not support
+   * {@code \u0000} codepoints in the value.
    * @param dst The destination to which the encoded value is written.
    * @param val The value to encode.
    * @param ord The {@link Order} to respect while encoding {@code val}.
@@ -986,8 +989,7 @@ public class OrderedBytes {
    */
   public static String decodeString(PositionedByteRange src) {
     final byte header = src.get();
-    if (header == NULL || header == DESCENDING.apply(NULL))
-      return null;
+    if (header == NULL || header == DESCENDING.apply(NULL)) return null;
     assert header == TEXT || header == DESCENDING.apply(TEXT);
     Order ord = header == TEXT ? ASCENDING : DESCENDING;
     byte[] a = src.getBytes();
@@ -1012,44 +1014,36 @@ public class OrderedBytes {
    * Calculate the expected BlobVar encoded length based on unencoded length.
    */
   public static int blobVarEncodedLength(int len) {
-    if (0 == len)
-      return 2; // 1-byte header + 1-byte terminator
-    else
-      return (int)
-          Math.ceil(
-            (len * 8) // 8-bits per input byte
-            / 7.0)    // 7-bits of input data per encoded byte, rounded up
-          + 1;        // + 1-byte header
+    if (0 == len) return 2; // 1-byte header + 1-byte terminator
+    else return (int) Math.ceil((len * 8) // 8-bits per input byte
+      / 7.0) // 7-bits of input data per encoded byte, rounded up
+      + 1; // + 1-byte header
   }
 
   /**
    * Calculate the expected BlobVar decoded length based on encoded length.
    */
   static int blobVarDecodedLength(int len) {
-    return
-        ((len
-          - 1) // 1-byte header
-          * 7) // 7-bits of payload per encoded byte
-          / 8; // 8-bits per byte
+    return ((len - 1) // 1-byte header
+      * 7) // 7-bits of payload per encoded byte
+      / 8; // 8-bits per byte
   }
 
   /**
    * Encode a Blob value using a modified varint encoding scheme.
    * <p>
-   * This format encodes a byte[] value such that no limitations on the input
-   * value are imposed. The first byte encodes the encoding scheme that
-   * follows, {@link #BLOB_VAR}. Each encoded byte thereafter consists of a
-   * header bit followed by 7 bits of payload. A header bit of '1' indicates
-   * continuation of the encoding. A header bit of '0' indicates this byte
-   * contains the last of the payload. An empty input value is encoded as the
-   * header byte immediately followed by a termination byte {@code 0x00}. This
-   * is not ambiguous with the encoded value of {@code []}, which results in
-   * {@code [0x80, 0x00]}.
+   * This format encodes a byte[] value such that no limitations on the input value are imposed. The
+   * first byte encodes the encoding scheme that follows, {@link #BLOB_VAR}. Each encoded byte
+   * thereafter consists of a header bit followed by 7 bits of payload. A header bit of '1'
+   * indicates continuation of the encoding. A header bit of '0' indicates this byte contains the
+   * last of the payload. An empty input value is encoded as the header byte immediately followed by
+   * a termination byte {@code 0x00}. This is not ambiguous with the encoded value of {@code []},
+   * which results in {@code [0x80, 0x00]}.
    * </p>
    * @return the number of bytes written.
    */
   public static int encodeBlobVar(PositionedByteRange dst, byte[] val, int voff, int vlen,
-      Order ord) {
+    Order ord) {
     if (null == val) {
       return encodeNull(dst, ord);
     }
@@ -1114,16 +1108,16 @@ public class OrderedBytes {
       ;
     end++; // increment end to 1-past last byte
     // create ret buffer using length of encoded data + 1 (header byte)
-    PositionedByteRange ret = new SimplePositionedMutableByteRange(blobVarDecodedLength(end - start
-        + 1));
+    PositionedByteRange ret =
+      new SimplePositionedMutableByteRange(blobVarDecodedLength(end - start + 1));
     int s = 6;
     byte t = (byte) ((ord.apply(a[offset + start]) << 1) & 0xff);
     for (int i = start + 1; i < end; i++) {
       if (s == 7) {
         ret.put((byte) (t | (ord.apply(a[offset + i]) & 0x7f)));
         i++;
-               // explicitly reset t -- clean up overflow buffer after decoding
-               // a full cycle and retain assertion condition below. This happens
+        // explicitly reset t -- clean up overflow buffer after decoding
+        // a full cycle and retain assertion condition below. This happens
         t = 0; // when the LSB in the last encoded byte is 1. (HBASE-9893)
       } else {
         ret.put((byte) (t | ((ord.apply(a[offset + i]) & 0x7f) >>> s)));
@@ -1139,15 +1133,15 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a Blob value as a byte-for-byte copy. BlobCopy encoding in
-   * DESCENDING order is NULL terminated so as to preserve proper sorting of
-   * {@code []} and so it does not support {@code 0x00} in the value.
+   * Encode a Blob value as a byte-for-byte copy. BlobCopy encoding in DESCENDING order is NULL
+   * terminated so as to preserve proper sorting of {@code []} and so it does not support
+   * {@code 0x00} in the value.
    * @return the number of bytes written.
-   * @throws IllegalArgumentException when {@code ord} is DESCENDING and
-   *    {@code val} contains a {@code 0x00} byte.
+   * @throws IllegalArgumentException when {@code ord} is DESCENDING and {@code val} contains a
+   *                                  {@code 0x00} byte.
    */
   public static int encodeBlobCopy(PositionedByteRange dst, byte[] val, int voff, int vlen,
-      Order ord) {
+    Order ord) {
     if (null == val) {
       encodeNull(dst, ord);
       if (ASCENDING == ord) return 1;
@@ -1178,12 +1172,12 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a Blob value as a byte-for-byte copy. BlobCopy encoding in
-   * DESCENDING order is NULL terminated so as to preserve proper sorting of
-   * {@code []} and so it does not support {@code 0x00} in the value.
+   * Encode a Blob value as a byte-for-byte copy. BlobCopy encoding in DESCENDING order is NULL
+   * terminated so as to preserve proper sorting of {@code []} and so it does not support
+   * {@code 0x00} in the value.
    * @return the number of bytes written.
-   * @throws IllegalArgumentException when {@code ord} is DESCENDING and
-   *    {@code val} contains a {@code 0x00} byte.
+   * @throws IllegalArgumentException when {@code ord} is DESCENDING and {@code val} contains a
+   *                                  {@code 0x00} byte.
    * @see #encodeBlobCopy(PositionedByteRange, byte[], int, int, Order)
    */
   public static int encodeBlobCopy(PositionedByteRange dst, byte[] val, Order ord) {
@@ -1230,8 +1224,7 @@ public class OrderedBytes {
    */
   public static int encodeInt8(PositionedByteRange dst, byte val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
-    dst.put(FIXED_INT8)
-       .put((byte) (val ^ 0x80));
+    dst.put(FIXED_INT8).put((byte) (val ^ 0x80));
     ord.apply(dst.getBytes(), offset + start, 2);
     return 2;
   }
@@ -1244,7 +1237,7 @@ public class OrderedBytes {
     final byte header = src.get();
     assert header == FIXED_INT8 || header == DESCENDING.apply(FIXED_INT8);
     Order ord = header == FIXED_INT8 ? ASCENDING : DESCENDING;
-    return (byte)((ord.apply(src.get()) ^ 0x80) & 0xff);
+    return (byte) ((ord.apply(src.get()) ^ 0x80) & 0xff);
   }
 
   /**
@@ -1255,9 +1248,7 @@ public class OrderedBytes {
    */
   public static int encodeInt16(PositionedByteRange dst, short val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
-    dst.put(FIXED_INT16)
-       .put((byte) ((val >> 8) ^ 0x80))
-       .put((byte) val);
+    dst.put(FIXED_INT16).put((byte) ((val >> 8) ^ 0x80)).put((byte) val);
     ord.apply(dst.getBytes(), offset + start, 3);
     return 3;
   }
@@ -1283,11 +1274,8 @@ public class OrderedBytes {
    */
   public static int encodeInt32(PositionedByteRange dst, int val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
-    dst.put(FIXED_INT32)
-        .put((byte) ((val >> 24) ^ 0x80))
-        .put((byte) (val >> 16))
-        .put((byte) (val >> 8))
-        .put((byte) val);
+    dst.put(FIXED_INT32).put((byte) ((val >> 24) ^ 0x80)).put((byte) (val >> 16))
+      .put((byte) (val >> 8)).put((byte) val);
     ord.apply(dst.getBytes(), offset + start, 5);
     return 5;
   }
@@ -1310,20 +1298,20 @@ public class OrderedBytes {
   /**
    * Encode an {@code int64} value using the fixed-length encoding.
    * <p>
-   * This format ensures that all longs sort in their natural order, as they
-   * would sort when using signed long comparison.
+   * This format ensures that all longs sort in their natural order, as they would sort when using
+   * signed long comparison.
    * </p>
    * <p>
-   * All Longs are serialized to an 8-byte, fixed-width sortable byte format.
-   * Serialization is performed by inverting the integer sign bit and writing
-   * the resulting bytes to the byte array in big endian order. The encoded
-   * value is prefixed by the {@link #FIXED_INT64} header byte. This encoding
-   * is designed to handle java language primitives and so Null values are NOT
+   * All Longs are serialized to an 8-byte, fixed-width sortable byte format. Serialization is
+   * performed by inverting the integer sign bit and writing the resulting bytes to the byte array
+   * in big endian order. The encoded value is prefixed by the {@link #FIXED_INT64} header byte.
+   * This encoding is designed to handle java language primitives and so Null values are NOT
    * supported by this implementation.
    * </p>
    * <p>
    * For example:
    * </p>
+   *
    * <pre>
    * Input:   0x0000000000000005 (5)
    * Result:  0x288000000000000005
@@ -1338,23 +1326,17 @@ public class OrderedBytes {
    * Result:  0x287fffffffffffffff
    * </pre>
    * <p>
-   * This encoding format, and much of this documentation string, is based on
-   * Orderly's {@code FixedIntWritableRowKey}.
+   * This encoding format, and much of this documentation string, is based on Orderly's
+   * {@code FixedIntWritableRowKey}.
    * </p>
    * @return the number of bytes written.
    * @see #decodeInt64(PositionedByteRange)
    */
   public static int encodeInt64(PositionedByteRange dst, long val, Order ord) {
     final int offset = dst.getOffset(), start = dst.getPosition();
-    dst.put(FIXED_INT64)
-       .put((byte) ((val >> 56) ^ 0x80))
-       .put((byte) (val >> 48))
-       .put((byte) (val >> 40))
-       .put((byte) (val >> 32))
-       .put((byte) (val >> 24))
-       .put((byte) (val >> 16))
-       .put((byte) (val >> 8))
-       .put((byte) val);
+    dst.put(FIXED_INT64).put((byte) ((val >> 56) ^ 0x80)).put((byte) (val >> 48))
+      .put((byte) (val >> 40)).put((byte) (val >> 32)).put((byte) (val >> 24))
+      .put((byte) (val >> 16)).put((byte) (val >> 8)).put((byte) val);
     ord.apply(dst.getBytes(), offset + start, 9);
     return 9;
   }
@@ -1375,9 +1357,8 @@ public class OrderedBytes {
   }
 
   /**
-   * Encode a 32-bit floating point value using the fixed-length encoding.
-   * Encoding format is described at length in
-   * {@link #encodeFloat64(PositionedByteRange, double, Order)}.
+   * Encode a 32-bit floating point value using the fixed-length encoding. Encoding format is
+   * described at length in {@link #encodeFloat64(PositionedByteRange, double, Order)}.
    * @return the number of bytes written.
    * @see #decodeFloat32(PositionedByteRange)
    * @see #encodeFloat64(PositionedByteRange, double, Order)
@@ -1386,11 +1367,8 @@ public class OrderedBytes {
     final int offset = dst.getOffset(), start = dst.getPosition();
     int i = Float.floatToIntBits(val);
     i ^= ((i >> (Integer.SIZE - 1)) | Integer.MIN_VALUE);
-    dst.put(FIXED_FLOAT32)
-        .put((byte) (i >> 24))
-        .put((byte) (i >> 16))
-        .put((byte) (i >> 8))
-        .put((byte) i);
+    dst.put(FIXED_FLOAT32).put((byte) (i >> 24)).put((byte) (i >> 16)).put((byte) (i >> 8))
+      .put((byte) i);
     ord.apply(dst.getBytes(), offset + start, 5);
     return 5;
   }
@@ -1414,64 +1392,59 @@ public class OrderedBytes {
   /**
    * Encode a 64-bit floating point value using the fixed-length encoding.
    * <p>
-   * This format ensures the following total ordering of floating point
-   * values: Double.NEGATIVE_INFINITY &lt; -Double.MAX_VALUE &lt; ... &lt;
-   * -Double.MIN_VALUE &lt; -0.0 &lt; +0.0; &lt; Double.MIN_VALUE &lt; ...
-   * &lt; Double.MAX_VALUE &lt; Double.POSITIVE_INFINITY &lt; Double.NaN
+   * This format ensures the following total ordering of floating point values:
+   * Double.NEGATIVE_INFINITY &lt; -Double.MAX_VALUE &lt; ... &lt; -Double.MIN_VALUE &lt; -0.0 &lt;
+   * +0.0; &lt; Double.MIN_VALUE &lt; ... &lt; Double.MAX_VALUE &lt; Double.POSITIVE_INFINITY &lt;
+   * Double.NaN
    * </p>
    * <p>
-   * Floating point numbers are encoded as specified in IEEE 754. A 64-bit
-   * double precision float consists of a sign bit, 11-bit unsigned exponent
-   * encoded in offset-1023 notation, and a 52-bit significand. The format is
-   * described further in the <a
-   * href="http://en.wikipedia.org/wiki/Double_precision"> Double Precision
-   * Floating Point Wikipedia page</a> </p>
-   * <p>
-   * The value of a normal float is -1 <sup>sign bit</sup> &times;
-   * 2<sup>exponent - 1023</sup> &times; 1.significand
+   * Floating point numbers are encoded as specified in IEEE 754. A 64-bit double precision float
+   * consists of a sign bit, 11-bit unsigned exponent encoded in offset-1023 notation, and a 52-bit
+   * significand. The format is described further in the
+   * <a href="http://en.wikipedia.org/wiki/Double_precision"> Double Precision Floating Point
+   * Wikipedia page</a>
    * </p>
    * <p>
-   * The IEE754 floating point format already preserves sort ordering for
-   * positive floating point numbers when the raw bytes are compared in most
-   * significant byte order. This is discussed further at <a href=
-   * "http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm"
-   * > http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.
-   * htm</a>
+   * The value of a normal float is -1 <sup>sign bit</sup> &times; 2<sup>exponent - 1023</sup>
+   * &times; 1.significand
    * </p>
    * <p>
-   * Thus, we need only ensure that negative numbers sort in the the exact
-   * opposite order as positive numbers (so that say, negative infinity is
-   * less than negative 1), and that all negative numbers compare less than
-   * any positive number. To accomplish this, we invert the sign bit of all
-   * floating point numbers, and we also invert the exponent and significand
-   * bits if the floating point number was negative.
+   * The IEE754 floating point format already preserves sort ordering for positive floating point
+   * numbers when the raw bytes are compared in most significant byte order. This is discussed
+   * further at
+   * <a href= "http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm" >
+   * http://www.cygnus-software.com/papers/comparingfloats/comparingfloats. htm</a>
    * </p>
    * <p>
-   * More specifically, we first store the floating point bits into a 64-bit
-   * long {@code l} using {@link Double#doubleToLongBits}. This method
-   * collapses all NaNs into a single, canonical NaN value but otherwise
-   * leaves the bits unchanged. We then compute
+   * Thus, we need only ensure that negative numbers sort in the the exact opposite order as
+   * positive numbers (so that say, negative infinity is less than negative 1), and that all
+   * negative numbers compare less than any positive number. To accomplish this, we invert the sign
+   * bit of all floating point numbers, and we also invert the exponent and significand bits if the
+   * floating point number was negative.
    * </p>
+   * <p>
+   * More specifically, we first store the floating point bits into a 64-bit long {@code l} using
+   * {@link Double#doubleToLongBits}. This method collapses all NaNs into a single, canonical NaN
+   * value but otherwise leaves the bits unchanged. We then compute
+   * </p>
+   *
    * <pre>
    * l &circ;= (l &gt;&gt; (Long.SIZE - 1)) | Long.MIN_SIZE
    * </pre>
    * <p>
-   * which inverts the sign bit and XOR's all other bits with the sign bit
-   * itself. Comparing the raw bytes of {@code l} in most significant
-   * byte order is equivalent to performing a double precision floating point
-   * comparison on the underlying bits (ignoring NaN comparisons, as NaNs
-   * don't compare equal to anything when performing floating point
-   * comparisons).
+   * which inverts the sign bit and XOR's all other bits with the sign bit itself. Comparing the raw
+   * bytes of {@code l} in most significant byte order is equivalent to performing a double
+   * precision floating point comparison on the underlying bits (ignoring NaN comparisons, as NaNs
+   * don't compare equal to anything when performing floating point comparisons).
    * </p>
    * <p>
-   * The resulting long integer is then converted into a byte array by
-   * serializing the long one byte at a time in most significant byte order.
-   * The serialized integer is prefixed by a single header byte. All
-   * serialized values are 9 bytes in length.
+   * The resulting long integer is then converted into a byte array by serializing the long one byte
+   * at a time in most significant byte order. The serialized integer is prefixed by a single header
+   * byte. All serialized values are 9 bytes in length.
    * </p>
    * <p>
-   * This encoding format, and much of this highly detailed documentation
-   * string, is based on Orderly's {@code DoubleWritableRowKey}.
+   * This encoding format, and much of this highly detailed documentation string, is based on
+   * Orderly's {@code DoubleWritableRowKey}.
    * </p>
    * @return the number of bytes written.
    * @see #decodeFloat64(PositionedByteRange)
@@ -1480,15 +1453,9 @@ public class OrderedBytes {
     final int offset = dst.getOffset(), start = dst.getPosition();
     long lng = Double.doubleToLongBits(val);
     lng ^= ((lng >> (Long.SIZE - 1)) | Long.MIN_VALUE);
-    dst.put(FIXED_FLOAT64)
-        .put((byte) (lng >> 56))
-        .put((byte) (lng >> 48))
-        .put((byte) (lng >> 40))
-        .put((byte) (lng >> 32))
-        .put((byte) (lng >> 24))
-        .put((byte) (lng >> 16))
-        .put((byte) (lng >> 8))
-        .put((byte) lng);
+    dst.put(FIXED_FLOAT64).put((byte) (lng >> 56)).put((byte) (lng >> 48)).put((byte) (lng >> 40))
+      .put((byte) (lng >> 32)).put((byte) (lng >> 24)).put((byte) (lng >> 16))
+      .put((byte) (lng >> 8)).put((byte) lng);
     ord.apply(dst.getBytes(), offset + start, 9);
     return 9;
   }
@@ -1510,29 +1477,24 @@ public class OrderedBytes {
   }
 
   /**
-   * Returns true when {@code src} appears to be positioned an encoded value,
-   * false otherwise.
+   * Returns true when {@code src} appears to be positioned an encoded value, false otherwise.
    */
   public static boolean isEncodedValue(PositionedByteRange src) {
     return isNull(src) || isNumeric(src) || isFixedInt8(src) || isFixedInt16(src)
-        || isFixedInt32(src) || isFixedInt64(src)
-        || isFixedFloat32(src) || isFixedFloat64(src) || isText(src) || isBlobCopy(src)
-        || isBlobVar(src);
+      || isFixedInt32(src) || isFixedInt64(src) || isFixedFloat32(src) || isFixedFloat64(src)
+      || isText(src) || isBlobCopy(src) || isBlobVar(src);
   }
 
   /**
-   * Return true when the next encoded value in {@code src} is null, false
-   * otherwise.
+   * Return true when the next encoded value in {@code src} is null, false otherwise.
    */
   public static boolean isNull(PositionedByteRange src) {
-    return NULL ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+    return NULL == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses Numeric
-   * encoding, false otherwise. {@code NaN}, {@code +/-Inf} are valid Numeric
-   * values.
+   * Return true when the next encoded value in {@code src} uses Numeric encoding, false otherwise.
+   * {@code NaN}, {@code +/-Inf} are valid Numeric values.
    */
   public static boolean isNumeric(PositionedByteRange src) {
     byte x = (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
@@ -1540,8 +1502,8 @@ public class OrderedBytes {
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses Numeric
-   * encoding and is {@code Infinite}, false otherwise.
+   * Return true when the next encoded value in {@code src} uses Numeric encoding and is
+   * {@code Infinite}, false otherwise.
    */
   public static boolean isNumericInfinite(PositionedByteRange src) {
     byte x = (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
@@ -1549,101 +1511,96 @@ public class OrderedBytes {
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses Numeric
-   * encoding and is {@code NaN}, false otherwise.
+   * Return true when the next encoded value in {@code src} uses Numeric encoding and is
+   * {@code NaN}, false otherwise.
    */
   public static boolean isNumericNaN(PositionedByteRange src) {
     return NAN == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses Numeric
-   * encoding and is {@code 0}, false otherwise.
-   */
-  public static boolean isNumericZero(PositionedByteRange src) {
-    return ZERO ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Int8 encoding, false otherwise.
-   */
-  public static boolean isFixedInt8(PositionedByteRange src) {
-    return FIXED_INT8 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Int16 encoding, false otherwise.
-   */
-  public static boolean isFixedInt16(PositionedByteRange src) {
-    return FIXED_INT16 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Int32 encoding, false otherwise.
-   */
-  public static boolean isFixedInt32(PositionedByteRange src) {
-    return FIXED_INT32 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Int64 encoding, false otherwise.
-   */
-  public static boolean isFixedInt64(PositionedByteRange src) {
-    return FIXED_INT64 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Float32 encoding, false otherwise.
-   */
-  public static boolean isFixedFloat32(PositionedByteRange src) {
-    return FIXED_FLOAT32 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses fixed-width
-   * Float64 encoding, false otherwise.
-   */
-  public static boolean isFixedFloat64(PositionedByteRange src) {
-    return FIXED_FLOAT64 ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
-  }
-
-  /**
-   * Return true when the next encoded value in {@code src} uses Text encoding,
+   * Return true when the next encoded value in {@code src} uses Numeric encoding and is {@code 0},
    * false otherwise.
    */
-  public static boolean isText(PositionedByteRange src) {
-    return TEXT ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  public static boolean isNumericZero(PositionedByteRange src) {
+    return ZERO == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses BlobVar
-   * encoding, false otherwise.
+   * Return true when the next encoded value in {@code src} uses fixed-width Int8 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedInt8(PositionedByteRange src) {
+    return FIXED_INT8
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width Int16 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedInt16(PositionedByteRange src) {
+    return FIXED_INT16
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width Int32 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedInt32(PositionedByteRange src) {
+    return FIXED_INT32
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width Int64 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedInt64(PositionedByteRange src) {
+    return FIXED_INT64
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width Float32 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedFloat32(PositionedByteRange src) {
+    return FIXED_FLOAT32
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses fixed-width Float64 encoding, false
+   * otherwise.
+   */
+  public static boolean isFixedFloat64(PositionedByteRange src) {
+    return FIXED_FLOAT64
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses Text encoding, false otherwise.
+   */
+  public static boolean isText(PositionedByteRange src) {
+    return TEXT == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+  }
+
+  /**
+   * Return true when the next encoded value in {@code src} uses BlobVar encoding, false otherwise.
    */
   public static boolean isBlobVar(PositionedByteRange src) {
-    return BLOB_VAR ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+    return BLOB_VAR
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
   /**
-   * Return true when the next encoded value in {@code src} uses BlobCopy
-   * encoding, false otherwise.
+   * Return true when the next encoded value in {@code src} uses BlobCopy encoding, false otherwise.
    */
   public static boolean isBlobCopy(PositionedByteRange src) {
-    return BLOB_COPY ==
-        (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
+    return BLOB_COPY
+        == (-1 == Integer.signum(src.peek()) ? DESCENDING : ASCENDING).apply(src.peek());
   }
 
   /**
@@ -1756,12 +1713,12 @@ public class OrderedBytes {
   }
 
   /**
-   * Return the number of encoded entries remaining in {@code buff}. The
-   * state of {@code buff} is not modified through use of this method.
+   * Return the number of encoded entries remaining in {@code buff}. The state of {@code buff} is
+   * not modified through use of this method.
    */
   public static int length(PositionedByteRange buff) {
     PositionedByteRange b =
-        new SimplePositionedMutableByteRange(buff.getBytes(), buff.getOffset(), buff.getLength());
+      new SimplePositionedMutableByteRange(buff.getBytes(), buff.getOffset(), buff.getLength());
     b.setPosition(buff.getPosition());
     int cnt = 0;
     for (; isEncodedValue(b); skip(b), cnt++)

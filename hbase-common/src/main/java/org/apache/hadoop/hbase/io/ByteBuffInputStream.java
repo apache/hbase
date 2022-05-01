@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.InputStream;
-
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,7 +32,7 @@ public class ByteBuffInputStream extends InputStream {
   private ByteBuff buf;
 
   public ByteBuffInputStream(ByteBuff buf) {
-      this.buf = buf;
+    this.buf = buf;
   }
 
   /**
@@ -53,14 +52,14 @@ public class ByteBuffInputStream extends InputStream {
   /**
    * Reads up to next <code>len</code> bytes of data from buffer into passed array(starting from
    * given offset).
-   * @param b the array into which the data is read.
+   * @param b   the array into which the data is read.
    * @param off the start offset in the destination array <code>b</code>
    * @param len the maximum number of bytes to read.
    * @return the total number of bytes actually read into the buffer, or <code>-1</code> if not even
    *         1 byte can be read because the end of the stream has been reached.
    */
   @Override
-  public int read (byte b[], int off, int len) {
+  public int read(byte b[], int off, int len) {
     int avail = available();
     if (avail <= 0) {
       return -1;
@@ -94,8 +93,8 @@ public class ByteBuffInputStream extends InputStream {
   }
 
   /**
-   * @return  the number of remaining bytes that can be read (or skipped
-   *          over) from this input stream.
+   * @return the number of remaining bytes that can be read (or skipped over) from this input
+   *         stream.
    */
   @Override
   public int available() {

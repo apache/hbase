@@ -28,13 +28,12 @@ import org.slf4j.LoggerFactory;
 /**
  * A {@link RegionSplitRestriction} implementation that groups rows by a prefix of the row-key.
  * <p>
- * This ensures that a region is not split "inside" a prefix of a row key.
- * I.e. rows can be co-located in a region by their prefix.
+ * This ensures that a region is not split "inside" a prefix of a row key. I.e. rows can be
+ * co-located in a region by their prefix.
  */
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitRestriction extends RegionSplitRestriction {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(KeyPrefixRegionSplitRestriction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KeyPrefixRegionSplitRestriction.class);
 
   public static final String PREFIX_LENGTH_KEY =
     "hbase.regionserver.region.split_restriction.prefix_length";
@@ -47,9 +46,8 @@ public class KeyPrefixRegionSplitRestriction extends RegionSplitRestriction {
     if (prefixLengthString == null) {
       prefixLengthString = conf.get(PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
-        LOG.error("{} not specified for table {}. "
-          + "Using the default RegionSplitRestriction", PREFIX_LENGTH_KEY,
-          tableDescriptor.getTableName());
+        LOG.error("{} not specified for table {}. " + "Using the default RegionSplitRestriction",
+          PREFIX_LENGTH_KEY, tableDescriptor.getTableName());
         return;
       }
     }
@@ -58,9 +56,9 @@ public class KeyPrefixRegionSplitRestriction extends RegionSplitRestriction {
     } catch (NumberFormatException ignored) {
     }
     if (prefixLength <= 0) {
-      LOG.error("Invalid value for {} for table {}:{}. "
-        + "Using the default RegionSplitRestriction", PREFIX_LENGTH_KEY,
-        tableDescriptor.getTableName(), prefixLengthString);
+      LOG.error(
+        "Invalid value for {} for table {}:{}. " + "Using the default RegionSplitRestriction",
+        PREFIX_LENGTH_KEY, tableDescriptor.getTableName(), prefixLengthString);
     }
   }
 

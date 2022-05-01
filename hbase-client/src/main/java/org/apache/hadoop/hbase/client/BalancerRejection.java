@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,27 +34,25 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 final public class BalancerRejection extends LogEntry {
-  //The reason why balancer was rejected
+  // The reason why balancer was rejected
   private final String reason;
   private final List<String> costFuncInfoList;
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
-  private static final Gson GSON = GsonUtil.createGson()
-    .setPrettyPrinting()
-    .disableHtmlEscaping()
-    .registerTypeAdapter(BalancerRejection.class, (JsonSerializer<BalancerRejection>)
-      (balancerRejection, type, jsonSerializationContext) -> {
+  private static final Gson GSON = GsonUtil.createGson().setPrettyPrinting().disableHtmlEscaping()
+    .registerTypeAdapter(BalancerRejection.class,
+      (JsonSerializer<BalancerRejection>) (balancerRejection, type, jsonSerializationContext) -> {
         Gson gson = new Gson();
         return gson.toJsonTree(balancerRejection);
-      }).create();
+      })
+    .create();
 
   private BalancerRejection(String reason, List<String> costFuncInfoList) {
     this.reason = reason;
-    if(costFuncInfoList == null){
+    if (costFuncInfoList == null) {
       this.costFuncInfoList = Collections.emptyList();
-    }
-    else {
+    } else {
       this.costFuncInfoList = costFuncInfoList;
     }
   }
@@ -72,10 +67,8 @@ final public class BalancerRejection extends LogEntry {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("reason", reason)
-      .append("costFuncInfoList", costFuncInfoList.toString())
-      .toString();
+    return new ToStringBuilder(this).append("reason", reason)
+      .append("costFuncInfoList", costFuncInfoList.toString()).toString();
   }
 
   @Override
@@ -92,19 +85,15 @@ final public class BalancerRejection extends LogEntry {
       return this;
     }
 
-    public void addCostFuncInfo(String funcName, double cost, float multiplier){
-      if(costFuncInfoList == null){
+    public void addCostFuncInfo(String funcName, double cost, float multiplier) {
+      if (costFuncInfoList == null) {
         costFuncInfoList = new ArrayList<>();
       }
-      costFuncInfoList.add(
-        new StringBuilder()
-          .append(funcName)
-          .append(" cost:").append(cost)
-          .append(" multiplier:").append(multiplier)
-          .toString());
+      costFuncInfoList.add(new StringBuilder().append(funcName).append(" cost:").append(cost)
+        .append(" multiplier:").append(multiplier).toString());
     }
 
-    public Builder setCostFuncInfoList(List<String> costFuncInfoList){
+    public Builder setCostFuncInfoList(List<String> costFuncInfoList) {
       this.costFuncInfoList = costFuncInfoList;
       return this;
     }

@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -55,12 +56,12 @@ import org.junit.rules.TestName;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestLowLatencySpaceQuotas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLowLatencySpaceQuotas.class);
+    HBaseClassTestRule.forClass(TestLowLatencySpaceQuotas.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Global for all tests in the class
@@ -106,8 +107,8 @@ public class TestLowLatencySpaceQuotas {
   public void testFlushes() throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     // Write some data
@@ -120,7 +121,8 @@ public class TestLowLatencySpaceQuotas {
     // We should be able to observe the system recording an increase in size (even
     // though we know the filesystem scanning did not happen).
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= initialSize;
       }
     });
@@ -130,8 +132,8 @@ public class TestLowLatencySpaceQuotas {
   public void testMajorCompaction() throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     // Write some data and flush it to disk.
@@ -145,7 +147,8 @@ public class TestLowLatencySpaceQuotas {
 
     // After two flushes, both hfiles would contain similar data. We should see 2x the data.
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= 2L * sizePerBatch;
       }
     });
@@ -156,7 +159,8 @@ public class TestLowLatencySpaceQuotas {
     // After we major compact the table, we should notice quickly that the amount of data in the
     // table is much closer to reality (the duplicate entries across the two files are removed).
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= sizePerBatch && snapshot.getUsage() <= 2L * sizePerBatch;
       }
     });
@@ -166,8 +170,8 @@ public class TestLowLatencySpaceQuotas {
   public void testMinorCompaction() throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     // Write some data and flush it to disk.
@@ -184,7 +188,8 @@ public class TestLowLatencySpaceQuotas {
 
     // After two flushes, both hfiles would contain similar data. We should see 2x the data.
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= numFiles * sizePerBatch;
       }
     });
@@ -196,9 +201,10 @@ public class TestLowLatencySpaceQuotas {
     // After we major compact the table, we should notice quickly that the amount of data in the
     // table is much closer to reality (the duplicate entries across the two files are removed).
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
-        return snapshot.getUsage() >= numFilesAfterMinorCompaction * sizePerBatch &&
-            snapshot.getUsage() <= (numFilesAfterMinorCompaction + 1) * sizePerBatch;
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+        return snapshot.getUsage() >= numFilesAfterMinorCompaction * sizePerBatch
+          && snapshot.getUsage() <= (numFilesAfterMinorCompaction + 1) * sizePerBatch;
       }
     });
   }
@@ -211,22 +217,21 @@ public class TestLowLatencySpaceQuotas {
   public void testBulkLoading() throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     admin.compactionSwitch(false,
       admin.getRegionServers().stream().map(ServerName::toString).collect(Collectors.toList()));
     Map<byte[], List<Path>> family2Files = helper.generateFileToLoad(tn, 3, 550);
     // Make sure the files are about as long as we expect
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    FileStatus[] files = fs.listStatus(
-        new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
+    FileStatus[] files =
+      fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
     long totalSize = 0;
     for (FileStatus file : files) {
-      assertTrue(
-          "Expected the file, " + file.getPath() + ",  length to be larger than 25KB, but was "
-              + file.getLen(),
-          file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      assertTrue("Expected the file, " + file.getPath()
+        + ",  length to be larger than 25KB, but was " + file.getLen(),
+        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
       totalSize += file.getLen();
     }
 
@@ -251,8 +256,8 @@ public class TestLowLatencySpaceQuotas {
   public void testSnapshotSizes() throws Exception {
     TableName tn = helper.createTableWithRegions(1);
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     // Write some data and flush it to disk.
@@ -274,7 +279,8 @@ public class TestLowLatencySpaceQuotas {
 
     // Wait for the table to show the usage
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() == storeFileSize;
       }
     });
@@ -282,7 +288,7 @@ public class TestLowLatencySpaceQuotas {
     // Spoof a "full" computation of snapshot size. Normally the chore handles this, but we want
     // to test in the absence of this chore.
     FileArchiverNotifier notifier = TEST_UTIL.getHBaseCluster().getMaster()
-        .getSnapshotQuotaObserverChore().getNotifierForTable(tn);
+      .getSnapshotQuotaObserverChore().getNotifierForTable(tn);
     notifier.computeAndStoreSnapshotSizes(Collections.singletonList(snapshot1));
 
     // Force a major compaction to create a new file and push the old file to the archive
@@ -292,7 +298,8 @@ public class TestLowLatencySpaceQuotas {
     // We have a new file created by the majc referenced by the table and the snapshot still
     // referencing the old file.
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= 2 * storeFileSize;
       }
     });
@@ -301,14 +308,14 @@ public class TestLowLatencySpaceQuotas {
       Result r = quotaTable.get(QuotaTableUtil.makeGetForSnapshotSize(tn, snapshot1));
       assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
       assertTrue(r.advance());
-      assertEquals("The snapshot's size should be the same as the origin store file",
-          storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()));
+      assertEquals("The snapshot's size should be the same as the origin store file", storeFileSize,
+        QuotaTableUtil.parseSnapshotSize(r.current()));
 
       r = quotaTable.get(QuotaTableUtil.createGetNamespaceSnapshotSize(tn.getNamespaceAsString()));
       assertTrue("Expected a non-null, non-empty Result", r != null && !r.isEmpty());
       assertTrue(r.advance());
-      assertEquals("The snapshot's size should be the same as the origin store file",
-          storeFileSize, QuotaTableUtil.parseSnapshotSize(r.current()));
+      assertEquals("The snapshot's size should be the same as the origin store file", storeFileSize,
+        QuotaTableUtil.parseSnapshotSize(r.current()));
     }
   }
 }

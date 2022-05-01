@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,15 +45,15 @@ public class CheckConfigurationConstraint extends BaseConstraint {
     if (conf != null) {
       String val = conf.get(key);
       if (val == null || !val.equals(value))
-        throw new IllegalArgumentException(
-            "Configuration was not passed correctly");
+        throw new IllegalArgumentException("Configuration was not passed correctly");
       // and then check to make sure we got a fresh config by checking for a
       // hadoop-based config value, and if we don't find it, its fine
-      if (conf.getRaw("fs.file.impl") != null)
-        throw new IllegalArgumentException(
-            "Configuration was created using 'new Configuration()', should be "
-                + "done via 'new Configuration(false) to exclude defaut hadoop "
-                + "configurations values.");
+      if (
+        conf.getRaw("fs.file.impl") != null
+      ) throw new IllegalArgumentException(
+        "Configuration was created using 'new Configuration()', should be "
+          + "done via 'new Configuration(false) to exclude defaut hadoop "
+          + "configurations values.");
     }
   }
 

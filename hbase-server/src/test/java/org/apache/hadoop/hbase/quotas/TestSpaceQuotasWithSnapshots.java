@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,12 +61,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 /**
  * Test class to exercise the inclusion of snapshots in space quotas
  */
-@Category({LargeTests.class})
+@Category({ LargeTests.class })
 public class TestSpaceQuotasWithSnapshots {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotasWithSnapshots.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotasWithSnapshots.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -111,8 +111,8 @@ public class TestSpaceQuotasWithSnapshots {
     TableName tn = helper.createTableWithRegions(1);
     LOG.info("Writing data");
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     // Write some data
     final long initialSize = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
@@ -121,7 +121,8 @@ public class TestSpaceQuotasWithSnapshots {
     LOG.info("Waiting until table size reflects written data");
     // Wait until that data is seen by the master
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= initialSize;
       }
     });
@@ -150,8 +151,8 @@ public class TestSpaceQuotasWithSnapshots {
     final long lowerBound = initialSize - FUDGE_FOR_TABLE_SIZE;
 
     // Store the actual size after writing more data and then compacting it down to one file
-    LOG.info("Waiting for the region reports to reflect the correct size, between ("
-        + lowerBound + ", " + upperBound + ")");
+    LOG.info("Waiting for the region reports to reflect the correct size, between (" + lowerBound
+      + ", " + upperBound + ")");
     TEST_UTIL.waitFor(30 * 1000, 500, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -179,23 +180,22 @@ public class TestSpaceQuotasWithSnapshots {
     // The final usage should be the sum of the initial size (referenced by the snapshot) and the
     // new size we just wrote above.
     long expectedFinalSize = actualInitialSize + finalSize;
-    LOG.info(
-        "Expecting table usage to be " + actualInitialSize + " + " + finalSize
-        + " = " + expectedFinalSize);
+    LOG.info("Expecting table usage to be " + actualInitialSize + " + " + finalSize + " = "
+      + expectedFinalSize);
     // The size of the table (WRT quotas) should now be approximately double what it was previously
     TEST_UTIL.waitFor(30 * 1000, 1000, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         LOG.debug("Checking for " + expectedFinalSize + " == " + snapshot.getUsage());
         return expectedFinalSize == snapshot.getUsage();
       }
     });
 
-    Map<String,Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
+    Map<String, Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
     Long size = snapshotSizes.get(snapshot1);
     assertNotNull("Did not observe the size of the snapshot", size);
-    assertEquals(
-        "The recorded size of the HBase snapshot was not the size we expected", actualInitialSize,
-        size.longValue());
+    assertEquals("The recorded size of the HBase snapshot was not the size we expected",
+      actualInitialSize, size.longValue());
   }
 
   @Test
@@ -204,8 +204,8 @@ public class TestSpaceQuotasWithSnapshots {
     TableName tn = helper.createTableWithRegions(ns, 1);
     LOG.info("Writing data");
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(
-        ns, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(ns,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     // Write some data and flush it to disk
@@ -216,7 +216,8 @@ public class TestSpaceQuotasWithSnapshots {
     LOG.info("Waiting until namespace size reflects written data");
     // Wait until that data is seen by the master
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, ns) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= initialSize;
       }
     });
@@ -244,8 +245,8 @@ public class TestSpaceQuotasWithSnapshots {
     final long upperBound = initialSize + FUDGE_FOR_TABLE_SIZE;
     final long lowerBound = initialSize - FUDGE_FOR_TABLE_SIZE;
 
-    LOG.info("Waiting for the region reports to reflect the correct size, between ("
-        + lowerBound + ", " + upperBound + ")");
+    LOG.info("Waiting for the region reports to reflect the correct size, between (" + lowerBound
+      + ", " + upperBound + ")");
     TEST_UTIL.waitFor(30 * 1000, 500, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -278,23 +279,22 @@ public class TestSpaceQuotasWithSnapshots {
     // The final usage should be the sum of the initial size (referenced by the snapshot) and the
     // new size we just wrote above.
     long expectedFinalSize = actualInitialSize + finalSize;
-    LOG.info(
-        "Expecting namespace usage to be " + actualInitialSize + " + " + finalSize
-        + " = " + expectedFinalSize);
+    LOG.info("Expecting namespace usage to be " + actualInitialSize + " + " + finalSize + " = "
+      + expectedFinalSize);
     // The size of the table (WRT quotas) should now be approximately double what it was previously
     TEST_UTIL.waitFor(30 * 1000, 1000, new SpaceQuotaSnapshotPredicate(conn, ns) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         LOG.debug("Checking for " + expectedFinalSize + " == " + snapshot.getUsage());
         return expectedFinalSize == snapshot.getUsage();
       }
     });
 
-    Map<String,Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
+    Map<String, Long> snapshotSizes = QuotaTableUtil.getObservedSnapshotSizes(conn);
     Long size = snapshotSizes.get(snapshot1);
     assertNotNull("Did not observe the size of the snapshot", size);
-    assertEquals(
-        "The recorded size of the HBase snapshot was not the size we expected", actualInitialSize,
-        size.longValue());
+    assertEquals("The recorded size of the HBase snapshot was not the size we expected",
+      actualInitialSize, size.longValue());
   }
 
   @Test
@@ -336,12 +336,11 @@ public class TestSpaceQuotasWithSnapshots {
             CellScanner cs = r.cellScanner();
             assertTrue(cs.advance());
             Cell c = cs.current();
-            SpaceQuotaSnapshot snapshot = SpaceQuotaSnapshot.toSpaceQuotaSnapshot(
-                QuotaProtos.SpaceQuotaSnapshot.parseFrom(
-                  UnsafeByteOperations.unsafeWrap(
-                      c.getValueArray(), c.getValueOffset(), c.getValueLength())));
+            SpaceQuotaSnapshot snapshot = SpaceQuotaSnapshot
+              .toSpaceQuotaSnapshot(QuotaProtos.SpaceQuotaSnapshot.parseFrom(UnsafeByteOperations
+                .unsafeWrap(c.getValueArray(), c.getValueOffset(), c.getValueLength())));
             LOG.info(
-                snapshot.getUsage() + "/" + snapshot.getLimit() + " " + snapshot.getQuotaStatus());
+              snapshot.getUsage() + "/" + snapshot.getLimit() + " " + snapshot.getQuotaStatus());
             // We expect to see the table move to violation
             return snapshot.getQuotaStatus().isInViolation();
           } finally {
@@ -360,11 +359,11 @@ public class TestSpaceQuotasWithSnapshots {
     TableName tn2 = helper.getNextTableName();
     LOG.info("Writing data");
     // Set a quota on both tables
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
-    QuotaSettings settings2 = QuotaSettingsFactory.limitTableSpace(
-        tn2, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings2 = QuotaSettingsFactory.limitTableSpace(tn2,
+      SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings2);
     // Write some data
     final long initialSize = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
@@ -373,7 +372,8 @@ public class TestSpaceQuotasWithSnapshots {
     LOG.info("Waiting until table size reflects written data");
     // Wait until that data is seen by the master
     TEST_UTIL.waitFor(30 * 1000, 500, new SpaceQuotaSnapshotPredicate(conn, tn) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         return snapshot.getUsage() >= initialSize;
       }
     });
@@ -428,7 +428,8 @@ public class TestSpaceQuotasWithSnapshots {
     AtomicLong lastValue = new AtomicLong(-1);
     AtomicInteger counter = new AtomicInteger(0);
     TEST_UTIL.waitFor(15_000, 500, new SpaceQuotaSnapshotPredicate(conn, tn, ns) {
-      @Override boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
+      @Override
+      boolean evaluate(SpaceQuotaSnapshot snapshot) throws Exception {
         LOG.debug("Last observed size=" + lastValue.get());
         if (snapshot.getUsage() == lastValue.get()) {
           int numMatches = counter.incrementAndGet();
@@ -460,7 +461,8 @@ public class TestSpaceQuotasWithSnapshots {
     AtomicLong lastValue = new AtomicLong(-1);
     AtomicInteger counter = new AtomicInteger(0);
     TEST_UTIL.waitFor(15_000, 500, new Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         LOG.debug("Last observed size=" + lastValue.get());
         long actual = getRegionSizeReportForTable(conn, tn);
         if (actual == lastValue.get()) {

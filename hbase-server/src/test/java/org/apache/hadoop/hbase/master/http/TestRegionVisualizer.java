@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.http;
 
 import static org.junit.Assert.assertEquals;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,10 +42,11 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
-@Category({ MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionVisualizer {
 
   @ClassRule

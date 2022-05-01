@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -95,24 +94,23 @@ import org.slf4j.LoggerFactory;
 /**
  * test hfile features.
  */
-@Category({IOTests.class, SmallTests.class})
-public class TestHFile  {
+@Category({ IOTests.class, SmallTests.class })
+public class TestHFile {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFile.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHFile.class);
 
-  @Rule public TestName testName = new TestName();
+  @Rule
+  public TestName testName = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFile.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static String ROOT_DIR =
-    TEST_UTIL.getDataTestDir("TestHFile").toString();
+  private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf;
-  private static Configuration conf ;
+  private static Configuration conf;
   private static FileSystem fs;
 
   @BeforeClass
@@ -123,21 +121,20 @@ public class TestHFile  {
   }
 
   public static Reader createReaderFromStream(ReaderContext context, CacheConfig cacheConf,
-      Configuration conf) throws IOException {
+    Configuration conf) throws IOException {
     HFileInfo fileInfo = new HFileInfo(context, conf);
     Reader preadReader = HFile.createReader(context, fileInfo, cacheConf, conf);
     fileInfo.initMetaAndIndex(preadReader);
     preadReader.close();
     context = new ReaderContextBuilder()
-        .withFileSystemAndPath(context.getFileSystem(), context.getFilePath())
-        .withReaderType(ReaderType.STREAM)
-        .build();
-    Reader streamReader = HFile.createReader(context, fileInfo, cacheConf,  conf);
+      .withFileSystemAndPath(context.getFileSystem(), context.getFilePath())
+      .withReaderType(ReaderType.STREAM).build();
+    Reader streamReader = HFile.createReader(context, fileInfo, cacheConf, conf);
     return streamReader;
   }
 
   private ByteBuffAllocator initAllocator(boolean reservoirEnabled, int bufSize, int bufCount,
-      int minAllocSize) {
+    int minAllocSize) {
     Configuration that = HBaseConfiguration.create(conf);
     that.setInt(BUFFER_SIZE_KEY, bufSize);
     that.setInt(MAX_BUFFER_COUNT_KEY, bufCount);
@@ -263,7 +260,7 @@ public class TestHFile  {
   }
 
   private void readStoreFile(Path storeFilePath, Configuration conf, ByteBuffAllocator alloc)
-      throws Exception {
+    throws Exception {
     // Open the file reader with block cache disabled.
     CacheConfig cache = new CacheConfig(conf, null, null, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cache, true, conf);
@@ -279,18 +276,16 @@ public class TestHFile  {
   private Path writeStoreFile() throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), "TestHFile");
     HFileContext meta = new HFileContextBuilder().withBlockSize(64 * 1024).build();
-    StoreFileWriter sfw =
-        new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
-          .withFileContext(meta).build();
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, fs).withOutputDir(storeFileParentDir)
+      .withFileContext(meta).build();
     final int rowLen = 32;
     Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 1000; ++i) {
       byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
       byte[] v = RandomKeyValueUtil.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
-      KeyValue kv =
-          new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
-              k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
     }
 
@@ -306,23 +301,21 @@ public class TestHFile  {
       KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
       if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
         throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
-            + "Probably the layout of KeyValue.Type has changed.");
+          + "Probably the layout of KeyValue.Type has changed.");
       }
       return keyType;
     }
   }
 
   /**
-   * Test empty HFile.
-   * Test all features work reasonably when hfile is empty of entries.
-   * @throws IOException
+   * Test empty HFile. Test all features work reasonably when hfile is empty of entries. n
    */
   @Test
   public void testEmptyHFile() throws IOException {
     Path f = new Path(ROOT_DIR, testName.getMethodName());
     HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
     Writer w =
-        HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
+      HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
     w.close();
     Reader r = HFile.createReader(fs, f, cacheConf, true, conf);
     assertFalse(r.getFirstKey().isPresent());
@@ -353,17 +346,13 @@ public class TestHFile  {
     FSDataOutputStream mockedOutputStream = Mockito.mock(FSDataOutputStream.class);
     String columnFamily = "MyColumnFamily";
     String tableName = "MyTableName";
-    HFileContext fileContext = new HFileContextBuilder()
-        .withHFileName(testName.getMethodName() + "HFile")
-        .withBlockSize(minBlockSize)
-        .withColumnFamily(Bytes.toBytes(columnFamily))
-        .withTableName(Bytes.toBytes(tableName))
-        .withHBaseCheckSum(false)
-        .withCompression(Compression.Algorithm.NONE)
-        .withCompressTags(false)
-        .build();
-    HFileWriterImpl writer = new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream,
-      fileContext);
+    HFileContext fileContext =
+      new HFileContextBuilder().withHFileName(testName.getMethodName() + "HFile")
+        .withBlockSize(minBlockSize).withColumnFamily(Bytes.toBytes(columnFamily))
+        .withTableName(Bytes.toBytes(tableName)).withHBaseCheckSum(false)
+        .withCompression(Compression.Algorithm.NONE).withCompressTags(false).build();
+    HFileWriterImpl writer =
+      new HFileWriterImpl(conf, cacheConf, path, mockedOutputStream, fileContext);
     CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     byte[] row = Bytes.toBytes("foo");
     byte[] qualifier = Bytes.toBytes("qualifier");
@@ -372,14 +361,14 @@ public class TestHFile  {
     long firstTS = 100L;
     long secondTS = 101L;
     Cell firstCell = cellBuilder.setRow(row).setValue(val).setTimestamp(firstTS)
-        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
-    Cell secondCell= cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
-        .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
-    //second Cell will sort "higher" than the first because later timestamps should come first
+      .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    Cell secondCell = cellBuilder.setRow(row).setValue(val).setTimestamp(secondTS)
+      .setQualifier(qualifier).setFamily(cf).setType(Cell.Type.Put).build();
+    // second Cell will sort "higher" than the first because later timestamps should come first
     writer.append(firstCell);
     try {
       writer.append(secondCell);
-    } catch(IOException ie){
+    } catch (IOException ie) {
       String message = ie.getMessage();
       Assert.assertTrue(message.contains("not lexically larger"));
       Assert.assertTrue(message.contains(tableName));
@@ -392,11 +381,11 @@ public class TestHFile  {
   public static void truncateFile(FileSystem fs, Path src, Path dst) throws IOException {
     FileStatus fst = fs.getFileStatus(src);
     long len = fst.getLen();
-    len = len / 2 ;
+    len = len / 2;
 
     // create a truncated hfile
     FSDataOutputStream fdos = fs.create(dst);
-    byte[] buf = new byte[(int)len];
+    byte[] buf = new byte[(int) len];
     FSDataInputStream fdis = fs.open(src);
     fdis.read(buf);
     fdos.write(buf);
@@ -410,9 +399,9 @@ public class TestHFile  {
   @Test
   public void testCorruptTruncatedHFile() throws IOException {
     Path f = new Path(ROOT_DIR, testName.getMethodName());
-    HFileContext  context = new HFileContextBuilder().build();
-    Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f)
-        .withFileContext(context).create();
+    HFileContext context = new HFileContextBuilder().build();
+    Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f).withFileContext(context)
+      .create();
     writeSomeRecords(w, 0, 100, false);
     w.close();
 
@@ -431,7 +420,7 @@ public class TestHFile  {
   // write some records into the hfile
   // write them twice
   private int writeSomeRecords(Writer writer, int start, int n, boolean useTags)
-      throws IOException {
+    throws IOException {
     String value = "value";
     KeyValue kv;
     for (int i = start; i < (start + n); i++) {
@@ -441,11 +430,11 @@ public class TestHFile  {
         Tag[] tags = new Tag[1];
         tags[0] = t;
         kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
-            HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value + key), tags);
+          HConstants.LATEST_TIMESTAMP, Bytes.toBytes(value + key), tags);
         writer.append(kv);
       } else {
         kv = new KeyValue(Bytes.toBytes(key), Bytes.toBytes("family"), Bytes.toBytes("qual"),
-            Bytes.toBytes(value + key));
+          Bytes.toBytes(value + key));
         writer.append(kv);
       }
     }
@@ -457,25 +446,22 @@ public class TestHFile  {
   }
 
   // read the records and check
-  private int readAndCheckbytes(HFileScanner scanner, int start, int n)
-      throws IOException {
+  private int readAndCheckbytes(HFileScanner scanner, int start, int n) throws IOException {
     String value = "value";
     int i = start;
     for (; i < (start + n); i++) {
-      ByteBuffer key = ByteBuffer.wrap(((KeyValue)scanner.getKey()).getKey());
+      ByteBuffer key = ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey());
       ByteBuffer val = scanner.getValue();
       String keyStr = String.format(localFormatter, Integer.valueOf(i));
       String valStr = value + keyStr;
       KeyValue kv = new KeyValue(Bytes.toBytes(keyStr), Bytes.toBytes("family"),
-          Bytes.toBytes("qual"), Bytes.toBytes(valStr));
-      byte[] keyBytes = new KeyValue.KeyOnlyKeyValue(Bytes.toBytes(key), 0,
-          Bytes.toBytes(key).length).getKey();
-      assertTrue("bytes for keys do not match " + keyStr + " " +
-        Bytes.toString(Bytes.toBytes(key)),
-          Arrays.equals(kv.getKey(), keyBytes));
-      byte [] valBytes = Bytes.toBytes(val);
-      assertTrue("bytes for vals do not match " + valStr + " " +
-        Bytes.toString(valBytes),
+        Bytes.toBytes("qual"), Bytes.toBytes(valStr));
+      byte[] keyBytes =
+        new KeyValue.KeyOnlyKeyValue(Bytes.toBytes(key), 0, Bytes.toBytes(key).length).getKey();
+      assertTrue("bytes for keys do not match " + keyStr + " " + Bytes.toString(Bytes.toBytes(key)),
+        Arrays.equals(kv.getKey(), keyBytes));
+      byte[] valBytes = Bytes.toBytes(val);
+      assertTrue("bytes for vals do not match " + valStr + " " + Bytes.toString(valBytes),
         Arrays.equals(Bytes.toBytes(valStr), valBytes));
       if (!scanner.next()) {
         break;
@@ -487,7 +473,7 @@ public class TestHFile  {
 
   private byte[] getSomeKey(int rowId) {
     KeyValue kv = new KeyValue(Bytes.toBytes(String.format(localFormatter, Integer.valueOf(rowId))),
-        Bytes.toBytes("family"), Bytes.toBytes("qual"), HConstants.LATEST_TIMESTAMP, Type.Put);
+      Bytes.toBytes("family"), Bytes.toBytes("qual"), HConstants.LATEST_TIMESTAMP, Type.Put);
     return kv.getKey();
   }
 
@@ -497,29 +483,24 @@ public class TestHFile  {
   }
 
   private FSDataOutputStream createFSOutput(Path name) throws IOException {
-    //if (fs.exists(name)) fs.delete(name, true);
+    // if (fs.exists(name)) fs.delete(name, true);
     FSDataOutputStream fout = fs.create(name);
     return fout;
   }
 
   /**
-   * test none codecs
-   * @param useTags
+   * test none codecs n
    */
   void basicWithSomeCodec(String codec, boolean useTags) throws IOException {
     if (useTags) {
       conf.setInt("hfile.format.version", 3);
     }
-    Path  ncHFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
+    Path ncHFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
     FSDataOutputStream fout = createFSOutput(ncHFile);
-    HFileContext meta = new HFileContextBuilder()
-                        .withBlockSize(minBlockSize)
-                        .withCompression(HFileWriterImpl.compressionByName(codec))
-                        .build();
-    Writer writer = HFile.getWriterFactory(conf, cacheConf)
-        .withOutputStream(fout)
-        .withFileContext(meta)
-        .create();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(minBlockSize)
+      .withCompression(HFileWriterImpl.compressionByName(codec)).build();
+    Writer writer =
+      HFile.getWriterFactory(conf, cacheConf).withOutputStream(fout).withFileContext(meta).create();
     LOG.info(Objects.toString(writer));
     writeRecords(writer, useTags);
     fout.close();
@@ -536,11 +517,10 @@ public class TestHFile  {
     int seekTo = scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50)));
     System.out.println(seekTo);
     assertTrue("location lookup failed",
-        scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50))) == 0);
+      scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50))) == 0);
     // read the key and see if it matches
-    ByteBuffer readKey = ByteBuffer.wrap(((KeyValue)scanner.getKey()).getKey());
-    assertTrue("seeked key does not match", Arrays.equals(getSomeKey(50),
-      Bytes.toBytes(readKey)));
+    ByteBuffer readKey = ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey());
+    assertTrue("seeked key does not match", Arrays.equals(getSomeKey(50), Bytes.toBytes(readKey)));
 
     scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(0)));
     ByteBuffer val1 = scanner.getValue();
@@ -568,7 +548,11 @@ public class TestHFile  {
     for (int i = 0; i < n; i++) {
       writer.appendMetaBlock("HFileMeta" + i, new Writable() {
         private int val;
-        public Writable setVal(int val) { this.val = val; return this; }
+
+        public Writable setVal(int val) {
+          this.val = val;
+          return this;
+        }
 
         @Override
         public void write(DataOutput out) throws IOException {
@@ -576,7 +560,8 @@ public class TestHFile  {
         }
 
         @Override
-        public void readFields(DataInput in) throws IOException { }
+        public void readFields(DataInput in) throws IOException {
+        }
       }.setVal(i));
     }
   }
@@ -588,13 +573,9 @@ public class TestHFile  {
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
       ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false).getBufferWithoutHeader();
-      ByteBuffer expected =
-        ByteBuffer.wrap(Bytes.toBytes("something to test" + i));
-      assertEquals(
-          "failed to match metadata",
-          Bytes.toStringBinary(expected),
-          Bytes.toStringBinary(actual.array(), actual.arrayOffset() + actual.position(),
-              actual.capacity()));
+      ByteBuffer expected = ByteBuffer.wrap(Bytes.toBytes("something to test" + i));
+      assertEquals("failed to match metadata", Bytes.toStringBinary(expected), Bytes.toStringBinary(
+        actual.array(), actual.arrayOffset() + actual.position(), actual.capacity()));
     }
   }
 
@@ -605,13 +586,11 @@ public class TestHFile  {
   private void metablocks(final String compress) throws Exception {
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
-    HFileContext meta = new HFileContextBuilder()
-                        .withCompression(HFileWriterImpl.compressionByName(compress))
-                        .withBlockSize(minBlockSize).build();
-    Writer writer = HFile.getWriterFactory(conf, cacheConf)
-        .withOutputStream(fout)
-        .withFileContext(meta)
-        .create();
+    HFileContext meta =
+      new HFileContextBuilder().withCompression(HFileWriterImpl.compressionByName(compress))
+        .withBlockSize(minBlockSize).build();
+    Writer writer =
+      HFile.getWriterFactory(conf, cacheConf).withOutputStream(fout).withFileContext(meta).create();
     someTestingWithMetaBlock(writer);
     writer.close();
     fout.close();
@@ -633,18 +612,15 @@ public class TestHFile  {
 
   @Test
   public void testNullMetaBlocks() throws Exception {
-    for (Compression.Algorithm compressAlgo :
-        HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
+    for (Compression.Algorithm compressAlgo : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
       FSDataOutputStream fout = createFSOutput(mFile);
-      HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)
-                          .withBlockSize(minBlockSize).build();
-      Writer writer = HFile.getWriterFactory(conf, cacheConf)
-          .withOutputStream(fout)
-          .withFileContext(meta)
-          .create();
-      KeyValue kv = new KeyValue(Bytes.toBytes("foo"), Bytes.toBytes("f1"), null,
-          Bytes.toBytes("value"));
+      HFileContext meta =
+        new HFileContextBuilder().withCompression(compressAlgo).withBlockSize(minBlockSize).build();
+      Writer writer = HFile.getWriterFactory(conf, cacheConf).withOutputStream(fout)
+        .withFileContext(meta).create();
+      KeyValue kv =
+        new KeyValue(Bytes.toBytes("foo"), Bytes.toBytes("f1"), null, Bytes.toBytes("value"));
       writer.append(kv);
       writer.close();
       fout.close();
@@ -667,36 +643,25 @@ public class TestHFile  {
 
   @Test
   public void testShortMidpointSameQual() {
-    Cell left = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a"))
-      .setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(11)
-      .setType(Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build();
-    Cell right = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("a"))
-      .setFamily(Bytes.toBytes("a"))
-      .setQualifier(Bytes.toBytes("a"))
-      .setTimestamp(9)
-      .setType(Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build();
+    Cell left =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
+        .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(11)
+        .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
+    Cell right =
+      ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(Bytes.toBytes("a"))
+        .setFamily(Bytes.toBytes("a")).setQualifier(Bytes.toBytes("a")).setTimestamp(9)
+        .setType(Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
     Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
-    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
   }
 
   private Cell getCell(byte[] row, byte[] family, byte[] qualifier) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(row)
-      .setFamily(family)
-      .setQualifier(qualifier)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build();
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build();
   }
 
   @Test
@@ -704,72 +669,64 @@ public class TestHFile  {
     Cell left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     Cell right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     Cell mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) <= 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("bbbbbbb"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(1, mid.getRowLength());
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("b"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaa"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getFamilyLength());
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("aaaaaaaaa"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) < 0);
     assertEquals(2, mid.getQualifierLength());
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), Bytes.toBytes("b"));
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) <= 0);
     assertEquals(1, mid.getQualifierLength());
 
     // Verify boundary conditions
-    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, (byte)0xFE });
-    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, (byte)0xFF });
+    left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, (byte) 0xFE });
+    right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, (byte) 0xFF });
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
     left = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, 0x12 });
     right = getCell(Bytes.toBytes("a"), Bytes.toBytes("a"), new byte[] { 0x00, 0x12, 0x00 });
     mid = HFileWriterImpl.getMidpoint(CellComparatorImpl.COMPARATOR, left, right);
@@ -782,10 +739,9 @@ public class TestHFile  {
     left = getCell(Bytes.toBytes("g"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     right = getCell(Bytes.toBytes("i"), Bytes.toBytes("a"), Bytes.toBytes("a"));
     mid = HFileWriterImpl.getMidpoint(MetaCellComparator.META_COMPARATOR, left, right);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
-    assertTrue(PrivateCellUtil
-      .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
+    assertTrue(PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, left, mid) < 0);
+    assertTrue(
+      PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, mid, right) == 0);
     byte[] family = Bytes.toBytes("family");
     byte[] qualA = Bytes.toBytes("qfA");
     byte[] qualB = Bytes.toBytes("qfB");
@@ -799,7 +755,7 @@ public class TestHFile  {
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
     byte[] expectedArray = Bytes.toBytes("the r");
     Bytes.equals(newKey.getRowArray(), newKey.getRowOffset(), newKey.getRowLength(), expectedArray,
-        0, expectedArray.length);
+      0, expectedArray.length);
 
     // verify: same with "row + family + qualifier", return rightKey directly
     kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 5, Type.Put);
@@ -844,7 +800,7 @@ public class TestHFile  {
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
     expectedArray = Bytes.toBytes("ilovehbasea");
     Bytes.equals(newKey.getRowArray(), newKey.getRowOffset(), newKey.getRowLength(), expectedArray,
-        0, expectedArray.length);
+      0, expectedArray.length);
     // verify only 1 offset scenario
     kv1 = new KeyValue(Bytes.toBytes("100abcdefg"), family, qualA, ts, Type.Put);
     kv2 = new KeyValue(Bytes.toBytes("101abcdefg"), family, qualA, ts, Type.Put);
@@ -854,7 +810,7 @@ public class TestHFile  {
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
     expectedArray = Bytes.toBytes("101");
     Bytes.equals(newKey.getRowArray(), newKey.getRowOffset(), newKey.getRowLength(), expectedArray,
-        0, expectedArray.length);
+      0, expectedArray.length);
   }
 
   @Test
@@ -865,14 +821,13 @@ public class TestHFile  {
         continue;
       }
       Path f = new Path(ROOT_DIR, testName.getMethodName() + "_" + encoding);
-      HFileContext context = new HFileContextBuilder()
-          .withIncludesTags(false)
-          .withDataBlockEncoding(encoding).build();
+      HFileContext context =
+        new HFileContextBuilder().withIncludesTags(false).withDataBlockEncoding(encoding).build();
       HFileWriterImpl writer = (HFileWriterImpl) HFile.getWriterFactory(conf, cacheConf)
-          .withPath(fs, f).withFileContext(context).create();
+        .withPath(fs, f).withFileContext(context).create();
 
       KeyValue kv = new KeyValue(Bytes.toBytes("testkey1"), Bytes.toBytes("family"),
-          Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
+        Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
       KeyValue kv2 = new KeyValue(Bytes.toBytes("testkey2"), Bytes.toBytes("family"),
         Bytes.toBytes("qual"), Bytes.toBytes("testvalue"));
       KeyValue kv3 = new KeyValue(Bytes.toBytes("testkey3"), Bytes.toBytes("family"),

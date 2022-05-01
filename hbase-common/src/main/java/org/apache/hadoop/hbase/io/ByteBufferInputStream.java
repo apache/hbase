@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -54,7 +53,7 @@ public class ByteBufferInputStream extends InputStream {
   /**
    * Reads up to next <code>len</code> bytes of data from buffer into passed array(starting from
    * given offset).
-   * @param b the array into which the data is read.
+   * @param b   the array into which the data is read.
    * @param off the start offset in the destination array <code>b</code>
    * @param len the maximum number of bytes to read.
    * @return the total number of bytes actually read into the buffer, or <code>-1</code> if not even
@@ -97,8 +96,8 @@ public class ByteBufferInputStream extends InputStream {
   }
 
   /**
-   * @return  the number of remaining bytes that can be read (or skipped
-   *          over) from this input stream.
+   * @return the number of remaining bytes that can be read (or skipped over) from this input
+   *         stream.
    */
   @Override
   public int available() {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     assertEquals(NUM_SLAVES_BASE, defaultInfo.getServers().size());
     // Assignment of meta and rsgroup regions.
     int count = MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().size();
-    LOG.info("regions assignments are" +
-      MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
+    LOG.info("regions assignments are"
+      + MASTER.getAssignmentManager().getRegionStates().getRegionAssignments().toString());
     // 2 (meta and rsgroup)
     assertEquals(2, count);
   }
@@ -196,8 +196,8 @@ public class TestRSGroupsBasics extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return CLUSTER.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS &&
-          !MASTER.getServerManager().areDeadServersInProgress();
+        return CLUSTER.getClusterMetrics().getDeadServerNames().size() == NUM_DEAD_SERVERS
+          && !MASTER.getServerManager().areDeadServersInProgress();
       }
     });
     assertFalse(CLUSTER.getClusterMetrics().getLiveServerMetrics().containsKey(serverToStop));

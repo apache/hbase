@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -39,9 +38,9 @@ abstract public class SudoCommandAction extends Action {
   public void init(ActionContext context) throws IOException {
     super.init(context);
     HBaseClusterInterface cluster = context.getHBaseCluster();
-    if (cluster instanceof DistributedHBaseCluster){
-      Object manager = ((DistributedHBaseCluster)cluster).getClusterManager();
-      if (manager instanceof HBaseClusterManager){
+    if (cluster instanceof DistributedHBaseCluster) {
+      Object manager = ((DistributedHBaseCluster) cluster).getClusterManager();
+      if (manager instanceof HBaseClusterManager) {
         clusterManager = (HBaseClusterManager) manager;
       }
     }
@@ -49,7 +48,7 @@ abstract public class SudoCommandAction extends Action {
 
   @Override
   public void perform() throws Exception {
-    if (clusterManager == null){
+    if (clusterManager == null) {
       getLogger().info("Couldn't perform command action, it requires a distributed cluster.");
       return;
     }

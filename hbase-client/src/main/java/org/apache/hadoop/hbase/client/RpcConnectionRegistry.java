@@ -86,9 +86,7 @@ public class RpcConnectionRegistry extends AbstractRpcBasedConnectionRegistry {
     if (StringUtils.isBlank(configuredBootstrapNodes)) {
       return MasterRegistry.getConnectionString(conf);
     }
-    return Splitter.on(ADDRS_CONF_SEPARATOR)
-      .trimResults()
-      .splitToStream(configuredBootstrapNodes)
+    return Splitter.on(ADDRS_CONF_SEPARATOR).trimResults().splitToStream(configuredBootstrapNodes)
       .collect(Collectors.joining(String.valueOf(ADDRS_CONF_SEPARATOR)));
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category({ SmallTests.class })
 public class TestCanaryStatusServlet {
   @ClassRule
@@ -42,13 +41,11 @@ public class TestCanaryStatusServlet {
   public void testFailures() throws IOException {
     CanaryTool.RegionStdOutSink regionStdOutSink = new CanaryTool.RegionStdOutSink();
 
-    ServerName serverName1 = ServerName.valueOf("staging-st04.server:22600",
-      1584180761635L);
+    ServerName serverName1 = ServerName.valueOf("staging-st04.server:22600", 1584180761635L);
     TableName fakeTableName1 = TableName.valueOf("fakeTableName1");
     RegionInfo regionInfo1 = RegionInfoBuilder.newBuilder(fakeTableName1).build();
 
-    ServerName serverName2 = ServerName.valueOf("staging-st05.server:22600",
-      1584180761636L);
+    ServerName serverName2 = ServerName.valueOf("staging-st05.server:22600", 1584180761636L);
     TableName fakeTableName2 = TableName.valueOf("fakeTableName2");
     RegionInfo regionInfo2 = RegionInfoBuilder.newBuilder(fakeTableName2).build();
 
@@ -69,8 +66,7 @@ public class TestCanaryStatusServlet {
   public void testReadFailuresOnly() throws IOException {
     CanaryTool.RegionStdOutSink regionStdOutSink = new CanaryTool.RegionStdOutSink();
 
-    ServerName serverName1 = ServerName.valueOf("staging-st04.server:22600",
-      1584180761635L);
+    ServerName serverName1 = ServerName.valueOf("staging-st04.server:22600", 1584180761635L);
     TableName fakeTableName1 = TableName.valueOf("fakeTableName1");
     RegionInfo regionInfo1 = RegionInfoBuilder.newBuilder(fakeTableName1).build();
 
@@ -87,8 +83,7 @@ public class TestCanaryStatusServlet {
   public void testWriteFailuresOnly() throws IOException {
     CanaryTool.RegionStdOutSink regionStdOutSink = new CanaryTool.RegionStdOutSink();
 
-    ServerName serverName2 = ServerName.valueOf("staging-st05.server:22600",
-      1584180761636L);
+    ServerName serverName2 = ServerName.valueOf("staging-st05.server:22600", 1584180761636L);
     TableName fakeTableName2 = TableName.valueOf("fakeTableName2");
     RegionInfo regionInfo2 = RegionInfoBuilder.newBuilder(fakeTableName2).build();
 

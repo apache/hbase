@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,11 +41,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * 1. Create table t1, t2
- * 2. Load data to t1, t2
- * 3 Full backup t1, t2
- * 4 Delete t2
- * 5 Load data to t1
+ * 1. Create table t1, t2 2. Load data to t1, t2 3 Full backup t1, t2 4 Delete t2 5 Load data to t1
  * 6 Incremental backup t1
  */
 @Category(LargeTests.class)
@@ -53,7 +49,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrementalBackupDeleteTable.class);
+    HBaseClassTestRule.forClass(TestIncrementalBackupDeleteTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
@@ -120,8 +116,8 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
     // #6 - restore incremental backup for table1
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1 };
     TableName[] tablesMapIncMultiple = new TableName[] { table1_restore };
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple,
-      false, tablesRestoreIncMultiple, tablesMapIncMultiple, true));
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupIdIncMultiple, false,
+      tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     hTable = conn.getTable(table1_restore);
     Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2);

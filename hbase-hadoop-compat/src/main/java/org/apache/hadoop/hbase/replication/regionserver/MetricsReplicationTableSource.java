@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -25,8 +24,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MetricsReplicationTableSource extends BaseSource {
 
   void setLastShippedAge(long age);
+
   void incrShippedBytes(long size);
+
   long getShippedBytes();
+
   void clear();
+
   long getLastShippedAge();
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -32,6 +31,7 @@ public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServer
    */
   private enum FactoryStorage {
     INSTANCE;
+
     MetricsThriftServerSourceImpl thriftOne;
     MetricsThriftServerSourceImpl thriftTwo;
   }
@@ -40,9 +40,7 @@ public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServer
   public MetricsThriftServerSource createThriftOneSource() {
     if (FactoryStorage.INSTANCE.thriftOne == null) {
       FactoryStorage.INSTANCE.thriftOne = new MetricsThriftServerSourceImpl(METRICS_NAME,
-          METRICS_DESCRIPTION,
-          THRIFT_ONE_METRICS_CONTEXT,
-          THRIFT_ONE_JMX_CONTEXT);
+        METRICS_DESCRIPTION, THRIFT_ONE_METRICS_CONTEXT, THRIFT_ONE_JMX_CONTEXT);
     }
     return FactoryStorage.INSTANCE.thriftOne;
   }
@@ -51,9 +49,7 @@ public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServer
   public MetricsThriftServerSource createThriftTwoSource() {
     if (FactoryStorage.INSTANCE.thriftTwo == null) {
       FactoryStorage.INSTANCE.thriftTwo = new MetricsThriftServerSourceImpl(METRICS_NAME,
-          METRICS_DESCRIPTION,
-          THRIFT_TWO_METRICS_CONTEXT,
-          THRIFT_TWO_JMX_CONTEXT);
+        METRICS_DESCRIPTION, THRIFT_TWO_METRICS_CONTEXT, THRIFT_TWO_JMX_CONTEXT);
     }
     return FactoryStorage.INSTANCE.thriftTwo;
   }

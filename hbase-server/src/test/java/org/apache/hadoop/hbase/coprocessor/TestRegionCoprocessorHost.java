@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -62,13 +61,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestRegionCoprocessorHost {
   private Configuration conf;
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionCoprocessorHost.class);
+    HBaseClassTestRule.forClass(TestRegionCoprocessorHost.class);
 
   @Rule
   public final TestName name = new TestName();
@@ -95,16 +94,16 @@ public class TestRegionCoprocessorHost {
     if (flag == null) {
       // configure a coprocessor which override postScannerFilterRow
       tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-          .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+        .setCoprocessor(SimpleRegionObserver.class.getName()).build();
     } else if (flag) {
       // configure a coprocessor which don't override postScannerFilterRow
       tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-          .setCoprocessor(TempRegionObserver.class.getName()).build();
+        .setCoprocessor(TempRegionObserver.class.getName()).build();
     } else {
       // configure two coprocessors, one don't override postScannerFilterRow but another one does
       conf.set(REGION_COPROCESSOR_CONF_KEY, TempRegionObserver.class.getName());
       tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-          .setCoprocessor(SimpleRegionObserver.class.getName()).build();
+        .setCoprocessor(SimpleRegionObserver.class.getName()).build();
     }
     region = mock(HRegion.class);
     when(region.getRegionInfo()).thenReturn(regionInfo);
@@ -134,9 +133,9 @@ public class TestRegionCoprocessorHost {
     Scan scan = new Scan();
     scan.setTimeRange(TimeRange.INITIAL_MIN_TIMESTAMP, TimeRange.INITIAL_MAX_TIMESTAMP);
     assertTrue("Scan is not for all time", scan.getTimeRange().isAllTime());
-    //SimpleRegionObserver is set to update the ScanInfo parameters if the passed-in scan
-    //is for all time. this lets us exercise both that the Scan is wired up properly in the coproc
-    //and that we can customize the metadata
+    // SimpleRegionObserver is set to update the ScanInfo parameters if the passed-in scan
+    // is for all time. this lets us exercise both that the Scan is wired up properly in the coproc
+    // and that we can customize the metadata
 
     ScanInfo oldScanInfo = getScanInfo();
 
@@ -213,8 +212,7 @@ public class TestRegionCoprocessorHost {
     long oldTTL = 10000;
 
     return new ScanInfo(conf, Bytes.toBytes("cf"), oldMinVersions, oldMaxVersions, oldTTL,
-    KeepDeletedCells.FALSE, HConstants.FOREVER, 1000,
-      CellComparator.getInstance(), true);
+      KeepDeletedCells.FALSE, HConstants.FOREVER, 1000, CellComparator.getInstance(), true);
   }
 
   /*

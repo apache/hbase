@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,8 +39,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 /**
  * AES-128, provided by the JCE
  * <p>
- * Algorithm instances are pooled for reuse, so the cipher provider and mode
- * are configurable but fixed at instantiation.
+ * Algorithm instances are pooled for reuse, so the cipher provider and mode are configurable but
+ * fixed at instantiation.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -112,7 +112,7 @@ public class AES extends Cipher {
 
   @Override
   public OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
-      throws IOException {
+    throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);
@@ -130,7 +130,7 @@ public class AES extends Cipher {
 
   @Override
   public InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
-      throws IOException {
+    throws IOException {
     Preconditions.checkNotNull(context);
     Preconditions.checkState(context.getKey() != null, "Context does not have a key");
     Preconditions.checkNotNull(iv);

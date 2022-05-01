@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,17 +19,13 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@code SoftReference} based shared object pool.
- * The objects are kept in soft references and
- * associated with keys which are identified by the {@code equals} method.
- * The objects are created by ObjectFactory on demand.
- * The object creation is expected to be lightweight,
- * and the objects may be excessively created and discarded.
- * Thread safe.
+ * A {@code SoftReference} based shared object pool. The objects are kept in soft references and
+ * associated with keys which are identified by the {@code equals} method. The objects are created
+ * by ObjectFactory on demand. The object creation is expected to be lightweight, and the objects
+ * may be excessively created and discarded. Thread safe.
  */
 @InterfaceAudience.Private
 public class SoftObjectPool<K, V> extends ObjectPool<K, V> {
@@ -43,7 +39,7 @@ public class SoftObjectPool<K, V> extends ObjectPool<K, V> {
   }
 
   public SoftObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity,
-      int concurrencyLevel) {
+    int concurrencyLevel) {
     super(objectFactory, initialCapacity, concurrencyLevel);
   }
 

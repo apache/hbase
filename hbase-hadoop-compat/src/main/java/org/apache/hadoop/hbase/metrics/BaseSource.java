@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *   BaseSource for dynamic metrics to announce to Metrics2.
- *   In hbase-hadoop{1|2}-compat there is an implementation of this interface.
+ * BaseSource for dynamic metrics to announce to Metrics2. In hbase-hadoop{1|2}-compat there is an
+ * implementation of this interface.
  */
 @InterfaceAudience.Private
 public interface BaseSource {
@@ -36,7 +35,6 @@ public interface BaseSource {
 
   /**
    * Set a gauge to a specific value.
-   *
    * @param gaugeName the name of the gauge
    * @param value     the value
    */
@@ -44,7 +42,6 @@ public interface BaseSource {
 
   /**
    * Add some amount to a gauge.
-   *
    * @param gaugeName the name of the gauge
    * @param delta     the amount to change the gauge by.
    */
@@ -52,7 +49,6 @@ public interface BaseSource {
 
   /**
    * Subtract some amount from a gauge.
-   *
    * @param gaugeName the name of the gauge
    * @param delta     the amount to change the gauge by.
    */
@@ -60,14 +56,12 @@ public interface BaseSource {
 
   /**
    * Remove a metric and no longer announce it.
-   *
    * @param key Name of the gauge to remove.
    */
   void removeMetric(String key);
 
   /**
    * Add some amount to a counter.
-   *
    * @param counterName the name of the counter
    * @param delta       the amount to change the counter by.
    */
@@ -75,17 +69,14 @@ public interface BaseSource {
 
   /**
    * Add some value to a histogram.
-   *
-   * @param name the name of the histogram
+   * @param name  the name of the histogram
    * @param value the value to add to the histogram
    */
   void updateHistogram(String name, long value);
 
-
   /**
-   * Get the metrics context.  For hadoop metrics2 system this is usually an all lowercased string.
+   * Get the metrics context. For hadoop metrics2 system this is usually an all lowercased string.
    * eg. regionserver, master, thriftserver
-   *
    * @return The string context used to register this source to hadoop's metrics2 system.
    */
   String getMetricsContext();
@@ -96,20 +87,19 @@ public interface BaseSource {
   String getMetricsDescription();
 
   /**
-   * Get the name of the context in JMX that this source will be exposed through.
-   * This is in ObjectName format. With the default context being Hadoop -&gt; HBase
+   * Get the name of the context in JMX that this source will be exposed through. This is in
+   * ObjectName format. With the default context being Hadoop -&gt; HBase
    */
   String getMetricsJmxContext();
 
   /**
-   * Get the name of the metrics that are being exported by this source.
-   * Eg. IPC, GC, WAL
+   * Get the name of the metrics that are being exported by this source. Eg. IPC, GC, WAL
    */
   String getMetricsName();
 
   default MetricRegistryInfo getMetricRegistryInfo() {
-    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(),
-        getMetricsContext(), getMetricsJmxContext(), true);
+    return new MetricRegistryInfo(getMetricsName(), getMetricsDescription(), getMetricsContext(),
+      getMetricsJmxContext(), true);
   }
 
 }

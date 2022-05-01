@@ -7,32 +7,29 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
  * Base interface for the 4 coprocessors - MasterCoprocessor, RegionCoprocessor,
- * RegionServerCoprocessor, and WALCoprocessor.
- * Do NOT implement this interface directly. Unless an implementation implements one (or more) of
- * the above mentioned 4 coprocessors, it'll fail to be loaded by any coprocessor host.
+ * RegionServerCoprocessor, and WALCoprocessor. Do NOT implement this interface directly. Unless an
+ * implementation implements one (or more) of the above mentioned 4 coprocessors, it'll fail to be
+ * loaded by any coprocessor host. Example: Building a coprocessor to observe Master operations.
  *
- * Example:
- * Building a coprocessor to observe Master operations.
  * <pre>
  * class MyMasterCoprocessor implements MasterCoprocessor {
  *   &#64;Override
@@ -47,6 +44,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Service;
  * </pre>
  *
  * Building a Service which can be loaded by both Master and RegionServer
+ *
  * <pre>
  * class MyCoprocessorService implements MasterCoprocessor, RegionServerCoprocessor {
  *   &#64;Override
@@ -86,18 +84,19 @@ public interface Coprocessor {
    * Called by the {@link CoprocessorEnvironment} during it's own startup to initialize the
    * coprocessor.
    */
-  default void start(CoprocessorEnvironment env) throws IOException {}
+  default void start(CoprocessorEnvironment env) throws IOException {
+  }
 
   /**
-   * Called by the {@link CoprocessorEnvironment} during it's own shutdown to stop the
-   * coprocessor.
+   * Called by the {@link CoprocessorEnvironment} during it's own shutdown to stop the coprocessor.
    */
-  default void stop(CoprocessorEnvironment env) throws IOException {}
+  default void stop(CoprocessorEnvironment env) throws IOException {
+  }
 
   /**
    * Coprocessor endpoints providing protobuf services should override this method.
-   * @return Iterable of {@link Service}s or empty collection. Implementations should never
-   * return null.
+   * @return Iterable of {@link Service}s or empty collection. Implementations should never return
+   *         null.
    */
   default Iterable<Service> getServices() {
     return Collections.EMPTY_SET;

@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress;
 
@@ -38,8 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Compression related stuff.
- * Copied from hadoop-3315 tfile.
+ * Compression related stuff. Copied from hadoop-3315 tfile.
  */
 @InterfaceAudience.Private
 public final class Compression {
@@ -47,61 +47,50 @@ public final class Compression {
 
   // LZO
 
-  public static final String LZO_CODEC_CLASS_KEY =
-      "hbase.io.compress.lzo.codec";
-  public static final String LZO_CODEC_CLASS_DEFAULT =
-      "com.hadoop.compression.lzo.LzoCodec";
+  public static final String LZO_CODEC_CLASS_KEY = "hbase.io.compress.lzo.codec";
+  public static final String LZO_CODEC_CLASS_DEFAULT = "com.hadoop.compression.lzo.LzoCodec";
 
   // GZ
 
-  public static final String GZ_CODEC_CLASS_KEY =
-      "hbase.io.compress.gz.codec";
+  public static final String GZ_CODEC_CLASS_KEY = "hbase.io.compress.gz.codec";
   // Our ReusableStreamGzipCodec fixes an inefficiency in Hadoop's Gzip codec, allowing us to
   // reuse compression streams, but still requires the Hadoop native codec.
   public static final String GZ_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec";
+    "org.apache.hadoop.hbase.io.compress.ReusableStreamGzipCodec";
 
   // SNAPPY
 
-  public static final String SNAPPY_CODEC_CLASS_KEY =
-      "hbase.io.compress.snappy.codec";
+  public static final String SNAPPY_CODEC_CLASS_KEY = "hbase.io.compress.snappy.codec";
   public static final String SNAPPY_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.io.compress.SnappyCodec";
+    "org.apache.hadoop.io.compress.SnappyCodec";
 
   // LZ4
 
-  public static final String LZ4_CODEC_CLASS_KEY =
-      "hbase.io.compress.lz4.codec";
-  public static final String LZ4_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.io.compress.Lz4Codec";
+  public static final String LZ4_CODEC_CLASS_KEY = "hbase.io.compress.lz4.codec";
+  public static final String LZ4_CODEC_CLASS_DEFAULT = "org.apache.hadoop.io.compress.Lz4Codec";
 
   // ZSTD
 
-  public static final String ZSTD_CODEC_CLASS_KEY =
-      "hbase.io.compress.zstd.codec";
+  public static final String ZSTD_CODEC_CLASS_KEY = "hbase.io.compress.zstd.codec";
   public static final String ZSTD_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.io.compress.ZStandardCodec";
+    "org.apache.hadoop.io.compress.ZStandardCodec";
 
   // BZIP2
 
-  public static final String BZIP2_CODEC_CLASS_KEY =
-      "hbase.io.compress.bzip2.codec";
-  public static final String BZIP2_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.io.compress.BZip2Codec";
+  public static final String BZIP2_CODEC_CLASS_KEY = "hbase.io.compress.bzip2.codec";
+  public static final String BZIP2_CODEC_CLASS_DEFAULT = "org.apache.hadoop.io.compress.BZip2Codec";
 
   // LZMA
 
-  public static final String LZMA_CODEC_CLASS_KEY =
-      "hbase.io.compress.lzma.codec";
+  public static final String LZMA_CODEC_CLASS_KEY = "hbase.io.compress.lzma.codec";
   public static final String LZMA_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.hbase.io.compress.xz.LzmaCodec";
+    "org.apache.hadoop.hbase.io.compress.xz.LzmaCodec";
 
   // Brotli
 
-  public static final String BROTLI_CODEC_CLASS_KEY =
-      "hbase.io.compress.brotli.codec";
+  public static final String BROTLI_CODEC_CLASS_KEY = "hbase.io.compress.brotli.codec";
   public static final String BROTLI_CODEC_CLASS_DEFAULT =
-      "org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec";
+    "org.apache.hadoop.hbase.io.compress.brotli.BrotliCodec";
 
   /**
    * Prevent the instantiation of class.
@@ -147,13 +136,11 @@ public final class Compression {
   }
 
   /**
-   * Compression algorithms. The ordinal of these cannot change or else you
-   * risk breaking all existing HFiles out there.  Even the ones that are
-   * not compressed! (They use the NONE algorithm)
+   * Compression algorithms. The ordinal of these cannot change or else you risk breaking all
+   * existing HFiles out there. Even the ones that are not compressed! (They use the NONE algorithm)
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-      value="SE_TRANSIENT_FIELD_NOT_RESTORED",
-      justification="We are not serializing so doesn't apply (not sure why transient though)")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
+      justification = "We are not serializing so doesn't apply (not sure why transient though)")
   @SuppressWarnings("ImmutableEnumChecker")
   @InterfaceAudience.Public
   public static enum Algorithm {
@@ -163,6 +150,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzoCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
@@ -174,6 +162,7 @@ public final class Compression {
         }
         return lzoCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -187,6 +176,7 @@ public final class Compression {
     GZ("gz", GZ_CODEC_CLASS_KEY, GZ_CODEC_CLASS_DEFAULT) {
       private volatile transient CompressionCodec gzCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (gzCodec == null) {
@@ -198,6 +188,7 @@ public final class Compression {
         }
         return gzCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -220,9 +211,8 @@ public final class Compression {
       }
 
       @Override
-      public synchronized InputStream createDecompressionStream(
-          InputStream downStream, Decompressor decompressor,
-          int downStreamBufferSize) throws IOException {
+      public synchronized InputStream createDecompressionStream(InputStream downStream,
+        Decompressor decompressor, int downStreamBufferSize) throws IOException {
         if (downStreamBufferSize > 0) {
           return new BufferedInputStream(downStream, downStreamBufferSize);
         }
@@ -230,9 +220,8 @@ public final class Compression {
       }
 
       @Override
-      public synchronized OutputStream createCompressionStream(
-          OutputStream downStream, Compressor compressor,
-          int downStreamBufferSize) throws IOException {
+      public synchronized OutputStream createCompressionStream(OutputStream downStream,
+        Compressor compressor, int downStreamBufferSize) throws IOException {
         if (downStreamBufferSize > 0) {
           return new BufferedOutputStream(downStream, downStreamBufferSize);
         }
@@ -244,6 +233,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec snappyCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (snappyCodec == null) {
@@ -255,6 +245,7 @@ public final class Compression {
         }
         return snappyCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -268,6 +259,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lz4Codec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lz4Codec == null) {
@@ -279,6 +271,7 @@ public final class Compression {
         }
         return lz4Codec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -292,6 +285,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec bzipCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (bzipCodec == null) {
@@ -303,6 +297,7 @@ public final class Compression {
         }
         return bzipCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -316,6 +311,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec zStandardCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (zStandardCodec == null) {
@@ -327,6 +323,7 @@ public final class Compression {
         }
         return zStandardCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -340,6 +337,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec lzmaCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (lzmaCodec == null) {
@@ -351,6 +349,7 @@ public final class Compression {
         }
         return lzmaCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -365,6 +364,7 @@ public final class Compression {
       // Use base type to avoid compile-time dependencies.
       private volatile transient CompressionCodec brotliCodec;
       private final transient Object lock = new Object();
+
       @Override
       CompressionCodec getCodec(Configuration conf) {
         if (brotliCodec == null) {
@@ -376,6 +376,7 @@ public final class Compression {
         }
         return brotliCodec;
       }
+
       @Override
       public CompressionCodec reload(Configuration conf) {
         synchronized (lock) {
@@ -408,57 +409,48 @@ public final class Compression {
     /**
      * Reload configuration for the given algorithm.
      * <p>
-     * NOTE: Experts only. This can only be done safely during process startup, before
-     * the algorithm's codecs are in use. If the codec implementation is changed, the
-     * new implementation may not be fully compatible with what was loaded at static
-     * initialization time, leading to potential data corruption.
-     * Mostly used by unit tests.
+     * NOTE: Experts only. This can only be done safely during process startup, before the
+     * algorithm's codecs are in use. If the codec implementation is changed, the new implementation
+     * may not be fully compatible with what was loaded at static initialization time, leading to
+     * potential data corruption. Mostly used by unit tests.
      * @param conf configuration
      */
     public abstract CompressionCodec reload(Configuration conf);
 
-    public InputStream createDecompressionStream(
-        InputStream downStream, Decompressor decompressor,
-        int downStreamBufferSize) throws IOException {
+    public InputStream createDecompressionStream(InputStream downStream, Decompressor decompressor,
+      int downStreamBufferSize) throws IOException {
       CompressionCodec codec = getCodec(conf);
       // Set the internal buffer size to read from down stream.
       if (downStreamBufferSize > 0) {
-        ((Configurable)codec).getConf().setInt("io.file.buffer.size",
-            downStreamBufferSize);
+        ((Configurable) codec).getConf().setInt("io.file.buffer.size", downStreamBufferSize);
       }
-      CompressionInputStream cis =
-          codec.createInputStream(downStream, decompressor);
+      CompressionInputStream cis = codec.createInputStream(downStream, decompressor);
       BufferedInputStream bis2 = new BufferedInputStream(cis, DATA_IBUF_SIZE);
       return bis2;
 
     }
 
-    public OutputStream createCompressionStream(
-        OutputStream downStream, Compressor compressor, int downStreamBufferSize)
-        throws IOException {
+    public OutputStream createCompressionStream(OutputStream downStream, Compressor compressor,
+      int downStreamBufferSize) throws IOException {
       OutputStream bos1 = null;
       if (downStreamBufferSize > 0) {
         bos1 = new BufferedOutputStream(downStream, downStreamBufferSize);
-      }
-      else {
+      } else {
         bos1 = downStream;
       }
-      CompressionOutputStream cos =
-          createPlainCompressionStream(bos1, compressor);
+      CompressionOutputStream cos = createPlainCompressionStream(bos1, compressor);
       BufferedOutputStream bos2 =
-          new BufferedOutputStream(new FinishOnFlushCompressionStream(cos),
-              DATA_OBUF_SIZE);
+        new BufferedOutputStream(new FinishOnFlushCompressionStream(cos), DATA_OBUF_SIZE);
       return bos2;
     }
 
     /**
-     * Creates a compression stream without any additional wrapping into
-     * buffering streams.
+     * Creates a compression stream without any additional wrapping into buffering streams.
      */
-    public CompressionOutputStream createPlainCompressionStream(
-        OutputStream downStream, Compressor compressor) throws IOException {
+    public CompressionOutputStream createPlainCompressionStream(OutputStream downStream,
+      Compressor compressor) throws IOException {
       CompressionCodec codec = getCodec(conf);
-      ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
+      ((Configurable) codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
       return codec.createOutputStream(downStream, compressor);
     }
 
@@ -490,7 +482,8 @@ public final class Compression {
       CompressionCodec codec = getCodec(conf);
       if (codec != null) {
         Decompressor decompressor = CodecPool.getDecompressor(codec);
-        if (LOG.isTraceEnabled()) LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
+        if (LOG.isTraceEnabled())
+          LOG.trace("Retrieved decompressor " + decompressor + " from pool.");
         if (decompressor != null) {
           if (decompressor.finished()) {
             // Somebody returns the decompressor to CodecPool but is still using it.
@@ -534,9 +527,8 @@ public final class Compression {
 
   /**
    * Get names of supported compression algorithms.
-   *
-   * @return Array of strings, each represents a supported compression
-   * algorithm. Currently, the following compression algorithms are supported.
+   * @return Array of strings, each represents a supported compression algorithm. Currently, the
+   *         following compression algorithms are supported.
    */
   public static String[] getSupportedAlgorithms() {
     Algorithm[] algos = Algorithm.class.getEnumConstants();
@@ -562,10 +554,10 @@ public final class Compression {
         throw new RuntimeException("No codec configured for " + algo.confKey);
       }
       Class<?> codecClass = getClassLoaderForCodec().loadClass(codecClassName);
-      CompressionCodec codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass,
-          new Configuration(conf));
-      LOG.info("Loaded codec {} for compression algorithm {}",
-        codec.getClass().getCanonicalName(), algo.name());
+      CompressionCodec codec =
+        (CompressionCodec) ReflectionUtils.newInstance(codecClass, new Configuration(conf));
+      LOG.info("Loaded codec {} for compression algorithm {}", codec.getClass().getCanonicalName(),
+        algo.name());
       return codec;
     } catch (ClassNotFoundException e) {
       throw new RuntimeException(e);
@@ -575,7 +567,7 @@ public final class Compression {
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     java.util.Map<String, CompressionCodec> implMap = new java.util.HashMap<>();
-    for (Algorithm algo: Algorithm.class.getEnumConstants()) {
+    for (Algorithm algo : Algorithm.class.getEnumConstants()) {
       try {
         implMap.put(algo.name(), algo.getCodec(conf));
       } catch (Exception e) {
@@ -583,14 +575,14 @@ public final class Compression {
         // We are to report what is configured.
       }
     }
-    for (Algorithm algo: Algorithm.class.getEnumConstants()) {
+    for (Algorithm algo : Algorithm.class.getEnumConstants()) {
       System.out.println(algo.name() + ":");
       System.out.println("    name: " + algo.getName());
       System.out.println("    confKey: " + algo.confKey);
       System.out.println("    confDefault: " + algo.confDefault);
       CompressionCodec codec = implMap.get(algo.name());
-      System.out.println("    implClass: " +
-        (codec != null ? codec.getClass().getCanonicalName() : "<none>"));
+      System.out.println(
+        "    implClass: " + (codec != null ? codec.getClass().getCanonicalName() : "<none>"));
     }
   }
 

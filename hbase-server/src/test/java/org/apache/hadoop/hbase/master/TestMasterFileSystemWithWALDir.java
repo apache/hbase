@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the master filesystem in a local cluster
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterFileSystemWithWALDir {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFileSystemWithWALDir.class);
+    HBaseClassTestRule.forClass(TestMasterFileSystemWithWALDir.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 

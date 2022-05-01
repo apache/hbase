@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,20 +70,21 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 
-
-@Category({ReplicationTests.class, LargeTests.class})
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationSink {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationSink.class);
+    HBaseClassTestRule.forClass(TestReplicationSink.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
@@ -121,7 +121,7 @@ public class TestReplicationSink {
   protected static String hfileArchiveDir;
   protected static String replicationClusterId;
 
-   /**
+  /**
    * @throws java.lang.Exception
    */
   @BeforeClass
@@ -157,14 +157,13 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a whole batch of entries
-   * @throws Exception
+   * Insert a whole batch of entries n
    */
   @Test
   public void testBatchSink() throws Exception {
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < BATCH_SIZE; i++) {
+    for (int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
@@ -175,14 +174,13 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a mix of puts and deletes
-   * @throws Exception
+   * Insert a mix of puts and deletes n
    */
   @Test
   public void testMixedPutDelete() throws Exception {
-    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE/2);
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE / 2);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < BATCH_SIZE/2; i++) {
+    for (int i = 0; i < BATCH_SIZE / 2; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
@@ -190,16 +188,16 @@ public class TestReplicationSink {
 
     entries = new ArrayList<>(BATCH_SIZE);
     cells = new ArrayList<>();
-    for(int i = 0; i < BATCH_SIZE; i++) {
+    for (int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i,
-          i % 2 != 0 ? KeyValue.Type.Put: KeyValue.Type.DeleteColumn, cells));
+        i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn, cells));
     }
 
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
       replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Scan scan = new Scan();
     ResultScanner scanRes = table1.getScanner(scan);
-    assertEquals(BATCH_SIZE/2, scanRes.next(BATCH_SIZE).length);
+    assertEquals(BATCH_SIZE / 2, scanRes.next(BATCH_SIZE).length);
   }
 
   @Test
@@ -222,9 +220,8 @@ public class TestReplicationSink {
     entries = new ArrayList<>();
     cells = new ArrayList<>();
     for (int i = 0; i < 11000; i++) {
-      entries.add(
-        createEntry(TABLE_NAME1, i, i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn,
-          cells));
+      entries.add(createEntry(TABLE_NAME1, i,
+        i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
       baseNamespaceDir, hfileArchiveDir);
@@ -237,40 +234,37 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert to 2 different tables
-   * @throws Exception
+   * Insert to 2 different tables n
    */
   @Test
   public void testMixedPutTables() throws Exception {
-    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE/2);
+    List<WALEntry> entries = new ArrayList<>(BATCH_SIZE / 2);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < BATCH_SIZE; i++) {
-      entries.add(createEntry( i % 2 == 0 ? TABLE_NAME2 : TABLE_NAME1,
-              i, KeyValue.Type.Put, cells));
+    for (int i = 0; i < BATCH_SIZE; i++) {
+      entries.add(createEntry(i % 2 == 0 ? TABLE_NAME2 : TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
 
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
       replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Scan scan = new Scan();
     ResultScanner scanRes = table2.getScanner(scan);
-    for(Result res : scanRes) {
+    for (Result res : scanRes) {
       assertEquals(0, Bytes.toInt(res.getRow()) % 2);
     }
     scanRes = table1.getScanner(scan);
-    for(Result res : scanRes) {
+    for (Result res : scanRes) {
       assertEquals(1, Bytes.toInt(res.getRow()) % 2);
     }
   }
 
   /**
-   * Insert then do different types of deletes
-   * @throws Exception
+   * Insert then do different types of deletes n
    */
   @Test
   public void testMixedDeletes() throws Exception {
     List<WALEntry> entries = new ArrayList<>(3);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
@@ -290,19 +284,18 @@ public class TestReplicationSink {
   }
 
   /**
-   * Puts are buffered, but this tests when a delete (not-buffered) is applied
-   * before the actual Put that creates it.
-   * @throws Exception
+   * Puts are buffered, but this tests when a delete (not-buffered) is applied before the actual Put
+   * that creates it. n
    */
   @Test
   public void testApplyDeleteBeforePut() throws Exception {
     List<WALEntry> entries = new ArrayList<>(5);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     entries.add(createEntry(TABLE_NAME1, 1, KeyValue.Type.DeleteFamily, cells));
-    for(int i = 3; i < 5; i++) {
+    for (int i = 3; i < 5; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
@@ -386,14 +379,12 @@ public class TestReplicationSink {
     WALProtos.BulkLoadDescriptor loadDescriptor = null;
 
     try (Connection c = ConnectionFactory.createConnection(conf);
-        RegionLocator l = c.getRegionLocator(TABLE_NAME1)) {
+      RegionLocator l = c.getRegionLocator(TABLE_NAME1)) {
       RegionInfo regionInfo = l.getAllRegionLocations().get(0).getRegion();
-      loadDescriptor =
-          ProtobufUtil.toBulkLoadDescriptor(TABLE_NAME1,
-              UnsafeByteOperations.unsafeWrap(regionInfo.getEncodedNameAsBytes()),
-              storeFiles, storeFilesSize, 1);
-      edit = org.apache.hadoop.hbase.wal.WALEdit.createBulkLoadEvent(regionInfo,
-        loadDescriptor);
+      loadDescriptor = ProtobufUtil.toBulkLoadDescriptor(TABLE_NAME1,
+        UnsafeByteOperations.unsafeWrap(regionInfo.getEncodedNameAsBytes()), storeFiles,
+        storeFilesSize, 1);
+      edit = org.apache.hadoop.hbase.wal.WALEdit.createBulkLoadEvent(regionInfo, loadDescriptor);
     }
     List<WALEntry> entries = new ArrayList<>(1);
 
@@ -402,12 +393,11 @@ public class TestReplicationSink {
 
     // 5. Copy the hfile to the path as it is in reality
     for (int i = 0; i < 25; i++) {
-      String pathToHfileFromNS =
-          new StringBuilder(100).append(TABLE_NAME1.getNamespaceAsString()).append(Path.SEPARATOR)
-              .append(Bytes.toString(TABLE_NAME1.getName())).append(Path.SEPARATOR)
-              .append(Bytes.toString(loadDescriptor.getEncodedRegionName().toByteArray()))
-              .append(Path.SEPARATOR).append(Bytes.toString(FAM_NAME1)).append(Path.SEPARATOR)
-              .append(hfilePrefix + i).toString();
+      String pathToHfileFromNS = new StringBuilder(100).append(TABLE_NAME1.getNamespaceAsString())
+        .append(Path.SEPARATOR).append(Bytes.toString(TABLE_NAME1.getName())).append(Path.SEPARATOR)
+        .append(Bytes.toString(loadDescriptor.getEncodedRegionName().toByteArray()))
+        .append(Path.SEPARATOR).append(Bytes.toString(FAM_NAME1)).append(Path.SEPARATOR)
+        .append(hfilePrefix + i).toString();
       String dst = baseNamespaceDir + Path.SEPARATOR + pathToHfileFromNS;
       Path dstPath = new Path(dst);
       FileUtil.copy(fs, p.get(0), fs, dstPath, false, conf);
@@ -437,7 +427,7 @@ public class TestReplicationSink {
     long errorCount = 0L;
     List<WALEntry> entries = new ArrayList<>(BATCH_SIZE);
     List<Cell> cells = new ArrayList<>();
-    for(int i = 0; i < BATCH_SIZE; i++) {
+    for (int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     cells.clear(); // cause IndexOutOfBoundsException
@@ -452,7 +442,7 @@ public class TestReplicationSink {
 
     entries.clear();
     cells.clear();
-    TableName notExistTable = TableName.valueOf("notExistTable");  // cause TableNotFoundException
+    TableName notExistTable = TableName.valueOf("notExistTable"); // cause TableNotFoundException
     for (int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(notExistTable, i, KeyValue.Type.Put, cells));
     }
@@ -467,7 +457,7 @@ public class TestReplicationSink {
 
     entries.clear();
     cells.clear();
-    for(int i = 0; i < BATCH_SIZE; i++) {
+    for (int i = 0; i < BATCH_SIZE; i++) {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     // cause IOException in batch()
@@ -488,8 +478,7 @@ public class TestReplicationSink {
     }
   }
 
-
-  private WALEntry createEntry(TableName table, int row,  KeyValue.Type type, List<Cell> cells) {
+  private WALEntry createEntry(TableName table, int row, KeyValue.Type type, List<Cell> cells) {
     byte[] fam = table.equals(TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
     byte[] rowBytes = Bytes.toBytes(row);
     // Just make sure we don't get the same ts for two consecutive rows with
@@ -501,15 +490,12 @@ public class TestReplicationSink {
     }
     final long now = EnvironmentEdgeManager.currentTime();
     KeyValue kv = null;
-    if(type.getCode() == KeyValue.Type.Put.getCode()) {
-      kv = new KeyValue(rowBytes, fam, fam, now,
-          KeyValue.Type.Put, Bytes.toBytes(row));
+    if (type.getCode() == KeyValue.Type.Put.getCode()) {
+      kv = new KeyValue(rowBytes, fam, fam, now, KeyValue.Type.Put, Bytes.toBytes(row));
     } else if (type.getCode() == KeyValue.Type.DeleteColumn.getCode()) {
-        kv = new KeyValue(rowBytes, fam, fam,
-            now, KeyValue.Type.DeleteColumn);
+      kv = new KeyValue(rowBytes, fam, fam, now, KeyValue.Type.DeleteColumn);
     } else if (type.getCode() == KeyValue.Type.DeleteFamily.getCode()) {
-        kv = new KeyValue(rowBytes, fam, null,
-            now, KeyValue.Type.DeleteFamily);
+      kv = new KeyValue(rowBytes, fam, null, now, KeyValue.Type.DeleteFamily);
     }
     WALEntry.Builder builder = createWALEntryBuilder(table);
     cells.add(kv);

@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.incRegionCountMetri
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isRemote;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.timelineConsistentRead;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -41,7 +42,9 @@ import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.util.Timer;
+
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService.Interface;
@@ -90,8 +93,8 @@ class AsyncClientScanner {
   private final Span span;
 
   public AsyncClientScanner(Scan scan, AdvancedScanResultConsumer consumer, TableName tableName,
-      AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
-      int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    AsyncConnectionImpl conn, Timer retryTimer, long pauseNs, long pauseNsForServerOverloaded,
+    int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     if (scan.getStartRow() == null) {
       scan.withStartRow(EMPTY_START_ROW, scan.includeStartRow());
     }
@@ -123,10 +126,7 @@ class AsyncClientScanner {
      * `start()` method. The cost of doing so would be making access to the `span` safe for
      * concurrent threads.
      */
-    span = new TableOperationSpanBuilder(conn)
-      .setTableName(tableName)
-      .setOperation(scan)
-      .build();
+    span = new TableOperationSpanBuilder(conn).setTableName(tableName).setOperation(scan).build();
     if (consumer instanceof AsyncTableResultScanner) {
       AsyncTableResultScanner scanner = (AsyncTableResultScanner) consumer;
       scanner.setSpan(span);
@@ -146,7 +146,7 @@ class AsyncClientScanner {
     public final ScanResponse resp;
 
     public OpenScannerResponse(HRegionLocation loc, boolean isRegionServerRemote, Interface stub,
-        HBaseRpcController controller, ScanResponse resp) {
+      HBaseRpcController controller, ScanResponse resp) {
       this.loc = loc;
       this.isRegionServerRemote = isRegionServerRemote;
       this.stub = stub;
@@ -158,7 +158,7 @@ class AsyncClientScanner {
   private final AtomicInteger openScannerTries = new AtomicInteger();
 
   private CompletableFuture<OpenScannerResponse> callOpenScanner(HBaseRpcController controller,
-      HRegionLocation loc, ClientService.Interface stub) {
+    HRegionLocation loc, ClientService.Interface stub) {
     try (Scope ignored = span.makeCurrent()) {
       boolean isRegionServerRemote = isRemote(loc.getHostname());
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
@@ -167,8 +167,8 @@ class AsyncClientScanner {
       }
       CompletableFuture<OpenScannerResponse> future = new CompletableFuture<>();
       try {
-        ScanRequest request = RequestConverter.buildScanRequest(
-          loc.getRegion().getRegionName(), scan, scan.getCaching(), false);
+        ScanRequest request = RequestConverter.buildScanRequest(loc.getRegion().getRegionName(),
+          scan, scan.getCaching(), false);
         stub.scan(controller, request, resp -> {
           try (Scope ignored1 = span.makeCurrent()) {
             if (controller.failed()) {
@@ -178,8 +178,8 @@ class AsyncClientScanner {
               span.end();
               return;
             }
-            future.complete(new OpenScannerResponse(
-              loc, isRegionServerRemote, stub, controller, resp));
+            future
+              .complete(new OpenScannerResponse(loc, isRegionServerRemote, stub, controller, resp));
           }
         });
       } catch (IOException e) {
@@ -191,17 +191,15 @@ class AsyncClientScanner {
   }
 
   private void startScan(OpenScannerResponse resp) {
-    addListener(
-      conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId()).location(resp.loc)
-        .remote(resp.isRegionServerRemote)
-        .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
-        .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-        .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts)
-        .startLogErrorsCnt(startLogErrorsCnt).start(resp.controller, resp.resp),
-      (hasMore, error) -> {
+    addListener(conn.callerFactory.scanSingleRegion().id(resp.resp.getScannerId())
+      .location(resp.loc).remote(resp.isRegionServerRemote)
+      .scannerLeaseTimeoutPeriod(resp.resp.getTtl(), TimeUnit.MILLISECONDS).stub(resp.stub)
+      .setScan(scan).metrics(scanMetrics).consumer(consumer).resultCache(resultCache)
+      .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+      .scanTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt)
+      .start(resp.controller, resp.resp), (hasMore, error) -> {
         try (Scope ignored = span.makeCurrent()) {
           if (error != null) {
             try {
@@ -230,17 +228,17 @@ class AsyncClientScanner {
     try (Scope ignored = span.makeCurrent()) {
       return conn.callerFactory.<OpenScannerResponse> single().table(tableName)
         .row(scan.getStartRow()).replicaId(replicaId).locateType(getLocateType(scan))
-        .priority(scan.getPriority())
-        .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+        .priority(scan.getPriority()).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
         .operationTimeout(scanTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
         .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
-        .maxAttempts(maxAttempts)
-        .startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner).call();
+        .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).action(this::callOpenScanner)
+        .call();
     }
   }
 
   private long getPrimaryTimeoutNs() {
-    return TableName.isMetaTableName(tableName) ? conn.connConf.getPrimaryMetaScanTimeoutNs()
+    return TableName.isMetaTableName(tableName)
+      ? conn.connConf.getPrimaryMetaScanTimeoutNs()
       : conn.connConf.getPrimaryScanTimeoutNs();
   }
 

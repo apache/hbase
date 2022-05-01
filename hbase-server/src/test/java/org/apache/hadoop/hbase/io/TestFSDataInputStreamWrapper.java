@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
-
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -49,35 +48,32 @@ public class TestFSDataInputStreamWrapper {
   @Test
   public void testUnbuffer() throws Exception {
     InputStream pc = new ParentClass();
-    FSDataInputStreamWrapper fsdisw1 =
-      new FSDataInputStreamWrapper(new FSDataInputStream(pc));
+    FSDataInputStreamWrapper fsdisw1 = new FSDataInputStreamWrapper(new FSDataInputStream(pc));
     fsdisw1.unbuffer();
     // parent class should be true
-    assertTrue(((ParentClass)pc).getIsCallUnbuffer());
+    assertTrue(((ParentClass) pc).getIsCallUnbuffer());
     fsdisw1.close();
 
     InputStream cc1 = new ChildClass1();
-    FSDataInputStreamWrapper fsdisw2 =
-      new FSDataInputStreamWrapper(new FSDataInputStream(cc1));
+    FSDataInputStreamWrapper fsdisw2 = new FSDataInputStreamWrapper(new FSDataInputStream(cc1));
     fsdisw2.unbuffer();
     // child1 class should be true
-    assertTrue(((ChildClass1)cc1).getIsCallUnbuffer());
+    assertTrue(((ChildClass1) cc1).getIsCallUnbuffer());
     fsdisw2.close();
   }
 
-  private class ParentClass extends FSInputStream
-      implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
-                 HasEnhancedByteBufferAccess, CanUnbuffer {
+  private class ParentClass extends FSInputStream implements ByteBufferReadable, CanSetDropBehind,
+    CanSetReadahead, HasEnhancedByteBufferAccess, CanUnbuffer {
 
     public boolean isCallUnbuffer = false;
 
-    public boolean getIsCallUnbuffer(){
+    public boolean getIsCallUnbuffer() {
       return isCallUnbuffer;
     }
 
     @Override
     public void unbuffer() {
-      isCallUnbuffer =  true;
+      isCallUnbuffer = true;
     }
 
     @Override
@@ -86,9 +82,8 @@ public class TestFSDataInputStreamWrapper {
     }
 
     @Override
-    public ByteBuffer read(ByteBufferPool paramByteBufferPool,
-        int paramInt, EnumSet<ReadOption> paramEnumSet)
-            throws IOException, UnsupportedOperationException {
+    public ByteBuffer read(ByteBufferPool paramByteBufferPool, int paramInt,
+      EnumSet<ReadOption> paramEnumSet) throws IOException, UnsupportedOperationException {
       return null;
     }
 
@@ -98,14 +93,13 @@ public class TestFSDataInputStreamWrapper {
     }
 
     @Override
-    public void setReadahead(Long paramLong)
-        throws IOException, UnsupportedOperationException {
+    public void setReadahead(Long paramLong) throws IOException, UnsupportedOperationException {
 
     }
 
     @Override
     public void setDropBehind(Boolean paramBoolean)
-        throws IOException, UnsupportedOperationException {
+      throws IOException, UnsupportedOperationException {
 
     }
 
@@ -130,7 +124,7 @@ public class TestFSDataInputStreamWrapper {
     }
   }
 
-  private class ChildClass1 extends ParentClass{
+  private class ChildClass1 extends ParentClass {
     @Override
     public void unbuffer() {
       isCallUnbuffer = true;

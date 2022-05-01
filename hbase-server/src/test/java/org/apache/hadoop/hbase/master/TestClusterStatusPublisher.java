@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, SmallTests.class}) // Plays with the ManualEnvironmentEdge
+@Category({ MasterTests.class, SmallTests.class }) // Plays with the ManualEnvironmentEdge
 public class TestClusterStatusPublisher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClusterStatusPublisher.class);
+    HBaseClassTestRule.forClass(TestClusterStatusPublisher.class);
 
   private ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 
@@ -99,7 +99,6 @@ public class TestClusterStatusPublisher {
         return res;
       }
     };
-
 
     mee.setValue(3);
     List<ServerName> allSNS = csp.generateDeadServersListToSend();

@@ -1,30 +1,30 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util.test;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.MultiThreadedAction.DefaultDataGenerator;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class LoadTestDataGeneratorWithACL extends DefaultDataGenerator {
@@ -34,7 +34,7 @@ public class LoadTestDataGeneratorWithACL extends DefaultDataGenerator {
   private int specialPermCellInsertionFactor = 100;
 
   public LoadTestDataGeneratorWithACL(int minValueSize, int maxValueSize, int minColumnsPerKey,
-      int maxColumnsPerKey, byte[]... columnFamilies) {
+    int maxColumnsPerKey, byte[]... columnFamilies) {
     super(minValueSize, maxValueSize, minColumnsPerKey, maxColumnsPerKey, columnFamilies);
   }
 
@@ -42,11 +42,10 @@ public class LoadTestDataGeneratorWithACL extends DefaultDataGenerator {
   public void initialize(String[] args) {
     super.initialize(args);
     if (args.length != 3) {
-      throw new IllegalArgumentException(
-          "LoadTestDataGeneratorWithACL can have "
-              + "1st arguement which would be super user, the 2nd argument "
-              + "would be the user list and the 3rd argument should be the factor representing "
-              + "the row keys for which only write ACLs will be added.");
+      throw new IllegalArgumentException("LoadTestDataGeneratorWithACL can have "
+        + "1st arguement which would be super user, the 2nd argument "
+        + "would be the user list and the 3rd argument should be the factor representing "
+        + "the row keys for which only write ACLs will be added.");
     }
     String temp = args[1];
     // This will be comma separated list of expressions.

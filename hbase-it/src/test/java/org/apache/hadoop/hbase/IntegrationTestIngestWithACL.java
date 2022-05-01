@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -35,12 +34,10 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * /**
- * An Integration class for tests that does something with the cluster while running
- * {@link LoadTestTool} to write and verify some data.
- * Verifies whether cells for users with only WRITE permissions are not read back
- * and cells with READ permissions are read back. 
- * Every operation happens in the user's specific context
+ * /** An Integration class for tests that does something with the cluster while running
+ * {@link LoadTestTool} to write and verify some data. Verifies whether cells for users with only
+ * WRITE permissions are not read back and cells with READ permissions are read back. Every
+ * operation happens in the user's specific context
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
@@ -52,8 +49,9 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
   public static final String OPT_USERS = "userlist";
   public static final String OPT_AUTHN = "authinfo";
   private String superUser = "owner";
-  private String userNames = "user1,user2,user3,user4"; 
+  private String userNames = "user1,user2,user3,user4";
   private String authnFileName;
+
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
@@ -68,7 +66,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
 
   @Override
   protected String[] getArgsForLoadTestTool(String mode, String modeSpecificArg, long startKey,
-      long numKeys) {
+    long numKeys) {
     String[] args = super.getArgsForLoadTestTool(mode, modeSpecificArg, startKey, numKeys);
     List<String> tmp = new ArrayList<>(Arrays.asList(args));
     tmp.add(HYPHEN + LoadTestTool.OPT_GENERATOR);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestTableResource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableResource.class);
+    HBaseClassTestRule.forClass(TestTableResource.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableResource.class);
 
@@ -74,8 +74,7 @@ public class TestTableResource {
   private static List<HRegionLocation> regionMap;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
 
@@ -83,16 +82,12 @@ public class TestTableResource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
-    context = JAXBContext.newInstance(
-        TableModel.class,
-        TableInfoModel.class,
-        TableListModel.class,
-        TableRegionModel.class);
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
+    context = JAXBContext.newInstance(TableModel.class, TableInfoModel.class, TableListModel.class,
+      TableRegionModel.class);
     TEST_UTIL.createMultiRegionTable(TABLE, Bytes.toBytes(COLUMN_FAMILY), NUM_REGIONS);
     byte[] k = new byte[3];
-    byte [][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(COLUMN));
+    byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(COLUMN));
     List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {
@@ -110,7 +105,7 @@ public class TestTableResource {
 
     Connection connection = TEST_UTIL.getConnection();
 
-    Table table =  connection.getTable(TABLE);
+    Table table = connection.getTable(TABLE);
     table.put(puts);
     table.close();
 
@@ -152,7 +147,7 @@ public class TestTableResource {
       TableRegionModel region = regions.next();
       boolean found = false;
       LOG.debug("looking for region " + region.getName());
-      for (HRegionLocation e: regionMap) {
+      for (HRegionLocation e : regionMap) {
         RegionInfo hri = e.getRegion();
         // getRegionNameAsString uses Bytes.toStringBinary which escapes some non-printable
         // characters
@@ -165,9 +160,8 @@ public class TestTableResource {
           byte[] endKey = hri.getEndKey();
           ServerName serverName = e.getServerName();
           InetSocketAddress sa =
-              new InetSocketAddress(serverName.getHostname(), serverName.getPort());
-          String location = sa.getHostName() + ":" +
-            Integer.valueOf(sa.getPort());
+            new InetSocketAddress(serverName.getHostname(), serverName.getPort());
+          String location = sa.getHostName() + ":" + Integer.valueOf(sa.getPort());
           assertEquals(hri.getRegionId(), region.getId());
           assertTrue(Bytes.equals(startKey, region.getStartKey()));
           assertTrue(Bytes.equals(endKey, region.getEndKey()));
@@ -191,9 +185,8 @@ public class TestTableResource {
     Response response = client.get("/", Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    TableListModel model = (TableListModel)
-      context.createUnmarshaller()
-        .unmarshal(new ByteArrayInputStream(response.getBody()));
+    TableListModel model = (TableListModel) context.createUnmarshaller()
+      .unmarshal(new ByteArrayInputStream(response.getBody()));
     checkTableList(model);
   }
 
@@ -229,12 +222,11 @@ public class TestTableResource {
 
   @Test
   public void testTableInfoXML() throws IOException, JAXBException {
-    Response response = client.get("/" + TABLE + "/regions",  Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + "/regions", Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    TableInfoModel model = (TableInfoModel)
-      context.createUnmarshaller()
-        .unmarshal(new ByteArrayInputStream(response.getBody()));
+    TableInfoModel model = (TableInfoModel) context.createUnmarshaller()
+      .unmarshal(new ByteArrayInputStream(response.getBody()));
     checkTableInfo(model);
   }
 
@@ -271,4 +263,3 @@ public class TestTableResource {
   }
 
 }
-

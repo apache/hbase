@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestCompactionInDeadRegionServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionInDeadRegionServer.class);
+    HBaseClassTestRule.forClass(TestCompactionInDeadRegionServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionInDeadRegionServer.class);
 
@@ -85,7 +85,7 @@ public class TestCompactionInDeadRegionServer {
 
     @Override
     protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
-        throws IOException {
+      throws IOException {
       try {
         super.tryRegionServerReport(reportStartTime, reportEndTime);
       } catch (YouAreDeadException e) {
@@ -100,7 +100,7 @@ public class TestCompactionInDeadRegionServer {
   @Parameters(name = "{index}: wal={0}")
   public static List<Object[]> params() {
     return Arrays.asList(new Object[] { FSHLogProvider.class },
-        new Object[] { AsyncFSWALProvider.class });
+      new Object[] { AsyncFSWALProvider.class });
   }
 
   @Before
@@ -169,8 +169,8 @@ public class TestCompactionInDeadRegionServer {
     });
     try {
       region.compact(true);
-      fail("Should fail as our wal file has already been closed, " +
-          "and walDir has also been renamed");
+      fail("Should fail as our wal file has already been closed, "
+        + "and walDir has also been renamed");
     } catch (Exception e) {
       LOG.debug("expected exception: ", e);
     }

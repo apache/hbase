@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +34,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test requirement that root directory must be a URI
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestRootPath {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRootPath.class);
+    HBaseClassTestRule.forClass(TestRootPath.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRootPath.class);
 
@@ -71,4 +71,3 @@ public class TestRootPath {
   }
 
 }
-

@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,18 +19,16 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * RegionServer implementation of {@link SpaceViolationPolicy}.
- *
- * Implementations must have a public, no-args constructor.
+ * RegionServer implementation of {@link SpaceViolationPolicy}. Implementations must have a public,
+ * no-args constructor.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -51,10 +50,8 @@ public interface SpaceViolationPolicyEnforcement {
   void disable() throws IOException;
 
   /**
-   * Checks the given {@link Mutation} against <code>this</code> policy. If the
-   * {@link Mutation} violates the policy, this policy should throw a
-   * {@link SpaceLimitingException}.
-   *
+   * Checks the given {@link Mutation} against <code>this</code> policy. If the {@link Mutation}
+   * violates the policy, this policy should throw a {@link SpaceLimitingException}.
    * @throws SpaceLimitingException When the given mutation violates this policy.
    */
   void check(Mutation m) throws SpaceLimitingException;
@@ -83,7 +80,6 @@ public interface SpaceViolationPolicyEnforcement {
    * Computes the size of the file(s) at the given path against <code>this</code> policy and the
    * current {@link SpaceQuotaSnapshot}. If the file would violate the policy, a
    * {@link SpaceLimitingException} will be thrown.
-   *
    * @param paths The paths in HDFS to files to be bulk loaded.
    * @return The size, in bytes, of the files that would be loaded.
    */

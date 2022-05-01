@@ -83,7 +83,7 @@
 
 <div class="container-fluid content">
   <% if (!master.isInitialized()) { %>
-  <div class="row">
+  <div class="row top_header">
     <div class="page-header">
       <h1>Master is not initialized</h1>
     </div>
@@ -91,7 +91,7 @@
   <jsp:include page="redirect.jsp" />
   <% } else { %>
 
-  <div class="row">
+  <div class="row top_header">
     <div class="page-header">
       <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and
         the <em>CatalogJanitor Consistency Issues</em> report. Only report titles

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,11 +33,11 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
@@ -48,7 +47,6 @@ public class HFileContentValidator extends AbstractHBaseTool {
 
   /**
    * Check HFile contents are readable by HBase 2.
-   *
    * @param conf used configuration
    * @return number of HFiles corrupted HBase
    * @throws IOException if a remote or network exception occurs
@@ -99,7 +97,7 @@ public class HFileContentValidator extends AbstractHBaseTool {
       }
 
       LOG.info("Change data block encodings before upgrading. "
-          + "Check https://s.apache.org/prefixtree for instructions.");
+        + "Check https://s.apache.org/prefixtree for instructions.");
 
       return false;
     }

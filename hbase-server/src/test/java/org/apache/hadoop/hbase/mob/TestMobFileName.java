@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -40,7 +39,7 @@ public class TestMobFileName {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobFileName.class);
+    HBaseClassTestRule.forClass(TestMobFileName.class);
 
   private String uuid;
   private Date date;
@@ -59,9 +58,9 @@ public class TestMobFileName {
   @Test
   public void testHashCode() {
     assertEquals(MobFileName.create(startKey, dateStr, uuid, regionName).hashCode(),
-        MobFileName.create(startKey, dateStr, uuid, regionName).hashCode());
+      MobFileName.create(startKey, dateStr, uuid, regionName).hashCode());
     assertNotSame(MobFileName.create(startKey, dateStr, uuid, regionName),
-        MobFileName.create(startKey, dateStr, uuid, regionName));
+      MobFileName.create(startKey, dateStr, uuid, regionName));
   }
 
   @Test
@@ -75,8 +74,8 @@ public class TestMobFileName {
     MobFileName mobFileName = MobFileName.create(startKey, dateStr, uuid, regionName);
     assertEquals(MD5Hash.getMD5AsHex(startKey, 0, startKey.length), mobFileName.getStartKey());
     assertEquals(dateStr, mobFileName.getDate());
-    assertEquals(mobFileName.getFileName(), MD5Hash.getMD5AsHex(startKey, 0, startKey.length)
-        + dateStr + uuid+"_"+regionName);
+    assertEquals(mobFileName.getFileName(),
+      MD5Hash.getMD5AsHex(startKey, 0, startKey.length) + dateStr + uuid + "_" + regionName);
   }
 
   @Test

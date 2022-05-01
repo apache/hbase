@@ -83,8 +83,7 @@ public class TestZKConnectionRegistry {
       clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getActiveMaster().get());
-    RegionReplicaTestHelper
-      .waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
+    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
     RegionLocations locs = REGISTRY.getMetaRegionLocations().get();
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {
@@ -102,8 +101,8 @@ public class TestZKConnectionRegistry {
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, MiniZooKeeperCluster.HOST);
       try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
-        assertNotSame("Using a different configuration / quorum should result in different " +
-          "backing zk connection.", zk1, zk2);
+        assertNotSame("Using a different configuration / quorum should result in different "
+          + "backing zk connection.", zk1, zk2);
         assertNotEquals(
           "Using a different configrution / quorum should be reflected in the zk connection.",
           zk1.getConnectString(), zk2.getConnectString());

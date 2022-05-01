@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,26 +74,21 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * IT test used to verify the deletes with visibility labels.
- * The test creates three tables tablename_0, tablename_1 and tablename_2 and each table
- * is associated with a unique pair of labels.
- * Another common table with the name 'commontable' is created and it has the data combined
- * from all these 3 tables such that there are 3 versions of every row but the visibility label
- * in every row corresponds to the table from which the row originated.
- * Then deletes are issued to the common table by selecting the visibility label
- * associated with each of the smaller tables.
- * After the delete is issued with one set of visibility labels we try to scan the common table
- * with each of the visibility pairs defined for the 3 tables.
- * So after the first delete is issued, a scan with the first set of visibility labels would
- * return zero result whereas the scan issued with the other two sets of visibility labels
- * should return all the rows corresponding to that set of visibility labels.  The above
- * process of delete and scan is repeated until after the last set of visibility labels are
- * used for the deletes the common table should not return any row.
- *
- * To use this
- * ./hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedListWithVisibility Loop 1 1 20000 /tmp 1 10000
- * or
- * ./hbase org.apache.hadoop.hbase.IntegrationTestsDriver -r .*IntegrationTestBigLinkedListWithVisibility.*
+ * IT test used to verify the deletes with visibility labels. The test creates three tables
+ * tablename_0, tablename_1 and tablename_2 and each table is associated with a unique pair of
+ * labels. Another common table with the name 'commontable' is created and it has the data combined
+ * from all these 3 tables such that there are 3 versions of every row but the visibility label in
+ * every row corresponds to the table from which the row originated. Then deletes are issued to the
+ * common table by selecting the visibility label associated with each of the smaller tables. After
+ * the delete is issued with one set of visibility labels we try to scan the common table with each
+ * of the visibility pairs defined for the 3 tables. So after the first delete is issued, a scan
+ * with the first set of visibility labels would return zero result whereas the scan issued with the
+ * other two sets of visibility labels should return all the rows corresponding to that set of
+ * visibility labels. The above process of delete and scan is repeated until after the last set of
+ * visibility labels are used for the deletes the common table should not return any row. To use
+ * this ./hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedListWithVisibility Loop 1 1
+ * 20000 /tmp 1 10000 or ./hbase org.apache.hadoop.hbase.IntegrationTestsDriver -r
+ * .*IntegrationTestBigLinkedListWithVisibility.*
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestBigLinkedList {
@@ -109,7 +104,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   private static final String PREVILIGED = "previliged";
   private static final String OPEN = "open";
   public static String labels = CONFIDENTIAL + "," + TOPSECRET + "," + SECRET + "," + RESTRICTED
-      + "," + PRIVATE + "," + PREVILIGED + "," + GROUP + "," + OPEN + "," + PUBLIC + "," + EVERYONE;
+    + "," + PRIVATE + "," + PREVILIGED + "," + GROUP + "," + OPEN + "," + PUBLIC + "," + EVERYONE;
   private static final String COMMA = ",";
   private static final String UNDER_SCORE = "_";
   public static int DEFAULT_TABLES_COUNT = 3;
@@ -129,13 +124,13 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     protected void createSchema() throws IOException {
       LOG.info("Creating tables");
       // Create three tables
-      boolean acl = AccessControlClient.isAccessControllerRunning(ConnectionFactory
-          .createConnection(getConf()));
-      if(!acl) {
+      boolean acl = AccessControlClient
+        .isAccessControllerRunning(ConnectionFactory.createConnection(getConf()));
+      if (!acl) {
         LOG.info("No ACL available.");
       }
       try (Connection conn = ConnectionFactory.createConnection(getConf());
-          Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
           TableName tableName = IntegrationTestBigLinkedListWithVisibility.getTableName(i);
           createTable(admin, tableName, false, acl);
@@ -145,8 +140,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
     }
 
-    private void createTable(Admin admin, TableName tableName, boolean setVersion,
-        boolean acl) throws IOException {
+    private void createTable(Admin admin, TableName tableName, boolean setVersion, boolean acl)
+      throws IOException {
       if (!admin.tableExists(tableName)) {
         ColumnFamilyDescriptorBuilder cfBuilder =
           ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_NAME);
@@ -161,10 +156,10 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
           Permission.Action[] actions = { Permission.Action.READ };
           try {
             AccessControlClient.grant(ConnectionFactory.createConnection(getConf()), tableName,
-                USER.getShortName(), null, null, actions);
+              USER.getShortName(), null, null, actions);
           } catch (Throwable e) {
-            LOG.error(HBaseMarkers.FATAL, "Error in granting permission for the user " +
-                USER.getShortName(), e);
+            LOG.error(HBaseMarkers.FATAL,
+              "Error in granting permission for the user " + USER.getShortName(), e);
             throw new IOException(e);
           }
         }
@@ -180,8 +175,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       BufferedMutator[] tables = new BufferedMutator[DEFAULT_TABLES_COUNT];
 
       @Override
-      protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context) throws IOException,
-          InterruptedException {
+      protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context)
+        throws IOException, InterruptedException {
         super.setup(context);
       }
 
@@ -197,7 +192,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
       @Override
       protected void cleanup(org.apache.hadoop.mapreduce.Mapper.Context context)
-          throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
           if (tables[i] != null) {
             tables[i].close();
@@ -207,7 +202,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
       @Override
       protected void persist(org.apache.hadoop.mapreduce.Mapper.Context output, long count,
-          byte[][] prev, byte[][] current, byte[] id) throws IOException {
+        byte[][] prev, byte[][] current, byte[] id) throws IOException {
         String visibilityExps = "";
         String[] split = labels.split(COMMA);
         for (int i = 0; i < current.length; i++) {
@@ -265,8 +260,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       scan.setRaw(true);
 
       String[] split = labels.split(COMMA);
-      scan.setAuthorizations(new Authorizations(split[this.labelIndex * 2],
-          split[(this.labelIndex * 2) + 1]));
+      scan.setAuthorizations(
+        new Authorizations(split[this.labelIndex * 2], split[(this.labelIndex * 2) + 1]));
       if (delete) {
         LOG.info("Running deletes");
       } else {
@@ -274,10 +269,10 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
       if (delete) {
         TableMapReduceUtil.initTableMapperJob(tableName.getNameAsString(), scan,
-            VisibilityDeleteImport.class, null, null, job);
+          VisibilityDeleteImport.class, null, null, job);
       } else {
         TableMapReduceUtil.initTableMapperJob(tableName.getNameAsString(), scan,
-            VisibilityImport.class, null, null, job);
+          VisibilityImport.class, null, null, job);
       }
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
       job.getConfiguration().setBoolean("mapreduce.reduce.speculative", false);
@@ -334,14 +329,12 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     // Creating delete here
     @Override
     protected void processKV(ImmutableBytesWritable key, Result result,
-        org.apache.hadoop.mapreduce.Mapper.Context context, Put put,
-        org.apache.hadoop.hbase.client.Delete delete) throws
-        IOException, InterruptedException {
+      org.apache.hadoop.mapreduce.Mapper.Context context, Put put,
+      org.apache.hadoop.hbase.client.Delete delete) throws IOException, InterruptedException {
       String visibilityExps = split[index * 2] + OR + split[(index * 2) + 1];
       for (Cell kv : result.rawCells()) {
         // skip if we filter it out
-        if (kv == null)
-          continue;
+        if (kv == null) continue;
         // Create deletes here
         if (delete == null) {
           delete = new Delete(key.get());
@@ -369,6 +362,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
   }
+
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
@@ -416,8 +410,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       return USER.runAs(scanAction);
     }
 
-    private int doVerify(Path outputDir, int numReducers) throws IOException, InterruptedException,
-        ClassNotFoundException {
+    private int doVerify(Path outputDir, int numReducers)
+      throws IOException, InterruptedException, ClassNotFoundException {
       job = new Job(getConf());
 
       job.setJobName("Link Verifier");
@@ -432,11 +426,11 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       scan.setCacheBlocks(false);
       String[] split = labels.split(COMMA);
 
-      scan.setAuthorizations(new Authorizations(split[this.labelIndex * 2],
-          split[(this.labelIndex * 2) + 1]));
+      scan.setAuthorizations(
+        new Authorizations(split[this.labelIndex * 2], split[(this.labelIndex * 2) + 1]));
 
       TableMapReduceUtil.initTableMapperJob(tableName.getName(), scan, VerifyMapper.class,
-          BytesWritable.class, BytesWritable.class, job);
+        BytesWritable.class, BytesWritable.class, job);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
 
       job.getConfiguration().setBoolean("mapreduce.map.speculative", false);
@@ -480,32 +474,33 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
     @Override
     protected void runGenerator(int numMappers, long numNodes, String outputDir, Integer width,
-        Integer wrapMultiplier, Integer numWalkers) throws Exception {
+      Integer wrapMultiplier, Integer numWalkers) throws Exception {
       Path outputPath = new Path(outputDir);
       UUID uuid = UUID.randomUUID(); // create a random UUID.
       Path generatorOutput = new Path(outputPath, uuid.toString());
 
       Generator generator = new VisibilityGenerator();
       generator.setConf(getConf());
-      int retCode = generator.run(numMappers, numNodes, generatorOutput, width, wrapMultiplier,
-          numWalkers);
+      int retCode =
+        generator.run(numMappers, numNodes, generatorOutput, width, wrapMultiplier, numWalkers);
       if (retCode > 0) {
         throw new RuntimeException("Generator failed with return code: " + retCode);
       }
     }
 
     protected void runDelete(int numMappers, long numNodes, String outputDir, Integer width,
-        Integer wrapMultiplier, int tableIndex) throws Exception {
-      LOG.info("Running copier on table "+IntegrationTestBigLinkedListWithVisibility.getTableName(tableIndex));
+      Integer wrapMultiplier, int tableIndex) throws Exception {
+      LOG.info("Running copier on table "
+        + IntegrationTestBigLinkedListWithVisibility.getTableName(tableIndex));
       Copier copier = new Copier(
-          IntegrationTestBigLinkedListWithVisibility.getTableName(tableIndex), tableIndex, true);
+        IntegrationTestBigLinkedListWithVisibility.getTableName(tableIndex), tableIndex, true);
       copier.setConf(getConf());
       copier.runCopier(outputDir);
       Thread.sleep(SLEEP_IN_MS);
     }
 
     protected void runVerify(String outputDir, int numReducers, long expectedNumNodes,
-        boolean allTables) throws Exception {
+      boolean allTables) throws Exception {
       Path outputPath = new Path(outputDir);
 
       if (allTables) {
@@ -524,7 +519,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     private void runVerify(String outputDir, int numReducers, long expectedNodes, int tableIndex)
-        throws Exception {
+      throws Exception {
       long temp = expectedNodes;
       for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
         if (i <= tableIndex) {
@@ -532,7 +527,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
         } else {
           expectedNodes = temp;
         }
-        LOG.info("Verifying data in the table with index "+i+ " and expected nodes is "+expectedNodes);
+        LOG.info("Verifying data in the table with index " + i + " and expected nodes is "
+          + expectedNodes);
         runVerifyCommonTable(outputDir, numReducers, expectedNodes, i);
       }
     }
@@ -542,14 +538,14 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     protected void runVerifyCommonTable(String outputDir, int numReducers, long expectedNumNodes,
-        int index) throws Exception {
+      int index) throws Exception {
       LOG.info("Verifying common table with index " + index);
       sleep(SLEEP_IN_MS);
       Path outputPath = new Path(outputDir);
       UUID uuid = UUID.randomUUID(); // create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
-      Verify verify = new VisibilityVerify(TableName.valueOf(COMMON_TABLE_NAME).getNameAsString(),
-          index);
+      Verify verify =
+        new VisibilityVerify(TableName.valueOf(COMMON_TABLE_NAME).getNameAsString(), index);
       verify(numReducers, expectedNumNodes, iterationOutput, verify);
     }
 
@@ -557,15 +553,15 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
         LOG.info("Running copier " + IntegrationTestBigLinkedListWithVisibility.getTableName(i));
         sleep(SLEEP_IN_MS);
-        Copier copier = new Copier(IntegrationTestBigLinkedListWithVisibility.getTableName(i), i,
-            false);
+        Copier copier =
+          new Copier(IntegrationTestBigLinkedListWithVisibility.getTableName(i), i, false);
         copier.setConf(getConf());
         copier.runCopier(outputDir);
       }
     }
 
-    private void verify(int numReducers, long expectedNumNodes,
-        Path iterationOutput, Verify verify) throws Exception {
+    private void verify(int numReducers, long expectedNumNodes, Path iterationOutput, Verify verify)
+      throws Exception {
       verify.setConf(getConf());
       int retCode = verify.run(iterationOutput, numReducers);
       if (retCode > 0) {
@@ -582,10 +578,9 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     @Override
     public int run(String[] args) throws Exception {
       if (args.length < 5) {
-        System.err
-            .println("Usage: Loop <num iterations> " +
-                "<num mappers> <num nodes per mapper> <output dir> " +
-                "<num reducers> [<width> <wrap multiplier>]");
+        System.err.println(
+          "Usage: Loop <num iterations> " + "<num mappers> <num nodes per mapper> <output dir> "
+            + "<num reducers> [<width> <wrap multiplier>]");
         return 1;
       }
       LOG.info("Running Loop with args:" + Arrays.deepToString(args));
@@ -619,7 +614,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
         runVerify(outputDir, numReducers, expectedNumNodes, true);
         sleep(SLEEP_IN_MS);
         for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
-          LOG.info("Deleting data on table with index: "+j);
+          LOG.info("Deleting data on table with index: " + j);
           runDelete(numMappers, numNodes, outputDir, width, wrapMultiplier, j);
           sleep(SLEEP_IN_MS);
           LOG.info("Verifying common table after deleting");
@@ -636,12 +631,10 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   public void testContinuousIngest() throws IOException, Exception {
     // Loop <num iterations> <num mappers> <num nodes per mapper> <output dir>
     // <num reducers>
-    int ret = ToolRunner.run(
-        getTestingUtil(getConf()).getConfiguration(),
-        new VisibilityLoop(),
-        new String[] { "1", "1", "20000",
-            util.getDataTestDirOnTestFS("IntegrationTestBigLinkedListWithVisibility").toString(),
-            "1", "10000" });
+    int ret = ToolRunner.run(getTestingUtil(getConf()).getConfiguration(), new VisibilityLoop(),
+      new String[] { "1", "1", "20000",
+        util.getDataTestDirOnTestFS("IntegrationTestBigLinkedListWithVisibility").toString(), "1",
+        "10000" });
     org.junit.Assert.assertEquals(0, ret);
   }
 

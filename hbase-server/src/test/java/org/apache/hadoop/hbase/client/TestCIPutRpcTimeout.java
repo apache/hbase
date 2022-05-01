@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ public class TestCIPutRpcTimeout extends AbstractTestCIRpcTimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCIPutRpcTimeout.class);
+    HBaseClassTestRule.forClass(TestCIPutRpcTimeout.class);
 
   @Override
   protected void execute(Table table) throws IOException {

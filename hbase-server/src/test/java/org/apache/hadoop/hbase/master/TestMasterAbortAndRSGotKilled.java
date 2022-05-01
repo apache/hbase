@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,8 +102,8 @@ public class TestMasterAbortAndRSGotKilled {
     UTIL.getMiniHBaseCluster().stopMaster(0);
     UTIL.getMiniHBaseCluster().startMaster();
     // wait until master initialized
-    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null &&
-      UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null
+      && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     Assert.assertTrue("Should be 3 RS after master restart",
       UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 3);
 
@@ -113,7 +113,7 @@ public class TestMasterAbortAndRSGotKilled {
 
     @Override
     public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-        throws IOException {
+      throws IOException {
       if (!c.getEnvironment().getRegion().getRegionInfo().getTable().isSystemTable()) {
         LOG.info("begin to sleep");
         countDownLatch.countDown();

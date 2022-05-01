@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -103,12 +103,12 @@ public class HFileBlockBuilder {
   public HFileBlock build() {
     if (isShared) {
       return new SharedMemHFileBlock(blockType, onDiskSizeWithoutHeader,
-          uncompressedSizeWithoutHeader, prevBlockOffset, buf, fillHeader, offset,
-          nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, allocator);
+        uncompressedSizeWithoutHeader, prevBlockOffset, buf, fillHeader, offset,
+        nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, allocator);
     } else {
       return new ExclusiveMemHFileBlock(blockType, onDiskSizeWithoutHeader,
-          uncompressedSizeWithoutHeader, prevBlockOffset, buf, fillHeader, offset,
-          nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, allocator);
+        uncompressedSizeWithoutHeader, prevBlockOffset, buf, fillHeader, offset,
+        nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, allocator);
     }
   }
 }

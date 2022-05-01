@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -13,15 +13,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,17 +27,17 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * A set of static functions for running our custom WAL compression/decompression.
- * Also contains a command line tool to compress and uncompress WALs.
+ * A set of static functions for running our custom WAL compression/decompression. Also contains a
+ * command line tool to compress and uncompress WALs.
  */
 @InterfaceAudience.Private
 public class Compressor {
@@ -65,8 +63,7 @@ public class Compressor {
     return;
   }
 
-  private static void transformFile(Path input, Path output)
-      throws IOException {
+  private static void transformFile(Path input, Path output) throws IOException {
     Configuration conf = HBaseConfiguration.create();
 
     FileSystem inFS = input.getFileSystem(conf);
@@ -80,12 +77,13 @@ public class Compressor {
         System.err.println("Cannot proceed, invalid reader type: " + in.getClass().getName());
         return;
       }
-      boolean compress = ((ReaderBase)in).hasCompression();
+      boolean compress = ((ReaderBase) in).hasCompression();
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
       out = WALFactory.createWALWriter(outFS, output, conf);
 
       WAL.Entry e = null;
-      while ((e = in.next()) != null) out.append(e);
+      while ((e = in.next()) != null)
+        out.append(e);
     } finally {
       in.close();
       if (out != null) {
@@ -97,14 +95,12 @@ public class Compressor {
 
   /**
    * Reads the next compressed entry and returns it as a byte array
-   * 
-   * @param in the DataInput to read from
+   * @param in   the DataInput to read from
    * @param dict the dictionary we use for our read.
    * @return the uncompressed array.
    */
   @Deprecated
-  static byte[] readCompressed(DataInput in, Dictionary dict)
-      throws IOException {
+  static byte[] readCompressed(DataInput in, Dictionary dict) throws IOException {
     byte status = in.readByte();
 
     if (status == Dictionary.NOT_IN_DICTIONARY) {
@@ -121,27 +117,23 @@ public class Compressor {
       short dictIdx = toShort(status, in.readByte());
       byte[] entry = dict.getEntry(dictIdx);
       if (entry == null) {
-        throw new IOException("Missing dictionary entry for index "
-            + dictIdx);
+        throw new IOException("Missing dictionary entry for index " + dictIdx);
       }
       return entry;
     }
   }
 
   /**
-   * Reads a compressed entry into an array.
-   * The output into the array ends up length-prefixed.
-   * 
-   * @param to the array to write into
+   * Reads a compressed entry into an array. The output into the array ends up length-prefixed.
+   * @param to     the array to write into
    * @param offset array offset to start writing to
-   * @param in the DataInput to read from
-   * @param dict the dictionary to use for compression
-   * 
+   * @param in     the DataInput to read from
+   * @param dict   the dictionary to use for compression
    * @return the length of the uncompressed data
    */
   @Deprecated
-  static int uncompressIntoArray(byte[] to, int offset, DataInput in,
-      Dictionary dict) throws IOException {
+  static int uncompressIntoArray(byte[] to, int offset, DataInput in, Dictionary dict)
+    throws IOException {
     byte status = in.readByte();
 
     if (status == Dictionary.NOT_IN_DICTIONARY) {
@@ -162,8 +154,7 @@ public class Compressor {
         throw new IOException("Unable to uncompress the log entry", ex);
       }
       if (entry == null) {
-        throw new IOException("Missing dictionary entry for index "
-            + dictIdx);
+        throw new IOException("Missing dictionary entry for index " + dictIdx);
       }
       // now we write the uncompressed value.
       Bytes.putBytes(to, offset, entry, 0, entry.length);
@@ -173,15 +164,13 @@ public class Compressor {
 
   /**
    * Compresses and writes an array to a DataOutput
-   * 
    * @param data the array to write.
-   * @param out the DataOutput to write into
+   * @param out  the DataOutput to write into
    * @param dict the dictionary to use for compression
    */
   @Deprecated
-  static void writeCompressed(byte[] data, int offset, int length,
-      DataOutput out, Dictionary dict)
-      throws IOException {
+  static void writeCompressed(byte[] data, int offset, int length, DataOutput out, Dictionary dict)
+    throws IOException {
     short dictIdx = Dictionary.NOT_IN_DICTIONARY;
     if (dict != null) {
       dictIdx = dict.findEntry(data, offset, length);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 public class HFilePreadReader extends HFileReaderImpl {
   private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
 
-  public HFilePreadReader(ReaderContext context, HFileInfo fileInfo,
-      CacheConfig cacheConf, Configuration conf) throws IOException {
+  public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
+    Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // Prefetch file blocks upon open if requested
     if (cacheConf.shouldPrefetchOnOpen()) {
@@ -74,8 +74,9 @@ public class HFilePreadReader extends HFileReaderImpl {
               LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
           } catch (NullPointerException e) {
-            LOG.warn("Stream moved/closed or prefetch cancelled?" +
-                getPathOffsetEndStr(path, offset, end), e);
+            LOG.warn(
+              "Stream moved/closed or prefetch cancelled?" + getPathOffsetEndStr(path, offset, end),
+              e);
           } catch (Exception e) {
             // Other exceptions are interesting
             LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -57,8 +56,7 @@ import org.slf4j.Logger;
  */
 public abstract class Action {
 
-  public static final String KILL_MASTER_TIMEOUT_KEY =
-    "hbase.chaosmonkey.action.killmastertimeout";
+  public static final String KILL_MASTER_TIMEOUT_KEY = "hbase.chaosmonkey.action.killmastertimeout";
   public static final String START_MASTER_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.startmastertimeout";
   public static final String KILL_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.killrstimeout";
@@ -72,9 +70,9 @@ public abstract class Action {
   public static final String START_DATANODE_TIMEOUT_KEY =
     "hbase.chaosmonkey.action.startdatanodetimeout";
   public static final String KILL_NAMENODE_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.killnamenodetimeout";
+    "hbase.chaosmonkey.action.killnamenodetimeout";
   public static final String START_NAMENODE_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.startnamenodetimeout";
+    "hbase.chaosmonkey.action.startnamenodetimeout";
 
   protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
@@ -118,36 +116,37 @@ public abstract class Action {
     initialServers = regionServers.toArray(new ServerName[0]);
 
     monkeyProps = context.getMonkeyProps();
-    if (monkeyProps == null){
+    if (monkeyProps == null) {
       monkeyProps = new Properties();
       IntegrationTestBase.loadMonkeyProperties(monkeyProps, cluster.getConf());
     }
 
-    killMasterTimeout = Long.parseLong(monkeyProps.getProperty(
-      KILL_MASTER_TIMEOUT_KEY, KILL_MASTER_TIMEOUT_DEFAULT + ""));
-    startMasterTimeout = Long.parseLong(monkeyProps.getProperty(START_MASTER_TIMEOUT_KEY,
-      START_MASTER_TIMEOUT_DEFAULT + ""));
-    killRsTimeout = Long.parseLong(monkeyProps.getProperty(KILL_RS_TIMEOUT_KEY,
-      KILL_RS_TIMEOUT_DEFAULT + ""));
-    startRsTimeout = Long.parseLong(monkeyProps.getProperty(START_RS_TIMEOUT_KEY,
-      START_RS_TIMEOUT_DEFAULT+ ""));
-    killZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_ZK_NODE_TIMEOUT_KEY,
-      KILL_ZK_NODE_TIMEOUT_DEFAULT + ""));
-    startZkNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_ZK_NODE_TIMEOUT_KEY,
-      START_ZK_NODE_TIMEOUT_DEFAULT + ""));
-    killDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_DATANODE_TIMEOUT_KEY,
-      KILL_DATANODE_TIMEOUT_DEFAULT + ""));
-    startDataNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_DATANODE_TIMEOUT_KEY,
-      START_DATANODE_TIMEOUT_DEFAULT + ""));
-    killNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(KILL_NAMENODE_TIMEOUT_KEY,
-      KILL_NAMENODE_TIMEOUT_DEFAULT + ""));
-    startNameNodeTimeout = Long.parseLong(monkeyProps.getProperty(START_NAMENODE_TIMEOUT_KEY,
-      START_NAMENODE_TIMEOUT_DEFAULT + ""));
+    killMasterTimeout = Long.parseLong(
+      monkeyProps.getProperty(KILL_MASTER_TIMEOUT_KEY, KILL_MASTER_TIMEOUT_DEFAULT + ""));
+    startMasterTimeout = Long.parseLong(
+      monkeyProps.getProperty(START_MASTER_TIMEOUT_KEY, START_MASTER_TIMEOUT_DEFAULT + ""));
+    killRsTimeout =
+      Long.parseLong(monkeyProps.getProperty(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT + ""));
+    startRsTimeout =
+      Long.parseLong(monkeyProps.getProperty(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT + ""));
+    killZkNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(KILL_ZK_NODE_TIMEOUT_KEY, KILL_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    startZkNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(START_ZK_NODE_TIMEOUT_KEY, START_ZK_NODE_TIMEOUT_DEFAULT + ""));
+    killDataNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(KILL_DATANODE_TIMEOUT_KEY, KILL_DATANODE_TIMEOUT_DEFAULT + ""));
+    startDataNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(START_DATANODE_TIMEOUT_KEY, START_DATANODE_TIMEOUT_DEFAULT + ""));
+    killNameNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(KILL_NAMENODE_TIMEOUT_KEY, KILL_NAMENODE_TIMEOUT_DEFAULT + ""));
+    startNameNodeTimeout = Long.parseLong(
+      monkeyProps.getProperty(START_NAMENODE_TIMEOUT_KEY, START_NAMENODE_TIMEOUT_DEFAULT + ""));
     skipMetaRS = Boolean.parseBoolean(monkeyProps.getProperty(MonkeyConstants.SKIP_META_RS,
       MonkeyConstants.DEFAULT_SKIP_META_RS + ""));
   }
 
-  public void perform() throws Exception { }
+  public void perform() throws Exception {
+  }
 
   /** Returns current region servers - active master */
   protected ServerName[] getCurrentServers() throws IOException {
@@ -155,7 +154,7 @@ public abstract class Action {
     Collection<ServerName> regionServers = clusterStatus.getLiveServerMetrics().keySet();
     int count = regionServers.size();
     if (count <= 0) {
-      return new ServerName [] {};
+      return new ServerName[] {};
     }
     ServerName master = clusterStatus.getMasterName();
     Set<ServerName> masters = new HashSet<>();
@@ -165,7 +164,7 @@ public abstract class Action {
     tmp.addAll(regionServers);
     tmp.removeAll(masters);
 
-    if(skipMetaRS){
+    if (skipMetaRS) {
       ServerName metaServer = cluster.getServerHoldingMeta();
       tmp.remove(metaServer);
     }
@@ -198,7 +197,7 @@ public abstract class Action {
   protected void suspendRs(ServerName server) throws IOException {
     getLogger().info("Suspending regionserver {}", server);
     cluster.suspendRegionServer(server);
-    if(!(cluster instanceof SingleProcessHBaseCluster)){
+    if (!(cluster instanceof SingleProcessHBaseCluster)) {
       cluster.waitForRegionServerToStop(server, killRsTimeout);
     }
     getLogger().info("Suspending regionserver {}. Reported num of rs:{}", server,
@@ -208,7 +207,7 @@ public abstract class Action {
   protected void resumeRs(ServerName server) throws IOException {
     getLogger().info("Resuming regionserver {}", server);
     cluster.resumeRegionServer(server);
-    if(!(cluster instanceof SingleProcessHBaseCluster)){
+    if (!(cluster instanceof SingleProcessHBaseCluster)) {
       cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     }
     getLogger().info("Resuming regionserver {}. Reported num of rs:{}", server,
@@ -266,7 +265,7 @@ public abstract class Action {
     cluster.killNameNode(server);
     cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
     getLogger().info("Killed namenode:{}. Reported num of rs:{}", server,
-        cluster.getClusterMetrics().getLiveServerMetrics().size());
+      cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startNameNode(ServerName server) throws IOException {
@@ -275,17 +274,17 @@ public abstract class Action {
     cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
     getLogger().info("Started namenode:{}", server);
   }
-  protected void unbalanceRegions(ClusterMetrics clusterStatus,
-      List<ServerName> fromServers, List<ServerName> toServers,
-      double fractionOfRegions) throws Exception {
+
+  protected void unbalanceRegions(ClusterMetrics clusterStatus, List<ServerName> fromServers,
+    List<ServerName> toServers, double fractionOfRegions) throws Exception {
     List<byte[]> victimRegions = new LinkedList<>();
-    for (Map.Entry<ServerName, ServerMetrics> entry
-      : clusterStatus.getLiveServerMetrics().entrySet()) {
+    for (Map.Entry<ServerName, ServerMetrics> entry : clusterStatus.getLiveServerMetrics()
+      .entrySet()) {
       ServerName sn = entry.getKey();
       ServerMetrics serverLoad = entry.getValue();
       // Ugh.
       List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
-      int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
+      int victimRegionCount = (int) Math.ceil(fractionOfRegions * regions.size());
       getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
       Random rand = ThreadLocalRandom.current();
       for (int i = 0; i < victimRegionCount; ++i) {
@@ -337,11 +336,11 @@ public abstract class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table. If there are no columns in a table
-   * or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table. If there are no columns in a table or if the
+   * context is stopping does nothing.
    * @param tableName the table to modify
-   * @param transform the modification to perform. Callers will have the
-   *                  column name as a string and a column family builder available to them
+   * @param transform the modification to perform. Callers will have the column name as a string and
+   *                  a column family builder available to them
    */
   protected void modifyAllTableColumns(TableName tableName,
     BiConsumer<String, ColumnFamilyDescriptorBuilder> transform) throws IOException {
@@ -370,8 +369,8 @@ public abstract class Action {
   }
 
   /**
-   * Apply a transform to all columns in a given table.
-   * If there are no columns in a table or if the context is stopping does nothing.
+   * Apply a transform to all columns in a given table. If there are no columns in a table or if the
+   * context is stopping does nothing.
    * @param tableName the table to modify
    * @param transform the modification to perform on each column family descriptor builder
    */
@@ -396,7 +395,7 @@ public abstract class Action {
       this.monkeyProps = monkeyProps;
     }
 
-    public Properties getMonkeyProps(){
+    public Properties getMonkeyProps() {
       return monkeyProps;
     }
 

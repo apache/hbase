@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -165,7 +165,8 @@ public class RSGroupAdminClient {
    * Balance regions in the given RegionServer group.
    * @return BalanceResponse details about the balancer run
    */
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     try {
       BalanceRSGroupRequest req = ProtobufUtil.createBalanceRSGroupRequest(groupName, request);
       return ProtobufUtil.toBalanceResponse(stub.balanceRSGroup(null, req));
@@ -212,8 +213,8 @@ public class RSGroupAdminClient {
 
   /**
    * Move given set of servers and tables to the specified target RegionServer group.
-   * @param servers set of servers to move
-   * @param tables set of tables to move
+   * @param servers     set of servers to move
+   * @param tables      set of tables to move
    * @param targetGroup the target group name
    * @throws IOException if moving the server and tables fail
    */

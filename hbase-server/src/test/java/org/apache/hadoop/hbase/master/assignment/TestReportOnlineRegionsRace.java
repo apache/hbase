@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -91,7 +91,7 @@ public class TestReportOnlineRegionsRace {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       if (RESUME_REPORT_STATE != null) {
         try {
           RESUME_REPORT_STATE.await();
@@ -128,7 +128,7 @@ public class TestReportOnlineRegionsRace {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 1000);
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT);
+      HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT);
     UTIL.startMiniCluster(1);
     UTIL.createTable(NAME, CF);
     UTIL.waitTableAvailable(NAME);

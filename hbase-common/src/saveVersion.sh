@@ -139,4 +139,3 @@ class Version {
 };
 } /* namespace hbase */
 EOF
-

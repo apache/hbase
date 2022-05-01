@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.io.IOException;
 import java.util.Map;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -27,12 +26,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthenticationProvider
-    implements SaslServerAuthenticationProvider {
+  implements SaslServerAuthenticationProvider {
 
   @Override
-  public AttemptingUserProvidingSaslServer createServer(
-      SecretManager<TokenIdentifier> secretManager,
-      Map<String, String> saslProps) throws IOException {
+  public AttemptingUserProvidingSaslServer
+    createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+      throws IOException {
     throw new RuntimeException("HBase SIMPLE authentication doesn't use SASL");
   }
 
@@ -43,7 +42,7 @@ public class SimpleSaslServerAuthenticationProvider extends SimpleSaslAuthentica
 
   @Override
   public UserGroupInformation getAuthorizedUgi(String authzId,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
+    SecretManager<TokenIdentifier> secretManager) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
     ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
     return ugi;

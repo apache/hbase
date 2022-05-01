@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -44,6 +45,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -55,12 +57,13 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationChangingPeerRegionservers.class);
+    HBaseClassTestRule.forClass(TestReplicationChangingPeerRegionservers.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
+    LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
 
-  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter(0)
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @Parameter(0)
   public boolean serialPeer;
 
   @Parameter(1)
@@ -86,8 +89,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
   public void setUp() throws Exception {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
-        .getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster().getRegionServerThreads()) {
       UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     UTIL1.deleteTableData(tableName);
@@ -125,7 +127,8 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     // This test wants two RS's up. We only run one generally so add one.
     peerCluster.startRegionServer();
     Waiter.waitFor(peerCluster.getConfiguration(), 30000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         return peerCluster.getLiveRegionServerThreads().size() > 1;
       }
     });

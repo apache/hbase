@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.compaction;
 
 import java.io.IOException;
@@ -49,13 +48,13 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
   }
 
   static Optional<MajorCompactionRequest> newRequest(Connection connection, RegionInfo info,
-      TableDescriptor htd) throws IOException {
+    TableDescriptor htd) throws IOException {
     MajorCompactionTTLRequest request = new MajorCompactionTTLRequest(connection, info);
     return request.createRequest(connection, htd);
   }
 
   private Optional<MajorCompactionRequest> createRequest(Connection connection, TableDescriptor htd)
-      throws IOException {
+    throws IOException {
     Map<String, Long> familiesToCompact = getStoresRequiringCompaction(htd);
     MajorCompactionRequest request = null;
     if (!familiesToCompact.isEmpty()) {
@@ -88,15 +87,14 @@ public class MajorCompactionTTLRequest extends MajorCompactionRequest {
 
   @Override
   protected boolean shouldIncludeStore(HRegionFileSystem fileSystem, String family,
-      Collection<StoreFileInfo> storeFiles, long ts) throws IOException {
+    Collection<StoreFileInfo> storeFiles, long ts) throws IOException {
 
     for (StoreFileInfo storeFile : storeFiles) {
       // Lets only compact when all files are older than TTL
       if (storeFile.getModificationTime() >= ts) {
         LOG.info("There is atleast one file in store: " + family + " file: " + storeFile.getPath()
-            + " with timestamp " + storeFile.getModificationTime()
-            + " for region: " + fileSystem.getRegionInfo().getEncodedName()
-            + " older than TTL: " + ts);
+          + " with timestamp " + storeFile.getModificationTime() + " for region: "
+          + fileSystem.getRegionInfo().getEncodedName() + " older than TTL: " + ts);
         return false;
       }
     }
