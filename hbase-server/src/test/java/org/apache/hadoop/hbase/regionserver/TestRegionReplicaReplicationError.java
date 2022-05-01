@@ -167,7 +167,6 @@ public class TestRegionReplicaReplicationError {
       builder.setDurability(Durability.SKIP_WAL);
     }
     TableDescriptor td = builder.build();
-
     HTU.getAdmin().createTable(td);
 
     try (Table table = HTU.getConnection().getTable(tableName)) {
@@ -177,6 +176,5 @@ public class TestRegionReplicaReplicationError {
       HTU.waitFor(30000, () -> checkReplica(table, 2));
       HTU.waitFor(30000, () -> checkReplica(table, 1));
     }
-
   }
 }
