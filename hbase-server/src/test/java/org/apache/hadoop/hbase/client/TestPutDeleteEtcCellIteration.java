@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,14 +38,14 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that I can Iterate Client Actions that hold Cells (Get does not have Cells).
  */
-@Category({SmallTests.class, ClientTests.class})
+@Category({ SmallTests.class, ClientTests.class })
 public class TestPutDeleteEtcCellIteration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
+    HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
 
-  private static final byte [] ROW = new byte [] {'r'};
+  private static final byte[] ROW = new byte[] { 'r' };
   private static final long TIMESTAMP = System.currentTimeMillis();
   private static final int COUNT = 10;
 
@@ -53,29 +53,29 @@ public class TestPutDeleteEtcCellIteration {
   public void testPutIteration() throws IOException {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] bytes = Bytes.toBytes(index++);
+      byte[] bytes = Bytes.toBytes(index++);
       assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
     }
     assertEquals(COUNT, index);
   }
 
-  @Test (expected = ConcurrentModificationException.class)
+  @Test(expected = ConcurrentModificationException.class)
   public void testPutConcurrentModificationOnIteration() throws IOException {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] bytes = Bytes.toBytes(index++);
+      byte[] bytes = Bytes.toBytes(index++);
       // When we hit the trigger, try inserting a new KV; should trigger exception
       p.addColumn(bytes, bytes, TIMESTAMP, bytes);
       assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
@@ -86,13 +86,13 @@ public class TestPutDeleteEtcCellIteration {
   public void testDeleteIteration() throws IOException {
     Delete d = new Delete(ROW);
     for (int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       d.addColumn(bytes, bytes, TIMESTAMP);
     }
     int index = 0;
     for (CellScanner cellScanner = d.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] bytes = Bytes.toBytes(index++);
+      byte[] bytes = Bytes.toBytes(index++);
       assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, KeyValue.Type.Delete), cell);
     }
     assertEquals(COUNT, index);
@@ -102,14 +102,14 @@ public class TestPutDeleteEtcCellIteration {
   public void testAppendIteration() throws IOException {
     Append a = new Append(ROW);
     for (int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       a.addColumn(bytes, bytes, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = a.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] bytes = Bytes.toBytes(index++);
-      KeyValue kv = (KeyValue)cell;
+      byte[] bytes = Bytes.toBytes(index++);
+      KeyValue kv = (KeyValue) cell;
       assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), bytes));
       assertTrue(Bytes.equals(CellUtil.cloneValue(kv), bytes));
     }
@@ -120,15 +120,15 @@ public class TestPutDeleteEtcCellIteration {
   public void testIncrementIteration() throws IOException {
     Increment increment = new Increment(ROW);
     for (int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       increment.addColumn(bytes, bytes, i);
     }
     int index = 0;
     for (CellScanner cellScanner = increment.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
       int value = index;
-      byte [] bytes = Bytes.toBytes(index++);
-      KeyValue kv = (KeyValue)cell;
+      byte[] bytes = Bytes.toBytes(index++);
+      KeyValue kv = (KeyValue) cell;
       assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), bytes));
       long a = Bytes.toLong(CellUtil.cloneValue(kv));
       assertEquals(value, a);
@@ -138,16 +138,16 @@ public class TestPutDeleteEtcCellIteration {
 
   @Test
   public void testResultIteration() throws IOException {
-    Cell [] cells = new Cell[COUNT];
-    for(int i = 0; i < COUNT; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+    Cell[] cells = new Cell[COUNT];
+    for (int i = 0; i < COUNT; i++) {
+      byte[] bytes = Bytes.toBytes(i);
       cells[i] = new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes);
     }
     Result r = Result.create(Arrays.asList(cells));
     int index = 0;
     for (CellScanner cellScanner = r.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] bytes = Bytes.toBytes(index++);
+      byte[] bytes = Bytes.toBytes(index++);
       assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
     }
     assertEquals(COUNT, index);

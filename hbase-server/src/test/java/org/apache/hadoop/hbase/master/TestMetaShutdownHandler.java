@@ -55,15 +55,15 @@ public class TestMetaShutdownHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaShutdownHandler.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaShutdownHandler.class);
+    HBaseClassTestRule.forClass(TestMetaShutdownHandler.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numRegionServers(3).rsClass(MyRegionServer.class).numDataNodes(3).build();
+    StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(3)
+      .rsClass(MyRegionServer.class).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
   }
 
@@ -73,13 +73,10 @@ public class TestMetaShutdownHandler {
   }
 
   /**
-   * This test will test the expire handling of a meta-carrying
-   * region server.
-   * After HBaseMiniCluster is up, we will delete the ephemeral
-   * node of the meta-carrying region server, which will trigger
-   * the expire of this region server on the master.
-   * On the other hand, we will slow down the abort process on
-   * the region server so that it is still up during the master SSH.
+   * This test will test the expire handling of a meta-carrying region server. After
+   * HBaseMiniCluster is up, we will delete the ephemeral node of the meta-carrying region server,
+   * which will trigger the expire of this region server on the master. On the other hand, we will
+   * slow down the abort process on the region server so that it is still up during the master SSH.
    * We will check that the master SSH is still successfully done.
    */
   @Test
@@ -87,13 +84,15 @@ public class TestMetaShutdownHandler {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-    ServerName metaServerName = regionStates.getRegionServerOfRegion(
-      HRegionInfo.FIRST_META_REGIONINFO);
-    if (master.getServerName().equals(metaServerName) || metaServerName == null
-        || !metaServerName.equals(cluster.getServerHoldingMeta())) {
+    ServerName metaServerName =
+      regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
+    if (
+      master.getServerName().equals(metaServerName) || metaServerName == null
+        || !metaServerName.equals(cluster.getServerHoldingMeta())
+    ) {
       // Move meta off master
       metaServerName =
-          cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
+        cluster.getLiveRegionServerThreads().get(0).getRegionServer().getServerName();
       master.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
         Bytes.toBytes(metaServerName.getServerName()));
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
@@ -106,9 +105,8 @@ public class TestMetaShutdownHandler {
 
     // Delete the ephemeral node of the meta-carrying region server.
     // This is trigger the expire of this region server on the master.
-    String rsEphemeralNodePath =
-        ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
-                metaServerName.toString());
+    String rsEphemeralNodePath = ZNodePaths.joinZNode(master.getZooKeeper().getZNodePaths().rsZNode,
+      metaServerName.toString());
     ZKUtil.deleteNode(master.getZooKeeper(), rsEphemeralNodePath);
     LOG.info("Deleted the znode for the RegionServer hosting hbase:meta; waiting on SSH");
     // Wait for SSH to finish
@@ -119,7 +117,7 @@ public class TestMetaShutdownHandler {
       @Override
       public boolean evaluate() throws Exception {
         return !serverManager.isServerOnline(priorMetaServerName)
-            && !serverManager.areDeadServersInProgress();
+          && !serverManager.areDeadServersInProgress();
       }
     });
     LOG.info("Past wait on RIT");
@@ -129,18 +127,17 @@ public class TestMetaShutdownHandler {
       regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     // Now, make sure meta is registered in zk
     metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-    assertEquals("Meta should not be in transition", RegionState.State.OPEN,
-        metaState.getState());
+    assertEquals("Meta should not be in transition", RegionState.State.OPEN, metaState.getState());
     assertEquals("Meta should be assigned", metaState.getServerName(),
       regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
-    assertNotEquals("Meta should be assigned on a different server",
-      metaState.getServerName(), metaServerName);
+    assertNotEquals("Meta should be assigned on a different server", metaState.getServerName(),
+      metaServerName);
   }
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {
 
-    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
-        InterruptedException {
+    public MyRegionServer(Configuration conf)
+      throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 
@@ -148,7 +145,7 @@ public class TestMetaShutdownHandler {
     public void abort(String reason, Throwable cause) {
       // sleep to slow down the region server abort
       try {
-        Thread.sleep(30*1000);
+        Thread.sleep(30 * 1000);
       } catch (InterruptedException e) {
         return;
       }

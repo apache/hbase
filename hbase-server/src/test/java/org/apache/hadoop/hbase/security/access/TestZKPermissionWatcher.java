@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestZKPermissionWatcher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKPermissionWatcher.class);
+    HBaseClassTestRule.forClass(TestZKPermissionWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKPermissionWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -75,8 +75,7 @@ public class TestZKPermissionWatcher {
     }
   };
 
-  private static TableName TEST_TABLE =
-      TableName.valueOf("perms_test");
+  private static TableName TEST_TABLE = TableName.valueOf("perms_test");
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -89,9 +88,9 @@ public class TestZKPermissionWatcher {
     AUTH_A = new AuthManager(conf);
     AUTH_B = new AuthManager(conf);
     WATCHER_A = new ZKPermissionWatcher(
-        new ZKWatcher(conf, "TestZKPermissionsWatcher_1", ABORTABLE), AUTH_A, conf);
+      new ZKWatcher(conf, "TestZKPermissionsWatcher_1", ABORTABLE), AUTH_A, conf);
     WATCHER_B = new ZKPermissionWatcher(
-        new ZKWatcher(conf, "TestZKPermissionsWatcher_2", ABORTABLE), AUTH_B, conf);
+      new ZKWatcher(conf, "TestZKPermissionsWatcher_2", ABORTABLE), AUTH_B, conf);
     WATCHER_A.start();
     WATCHER_B.start();
   }
@@ -106,8 +105,8 @@ public class TestZKPermissionWatcher {
   @Test
   public void testPermissionsWatcher() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    User george = User.createUserForTesting(conf, "george", new String[] { });
-    User hubert = User.createUserForTesting(conf, "hubert", new String[] { });
+    User george = User.createUserForTesting(conf, "george", new String[] {});
+    User hubert = User.createUserForTesting(conf, "hubert", new String[] {});
 
     assertFalse(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
     assertFalse(AUTH_A.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
@@ -122,7 +121,7 @@ public class TestZKPermissionWatcher {
     // update ACL: george RW
     List<UserPermission> acl = new ArrayList<>(1);
     acl.add(new UserPermission(george.getShortName(), Permission.newBuilder(TEST_TABLE)
-        .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
+      .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
     ListMultimap<String, UserPermission> multimap = ArrayListMultimap.create();
     multimap.putAll(george.getShortName(), acl);
     byte[] serialized = PermissionStorage.writePermissionsAsBytes(multimap, conf);
@@ -150,7 +149,7 @@ public class TestZKPermissionWatcher {
     // update ACL: hubert R
     List<UserPermission> acl2 = new ArrayList<>(1);
     acl2.add(new UserPermission(hubert.getShortName(),
-        Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build()));
+      Permission.newBuilder(TEST_TABLE).withActions(TablePermission.Action.READ).build()));
     final long mtimeA = AUTH_A.getMTime();
     multimap.putAll(hubert.getShortName(), acl2);
     byte[] serialized2 = PermissionStorage.writePermissionsAsBytes(multimap, conf);

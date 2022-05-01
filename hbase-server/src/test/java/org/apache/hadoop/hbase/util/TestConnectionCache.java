@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,12 +27,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestConnectionCache extends TestCase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConnectionCache.class);
+    HBaseClassTestRule.forClass(TestConnectionCache.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -43,9 +43,9 @@ public class TestConnectionCache extends TestCase {
   public void testConnectionChore() throws Exception {
     UTIL.startMiniCluster();
 
-    //1s for clean interval & 5s for maxIdleTime
+    // 1s for clean interval & 5s for maxIdleTime
     ConnectionCache cache = new ConnectionCache(UTIL.getConfiguration(),
-        UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
+      UserProvider.instantiate(UTIL.getConfiguration()), 1000, 5000);
     ConnectionCache.ConnectionInfo info = cache.getCurrentConnection();
 
     assertEquals(false, info.connection.isClosed());
@@ -57,4 +57,3 @@ public class TestConnectionCache extends TestCase {
   }
 
 }
-

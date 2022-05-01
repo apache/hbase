@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,14 +26,17 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * An interface for strategy logic for {@link Mode}.
  */
 @InterfaceAudience.Private
 interface ModeStrategy {
   List<FieldInfo> getFieldInfos();
+
   Field getDefaultSortField();
+
   List<Record> getRecords(ClusterMetrics clusterMetrics, List<RecordFilter> pushDownFilters);
-  @Nullable DrillDownInfo drillDown(Record selectedRecord);
+
+  @Nullable
+  DrillDownInfo drillDown(Record selectedRecord);
 }

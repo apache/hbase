@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,8 +56,8 @@ public final class TraceUtil {
   }
 
   /**
-   * Wrapper method to create new child TraceScope with the given description
-   * and parent scope's spanId
+   * Wrapper method to create new child TraceScope with the given description and parent scope's
+   * spanId
    * @param span parent span
    * @return TraceScope or null when not tracing
    */
@@ -84,7 +84,7 @@ public final class TraceUtil {
   /**
    * Wrapper method to add key-value pair to TraceInfo of actual span
    */
-  public static void addKVAnnotation(String key, String value){
+  public static void addKVAnnotation(String key, String value) {
     Span span = Tracer.getCurrentSpan();
     if (span != null) {
       span.addKVAnnotation(key, value);

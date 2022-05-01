@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,21 +34,21 @@ import org.junit.experimental.categories.Category;
 
 /**
  * Test a case when an inline index chunk is converted to a root one. This reproduces the bug in
- * HBASE-6871. We write a carefully selected number of relatively large keys so that we accumulate
- * a leaf index chunk that only goes over the configured index chunk size after adding the last
+ * HBASE-6871. We write a carefully selected number of relatively large keys so that we accumulate a
+ * leaf index chunk that only goes over the configured index chunk size after adding the last
  * key/value. The bug is in that when we close the file, we convert that inline (leaf-level) chunk
- * into a root chunk, but then look at the size of that root chunk, find that it is greater than
- * the configured chunk size, and split it into a number of intermediate index blocks that should
- * really be leaf-level blocks. If more keys were added, we would flush the leaf-level block, add
- * another entry to the root-level block, and that would prevent us from upgrading the leaf-level
- * chunk to the root chunk, thus not triggering the bug.
+ * into a root chunk, but then look at the size of that root chunk, find that it is greater than the
+ * configured chunk size, and split it into a number of intermediate index blocks that should really
+ * be leaf-level blocks. If more keys were added, we would flush the leaf-level block, add another
+ * entry to the root-level block, and that would prevent us from upgrading the leaf-level chunk to
+ * the root chunk, thus not triggering the bug.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileInlineToRootChunkConversion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileInlineToRootChunkConversion.class);
+    HBaseClassTestRule.forClass(TestHFileInlineToRootChunkConversion.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();
@@ -56,15 +56,14 @@ public class TestHFileInlineToRootChunkConversion {
   @Test
   public void testWriteHFile() throws Exception {
     Path hfPath = new Path(testUtil.getDataTestDir(),
-        TestHFileInlineToRootChunkConversion.class.getSimpleName() + ".hfile");
+      TestHFileInlineToRootChunkConversion.class.getSimpleName() + ".hfile");
     int maxChunkSize = 1024;
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
-    HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf)
-            .withFileContext(context)
-            .withPath(fs, hfPath).create();
+    HFile.Writer hfw = new HFile.WriterFactory(conf, cacheConf).withFileContext(context)
+      .withPath(fs, hfPath).create();
     List<byte[]> keys = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
 
@@ -85,7 +84,7 @@ public class TestHFileInlineToRootChunkConversion {
     hfw.close();
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
-    // Scanner doesn't do Cells yet.  Fix.
+    // Scanner doesn't do Cells yet. Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(CellUtil.createCell(keys.get(i)));

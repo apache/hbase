@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionPlan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionPlan.class);
+    HBaseClassTestRule.forClass(TestRegionPlan.class);
 
   private final ServerName SRC = ServerName.valueOf("source", 1234, 2345);
   private final ServerName DEST = ServerName.valueOf("dest", 1234, 2345);
@@ -98,7 +98,7 @@ public class TestRegionPlan {
 
     // HRI is used for equality
     RegionInfo other =
-        RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName() + "other")).build();
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName() + "other")).build();
     assertNotEquals(plan.hashCode(), new RegionPlan(other, SRC, DEST).hashCode());
     assertNotEquals(plan, new RegionPlan(other, SRC, DEST));
   }

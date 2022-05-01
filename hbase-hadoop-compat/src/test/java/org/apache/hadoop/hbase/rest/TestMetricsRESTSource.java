@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,18 +26,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *   Test of Rest Metrics Source interface.
+ * Test of Rest Metrics Source interface.
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsRESTSource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsRESTSource.class);
+    HBaseClassTestRule.forClass(TestMetricsRESTSource.class);
 
-  @Test(expected=RuntimeException.class)
+  @Test(expected = RuntimeException.class)
   public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
+    // This should throw an exception because there is no compat lib on the class path.
     CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class);
   }
 

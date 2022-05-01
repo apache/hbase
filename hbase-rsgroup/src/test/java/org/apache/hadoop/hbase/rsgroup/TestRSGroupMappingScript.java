@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,8 @@ public class TestRSGroupMappingScript {
   @BeforeClass
   public static void setupScript() throws Exception {
     String currentDir = new File("").getAbsolutePath();
-    UTIL.getConfiguration().set(
-      RSGroupMappingScript.RS_GROUP_MAPPING_SCRIPT,
-      currentDir + "/rsgroup_table_mapping.sh"
-    );
+    UTIL.getConfiguration().set(RSGroupMappingScript.RS_GROUP_MAPPING_SCRIPT,
+      currentDir + "/rsgroup_table_mapping.sh");
   }
 
   @Before
@@ -81,7 +79,7 @@ public class TestRSGroupMappingScript {
       pw.close();
     }
     boolean executable = script.setExecutable(true);
-    LOG.info("Created " + script  + ", executable=" + executable);
+    LOG.info("Created " + script + ", executable=" + executable);
     verifyScriptContent(script);
   }
 
@@ -96,23 +94,18 @@ public class TestRSGroupMappingScript {
   @Test
   public void testScript() throws Exception {
     RSGroupMappingScript script = new RSGroupMappingScript(UTIL.getConfiguration());
-    TableName testNamespace =
-      TableName.valueOf("test", "should_be_in_test");
-    String rsgroup = script.getRSGroup(
-      testNamespace.getNamespaceAsString(), testNamespace.getQualifierAsString()
-    );
+    TableName testNamespace = TableName.valueOf("test", "should_be_in_test");
+    String rsgroup =
+      script.getRSGroup(testNamespace.getNamespaceAsString(), testNamespace.getQualifierAsString());
     Assert.assertEquals("test", rsgroup);
 
-    TableName otherName =
-      TableName.valueOf("whatever", "oh_foo_should_be_in_other");
+    TableName otherName = TableName.valueOf("whatever", "oh_foo_should_be_in_other");
     rsgroup = script.getRSGroup(otherName.getNamespaceAsString(), otherName.getQualifierAsString());
     Assert.assertEquals("other", rsgroup);
 
-    TableName defaultName =
-      TableName.valueOf("nono", "should_be_in_default");
-    rsgroup = script.getRSGroup(
-      defaultName.getNamespaceAsString(), defaultName.getQualifierAsString()
-    );
+    TableName defaultName = TableName.valueOf("nono", "should_be_in_default");
+    rsgroup =
+      script.getRSGroup(defaultName.getNamespaceAsString(), defaultName.getQualifierAsString());
     Assert.assertEquals("default", rsgroup);
   }
 
@@ -124,4 +117,3 @@ public class TestRSGroupMappingScript {
   }
 
 }
-

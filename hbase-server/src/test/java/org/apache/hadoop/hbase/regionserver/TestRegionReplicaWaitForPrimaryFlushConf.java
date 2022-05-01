@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
 public class TestRegionReplicaWaitForPrimaryFlushConf {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicaWaitForPrimaryFlushConf.class);
+    HBaseClassTestRule.forClass(TestRegionReplicaWaitForPrimaryFlushConf.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
@@ -87,12 +87,12 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
   public void testSecondaryReplicaReadEnabled() throws Exception {
     tableName = name.getTableName();
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setRegionReplication(2).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setRegionMemStoreReplication(true).build();
+      .setRegionReplication(2).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
+      .setRegionMemStoreReplication(true).build();
     HTU.getAdmin().createTable(tableDescriptor);
 
     final ArrayList<Pair<HRegion, HRegionServer>> regionAndRegionServers =
-        new ArrayList<Pair<HRegion, HRegionServer>>(Arrays.asList(null, null));
+      new ArrayList<Pair<HRegion, HRegionServer>>(Arrays.asList(null, null));
 
     for (int i = 0; i < 2; i++) {
       HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
@@ -111,7 +111,7 @@ public class TestRegionReplicaWaitForPrimaryFlushConf {
 
     try {
       secondaryRs.getExecutorService()
-          .getExecutorThreadPool(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS);
+        .getExecutorThreadPool(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS);
       fail();
     } catch (NullPointerException e) {
       assertTrue(e != null);

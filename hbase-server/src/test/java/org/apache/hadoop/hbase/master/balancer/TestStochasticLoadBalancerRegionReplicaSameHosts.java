@@ -35,7 +35,7 @@ public class TestStochasticLoadBalancerRegionReplicaSameHosts extends BalancerTe
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaSameHosts.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaSameHosts.class);
 
   @Test
   public void testRegionReplicationOnMidClusterSameHosts() {
@@ -48,7 +48,7 @@ public class TestStochasticLoadBalancerRegionReplicaSameHosts extends BalancerTe
     int numRegionsPerServer = 5;
     int numTables = 10;
     Map<ServerName, List<RegionInfo>> serverMap =
-        createServerMap(numHosts, numRegions, numRegionsPerServer, replication, numTables);
+      createServerMap(numHosts, numRegions, numRegionsPerServer, replication, numTables);
     int numNodesPerHost = 4;
 
     // create a new map with 4 RS per host.

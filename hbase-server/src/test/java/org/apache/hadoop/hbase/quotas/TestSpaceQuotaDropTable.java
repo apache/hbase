@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,7 +48,7 @@ public class TestSpaceQuotaDropTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotaDropTable.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotaDropTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotaDropTable.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -109,7 +110,7 @@ public class TestSpaceQuotaDropTable {
       public boolean evaluate() throws Exception {
         Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
         List<RegionInfo> tableRegions =
-            MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
+          MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), tn);
         return regionSizes.containsKey(tableRegions.get(0));
       }
     });
@@ -142,7 +143,7 @@ public class TestSpaceQuotaDropTable {
   private void setQuotaAndThenDropTable(SpaceViolationPolicy policy) throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     // Do puts until we violate space policy
     final TableName tn = helper.writeUntilViolationAndVerifyViolation(policy, put);

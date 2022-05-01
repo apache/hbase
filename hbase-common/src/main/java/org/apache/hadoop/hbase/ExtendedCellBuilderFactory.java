@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 @InterfaceAudience.Private
 public final class ExtendedCellBuilderFactory {
@@ -40,6 +38,6 @@ public final class ExtendedCellBuilderFactory {
     }
   }
 
-  private ExtendedCellBuilderFactory(){
+  private ExtendedCellBuilderFactory() {
   }
 }

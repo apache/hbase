@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.InterruptedIOException;
-
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 
 /**
  * Chore that will feed the balancer the cluster status.
@@ -37,8 +35,8 @@ public class ClusterStatusChore extends ScheduledChore {
   private final LoadBalancer balancer;
 
   public ClusterStatusChore(HMaster master, LoadBalancer balancer) {
-    super(master.getServerName() + "-ClusterStatusChore", master, master.getConfiguration().getInt(
-      "hbase.balancer.statusPeriod", 60000));
+    super(master.getServerName() + "-ClusterStatusChore", master,
+      master.getConfiguration().getInt("hbase.balancer.statusPeriod", 60000));
     this.master = master;
     this.balancer = balancer;
   }

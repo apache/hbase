@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
@@ -65,11 +66,11 @@ import org.junit.experimental.categories.Category;
 /**
  * Test LogLevel.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestLogLevel {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLogLevel.class);
+    HBaseClassTestRule.forClass(TestLogLevel.class);
 
   private static String keystoresDir;
   private static String sslConfDir;
@@ -81,7 +82,7 @@ public class TestLogLevel {
   private static final String protectedLogName = protectedPrefix + "." + logName;
   private static final Logger log = LogManager.getLogger(logName);
   private final static String PRINCIPAL = "loglevel.principal";
-  private final static String KEYTAB  = "loglevel.keytab";
+  private final static String KEYTAB = "loglevel.keytab";
 
   private static MiniKdc kdc;
 
@@ -111,8 +112,7 @@ public class TestLogLevel {
   }
 
   /**
-   * Sets up {@link MiniKdc} for testing security.
-   * Copied from HBaseTestingUtility#setupMiniKdc().
+   * Sets up {@link MiniKdc} for testing security. Copied from HBaseTestingUtility#setupMiniKdc().
    */
   static private MiniKdc setupMiniKdc() throws Exception {
     Properties conf = MiniKdc.createConf();
@@ -130,7 +130,7 @@ public class TestLogLevel {
         kdc = new MiniKdc(conf, dir);
         kdc.start();
       } catch (BindException e) {
-        FileUtils.deleteDirectory(dir);  // clean directory
+        FileUtils.deleteDirectory(dir); // clean directory
         numTries++;
         if (numTries == 3) {
           log.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
@@ -156,15 +156,15 @@ public class TestLogLevel {
   }
 
   /**
-   * Get the SSL configuration.
-   * This method is copied from KeyStoreTestUtil#getSslConfig() in Hadoop.
+   * Get the SSL configuration. This method is copied from KeyStoreTestUtil#getSslConfig() in
+   * Hadoop.
    * @return {@link Configuration} instance with ssl configs loaded.
    * @param conf to pull client/server SSL settings filename from
    */
-  private static Configuration getSslConfig(Configuration conf){
+  private static Configuration getSslConfig(Configuration conf) {
     Configuration sslConf = new Configuration(false);
     String sslServerConfFile = conf.get(SSLFactory.SSL_SERVER_CONF_KEY);
-    String sslClientConfFile =  conf.get(SSLFactory.SSL_CLIENT_CONF_KEY);
+    String sslClientConfFile = conf.get(SSLFactory.SSL_CLIENT_CONF_KEY);
     sslConf.addResource(sslServerConfFile);
     sslConf.addResource(sslClientConfFile);
     sslConf.set(SSLFactory.SSL_SERVER_CONF_KEY, sslServerConfFile);
@@ -189,36 +189,29 @@ public class TestLogLevel {
   public void testCommandOptions() throws Exception {
     final String className = this.getClass().getName();
 
-    assertFalse(validateCommand(new String[] {"-foo" }));
+    assertFalse(validateCommand(new String[] { "-foo" }));
     // fail due to insufficient number of arguments
     assertFalse(validateCommand(new String[] {}));
-    assertFalse(validateCommand(new String[] {"-getlevel" }));
-    assertFalse(validateCommand(new String[] {"-setlevel" }));
-    assertFalse(validateCommand(new String[] {"-getlevel", "foo.bar:8080" }));
+    assertFalse(validateCommand(new String[] { "-getlevel" }));
+    assertFalse(validateCommand(new String[] { "-setlevel" }));
+    assertFalse(validateCommand(new String[] { "-getlevel", "foo.bar:8080" }));
 
     // valid command arguments
-    assertTrue(validateCommand(
-        new String[] {"-getlevel", "foo.bar:8080", className }));
-    assertTrue(validateCommand(
-        new String[] {"-setlevel", "foo.bar:8080", className, "DEBUG" }));
-    assertTrue(validateCommand(
-        new String[] {"-getlevel", "foo.bar:8080", className }));
-    assertTrue(validateCommand(
-        new String[] {"-setlevel", "foo.bar:8080", className, "DEBUG" }));
+    assertTrue(validateCommand(new String[] { "-getlevel", "foo.bar:8080", className }));
+    assertTrue(validateCommand(new String[] { "-setlevel", "foo.bar:8080", className, "DEBUG" }));
+    assertTrue(validateCommand(new String[] { "-getlevel", "foo.bar:8080", className }));
+    assertTrue(validateCommand(new String[] { "-setlevel", "foo.bar:8080", className, "DEBUG" }));
 
     // fail due to the extra argument
-    assertFalse(validateCommand(
-        new String[] {"-getlevel", "foo.bar:8080", className, "blah" }));
-    assertFalse(validateCommand(
-        new String[] {"-setlevel", "foo.bar:8080", className, "DEBUG", "blah" }));
-    assertFalse(validateCommand(
-        new String[] {"-getlevel", "foo.bar:8080", className, "-setlevel", "foo.bar:8080",
-          className }));
+    assertFalse(validateCommand(new String[] { "-getlevel", "foo.bar:8080", className, "blah" }));
+    assertFalse(
+      validateCommand(new String[] { "-setlevel", "foo.bar:8080", className, "DEBUG", "blah" }));
+    assertFalse(validateCommand(new String[] { "-getlevel", "foo.bar:8080", className, "-setlevel",
+      "foo.bar:8080", className }));
   }
 
   /**
    * Check to see if a command can be accepted.
-   *
    * @param args a String array of arguments
    * @return true if the command can be accepted, false if not.
    */
@@ -237,40 +230,32 @@ public class TestLogLevel {
   }
 
   /**
-   * Creates and starts a Jetty server binding at an ephemeral port to run
-   * LogLevel servlet.
+   * Creates and starts a Jetty server binding at an ephemeral port to run LogLevel servlet.
    * @param protocol "http" or "https"
    * @param isSpnego true if SPNEGO is enabled
    * @return a created HttpServer object
    * @throws Exception if unable to create or start a Jetty server
    */
-  private HttpServer createServer(String protocol, boolean isSpnego)
-      throws Exception {
-    HttpServer.Builder builder = new HttpServer.Builder()
-        .setName("..")
-        .addEndpoint(new URI(protocol + "://localhost:0"))
-        .setFindPort(true)
-        .setConf(serverConf);
+  private HttpServer createServer(String protocol, boolean isSpnego) throws Exception {
+    HttpServer.Builder builder = new HttpServer.Builder().setName("..")
+      .addEndpoint(new URI(protocol + "://localhost:0")).setFindPort(true).setConf(serverConf);
     if (isSpnego) {
       // Set up server Kerberos credentials.
       // Since the server may fall back to simple authentication,
       // use ACL to make sure the connection is Kerberos/SPNEGO authenticated.
-      builder.setSecurityEnabled(true)
-          .setUsernameConfKey(PRINCIPAL)
-          .setKeytabConfKey(KEYTAB)
-          .setACL(new AccessControlList("client"));
+      builder.setSecurityEnabled(true).setUsernameConfKey(PRINCIPAL).setKeytabConfKey(KEYTAB)
+        .setACL(new AccessControlList("client"));
     }
 
     // if using HTTPS, configure keystore/truststore properties.
     if (protocol.equals(LogLevel.PROTOCOL_HTTPS)) {
-      builder = builder.
-          keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
-          .keyStore(sslConf.get("ssl.server.keystore.location"),
-              sslConf.get("ssl.server.keystore.password"),
-              sslConf.get("ssl.server.keystore.type", "jks"))
-          .trustStore(sslConf.get("ssl.server.truststore.location"),
-              sslConf.get("ssl.server.truststore.password"),
-              sslConf.get("ssl.server.truststore.type", "jks"));
+      builder = builder.keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyStore(sslConf.get("ssl.server.keystore.location"),
+          sslConf.get("ssl.server.keystore.password"),
+          sslConf.get("ssl.server.keystore.type", "jks"))
+        .trustStore(sslConf.get("ssl.server.truststore.location"),
+          sslConf.get("ssl.server.truststore.password"),
+          sslConf.get("ssl.server.truststore.type", "jks"));
     }
 
     HttpServer server = builder.build();
@@ -279,28 +264,24 @@ public class TestLogLevel {
   }
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-      final boolean isSpnego)
-      throws Exception {
+    final boolean isSpnego) throws Exception {
     testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, Level.DEBUG.toString());
   }
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-      final boolean isSpnego, final String newLevel)
-      throws Exception {
+    final boolean isSpnego, final String newLevel) throws Exception {
     testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, newLevel);
   }
 
   /**
    * Run both client and server using the given protocol.
-   *
-   * @param bindProtocol specify either http or https for server
+   * @param bindProtocol    specify either http or https for server
    * @param connectProtocol specify either http or https for client
-   * @param isSpnego true if SPNEGO is enabled
+   * @param isSpnego        true if SPNEGO is enabled
    * @throws Exception if client can't accesss server.
    */
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
-      final boolean isSpnego, final String loggerName, final String newLevel)
-      throws Exception {
+    final boolean isSpnego, final String loggerName, final String newLevel) throws Exception {
     if (!LogLevel.isValidProtocol(bindProtocol)) {
       throw new Exception("Invalid server protocol " + bindProtocol);
     }
@@ -309,8 +290,7 @@ public class TestLogLevel {
     }
     Logger log = LogManager.getLogger(loggerName);
     Level oldLevel = log.getLevel();
-    assertNotEquals("Get default Log Level which shouldn't be ERROR.",
-        Level.ERROR, oldLevel);
+    assertNotEquals("Get default Log Level which shouldn't be ERROR.", Level.ERROR, oldLevel);
 
     // configs needed for SPNEGO at server side
     if (isSpnego) {
@@ -331,8 +311,8 @@ public class TestLogLevel {
 
     String keytabFilePath = keyTabFile.getAbsolutePath();
 
-    UserGroupInformation clientUGI = UserGroupInformation.
-        loginUserFromKeytabAndReturnUGI(clientPrincipal, keytabFilePath);
+    UserGroupInformation clientUGI =
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal, keytabFilePath);
     try {
       clientUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
         // client command line
@@ -350,37 +330,33 @@ public class TestLogLevel {
   }
 
   /**
-   * Run LogLevel command line to start a client to get log level of this test
-   * class.
-   *
-   * @param protocol specify either http or https
+   * Run LogLevel command line to start a client to get log level of this test class.
+   * @param protocol  specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to connect
    */
   private void getLevel(String protocol, String authority, String logName) throws Exception {
-    String[] getLevelArgs = {"-getlevel", authority, logName, "-protocol", protocol};
+    String[] getLevelArgs = { "-getlevel", authority, logName, "-protocol", protocol };
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(getLevelArgs);
   }
 
   /**
-   * Run LogLevel command line to start a client to set log level of this test
-   * class to debug.
-   *
-   * @param protocol specify either http or https
+   * Run LogLevel command line to start a client to set log level of this test class to debug.
+   * @param protocol  specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
   private void setLevel(String protocol, String authority, String logName, String newLevel)
-      throws Exception {
-    String[] setLevelArgs = {"-setlevel", authority, logName, newLevel, "-protocol", protocol};
+    throws Exception {
+    String[] setLevelArgs = { "-setlevel", authority, logName, newLevel, "-protocol", protocol };
     CLI cli = new CLI(protocol.equalsIgnoreCase("https") ? sslConf : clientConf);
     cli.run(setLevelArgs);
 
     Logger log = LogManager.getLogger(logName);
 
     assertEquals("new level not equal to expected: ", newLevel.toUpperCase(),
-        log.getEffectiveLevel().toString());
+      log.getEffectiveLevel().toString());
   }
 
   @Test
@@ -391,13 +367,13 @@ public class TestLogLevel {
       fail("Expected IO exception due to protected logger");
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("" + HttpServletResponse.SC_PRECONDITION_FAILED));
-      assertTrue(e.getMessage().contains("Modification of logger " + protectedLogName + " is disallowed in configuration."));
+      assertTrue(e.getMessage().contains(
+        "Modification of logger " + protectedLogName + " is disallowed in configuration."));
     }
   }
 
   /**
    * Test setting log level to "Info".
-   *
    * @throws Exception if client can't set log level to INFO.
    */
   @Test
@@ -407,7 +383,6 @@ public class TestLogLevel {
 
   /**
    * Test setting log level to "Error".
-   *
    * @throws Exception if client can't set log level to ERROR.
    */
   @Test
@@ -417,18 +392,15 @@ public class TestLogLevel {
 
   /**
    * Server runs HTTP, no SPNEGO.
-   *
-   * @throws Exception if http client can't access http server,
-   *   or http client can access https server.
+   * @throws Exception if http client can't access http server, or http client can access https
+   *                   server.
    */
   @Test
   public void testLogLevelByHttp() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, false);
     try {
-      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
-          false);
-      fail("An HTTPS Client should not have succeeded in connecting to a " +
-          "HTTP server");
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, false);
+      fail("An HTTPS Client should not have succeeded in connecting to a " + "HTTP server");
     } catch (SSLException e) {
       exceptionShouldContains("Unrecognized SSL message", e);
     }
@@ -436,18 +408,15 @@ public class TestLogLevel {
 
   /**
    * Server runs HTTP + SPNEGO.
-   *
-   * @throws Exception if http client can't access http server,
-   *   or http client can access https server.
+   * @throws Exception if http client can't access http server, or http client can access https
+   *                   server.
    */
   @Test
   public void testLogLevelByHttpWithSpnego() throws Exception {
     testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTP, true);
     try {
-      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS,
-          true);
-      fail("An HTTPS Client should not have succeeded in connecting to a " +
-          "HTTP server");
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTP, LogLevel.PROTOCOL_HTTPS, true);
+      fail("An HTTPS Client should not have succeeded in connecting to a " + "HTTP server");
     } catch (SSLException e) {
       exceptionShouldContains("Unrecognized SSL message", e);
     }
@@ -455,19 +424,15 @@ public class TestLogLevel {
 
   /**
    * Server runs HTTPS, no SPNEGO.
-   *
-   * @throws Exception if https client can't access https server,
-   *   or https client can access http server.
+   * @throws Exception if https client can't access https server, or https client can access http
+   *                   server.
    */
   @Test
   public void testLogLevelByHttps() throws Exception {
-    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
-        false);
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS, false);
     try {
-      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
-          false);
-      fail("An HTTP Client should not have succeeded in connecting to a " +
-          "HTTPS server");
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, false);
+      fail("An HTTP Client should not have succeeded in connecting to a " + "HTTPS server");
     } catch (SocketException e) {
       exceptionShouldContains("Unexpected end of file from server", e);
     }
@@ -475,32 +440,27 @@ public class TestLogLevel {
 
   /**
    * Server runs HTTPS + SPNEGO.
-   *
-   * @throws Exception if https client can't access https server,
-   *   or https client can access http server.
+   * @throws Exception if https client can't access https server, or https client can access http
+   *                   server.
    */
   @Test
   public void testLogLevelByHttpsWithSpnego() throws Exception {
-    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS,
-        true);
+    testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTPS, true);
     try {
-      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP,
-          true);
-      fail("An HTTP Client should not have succeeded in connecting to a " +
-          "HTTPS server");
-    }  catch (SocketException e) {
+      testDynamicLogLevel(LogLevel.PROTOCOL_HTTPS, LogLevel.PROTOCOL_HTTP, true);
+      fail("An HTTP Client should not have succeeded in connecting to a " + "HTTPS server");
+    } catch (SocketException e) {
       exceptionShouldContains("Unexpected end of file from server", e);
     }
   }
 
   /**
-   * Assert that a throwable or one of its causes should contain the substr in its message.
-   *
-   * Ideally we should use {@link GenericTestUtils#assertExceptionContains(String, Throwable)} util
-   * method which asserts t.toString() contains the substr. As the original throwable may have been
-   * wrapped in Hadoop3 because of HADOOP-12897, it's required to check all the wrapped causes.
-   * After stop supporting Hadoop2, this method can be removed and assertion in tests can use
-   * t.getCause() directly, similar to HADOOP-15280.
+   * Assert that a throwable or one of its causes should contain the substr in its message. Ideally
+   * we should use {@link GenericTestUtils#assertExceptionContains(String, Throwable)} util method
+   * which asserts t.toString() contains the substr. As the original throwable may have been wrapped
+   * in Hadoop3 because of HADOOP-12897, it's required to check all the wrapped causes. After stop
+   * supporting Hadoop2, this method can be removed and assertion in tests can use t.getCause()
+   * directly, similar to HADOOP-15280.
    */
   private static void exceptionShouldContains(String substr, Throwable throwable) {
     Throwable t = throwable;
@@ -511,7 +471,7 @@ public class TestLogLevel {
       }
       t = t.getCause();
     }
-    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:" +
-        StringUtils.stringifyException(throwable), throwable);
+    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:"
+      + StringUtils.stringifyException(throwable), throwable);
   }
 }

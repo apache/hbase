@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -42,8 +40,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class StorageClusterStatusResource extends ResourceBase {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(StorageClusterStatusResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(StorageClusterStatusResource.class);
 
   static CacheControl cacheControl;
   static {
@@ -53,54 +50,48 @@ public class StorageClusterStatusResource extends ResourceBase {
   }
 
   /**
-   * Constructor
-   * @throws IOException
+   * Constructor n
    */
   public StorageClusterStatusResource() throws IOException {
     super();
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      ClusterMetrics status = servlet.getAdmin().getClusterMetrics(
-        EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS));
+      ClusterMetrics status =
+        servlet.getAdmin().getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS));
       StorageClusterStatusModel model = new StorageClusterStatusModel();
       model.setRegions(status.getRegionCount());
       model.setRequests(status.getRequestCount());
       model.setAverageLoad(status.getAverageLoad());
-      for (Map.Entry<ServerName, ServerMetrics> entry: status.getLiveServerMetrics().entrySet()) {
+      for (Map.Entry<ServerName, ServerMetrics> entry : status.getLiveServerMetrics().entrySet()) {
         ServerName sn = entry.getKey();
         ServerMetrics load = entry.getValue();
         StorageClusterStatusModel.Node node =
-          model.addLiveNode(
-            sn.getHostname() + ":" +
-            Integer.toString(sn.getPort()),
+          model.addLiveNode(sn.getHostname() + ":" + Integer.toString(sn.getPort()),
             sn.getStartcode(), (int) load.getUsedHeapSize().get(Size.Unit.MEGABYTE),
             (int) load.getMaxHeapSize().get(Size.Unit.MEGABYTE));
         node.setRequests(load.getRequestCount());
-        for (RegionMetrics region: load.getRegionMetrics().values()) {
-          node.addRegion(region.getRegionName(), region.getStoreCount(),
-            region.getStoreFileCount(),
+        for (RegionMetrics region : load.getRegionMetrics().values()) {
+          node.addRegion(region.getRegionName(), region.getStoreCount(), region.getStoreFileCount(),
             (int) region.getStoreFileSize().get(Size.Unit.MEGABYTE),
             (int) region.getMemStoreSize().get(Size.Unit.MEGABYTE),
             (long) region.getStoreFileIndexSize().get(Size.Unit.KILOBYTE),
-            region.getReadRequestCount(),
-            region.getWriteRequestCount(),
+            region.getReadRequestCount(), region.getWriteRequestCount(),
             (int) region.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE),
             (int) region.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE),
             (int) region.getBloomFilterSize().get(Size.Unit.KILOBYTE),
-            region.getCompactingCellCount(),
-            region.getCompactedCellCount());
+            region.getCompactingCellCount(), region.getCompactedCellCount());
         }
       }
-      for (ServerName name: status.getDeadServerNames()) {
+      for (ServerName name : status.getDeadServerNames()) {
         model.addDeadNode(name.toString());
       }
       ResponseBuilder response = Response.ok(model);
@@ -109,9 +100,8 @@ public class StorageClusterStatusResource extends ResourceBase {
       return response.build();
     } catch (IOException e) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
-        .build();
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
+        .entity("Unavailable" + CRLF).build();
     }
   }
 }

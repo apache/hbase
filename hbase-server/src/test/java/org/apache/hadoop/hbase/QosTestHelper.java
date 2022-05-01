@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +17,27 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.regionserver.AnnotationReadingPriorityFunction;
 import org.apache.hadoop.hbase.security.User;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 public class QosTestHelper {
   protected void checkMethod(Configuration conf, final String methodName, final int expected,
-                             final AnnotationReadingPriorityFunction qosf) {
+    final AnnotationReadingPriorityFunction qosf) {
     checkMethod(conf, methodName, expected, qosf, null);
   }
 
   protected void checkMethod(Configuration conf, final String methodName, final int expected,
-                             final AnnotationReadingPriorityFunction qosf, final Message param) {
+    final AnnotationReadingPriorityFunction qosf, final Message param) {
     RPCProtos.RequestHeader.Builder builder = RPCProtos.RequestHeader.newBuilder();
     builder.setMethodName(methodName);
     assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,
-      User.createUserForTesting(conf, "someuser", new String[]{"somegroup"})));
+      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })));
   }
 }

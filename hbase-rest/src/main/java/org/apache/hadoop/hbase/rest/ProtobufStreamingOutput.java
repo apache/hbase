@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,15 +49,15 @@ public class ProtobufStreamingOutput implements StreamingOutput {
     this.limit = limit;
     this.fetchSize = fetchSize;
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Created StreamingOutput with content type = " + this.contentType
-          + " user limit : " + this.limit + " scan fetch size : " + this.fetchSize);
+      LOG.trace("Created StreamingOutput with content type = " + this.contentType + " user limit : "
+        + this.limit + " scan fetch size : " + this.fetchSize);
     }
   }
 
   @Override
   public void write(OutputStream outStream) throws IOException, WebApplicationException {
     Result[] rowsToSend;
-    if(limit < fetchSize){
+    if (limit < fetchSize) {
       rowsToSend = this.resultScanner.next(limit);
       writeToStream(createModelFromResults(rowsToSend), this.contentType, outStream);
     } else {
@@ -68,7 +68,7 @@ public class ProtobufStreamingOutput implements StreamingOutput {
         } else {
           rowsToSend = this.resultScanner.next(this.fetchSize);
         }
-        if(rowsToSend.length == 0){
+        if (rowsToSend.length == 0) {
           break;
         }
         count = count - rowsToSend.length;
@@ -78,9 +78,9 @@ public class ProtobufStreamingOutput implements StreamingOutput {
   }
 
   private void writeToStream(CellSetModel model, String contentType, OutputStream outStream)
-      throws IOException {
+    throws IOException {
     byte[] objectBytes = model.createProtobufOutput();
-    outStream.write(Bytes.toBytes((short)objectBytes.length));
+    outStream.write(Bytes.toBytes((short) objectBytes.length));
     outStream.write(objectBytes);
     outStream.flush();
     if (LOG.isTraceEnabled()) {
@@ -95,8 +95,8 @@ public class ProtobufStreamingOutput implements StreamingOutput {
       RowModel rModel = new RowModel(rowKey);
       List<Cell> kvs = rs.listCells();
       for (Cell kv : kvs) {
-        rModel.addCell(new CellModel(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv
-            .getTimestamp(), CellUtil.cloneValue(kv)));
+        rModel.addCell(new CellModel(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
+          kv.getTimestamp(), CellUtil.cloneValue(kv)));
       }
       cellSetModel.addRow(rModel);
     }

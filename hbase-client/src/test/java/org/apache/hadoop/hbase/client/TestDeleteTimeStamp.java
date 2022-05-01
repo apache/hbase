@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,20 +30,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestDeleteTimeStamp {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeleteTimeStamp.class);
+    HBaseClassTestRule.forClass(TestDeleteTimeStamp.class);
 
   private static final byte[] ROW = Bytes.toBytes("testRow");
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
 
   /*
-   * Test for verifying that the timestamp in delete object is being honored.
-   * @throws Exception
+   * Test for verifying that the timestamp in delete object is being honored. n
    */
   @Test
   public void testTimeStamp() {

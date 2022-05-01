@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues.impl;
 
 import java.util.Arrays;
@@ -24,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,8 +79,7 @@ public class SlowLogQueueService implements NamedQueueService {
     int slowLogQueueSize =
       conf.getInt(SLOW_LOG_RING_BUFFER_SIZE, HConstants.DEFAULT_SLOW_LOG_RING_BUFFER_SIZE);
 
-    EvictingQueue<TooSlowLog.SlowLogPayload> evictingQueue =
-      EvictingQueue.create(slowLogQueueSize);
+    EvictingQueue<TooSlowLog.SlowLogPayload> evictingQueue = EvictingQueue.create(slowLogQueueSize);
     slowLogQueue = Queues.synchronizedQueue(evictingQueue);
 
     this.isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
@@ -101,9 +97,8 @@ public class SlowLogQueueService implements NamedQueueService {
   }
 
   /**
-   * This implementation is specific to slowLog event. This consumes slowLog event from
-   * disruptor and inserts records to EvictingQueue.
-   *
+   * This implementation is specific to slowLog event. This consumes slowLog event from disruptor
+   * and inserts records to EvictingQueue.
    * @param namedQueuePayload namedQueue payload from disruptor ring buffer
    */
   @Override
@@ -156,21 +151,13 @@ public class SlowLogQueueService implements NamedQueueService {
       methodDescriptor != null ? methodDescriptor.getName() : StringUtils.EMPTY;
     TooSlowLog.SlowLogPayload slowLogPayload = TooSlowLog.SlowLogPayload.newBuilder()
       .setCallDetails(methodDescriptorName + "(" + param.getClass().getName() + ")")
-      .setClientAddress(clientAddress)
-      .setMethodName(methodDescriptorName)
-      .setMultiGets(numGets)
-      .setMultiMutations(numMutations)
-      .setMultiServiceCalls(numServiceCalls)
+      .setClientAddress(clientAddress).setMethodName(methodDescriptorName).setMultiGets(numGets)
+      .setMultiMutations(numMutations).setMultiServiceCalls(numServiceCalls)
       .setParam(slowLogParams != null ? slowLogParams.getParams() : StringUtils.EMPTY)
-      .setProcessingTime(processingTime)
-      .setQueueTime(qTime)
+      .setProcessingTime(processingTime).setQueueTime(qTime)
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
-      .setResponseSize(responseSize)
-      .setServerClass(className)
-      .setStartTime(startTime)
-      .setType(type)
-      .setUserName(userName)
-      .build();
+      .setResponseSize(responseSize).setServerClass(className).setStartTime(startTime).setType(type)
+      .setUserName(userName).build();
     slowLogQueue.add(slowLogPayload);
     if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
@@ -197,8 +184,10 @@ public class SlowLogQueueService implements NamedQueueService {
     final AdminProtos.SlowLogResponseRequest slowLogResponseRequest =
       request.getSlowLogResponseRequest();
     final List<TooSlowLog.SlowLogPayload> slowLogPayloads;
-    if (AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG
-        .equals(slowLogResponseRequest.getLogType())) {
+    if (
+      AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG
+        .equals(slowLogResponseRequest.getLogType())
+    ) {
       slowLogPayloads = getLargeLogPayloads(slowLogResponseRequest);
     } else {
       slowLogPayloads = getSlowLogPayloads(slowLogResponseRequest);
@@ -229,8 +218,8 @@ public class SlowLogQueueService implements NamedQueueService {
   }
 
   /**
-   * Add all slowLog events to system table. This is only for slowLog event's persistence on
-   * system table.
+   * Add all slowLog events to system table. This is only for slowLog event's persistence on system
+   * table.
    */
   @Override
   public void persistAll() {
@@ -242,23 +231,26 @@ public class SlowLogQueueService implements NamedQueueService {
     }
   }
 
-  private List<TooSlowLog.SlowLogPayload> getSlowLogPayloads(
-      final AdminProtos.SlowLogResponseRequest request) {
+  private List<TooSlowLog.SlowLogPayload>
+    getSlowLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
     List<TooSlowLog.SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(slowLogQueue.toArray(new TooSlowLog.SlowLogPayload[0])).filter(
-        e -> e.getType() == TooSlowLog.SlowLogPayload.Type.ALL
-          || e.getType() == TooSlowLog.SlowLogPayload.Type.SLOW_LOG).collect(Collectors.toList());
+      Arrays.stream(slowLogQueue.toArray(new TooSlowLog.SlowLogPayload[0]))
+        .filter(e -> e.getType() == TooSlowLog.SlowLogPayload.Type.ALL
+          || e.getType() == TooSlowLog.SlowLogPayload.Type.SLOW_LOG)
+        .collect(Collectors.toList());
     // latest slow logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
     return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);
   }
 
-  private List<TooSlowLog.SlowLogPayload> getLargeLogPayloads(
-      final AdminProtos.SlowLogResponseRequest request) {
-    List<TooSlowLog.SlowLogPayload> slowLogPayloadList =
-      Arrays.stream(slowLogQueue.toArray(new TooSlowLog.SlowLogPayload[0])).filter(
-        e -> e.getType() == TooSlowLog.SlowLogPayload.Type.ALL
-          || e.getType() == TooSlowLog.SlowLogPayload.Type.LARGE_LOG).collect(Collectors.toList());
+  private List<TooSlowLog.SlowLogPayload>
+    getLargeLogPayloads(final AdminProtos.SlowLogResponseRequest request) {
+    List<
+      TooSlowLog.SlowLogPayload> slowLogPayloadList =
+        Arrays.stream(slowLogQueue.toArray(new TooSlowLog.SlowLogPayload[0]))
+          .filter(e -> e.getType() == TooSlowLog.SlowLogPayload.Type.ALL
+            || e.getType() == TooSlowLog.SlowLogPayload.Type.LARGE_LOG)
+          .collect(Collectors.toList());
     // latest large logs first, operator is interested in latest records from in-memory buffer
     Collections.reverse(slowLogPayloadList);
     return LogHandlerUtils.getFilteredLogs(request, slowLogPayloadList);

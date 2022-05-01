@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,10 +27,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /** A call waiting for a value. */
@@ -49,7 +51,7 @@ class Call {
   // The return type. Used to create shell into which we deserialize the response if any.
   Message responseDefaultType;
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
-    justification = "Direct access is only allowed after done")
+      justification = "Direct access is only allowed after done")
   IOException error; // exception, null if value
   private boolean done; // true when call is done
   final Descriptors.MethodDescriptor md;
@@ -61,8 +63,8 @@ class Call {
   Timeout timeoutTask;
 
   protected Call(int id, final Descriptors.MethodDescriptor md, Message param,
-      final CellScanner cells, final Message responseDefaultType, int timeout, int priority,
-      RpcCallback<Call> callback, MetricsConnection.CallStats callStats) {
+    final CellScanner cells, final Message responseDefaultType, int timeout, int priority,
+    RpcCallback<Call> callback, MetricsConnection.CallStats callStats) {
     this.param = param;
     this.md = md;
     this.cells = cells;
@@ -80,20 +82,15 @@ class Call {
    * Builds a simplified {@link #toString()} that includes just the id and method name.
    */
   public String toShortString() {
-    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("id", id)
-      .append("methodName", md.getName())
-      .toString();
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", id)
+      .append("methodName", md.getName()).toString();
   }
 
   @Override
   public String toString() {
     // Call[id=32153218,methodName=Get]
-    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .appendSuper(toShortString())
-      .append("param", Optional.ofNullable(param)
-        .map(ProtobufUtil::getShortTextFormat)
-        .orElse(""))
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).appendSuper(toShortString())
+      .append("param", Optional.ofNullable(param).map(ProtobufUtil::getShortTextFormat).orElse(""))
       .toString();
   }
 
@@ -136,7 +133,7 @@ class Call {
   /**
    * Set the return value when there is no error. Notify the caller the call is done.
    * @param response return value of the call.
-   * @param cells Can be null
+   * @param cells    Can be null
    */
   public void setResponse(Message response, final CellScanner cells) {
     synchronized (this) {

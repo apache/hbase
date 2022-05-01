@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,25 +31,28 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTran
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
  * Handles closing of a region on a region server.
  * <p/>
  * In normal operation, we use {@link UnassignRegionHandler} closing Regions but when shutting down
- * the region server and closing out Regions, we use this handler instead; it does not expect to
- * be able to communicate the close back to the Master.
- * <p>Expects that the close *has* been registered in the hosting RegionServer before
- * submitting this Handler; i.e. <code>rss.getRegionsInTransitionInRS().putIfAbsent(
- * this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);</code> has been called first.
- * In here when done, we do the deregister.</p>
+ * the region server and closing out Regions, we use this handler instead; it does not expect to be
+ * able to communicate the close back to the Master.
+ * <p>
+ * Expects that the close *has* been registered in the hosting RegionServer before submitting this
+ * Handler; i.e. <code>rss.getRegionsInTransitionInRS().putIfAbsent(
+ * this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);</code> has been called first. In here
+ * when done, we do the deregister.
+ * </p>
  * @see UnassignRegionHandler
  */
 @InterfaceAudience.Private
 public class CloseRegionHandler extends EventHandler {
-  // NOTE on priorities shutting down.  There are none for close. There are some
-  // for open.  I think that is right.  On shutdown, we want the meta to close
-  // after the user regions have closed.  What
+  // NOTE on priorities shutting down. There are none for close. There are some
+  // for open. I think that is right. On shutdown, we want the meta to close
+  // after the user regions have closed. What
   // about the case where master tells us to shutdown a catalog region and we
   // have a running queue of user regions to close?
   private static final Logger LOG = LoggerFactory.getLogger(CloseRegionHandler.class);
@@ -58,7 +60,7 @@ public class CloseRegionHandler extends EventHandler {
   private final RegionServerServices rsServices;
   private final RegionInfo regionInfo;
 
-  // If true, the hosting server is aborting.  Region close process is different
+  // If true, the hosting server is aborting. Region close process is different
   // when we are aborting.
   private final boolean abort;
   private ServerName destination;
@@ -67,17 +69,13 @@ public class CloseRegionHandler extends EventHandler {
    * This method used internally by the RegionServer to close out regions.
    * @param abort If the regionserver is aborting.
    */
-  public CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices,
-      final RegionInfo regionInfo, final boolean abort,
-      ServerName destination) {
-    this(server, rsServices, regionInfo, abort,
-      EventType.M_RS_CLOSE_REGION, destination);
+  public CloseRegionHandler(final Server server, final RegionServerServices rsServices,
+    final RegionInfo regionInfo, final boolean abort, ServerName destination) {
+    this(server, rsServices, regionInfo, abort, EventType.M_RS_CLOSE_REGION, destination);
   }
 
-  protected CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices, RegionInfo regionInfo,
-      boolean abort, EventType eventType, ServerName destination) {
+  protected CloseRegionHandler(final Server server, final RegionServerServices rsServices,
+    RegionInfo regionInfo, boolean abort, EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
     this.rsServices = rsServices;
@@ -95,7 +93,7 @@ public class CloseRegionHandler extends EventHandler {
     String name = regionInfo.getEncodedName();
     LOG.trace("Processing close of {}", name);
     // Check that this region is being served here
-    HRegion region = (HRegion)rsServices.getRegion(name);
+    HRegion region = (HRegion) rsServices.getRegion(name);
     try {
       if (region == null) {
         LOG.warn("Received CLOSE for region {} but currently not serving - ignoring", name);
@@ -115,7 +113,7 @@ public class CloseRegionHandler extends EventHandler {
       rsServices.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
         HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo));
 
-      // Done!  Region is closed on this RS
+      // Done! Region is closed on this RS
       LOG.debug("Closed {}", region.getRegionInfo().getRegionNameAsString());
     } finally {
       // Clear any reference in getServer().getRegionsInTransitionInRS() on success or failure,
@@ -125,8 +123,9 @@ public class CloseRegionHandler extends EventHandler {
     }
   }
 
-  @Override protected void handleException(Throwable t) {
-    server.abort("Unrecoverable exception while closing " +
-      this.regionInfo.getRegionNameAsString(), t);
+  @Override
+  protected void handleException(Throwable t) {
+    server.abort("Unrecoverable exception while closing " + this.regionInfo.getRegionNameAsString(),
+      t);
   }
 }

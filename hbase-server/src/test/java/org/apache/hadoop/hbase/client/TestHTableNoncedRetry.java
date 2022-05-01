@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
@@ -45,6 +46,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -151,8 +153,8 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    Result result = table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)
-      .setReturnResults(false));
+    Result result =
+      table.append(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE).setReturnResults(false));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -176,8 +178,8 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    Result result = table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)
-      .setReturnResults(false));
+    Result result =
+      table.increment(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L).setReturnResults(false));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -189,9 +191,9 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-      .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2)));
+    Result result =
+      table.mutateRow(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+        .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2)));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -203,9 +205,9 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
-      .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2)));
+    Result result =
+      table.mutateRow(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+        .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2)));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -217,9 +219,9 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    Result result = table.mutateRow(new RowMutations(row)
-      .add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-      .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE)));
+    Result result =
+      table.mutateRow(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+        .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE)));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -233,8 +235,7 @@ public class TestHTableNoncedRetry {
 
     miniBatchOperationCount = 1;
     CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER2)
-      .build(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)));
+      .ifNotExists(FAMILY, QUALIFIER2).build(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L)));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -248,8 +249,7 @@ public class TestHTableNoncedRetry {
 
     miniBatchOperationCount = 1;
     CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER2)
-      .build(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)));
+      .ifNotExists(FAMILY, QUALIFIER2).build(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE)));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -262,10 +262,10 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-        .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2))));
+    CheckAndMutateResult result =
+      table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+        .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+          .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2))));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -278,10 +278,10 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
-        .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2))));
+    CheckAndMutateResult result =
+      table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+        .build(new RowMutations(row).add(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE))
+          .add((Mutation) new Delete(row).addColumn(FAMILY, QUALIFIER2))));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -294,10 +294,10 @@ public class TestHTableNoncedRetry {
     assertEquals(0, CALLED.get());
 
     miniBatchOperationCount = 1;
-    CheckAndMutateResult result = table.checkAndMutate(CheckAndMutate.newBuilder(row)
-      .ifNotExists(FAMILY, QUALIFIER3)
-      .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
-        .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE))));
+    CheckAndMutateResult result =
+      table.checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER3)
+        .build(new RowMutations(row).add(new Increment(row).addColumn(FAMILY, QUALIFIER, 1L))
+          .add(new Append(row).addColumn(FAMILY, QUALIFIER2, VALUE))));
 
     // make sure we called twice and the result is still correct
     assertEquals(2, CALLED.get());
@@ -318,22 +318,18 @@ public class TestHTableNoncedRetry {
 
     miniBatchOperationCount = 6;
     Object[] results = new Object[6];
-    table.batch(Arrays.asList(
-      new Append(row).addColumn(FAMILY, QUALIFIER, VALUE),
+    table.batch(Arrays.asList(new Append(row).addColumn(FAMILY, QUALIFIER, VALUE),
       new Increment(row2).addColumn(FAMILY, QUALIFIER, 1L),
-      new RowMutations(row3)
-        .add(new Increment(row3).addColumn(FAMILY, QUALIFIER, 1L))
+      new RowMutations(row3).add(new Increment(row3).addColumn(FAMILY, QUALIFIER, 1L))
         .add(new Append(row3).addColumn(FAMILY, QUALIFIER2, VALUE)),
-      CheckAndMutate.newBuilder(row4)
-        .ifNotExists(FAMILY, QUALIFIER2)
+      CheckAndMutate.newBuilder(row4).ifNotExists(FAMILY, QUALIFIER2)
         .build(new Increment(row4).addColumn(FAMILY, QUALIFIER, 1L)),
-      CheckAndMutate.newBuilder(row5)
-        .ifNotExists(FAMILY, QUALIFIER2)
+      CheckAndMutate.newBuilder(row5).ifNotExists(FAMILY, QUALIFIER2)
         .build(new Append(row5).addColumn(FAMILY, QUALIFIER, VALUE)),
-      CheckAndMutate.newBuilder(row6)
-        .ifNotExists(FAMILY, QUALIFIER3)
+      CheckAndMutate.newBuilder(row6).ifNotExists(FAMILY, QUALIFIER3)
         .build(new RowMutations(row6).add(new Increment(row6).addColumn(FAMILY, QUALIFIER, 1L))
-          .add(new Append(row6).addColumn(FAMILY, QUALIFIER2, VALUE)))), results);
+          .add(new Append(row6).addColumn(FAMILY, QUALIFIER2, VALUE)))),
+      results);
 
     // make sure we called twice and the result is still correct
 

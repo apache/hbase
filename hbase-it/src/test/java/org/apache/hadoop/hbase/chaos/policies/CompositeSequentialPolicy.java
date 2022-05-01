@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.policies;
 
 import java.util.Arrays;
@@ -24,6 +23,7 @@ import java.util.List;
 /** A policy that runs multiple other policies one after the other */
 public class CompositeSequentialPolicy extends Policy {
   private final List<Policy> policies;
+
   public CompositeSequentialPolicy(Policy... policies) {
     this.policies = Arrays.asList(policies);
   }

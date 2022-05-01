@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,10 +76,10 @@ public class TestRegionServerReadRequestMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerReadRequestMetrics.class);
+    HBaseClassTestRule.forClass(TestRegionServerReadRequestMetrics.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
+    LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF1 = "c1".getBytes();
@@ -114,8 +114,8 @@ public class TestRegionServerReadRequestMetrics {
     // TEST_UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
     TEST_UTIL.startMiniCluster();
     admin = TEST_UTIL.getAdmin();
-    serverNames = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
-      .getLiveServerMetrics().keySet();
+    serverNames =
+      admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().keySet();
     table = createTable();
     putData();
     List<RegionInfo> regions = admin.getRegions(TABLE_NAME);
@@ -131,15 +131,14 @@ public class TestRegionServerReadRequestMetrics {
   private static Table createTable() throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF1));
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL)
-        .build());
+    builder
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2).setTimeToLive(TTL).build());
     admin.createTable(builder.build());
     return TEST_UTIL.getConnection().getTable(TABLE_NAME);
   }
 
-  private static void testReadRequests(long resultCount,
-    long expectedReadRequests, long expectedFilteredReadRequests)
-    throws IOException, InterruptedException {
+  private static void testReadRequests(long resultCount, long expectedReadRequests,
+    long expectedFilteredReadRequests) throws IOException, InterruptedException {
     updateMetricsMap();
     System.out.println("requestsMapPrev = " + requestsMapPrev);
     System.out.println("requestsMap = " + requestsMap);
@@ -154,14 +153,12 @@ public class TestRegionServerReadRequestMetrics {
       // method is used by a bunch of tests. Just do this check if master is hosting (system)
       // regions only.
       assertEquals(expectedReadRequests,
-      requestsMap.get(Metric.SERVER_READ) - requestsMapPrev.get(Metric.SERVER_READ));
+        requestsMap.get(Metric.SERVER_READ) - requestsMapPrev.get(Metric.SERVER_READ));
     }
-    assertEquals(expectedFilteredReadRequests,
-      requestsMap.get(Metric.FILTERED_REGION_READ)
-        - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
-    assertEquals(expectedFilteredReadRequests,
-      requestsMap.get(Metric.FILTERED_SERVER_READ)
-        - requestsMapPrev.get(Metric.FILTERED_SERVER_READ));
+    assertEquals(expectedFilteredReadRequests, requestsMap.get(Metric.FILTERED_REGION_READ)
+      - requestsMapPrev.get(Metric.FILTERED_REGION_READ));
+    assertEquals(expectedFilteredReadRequests, requestsMap.get(Metric.FILTERED_SERVER_READ)
+      - requestsMapPrev.get(Metric.FILTERED_SERVER_READ));
     assertEquals(expectedReadRequests, resultCount);
   }
 
@@ -229,7 +226,7 @@ public class TestRegionServerReadRequestMetrics {
     put.addColumn(CF1, COL3, VAL3);
     table.put(put);
     put = new Put(ROW2);
-    put.addColumn(CF1, COL1, VAL2);  // put val2 instead of val1
+    put.addColumn(CF1, COL1, VAL2); // put val2 instead of val1
     put.addColumn(CF1, COL2, VAL2);
     table.put(put);
     put = new Put(ROW3);
@@ -310,7 +307,7 @@ public class TestRegionServerReadRequestMetrics {
     put = new Put(ROW1);
     put.addColumn(CF1, COL2, VAL2);
     boolean checkAndPut =
-        table.checkAndMutate(ROW1, CF1).qualifier(COL2).ifEquals(VAL2).thenPut(put);
+      table.checkAndMutate(ROW1, CF1).qualifier(COL2).ifEquals(VAL2).thenPut(put);
     resultCount = checkAndPut ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
 
@@ -327,7 +324,7 @@ public class TestRegionServerReadRequestMetrics {
     RowMutations rm = new RowMutations(ROW1);
     rm.add(put);
     boolean checkAndMutate =
-        table.checkAndMutate(ROW1, CF1).qualifier(COL1).ifEquals(VAL1).thenMutate(rm);
+      table.checkAndMutate(ROW1, CF1).qualifier(COL1).ifEquals(VAL1).thenMutate(rm);
     resultCount = checkAndMutate ? 1 : 0;
     testReadRequests(resultCount, 1, 0);
   }
@@ -372,11 +369,11 @@ public class TestRegionServerReadRequestMetrics {
     }
 
     // fixme filtered get should not increase readRequestsCount
-//    Get get = new Get(ROW2);
-//    get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
-//    Result result = table.get(get);
-//    resultCount = result.isEmpty() ? 0 : 1;
-//    testReadRequests(resultCount, 0, 1);
+    // Get get = new Get(ROW2);
+    // get.setFilter(new SingleColumnValueFilter(CF1, COL1, CompareFilter.CompareOp.EQUAL, VAL1));
+    // Result result = table.get(get);
+    // resultCount = result.isEmpty() ? 0 : 1;
+    // testReadRequests(resultCount, 0, 1);
   }
 
   @Ignore // HBASE-19785
@@ -455,13 +452,13 @@ public class TestRegionServerReadRequestMetrics {
 
   private void testReadRequests(byte[] regionName, int expectedReadRequests) throws Exception {
     for (ServerName serverName : serverNames) {
-      ServerLoad serverLoad = new ServerLoad(admin.getClusterMetrics(
-        EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName));
+      ServerLoad serverLoad = new ServerLoad(admin
+        .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics().get(serverName));
       Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
       RegionLoad regionLoad = regionsLoad.get(regionName);
       if (regionLoad != null) {
         LOG.debug("server read request is " + serverLoad.getReadRequestsCount()
-            + ", region read request is " + regionLoad.getReadRequestsCount());
+          + ", region read request is " + regionLoad.getReadRequestsCount());
         assertEquals(3, serverLoad.getReadRequestsCount());
         assertEquals(3, regionLoad.getReadRequestsCount());
       }
@@ -503,5 +500,10 @@ public class TestRegionServerReadRequestMetrics {
     }
   }
 
-  private enum Metric {REGION_READ, SERVER_READ, FILTERED_REGION_READ, FILTERED_SERVER_READ}
+  private enum Metric {
+    REGION_READ,
+    SERVER_READ,
+    FILTERED_REGION_READ,
+    FILTERED_SERVER_READ
+  }
 }

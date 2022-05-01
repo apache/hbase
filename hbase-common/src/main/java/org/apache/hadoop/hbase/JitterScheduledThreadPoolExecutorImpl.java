@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.concurrent.Callable;
@@ -28,12 +26,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * ScheduledThreadPoolExecutor that will add some jitter to the RunnableScheduledFuture.getDelay.
- *
  * This will spread out things on a distributed cluster.
  */
 @InterfaceAudience.Private
@@ -44,31 +40,30 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
    * Main constructor.
    * @param spread The percent up and down that RunnableScheduledFuture.getDelay should be jittered.
    */
-  public JitterScheduledThreadPoolExecutorImpl(int corePoolSize,
-                                               ThreadFactory threadFactory,
-                                               double spread) {
+  public JitterScheduledThreadPoolExecutorImpl(int corePoolSize, ThreadFactory threadFactory,
+    double spread) {
     super(corePoolSize, threadFactory);
     this.spread = spread;
   }
 
   @Override
-  protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
-      Runnable runnable, java.util.concurrent.RunnableScheduledFuture<V> task) {
+  protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(Runnable runnable,
+    java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);
   }
 
   @Override
-  protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(
-      Callable<V> callable, java.util.concurrent.RunnableScheduledFuture<V> task) {
+  protected <V> java.util.concurrent.RunnableScheduledFuture<V> decorateTask(Callable<V> callable,
+    java.util.concurrent.RunnableScheduledFuture<V> task) {
     return new JitteredRunnableScheduledFuture<>(task);
   }
 
   /**
-   * Class that basically just defers to the wrapped future.
-   * The only exception is getDelay
+   * Class that basically just defers to the wrapped future. The only exception is getDelay
    */
   protected class JitteredRunnableScheduledFuture<V> implements RunnableScheduledFuture<V> {
     private final RunnableScheduledFuture<V> wrapped;
+
     JitteredRunnableScheduledFuture(RunnableScheduledFuture<V> wrapped) {
       this.wrapped = wrapped;
     }
@@ -82,8 +77,9 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     public long getDelay(TimeUnit unit) {
       long baseDelay = wrapped.getDelay(unit);
       long spreadTime = (long) (baseDelay * spread);
-      long delay = spreadTime <= 0 ? baseDelay
-          : baseDelay + ThreadLocalRandom.current().nextLong(-spreadTime, spreadTime);
+      long delay = spreadTime <= 0
+        ? baseDelay
+        : baseDelay + ThreadLocalRandom.current().nextLong(-spreadTime, spreadTime);
       // Ensure that we don't roll over for nanoseconds.
       return (delay < 0) ? baseDelay : delay;
     }
@@ -98,7 +94,7 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
       if (obj == this) {
         return true;
       }
-      return obj instanceof Delayed? compareTo((Delayed)obj) == 0: false;
+      return obj instanceof Delayed ? compareTo((Delayed) obj) == 0 : false;
     }
 
     @Override
@@ -132,8 +128,8 @@ public class JitterScheduledThreadPoolExecutorImpl extends ScheduledThreadPoolEx
     }
 
     @Override
-    public V get(long timeout,
-                 TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public V get(long timeout, TimeUnit unit)
+      throws InterruptedException, ExecutionException, TimeoutException {
       return wrapped.get(timeout, unit);
     }
   }

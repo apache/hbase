@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -28,9 +27,9 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
 /**
- * Dummy mapper used for unit tests to verify that the mapper can be injected.
- * This approach would be used if a custom transformation needed to be done after
- * reading the input data before writing it to HFiles.
+ * Dummy mapper used for unit tests to verify that the mapper can be injected. This approach would
+ * be used if a custom transformation needed to be done after reading the input data before writing
+ * it to HFiles.
  */
 public class TsvImporterCustomTestMapper extends TsvImporterMapper {
   @Override
@@ -39,12 +38,11 @@ public class TsvImporterCustomTestMapper extends TsvImporterMapper {
   }
 
   /**
-   * Convert a line of TSV text into an HBase table row after transforming the
-   * values by multiplying them by 3.
+   * Convert a line of TSV text into an HBase table row after transforming the values by multiplying
+   * them by 3.
    */
   @Override
-  public void map(LongWritable offset, Text value, Context context)
-        throws IOException {
+  public void map(LongWritable offset, Text value, Context context) throws IOException {
     byte[] family = Bytes.toBytes("FAM");
     final byte[][] qualifiers = { Bytes.toBytes("A"), Bytes.toBytes("B") };
 
@@ -53,20 +51,19 @@ public class TsvImporterCustomTestMapper extends TsvImporterMapper {
     String[] valueTokens = new String(lineBytes, "UTF-8").split("\u001b");
 
     // create the rowKey and Put
-    ImmutableBytesWritable rowKey =
-      new ImmutableBytesWritable(Bytes.toBytes(valueTokens[0]));
+    ImmutableBytesWritable rowKey = new ImmutableBytesWritable(Bytes.toBytes(valueTokens[0]));
     Put put = new Put(rowKey.copyBytes());
     put.setDurability(Durability.SKIP_WAL);
 
-    //The value should look like this: VALUE1 or VALUE2. Let's multiply
-    //the integer by 3
-    for(int i = 1; i < valueTokens.length; i++) {
+    // The value should look like this: VALUE1 or VALUE2. Let's multiply
+    // the integer by 3
+    for (int i = 1; i < valueTokens.length; i++) {
       String prefix = valueTokens[i].substring(0, "VALUE".length());
       String suffix = valueTokens[i].substring("VALUE".length());
       String newValue = prefix + Integer.parseInt(suffix) * 3;
 
-      KeyValue kv = new KeyValue(rowKey.copyBytes(), family,
-          qualifiers[i-1], Bytes.toBytes(newValue));
+      KeyValue kv =
+        new KeyValue(rowKey.copyBytes(), family, qualifiers[i - 1], Bytes.toBytes(newValue));
       put.add(kv);
     }
 

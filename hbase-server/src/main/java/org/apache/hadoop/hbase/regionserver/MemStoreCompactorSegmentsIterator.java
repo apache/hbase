@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -24,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,16 +29,17 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
- * The MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator
- * and performs the scan for compaction operation meaning it is based on SQM
+ * The MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator and performs the scan for
+ * compaction operation meaning it is based on SQM
  */
 @InterfaceAudience.Private
 public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator {
   private static final Logger LOG =
-      LoggerFactory.getLogger(MemStoreCompactorSegmentsIterator.class);
+    LoggerFactory.getLogger(MemStoreCompactorSegmentsIterator.class);
 
   private final List<Cell> kvs = new ArrayList<>();
   private boolean hasMore = true;
@@ -52,7 +50,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
 
   // C-tor
   public MemStoreCompactorSegmentsIterator(List<ImmutableSegment> segments,
-      CellComparator comparator, int compactionKVMax, HStore store) throws IOException {
+    CellComparator comparator, int compactionKVMax, HStore store) throws IOException {
     super(compactionKVMax);
 
     List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
@@ -101,7 +99,7 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
    * @return the scanner
    */
   private InternalScanner createScanner(HStore store, List<KeyValueScanner> scanners)
-      throws IOException {
+    throws IOException {
     InternalScanner scanner = null;
     boolean success = false;
     try {
@@ -113,12 +111,12 @@ public class MemStoreCompactorSegmentsIterator extends MemStoreSegmentsIterator 
         scanInfo = store.getScanInfo();
       }
       scanner = new StoreScanner(store, scanInfo, scanners, ScanType.COMPACT_RETAIN_DELETES,
-          store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
+        store.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
       if (cpHost != null) {
         InternalScanner scannerFromCp = cpHost.preMemStoreCompactionCompact(store, scanner);
         if (scannerFromCp == null) {
-          throw new CoprocessorException("Got a null InternalScanner when calling" +
-              " preMemStoreCompactionCompact which is not acceptable");
+          throw new CoprocessorException("Got a null InternalScanner when calling"
+            + " preMemStoreCompactionCompact which is not acceptable");
         }
         success = true;
         return scannerFromCp;

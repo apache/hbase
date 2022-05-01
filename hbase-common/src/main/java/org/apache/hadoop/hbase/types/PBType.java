@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,9 @@ public abstract class PBType<T extends Message> implements DataType<T> {
   /**
    * Create a {@link CodedInputStream} from a {@link PositionedByteRange}. Be sure to update
    * {@code src}'s position after consuming from the stream.
-   * <p>For example:
+   * <p>
+   * For example:
+   *
    * <pre>
    * Foo.Builder builder = ...
    * CodedInputStream is = inputStreamFromByteRange(src);
@@ -71,16 +73,16 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * </pre>
    */
   public static CodedInputStream inputStreamFromByteRange(PositionedByteRange src) {
-    return CodedInputStream.newInstance(
-      src.getBytes(),
-      src.getOffset() + src.getPosition(),
+    return CodedInputStream.newInstance(src.getBytes(), src.getOffset() + src.getPosition(),
       src.getRemaining());
   }
 
   /**
    * Create a {@link CodedOutputStream} from a {@link PositionedByteRange}. Be sure to update
    * {@code dst}'s position after writing to the stream.
-   * <p>For example:
+   * <p>
+   * For example:
+   *
    * <pre>
    * CodedOutputStream os = outputStreamFromByteRange(dst);
    * int before = os.spaceLeft(), after, written;
@@ -91,10 +93,7 @@ public abstract class PBType<T extends Message> implements DataType<T> {
    * </pre>
    */
   public static CodedOutputStream outputStreamFromByteRange(PositionedByteRange dst) {
-    return CodedOutputStream.newInstance(
-      dst.getBytes(),
-      dst.getOffset() + dst.getPosition(),
-      dst.getRemaining()
-    );
+    return CodedOutputStream.newInstance(dst.getBytes(), dst.getOffset() + dst.getPosition(),
+      dst.getRemaining());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +21,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The presentation logic for the field screen.
@@ -63,7 +61,7 @@ public class FieldScreenPresenter {
 
     int headerLength = 0;
     int descriptionLength = 0;
-    for (int i = 0; i < fields.size(); i ++) {
+    for (int i = 0; i < fields.size(); i++) {
       Field field = fields.get(i);
 
       if (field == sortField) {
@@ -86,8 +84,8 @@ public class FieldScreenPresenter {
   public void init() {
     fieldScreenView.hideCursor();
     fieldScreenView.clearTerminal();
-    fieldScreenView.showFieldScreen(sortField.getHeader(), fields, fieldDisplayMap,
-      currentPosition, headerMaxLength, descriptionMaxLength, moveMode);
+    fieldScreenView.showFieldScreen(sortField.getHeader(), fields, fieldDisplayMap, currentPosition,
+      headerMaxLength, descriptionMaxLength, moveMode);
     fieldScreenView.refreshTerminal();
   }
 
@@ -132,7 +130,7 @@ public class FieldScreenPresenter {
   }
 
   public void pageDown() {
-    if (currentPosition < fields.size() - 1  && !moveMode) {
+    if (currentPosition < fields.size() - 1 && !moveMode) {
       int previousPosition = currentPosition;
       currentPosition = fields.size() - 1;
       showField(previousPosition);

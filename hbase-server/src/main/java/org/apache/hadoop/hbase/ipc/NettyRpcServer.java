@@ -58,13 +58,13 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  * An RPC server with Netty4 implementation.
  * @since 2.0.0
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class NettyRpcServer extends RpcServer {
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
 
   /**
-   * Name of property to change netty rpc server eventloop thread count. Default is 0.
-   * Tests may set this down from unlimited.
+   * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
+   * this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
     "hbase.netty.eventloop.rpcserver.thread.count";
@@ -78,8 +78,8 @@ public class NettyRpcServer extends RpcServer {
     new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
-      InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
-      boolean reservoirEnabled) throws IOException {
+    InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
+    boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
     EventLoopGroup eventLoopGroup;
@@ -89,31 +89,32 @@ public class NettyRpcServer extends RpcServer {
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
-      int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
-        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+      int threadCount = server == null
+        ? EVENTLOOP_THREADCOUNT_DEFAULT
+        : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
           EVENTLOOP_THREADCOUNT_DEFAULT);
       eventLoopGroup = new NioEventLoopGroup(threadCount,
         new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
-        .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
-        .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
-        .childOption(ChannelOption.SO_REUSEADDR, true)
-        .childHandler(new ChannelInitializer<Channel>() {
+      .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
+      .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
+      .childOption(ChannelOption.SO_REUSEADDR, true)
+      .childHandler(new ChannelInitializer<Channel>() {
 
-          @Override
-          protected void initChannel(Channel ch) throws Exception {
-            ChannelPipeline pipeline = ch.pipeline();
-            FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
-            preambleDecoder.setSingleDecode(true);
-            pipeline.addLast("preambleDecoder", preambleDecoder);
-            pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
-            pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
-            pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
-            pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
-          }
-        });
+        @Override
+        protected void initChannel(Channel ch) throws Exception {
+          ChannelPipeline pipeline = ch.pipeline();
+          FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
+          preambleDecoder.setSingleDecode(true);
+          pipeline.addLast("preambleDecoder", preambleDecoder);
+          pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
+          pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
+          pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
+          pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
+        }
+      });
     try {
       serverChannel = bootstrap.bind(this.bindAddress).sync().channel();
       LOG.info("Bind to {}", serverChannel.localAddress());
@@ -188,19 +189,19 @@ public class NettyRpcServer extends RpcServer {
   }
 
   @Override
-  public Pair<Message, CellScanner> call(BlockingService service,
-      MethodDescriptor md, Message param, CellScanner cellScanner,
-      long receiveTime, MonitoredRPCHandler status) throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status,
-        System.currentTimeMillis(), 0);
+  public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
+    Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
+    throws IOException {
+    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),
+      0);
   }
 
   @Override
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
-      Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
-      long startTime, int timeout) throws IOException {
+    Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
+    long startTime, int timeout) throws IOException {
     NettyServerCall fakeCall = new NettyServerCall(-1, service, md, null, param, cellScanner, null,
-        -1, null, receiveTime, timeout, bbAllocator, cellBlockBuilder, null);
+      -1, null, receiveTime, timeout, bbAllocator, cellBlockBuilder, null);
     return call(fakeCall, status);
   }
 }

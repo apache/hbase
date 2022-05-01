@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +20,19 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -41,8 +40,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * The storage engine that implements the stripe-based store/compaction scheme.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
-  StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
+public class StripeStoreEngine extends
+  StoreEngine<StripeStoreFlusher, StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
   private static final Logger LOG = LoggerFactory.getLogger(StripeStoreEngine.class);
   private StripeStoreConfig config;
 
@@ -57,13 +56,13 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
   }
 
   @Override
-  protected void createComponents(
-      Configuration conf, HStore store, CellComparator comparator) throws IOException {
+  protected void createComponents(Configuration conf, HStore store, CellComparator comparator)
+    throws IOException {
     this.config = new StripeStoreConfig(conf, store);
     this.compactionPolicy = new StripeCompactionPolicy(conf, store, config);
     this.storeFileManager = new StripeStoreFileManager(comparator, conf, this.config);
-    this.storeFlusher = new StripeStoreFlusher(
-      conf, store, this.compactionPolicy, this.storeFileManager);
+    this.storeFlusher =
+      new StripeStoreFlusher(conf, store, this.compactionPolicy, this.storeFileManager);
     this.compactor = new StripeCompactor(conf, store);
   }
 
@@ -80,11 +79,12 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
 
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
-        boolean mayUseOffPeak, boolean forceMajor) throws IOException {
-      this.stripeRequest = compactionPolicy.selectCompaction(
-          storeFileManager, filesCompacting, mayUseOffPeak);
+      boolean mayUseOffPeak, boolean forceMajor) throws IOException {
+      this.stripeRequest =
+        compactionPolicy.selectCompaction(storeFileManager, filesCompacting, mayUseOffPeak);
       this.request = (this.stripeRequest == null)
-          ? new CompactionRequestImpl(new ArrayList<>()) : this.stripeRequest.getRequest();
+        ? new CompactionRequestImpl(new ArrayList<>())
+        : this.stripeRequest.getRequest();
       return this.stripeRequest != null;
     }
 
@@ -101,7 +101,7 @@ public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
 
     @Override
     public List<Path> compact(ThroughputController throughputController, User user)
-        throws IOException {
+      throws IOException {
       Preconditions.checkArgument(this.stripeRequest != null, "Cannot compact without selection");
       return this.stripeRequest.execute(compactor, throughputController, user);
     }

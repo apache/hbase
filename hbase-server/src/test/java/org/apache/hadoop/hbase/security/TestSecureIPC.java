@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,12 +83,12 @@ public class TestSecureIPC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureIPC.class);
+    HBaseClassTestRule.forClass(TestSecureIPC.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static final File KEYTAB_FILE = new File(
-      TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE =
+    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
@@ -106,10 +106,10 @@ public class TestSecureIPC {
   @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
   public static Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>();
-    List<String> rpcClientImpls = Arrays.asList(
-        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
-    List<String> rpcServerImpls = Arrays.asList(
-        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+    List<String> rpcClientImpls =
+      Arrays.asList(BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+    List<String> rpcServerImpls =
+      Arrays.asList(SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
         params.add(new Object[] { rpcClientImpl, rpcServerImpl });
@@ -148,8 +148,7 @@ public class TestSecureIPC {
     clientConf = getSecuredConfiguration();
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
     serverConf = getSecuredConfiguration();
-    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        rpcServerImpl);
+    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
   }
 
   @Test
@@ -167,8 +166,8 @@ public class TestSecureIPC {
   @Test
   public void testRpcFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
-    UserGroupInformation clientUgi = UserGroupInformation.createUserForTesting(clientUsername,
-      new String[] { clientUsername });
+    UserGroupInformation clientUgi =
+      UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
 
     // check that the client user is insecure
     assertNotSame(ugi, clientUgi);
@@ -186,8 +185,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client qops.
-   * @throws Exception
+   * Test various combinations of Server and Client qops. n
    */
   @Test
   public void testSaslWithCommonQop() throws Exception {
@@ -216,8 +214,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test sasl encryption with Crypto AES.
-   * @throws Exception
+   * Test sasl encryption with Crypto AES. n
    */
   @Test
   public void testSaslWithCryptoAES() throws Exception {
@@ -227,8 +224,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client configuration for Crypto AES.
-   * @throws Exception
+   * Test various combinations of Server and Client configuration for Crypto AES. n
    */
   @Test
   public void testDifferentConfWithCryptoAES() throws Exception {
@@ -252,7 +248,7 @@ public class TestSecureIPC {
   }
 
   private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
-      throws Exception {
+    throws Exception {
     Configuration cnf = new Configuration();
     cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(cnf);
@@ -267,19 +263,20 @@ public class TestSecureIPC {
   private void callRpcService(User clientUser) throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
-        .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
+      .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
     RpcServerInterface rpcServer = RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
-        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)), isa,
-        serverConf, new FifoRpcScheduler(serverConf, 1));
+      Lists
+        .newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+      isa, serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
-    try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
-      HConstants.DEFAULT_CLUSTER_ID.toString())) {
-      BlockingInterface stub = newBlockingStub(rpcClient, rpcServer.getListenerAddress(),
-        clientUser);
+    try (RpcClient rpcClient =
+      RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
+      BlockingInterface stub =
+        newBlockingStub(rpcClient, rpcServer.getListenerAddress(), clientUser);
       TestThread th1 = new TestThread(stub);
       final Throwable exception[] = new Throwable[1];
       Collections.synchronizedList(new ArrayList<Throwable>());
@@ -317,8 +314,8 @@ public class TestSecureIPC {
         int[] messageSize = new int[] { 100, 1000, 10000 };
         for (int i = 0; i < messageSize.length; i++) {
           String input = RandomStringUtils.random(messageSize[i]);
-          String result = stub
-              .echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
+          String result =
+            stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
               .getMessage();
           assertEquals(input, result);
         }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -28,12 +29,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Checks tests are categorized.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCheckTestClasses {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCheckTestClasses.class);
+    HBaseClassTestRule.forClass(TestCheckTestClasses.class);
 
   /**
    * Throws an assertion if we find a test class without category (small/medium/large/integration).
@@ -48,7 +49,7 @@ public class TestCheckTestClasses {
         badClasses.add(c);
       }
     }
-    assertTrue("There are " + badClasses.size() + " test classes without category: "
-      + badClasses, badClasses.isEmpty());
+    assertTrue("There are " + badClasses.size() + " test classes without category: " + badClasses,
+      badClasses.isEmpty());
   }
 }

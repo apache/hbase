@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestExpiredMobFileCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExpiredMobFileCleaner.class);
+    HBaseClassTestRule.forClass(TestExpiredMobFileCleaner.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static TableName tableName = TableName.valueOf("TestExpiredMobFileCleaner");
@@ -93,7 +93,7 @@ public class TestExpiredMobFileCleaner {
     admin = TEST_UTIL.getAdmin();
     admin.createTable(desc);
     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
-            .getBufferedMutator(tableName);
+      .getBufferedMutator(tableName);
   }
 
   private void modifyColumnExpiryDays(int expireDays) throws Exception {
@@ -108,7 +108,7 @@ public class TestExpiredMobFileCleaner {
   }
 
   private void putKVAndFlush(BufferedMutator table, byte[] row, byte[] value, long ts)
-      throws Exception {
+    throws Exception {
 
     Put put = new Put(row, ts);
     put.addColumn(Bytes.toBytes(family), qf, value);
@@ -119,9 +119,9 @@ public class TestExpiredMobFileCleaner {
   }
 
   /**
-   * Creates a 3 day old hfile and an 1 day old hfile then sets expiry to 2 days.
-   * Verifies that the 3 day old hfile is removed but the 1 day one is still present
-   * after the expiry based cleaner is run.
+   * Creates a 3 day old hfile and an 1 day old hfile then sets expiry to 2 days. Verifies that the
+   * 3 day old hfile is removed but the 1 day one is still present after the expiry based cleaner is
+   * run.
    */
   @Test
   public void testCleaner() throws Exception {
@@ -133,14 +133,14 @@ public class TestExpiredMobFileCleaner {
     long ts = System.currentTimeMillis() - 3 * secondsOfDay() * 1000; // 3 days before
     putKVAndFlush(table, row1, dummyData, ts);
     FileStatus[] firstFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
-    //the first mob file
+    // the first mob file
     assertEquals("Before cleanup without delay 1", 1, firstFiles.length);
     String firstFile = firstFiles[0].getPath().getName();
 
     ts = System.currentTimeMillis() - 1 * secondsOfDay() * 1000; // 1 day before
     putKVAndFlush(table, row2, dummyData, ts);
     FileStatus[] secondFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
-    //now there are 2 mob files
+    // now there are 2 mob files
     assertEquals("Before cleanup without delay 2", 2, secondFiles.length);
     String f1 = secondFiles[0].getPath().getName();
     String f2 = secondFiles[1].getPath().getName();
@@ -148,7 +148,7 @@ public class TestExpiredMobFileCleaner {
 
     modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
 
-    //run the cleaner
+    // run the cleaner
     String[] args = new String[2];
     args[0] = tableName.getNameAsString();
     args[1] = family;
@@ -156,7 +156,7 @@ public class TestExpiredMobFileCleaner {
 
     FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     String lastFile = filesAfterClean[0].getPath().getName();
-    //the first mob fie is removed
+    // the first mob fie is removed
     assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
     assertEquals("After cleanup without delay 2", secondFile, lastFile);
   }
@@ -166,7 +166,7 @@ public class TestExpiredMobFileCleaner {
   }
 
   private byte[] makeDummyData(int size) {
-    byte [] dummyData = new byte[size];
+    byte[] dummyData = new byte[size];
     Bytes.random(dummyData);
     return dummyData;
   }

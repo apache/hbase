@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,16 +80,16 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @InterfaceAudience.Private
 class ZKReplicationQueueStorage extends ZKReplicationStorageBase
-    implements ReplicationQueueStorage {
+  implements ReplicationQueueStorage {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKReplicationQueueStorage.class);
 
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_KEY =
-      "zookeeper.znode.replication.hfile.refs";
+    "zookeeper.znode.replication.hfile.refs";
   public static final String ZOOKEEPER_ZNODE_REPLICATION_HFILE_REFS_DEFAULT = "hfile-refs";
 
   public static final String ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY =
-      "zookeeper.znode.replication.regions";
+    "zookeeper.znode.replication.regions";
   public static final String ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT = "regions";
 
   /**
@@ -113,7 +113,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     this.queuesZNode = ZNodePaths.joinZNode(replicationZNode, queuesZNodeName);
     this.hfileRefsZNode = ZNodePaths.joinZNode(replicationZNode, hfileRefsZNodeName);
     this.regionsZNode = ZNodePaths.joinZNode(replicationZNode, conf
-        .get(ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY, ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT));
+      .get(ZOOKEEPER_ZNODE_REPLICATION_REGIONS_KEY, ZOOKEEPER_ZNODE_REPLICATION_REGIONS_DEFAULT));
   }
 
   @Override
@@ -152,20 +152,20 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * is the peer id.
    * </p>
    * @param encodedRegionName the encoded region name.
-   * @param peerId peer id for replication.
+   * @param peerId            peer id for replication.
    * @return ZNode path to persist the max sequence id that we've pushed for the given region and
    *         peer.
    */
   String getSerialReplicationRegionPeerNode(String encodedRegionName, String peerId) {
     if (encodedRegionName == null || encodedRegionName.length() != RegionInfo.MD5_HEX_LENGTH) {
       throw new IllegalArgumentException(
-          "Invalid encoded region name: " + encodedRegionName + ", length should be 32.");
+        "Invalid encoded region name: " + encodedRegionName + ", length should be 32.");
     }
     return new StringBuilder(regionsZNode).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-            .append(encodedRegionName, 0, 2).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-            .append(encodedRegionName, 2, 4).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
-            .append(encodedRegionName, 4, encodedRegionName.length()).append("-").append(peerId)
-            .toString();
+      .append(encodedRegionName, 0, 2).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+      .append(encodedRegionName, 2, 4).append(ZNodePaths.ZNODE_PATH_SEPARATOR)
+      .append(encodedRegionName, 4, encodedRegionName.length()).append("-").append(peerId)
+      .toString();
   }
 
   @Override
@@ -174,37 +174,37 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       ZKUtil.deleteNodeRecursively(zookeeper, getQueueNode(serverName, queueId));
     } catch (KeeperException e) {
       throw new ReplicationException(
-          "Failed to delete queue (serverName=" + serverName + ", queueId=" + queueId + ")", e);
+        "Failed to delete queue (serverName=" + serverName + ", queueId=" + queueId + ")", e);
     }
   }
 
   @Override
   public void addWAL(ServerName serverName, String queueId, String fileName)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       ZKUtil.createWithParents(zookeeper, getFileNode(serverName, queueId, fileName));
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to add wal to queue (serverName=" + serverName
-          + ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
+        + ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
     }
   }
 
   @Override
   public void removeWAL(ServerName serverName, String queueId, String fileName)
-      throws ReplicationException {
+    throws ReplicationException {
     String fileNode = getFileNode(serverName, queueId, fileName);
     try {
       ZKUtil.deleteNode(zookeeper, fileNode);
     } catch (NoNodeException e) {
       LOG.warn("{} already deleted when removing log", fileNode);
     } catch (KeeperException e) {
-      throw new ReplicationException("Failed to remove wal from queue (serverName=" + serverName +
-        ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
+      throw new ReplicationException("Failed to remove wal from queue (serverName=" + serverName
+        + ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
     }
   }
 
   private void addLastSeqIdsToOps(String queueId, Map<String, Long> lastSeqIds,
-      List<ZKUtilOp> listOfOps) throws KeeperException, ReplicationException {
+    List<ZKUtilOp> listOfOps) throws KeeperException, ReplicationException {
     String peerId = new ReplicationQueueInfo(queueId).getPeerId();
     for (Entry<String, Long> lastSeqEntry : lastSeqIds.entrySet()) {
       String path = getSerialReplicationRegionPeerNode(lastSeqEntry.getKey(), peerId);
@@ -228,7 +228,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
 
   @Override
   public void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
-      Map<String, Long> lastSeqIds) throws ReplicationException {
+    Map<String, Long> lastSeqIds) throws ReplicationException {
     try {
       for (int retry = 0;; retry++) {
         List<ZKUtilOp> listOfOps = new ArrayList<>();
@@ -247,13 +247,13 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
         } catch (KeeperException.BadVersionException | KeeperException.NodeExistsException e) {
           LOG.warn(
             "Bad version(or node exist) when persist the last pushed sequence id to zookeeper "
-                + "storage, Retry = " + retry + ", serverName=" + serverName + ", queueId="
-                + queueId + ", fileName=" + fileName);
+              + "storage, Retry = " + retry + ", serverName=" + serverName + ", queueId=" + queueId
+              + ", fileName=" + fileName);
         }
       }
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to set log position (serverName=" + serverName
-          + ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
+        + ", queueId=" + queueId + ", fileName=" + fileName + ", position=" + position + ")", e);
     }
   }
 
@@ -262,7 +262,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * that the ZNode does not exist.
    */
   protected Pair<Long, Integer> getLastSequenceIdWithVersion(String encodedRegionName,
-      String peerId) throws KeeperException {
+    String peerId) throws KeeperException {
     Stat stat = new Stat();
     String path = getSerialReplicationRegionPeerNode(encodedRegionName, peerId);
     byte[] data = ZKUtil.getDataNoWatch(zookeeper, path, stat);
@@ -274,25 +274,25 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       return Pair.newPair(ZKUtil.parseWALPositionFrom(data), stat.getVersion());
     } catch (DeserializationException de) {
       LOG.warn("Failed to parse log position (region=" + encodedRegionName + ", peerId=" + peerId
-          + "), data=" + Bytes.toStringBinary(data));
+        + "), data=" + Bytes.toStringBinary(data));
     }
     return Pair.newPair(HConstants.NO_SEQNUM, stat.getVersion());
   }
 
   @Override
   public long getLastSequenceId(String encodedRegionName, String peerId)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       return getLastSequenceIdWithVersion(encodedRegionName, peerId).getFirst();
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to get last pushed sequence id (encodedRegionName="
-          + encodedRegionName + ", peerId=" + peerId + ")", e);
+        + encodedRegionName + ", peerId=" + peerId + ")", e);
     }
   }
 
   @Override
   public void setLastSequenceIds(String peerId, Map<String, Long> lastSeqIds)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       // No need CAS and retry here, because it'll call setLastSequenceIds() for disabled peers
       // only, so no conflict happen.
@@ -307,7 +307,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       }
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to set last sequence ids, peerId=" + peerId
-          + ", size of lastSeqIds=" + lastSeqIds.size(), e);
+        + ", size of lastSeqIds=" + lastSeqIds.size(), e);
     }
   }
 
@@ -347,33 +347,33 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
 
   @Override
   public void removeLastSequenceIds(String peerId, List<String> encodedRegionNames)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       List<ZKUtilOp> listOfOps =
         encodedRegionNames.stream().map(n -> getSerialReplicationRegionPeerNode(n, peerId))
           .map(ZKUtilOp::deleteNodeFailSilent).collect(Collectors.toList());
       ZKUtil.multiOrSequential(zookeeper, listOfOps, true);
     } catch (KeeperException e) {
-      throw new ReplicationException("Failed to remove last sequence ids, peerId=" + peerId +
-        ", encodedRegionNames.size=" + encodedRegionNames.size(), e);
+      throw new ReplicationException("Failed to remove last sequence ids, peerId=" + peerId
+        + ", encodedRegionNames.size=" + encodedRegionNames.size(), e);
     }
   }
 
   @Override
   public long getWALPosition(ServerName serverName, String queueId, String fileName)
-      throws ReplicationException {
+    throws ReplicationException {
     byte[] bytes;
     try {
       bytes = ZKUtil.getData(zookeeper, getFileNode(serverName, queueId, fileName));
     } catch (KeeperException | InterruptedException e) {
-      throw new ReplicationException("Failed to get log position (serverName=" + serverName +
-        ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
+      throw new ReplicationException("Failed to get log position (serverName=" + serverName
+        + ", queueId=" + queueId + ", fileName=" + fileName + ")", e);
     }
     try {
       return ZKUtil.parseWALPositionFrom(bytes);
     } catch (DeserializationException de) {
-      LOG.warn("Failed parse log position (serverName={}, queueId={}, fileName={})",
-          serverName, queueId, fileName);
+      LOG.warn("Failed parse log position (serverName={}, queueId={}, fileName={})", serverName,
+        queueId, fileName);
     }
     // if we can not parse the position, start at the beginning of the wal file again
     return 0;
@@ -386,15 +386,13 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    */
   @Override
   public Pair<String, SortedSet<String>> claimQueue(ServerName sourceServerName, String queueId,
-      ServerName destServerName) throws ReplicationException {
+    ServerName destServerName) throws ReplicationException {
     LOG.info("Atomically moving {}/{}'s WALs to {}", sourceServerName, queueId, destServerName);
     try {
       ZKUtil.createWithParents(zookeeper, getRsNode(destServerName));
     } catch (KeeperException e) {
-      throw new ReplicationException(
-          "Claim queue queueId=" + queueId + " from " + sourceServerName + " to " + destServerName +
-            " failed when creating the node for " + destServerName,
-          e);
+      throw new ReplicationException("Claim queue queueId=" + queueId + " from " + sourceServerName
+        + " to " + destServerName + " failed when creating the node for " + destServerName, e);
     }
     String newQueueId = queueId + "-" + sourceServerName;
     try {
@@ -440,11 +438,11 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       // queue to tell the upper layer that claim nothing. For other types of exception should be
       // thrown out to notify the upper layer.
       LOG.info("Claim queue queueId={} from {} to {} failed with {}, someone else took the log?",
-          queueId,sourceServerName, destServerName, e.toString());
+        queueId, sourceServerName, destServerName, e.toString());
       return new Pair<>(newQueueId, Collections.emptySortedSet());
     } catch (KeeperException | InterruptedException e) {
-      throw new ReplicationException("Claim queue queueId=" + queueId + " from " +
-        sourceServerName + " to " + destServerName + " failed", e);
+      throw new ReplicationException("Claim queue queueId=" + queueId + " from " + sourceServerName
+        + " to " + destServerName + " failed", e);
     }
   }
 
@@ -477,21 +475,20 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
   }
 
   private List<String> getWALsInQueue0(ServerName serverName, String queueId)
-      throws KeeperException {
-    List<String> children = ZKUtil.listChildrenNoWatch(zookeeper, getQueueNode(serverName,
-        queueId));
+    throws KeeperException {
+    List<String> children =
+      ZKUtil.listChildrenNoWatch(zookeeper, getQueueNode(serverName, queueId));
     return children != null ? children : Collections.emptyList();
   }
 
   @Override
   public List<String> getWALsInQueue(ServerName serverName, String queueId)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       return getWALsInQueue0(serverName, queueId);
     } catch (KeeperException e) {
       throw new ReplicationException(
-          "Failed to get wals in queue (serverName=" + serverName + ", queueId=" + queueId + ")",
-          e);
+        "Failed to get wals in queue (serverName=" + serverName + ", queueId=" + queueId + ")", e);
     }
   }
 
@@ -521,7 +518,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
    * Therefore, we must update the cversion of root {@link #queuesZNode} when migrate wal nodes to
    * other queues.
    * @see #claimQueue(ServerName, String, ServerName) as an example of updating root
-   * {@link #queuesZNode} cversion.
+   *      {@link #queuesZNode} cversion.
    */
   @Override
   public Set<String> getAllWALs() throws ReplicationException {
@@ -543,8 +540,8 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
         if (v0 == v1) {
           return wals;
         }
-        LOG.info("Replication queue node cversion changed from %d to %d, retry = %d",
-            v0, v1, retry);
+        LOG.info("Replication queue node cversion changed from %d to %d, retry = %d", v0, v1,
+          retry);
       }
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to get all wals", e);
@@ -569,7 +566,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       }
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to add peer " + peerId + " to hfile reference queue.",
-          e);
+        e);
     }
   }
 
@@ -585,20 +582,20 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       }
     } catch (KeeperException e) {
       throw new ReplicationException(
-          "Failed to remove peer " + peerId + " from hfile reference queue.", e);
+        "Failed to remove peer " + peerId + " from hfile reference queue.", e);
     }
   }
 
   @Override
   public void addHFileRefs(String peerId, List<Pair<Path, Path>> pairs)
-      throws ReplicationException {
+    throws ReplicationException {
     String peerNode = getHFileRefsPeerNode(peerId);
     LOG.debug("Adding hfile references {} in queue {}", pairs, peerNode);
-    List<ZKUtilOp> listOfOps = pairs.stream().map(p -> p.getSecond().getName())
-        .map(n -> getHFileNode(peerNode, n))
+    List<ZKUtilOp> listOfOps =
+      pairs.stream().map(p -> p.getSecond().getName()).map(n -> getHFileNode(peerNode, n))
         .map(f -> ZKUtilOp.createAndFailSilent(f, HConstants.EMPTY_BYTE_ARRAY)).collect(toList());
-    LOG.debug("The multi list size for adding hfile references in zk for node {} is {}",
-          peerNode, listOfOps.size());
+    LOG.debug("The multi list size for adding hfile references in zk for node {} is {}", peerNode,
+      listOfOps.size());
     try {
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, true);
     } catch (KeeperException e) {
@@ -612,9 +609,9 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
     LOG.debug("Removing hfile references {} from queue {}", files, peerNode);
 
     List<ZKUtilOp> listOfOps = files.stream().map(n -> getHFileNode(peerNode, n))
-        .map(ZKUtilOp::deleteNodeFailSilent).collect(toList());
-    LOG.debug("The multi list size for removing hfile references in zk for node {} is {}",
-        peerNode, listOfOps.size());
+      .map(ZKUtilOp::deleteNodeFailSilent).collect(toList());
+    LOG.debug("The multi list size for removing hfile references in zk for node {} is {}", peerNode,
+      listOfOps.size());
     try {
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, true);
     } catch (KeeperException e) {
@@ -633,13 +630,13 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       return getAllPeersFromHFileRefsQueue0();
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to get list of all peers in hfile references node.",
-          e);
+        e);
     }
   }
 
   private List<String> getReplicableHFiles0(String peerId) throws KeeperException {
-    List<String> children = ZKUtil.listChildrenNoWatch(this.zookeeper,
-        getHFileRefsPeerNode(peerId));
+    List<String> children =
+      ZKUtil.listChildrenNoWatch(this.zookeeper, getHFileRefsPeerNode(peerId));
     return children != null ? children : Collections.emptyList();
   }
 
@@ -649,7 +646,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
       return getReplicableHFiles0(peerId);
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to get list of hfile references for peer " + peerId,
-          e);
+        e);
     }
   }
 
@@ -683,7 +680,7 @@ class ZKReplicationQueueStorage extends ZKReplicationStorageBase
           return hfileRefs;
         }
         LOG.debug("Replication hfile references node cversion changed from %d to %d, retry = %d",
-            v0, v1, retry);
+          v0, v1, retry);
       }
     } catch (KeeperException e) {
       throw new ReplicationException("Failed to get all hfile refs", e);

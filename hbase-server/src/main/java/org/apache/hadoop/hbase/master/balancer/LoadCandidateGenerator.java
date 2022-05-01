@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,7 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class LoadCandidateGenerator extends CandidateGenerator {
 
-  @Override BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
+  @Override
+  BaseLoadBalancer.Cluster.Action generate(BaseLoadBalancer.Cluster cluster) {
     cluster.sortServersByRegionCount();
     int thisServer = pickMostLoadedServer(cluster, -1);
     int otherServer = pickLeastLoadedServer(cluster, thisServer);
@@ -40,13 +40,15 @@ class LoadCandidateGenerator extends CandidateGenerator {
       if (servers[i] == null || servers[i] == thisServer) {
         continue;
       }
-      if (selectedIndex != -1 && cluster.getNumRegionsComparator().compare(servers[i],
-        servers[selectedIndex]) != 0) {
+      if (
+        selectedIndex != -1
+          && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0
+      ) {
         // Exhausted servers of the same region count
         break;
       }
       // we don't know how many servers have the same region count, we will randomly select one
-      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // using a simplified inline reservoir sampling by assignmening a random number to stream
       // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {
@@ -66,13 +68,15 @@ class LoadCandidateGenerator extends CandidateGenerator {
       if (servers[i] == null || servers[i] == thisServer) {
         continue;
       }
-      if (selectedIndex != -1
-        && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0) {
+      if (
+        selectedIndex != -1
+          && cluster.getNumRegionsComparator().compare(servers[i], servers[selectedIndex]) != 0
+      ) {
         // Exhausted servers of the same region count
         break;
       }
       // we don't know how many servers have the same region count, we will randomly select one
-      // using a simplified inline reservoir sampling by assignmening a random number to  stream
+      // using a simplified inline reservoir sampling by assignmening a random number to stream
       // data and choose the greatest one. (http://gregable.com/2007/10/reservoir-sampling.html)
       double currentRandom = ThreadLocalRandom.current().nextDouble();
       if (currentRandom > currentLargestRandom) {

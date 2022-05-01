@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,22 +19,19 @@ package org.apache.hadoop.hbase.http.conf;
 
 import java.io.IOException;
 import java.io.Writer;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.http.HttpServer;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * A servlet to print out the running configuration data.
  */
-@InterfaceAudience.LimitedPrivate({"HBase"})
+@InterfaceAudience.LimitedPrivate({ "HBase" })
 @InterfaceStability.Unstable
 public class ConfServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
@@ -44,21 +41,20 @@ public class ConfServlet extends HttpServlet {
   private static final String FORMAT_PARAM = "format";
 
   /**
-   * Return the Configuration of the daemon hosting this servlet.
-   * This is populated when the HttpServer starts.
+   * Return the Configuration of the daemon hosting this servlet. This is populated when the
+   * HttpServer starts.
    */
   private Configuration getConfFromContext() {
-    Configuration conf = (Configuration)getServletContext().getAttribute(
-        HttpServer.CONF_CONTEXT_ATTRIBUTE);
+    Configuration conf =
+      (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
     assert conf != null;
     return conf;
   }
 
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
-                                                   request, response)) {
+    throws ServletException, IOException {
+    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(), request, response)) {
       return;
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,21 +34,21 @@ import org.junit.experimental.categories.Category;
 
 @Category({ CoprocessorTests.class, MediumTests.class })
 public class TestWriteHeavyIncrementObserverWithMemStoreCompaction
-    extends WriteHeavyIncrementObserverTestBase {
+  extends WriteHeavyIncrementObserverTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserverWithMemStoreCompaction.class);
+    HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserverWithMemStoreCompaction.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
     WriteHeavyIncrementObserverTestBase.setUp();
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
-            .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
-              MemoryCompactionPolicy.EAGER.name())
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
+        .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
+          MemoryCompactionPolicy.EAGER.name())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 

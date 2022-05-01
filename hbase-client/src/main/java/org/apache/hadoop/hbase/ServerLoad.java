@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
@@ -33,13 +30,13 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Objects;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 
 /**
  * This class is used for exporting current state of load on a RegionServer.
- *
- * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
- *             Use {@link ServerMetrics} instead.
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use {@link ServerMetrics}
+ *             instead.
  */
 @InterfaceAudience.Public
 @Deprecated
@@ -68,7 +65,7 @@ public class ServerLoad implements ServerMetrics {
     this(ServerName.valueOf("localhost,1,1"), serverLoad);
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
   @InterfaceAudience.Private
   public ServerLoad(ServerName name, ClusterStatusProtos.ServerLoad serverLoad) {
     this(ServerMetricsBuilder.toServerMetrics(name, serverLoad));
@@ -112,9 +109,9 @@ public class ServerLoad implements ServerMetrics {
   protected ClusterStatusProtos.ServerLoad serverLoad;
 
   /**
-   * @return number of requests  since last report.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getRequestCountPerSecond} instead.
+   * @return number of requests since last report.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #getRequestCountPerSecond} instead.
    */
   @Deprecated
   public long getNumberOfRequests() {
@@ -122,8 +119,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             No flag in 2.0
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated
   public boolean hasNumberOfRequests() {
@@ -132,8 +128,8 @@ public class ServerLoad implements ServerMetrics {
 
   /**
    * @return total Number of requests from the start of the region server.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getRequestCount} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #getRequestCount} instead.
    */
   @Deprecated
   public long getTotalNumberOfRequests() {
@@ -141,8 +137,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             No flag in 2.0
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated
   public boolean hasTotalNumberOfRequests() {
@@ -151,8 +146,8 @@ public class ServerLoad implements ServerMetrics {
 
   /**
    * @return the amount of used heap, in MB.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getUsedHeapSize} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #getUsedHeapSize} instead.
    */
   @Deprecated
   public int getUsedHeapMB() {
@@ -160,8 +155,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             No flag in 2.0
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated
   public boolean hasUsedHeapMB() {
@@ -170,8 +164,8 @@ public class ServerLoad implements ServerMetrics {
 
   /**
    * @return the maximum allowable size of the heap, in MB.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getMaxHeapSize} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getMaxHeapSize} instead.
    */
   @Deprecated
   public int getMaxHeapMB() {
@@ -179,8 +173,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             No flag in 2.0
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated
   public boolean hasMaxHeapMB() {
@@ -188,8 +181,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStores() {
@@ -197,8 +190,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStorefiles() {
@@ -206,8 +199,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStoreUncompressedSizeMB() {
@@ -215,8 +208,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStorefileSizeInMB() {
@@ -224,8 +217,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStorefileSizeMB() {
@@ -233,8 +226,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getMemstoreSizeInMB() {
@@ -242,8 +235,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getMemStoreSizeMB() {
@@ -251,8 +244,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getStorefileIndexSizeInMB() {
@@ -261,8 +254,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getStorefileIndexSizeKB() {
@@ -270,8 +263,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getReadRequestsCount() {
@@ -279,8 +272,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getFilteredReadRequestsCount() {
@@ -288,8 +281,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getWriteRequestsCount() {
@@ -297,8 +290,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getRootIndexSizeKB() {
@@ -306,8 +299,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getTotalStaticIndexSizeKB() {
@@ -315,8 +308,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getTotalStaticBloomSizeKB() {
@@ -324,8 +317,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getTotalCompactingKVs() {
@@ -333,8 +326,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *     Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public long getCurrentCompactedKVs() {
@@ -342,8 +335,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public int getNumberOfRegions() {
@@ -399,8 +392,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * Call directly from client such as hbase shell
-   * @return ReplicationLoadSink
+   * Call directly from client such as hbase shell n
    */
   @Override
   public ReplicationLoadSink getReplicationLoadSink() {
@@ -412,7 +404,8 @@ public class ServerLoad implements ServerMetrics {
     return metrics.getRegionMetrics();
   }
 
-  @Override public Map<byte[], UserMetrics> getUserMetrics() {
+  @Override
+  public Map<byte[], UserMetrics> getUserMetrics() {
     return metrics.getUserMetrics();
   }
 
@@ -432,15 +425,13 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * Originally, this method factored in the effect of requests going to the
-   * server as well. However, this does not interact very well with the current
-   * region rebalancing code, which only factors number of regions. For the
-   * interim, until we can figure out how to make rebalancing use all the info
-   * available, we're just going to make load purely the number of regions.
-   *
+   * Originally, this method factored in the effect of requests going to the server as well.
+   * However, this does not interact very well with the current region rebalancing code, which only
+   * factors number of regions. For the interim, until we can figure out how to make rebalancing use
+   * all the info available, we're just going to make load purely the number of regions.
    * @return load factor for this server.
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getNumberOfRegions} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getNumberOfRegions} instead.
    */
   @Deprecated
   public int getLoad() {
@@ -452,21 +443,20 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRegionMetrics} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRegionMetrics} instead.
    */
   @Deprecated
   public Map<byte[], RegionLoad> getRegionsLoad() {
     return getRegionMetrics().entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, e -> new RegionLoad(e.getValue()),
-          (v1, v2) -> {
-            throw new RuntimeException("key collisions?");
-          }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
+      .collect(Collectors.toMap(Map.Entry::getKey, e -> new RegionLoad(e.getValue()), (v1, v2) -> {
+        throw new RuntimeException("key collisions?");
+      }, () -> new TreeMap<>(Bytes.BYTES_COMPARATOR)));
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getCoprocessorNames} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getCoprocessorNames} instead.
    */
   @Deprecated
   public String[] getRegionServerCoprocessors() {
@@ -474,8 +464,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getCoprocessorNames} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getCoprocessorNames} instead.
    */
   @Deprecated
   public String[] getRsCoprocessors() {
@@ -483,8 +473,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getRequestCountPerSecond} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getRequestCountPerSecond} instead.
    */
   @Deprecated
   public double getRequestsPerSecond() {
@@ -504,30 +494,29 @@ public class ServerLoad implements ServerMetrics {
     Strings.appendKeyValue(sb, "numberOfStores", Integer.valueOf(this.stores));
     Strings.appendKeyValue(sb, "numberOfStorefiles", Integer.valueOf(this.storefiles));
     Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
-        Integer.valueOf(this.storeUncompressedSizeMB));
+      Integer.valueOf(this.storeUncompressedSizeMB));
     Strings.appendKeyValue(sb, "storefileSizeMB", Integer.valueOf(this.storefileSizeMB));
     if (this.storeUncompressedSizeMB != 0) {
-      Strings.appendKeyValue(sb, "compressionRatio", String.format("%.4f",
-          (float) this.storefileSizeMB / (float) this.storeUncompressedSizeMB));
+      Strings.appendKeyValue(sb, "compressionRatio",
+        String.format("%.4f", (float) this.storefileSizeMB / (float) this.storeUncompressedSizeMB));
     }
     Strings.appendKeyValue(sb, "memstoreSizeMB", Integer.valueOf(this.memstoreSizeMB));
-    Strings.appendKeyValue(sb, "storefileIndexSizeKB",
-        Long.valueOf(this.storefileIndexSizeKB));
+    Strings.appendKeyValue(sb, "storefileIndexSizeKB", Long.valueOf(this.storefileIndexSizeKB));
     Strings.appendKeyValue(sb, "readRequestsCount", Long.valueOf(this.readRequestsCount));
     Strings.appendKeyValue(sb, "filteredReadRequestsCount",
-        Long.valueOf(this.filteredReadRequestsCount));
+      Long.valueOf(this.filteredReadRequestsCount));
     Strings.appendKeyValue(sb, "writeRequestsCount", Long.valueOf(this.writeRequestsCount));
     Strings.appendKeyValue(sb, "rootIndexSizeKB", Integer.valueOf(this.rootIndexSizeKB));
     Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
-        Integer.valueOf(this.totalStaticIndexSizeKB));
+      Integer.valueOf(this.totalStaticIndexSizeKB));
     Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
-        Integer.valueOf(this.totalStaticBloomSizeKB));
+      Integer.valueOf(this.totalStaticBloomSizeKB));
     Strings.appendKeyValue(sb, "totalCompactingKVs", Long.valueOf(this.totalCompactingKVs));
     Strings.appendKeyValue(sb, "currentCompactedKVs", Long.valueOf(this.currentCompactedKVs));
     float compactionProgressPct = Float.NaN;
     if (this.totalCompactingKVs > 0) {
       compactionProgressPct =
-          Float.valueOf((float) this.currentCompactedKVs / this.totalCompactingKVs);
+        Float.valueOf((float) this.currentCompactedKVs / this.totalCompactingKVs);
     }
     Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
 
@@ -539,17 +528,16 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link ServerMetricsBuilder#of(ServerName)} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link ServerMetricsBuilder#of(ServerName)} instead.
    */
   @Deprecated
-  public static final ServerLoad EMPTY_SERVERLOAD =
-      new ServerLoad(ServerName.valueOf("localhost,1,1"),
-          ClusterStatusProtos.ServerLoad.newBuilder().build());
+  public static final ServerLoad EMPTY_SERVERLOAD = new ServerLoad(
+    ServerName.valueOf("localhost,1,1"), ClusterStatusProtos.ServerLoad.newBuilder().build());
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             Use {@link #getReportTimestamp} instead.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
+   *             {@link #getReportTimestamp} instead.
    */
   @Deprecated
   public long getReportTime() {
@@ -558,11 +546,10 @@ public class ServerLoad implements ServerMetrics {
 
   @Override
   public int hashCode() {
-    return Objects
-        .hashCode(stores, storefiles, storeUncompressedSizeMB, storefileSizeMB, memstoreSizeMB,
-            storefileIndexSizeKB, readRequestsCount, filteredReadRequestsCount, writeRequestsCount,
-            rootIndexSizeKB, totalStaticIndexSizeKB, totalStaticBloomSizeKB, totalCompactingKVs,
-            currentCompactedKVs);
+    return Objects.hashCode(stores, storefiles, storeUncompressedSizeMB, storefileSizeMB,
+      memstoreSizeMB, storefileIndexSizeKB, readRequestsCount, filteredReadRequestsCount,
+      writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB, totalStaticBloomSizeKB,
+      totalCompactingKVs, currentCompactedKVs);
   }
 
   @Override
@@ -571,16 +558,16 @@ public class ServerLoad implements ServerMetrics {
     if (other instanceof ServerLoad) {
       ServerLoad sl = ((ServerLoad) other);
       return stores == sl.stores && storefiles == sl.storefiles
-          && storeUncompressedSizeMB == sl.storeUncompressedSizeMB
-          && storefileSizeMB == sl.storefileSizeMB && memstoreSizeMB == sl.memstoreSizeMB
-          && storefileIndexSizeKB == sl.storefileIndexSizeKB
-          && readRequestsCount == sl.readRequestsCount
-          && filteredReadRequestsCount == sl.filteredReadRequestsCount
-          && writeRequestsCount == sl.writeRequestsCount && rootIndexSizeKB == sl.rootIndexSizeKB
-          && totalStaticIndexSizeKB == sl.totalStaticIndexSizeKB
-          && totalStaticBloomSizeKB == sl.totalStaticBloomSizeKB
-          && totalCompactingKVs == sl.totalCompactingKVs
-          && currentCompactedKVs == sl.currentCompactedKVs;
+        && storeUncompressedSizeMB == sl.storeUncompressedSizeMB
+        && storefileSizeMB == sl.storefileSizeMB && memstoreSizeMB == sl.memstoreSizeMB
+        && storefileIndexSizeKB == sl.storefileIndexSizeKB
+        && readRequestsCount == sl.readRequestsCount
+        && filteredReadRequestsCount == sl.filteredReadRequestsCount
+        && writeRequestsCount == sl.writeRequestsCount && rootIndexSizeKB == sl.rootIndexSizeKB
+        && totalStaticIndexSizeKB == sl.totalStaticIndexSizeKB
+        && totalStaticBloomSizeKB == sl.totalStaticBloomSizeKB
+        && totalCompactingKVs == sl.totalCompactingKVs
+        && currentCompactedKVs == sl.currentCompactedKVs;
     }
     return false;
   }

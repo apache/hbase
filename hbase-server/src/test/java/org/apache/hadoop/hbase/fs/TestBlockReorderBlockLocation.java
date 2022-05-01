@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,19 +44,17 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Tests for the hdfs fix from HBASE-6435.
- *
- * Please don't add new subtest which involves starting / stopping MiniDFSCluster in this class.
- * When stopping MiniDFSCluster, shutdown hooks would be cleared in hadoop's ShutdownHookManager
- *   in hadoop 3.
- * This leads to 'Failed suppression of fs shutdown hook' error in region server.
+ * Tests for the hdfs fix from HBASE-6435. Please don't add new subtest which involves starting /
+ * stopping MiniDFSCluster in this class. When stopping MiniDFSCluster, shutdown hooks would be
+ * cleared in hadoop's ShutdownHookManager in hadoop 3. This leads to 'Failed suppression of fs
+ * shutdown hook' error in region server.
  */
-@Category({MiscTests.class, LargeTests.class})
+@Category({ MiscTests.class, LargeTests.class })
 public class TestBlockReorderBlockLocation {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlockReorderBlockLocation.class);
+    HBaseClassTestRule.forClass(TestBlockReorderBlockLocation.class);
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -74,8 +72,8 @@ public class TestBlockReorderBlockLocation {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
     htu.getConfiguration().setInt("dfs.replication", 3);
-    htu.startMiniDFSCluster(3,
-        new String[]{"/r1", "/r2", "/r3"}, new String[]{host1, host2, host3});
+    htu.startMiniDFSCluster(3, new String[] { "/r1", "/r2", "/r3" },
+      new String[] { host1, host2, host3 });
 
     conf = htu.getConfiguration();
     cluster = htu.getDFSCluster();
@@ -86,7 +84,6 @@ public class TestBlockReorderBlockLocation {
   public void tearDownAfterClass() throws Exception {
     htu.shutdownMiniCluster();
   }
-
 
   private static ClientProtocol getNamenode(DFSClient dfsc) throws Exception {
     Field nf = DFSClient.class.getDeclaredField("namenode");
@@ -99,11 +96,10 @@ public class TestBlockReorderBlockLocation {
    */
   @Test
   public void testBlockLocation() throws Exception {
-    // We need to start HBase to get  HConstants.HBASE_DIR set in conf
+    // We need to start HBase to get HConstants.HBASE_DIR set in conf
     htu.startMiniZKCluster();
     MiniHBaseCluster hbm = htu.startMiniHBaseCluster();
     conf = hbm.getConfiguration();
-
 
     // The "/" is mandatory, without it we've got a null pointer exception on the namenode
     final String fileName = "/helloWorld";
@@ -118,7 +114,7 @@ public class TestBlockReorderBlockLocation {
     fop.writeDouble(toWrite);
     fop.close();
 
-    for (int i=0; i<10; i++){
+    for (int i = 0; i < 10; i++) {
       // The interceptor is not set in this test, so we get the raw list at this point
       LocatedBlocks l;
       final long max = System.currentTimeMillis() + 10000;
@@ -127,11 +123,11 @@ public class TestBlockReorderBlockLocation {
         Assert.assertNotNull(l.getLocatedBlocks());
         Assert.assertEquals(1, l.getLocatedBlocks().size());
         Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
-            System.currentTimeMillis() < max);
+          System.currentTimeMillis() < max);
       } while (l.get(0).getLocations().length != repCount);
 
       // Should be filtered, the name is different => The order won't change
-      Object originalList [] = l.getLocatedBlocks().toArray();
+      Object originalList[] = l.getLocatedBlocks().toArray();
       HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
       lrb.reorderBlocks(conf, l, fileName);
       Assert.assertArrayEquals(originalList, l.getLocatedBlocks().toArray());
@@ -139,8 +135,8 @@ public class TestBlockReorderBlockLocation {
       // Should be reordered, as we pretend to be a file name with a compliant stuff
       Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
       Assert.assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
-      String pseudoLogFile = conf.get(HConstants.HBASE_DIR) + "/" +
-          HConstants.HREGION_LOGDIR_NAME + "/" + host1 + ",6977,6576" + "/mylogfile";
+      String pseudoLogFile = conf.get(HConstants.HBASE_DIR) + "/" + HConstants.HREGION_LOGDIR_NAME
+        + "/" + host1 + ",6977,6576" + "/mylogfile";
 
       // Check that it will be possible to extract a ServerName from our construction
       Assert.assertNotNull("log= " + pseudoLogFile,

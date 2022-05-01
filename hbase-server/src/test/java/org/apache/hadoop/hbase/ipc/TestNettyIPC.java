@@ -39,6 +39,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.epoll.EpollSocketChannel;
@@ -51,7 +52,7 @@ public class TestNettyIPC extends AbstractTestIPC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNettyIPC.class);
+    HBaseClassTestRule.forClass(TestNettyIPC.class);
 
   @Parameters(name = "{index}: EventLoop={0}")
   public static Collection<Object[]> parameters() {
@@ -107,8 +108,8 @@ public class TestNettyIPC extends AbstractTestIPC {
 
   @Override
   protected RpcServer createRpcServer(Server server, String name,
-      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
+    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return new NettyRpcServer(server, name, services, bindAddress, conf, scheduler, true);
   }
 
@@ -146,8 +147,8 @@ public class TestNettyIPC extends AbstractTestIPC {
   private static class TestFailingRpcServer extends NettyRpcServer {
 
     TestFailingRpcServer(Server server, String name,
-        List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-        Configuration conf, RpcScheduler scheduler) throws IOException {
+      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+      Configuration conf, RpcScheduler scheduler) throws IOException {
       super(server, name, services, bindAddress, conf, scheduler, true);
     }
 
@@ -177,8 +178,8 @@ public class TestNettyIPC extends AbstractTestIPC {
 
   @Override
   protected RpcServer createTestFailingRpcServer(Server server, String name,
-      List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
+    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return new TestFailingRpcServer(server, name, services, bindAddress, conf, scheduler);
   }
 }

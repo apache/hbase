@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
 public class TestCopyOnWriteMaps {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCopyOnWriteMaps.class);
+    HBaseClassTestRule.forClass(TestCopyOnWriteMaps.class);
 
   private static final int MAX_RAND = 10 * 1000 * 1000;
   private ConcurrentNavigableMap<Long, Long> m;
@@ -49,14 +50,14 @@ public class TestCopyOnWriteMaps {
     m = new CopyOnWriteArrayMap<>();
     csm = new ConcurrentSkipListMap<>();
 
-    for (long i = 0 ; i < 10000; i++) {
+    for (long i = 0; i < 10000; i++) {
       long o = ThreadLocalRandom.current().nextLong(MAX_RAND);
       m.put(i, o);
-      csm.put(i,o);
+      csm.put(i, o);
     }
     long o = ThreadLocalRandom.current().nextLong(MAX_RAND);
     m.put(0L, o);
-    csm.put(0L,o);
+    csm.put(0L, o);
   }
 
   @Test
@@ -88,7 +89,7 @@ public class TestCopyOnWriteMaps {
     assertEquals(csm.lowerKey(400L), m.lowerKey(400L));
     assertEquals(csm.lowerKey(-1L), m.lowerKey(-1L));
 
-    for (int i = 0 ; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
       Long key = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.lowerKey(key), m.lowerKey(key));
     }
@@ -96,7 +97,7 @@ public class TestCopyOnWriteMaps {
 
   @Test
   public void testFloorEntry() {
-    for (int i = 0 ; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
       Long key = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.floorEntry(key), m.floorEntry(key));
     }
@@ -104,7 +105,7 @@ public class TestCopyOnWriteMaps {
 
   @Test
   public void testFloorKey() {
-    for (int i = 0 ; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
       Long key = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.floorKey(key), m.floorKey(key));
     }
@@ -116,7 +117,7 @@ public class TestCopyOnWriteMaps {
     assertEquals(csm.ceilingKey(400L), m.ceilingKey(400L));
     assertEquals(csm.ceilingKey(-1L), m.ceilingKey(-1L));
 
-    for (int i = 0 ; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
       Long key = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.ceilingKey(key), m.ceilingKey(key));
     }
@@ -128,7 +129,7 @@ public class TestCopyOnWriteMaps {
     assertEquals(csm.higherKey(400L), m.higherKey(400L));
     assertEquals(csm.higherKey(-1L), m.higherKey(-1L));
 
-    for (int i = 0 ; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
       Long key = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.higherKey(key), m.higherKey(key));
     }
@@ -156,9 +157,9 @@ public class TestCopyOnWriteMaps {
     for (Map.Entry<Long, Long> e : csm.entrySet()) {
       Long newValue = ThreadLocalRandom.current().nextLong();
       assertEquals(csm.replace(e.getKey(), e.getValue() + 1, newValue),
-          m.replace(e.getKey(), e.getValue() + 1, newValue));
+        m.replace(e.getKey(), e.getValue() + 1, newValue));
       assertEquals(csm.replace(e.getKey(), e.getValue(), newValue),
-          m.replace(e.getKey(), e.getValue(), newValue));
+        m.replace(e.getKey(), e.getValue(), newValue));
       assertEquals(newValue, m.get(e.getKey()));
       assertEquals(csm.get(e.getKey()), m.get(e.getKey()));
     }
@@ -168,11 +169,10 @@ public class TestCopyOnWriteMaps {
   @Test
   public void testMultiAdd() throws InterruptedException {
     Thread[] threads = new Thread[10];
-    for (int i = 0 ; i < threads.length; i++) {
+    for (int i = 0; i < threads.length; i++) {
       threads[i] = new Thread(() -> {
         for (int j = 0; j < 5000; j++) {
-          m.put(ThreadLocalRandom.current().nextLong(),
-              ThreadLocalRandom.current().nextLong());
+          m.put(ThreadLocalRandom.current().nextLong(), ThreadLocalRandom.current().nextLong());
         }
       });
     }
@@ -253,8 +253,8 @@ public class TestCopyOnWriteMaps {
     m.put(102L, 102L);
 
     long n = 100L;
-    CopyOnWriteArrayMap<Long,Long> tm99 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(99L, false);
-    for (Map.Entry<Long,Long> e : tm99.entrySet()) {
+    CopyOnWriteArrayMap<Long, Long> tm99 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(99L, false);
+    for (Map.Entry<Long, Long> e : tm99.entrySet()) {
       assertEquals(Long.valueOf(n), e.getKey());
       assertEquals(Long.valueOf(n), e.getValue());
       n++;
@@ -272,15 +272,15 @@ public class TestCopyOnWriteMaps {
     m.put(102L, 102L);
 
     long n = 102;
-    CopyOnWriteArrayMap<Long,Long> tm102 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(102L, true);
-    for (Map.Entry<Long,Long> e : tm102.entrySet()) {
+    CopyOnWriteArrayMap<Long, Long> tm102 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(102L, true);
+    for (Map.Entry<Long, Long> e : tm102.entrySet()) {
       assertEquals(Long.valueOf(n), e.getKey());
       assertEquals(Long.valueOf(n), e.getValue());
       n++;
     }
     n = 99;
-    CopyOnWriteArrayMap<Long,Long> tm98 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(98L, true);
-    for (Map.Entry<Long,Long> e : tm98.entrySet()) {
+    CopyOnWriteArrayMap<Long, Long> tm98 = (CopyOnWriteArrayMap<Long, Long>) m.tailMap(98L, true);
+    for (Map.Entry<Long, Long> e : tm98.entrySet()) {
       assertEquals(Long.valueOf(n), e.getKey());
       assertEquals(Long.valueOf(n), e.getValue());
       n++;

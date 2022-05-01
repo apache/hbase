@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,15 +18,13 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An interface which abstract away the action taken to enable or disable
- * a space quota violation policy across the HBase cluster. Implementations
- * must have a no-args constructor.
+ * An interface which abstract away the action taken to enable or disable a space quota violation
+ * policy across the HBase cluster. Implementations must have a no-args constructor.
  */
 @InterfaceAudience.Private
 public interface SpaceQuotaSnapshotNotifier {
@@ -37,9 +36,8 @@ public interface SpaceQuotaSnapshotNotifier {
 
   /**
    * Informs the cluster of the current state of a space quota for a table.
-   *
    * @param tableName The name of the table.
-   * @param snapshot The details of the space quota utilization.
+   * @param snapshot  The details of the space quota utilization.
    */
   void transitionTable(TableName tableName, SpaceQuotaSnapshot snapshot) throws IOException;
 }

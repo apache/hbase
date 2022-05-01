@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,7 +80,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
-      throws IOException {
+    throws IOException {
     byte[][] splitKeys = new byte[2][];
     splitKeys[0] = Bytes.toBytes(4);
     splitKeys[1] = Bytes.toBytes(8);
@@ -343,7 +343,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
-      throws IOException {
+    throws IOException {
     int numRS = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
@@ -367,8 +367,8 @@ public class TestAdmin extends TestAdminBase {
     int max = (int) Math.ceil(average);
     for (List<RegionInfo> regionList : server2Regions.values()) {
       assertTrue(
-        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size() +
-          ", tablesOnMaster=" + tablesOnMaster,
+        "numRS=" + numRS + ", min=" + min + ", max=" + max + ", size=" + regionList.size()
+          + ", tablesOnMaster=" + tablesOnMaster,
         regionList.size() == min || regionList.size() == max);
     }
   }
@@ -388,7 +388,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void testCloneTableSchema(final TableName tableName, final TableName newTableName,
-      boolean preserveSplits) throws Exception {
+    boolean preserveSplits) throws Exception {
     byte[] FAMILY_0 = Bytes.toBytes("cf0");
     byte[] FAMILY_1 = Bytes.toBytes("cf1");
     byte[][] splitKeys = new byte[2][];

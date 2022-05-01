@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,8 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationTracker {
 
   /**
-   * Register a replication listener to receive replication events.
-   * @param listener
+   * Register a replication listener to receive replication events. n
    */
   void registerListener(ReplicationListener listener);
 

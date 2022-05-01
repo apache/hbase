@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,19 +27,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *  Used by a {@link RecoveredReplicationSource}.
+ * Used by a {@link RecoveredReplicationSource}.
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RecoveredReplicationSourceShipper.class);
+    LoggerFactory.getLogger(RecoveredReplicationSourceShipper.class);
 
   protected final RecoveredReplicationSource source;
   private final ReplicationQueueStorage replicationQueues;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-      ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
-      ReplicationQueueStorage queueStorage) {
+    ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
+    ReplicationQueueStorage queueStorage) {
     super(conf, walGroupId, logQueue, source);
     this.source = source;
     this.replicationQueues = queueStorage;

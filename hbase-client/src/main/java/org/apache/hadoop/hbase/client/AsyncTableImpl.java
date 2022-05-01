@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   private final ExecutorService pool;
 
   AsyncTableImpl(AsyncConnectionImpl conn, AsyncTable<AdvancedScanResultConsumer> rawTable,
-      ExecutorService pool) {
+    ExecutorService pool) {
     this.rawTable = rawTable;
     this.pool = pool;
   }
@@ -178,8 +178,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilder() {
 
-      private final CheckAndMutateWithFilterBuilder builder =
-        rawTable.checkAndMutate(row, filter);
+      private final CheckAndMutateWithFilterBuilder builder = rawTable.checkAndMutate(row, filter);
 
       @Override
       public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
@@ -210,10 +209,9 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
-    List<CheckAndMutate> checkAndMutates) {
-    return rawTable.checkAndMutate(checkAndMutates).stream()
-      .map(this::wrap).collect(toList());
+  public List<CompletableFuture<CheckAndMutateResult>>
+    checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream().map(this::wrap).collect(toList());
   }
 
   @Override
@@ -272,14 +270,14 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, byte[] row) {
+    ServiceCaller<S, R> callable, byte[] row) {
     return wrap(rawTable.coprocessorService(stubMaker, callable, row));
   }
 
   @Override
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
-      Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
-      CoprocessorCallback<R> callback) {
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    CoprocessorCallback<R> callback) {
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
       @Override

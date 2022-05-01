@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -25,8 +24,7 @@ import org.slf4j.LoggerFactory;
 /**
  * The purpose of introduction of {@link MovingAverage} mainly is to measure execution time of a
  * specific method, which can help us to know its performance fluctuation in response to different
- * machine states or situations, better case, then to act accordingly.
- * <br>
+ * machine states or situations, better case, then to act accordingly. <br>
  * In different situation, different {@link MovingAverage} algorithm can be used based on needs.
  */
 @InterfaceAudience.Private

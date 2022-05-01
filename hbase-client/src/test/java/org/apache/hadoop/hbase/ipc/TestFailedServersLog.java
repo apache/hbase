@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +48,7 @@ public class TestFailedServersLog {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFailedServersLog.class);
+    HBaseClassTestRule.forClass(TestFailedServersLog.class);
 
   static final int TEST_PORT = 9999;
   private InetSocketAddress addr;
@@ -82,8 +82,7 @@ public class TestFailedServersLog {
     LoggingEvent loggingEvent = (LoggingEvent) captorLoggingEvent.getValue();
     assertThat(loggingEvent.getLevel(), is(Level.DEBUG));
     assertEquals("Added failed server with address " + addr.toString() + " to list caused by "
-        + nullException.toString(),
-      loggingEvent.getRenderedMessage());
+      + nullException.toString(), loggingEvent.getRenderedMessage());
   }
 
 }

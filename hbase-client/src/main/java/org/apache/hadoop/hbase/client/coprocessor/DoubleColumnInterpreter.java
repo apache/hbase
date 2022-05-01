@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,42 +18,38 @@
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * a concrete column interpreter implementation. The cell value is a Double value
- * and its promoted data type is also a Double value. For computing aggregation
- * function, this class is used to find the datatype of the cell value. Client
- * is supposed to instantiate it and passed along as a parameter. See
- * TestDoubleColumnInterpreter methods for its sample usage.
- * Its methods handle null arguments gracefully. 
+ * a concrete column interpreter implementation. The cell value is a Double value and its promoted
+ * data type is also a Double value. For computing aggregation function, this class is used to find
+ * the datatype of the cell value. Client is supposed to instantiate it and passed along as a
+ * parameter. See TestDoubleColumnInterpreter methods for its sample usage. Its methods handle null
+ * arguments gracefully.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double, 
-      EmptyMsg, DoubleMsg, DoubleMsg>{
- 
+public class DoubleColumnInterpreter
+  extends ColumnInterpreter<Double, Double, EmptyMsg, DoubleMsg, DoubleMsg> {
+
   @Override
-  public Double getValue(byte[] colFamily, byte[] colQualifier, Cell c)
-      throws IOException {
-    if (c == null || c.getValueLength() != Bytes.SIZEOF_DOUBLE)
-      return null;
+  public Double getValue(byte[] colFamily, byte[] colQualifier, Cell c) throws IOException {
+    if (c == null || c.getValueLength() != Bytes.SIZEOF_DOUBLE) return null;
     return PrivateCellUtil.getValueAsDouble(c);
   }
 
   @Override
   public Double add(Double d1, Double d2) {
     if (d1 == null || d2 == null) {
-      return (d1 == null) ? d2 : d1; 
+      return (d1 == null) ? d2 : d1;
     }
     return d1 + d2;
   }
@@ -63,8 +58,7 @@ public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double,
   public int compare(final Double d1, final Double d2) {
     if (d1 == null ^ d2 == null) {
       return d1 == null ? -1 : 1; // either of one is null.
-    } else if (d1 == null)
-      return 0; // both are null
+    } else if (d1 == null) return 0; // both are null
     return d1.compareTo(d2); // natural ordering.
   }
 
@@ -90,8 +84,7 @@ public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double,
 
   @Override
   public double divideForAvg(Double d1, Long l2) {
-    return (l2 == null || d1 == null) ? Double.NaN : (d1.doubleValue() / l2
-        .doubleValue());
+    return (l2 == null || d1 == null) ? Double.NaN : (d1.doubleValue() / l2.doubleValue());
   }
 
   @Override
@@ -111,7 +104,7 @@ public class DoubleColumnInterpreter extends ColumnInterpreter<Double, Double,
 
   @Override
   public void initialize(EmptyMsg msg) {
-    //nothing 
+    // nothing
   }
 
   @Override

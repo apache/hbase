@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestMasterFifoRpcScheduler {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFifoRpcScheduler.class);
+    HBaseClassTestRule.forClass(TestMasterFifoRpcScheduler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFifoRpcScheduler.class);
 
@@ -127,12 +127,12 @@ public class TestMasterFifoRpcScheduler {
   }
 
   private CallRunner createMockTask(AtomicInteger callExecutionCount,
-      boolean isRegionServerReportTask) {
+    boolean isRegionServerReportTask) {
     CallRunner task = mock(CallRunner.class);
     ServerCall call = mock(ServerCall.class);
     when(task.getRpcCall()).thenReturn(call);
     when(call.getHeader()).thenReturn(RPCProtos.RequestHeader.newBuilder()
-        .setMethodName(isRegionServerReportTask ? REGION_SERVER_REPORT : OTHER).build());
+      .setMethodName(isRegionServerReportTask ? REGION_SERVER_REPORT : OTHER).build());
 
     doAnswer(new Answer<Void>() {
       @Override
@@ -149,7 +149,7 @@ public class TestMasterFifoRpcScheduler {
   private static class MockMasterFifoRpcScheduler extends MasterFifoRpcScheduler {
 
     public MockMasterFifoRpcScheduler(Configuration conf, int callHandlerCount,
-        int rsReportHandlerCount) {
+      int rsReportHandlerCount) {
       super(conf, callHandlerCount, rsReportHandlerCount);
     }
 

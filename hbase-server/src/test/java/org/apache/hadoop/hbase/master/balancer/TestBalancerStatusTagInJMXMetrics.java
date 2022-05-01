@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -44,9 +43,10 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBalancerStatusTagInJMXMetrics.class);
+    HBaseClassTestRule.forClass(TestBalancerStatusTagInJMXMetrics.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestBalancerStatusTagInJMXMetrics.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestBalancerStatusTagInJMXMetrics.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static int connectorPort = 61120;
   private static HMaster master;
@@ -107,10 +107,10 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
    */
   public String getStatus() throws Exception {
     MetricsSource source =
-        DefaultMetricsSystem.instance().getSource(MetricsBalancerSource.METRICS_JMX_CONTEXT);
+      DefaultMetricsSystem.instance().getSource(MetricsBalancerSource.METRICS_JMX_CONTEXT);
     if (source instanceof MetricsBalancerSourceImpl) {
       MetricsTag status = ((MetricsBalancerSourceImpl) source).getMetricsRegistry()
-          .getTag(MetricsBalancerSource.BALANCER_STATUS);
+        .getTag(MetricsBalancerSource.BALANCER_STATUS);
       return status.value();
     } else {
       LOG.warn("Balancer JMX Metrics not registered");

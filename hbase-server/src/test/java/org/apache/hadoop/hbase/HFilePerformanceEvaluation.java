@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,28 +19,27 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.commons.math3.random.RandomData;
 import org.apache.commons.math3.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.crypto.CryptoCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class runs performance benchmarks for {@link HFile}.
@@ -52,19 +50,19 @@ public class HFilePerformanceEvaluation {
   private static final int ROW_COUNT = 1000000;
   private static final int RFILE_BLOCKSIZE = 8 * 1024;
   private static StringBuilder testSummary = new StringBuilder();
-  
+
   // Disable verbose INFO logging from org.apache.hadoop.io.compress.CodecPool
   static {
-    System.setProperty("org.apache.commons.logging.Log", 
+    System.setProperty("org.apache.commons.logging.Log",
       "org.apache.commons.logging.impl.SimpleLog");
-    System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.hadoop.io.compress.CodecPool",
-      "WARN");
+    System.setProperty(
+      "org.apache.commons.logging.simplelog.log.org.apache.hadoop.io.compress.CodecPool", "WARN");
   }
-  
+
   private static final Logger LOG =
     LoggerFactory.getLogger(HFilePerformanceEvaluation.class.getName());
 
-  static byte [] format(final int i) {
+  static byte[] format(final int i) {
     String v = Integer.toString(i);
     return Bytes.toBytes("0000000000".substring(v.length()) + v);
   }
@@ -79,38 +77,37 @@ public class HFilePerformanceEvaluation {
   }
 
   /**
-   * HFile is Cell-based. It used to be byte arrays.  Doing this test, pass Cells. All Cells
+   * HFile is Cell-based. It used to be byte arrays. Doing this test, pass Cells. All Cells
    * intentionally have same coordinates in all fields but row.
-   * @param i Integer to format as a row Key.
+   * @param i     Integer to format as a row Key.
    * @param value Value to use
    * @return Created Cell.
    */
-  static Cell createCell(final int i, final byte [] value) {
+  static Cell createCell(final int i, final byte[] value) {
     return createCell(format(i), value);
   }
 
-  static Cell createCell(final byte [] keyRow) {
+  static Cell createCell(final byte[] keyRow) {
     return CellUtil.createCell(keyRow);
   }
 
-  static Cell createCell(final byte [] keyRow, final byte [] value) {
+  static Cell createCell(final byte[] keyRow, final byte[] value) {
     return CellUtil.createCell(keyRow, value);
   }
 
   /**
-   * Add any supported codec or cipher to test the HFile read/write performance. 
-   * Specify "none" to disable codec or cipher or both.  
-   * @throws Exception
+   * Add any supported codec or cipher to test the HFile read/write performance. Specify "none" to
+   * disable codec or cipher or both. n
    */
   private void runBenchmarks() throws Exception {
     final Configuration conf = new Configuration();
     final FileSystem fs = FileSystem.get(conf);
     final Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
-    
+
     // codec=none cipher=none
     runWriteBenchmark(conf, fs, mf, "none", "none");
     runReadBenchmark(conf, fs, mf, "none", "none");
-    
+
     // codec=gz cipher=none
     runWriteBenchmark(conf, fs, mf, "gz", "none");
     runReadBenchmark(conf, fs, mf, "gz", "none");
@@ -166,105 +163,95 @@ public class HFilePerformanceEvaluation {
   }
 
   /**
-   * Write a test HFile with the given codec & cipher
-   * @param conf
-   * @param fs
-   * @param mf
-   * @param codec "none", "lzo", "gz", "snappy"
-   * @param cipher "none", "aes"
-   * @throws Exception
+   * Write a test HFile with the given codec & cipher nnn * @param codec "none", "lzo", "gz",
+   * "snappy"
+   * @param cipher "none", "aes" n
    */
   private void runWriteBenchmark(Configuration conf, FileSystem fs, Path mf, String codec,
-      String cipher) throws Exception {
+    String cipher) throws Exception {
     if (fs.exists(mf)) {
       fs.delete(mf, true);
     }
 
-    runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT, codec, cipher),
-        ROW_COUNT, codec, getCipherName(conf, cipher));
+    runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT, codec, cipher), ROW_COUNT,
+      codec, getCipherName(conf, cipher));
 
   }
 
   /**
-   * Run all the read benchmarks for the test HFile 
-   * @param conf
-   * @param fs
-   * @param mf
-   * @param codec "none", "lzo", "gz", "snappy"
+   * Run all the read benchmarks for the test HFile nnn * @param codec "none", "lzo", "gz", "snappy"
    * @param cipher "none", "aes"
    */
   private void runReadBenchmark(final Configuration conf, final FileSystem fs, final Path mf,
-      final String codec, final String cipher) {
+    final String codec, final String cipher) {
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
       @Override
       public void run() {
         try {
-          runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT),
-            ROW_COUNT, codec, getCipherName(conf, cipher));
+          runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT), ROW_COUNT, codec,
+            getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("UniformRandomSmallScan failed " + e.getMessage());
           e.printStackTrace();
         }
       }
     });
-    
+
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
       @Override
       public void run() {
         try {
-          runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, getCipherName(conf, cipher));
+          runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT), ROW_COUNT, codec,
+            getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("UniformRandomReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
         }
       }
     });
-    
+
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
       @Override
       public void run() {
         try {
-          runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, getCipherName(conf, cipher));
+          runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT), ROW_COUNT, codec,
+            getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("GaussianRandomReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
         }
       }
     });
-    
+
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
       @Override
       public void run() {
         try {
-          runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),
-              ROW_COUNT, codec, getCipherName(conf, cipher));
+          runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT), ROW_COUNT, codec,
+            getCipherName(conf, cipher));
         } catch (Exception e) {
           testSummary.append("SequentialReadBenchmark failed " + e.getMessage());
           e.printStackTrace();
         }
       }
-    });    
+    });
 
   }
-  
-  protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount,
-      String codec, String cipher) throws Exception {
-    LOG.info("Running " + benchmark.getClass().getSimpleName() + " with codec[" + 
-        codec + "] " + "cipher[" + cipher + "] for " + rowCount + " rows.");
-    
+
+  protected void runBenchmark(RowOrientedBenchmark benchmark, int rowCount, String codec,
+    String cipher) throws Exception {
+    LOG.info("Running " + benchmark.getClass().getSimpleName() + " with codec[" + codec + "] "
+      + "cipher[" + cipher + "] for " + rowCount + " rows.");
+
     long elapsedTime = benchmark.run();
-    
-    LOG.info("Running " + benchmark.getClass().getSimpleName() + " with codec[" + 
-        codec + "] " + "cipher[" + cipher + "] for " + rowCount + " rows took " + 
-        elapsedTime + "ms.");
-    
+
+    LOG.info("Running " + benchmark.getClass().getSimpleName() + " with codec[" + codec + "] "
+      + "cipher[" + cipher + "] for " + rowCount + " rows took " + elapsedTime + "ms.");
+
     // Store results to print summary at the end
     testSummary.append("Running ").append(benchmark.getClass().getSimpleName())
-        .append(" with codec[").append(codec).append("] cipher[").append(cipher)
-        .append("] for ").append(rowCount).append(" rows took ").append(elapsedTime)
-        .append("ms.").append("\n");
+      .append(" with codec[").append(codec).append("] cipher[").append(cipher).append("] for ")
+      .append(rowCount).append(" rows took ").append(elapsedTime).append("ms.").append("\n");
   }
 
   static abstract class RowOrientedBenchmark {
@@ -276,8 +263,8 @@ public class HFilePerformanceEvaluation {
     protected String codec = "none";
     protected String cipher = "none";
 
-    public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf,
-        int totalRows, String codec, String cipher) {
+    public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows,
+      String codec, String cipher) {
       this.conf = conf;
       this.fs = fs;
       this.mf = mf;
@@ -286,8 +273,7 @@ public class HFilePerformanceEvaluation {
       this.cipher = cipher;
     }
 
-    public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf,
-        int totalRows) {
+    public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows) {
       this.conf = conf;
       this.fs = fs;
       this.mf = mf;
@@ -310,8 +296,7 @@ public class HFilePerformanceEvaluation {
 
     /**
      * Run benchmark
-     * @return elapsed time.
-     * @throws Exception
+     * @return elapsed time. n
      */
     long run() throws Exception {
       long elapsedTime;
@@ -337,8 +322,8 @@ public class HFilePerformanceEvaluation {
     protected HFile.Writer writer;
     private byte[] bytes = new byte[ROW_LENGTH];
 
-    public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf,
-        int totalRows, String codec, String cipher) {
+    public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows,
+      String codec, String cipher) {
       super(conf, fs, mf, totalRows, codec, cipher);
     }
 
@@ -346,27 +331,23 @@ public class HFilePerformanceEvaluation {
     void setUp() throws Exception {
 
       HFileContextBuilder builder = new HFileContextBuilder()
-          .withCompression(HFileWriterImpl.compressionByName(codec))
-          .withBlockSize(RFILE_BLOCKSIZE);
-      
+        .withCompression(HFileWriterImpl.compressionByName(codec)).withBlockSize(RFILE_BLOCKSIZE);
+
       if (cipher == "aes") {
         byte[] cipherKey = new byte[AES.KEY_LENGTH];
         Bytes.secureRandom(cipherKey);
         builder.withEncryptionContext(Encryption.newContext(conf)
-            .setCipher(Encryption.getCipher(conf, cipher))
-            .setKey(cipherKey));
+          .setCipher(Encryption.getCipher(conf, cipher)).setKey(cipherKey));
       } else if (!"none".equals(cipher)) {
         throw new IOException("Cipher " + cipher + " not supported.");
       }
-      
+
       HFileContext hFileContext = builder.build();
 
-      writer = HFile.getWriterFactoryNoCache(conf)
-          .withPath(fs, mf)
-          .withFileContext(hFileContext)
-          .create();
+      writer =
+        HFile.getWriterFactoryNoCache(conf).withPath(fs, mf).withFileContext(hFileContext).create();
     }
-    
+
     @Override
     void doRow(int i) throws Exception {
       writer.append(createCell(i, generateValue()));
@@ -393,8 +374,7 @@ public class HFilePerformanceEvaluation {
 
     protected HFile.Reader reader;
 
-    public ReadBenchmark(Configuration conf, FileSystem fs, Path mf,
-        int totalRows) {
+    public ReadBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
 
@@ -413,8 +393,7 @@ public class HFilePerformanceEvaluation {
   static class SequentialReadBenchmark extends ReadBenchmark {
     private HFileScanner scanner;
 
-    public SequentialReadBenchmark(Configuration conf, FileSystem fs,
-      Path mf, int totalRows) {
+    public SequentialReadBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
 
@@ -444,15 +423,14 @@ public class HFilePerformanceEvaluation {
 
   static class UniformRandomReadBenchmark extends ReadBenchmark {
 
-    public UniformRandomReadBenchmark(Configuration conf, FileSystem fs,
-        Path mf, int totalRows) {
+    public UniformRandomReadBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
 
     @Override
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
-      byte [] b = getRandomRow();
+      byte[] b = getRandomRow();
       if (scanner.seekTo(createCell(b)) < 0) {
         LOG.info("Not able to seekTo " + new String(b));
         return;
@@ -463,22 +441,21 @@ public class HFilePerformanceEvaluation {
       PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, c.getValueLength());
     }
 
-    private byte [] getRandomRow() {
+    private byte[] getRandomRow() {
       return format(ThreadLocalRandom.current().nextInt(totalRows));
     }
   }
 
   static class UniformRandomSmallScan extends ReadBenchmark {
 
-    public UniformRandomSmallScan(Configuration conf, FileSystem fs,
-        Path mf, int totalRows) {
-      super(conf, fs, mf, totalRows/10);
+    public UniformRandomSmallScan(Configuration conf, FileSystem fs, Path mf, int totalRows) {
+      super(conf, fs, mf, totalRows / 10);
     }
 
     @Override
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, false);
-      byte [] b = getRandomRow();
+      byte[] b = getRandomRow();
       // System.out.println("Random row: " + new String(b));
       Cell c = createCell(b);
       if (scanner.seekTo(c) != 0) {
@@ -488,7 +465,7 @@ public class HFilePerformanceEvaluation {
       // TODO: HFileScanner doesn't do Cells yet. Temporary fix.
       c = scanner.getCell();
       // System.out.println("Found row: " +
-      //  new String(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
+      // new String(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
       PerformanceEvaluationCommons.assertKey(b, c);
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
@@ -500,7 +477,7 @@ public class HFilePerformanceEvaluation {
       }
     }
 
-    private byte [] getRandomRow() {
+    private byte[] getRandomRow() {
       return format(ThreadLocalRandom.current().nextInt(totalRows));
     }
   }
@@ -509,8 +486,7 @@ public class HFilePerformanceEvaluation {
 
     private RandomData randomData = new RandomDataImpl();
 
-    public GaussianRandomReadBenchmark(Configuration conf, FileSystem fs,
-        Path mf, int totalRows) {
+    public GaussianRandomReadBenchmark(Configuration conf, FileSystem fs, Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
     }
 
@@ -529,18 +505,15 @@ public class HFilePerformanceEvaluation {
       }
     }
 
-    private byte [] getGaussianRandomRowBytes() {
-      int r = (int) randomData.nextGaussian((double)totalRows / 2.0,
-          (double)totalRows / 10.0);
+    private byte[] getGaussianRandomRowBytes() {
+      int r = (int) randomData.nextGaussian((double) totalRows / 2.0, (double) totalRows / 10.0);
       // make sure r falls into [0,totalRows)
-      return format(Math.min(totalRows, Math.max(r,0)));
+      return format(Math.min(totalRows, Math.max(r, 0)));
     }
   }
 
   /**
-   * @param args
-   * @throws Exception
-   * @throws IOException
+   * nnn
    */
   public static void main(String[] args) throws Exception {
     new HFilePerformanceEvaluation().runBenchmarks();
@@ -549,8 +522,10 @@ public class HFilePerformanceEvaluation {
   private String getCipherName(Configuration conf, String cipherName) {
     if (cipherName.equals("aes")) {
       String provider = conf.get(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY);
-      if (provider == null || provider.equals("")
-              || provider.equals(DefaultCipherProvider.class.getName())) {
+      if (
+        provider == null || provider.equals("")
+          || provider.equals(DefaultCipherProvider.class.getName())
+      ) {
         return "aes-default";
       } else if (provider.equals(CryptoCipherProvider.class.getName())) {
         return "aes-commons";

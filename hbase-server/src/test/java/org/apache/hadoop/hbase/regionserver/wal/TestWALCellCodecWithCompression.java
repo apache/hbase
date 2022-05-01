@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALCellCodecWithCompression {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
+    HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
 
   @Test
   public void testEncodeDecodeKVsWithTags() throws Exception {
@@ -68,8 +68,8 @@ public class TestWALCellCodecWithCompression {
   private void doTest(boolean compressTags, boolean offheapKV) throws Exception {
     Configuration conf = new Configuration(false);
     conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
-    WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false,
-        compressTags));
+    WALCellCodec codec =
+      new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false, compressTags));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
     if (offheapKV) {

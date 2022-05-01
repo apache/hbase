@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SwitchRpcThrottleRemoteStateData;
 
 /**
@@ -48,7 +49,7 @@ public class SwitchRpcThrottleRemoteCallable implements RSProcedureCallable {
     this.rs = rs;
     try {
       SwitchRpcThrottleRemoteStateData param =
-          SwitchRpcThrottleRemoteStateData.parseFrom(parameter);
+        SwitchRpcThrottleRemoteStateData.parseFrom(parameter);
       rpcThrottleEnabled = param.getRpcThrottleEnabled();
     } catch (InvalidProtocolBufferException e) {
       initError = e;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.trace;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,14 +36,13 @@ public class HBaseHTraceConfiguration extends HTraceConfiguration {
     String newKey = KEY_PREFIX + key;
     String oldValue = conf.get(oldKey);
     if (oldValue != null) {
-      LOG.warn("Warning: using deprecated configuration key " + oldKey +
-          ".  Please use " + newKey + " instead.");
+      LOG.warn("Warning: using deprecated configuration key " + oldKey + ".  Please use " + newKey
+        + " instead.");
       String newValue = conf.get(newKey);
       if (newValue == null) {
         conf.set(newKey, oldValue);
       } else {
-        LOG.warn("Conflicting values for " + newKey + " and " + oldKey +
-            ".  Using " + newValue);
+        LOG.warn("Conflicting values for " + newKey + " and " + oldKey + ".  Using " + newValue);
       }
     }
   }
@@ -69,7 +67,7 @@ public class HBaseHTraceConfiguration extends HTraceConfiguration {
 
   @Override
   public String get(String key, String defaultValue) {
-    return conf.get(KEY_PREFIX + key,defaultValue);
+    return conf.get(KEY_PREFIX + key, defaultValue);
 
   }
 

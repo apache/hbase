@@ -57,35 +57,33 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Base for TestFromClientSide* classes.
- * Has common defines and utility used by all.
+ * Base for TestFromClientSide* classes. Has common defines and utility used by all.
  */
-@Category({LargeTests.class, ClientTests.class})
-@SuppressWarnings ("deprecation")
+@Category({ LargeTests.class, ClientTests.class })
+@SuppressWarnings("deprecation")
 @RunWith(Parameterized.class)
 class FromClientSideBase {
   private static final Logger LOG = LoggerFactory.getLogger(FromClientSideBase.class);
   static HBaseTestingUtility TEST_UTIL;
-  static byte [] ROW = Bytes.toBytes("testRow");
-  static byte [] FAMILY = Bytes.toBytes("testFamily");
+  static byte[] ROW = Bytes.toBytes("testRow");
+  static byte[] FAMILY = Bytes.toBytes("testFamily");
   static final byte[] INVALID_FAMILY = Bytes.toBytes("invalidTestFamily");
-  static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-  static byte [] VALUE = Bytes.toBytes("testValue");
+  static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+  static byte[] VALUE = Bytes.toBytes("testValue");
   static int SLAVES = 1;
 
   // To keep the child classes happy.
-  FromClientSideBase() {}
+  FromClientSideBase() {
+  }
 
   /**
    * JUnit does not provide an easy way to run a hook after each parameterized run. Without that
    * there is no easy way to restart the test cluster after each parameterized run. Annotation
    * BeforeParam does not work either because it runs before parameterization and hence does not
-   * have access to the test parameters (which is weird).
-   *
-   * This *hack* checks if the current instance of test cluster configuration has the passed
-   * parameterized configs. In such a case, we can just reuse the cluster for test and do not need
-   * to initialize from scratch. While this is a hack, it saves a ton of time for the full
-   * test and de-flakes it.
+   * have access to the test parameters (which is weird). This *hack* checks if the current instance
+   * of test cluster configuration has the passed parameterized configs. In such a case, we can just
+   * reuse the cluster for test and do not need to initialize from scratch. While this is a hack, it
+   * saves a ton of time for the full test and de-flakes it.
    */
   protected static boolean isSameParameterizedCluster(Class<?> registryImpl, int numHedgedReqs) {
     if (TEST_UTIL == null) {
@@ -123,7 +121,7 @@ class FromClientSideBase {
       Arrays.stream(cps).map(Class::getName).toArray(String[]::new));
     conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true); // enable for below tests
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY, registryImpl,
-        ConnectionRegistry.class);
+      ConnectionRegistry.class);
     Preconditions.checkArgument(numHedgedReqs > 0);
     conf.setInt(MasterRegistry.MASTER_REGISTRY_HEDGED_REQS_FANOUT_KEY, numHedgedReqs);
     StartMiniClusterOption.Builder builder = StartMiniClusterOption.builder();
@@ -138,8 +136,7 @@ class FromClientSideBase {
     }
   }
 
-  protected void deleteColumns(Table ht, String value, String keyPrefix)
-    throws IOException {
+  protected void deleteColumns(Table ht, String value, String keyPrefix) throws IOException {
     ResultScanner scanner = buildScanner(keyPrefix, value, ht);
     Iterator<Result> it = scanner.iterator();
     int count = 0;
@@ -153,8 +150,7 @@ class FromClientSideBase {
     assertEquals("Did not perform correct number of deletes", 3, count);
   }
 
-  protected int getNumberOfRows(String keyPrefix, String value, Table ht)
-    throws Exception {
+  protected int getNumberOfRows(String keyPrefix, String value, Table ht) throws Exception {
     ResultScanner resultScanner = buildScanner(keyPrefix, value, ht);
     Iterator<Result> scanner = resultScanner.iterator();
     int numberOfResults = 0;
@@ -162,8 +158,7 @@ class FromClientSideBase {
       Result result = scanner.next();
       System.out.println("Got back key: " + Bytes.toString(result.getRow()));
       for (Cell kv : result.rawCells()) {
-        System.out.println("kv=" + kv.toString() + ", "
-          + Bytes.toString(CellUtil.cloneValue(kv)));
+        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.cloneValue(kv)));
       }
       numberOfResults++;
     }
@@ -175,9 +170,8 @@ class FromClientSideBase {
     // OurFilterList allFilters = new OurFilterList();
     FilterList allFilters = new FilterList(/* FilterList.Operator.MUST_PASS_ALL */);
     allFilters.addFilter(new PrefixFilter(Bytes.toBytes(keyPrefix)));
-    SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes
-      .toBytes("trans-tags"), Bytes.toBytes("qual2"), CompareOperator.EQUAL, Bytes
-      .toBytes(value));
+    SingleColumnValueFilter filter = new SingleColumnValueFilter(Bytes.toBytes("trans-tags"),
+      Bytes.toBytes("qual2"), CompareOperator.EQUAL, Bytes.toBytes(value));
     filter.setFilterIfMissing(true);
     allFilters.addFilter(filter);
 
@@ -196,23 +190,17 @@ class FromClientSideBase {
     return ht.getScanner(scan);
   }
 
-  protected void putRows(Table ht, int numRows, String value, String key)
-    throws IOException {
+  protected void putRows(Table ht, int numRows, String value, String key) throws IOException {
     for (int i = 0; i < numRows; i++) {
       String row = key + "_" + HBaseCommonTestingUtility.getRandomUUID().toString();
-      System.out.println(String.format("Saving row: %s, with value %s", row,
-        value));
+      System.out.println(String.format("Saving row: %s, with value %s", row, value));
       Put put = new Put(Bytes.toBytes(row));
       put.setDurability(Durability.SKIP_WAL);
-      put.addColumn(Bytes.toBytes("trans-blob"), null, Bytes
-        .toBytes("value for blob"));
+      put.addColumn(Bytes.toBytes("trans-blob"), null, Bytes.toBytes("value for blob"));
       put.addColumn(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
-      put.addColumn(Bytes.toBytes("trans-date"), null, Bytes
-        .toBytes("20090921010101999"));
-      put.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes
-        .toBytes(value));
-      put.addColumn(Bytes.toBytes("trans-group"), null, Bytes
-        .toBytes("adhocTransactionGroupId"));
+      put.addColumn(Bytes.toBytes("trans-date"), null, Bytes.toBytes("20090921010101999"));
+      put.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes.toBytes(value));
+      put.addColumn(Bytes.toBytes("trans-group"), null, Bytes.toBytes("adhocTransactionGroupId"));
       ht.put(put);
     }
   }
@@ -222,26 +210,22 @@ class FromClientSideBase {
   }
 
   /*
-   * @param key
-   * @return Scan with RowFilter that does LESS than passed key.
+   * n * @return Scan with RowFilter that does LESS than passed key.
    */
-  protected Scan createScanWithRowFilter(final byte [] key) {
+  protected Scan createScanWithRowFilter(final byte[] key) {
     return createScanWithRowFilter(key, null, CompareOperator.LESS);
   }
 
   /*
-   * @param key
-   * @param op
-   * @param startRow
-   * @return Scan with RowFilter that does CompareOp op on passed key.
+   * nnn * @return Scan with RowFilter that does CompareOp op on passed key.
    */
-  protected Scan createScanWithRowFilter(final byte [] key,
-    final byte [] startRow, CompareOperator op) {
+  protected Scan createScanWithRowFilter(final byte[] key, final byte[] startRow,
+    CompareOperator op) {
     // Make sure key is of some substance... non-null and > than first key.
-    assertTrue(key != null && key.length > 0 &&
-      Bytes.BYTES_COMPARATOR.compare(key, new byte [] {'a', 'a', 'a'}) >= 0);
+    assertTrue(key != null && key.length > 0
+      && Bytes.BYTES_COMPARATOR.compare(key, new byte[] { 'a', 'a', 'a' }) >= 0);
     LOG.info("Key=" + Bytes.toString(key));
-    Scan s = startRow == null? new Scan(): new Scan(startRow);
+    Scan s = startRow == null ? new Scan() : new Scan(startRow);
     Filter f = new RowFilter(op, new BinaryComparator(key));
     f = new WhileMatchFilter(f);
     s.setFilter(f);
@@ -265,10 +249,9 @@ class FromClientSideBase {
   }
 
   /*
-   * Wait on table split.  May return because we waited long enough on the split
-   * and it didn't happen.  Caller should check.
-   * @param t
-   * @return Map of table regions; caller needs to check table actually split.
+   * Wait on table split. May return because we waited long enough on the split and it didn't
+   * happen. Caller should check. n * @return Map of table regions; caller needs to check table
+   * actually split.
    */
   private List<HRegionLocation> waitOnSplit(final Table t) throws IOException {
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {
@@ -308,48 +291,48 @@ class FromClientSideBase {
     return result;
   }
 
-  protected byte [][] makeNAscii(byte [] base, int n) {
-    if(n > 256) {
+  protected byte[][] makeNAscii(byte[] base, int n) {
+    if (n > 256) {
       return makeNBig(base, n);
     }
-    byte [][] ret = new byte[n][];
-    for(int i=0;i<n;i++) {
-      byte [] tail = Bytes.toBytes(Integer.toString(i));
+    byte[][] ret = new byte[n][];
+    for (int i = 0; i < n; i++) {
+      byte[] tail = Bytes.toBytes(Integer.toString(i));
       ret[i] = Bytes.add(base, tail);
     }
     return ret;
   }
 
-  protected byte [][] makeN(byte [] base, int n) {
+  protected byte[][] makeN(byte[] base, int n) {
     if (n > 256) {
       return makeNBig(base, n);
     }
-    byte [][] ret = new byte[n][];
-    for(int i=0;i<n;i++) {
-      ret[i] = Bytes.add(base, new byte[]{(byte)i});
+    byte[][] ret = new byte[n][];
+    for (int i = 0; i < n; i++) {
+      ret[i] = Bytes.add(base, new byte[] { (byte) i });
     }
     return ret;
   }
 
-  protected byte [][] makeNBig(byte [] base, int n) {
-    byte [][] ret = new byte[n][];
-    for(int i = 0; i < n; i++) {
+  protected byte[][] makeNBig(byte[] base, int n) {
+    byte[][] ret = new byte[n][];
+    for (int i = 0; i < n; i++) {
       int byteA = (i % 256);
       int byteB = (i >> 8);
-      ret[i] = Bytes.add(base, new byte[]{(byte)byteB,(byte)byteA});
+      ret[i] = Bytes.add(base, new byte[] { (byte) byteB, (byte) byteA });
     }
     return ret;
   }
 
-  protected long [] makeStamps(int n) {
-    long [] stamps = new long[n];
+  protected long[] makeStamps(int n) {
+    long[] stamps = new long[n];
     for (int i = 0; i < n; i++) {
-      stamps[i] = i+1L;
+      stamps[i] = i + 1L;
     }
     return stamps;
   }
 
-  protected static boolean equals(byte [] left, byte [] right) {
+  protected static boolean equals(byte[] left, byte[] right) {
     if (left == null && right == null) {
       return true;
     }
@@ -362,257 +345,240 @@ class FromClientSideBase {
     return Bytes.equals(left, right);
   }
 
-  protected void assertKey(Cell key, byte [] row, byte [] family, byte [] qualifier,
-      byte [] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(CellUtil.cloneRow(key)) +"]",
-      equals(row, CellUtil.cloneRow(key)));
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
+  protected void assertKey(Cell key, byte[] row, byte[] family, byte[] qualifier, byte[] value) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(CellUtil.cloneRow(key)) + "]", equals(row, CellUtil.cloneRow(key)));
+    assertTrue(
+      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
       equals(family, CellUtil.cloneFamily(key)));
-    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
+    assertTrue(
+      "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
       equals(qualifier, CellUtil.cloneQualifier(key)));
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(CellUtil.cloneValue(key)) + "]",
-      equals(value, CellUtil.cloneValue(key)));
+    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+      + Bytes.toString(CellUtil.cloneValue(key)) + "]", equals(value, CellUtil.cloneValue(key)));
   }
 
-  protected static void assertIncrementKey(Cell key, byte [] row, byte [] family,
-    byte [] qualifier, long value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(CellUtil.cloneRow(key)) +"]",
-      equals(row, CellUtil.cloneRow(key)));
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
+  protected static void assertIncrementKey(Cell key, byte[] row, byte[] family, byte[] qualifier,
+    long value) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(CellUtil.cloneRow(key)) + "]", equals(row, CellUtil.cloneRow(key)));
+    assertTrue(
+      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
       equals(family, CellUtil.cloneFamily(key)));
-    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
+    assertTrue(
+      "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
       equals(qualifier, CellUtil.cloneQualifier(key)));
-    assertEquals(
-      "Expected value [" + value + "] " + "Got value [" + Bytes.toLong(CellUtil.cloneValue(key))
-        + "]", Bytes.toLong(CellUtil.cloneValue(key)), value);
+    assertEquals("Expected value [" + value + "] " + "Got value ["
+      + Bytes.toLong(CellUtil.cloneValue(key)) + "]", Bytes.toLong(CellUtil.cloneValue(key)),
+      value);
   }
 
   protected void assertNumKeys(Result result, int n) throws Exception {
     assertEquals("Expected " + n + " keys but got " + result.size(), result.size(), n);
   }
 
-  protected void assertNResult(Result result, byte [] row,
-    byte [][] families, byte [][] qualifiers, byte [][] values, int [][] idxs) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(result.getRow()) +"]",
-      equals(row, result.getRow()));
+  protected void assertNResult(Result result, byte[] row, byte[][] families, byte[][] qualifiers,
+    byte[][] values, int[][] idxs) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
     assertEquals("Expected " + idxs.length + " keys but result contains " + result.size(),
       result.size(), idxs.length);
 
-    Cell [] keys = result.rawCells();
+    Cell[] keys = result.rawCells();
 
-    for(int i=0;i<keys.length;i++) {
-      byte [] family = families[idxs[i][0]];
-      byte [] qualifier = qualifiers[idxs[i][1]];
-      byte [] value = values[idxs[i][2]];
+    for (int i = 0; i < keys.length; i++) {
+      byte[] family = families[idxs[i][0]];
+      byte[] qualifier = qualifiers[idxs[i][1]];
+      byte[] value = values[idxs[i][2]];
       Cell key = keys[i];
 
       byte[] famb = CellUtil.cloneFamily(key);
       byte[] qualb = CellUtil.cloneQualifier(key);
       byte[] valb = CellUtil.cloneValue(key);
-      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
-          + "] " + "Got family [" + Bytes.toString(famb) + "]",
-        equals(family, famb));
-      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
-          + "] " + "Got qualifier [" + Bytes.toString(qualb) + "]",
-        equals(qualifier, qualb));
-      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] "
-          + "Got value [" + Bytes.toString(valb) + "]",
-        equals(value, valb));
+      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(famb) + "]", equals(family, famb));
+      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) + "] "
+        + "Got qualifier [" + Bytes.toString(qualb) + "]", equals(qualifier, qualb));
+      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+        + Bytes.toString(valb) + "]", equals(value, valb));
     }
   }
 
-  protected void assertNResult(Result result, byte [] row,
-    byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
-    int start, int end) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(result.getRow()) +"]",
-      equals(row, result.getRow()));
+  protected void assertNResult(Result result, byte[] row, byte[] family, byte[] qualifier,
+    long[] stamps, byte[][] values, int start, int end) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
     int expectedResults = end - start + 1;
     assertEquals(expectedResults, result.size());
 
     Cell[] keys = result.rawCells();
 
-    for (int i=0; i<keys.length; i++) {
-      byte [] value = values[end-i];
-      long ts = stamps[end-i];
+    for (int i = 0; i < keys.length; i++) {
+      byte[] value = values[end - i];
+      long ts = stamps[end - i];
       Cell key = keys[i];
 
-      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
-          + "] " + "Got family [" + Bytes.toString(CellUtil.cloneFamily(key)) + "]",
-        CellUtil.matchingFamily(key, family));
-      assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
-          + "] " + "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(key))+ "]",
+      assertTrue("(" + i + ") Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(key)) + "]", CellUtil.matchingFamily(key, family));
+      assertTrue(
+        "(" + i + ") Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+          + Bytes.toString(CellUtil.cloneQualifier(key)) + "]",
         CellUtil.matchingQualifier(key, qualifier));
       assertEquals("Expected ts [" + ts + "] " + "Got ts [" + key.getTimestamp() + "]", ts,
         key.getTimestamp());
-      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] "
-          + "Got value [" + Bytes.toString(CellUtil.cloneValue(key)) + "]",
-        CellUtil.matchingValue(key,  value));
+      assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+        + Bytes.toString(CellUtil.cloneValue(key)) + "]", CellUtil.matchingValue(key, value));
     }
   }
 
   /**
-   * Validate that result contains two specified keys, exactly.
-   * It is assumed key A sorts before key B.
+   * Validate that result contains two specified keys, exactly. It is assumed key A sorts before key
+   * B.
    */
-  protected void assertDoubleResult(Result result, byte [] row,
-    byte [] familyA, byte [] qualifierA, byte [] valueA,
-    byte [] familyB, byte [] qualifierB, byte [] valueB) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(result.getRow()) +"]",
-      equals(row, result.getRow()));
-    assertEquals("Expected two keys but result contains " + result.size(),
-      2, result.size());
-    Cell [] kv = result.rawCells();
+  protected void assertDoubleResult(Result result, byte[] row, byte[] familyA, byte[] qualifierA,
+    byte[] valueA, byte[] familyB, byte[] qualifierB, byte[] valueB) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
+    assertEquals("Expected two keys but result contains " + result.size(), 2, result.size());
+    Cell[] kv = result.rawCells();
     Cell kvA = kv[0];
-    assertTrue("(A) Expected family [" + Bytes.toString(familyA) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(kvA)) + "]",
+    assertTrue(
+      "(A) Expected family [" + Bytes.toString(familyA) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(kvA)) + "]",
       equals(familyA, CellUtil.cloneFamily(kvA)));
-    assertTrue("(A) Expected qualifier [" + Bytes.toString(qualifierA) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(kvA)) + "]",
+    assertTrue(
+      "(A) Expected qualifier [" + Bytes.toString(qualifierA) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(kvA)) + "]",
       equals(qualifierA, CellUtil.cloneQualifier(kvA)));
-    assertTrue("(A) Expected value [" + Bytes.toString(valueA) + "] " +
-        "Got value [" + Bytes.toString(CellUtil.cloneValue(kvA)) + "]",
-      equals(valueA, CellUtil.cloneValue(kvA)));
+    assertTrue("(A) Expected value [" + Bytes.toString(valueA) + "] " + "Got value ["
+      + Bytes.toString(CellUtil.cloneValue(kvA)) + "]", equals(valueA, CellUtil.cloneValue(kvA)));
     Cell kvB = kv[1];
-    assertTrue("(B) Expected family [" + Bytes.toString(familyB) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(kvB)) + "]",
+    assertTrue(
+      "(B) Expected family [" + Bytes.toString(familyB) + "] " + "Got family ["
+        + Bytes.toString(CellUtil.cloneFamily(kvB)) + "]",
       equals(familyB, CellUtil.cloneFamily(kvB)));
-    assertTrue("(B) Expected qualifier [" + Bytes.toString(qualifierB) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(kvB)) + "]",
+    assertTrue(
+      "(B) Expected qualifier [" + Bytes.toString(qualifierB) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(kvB)) + "]",
       equals(qualifierB, CellUtil.cloneQualifier(kvB)));
-    assertTrue("(B) Expected value [" + Bytes.toString(valueB) + "] " +
-        "Got value [" + Bytes.toString(CellUtil.cloneValue(kvB)) + "]",
-      equals(valueB, CellUtil.cloneValue(kvB)));
+    assertTrue("(B) Expected value [" + Bytes.toString(valueB) + "] " + "Got value ["
+      + Bytes.toString(CellUtil.cloneValue(kvB)) + "]", equals(valueB, CellUtil.cloneValue(kvB)));
   }
 
-  protected void assertSingleResult(Result result, byte [] row, byte [] family,
-    byte [] qualifier, byte [] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(result.getRow()) +"]",
-      equals(row, result.getRow()));
+  protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
+    byte[] value) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
     assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
     Cell kv = result.rawCells()[0];
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(kv)) + "]",
-      equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
+    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
+    assertTrue(
+      "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
       equals(qualifier, CellUtil.cloneQualifier(kv)));
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(CellUtil.cloneValue(kv)) + "]",
-      equals(value, CellUtil.cloneValue(kv)));
+    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+      + Bytes.toString(CellUtil.cloneValue(kv)) + "]", equals(value, CellUtil.cloneValue(kv)));
   }
 
   protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
     long value) {
-    assertTrue(
-      "Expected row [" + Bytes.toString(row) + "] " + "Got row [" + Bytes.toString(result.getRow())
-        + "]", equals(row, result.getRow()));
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
     assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
     Cell kv = result.rawCells()[0];
+    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
     assertTrue(
-      "Expected family [" + Bytes.toString(family) + "] " + "Got family ["
-        + Bytes.toString(CellUtil.cloneFamily(kv)) + "]",
-      equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+      "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
         + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
       equals(qualifier, CellUtil.cloneQualifier(kv)));
-    assertEquals(
-      "Expected value [" + value + "] " + "Got value [" + Bytes.toLong(CellUtil.cloneValue(kv))
-        + "]", value, Bytes.toLong(CellUtil.cloneValue(kv)));
+    assertEquals("Expected value [" + value + "] " + "Got value ["
+      + Bytes.toLong(CellUtil.cloneValue(kv)) + "]", value, Bytes.toLong(CellUtil.cloneValue(kv)));
   }
 
-  protected void assertSingleResult(Result result, byte [] row, byte [] family,
-    byte [] qualifier, long ts, byte [] value) {
-    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(result.getRow()) +"]",
-      equals(row, result.getRow()));
+  protected void assertSingleResult(Result result, byte[] row, byte[] family, byte[] qualifier,
+    long ts, byte[] value) {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " + "Got row ["
+      + Bytes.toString(result.getRow()) + "]", equals(row, result.getRow()));
     assertEquals("Expected a single key but result contains " + result.size(), 1, result.size());
     Cell kv = result.rawCells()[0];
-    assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(CellUtil.cloneFamily(kv)) + "]",
-      equals(family, CellUtil.cloneFamily(kv)));
-    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
+    assertTrue("Expected family [" + Bytes.toString(family) + "] " + "Got family ["
+      + Bytes.toString(CellUtil.cloneFamily(kv)) + "]", equals(family, CellUtil.cloneFamily(kv)));
+    assertTrue(
+      "Expected qualifier [" + Bytes.toString(qualifier) + "] " + "Got qualifier ["
+        + Bytes.toString(CellUtil.cloneQualifier(kv)) + "]",
       equals(qualifier, CellUtil.cloneQualifier(kv)));
     assertEquals("Expected ts [" + ts + "] " + "Got ts [" + kv.getTimestamp() + "]", ts,
       kv.getTimestamp());
-    assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(CellUtil.cloneValue(kv)) + "]",
-      equals(value, CellUtil.cloneValue(kv)));
+    assertTrue("Expected value [" + Bytes.toString(value) + "] " + "Got value ["
+      + Bytes.toString(CellUtil.cloneValue(kv)) + "]", equals(value, CellUtil.cloneValue(kv)));
   }
 
   protected void assertEmptyResult(Result result) throws Exception {
-    assertTrue("expected an empty result but result contains " +
-      result.size() + " keys", result.isEmpty());
+    assertTrue("expected an empty result but result contains " + result.size() + " keys",
+      result.isEmpty());
   }
 
   protected void assertNullResult(Result result) throws Exception {
     assertNull("expected null result but received a non-null result", result);
   }
 
-  protected void getVersionRangeAndVerifyGreaterThan(Table ht, byte [] row,
-    byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
-    int start, int end) throws IOException {
+  protected void getVersionRangeAndVerifyGreaterThan(Table ht, byte[] row, byte[] family,
+    byte[] qualifier, long[] stamps, byte[][] values, int start, int end) throws IOException {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
     get.readVersions(Integer.MAX_VALUE);
-    get.setTimeRange(stamps[start+1], Long.MAX_VALUE);
+    get.setTimeRange(stamps[start + 1], Long.MAX_VALUE);
     Result result = ht.get(get);
-    assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
+    assertNResult(result, row, family, qualifier, stamps, values, start + 1, end);
   }
 
-  protected void getVersionRangeAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
+  protected void getVersionRangeAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long[] stamps, byte[][] values, int start, int end) throws IOException {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
     get.readVersions(Integer.MAX_VALUE);
-    get.setTimeRange(stamps[start], stamps[end]+1);
-    Result result = ht.get(get);
-    assertNResult(result, row, family, qualifier, stamps, values, start, end);
-  }
-
-  protected void getAllVersionsAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
-    Get get = new Get(row);
-    get.addColumn(family, qualifier);
-    get.readVersions(Integer.MAX_VALUE);
+    get.setTimeRange(stamps[start], stamps[end] + 1);
     Result result = ht.get(get);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
 
-  protected void scanVersionRangeAndVerifyGreaterThan(Table ht, byte [] row,
-    byte [] family, byte [] qualifier, long [] stamps, byte [][] values,
-    int start, int end) throws IOException {
+  protected void getAllVersionsAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long[] stamps, byte[][] values, int start, int end) throws IOException {
+    Get get = new Get(row);
+    get.addColumn(family, qualifier);
+    get.readVersions(Integer.MAX_VALUE);
+    Result result = ht.get(get);
+    assertNResult(result, row, family, qualifier, stamps, values, start, end);
+  }
+
+  protected void scanVersionRangeAndVerifyGreaterThan(Table ht, byte[] row, byte[] family,
+    byte[] qualifier, long[] stamps, byte[][] values, int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setMaxVersions(Integer.MAX_VALUE);
-    scan.setTimeRange(stamps[start+1], Long.MAX_VALUE);
+    scan.setTimeRange(stamps[start + 1], Long.MAX_VALUE);
     Result result = getSingleScanResult(ht, scan);
-    assertNResult(result, row, family, qualifier, stamps, values, start+1, end);
+    assertNResult(result, row, family, qualifier, stamps, values, start + 1, end);
   }
 
-  protected void scanVersionRangeAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
+  protected void scanVersionRangeAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long[] stamps, byte[][] values, int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setMaxVersions(Integer.MAX_VALUE);
-    scan.setTimeRange(stamps[start], stamps[end]+1);
+    scan.setTimeRange(stamps[start], stamps[end] + 1);
     Result result = getSingleScanResult(ht, scan);
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
 
-  protected void scanAllVersionsAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long [] stamps, byte [][] values, int start, int end) throws IOException {
+  protected void scanAllVersionsAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long[] stamps, byte[][] values, int start, int end) throws IOException {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setMaxVersions(Integer.MAX_VALUE);
@@ -620,8 +586,8 @@ class FromClientSideBase {
     assertNResult(result, row, family, qualifier, stamps, values, start, end);
   }
 
-  protected void getVersionAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long stamp, byte [] value) throws Exception {
+  protected void getVersionAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long stamp, byte[] value) throws Exception {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
     get.setTimestamp(stamp);
@@ -630,8 +596,8 @@ class FromClientSideBase {
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
 
-  protected void getVersionAndVerifyMissing(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long stamp) throws Exception {
+  protected void getVersionAndVerifyMissing(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long stamp) throws Exception {
     Get get = new Get(row);
     get.addColumn(family, qualifier);
     get.setTimestamp(stamp);
@@ -640,8 +606,8 @@ class FromClientSideBase {
     assertEmptyResult(result);
   }
 
-  protected void scanVersionAndVerify(Table ht, byte [] row, byte [] family,
-    byte [] qualifier, long stamp, byte [] value) throws Exception {
+  protected void scanVersionAndVerify(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long stamp, byte[] value) throws Exception {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
@@ -650,8 +616,8 @@ class FromClientSideBase {
     assertSingleResult(result, row, family, qualifier, stamp, value);
   }
 
-  protected void scanVersionAndVerifyMissing(Table ht, byte [] row,
-    byte [] family, byte [] qualifier, long stamp) throws Exception {
+  protected void scanVersionAndVerifyMissing(Table ht, byte[] row, byte[] family, byte[] qualifier,
+    long stamp) throws Exception {
     Scan scan = new Scan(row);
     scan.addColumn(family, qualifier);
     scan.setTimestamp(stamp);
@@ -660,8 +626,7 @@ class FromClientSideBase {
     assertNullResult(result);
   }
 
-  protected void getTestNull(Table ht, byte [] row, byte [] family, byte [] value)
-      throws Exception {
+  protected void getTestNull(Table ht, byte[] row, byte[] family, byte[] value) throws Exception {
     Get get = new Get(row);
     get.addColumn(family, null);
     Result result = ht.get(get);
@@ -704,8 +669,7 @@ class FromClientSideBase {
     assertSingleResult(result, row, family, HConstants.EMPTY_BYTE_ARRAY, value);
   }
 
-  protected void scanTestNull(Table ht, byte[] row, byte[] family, byte[] value)
-    throws Exception {
+  protected void scanTestNull(Table ht, byte[] row, byte[] family, byte[] value) throws Exception {
     scanTestNull(ht, row, family, value, false);
   }
 
@@ -737,8 +701,8 @@ class FromClientSideBase {
 
   }
 
-  protected void singleRowGetTest(Table ht, byte [][] ROWS, byte [][] FAMILIES,
-    byte [][] QUALIFIERS, byte [][] VALUES) throws Exception {
+  protected void singleRowGetTest(Table ht, byte[][] ROWS, byte[][] FAMILIES, byte[][] QUALIFIERS,
+    byte[][] VALUES) throws Exception {
     // Single column from memstore
     Get get = new Get(ROWS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[0]);
@@ -762,8 +726,8 @@ class FromClientSideBase {
     get = new Get(ROWS[0]);
     get.addFamily(FAMILIES[4]);
     result = ht.get(get);
-    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
-      FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0], FAMILIES[4],
+      QUALIFIERS[4], VALUES[4]);
 
     // Two columns, one from memstore one from storefile, same family,
     // explicit match
@@ -771,8 +735,8 @@ class FromClientSideBase {
     get.addColumn(FAMILIES[4], QUALIFIERS[0]);
     get.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = ht.get(get);
-    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
-      FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0], FAMILIES[4],
+      QUALIFIERS[4], VALUES[4]);
 
     // Three column, one from memstore two from storefile, different families,
     // wildcard match
@@ -781,7 +745,7 @@ class FromClientSideBase {
     get.addFamily(FAMILIES[7]);
     result = ht.get(get);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] { {4, 0, 0}, {4, 4, 4}, {7, 7, 7} });
+      new int[][] { { 4, 0, 0 }, { 4, 4, 4 }, { 7, 7, 7 } });
 
     // Multiple columns from everywhere storefile, many family, wildcard
     get = new Get(ROWS[0]);
@@ -790,10 +754,8 @@ class FromClientSideBase {
     get.addFamily(FAMILIES[6]);
     get.addFamily(FAMILIES[7]);
     result = ht.get(get);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 } });
 
     // Multiple columns from everywhere storefile, many family, wildcard
     get = new Get(ROWS[0]);
@@ -806,18 +768,14 @@ class FromClientSideBase {
     get.addColumn(FAMILIES[7], QUALIFIERS[7]);
     get.addColumn(FAMILIES[7], QUALIFIERS[8]);
     result = ht.get(get);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 } });
 
     // Everything
     get = new Get(ROWS[0]);
     result = ht.get(get);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}, {9, 0, 0}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 }, { 9, 0, 0 } });
 
     // Get around inserted columns
 
@@ -833,8 +791,8 @@ class FromClientSideBase {
 
   }
 
-  protected void singleRowScanTest(Table ht, byte [][] ROWS, byte [][] FAMILIES,
-    byte [][] QUALIFIERS, byte [][] VALUES) throws Exception {
+  protected void singleRowScanTest(Table ht, byte[][] ROWS, byte[][] FAMILIES, byte[][] QUALIFIERS,
+    byte[][] VALUES) throws Exception {
     // Single column from memstore
     Scan scan = new Scan();
     scan.addColumn(FAMILIES[4], QUALIFIERS[0]);
@@ -858,8 +816,8 @@ class FromClientSideBase {
     scan = new Scan();
     scan.addFamily(FAMILIES[4]);
     result = getSingleScanResult(ht, scan);
-    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
-      FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0], FAMILIES[4],
+      QUALIFIERS[4], VALUES[4]);
 
     // Two columns, one from memstore one from storefile, same family,
     // explicit match
@@ -867,8 +825,8 @@ class FromClientSideBase {
     scan.addColumn(FAMILIES[4], QUALIFIERS[0]);
     scan.addColumn(FAMILIES[4], QUALIFIERS[4]);
     result = getSingleScanResult(ht, scan);
-    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0],
-      FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+    assertDoubleResult(result, ROWS[0], FAMILIES[4], QUALIFIERS[0], VALUES[0], FAMILIES[4],
+      QUALIFIERS[4], VALUES[4]);
 
     // Three column, one from memstore two from storefile, different families,
     // wildcard match
@@ -877,7 +835,7 @@ class FromClientSideBase {
     scan.addFamily(FAMILIES[7]);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] { {4, 0, 0}, {4, 4, 4}, {7, 7, 7} });
+      new int[][] { { 4, 0, 0 }, { 4, 4, 4 }, { 7, 7, 7 } });
 
     // Multiple columns from everywhere storefile, many family, wildcard
     scan = new Scan();
@@ -886,10 +844,8 @@ class FromClientSideBase {
     scan.addFamily(FAMILIES[6]);
     scan.addFamily(FAMILIES[7]);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 } });
 
     // Multiple columns from everywhere storefile, many family, wildcard
     scan = new Scan();
@@ -902,18 +858,14 @@ class FromClientSideBase {
     scan.addColumn(FAMILIES[7], QUALIFIERS[7]);
     scan.addColumn(FAMILIES[7], QUALIFIERS[8]);
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 } });
 
     // Everything
     scan = new Scan();
     result = getSingleScanResult(ht, scan);
-    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES,
-      new int [][] {
-        {2, 2, 2}, {2, 4, 4}, {4, 0, 0}, {4, 4, 4}, {6, 6, 6}, {6, 7, 7}, {7, 7, 7}, {9, 0, 0}
-      });
+    assertNResult(result, ROWS[0], FAMILIES, QUALIFIERS, VALUES, new int[][] { { 2, 2, 2 },
+      { 2, 4, 4 }, { 4, 0, 0 }, { 4, 4, 4 }, { 6, 6, 6 }, { 6, 7, 7 }, { 7, 7, 7 }, { 9, 0, 0 } });
 
     // Scan around inserted columns
 
@@ -929,122 +881,118 @@ class FromClientSideBase {
   }
 
   /**
-   * Verify a single column using gets.
-   * Expects family and qualifier arrays to be valid for at least
-   * the range:  idx-2 < idx < idx+2
+   * Verify a single column using gets. Expects family and qualifier arrays to be valid for at least
+   * the range: idx-2 < idx < idx+2
    */
-  protected void getVerifySingleColumn(Table ht, byte [][] ROWS, int ROWIDX, byte [][] FAMILIES,
-    int FAMILYIDX, byte [][] QUALIFIERS, int QUALIFIERIDX, byte [][] VALUES, int VALUEIDX)
+  protected void getVerifySingleColumn(Table ht, byte[][] ROWS, int ROWIDX, byte[][] FAMILIES,
+    int FAMILYIDX, byte[][] QUALIFIERS, int QUALIFIERIDX, byte[][] VALUES, int VALUEIDX)
     throws Exception {
     Get get = new Get(ROWS[ROWIDX]);
     Result result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     get = new Get(ROWS[ROWIDX]);
-    get.addFamily(FAMILIES[FAMILYIDX-2]);
+    get.addFamily(FAMILIES[FAMILYIDX - 2]);
     get.addFamily(FAMILIES[FAMILYIDX]);
-    get.addFamily(FAMILIES[FAMILYIDX+2]);
+    get.addFamily(FAMILIES[FAMILYIDX + 2]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     get = new Get(ROWS[ROWIDX]);
     get.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[0]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     get = new Get(ROWS[ROWIDX]);
     get.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[1]);
     get.addFamily(FAMILIES[FAMILYIDX]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[FAMILYIDX]);
-    get.addColumn(FAMILIES[FAMILYIDX+1], QUALIFIERS[1]);
-    get.addColumn(FAMILIES[FAMILYIDX-2], QUALIFIERS[1]);
-    get.addFamily(FAMILIES[FAMILYIDX-1]);
-    get.addFamily(FAMILIES[FAMILYIDX+2]);
+    get.addColumn(FAMILIES[FAMILYIDX + 1], QUALIFIERS[1]);
+    get.addColumn(FAMILIES[FAMILYIDX - 2], QUALIFIERS[1]);
+    get.addFamily(FAMILIES[FAMILYIDX - 1]);
+    get.addFamily(FAMILIES[FAMILYIDX + 2]);
     result = ht.get(get);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
   }
 
-
   /**
-   * Verify a single column using scanners.
-   * Expects family and qualifier arrays to be valid for at least
-   * the range:  idx-2 to idx+2
-   * Expects row array to be valid for at least idx to idx+2
+   * Verify a single column using scanners. Expects family and qualifier arrays to be valid for at
+   * least the range: idx-2 to idx+2 Expects row array to be valid for at least idx to idx+2
    */
-  protected void scanVerifySingleColumn(Table ht, byte [][] ROWS, int ROWIDX, byte [][] FAMILIES,
-    int FAMILYIDX, byte [][] QUALIFIERS, int QUALIFIERIDX, byte [][] VALUES, int VALUEIDX)
+  protected void scanVerifySingleColumn(Table ht, byte[][] ROWS, int ROWIDX, byte[][] FAMILIES,
+    int FAMILYIDX, byte[][] QUALIFIERS, int QUALIFIERIDX, byte[][] VALUES, int VALUEIDX)
     throws Exception {
     Scan scan = new Scan();
     Result result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     scan = new Scan(ROWS[ROWIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
-    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX+1]);
+    scan = new Scan(ROWS[ROWIDX], ROWS[ROWIDX + 1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
-    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX+1]);
+    scan = new Scan(HConstants.EMPTY_START_ROW, ROWS[ROWIDX + 1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     scan = new Scan();
     scan.addFamily(FAMILIES[FAMILYIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     scan = new Scan();
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     scan = new Scan();
-    scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX+1]);
+    scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX + 1]);
     scan.addFamily(FAMILIES[FAMILYIDX]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
     scan = new Scan();
-    scan.addColumn(FAMILIES[FAMILYIDX-1], QUALIFIERS[QUALIFIERIDX+1]);
+    scan.addColumn(FAMILIES[FAMILYIDX - 1], QUALIFIERS[QUALIFIERIDX + 1]);
     scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX]);
-    scan.addFamily(FAMILIES[FAMILYIDX+1]);
+    scan.addFamily(FAMILIES[FAMILYIDX + 1]);
     result = getSingleScanResult(ht, scan);
-    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX],
-      QUALIFIERS[QUALIFIERIDX], VALUES[VALUEIDX]);
+    assertSingleResult(result, ROWS[ROWIDX], FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX],
+      VALUES[VALUEIDX]);
 
   }
 
   /**
-   * Verify we do not read any values by accident around a single column
-   * Same requirements as getVerifySingleColumn
+   * Verify we do not read any values by accident around a single column Same requirements as
+   * getVerifySingleColumn
    */
-  protected void getVerifySingleEmpty(Table ht, byte [][] ROWS, int ROWIDX, byte [][] FAMILIES,
-    int FAMILYIDX, byte [][] QUALIFIERS, int QUALIFIERIDX) throws Exception {
+  protected void getVerifySingleEmpty(Table ht, byte[][] ROWS, int ROWIDX, byte[][] FAMILIES,
+    int FAMILYIDX, byte[][] QUALIFIERS, int QUALIFIERIDX) throws Exception {
     Get get = new Get(ROWS[ROWIDX]);
     get.addFamily(FAMILIES[4]);
     get.addColumn(FAMILIES[4], QUALIFIERS[1]);
@@ -1064,19 +1012,19 @@ class FromClientSideBase {
     result = ht.get(get);
     assertEmptyResult(result);
 
-    get = new Get(ROWS[ROWIDX+1]);
+    get = new Get(ROWS[ROWIDX + 1]);
     result = ht.get(get);
     assertEmptyResult(result);
 
   }
 
-  protected void scanVerifySingleEmpty(Table ht, byte [][] ROWS, int ROWIDX, byte [][] FAMILIES,
-    int FAMILYIDX, byte [][] QUALIFIERS, int QUALIFIERIDX) throws Exception {
-    Scan scan = new Scan(ROWS[ROWIDX+1]);
+  protected void scanVerifySingleEmpty(Table ht, byte[][] ROWS, int ROWIDX, byte[][] FAMILIES,
+    int FAMILYIDX, byte[][] QUALIFIERS, int QUALIFIERIDX) throws Exception {
+    Scan scan = new Scan(ROWS[ROWIDX + 1]);
     Result result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
-    scan = new Scan(ROWS[ROWIDX+1],ROWS[ROWIDX+2]);
+    scan = new Scan(ROWS[ROWIDX + 1], ROWS[ROWIDX + 2]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
@@ -1085,11 +1033,10 @@ class FromClientSideBase {
     assertNullResult(result);
 
     scan = new Scan();
-    scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX+1]);
-    scan.addFamily(FAMILIES[FAMILYIDX-1]);
+    scan.addColumn(FAMILIES[FAMILYIDX], QUALIFIERS[QUALIFIERIDX + 1]);
+    scan.addFamily(FAMILIES[FAMILYIDX - 1]);
     result = getSingleScanResult(ht, scan);
     assertNullResult(result);
 
   }
 }
-

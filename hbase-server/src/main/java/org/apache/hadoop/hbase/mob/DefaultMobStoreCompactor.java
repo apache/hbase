@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,13 +22,12 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -72,23 +71,23 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
 
     @Override
     public InternalScanner createScanner(ScanInfo scanInfo, List<StoreFileScanner> scanners,
-        ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
+      ScanType scanType, FileDetails fd, long smallestReadPoint) throws IOException {
       return new StoreScanner(store, scanInfo, scanners, scanType, smallestReadPoint,
-          fd.earliestPutTs);
+        fd.earliestPutTs);
     }
   };
 
   private final CellSinkFactory<StoreFileWriter> writerFactory =
-      new CellSinkFactory<StoreFileWriter>() {
-        @Override
-        public StoreFileWriter createWriter(InternalScanner scanner,
-            org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
-            boolean shouldDropBehind) throws IOException {
-          // make this writer with tags always because of possible new cells with tags.
-          return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
-            shouldDropBehind);
-        }
-      };
+    new CellSinkFactory<StoreFileWriter>() {
+      @Override
+      public StoreFileWriter createWriter(InternalScanner scanner,
+        org.apache.hadoop.hbase.regionserver.compactions.Compactor.FileDetails fd,
+        boolean shouldDropBehind) throws IOException {
+        // make this writer with tags always because of possible new cells with tags.
+        return store.createWriterInTmp(fd.maxKeyCount, compactionCompression, true, true, true,
+          shouldDropBehind);
+      }
+    };
 
   public DefaultMobStoreCompactor(Configuration conf, HStore store) {
     super(conf, store);
@@ -104,68 +103,56 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   }
 
   @Override
-  public List<Path> compact(CompactionRequestImpl request, ThroughputController throughputController,
-      User user) throws IOException {
+  public List<Path> compact(CompactionRequestImpl request,
+    ThroughputController throughputController, User user) throws IOException {
     return compact(request, scannerFactory, writerFactory, throughputController, user);
   }
 
   /**
-   * Performs compaction on a column family with the mob flag enabled.
-   * This is for when the mob threshold size has changed or if the mob
-   * column family mode has been toggled via an alter table statement.
-   * Compacts the files by the following rules.
-   * 1. If the Put cell has a mob reference tag, the cell's value is the path of the mob file.
+   * Performs compaction on a column family with the mob flag enabled. This is for when the mob
+   * threshold size has changed or if the mob column family mode has been toggled via an alter table
+   * statement. Compacts the files by the following rules. 1. If the Put cell has a mob reference
+   * tag, the cell's value is the path of the mob file.
    * <ol>
-   * <li>
-   * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
-   * directly copy the (with mob tag) cell into the new store file.
-   * </li>
-   * <li>
-   * Otherwise, retrieve the mob cell from the mob file, and writes a copy of the cell into
-   * the new store file.
-   * </li>
+   * <li>If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
+   * directly copy the (with mob tag) cell into the new store file.</li>
+   * <li>Otherwise, retrieve the mob cell from the mob file, and writes a copy of the cell into the
+   * new store file.</li>
    * </ol>
    * 2. If the Put cell doesn't have a reference tag.
    * <ol>
-   * <li>
-   * If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
-   * write this cell to a mob file, and write the path of this mob file to the store file.
-   * </li>
-   * <li>
-   * Otherwise, directly write this cell into the store file.
-   * </li>
+   * <li>If the value size of a cell is larger than the threshold, this cell is regarded as a mob,
+   * write this cell to a mob file, and write the path of this mob file to the store file.</li>
+   * <li>Otherwise, directly write this cell into the store file.</li>
    * </ol>
    * 3. Decide how to write a Delete cell.
    * <ol>
-   * <li>
-   * If a Delete cell does not have a mob reference tag which means this delete marker have not
-   * been written to the mob del file, write this cell to the mob del file, and write this cell
-   * with a ref tag to a store file.
-   * </li>
-   * <li>
-   * Otherwise, directly write it to a store file.
-   * </li>
+   * <li>If a Delete cell does not have a mob reference tag which means this delete marker have not
+   * been written to the mob del file, write this cell to the mob del file, and write this cell with
+   * a ref tag to a store file.</li>
+   * <li>Otherwise, directly write it to a store file.</li>
    * </ol>
    * After the major compaction on the normal hfiles, we have a guarantee that we have purged all
    * deleted or old version mob refs, and the delete markers are written to a del file with the
-   * suffix _del. Because of this, it is safe to use the del file in the mob compaction.
-   * The mob compaction doesn't take place in the normal hfiles, it occurs directly in the
-   * mob files. When the small mob files are merged into bigger ones, the del file is added into
-   * the scanner to filter the deleted cells.
-   * @param fd File details
-   * @param scanner Where to read from.
-   * @param writer Where to write to.
-   * @param smallestReadPoint Smallest read point.
-   * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
+   * suffix _del. Because of this, it is safe to use the del file in the mob compaction. The mob
+   * compaction doesn't take place in the normal hfiles, it occurs directly in the mob files. When
+   * the small mob files are merged into bigger ones, the del file is added into the scanner to
+   * filter the deleted cells.
+   * @param fd                   File details
+   * @param scanner              Where to read from.
+   * @param writer               Where to write to.
+   * @param smallestReadPoint    Smallest read point.
+   * @param cleanSeqId           When true, remove seqId(used to be mvcc) value which is <=
+   *                             smallestReadPoint
    * @param throughputController The compaction throughput controller.
-   * @param major Is a major compaction.
-   * @param numofFilesToCompact the number of files to compact
+   * @param major                Is a major compaction.
+   * @param numofFilesToCompact  the number of files to compact
    * @return Whether compaction ended; false if it was interrupted for any reason.
    */
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-      boolean major, int numofFilesToCompact) throws IOException {
+    long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
+    boolean major, int numofFilesToCompact) throws IOException {
     long bytesWrittenProgressForCloseCheck = 0;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
@@ -189,10 +176,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     long cellsSizeCompactedToMob = 0, cellsSizeCompactedFromMob = 0;
     boolean finished = false;
     ScannerContext scannerContext =
-        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+      ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
-    KeyValueScanner kvs = (scanner instanceof KeyValueScanner)? (KeyValueScanner)scanner : null;
-    long shippedCallSizeLimit = (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+    KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
+    long shippedCallSizeLimit =
+      (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
@@ -201,7 +189,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
       } catch (IOException e) {
         LOG.warn("Failed to create mob writer, "
-               + "we will continue the compaction by writing MOB cells directly in store files", e);
+          + "we will continue the compaction by writing MOB cells directly in store files", e);
       }
       if (major) {
         try {
@@ -210,7 +198,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         } catch (IOException e) {
           LOG.warn(
             "Failed to create del writer, "
-            + "we will continue the compaction by writing delete markers directly in store files",
+              + "we will continue the compaction by writing delete markers directly in store files",
             e);
         }
       }
@@ -263,11 +251,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               }
             } else {
               LOG.warn("The value format of the KeyValue " + c
-                  + " is wrong, its length is less than " + Bytes.SIZEOF_INT);
+                + " is wrong, its length is less than " + Bytes.SIZEOF_INT);
               writer.append(c);
             }
           } else if (c.getValueLength() <= mobSizeThreshold) {
-            //If value size of a cell is not larger than the threshold, directly write to store file
+            // If value size of a cell is not larger than the threshold, directly write to store
+            // file
             writer.append(c);
           } else {
             // If the value size of a cell is larger than the threshold, it's regarded as a mob,
@@ -275,8 +264,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             mobCells++;
             // append the original keyValue in the mob file.
             mobFileWriter.append(c);
-            Cell reference = MobUtils.createMobRefCell(c, fileName,
-                this.mobStore.getRefCellTags());
+            Cell reference = MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags());
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             cellsCountCompactedToMob++;
@@ -302,7 +290,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             }
           }
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
-            ((ShipperListener)writer).beforeShipped();
+            ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
             bytesWrittenProgressForShippedCall = 0;
           }
@@ -325,7 +313,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     } catch (InterruptedException e) {
       progress.cancel();
       throw new InterruptedIOException(
-          "Interrupted while control throughput of compacting " + compactionName);
+        "Interrupted while control throughput of compacting " + compactionName);
     } finally {
       // Clone last cell in the final because writer will append last cell when committing. If
       // don't clone here and once the scanner get closed, then the memory of last cell will be

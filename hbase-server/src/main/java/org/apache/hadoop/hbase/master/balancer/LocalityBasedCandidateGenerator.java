@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Optional;
@@ -34,8 +33,10 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
       for (int i = 0; i < cluster.numRegions; i++) {
         int region = (startIndex + i) % cluster.numRegions;
         int currentServer = cluster.regionIndexToServerIndex[region];
-        if (currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
-          BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]) {
+        if (
+          currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
+            BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]
+        ) {
           Optional<BaseLoadBalancer.Cluster.Action> potential = tryMoveOrSwap(cluster,
             currentServer, region, cluster.getOrComputeRegionsToMostLocalEntities(
               BaseLoadBalancer.Cluster.LocalityType.SERVER)[region]);
@@ -49,7 +50,7 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
   }
 
   private Optional<BaseLoadBalancer.Cluster.Action> tryMoveOrSwap(BaseLoadBalancer.Cluster cluster,
-      int fromServer, int fromRegion, int toServer) {
+    int fromServer, int fromRegion, int toServer) {
     // Try move first. We know apriori fromRegion has the highest locality on toServer
     if (cluster.serverHasTooFewRegions(toServer)) {
       return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
@@ -57,14 +58,14 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
     // Compare locality gain/loss from swapping fromRegion with regions on toServer
     double fromRegionLocalityDelta = getWeightedLocality(cluster, fromRegion, toServer)
       - getWeightedLocality(cluster, fromRegion, fromServer);
-    int toServertotalRegions =  cluster.regionsPerServer[toServer].length;
+    int toServertotalRegions = cluster.regionsPerServer[toServer].length;
     if (toServertotalRegions > 0) {
       int startIndex = ThreadLocalRandom.current().nextInt(toServertotalRegions);
       for (int i = 0; i < toServertotalRegions; i++) {
         int toRegionIndex = (startIndex + i) % toServertotalRegions;
         int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
-        double toRegionLocalityDelta = getWeightedLocality(cluster, toRegion, fromServer) -
-          getWeightedLocality(cluster, toRegion, toServer);
+        double toRegionLocalityDelta = getWeightedLocality(cluster, toRegion, fromServer)
+          - getWeightedLocality(cluster, toRegion, toServer);
         // If locality would remain neutral or improve, attempt the swap
         if (fromRegionLocalityDelta + toRegionLocalityDelta >= 0) {
           return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));

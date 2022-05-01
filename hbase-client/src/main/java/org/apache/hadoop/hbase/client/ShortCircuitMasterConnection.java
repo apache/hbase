@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -100,10 +101,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedur
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsRpcThrottleEnabledResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-  .IsSnapshotCleanupEnabledRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos
-  .IsSnapshotCleanupEnabledResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotCleanupEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsSplitOrMergeEnabledRequest;
@@ -208,418 +207,418 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
 
   @Override
   public UnassignRegionResponse unassignRegion(RpcController controller,
-      UnassignRegionRequest request) throws ServiceException {
+    UnassignRegionRequest request) throws ServiceException {
     return stub.unassignRegion(controller, request);
   }
 
   @Override
   public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.truncateTable(controller, request);
   }
 
   @Override
   public StopMasterResponse stopMaster(RpcController controller, StopMasterRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.stopMaster(controller, request);
   }
 
   @Override
   public SnapshotResponse snapshot(RpcController controller, SnapshotRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.snapshot(controller, request);
   }
 
   @Override
   public ShutdownResponse shutdown(RpcController controller, ShutdownRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.shutdown(controller, request);
   }
 
   @Override
   public SetSplitOrMergeEnabledResponse setSplitOrMergeEnabled(RpcController controller,
-      SetSplitOrMergeEnabledRequest request) throws ServiceException {
+    SetSplitOrMergeEnabledRequest request) throws ServiceException {
     return stub.setSplitOrMergeEnabled(controller, request);
   }
 
   @Override
   public SetQuotaResponse setQuota(RpcController controller, SetQuotaRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.setQuota(controller, request);
   }
 
   @Override
   public SetNormalizerRunningResponse setNormalizerRunning(RpcController controller,
-      SetNormalizerRunningRequest request) throws ServiceException {
+    SetNormalizerRunningRequest request) throws ServiceException {
     return stub.setNormalizerRunning(controller, request);
   }
 
   @Override
   public SetBalancerRunningResponse setBalancerRunning(RpcController controller,
-      SetBalancerRunningRequest request) throws ServiceException {
+    SetBalancerRunningRequest request) throws ServiceException {
     return stub.setBalancerRunning(controller, request);
   }
 
   @Override
   public RunCatalogScanResponse runCatalogScan(RpcController controller,
-      RunCatalogScanRequest request) throws ServiceException {
+    RunCatalogScanRequest request) throws ServiceException {
     return stub.runCatalogScan(controller, request);
   }
 
   @Override
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
-      RestoreSnapshotRequest request) throws ServiceException {
+    RestoreSnapshotRequest request) throws ServiceException {
     return stub.restoreSnapshot(controller, request);
   }
 
   @Override
   public SetSnapshotCleanupResponse switchSnapshotCleanup(RpcController controller,
-      SetSnapshotCleanupRequest request) throws ServiceException {
+    SetSnapshotCleanupRequest request) throws ServiceException {
     return stub.switchSnapshotCleanup(controller, request);
   }
 
   @Override
-  public IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
-      RpcController controller, IsSnapshotCleanupEnabledRequest request)
-      throws ServiceException {
+  public IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(RpcController controller,
+    IsSnapshotCleanupEnabledRequest request) throws ServiceException {
     return stub.isSnapshotCleanupEnabled(controller, request);
   }
 
   @Override
   public RemoveReplicationPeerResponse removeReplicationPeer(RpcController controller,
-      RemoveReplicationPeerRequest request) throws ServiceException {
+    RemoveReplicationPeerRequest request) throws ServiceException {
     return stub.removeReplicationPeer(controller, request);
   }
 
   @Override
   public RecommissionRegionServerResponse recommissionRegionServer(RpcController controller,
-      RecommissionRegionServerRequest request) throws ServiceException {
+    RecommissionRegionServerRequest request) throws ServiceException {
     return stub.recommissionRegionServer(controller, request);
   }
 
   @Override
   public OfflineRegionResponse offlineRegion(RpcController controller, OfflineRegionRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.offlineRegion(controller, request);
   }
 
   @Override
   public NormalizeResponse normalize(RpcController controller, NormalizeRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.normalize(controller, request);
   }
 
   @Override
   public MoveRegionResponse moveRegion(RpcController controller, MoveRegionRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.moveRegion(controller, request);
   }
 
   @Override
   public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.modifyTable(controller, request);
   }
 
   @Override
   public ModifyNamespaceResponse modifyNamespace(RpcController controller,
-      ModifyNamespaceRequest request) throws ServiceException {
+    ModifyNamespaceRequest request) throws ServiceException {
     return stub.modifyNamespace(controller, request);
   }
 
   @Override
   public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.modifyColumn(controller, request);
   }
 
   @Override
   public MergeTableRegionsResponse mergeTableRegions(RpcController controller,
-      MergeTableRegionsRequest request) throws ServiceException {
+    MergeTableRegionsRequest request) throws ServiceException {
     return stub.mergeTableRegions(controller, request);
   }
 
   @Override
   public ListTableNamesByNamespaceResponse listTableNamesByNamespace(RpcController controller,
-      ListTableNamesByNamespaceRequest request) throws ServiceException {
+    ListTableNamesByNamespaceRequest request) throws ServiceException {
     return stub.listTableNamesByNamespace(controller, request);
   }
 
   @Override
   public ListTableDescriptorsByNamespaceResponse listTableDescriptorsByNamespace(
-      RpcController controller, ListTableDescriptorsByNamespaceRequest request)
-      throws ServiceException {
+    RpcController controller, ListTableDescriptorsByNamespaceRequest request)
+    throws ServiceException {
     return stub.listTableDescriptorsByNamespace(controller, request);
   }
 
   @Override
-  public GetProceduresResponse getProcedures(RpcController controller,
-      GetProceduresRequest request) throws ServiceException {
+  public GetProceduresResponse getProcedures(RpcController controller, GetProceduresRequest request)
+    throws ServiceException {
     return stub.getProcedures(controller, request);
   }
 
   @Override
-  public GetLocksResponse getLocks(RpcController controller,
-      GetLocksRequest request) throws ServiceException {
+  public GetLocksResponse getLocks(RpcController controller, GetLocksRequest request)
+    throws ServiceException {
     return stub.getLocks(controller, request);
   }
 
   @Override
   public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController controller,
-      ListNamespaceDescriptorsRequest request) throws ServiceException {
+    ListNamespaceDescriptorsRequest request) throws ServiceException {
     return stub.listNamespaceDescriptors(controller, request);
   }
 
   @Override
-  public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(RpcController controller,
-      ListDecommissionedRegionServersRequest request) throws ServiceException {
+  public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(
+    RpcController controller, ListDecommissionedRegionServersRequest request)
+    throws ServiceException {
     return stub.listDecommissionedRegionServers(controller, request);
   }
 
   @Override
   public IsSplitOrMergeEnabledResponse isSplitOrMergeEnabled(RpcController controller,
-      IsSplitOrMergeEnabledRequest request) throws ServiceException {
+    IsSplitOrMergeEnabledRequest request) throws ServiceException {
     return stub.isSplitOrMergeEnabled(controller, request);
   }
 
   @Override
   public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
-      IsSnapshotDoneRequest request) throws ServiceException {
+    IsSnapshotDoneRequest request) throws ServiceException {
     return stub.isSnapshotDone(controller, request);
   }
 
   @Override
   public IsProcedureDoneResponse isProcedureDone(RpcController controller,
-      IsProcedureDoneRequest request) throws ServiceException {
+    IsProcedureDoneRequest request) throws ServiceException {
     return stub.isProcedureDone(controller, request);
   }
 
   @Override
   public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
-      IsNormalizerEnabledRequest request) throws ServiceException {
+    IsNormalizerEnabledRequest request) throws ServiceException {
     return stub.isNormalizerEnabled(controller, request);
   }
 
   @Override
   public IsMasterRunningResponse isMasterRunning(RpcController controller,
-      IsMasterRunningRequest request) throws ServiceException {
+    IsMasterRunningRequest request) throws ServiceException {
     return stub.isMasterRunning(controller, request);
   }
 
   @Override
   public IsInMaintenanceModeResponse isMasterInMaintenanceMode(RpcController controller,
-      IsInMaintenanceModeRequest request) throws ServiceException {
+    IsInMaintenanceModeRequest request) throws ServiceException {
     return stub.isMasterInMaintenanceMode(controller, request);
   }
 
   @Override
   public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController controller,
-      IsCatalogJanitorEnabledRequest request) throws ServiceException {
+    IsCatalogJanitorEnabledRequest request) throws ServiceException {
     return stub.isCatalogJanitorEnabled(controller, request);
   }
 
   @Override
   public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
-      IsBalancerEnabledRequest request) throws ServiceException {
+    IsBalancerEnabledRequest request) throws ServiceException {
     return stub.isBalancerEnabled(controller, request);
   }
 
   @Override
   public GetTableStateResponse getTableState(RpcController controller, GetTableStateRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.getTableState(controller, request);
   }
 
   @Override
   public GetTableNamesResponse getTableNames(RpcController controller, GetTableNamesRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.getTableNames(controller, request);
   }
 
   @Override
   public GetTableDescriptorsResponse getTableDescriptors(RpcController controller,
-      GetTableDescriptorsRequest request) throws ServiceException {
+    GetTableDescriptorsRequest request) throws ServiceException {
     return stub.getTableDescriptors(controller, request);
   }
 
   @Override
   public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
-      SecurityCapabilitiesRequest request) throws ServiceException {
+    SecurityCapabilitiesRequest request) throws ServiceException {
     return stub.getSecurityCapabilities(controller, request);
   }
 
   @Override
   public GetSchemaAlterStatusResponse getSchemaAlterStatus(RpcController controller,
-      GetSchemaAlterStatusRequest request) throws ServiceException {
+    GetSchemaAlterStatusRequest request) throws ServiceException {
     return stub.getSchemaAlterStatus(controller, request);
   }
 
   @Override
   public GetProcedureResultResponse getProcedureResult(RpcController controller,
-      GetProcedureResultRequest request) throws ServiceException {
+    GetProcedureResultRequest request) throws ServiceException {
     return stub.getProcedureResult(controller, request);
   }
 
   @Override
   public GetNamespaceDescriptorResponse getNamespaceDescriptor(RpcController controller,
-      GetNamespaceDescriptorRequest request) throws ServiceException {
+    GetNamespaceDescriptorRequest request) throws ServiceException {
     return stub.getNamespaceDescriptor(controller, request);
   }
 
   @Override
   public ListNamespacesResponse listNamespaces(RpcController controller,
-      ListNamespacesRequest request) throws ServiceException {
+    ListNamespacesRequest request) throws ServiceException {
     return stub.listNamespaces(controller, request);
   }
 
   @Override
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-      HBaseProtos.LogRequest request) throws ServiceException {
+    HBaseProtos.LogRequest request) throws ServiceException {
     return stub.getLogEntries(controller, request);
   }
 
   @Override
   public MajorCompactionTimestampResponse getLastMajorCompactionTimestampForRegion(
-      RpcController controller, MajorCompactionTimestampForRegionRequest request)
-      throws ServiceException {
+    RpcController controller, MajorCompactionTimestampForRegionRequest request)
+    throws ServiceException {
     return stub.getLastMajorCompactionTimestampForRegion(controller, request);
   }
 
   @Override
   public MajorCompactionTimestampResponse getLastMajorCompactionTimestamp(RpcController controller,
-      MajorCompactionTimestampRequest request) throws ServiceException {
+    MajorCompactionTimestampRequest request) throws ServiceException {
     return stub.getLastMajorCompactionTimestamp(controller, request);
   }
 
   @Override
   public GetCompletedSnapshotsResponse getCompletedSnapshots(RpcController controller,
-      GetCompletedSnapshotsRequest request) throws ServiceException {
+    GetCompletedSnapshotsRequest request) throws ServiceException {
     return stub.getCompletedSnapshots(controller, request);
   }
 
   @Override
   public GetClusterStatusResponse getClusterStatus(RpcController controller,
-      GetClusterStatusRequest request) throws ServiceException {
+    GetClusterStatusRequest request) throws ServiceException {
     return stub.getClusterStatus(controller, request);
   }
 
   @Override
   public ExecProcedureResponse execProcedureWithRet(RpcController controller,
-      ExecProcedureRequest request) throws ServiceException {
+    ExecProcedureRequest request) throws ServiceException {
     return stub.execProcedureWithRet(controller, request);
   }
 
   @Override
   public ExecProcedureResponse execProcedure(RpcController controller, ExecProcedureRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.execProcedure(controller, request);
   }
 
   @Override
   public CoprocessorServiceResponse execMasterService(RpcController controller,
-      CoprocessorServiceRequest request) throws ServiceException {
+    CoprocessorServiceRequest request) throws ServiceException {
     return stub.execMasterService(controller, request);
   }
 
   @Override
   public EnableTableResponse enableTable(RpcController controller, EnableTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.enableTable(controller, request);
   }
 
   @Override
   public EnableReplicationPeerResponse enableReplicationPeer(RpcController controller,
-      EnableReplicationPeerRequest request) throws ServiceException {
+    EnableReplicationPeerRequest request) throws ServiceException {
     return stub.enableReplicationPeer(controller, request);
   }
 
   @Override
   public EnableCatalogJanitorResponse enableCatalogJanitor(RpcController controller,
-      EnableCatalogJanitorRequest request) throws ServiceException {
+    EnableCatalogJanitorRequest request) throws ServiceException {
     return stub.enableCatalogJanitor(controller, request);
   }
 
   @Override
   public DecommissionRegionServersResponse decommissionRegionServers(RpcController controller,
-      DecommissionRegionServersRequest request) throws ServiceException {
+    DecommissionRegionServersRequest request) throws ServiceException {
     return stub.decommissionRegionServers(controller, request);
   }
 
   @Override
   public DisableTableResponse disableTable(RpcController controller, DisableTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.disableTable(controller, request);
   }
 
   @Override
   public DisableReplicationPeerResponse disableReplicationPeer(RpcController controller,
-      DisableReplicationPeerRequest request) throws ServiceException {
+    DisableReplicationPeerRequest request) throws ServiceException {
     return stub.disableReplicationPeer(controller, request);
   }
 
   @Override
   public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.deleteTable(controller, request);
   }
 
   @Override
   public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
-      DeleteSnapshotRequest request) throws ServiceException {
+    DeleteSnapshotRequest request) throws ServiceException {
     return stub.deleteSnapshot(controller, request);
   }
 
   @Override
   public DeleteNamespaceResponse deleteNamespace(RpcController controller,
-      DeleteNamespaceRequest request) throws ServiceException {
+    DeleteNamespaceRequest request) throws ServiceException {
     return stub.deleteNamespace(controller, request);
   }
 
   @Override
   public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.deleteColumn(controller, request);
   }
 
   @Override
   public CreateTableResponse createTable(RpcController controller, CreateTableRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.createTable(controller, request);
   }
 
   @Override
   public CreateNamespaceResponse createNamespace(RpcController controller,
-      CreateNamespaceRequest request) throws ServiceException {
+    CreateNamespaceRequest request) throws ServiceException {
     return stub.createNamespace(controller, request);
   }
 
   @Override
   public BalanceResponse balance(RpcController controller, BalanceRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.balance(controller, request);
   }
 
   @Override
   public AssignRegionResponse assignRegion(RpcController controller, AssignRegionRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.assignRegion(controller, request);
   }
 
   @Override
   public AddReplicationPeerResponse addReplicationPeer(RpcController controller,
-      AddReplicationPeerRequest request) throws ServiceException {
+    AddReplicationPeerRequest request) throws ServiceException {
     return stub.addReplicationPeer(controller, request);
   }
 
   @Override
   public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.addColumn(controller, request);
   }
 
   @Override
   public AbortProcedureResponse abortProcedure(RpcController controller,
-      AbortProcedureRequest request) throws ServiceException {
+    AbortProcedureRequest request) throws ServiceException {
     return stub.abortProcedure(controller, request);
   }
 
@@ -630,103 +629,103 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
 
   @Override
   public RunCleanerChoreResponse runCleanerChore(RpcController controller,
-      RunCleanerChoreRequest request) throws ServiceException {
+    RunCleanerChoreRequest request) throws ServiceException {
     return stub.runCleanerChore(controller, request);
   }
 
   @Override
   public SetCleanerChoreRunningResponse setCleanerChoreRunning(RpcController controller,
-      SetCleanerChoreRunningRequest request) throws ServiceException {
+    SetCleanerChoreRunningRequest request) throws ServiceException {
     return stub.setCleanerChoreRunning(controller, request);
   }
 
   @Override
   public IsCleanerChoreEnabledResponse isCleanerChoreEnabled(RpcController controller,
-      IsCleanerChoreEnabledRequest request) throws ServiceException {
+    IsCleanerChoreEnabledRequest request) throws ServiceException {
     return stub.isCleanerChoreEnabled(controller, request);
   }
 
   @Override
   public GetReplicationPeerConfigResponse getReplicationPeerConfig(RpcController controller,
-      GetReplicationPeerConfigRequest request) throws ServiceException {
+    GetReplicationPeerConfigRequest request) throws ServiceException {
     return stub.getReplicationPeerConfig(controller, request);
   }
 
   @Override
   public UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(RpcController controller,
-      UpdateReplicationPeerConfigRequest request) throws ServiceException {
+    UpdateReplicationPeerConfigRequest request) throws ServiceException {
     return stub.updateReplicationPeerConfig(controller, request);
   }
 
   @Override
   public ListReplicationPeersResponse listReplicationPeers(RpcController controller,
-      ListReplicationPeersRequest request) throws ServiceException {
+    ListReplicationPeersRequest request) throws ServiceException {
     return stub.listReplicationPeers(controller, request);
   }
 
   @Override
   public GetSpaceQuotaRegionSizesResponse getSpaceQuotaRegionSizes(RpcController controller,
-      GetSpaceQuotaRegionSizesRequest request) throws ServiceException {
+    GetSpaceQuotaRegionSizesRequest request) throws ServiceException {
     return stub.getSpaceQuotaRegionSizes(controller, request);
   }
 
   @Override
   public GetQuotaStatesResponse getQuotaStates(RpcController controller,
-      GetQuotaStatesRequest request) throws ServiceException {
+    GetQuotaStatesRequest request) throws ServiceException {
     return stub.getQuotaStates(controller, request);
   }
 
   @Override
   public ClearDeadServersResponse clearDeadServers(RpcController controller,
-      ClearDeadServersRequest request) throws ServiceException {
+    ClearDeadServersRequest request) throws ServiceException {
     return stub.clearDeadServers(controller, request);
   }
 
   @Override
-  public SplitTableRegionResponse splitRegion(RpcController controller, SplitTableRegionRequest request)
-      throws ServiceException {
+  public SplitTableRegionResponse splitRegion(RpcController controller,
+    SplitTableRegionRequest request) throws ServiceException {
     return stub.splitRegion(controller, request);
   }
 
   @Override
   public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
-      SwitchRpcThrottleRequest request) throws ServiceException {
+    SwitchRpcThrottleRequest request) throws ServiceException {
     return stub.switchRpcThrottle(controller, request);
   }
 
   @Override
   public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(RpcController controller,
-      IsRpcThrottleEnabledRequest request) throws ServiceException {
+    IsRpcThrottleEnabledRequest request) throws ServiceException {
     return stub.isRpcThrottleEnabled(controller, request);
   }
 
   @Override
   public SwitchExceedThrottleQuotaResponse switchExceedThrottleQuota(RpcController controller,
-      SwitchExceedThrottleQuotaRequest request) throws ServiceException {
+    SwitchExceedThrottleQuotaRequest request) throws ServiceException {
     return stub.switchExceedThrottleQuota(controller, request);
   }
 
   @Override
   public GrantResponse grant(RpcController controller, GrantRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.grant(controller, request);
   }
 
   @Override
   public RevokeResponse revoke(RpcController controller, RevokeRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return stub.revoke(controller, request);
   }
 
   @Override
   public GetUserPermissionsResponse getUserPermissions(RpcController controller,
-      GetUserPermissionsRequest request) throws ServiceException {
+    GetUserPermissionsRequest request) throws ServiceException {
     return stub.getUserPermissions(controller, request);
   }
 
   @Override
   public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
-      HasUserPermissionsRequest request) throws ServiceException {
+    HasUserPermissionsRequest request) throws ServiceException {
     return stub.hasUserPermissions(controller, request);
   }
 }

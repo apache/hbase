@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,10 +61,10 @@ public class TestCompactionWithThroughputController {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionWithThroughputController.class);
+    HBaseClassTestRule.forClass(TestCompactionWithThroughputController.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
+    LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -166,7 +166,7 @@ public class TestCompactionWithThroughputController {
     long limitTime = testCompactionWithThroughputLimit();
     long noLimitTime = testCompactionWithoutThroughputLimit();
     LOG.info("With 1M/s limit, compaction use " + limitTime + "ms; without limit, compaction use "
-        + noLimitTime + "ms");
+      + noLimitTime + "ms");
     // usually the throughput of a compaction without limitation is about 40MB/sec at least, so this
     // is a very weak assumption.
     assertTrue(limitTime > noLimitTime * 2);
@@ -190,14 +190,14 @@ public class TestCompactionWithThroughputController {
     Connection conn = ConnectionFactory.createConnection(conf);
     try {
       TEST_UTIL.getAdmin()
-          .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
-              .build());
+        .createTable(TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+          .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       PressureAwareCompactionThroughputController throughputController =
-          (PressureAwareCompactionThroughputController) regionServer.compactSplitThread
-              .getCompactionThroughputController();
+        (PressureAwareCompactionThroughputController) regionServer.compactSplitThread
+          .getCompactionThroughputController();
       assertEquals(10L * 1024 * 1024, throughputController.getMaxThroughput(), EPSILON);
       Table table = conn.getTable(tableName);
       for (int i = 0; i < 5; i++) {
@@ -224,8 +224,8 @@ public class TestCompactionWithThroughputController {
         NoLimitThroughputController.class.getName());
       regionServer.compactSplitThread.onConfigurationChange(conf);
       assertTrue(throughputController.isStopped());
-      assertTrue(regionServer.compactSplitThread.getCompactionThroughputController()
-        instanceof NoLimitThroughputController);
+      assertTrue(regionServer.compactSplitThread
+        .getCompactionThroughputController() instanceof NoLimitThroughputController);
     } finally {
       conn.close();
       TEST_UTIL.shutdownMiniCluster();
@@ -247,9 +247,9 @@ public class TestCompactionWithThroughputController {
     Connection conn = ConnectionFactory.createConnection(conf);
     try {
       TEST_UTIL.getAdmin()
-          .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
-              .build());
+        .createTable(TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+          .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HStore store = getStoreWithName(tableName);
       assertEquals(0, store.getStorefilesCount());

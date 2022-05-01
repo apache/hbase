@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The class that creates a load balancer from a conf.
@@ -30,8 +30,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LoadBalancerFactory {
 
   /**
-   * The default {@link LoadBalancer} class. 
-   *
+   * The default {@link LoadBalancer} class.
    * @return The Class for the default {@link LoadBalancer}.
    */
   public static Class<? extends LoadBalancer> getDefaultLoadBalancerClass() {
@@ -39,16 +38,14 @@ public class LoadBalancerFactory {
   }
 
   /**
-   * Create a loadbalancer from the given conf.
-   * @param conf
-   * @return A {@link LoadBalancer}
+   * Create a loadbalancer from the given conf. n * @return A {@link LoadBalancer}
    */
   public static LoadBalancer getLoadBalancer(Configuration conf) {
 
     // Create the balancer
     Class<? extends LoadBalancer> balancerKlass =
-        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
-          LoadBalancer.class);
+      conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
+        LoadBalancer.class);
     return ReflectionUtils.newInstance(balancerKlass, conf);
 
   }

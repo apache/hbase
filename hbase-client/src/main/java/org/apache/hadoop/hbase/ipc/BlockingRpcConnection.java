@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.security.sasl.SaslException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -67,11 +66,13 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -151,7 +152,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     public void sendCall(final Call call) throws IOException {
       if (callsToWrite.size() >= maxQueueSize) {
         throw new IOException("Can't add " + call.toShortString()
-            + " to the write queue. callsToWrite.size()=" + callsToWrite.size());
+          + " to the write queue. callsToWrite.size()=" + callsToWrite.size());
       }
       callsToWrite.offer(call);
       BlockingRpcConnection.this.notifyAll();
@@ -163,8 +164,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // it means as well that we don't know how many calls we cancelled.
       calls.remove(call.id);
       call.setException(new CallCancelledException(call.toShortString() + ", waitTime="
-          + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
-          + call.timeout));
+        + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
+        + call.timeout));
     }
 
     /**
@@ -206,8 +207,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
      * Cleans the call not yet sent when we finish.
      */
     public void cleanup(IOException e) {
-      IOException ie = new ConnectionClosingException(
-          "Connection to " + remoteId.address + " is closing.");
+      IOException ie =
+        new ConnectionClosingException("Connection to " + remoteId.address + " is closing.");
       for (Call call : callsToWrite) {
         call.setException(ie);
       }
@@ -217,7 +218,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
-        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
+      rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
     this.rpcClient = rpcClient;
     if (remoteId.getAddress().isUnresolved()) {
       throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
@@ -234,8 +235,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
     this.threadName = "BRPC Connection (" + this.rpcClient.socketFactory.hashCode() + ") to "
-        + remoteId.getAddress().toString()
-        + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
+      + remoteId.getAddress().toString()
+      + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
 
     if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
       callSender = new CallSender(threadName, this.rpcClient.conf);
@@ -265,14 +266,14 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
          * The max number of retries is 45, which amounts to 20s*45 = 15 minutes retries.
          */
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Received exception in connection setup.\n" +
-              StringUtils.stringifyException(toe));
+          LOG.debug(
+            "Received exception in connection setup.\n" + StringUtils.stringifyException(toe));
         }
         handleConnectionFailure(timeoutFailures++, this.rpcClient.maxRetries, toe);
       } catch (IOException ie) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Received exception in connection setup.\n" +
-              StringUtils.stringifyException(ie));
+          LOG.debug(
+            "Received exception in connection setup.\n" + StringUtils.stringifyException(ie));
         }
         handleConnectionFailure(ioFailures++, this.rpcClient.maxRetries, ie);
       }
@@ -286,11 +287,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * the sleep is synchronized; the locks will be retained.
    * @param curRetries current number of retries
    * @param maxRetries max number of retries allowed
-   * @param ioe failure reason
+   * @param ioe        failure reason
    * @throws IOException if max number of retries is reached
    */
   private void handleConnectionFailure(int curRetries, int maxRetries, IOException ioe)
-      throws IOException {
+    throws IOException {
     closeSocket();
 
     // throw the exception if the maximum number of retries is reached
@@ -306,9 +307,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
-        " after sleeping " + this.rpcClient.failureSleep + "ms. Already tried " + curRetries +
-        " time(s).");
+      LOG.info("Retrying connect to server: " + remoteId.getAddress() + " after sleeping "
+        + this.rpcClient.failureSleep + "ms. Already tried " + curRetries + " time(s).");
     }
   }
 
@@ -361,12 +361,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
 
   private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
-      throws IOException {
-    saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token,
-        serverAddress, securityInfo, this.rpcClient.fallbackAllowed,
-        this.rpcClient.conf.get("hbase.rpc.protection",
-            QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
-        this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
+    throws IOException {
+    saslRpcClient = new HBaseSaslRpcClient(this.rpcClient.conf, provider, token, serverAddress,
+      securityInfo, this.rpcClient.fallbackAllowed,
+      this.rpcClient.conf.get("hbase.rpc.protection",
+        QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
+      this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
     return saslRpcClient.saslConnect(in2, out2);
   }
 
@@ -377,15 +377,14 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * connection again. The other problem is to do with ticket expiry. To handle that, a relogin is
    * attempted.
    * <p>
-   * The retry logic is governed by the {@link SaslClientAuthenticationProvider#canRetry()}
-   * method. Some providers have the ability to obtain new credentials and then re-attempt to
-   * authenticate with HBase services. Other providers will continue to fail if they failed the
-   * first time -- for those, we want to fail-fast.
+   * The retry logic is governed by the {@link SaslClientAuthenticationProvider#canRetry()} method.
+   * Some providers have the ability to obtain new credentials and then re-attempt to authenticate
+   * with HBase services. Other providers will continue to fail if they failed the first time -- for
+   * those, we want to fail-fast.
    * </p>
    */
   private void handleSaslConnectionFailure(final int currRetries, final int maxRetries,
-      final Exception ex, final UserGroupInformation user)
-      throws IOException, InterruptedException {
+    final Exception ex, final UserGroupInformation user) throws IOException, InterruptedException {
     closeSocket();
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
@@ -399,7 +398,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           }
           if (ex instanceof SaslException) {
             String msg = "SASL authentication failed."
-                + " The most likely cause is missing or invalid credentials.";
+              + " The most likely cause is missing or invalid credentials.";
             throw new RuntimeException(msg, ex);
           }
           throw new IOException(ex);
@@ -423,9 +422,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
           return null;
         } else {
-          String msg = "Failed to initiate connection for "
-              + UserGroupInformation.getLoginUser().getUserName() + " to "
-              + securityInfo.getServerPrincipal();
+          String msg =
+            "Failed to initiate connection for " + UserGroupInformation.getLoginUser().getUserName()
+              + " to " + securityInfo.getServerPrincipal();
           throw new IOException(msg, ex);
         }
       }
@@ -441,10 +440,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Not trying to connect to " + remoteId.address
-            + " this server is in the failed servers list");
+          + " this server is in the failed servers list");
       }
       throw new FailedServerException(
-          "This server is in the failed servers list: " + remoteId.address);
+        "This server is in the failed servers list: " + remoteId.address);
     }
 
     try {
@@ -538,10 +537,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     boolean isCryptoAesEnable = false;
     // check if Crypto AES is enabled
     if (saslRpcClient != null) {
-      boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.
-          getSaslQop().equalsIgnoreCase(saslRpcClient.getSaslQOP());
-      isCryptoAesEnable = saslEncryptionEnabled && conf.getBoolean(
-          CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
+      boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.getSaslQop()
+        .equalsIgnoreCase(saslRpcClient.getSaslQOP());
+      isCryptoAesEnable = saslEncryptionEnabled
+        && conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
     }
 
     // if Crypto AES is enabled, set transformation and negotiate with server
@@ -565,7 +564,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
 
       RPCProtos.ConnectionHeaderResponse connectionHeaderResponse =
-          RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
+        RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
 
       // Get the CryptoCipherMeta, update the HBaseSaslRpcClient for Crypto Cipher
       if (connectionHeaderResponse.hasCryptoCipherMeta()) {
@@ -573,16 +572,17 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
       waitingConnectionHeaderResponse = false;
     } catch (SocketTimeoutException ste) {
-      LOG.error(HBaseMarkers.FATAL, "Can't get the connection header response for rpc timeout, "
+      LOG.error(HBaseMarkers.FATAL,
+        "Can't get the connection header response for rpc timeout, "
           + "please check if server has the correct configuration to support the additional "
-          + "function.", ste);
+          + "function.",
+        ste);
       // timeout when waiting the connection header response, ignore the additional function
       throw new IOException("Timeout while waiting connection header response", ste);
     }
   }
 
-  private void negotiateCryptoAes(RPCProtos.CryptoCipherMeta cryptoCipherMeta)
-      throws IOException {
+  private void negotiateCryptoAes(RPCProtos.CryptoCipherMeta cryptoCipherMeta) throws IOException {
     // initialize the Crypto AES with CryptoCipherMeta
     saslRpcClient.initCryptoCipher(cryptoCipherMeta, this.rpcClient.conf);
     // reset the inputStream/outputStream for Crypto AES encryption
@@ -591,8 +591,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
 
   private void tracedWriteRequest(Call call) throws IOException {
-    try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
-          call.span)) {
+    try (
+      TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest", call.span)) {
       writeRequest(call);
     }
   }
@@ -606,7 +606,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     ByteBuf cellBlock = null;
     try {
       cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec, this.compressor,
-          call.cells, PooledByteBufAllocator.DEFAULT);
+        call.cells, PooledByteBufAllocator.DEFAULT);
       CellBlockMeta cellBlockMeta;
       if (cellBlock != null) {
         cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.readableBytes()).build();
@@ -630,7 +630,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       try {
         call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
       } catch (Throwable t) {
-        if(LOG.isTraceEnabled()) {
+        if (LOG.isTraceEnabled()) {
           LOG.trace("Error while writing {}", call.toShortString());
         }
         IOException e = IPCUtil.toIOE(t);
@@ -673,7 +673,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         if (call != null) {
           call.callStats.setResponseSizeBytes(totalSize);
           call.callStats
-              .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         }
         return;
       }
@@ -683,7 +683,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setException(re);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+          .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         if (isFatalConnectionException(exceptionResponse)) {
           synchronized (this) {
             closeConn(re);
@@ -707,7 +707,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setResponse(value, cellBlockScanner);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+          .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
       }
     } catch (IOException e) {
       if (expectedCall) {
@@ -778,7 +778,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   @Override
   public synchronized void sendRequest(final Call call, HBaseRpcController pcrc)
-      throws IOException {
+    throws IOException {
     pcrc.notifyOnCancel(new RpcCallback<Object>() {
 
       @Override

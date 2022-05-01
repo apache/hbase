@@ -52,13 +52,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
 public class Replication implements ReplicationSourceService, ReplicationSinkService {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(Replication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
@@ -85,7 +85,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
-      WALFactory walFactory) throws IOException {
+    WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
@@ -93,25 +93,26 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
         .setNameFormat(server.getServerName().toShortString() + "Replication Statistics #%d")
-        .setDaemon(true)
-        .build());
+        .setDaemon(true).build());
     if (this.isReplicationForBulkLoadDataEnabled) {
-      if (conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
-          || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()) {
-        throw new IllegalArgumentException(HConstants.REPLICATION_CLUSTER_ID
-            + " cannot be null/empty when " + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
-            + " is set to true.");
+      if (
+        conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
+          || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()
+      ) {
+        throw new IllegalArgumentException(
+          HConstants.REPLICATION_CLUSTER_ID + " cannot be null/empty when "
+            + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is set to true.");
       }
     }
 
     try {
       this.queueStorage =
-          ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
       this.replicationPeers =
-          ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
+        ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
       this.replicationTracker =
-          ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.server, this.server);
+        ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.server, this.server);
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
     }
@@ -122,19 +123,18 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
       throw new IOException("Could not read cluster id", ke);
     }
     this.globalMetricsSource = CompatibilitySingletonFactory
-        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers,
-        replicationTracker, conf, this.server, fs, logDir, oldLogDir, clusterId, walFactory,
-      globalMetricsSource);
+      .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+    this.replicationManager =
+      new ReplicationSourceManager(queueStorage, replicationPeers, replicationTracker, conf,
+        this.server, fs, logDir, oldLogDir, clusterId, walFactory, globalMetricsSource);
     // Get the user-space WAL provider
-    WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
+    WALProvider walProvider = walFactory != null ? walFactory.getWALProvider() : null;
     if (walProvider != null) {
       walProvider
         .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
     }
-    this.statsThreadPeriod =
-        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
-    LOG.debug("Replication stats-in-log period={} seconds",  this.statsThreadPeriod);
+    this.statsThreadPeriod = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    LOG.debug("Replication stats-in-log period={} seconds", this.statsThreadPeriod);
     this.replicationLoad = new ReplicationLoad();
 
     this.peerProcedureHandler = new PeerProcedureHandlerImpl(replicationManager);
@@ -166,28 +166,27 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
 
   /**
    * Carry on the list of log entries down to the sink
-   * @param entries list of entries to replicate
-   * @param cells The data -- the cells -- that <code>entries</code> describes (the entries do not
-   *          contain the Cells we are replicating; they are passed here on the side in this
-   *          CellScanner).
-   * @param replicationClusterId Id which will uniquely identify source cluster FS client
-   *          configurations in the replication configuration directory
+   * @param entries                    list of entries to replicate
+   * @param cells                      The data -- the cells -- that <code>entries</code> describes
+   *                                   (the entries do not contain the Cells we are replicating;
+   *                                   they are passed here on the side in this CellScanner).
+   * @param replicationClusterId       Id which will uniquely identify source cluster FS client
+   *                                   configurations in the replication configuration directory
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
-   *          directory required for replicating hfiles
-   * @param sourceHFileArchiveDirPath Path that point to the source cluster hfile archive directory
-   * @throws IOException
+   *                                   directory required for replicating hfiles
+   * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
+   *                                   n
    */
   @Override
   public void replicateLogEntries(List<WALEntry> entries, CellScanner cells,
-      String replicationClusterId, String sourceBaseNamespaceDirPath,
-      String sourceHFileArchiveDirPath) throws IOException {
+    String replicationClusterId, String sourceBaseNamespaceDirPath,
+    String sourceHFileArchiveDirPath) throws IOException {
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
       sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
   }
 
   /**
-   * If replication is enabled and this cluster is a master,
-   * it starts
+   * If replication is enabled and this cluster is a master, it starts
    */
   @Override
   public void startReplicationService() throws IOException {
@@ -208,7 +207,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   }
 
   void addHFileRefsToQueue(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-      throws IOException {
+    throws IOException {
     try {
       this.replicationManager.addHFileRefs(tableName, family, pairs);
     } catch (IOException e) {
@@ -226,7 +225,7 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     private final ReplicationSourceManager replicationManager;
 
     public ReplicationStatisticsTask(ReplicationSink replicationSink,
-        ReplicationSourceManager replicationManager) {
+      ReplicationSourceManager replicationManager) {
       this.replicationManager = replicationManager;
       this.replicationSink = replicationSink;
     }

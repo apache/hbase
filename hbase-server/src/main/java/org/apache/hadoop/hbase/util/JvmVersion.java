@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -47,8 +45,8 @@ public abstract class JvmVersion {
    * Return the current JVM version information.
    */
   public static String getVersion() {
-    return System.getProperty("java.vm.vendor", "UNKNOWN_VM_VENDOR") + ' ' +
-      System.getProperty("java.version", "UNKNOWN_JAVA_VERSION") + '-' +
-      System.getProperty("java.vm.version", "UNKNOWN_VM_VERSION");
+    return System.getProperty("java.vm.vendor", "UNKNOWN_VM_VENDOR") + ' '
+      + System.getProperty("java.version", "UNKNOWN_JAVA_VERSION") + '-'
+      + System.getProperty("java.vm.version", "UNKNOWN_VM_VERSION");
   }
 }

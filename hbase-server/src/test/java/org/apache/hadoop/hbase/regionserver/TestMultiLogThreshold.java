@@ -111,7 +111,8 @@ public class TestMultiLogThreshold {
   }
 
   private enum ActionType {
-    REGION_ACTIONS, ACTIONS;
+    REGION_ACTIONS,
+    ACTIONS;
   }
 
   /**
@@ -153,8 +154,10 @@ public class TestMultiLogThreshold {
     verify(appender, atLeastOnce()).doAppend(captor.capture());
     boolean actual = false;
     for (LoggingEvent event : captor.getAllValues()) {
-      if (event.getLevel() == Level.WARN &&
-        event.getRenderedMessage().contains("Large batch operation detected")) {
+      if (
+        event.getLevel() == Level.WARN
+          && event.getRenderedMessage().contains("Large batch operation detected")
+      ) {
         actual = true;
         break;
       }

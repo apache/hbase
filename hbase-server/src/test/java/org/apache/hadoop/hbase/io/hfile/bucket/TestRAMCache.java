@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -47,7 +46,7 @@ public class TestRAMCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRAMCache.class);
+    HBaseClassTestRule.forClass(TestRAMCache.class);
 
   // Define a mock HFileBlock.
   private static class MockHFileBlock extends HFileBlock {
@@ -55,12 +54,12 @@ public class TestRAMCache {
     private volatile CountDownLatch latch;
 
     MockHFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
-        int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
-        long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
-        HFileContext fileContext, ByteBuffAllocator allocator) {
+      int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuffer b, boolean fillHeader,
+      long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader, HFileContext fileContext,
+      ByteBuffAllocator allocator) {
       super(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset,
-          ByteBuff.wrap(b), fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader,
-          fileContext, allocator);
+        ByteBuff.wrap(b), fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader,
+        fileContext, allocator);
     }
 
     public void setLatch(CountDownLatch latch) {
@@ -89,8 +88,8 @@ public class TestRAMCache {
     RAMCache cache = new RAMCache();
     BlockCacheKey key = new BlockCacheKey("file-1", 1);
     MockHFileBlock blk = new MockHFileBlock(BlockType.DATA, size, size, -1,
-        ByteBuffer.wrap(byteArr, 0, size), HFileBlock.FILL_HEADER, -1, 52, -1,
-        new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);
+      ByteBuffer.wrap(byteArr, 0, size), HFileBlock.FILL_HEADER, -1, 52, -1,
+      new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);
     RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false);
 
     Assert.assertNull(cache.putIfAbsent(key, re));

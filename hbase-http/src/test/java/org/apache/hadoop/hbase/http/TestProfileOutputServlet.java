@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,23 +22,22 @@ import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestProfileOutputServlet {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProfileOutputServlet.class);
+    HBaseClassTestRule.forClass(TestProfileOutputServlet.class);
 
   @Test
   public void testSanitization() {
-    List<String> good = Arrays.asList("abcd", "key=value", "key1=value&key2=value2", "",
-        "host=host-1.example.com");
+    List<String> good =
+      Arrays.asList("abcd", "key=value", "key1=value&key2=value2", "", "host=host-1.example.com");
     for (String input : good) {
       assertEquals(input, ProfileOutputServlet.sanitize(input));
     }

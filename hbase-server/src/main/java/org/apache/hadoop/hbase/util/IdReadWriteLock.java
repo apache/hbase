@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -57,8 +55,8 @@ public class IdReadWriteLock<T> {
   /**
    * Constructor of IdReadWriteLock
    * @param referenceType type of the reference used in lock pool, {@link ReferenceType#WEAK} by
-   *          default. Use {@link ReferenceType#SOFT} if the key set is limited and the locks will
-   *          be reused with a high frequency
+   *                      default. Use {@link ReferenceType#SOFT} if the key set is limited and the
+   *                      locks will be reused with a high frequency
    */
   public IdReadWriteLock(ReferenceType referenceType) {
     this.refType = referenceType;
@@ -83,7 +81,8 @@ public class IdReadWriteLock<T> {
   }
 
   public static enum ReferenceType {
-    WEAK, SOFT
+    WEAK,
+    SOFT
   }
 
   /**
@@ -104,7 +103,7 @@ public class IdReadWriteLock<T> {
     return lockPool.size();
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DM_GC", justification="Intentional")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DM_GC", justification = "Intentional")
   private void gc() {
     System.gc();
   }

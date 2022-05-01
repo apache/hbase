@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,8 +41,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
  * Writer for protobuf-based WAL.
  */
 @InterfaceAudience.Private
-public class ProtobufLogWriter extends AbstractProtobufLogWriter
-    implements FSHLogProvider.Writer {
+public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHLogProvider.Writer {
 
   private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogWriter.class);
 
@@ -53,8 +51,8 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public void append(Entry entry) throws IOException {
-    entry.getKey().getBuilder(compressor).
-        setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
+    entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
+      .writeDelimitedTo(output);
     for (Cell cell : entry.getEdit().getCells()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
       cellEncoder.write(cell);
@@ -104,9 +102,9 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
-    this.output = CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication,
-        blockSize, false);
+    short replication, long blockSize) throws IOException, StreamLacksCapabilityException {
+    this.output =
+      CommonFSUtils.createForWal(fs, path, overwritable, bufferSize, replication, blockSize, false);
     if (fs.getConf().getBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true)) {
       if (!output.hasCapability(StreamCapabilities.HFLUSH)) {
         throw new StreamLacksCapabilityException(StreamCapabilities.HFLUSH);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,8 +76,8 @@ public class TestAdmin1 extends TestAdminBase {
   public void testCompactRegionWithTableName() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName).
-        setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
       ADMIN.createTable(htd);
       Region metaRegion = null;
       for (int i = 0; i < NB_SERVERS; i++) {
@@ -255,7 +255,7 @@ public class TestAdmin1 extends TestAdminBase {
   }
 
   private void splitTest(byte[] splitPoint, byte[][] familyNames, int[] rowCounts, int numVersions,
-      int blockSize, boolean async) throws Exception {
+    int blockSize, boolean async) throws Exception {
     TableName tableName = TableName.valueOf("testForceSplit");
     StringBuilder sb = new StringBuilder();
     // Add tail to String so can see better in logs where a test is running.
@@ -264,7 +264,7 @@ public class TestAdmin1 extends TestAdminBase {
     }
     assertFalse(ADMIN.tableExists(tableName));
     try (final Table table = TEST_UTIL.createTable(tableName, familyNames, numVersions, blockSize);
-        final RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      final RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
 
       int rowCount = 0;
       byte[] q = new byte[0];
@@ -370,13 +370,13 @@ public class TestAdmin1 extends TestAdminBase {
           // check if splitKey is based on the largest column family
           // in terms of it store size
           int deltaForLargestFamily = Math.abs(rowCount / 2 - splitKey);
-          LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily +
-            ", r=" + regions.get(0).getRegion());
+          LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily
+            + ", r=" + regions.get(0).getRegion());
           for (int index = 0; index < familyNames.length; index++) {
             int delta = Math.abs(rowCounts[index] / 2 - splitKey);
             if (delta < deltaForLargestFamily) {
-              assertTrue("Delta " + delta + " for family " + index + " should be at least " +
-                "deltaForLargestFamily " + deltaForLargestFamily, false);
+              assertTrue("Delta " + delta + " for family " + index + " should be at least "
+                + "deltaForLargestFamily " + deltaForLargestFamily, false);
             }
           }
         }
@@ -524,8 +524,8 @@ public class TestAdmin1 extends TestAdminBase {
         for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn));
           assertTrue("Column family " + fn + " should have 3 copies",
-            CommonFSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(),
-              sf.getPath()) == (sf.getFileInfo().getFileStatus().getReplication()));
+            CommonFSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(), sf.getPath())
+                == (sf.getFileInfo().getFileStatus().getReplication()));
         }
 
         store = r.getStore(Bytes.toBytes(fn1));
@@ -568,8 +568,8 @@ public class TestAdmin1 extends TestAdminBase {
       regionB = tableRegions.get(1);
       regionC = tableRegions.get(2);
       // TODO convert this to version that is synchronous (See HBASE-16668)
-      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(),
-        false).get(60, TimeUnit.SECONDS);
+      ADMIN.mergeRegionsAsync(regionA.getRegionName(), regionB.getRegionName(), false).get(60,
+        TimeUnit.SECONDS);
 
       tableRegions = ADMIN.getRegions(tableName);
 
@@ -593,8 +593,7 @@ public class TestAdmin1 extends TestAdminBase {
 
       // TODO convert this to version that is synchronous (See HBASE-16668)
       ADMIN.mergeRegionsAsync(regionC.getEncodedNameAsBytes(),
-        mergedChildRegion.getEncodedNameAsBytes(), false)
-        .get(60, TimeUnit.SECONDS);
+        mergedChildRegion.getEncodedNameAsBytes(), false).get(60, TimeUnit.SECONDS);
 
       assertEquals(1, ADMIN.getRegions(tableName).size());
     } finally {
@@ -605,7 +604,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testMergeRegionsInvalidRegionCount()
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   private final Map<Integer, Call> id2Call = new HashMap<>();
 
   public NettyRpcDuplexHandler(NettyRpcConnection conn, CellBlockBuilder cellBlockBuilder,
-      Codec codec, CompressionCodec compressor) {
+    Codec codec, CompressionCodec compressor) {
     this.conn = conn;
     this.cellBlockBuilder = cellBlockBuilder;
     this.codec = codec;
@@ -76,7 +76,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   }
 
   private void writeRequest(ChannelHandlerContext ctx, Call call, ChannelPromise promise)
-      throws IOException {
+    throws IOException {
     id2Call.put(call.id, call);
     ByteBuf cellBlock = cellBlockBuilder.buildCellBlock(codec, compressor, call.cells, ctx.alloc());
     CellBlockMeta cellBlockMeta;
@@ -89,8 +89,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     }
     RequestHeader requestHeader = IPCUtil.buildRequestHeader(call, cellBlockMeta);
     int sizeWithoutCellBlock = IPCUtil.getTotalSizeWhenWrittenDelimited(requestHeader, call.param);
-    int totalSize = cellBlock != null ? sizeWithoutCellBlock + cellBlock.writerIndex()
-        : sizeWithoutCellBlock;
+    int totalSize =
+      cellBlock != null ? sizeWithoutCellBlock + cellBlock.writerIndex() : sizeWithoutCellBlock;
     ByteBuf buf = ctx.alloc().buffer(sizeWithoutCellBlock + 4);
     buf.writeInt(totalSize);
     try (ByteBufOutputStream bbos = new ByteBufOutputStream(buf)) {
@@ -114,7 +114,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-      throws Exception {
+    throws Exception {
     if (msg instanceof Call) {
       writeRequest(ctx, (Call) msg, promise);
     } else {
@@ -129,7 +129,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     int id = responseHeader.getCallId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("got response header " + TextFormat.shortDebugString(responseHeader)
-          + ", totalSize: " + totalSize + " bytes");
+        + ", totalSize: " + totalSize + " bytes");
     }
     RemoteException remoteExc;
     if (responseHeader.hasException()) {
@@ -154,7 +154,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
         int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
         int whatIsLeftToRead = totalSize - readSoFar;
         LOG.debug("Unknown callId: " + id + ", skipping over this response of " + whatIsLeftToRead
-            + " bytes");
+          + " bytes");
       }
       return;
     }
@@ -231,7 +231,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
           if (id2Call.isEmpty()) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("shutdown connection to " + conn.remoteId().address
-                  + " because idle for a long time");
+                + " because idle for a long time");
             }
             // It may happen that there are still some pending calls in the event loop queue and
             // they will get a closed channel exception. But this is not a big deal as it rarely

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TableInfoMissingException extends HBaseIOException {
   }
 
   /**
-   * @param message the message for this exception
+   * @param message   the message for this exception
    * @param throwable the {@link Throwable} to use for this exception
    */
   public TableInfoMissingException(String message, Throwable throwable) {

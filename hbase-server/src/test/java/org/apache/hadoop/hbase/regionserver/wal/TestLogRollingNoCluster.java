@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,20 +53,20 @@ import org.slf4j.LoggerFactory;
 /**
  * Test many concurrent appenders to an WAL while rolling the log.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestLogRollingNoCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLogRollingNoCluster.class);
+    HBaseClassTestRule.forClass(TestLogRollingNoCluster.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static byte [] EMPTY_1K_ARRAY = new byte[1024];
+  private final static byte[] EMPTY_1K_ARRAY = new byte[1024];
   private static final int NUM_THREADS = 100; // Spin up this many threads
   private static final int NUM_ENTRIES = 100; // How many entries to write
 
   /** ProtobufLogWriter that simulates higher latencies in sync() call */
-  public static class HighLatencySyncWriter extends  ProtobufLogWriter {
+  public static class HighLatencySyncWriter extends ProtobufLogWriter {
     @Override
     public void sync(boolean forceSync) throws IOException {
       Threads.sleep(ThreadLocalRandom.current().nextInt(10));
@@ -76,10 +76,8 @@ public class TestLogRollingNoCluster {
   }
 
   /**
-   * Spin up a bunch of threads and have them all append to a WAL.  Roll the
-   * WAL frequently to try and trigger NPE.
-   * @throws IOException
-   * @throws InterruptedException
+   * Spin up a bunch of threads and have them all append to a WAL. Roll the WAL frequently to try
+   * and trigger NPE. nn
    */
   @Test
   public void testContendedLogRolling() throws Exception {
@@ -98,7 +96,7 @@ public class TestLogRollingNoCluster {
     final WALFactory wals = new WALFactory(conf, TestLogRollingNoCluster.class.getName());
     final WAL wal = wals.getWAL(null);
 
-    Appender [] appenders = null;
+    Appender[] appenders = null;
 
     final int numThreads = NUM_THREADS;
     appenders = new Appender[numThreads];
@@ -111,7 +109,7 @@ public class TestLogRollingNoCluster {
         appenders[i].start();
       }
       for (int i = 0; i < numThreads; i++) {
-        //ensure that all threads are joined before closing the wal
+        // ensure that all threads are joined before closing the wal
         appenders[i].join();
       }
     } finally {
@@ -124,7 +122,7 @@ public class TestLogRollingNoCluster {
   }
 
   /**
-   * Appender thread.  Appends to passed wal file.
+   * Appender thread. Appends to passed wal file.
    */
   static class Appender extends Thread {
     private final Logger log;
@@ -154,7 +152,7 @@ public class TestLogRollingNoCluster {
 
     @Override
     public void run() {
-      this.log.info(getName() +" started");
+      this.log.info(getName() + " started");
       final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
         for (int i = 0; i < this.count; i++) {
@@ -168,7 +166,7 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
           NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-          for(byte[] fam: this.metaTableDescriptor.getColumnFamilyNames()) {
+          for (byte[] fam : this.metaTableDescriptor.getColumnFamilyNames()) {
             scopes.put(fam, 0);
           }
           final long txid = wal.appendData(hri, new WALKeyImpl(hri.getEncodedNameAsBytes(),
@@ -177,10 +175,8 @@ public class TestLogRollingNoCluster {
           wal.sync(txid);
         }
         String msg = getName() + " finished";
-        if (isException())
-          this.log.info(msg, getException());
-        else
-          this.log.info(msg);
+        if (isException()) this.log.info(msg, getException());
+        else this.log.info(msg);
       } catch (Exception e) {
         this.e = e;
         log.info("Caught exception from Appender:" + getName(), e);
@@ -195,7 +191,7 @@ public class TestLogRollingNoCluster {
     }
   }
 
-  //@org.junit.Rule
-  //public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-  //  new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
+  // @org.junit.Rule
+  // public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+  // new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

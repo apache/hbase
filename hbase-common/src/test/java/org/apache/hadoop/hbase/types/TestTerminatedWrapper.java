@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,16 +31,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestTerminatedWrapper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTerminatedWrapper.class);
+    HBaseClassTestRule.forClass(TestTerminatedWrapper.class);
 
-  static final String[] VALUES_STRINGS = new String[] {
-    "", "1", "22", "333", "4444", "55555", "666666", "7777777", "88888888", "999999999",
-  };
+  static final String[] VALUES_STRINGS = new String[] { "", "1", "22", "333", "4444", "55555",
+    "666666", "7777777", "88888888", "999999999", };
 
   static final byte[][] VALUES_BYTES = new byte[VALUES_STRINGS.length][];
   static {
@@ -72,9 +71,8 @@ public class TestTerminatedWrapper {
   @Test
   public void testReadWriteSkippable() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(14);
-    for (OrderedString t : new OrderedString[] {
-        OrderedString.ASCENDING, OrderedString.DESCENDING
-    }) {
+    for (OrderedString t : new OrderedString[] { OrderedString.ASCENDING,
+      OrderedString.DESCENDING }) {
       for (byte[] term : TERMINATORS) {
         for (String val : VALUES_STRINGS) {
           buff.setPosition(0);
@@ -108,9 +106,8 @@ public class TestTerminatedWrapper {
   @Test
   public void testSkipSkippable() {
     PositionedByteRange buff = new SimplePositionedMutableByteRange(14);
-    for (OrderedString t : new OrderedString[] {
-        OrderedString.ASCENDING, OrderedString.DESCENDING
-    }) {
+    for (OrderedString t : new OrderedString[] { OrderedString.ASCENDING,
+      OrderedString.DESCENDING }) {
       for (byte[] term : TERMINATORS) {
         for (String val : VALUES_STRINGS) {
           buff.setPosition(0);

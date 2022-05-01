@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -29,9 +27,6 @@ import javax.ws.rs.QueryParam;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -39,6 +34,9 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class TableResource extends ResourceBase {
@@ -47,9 +45,7 @@ public class TableResource extends ResourceBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
 
   /**
-   * Constructor
-   * @param table
-   * @throws IOException
+   * Constructor nn
    */
   public TableResource(String table) throws IOException {
     super();
@@ -62,8 +58,7 @@ public class TableResource extends ResourceBase {
   }
 
   /**
-   * @return true if the table exists
-   * @throws IOException
+   * @return true if the table exists n
    */
   boolean exists() throws IOException {
     return servlet.getAdmin().tableExists(TableName.valueOf(table));
@@ -91,47 +86,43 @@ public class TableResource extends ResourceBase {
 
   @Path("{multiget: multiget.*}")
   public MultiRowResource getMultipleRowResource(final @QueryParam("v") String versions,
-      @PathParam("multiget") String path) throws IOException {
+    @PathParam("multiget") String path) throws IOException {
     return new MultiRowResource(this, versions, path.replace("multiget", "").replace("/", ""));
   }
 
   @Path("{rowspec: [^*]+}")
   public RowResource getRowResource(
-      // We need the @Encoded decorator so Jersey won't urldecode before
-      // the RowSpec constructor has a chance to parse
-      final @PathParam("rowspec") @Encoded String rowspec,
-      final @QueryParam("v") String versions,
-      final @QueryParam("check") String check,
-      final @QueryParam("rr") String returnResult) throws IOException {
+    // We need the @Encoded decorator so Jersey won't urldecode before
+    // the RowSpec constructor has a chance to parse
+    final @PathParam("rowspec") @Encoded String rowspec, final @QueryParam("v") String versions,
+    final @QueryParam("check") String check, final @QueryParam("rr") String returnResult)
+    throws IOException {
     return new RowResource(this, rowspec, versions, check, returnResult);
   }
 
   @Path("{suffixglobbingspec: .*\\*/.+}")
   public RowResource getRowResourceWithSuffixGlobbing(
-      // We need the @Encoded decorator so Jersey won't urldecode before
-      // the RowSpec constructor has a chance to parse
-      final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
-      final @QueryParam("v") String versions,
-      final @QueryParam("check") String check,
-      final @QueryParam("rr") String returnResult) throws IOException {
+    // We need the @Encoded decorator so Jersey won't urldecode before
+    // the RowSpec constructor has a chance to parse
+    final @PathParam("suffixglobbingspec") @Encoded String suffixglobbingspec,
+    final @QueryParam("v") String versions, final @QueryParam("check") String check,
+    final @QueryParam("rr") String returnResult) throws IOException {
     return new RowResource(this, suffixglobbingspec, versions, check, returnResult);
   }
 
   @Path("{scanspec: .*[*]$}")
-  public TableScanResource  getScanResource(
-      final @PathParam("scanspec") String scanSpec,
-      @DefaultValue(Integer.MAX_VALUE + "")
-      @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
-      @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
-      @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
-      @QueryParam(Constants.SCAN_COLUMN) List<String> column,
-      @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
-      @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
-      @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
-      @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_CACHE_BLOCKS) boolean cacheBlocks,
-      @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
-      @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String paramFilter) {
+  public TableScanResource getScanResource(final @PathParam("scanspec") String scanSpec,
+    @DefaultValue(Integer.MAX_VALUE + "") @QueryParam(Constants.SCAN_LIMIT) int userRequestedLimit,
+    @DefaultValue("") @QueryParam(Constants.SCAN_START_ROW) String startRow,
+    @DefaultValue("") @QueryParam(Constants.SCAN_END_ROW) String endRow,
+    @QueryParam(Constants.SCAN_COLUMN) List<String> column,
+    @DefaultValue("1") @QueryParam(Constants.SCAN_MAX_VERSIONS) int maxVersions,
+    @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
+    @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
+    @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
+    @DefaultValue("true") @QueryParam(Constants.SCAN_CACHE_BLOCKS) boolean cacheBlocks,
+    @DefaultValue("false") @QueryParam(Constants.SCAN_REVERSED) boolean reversed,
+    @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String paramFilter) {
     try {
       Filter prefixFilter = null;
       Scan tableScan = new Scan();
@@ -145,9 +136,9 @@ public class TableResource extends ResourceBase {
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace("Query parameters  : Table Name = > " + this.table + " Start Row => " + startRow
-            + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
-            + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
-            + maxVersions + " Batch Size => " + batchSize);
+          + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
+          + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
+          + maxVersions + " Batch Size => " + batchSize);
       }
       Table hTable = RESTServlet.getInstance().getTable(this.table);
       tableScan.setBatch(batchSize);
@@ -158,7 +149,7 @@ public class TableResource extends ResourceBase {
       }
       tableScan.setStopRow(Bytes.toBytes(endRow));
       for (String col : column) {
-        byte [][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
+        byte[][] parts = CellUtil.parseColumn(Bytes.toBytes(col.trim()));
         if (parts.length == 1) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Scan family : " + Bytes.toStringBinary(parts[0]));
@@ -166,8 +157,8 @@ public class TableResource extends ResourceBase {
           tableScan.addFamily(parts[0]);
         } else if (parts.length == 2) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("Scan family and column : " + Bytes.toStringBinary(parts[0])
-                + "  " + Bytes.toStringBinary(parts[1]));
+            LOG.trace("Scan family and column : " + Bytes.toStringBinary(parts[0]) + "  "
+              + Bytes.toStringBinary(parts[1]));
           }
           tableScan.addColumn(parts[0], parts[1]);
         } else {

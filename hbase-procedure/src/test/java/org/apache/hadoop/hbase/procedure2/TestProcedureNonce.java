@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,11 +43,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureNonce {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureNonce.class);
+    HBaseClassTestRule.forClass(TestProcedureNonce.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureNonce.class);
 
@@ -174,8 +174,8 @@ public class TestProcedureNonce {
     testConcurrentNonceRegistration(false, 890, 55555);
   }
 
-  private void testConcurrentNonceRegistration(final boolean submitProcedure,
-      final long nonceGroup, final long nonce) throws IOException {
+  private void testConcurrentNonceRegistration(final boolean submitProcedure, final long nonceGroup,
+    final long nonce) throws IOException {
     // register the nonce
     final NonceKey nonceKey = procExecutor.createNonceKey(nonceGroup, nonce);
 
@@ -229,8 +229,7 @@ public class TestProcedureNonce {
 
           // register the nonce
           t2BeforeNonceRegisteredLatch.countDown();
-          assertFalse("unexpected non registered nonce",
-            procExecutor.registerNonce(nonceKey) < 0);
+          assertFalse("unexpected non registered nonce", procExecutor.registerNonce(nonceKey) < 0);
         } catch (Throwable e) {
           t2Exception.set(e);
         } finally {
@@ -256,7 +255,8 @@ public class TestProcedureNonce {
   public static class TestSingleStepProcedure extends SequentialProcedure<TestProcEnv> {
     private int step = 0;
 
-    public TestSingleStepProcedure() { }
+    public TestSingleStepProcedure() {
+    }
 
     @Override
     protected Procedure[] execute(TestProcEnv env) throws InterruptedException {
@@ -269,7 +269,8 @@ public class TestProcedureNonce {
     }
 
     @Override
-    protected void rollback(TestProcEnv env) { }
+    protected void rollback(TestProcEnv env) {
+    }
 
     @Override
     protected boolean abort(TestProcEnv env) {

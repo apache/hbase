@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWriter>
-    extends Compactor<T> {
+  extends Compactor<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractMultiOutputCompactor.class);
 
@@ -47,7 +46,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
   }
 
   protected void initMultiWriter(AbstractMultiFileWriter writer, InternalScanner scanner,
-      final FileDetails fd, final boolean shouldDropBehind) {
+    final FileDetails fd, final boolean shouldDropBehind) {
     WriterFactory writerFactory = new WriterFactory() {
       @Override
       public StoreFileWriter createWriter() throws IOException {
@@ -56,7 +55,7 @@ public abstract class AbstractMultiOutputCompactor<T extends AbstractMultiFileWr
 
       @Override
       public StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
-          throws IOException {
+        throws IOException {
         return createTmpWriter(fd, shouldDropBehind, fileStoragePolicy);
       }
     };

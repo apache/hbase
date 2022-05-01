@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,17 +33,15 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the comparator used by Hbck.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHBaseFsckComparator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckComparator.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckComparator.class);
 
-  TableName table =
-      TableName.valueOf("table1");
-  TableName table2 =
-      TableName.valueOf("table2");
+  TableName table = TableName.valueOf("table1");
+  TableName table2 = TableName.valueOf("table2");
   byte[] keyStart = Bytes.toBytes("");
   byte[] keyA = Bytes.toBytes("A");
   byte[] keyB = Bytes.toBytes("B");
@@ -51,8 +49,7 @@ public class TestHBaseFsckComparator {
   byte[] keyEnd = Bytes.toBytes("");
 
   static HbckRegionInfo genHbckInfo(TableName table, byte[] start, byte[] end, int time) {
-    return new HbckRegionInfo(new MetaEntry(new HRegionInfo(table, start, end), null,
-        time));
+    return new HbckRegionInfo(new MetaEntry(new HRegionInfo(table, start, end), null, time));
   }
 
   @Test
@@ -103,4 +100,3 @@ public class TestHBaseFsckComparator {
     assertTrue(HbckRegionInfo.COMPARATOR.compare(hi2, hi1) > 0);
   }
 }
-

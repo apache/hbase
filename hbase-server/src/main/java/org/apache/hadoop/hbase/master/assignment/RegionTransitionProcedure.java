@@ -31,9 +31,10 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionTransitionState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Leave here only for checking if we can successfully start the master.
@@ -43,7 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @Deprecated
 @InterfaceAudience.Private
 public abstract class RegionTransitionProcedure extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+  implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
 
   protected final AtomicBoolean aborted = new AtomicBoolean(false);
 
@@ -92,9 +93,11 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
     sb.append(getProcName());
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     RegionInfo r = getRegionInfo();
-    return getClass().getSimpleName() + " " + getTableName() + (r != null? r.getEncodedName(): "");
+    return getClass().getSimpleName() + " " + getTableName()
+      + (r != null ? r.getEncodedName() : "");
   }
 
   public RegionStateNode getRegionState(final MasterProcedureEnv env) {
@@ -110,27 +113,27 @@ public abstract class RegionTransitionProcedure extends Procedure<MasterProcedur
   }
 
   protected abstract boolean startTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-      throws IOException, ProcedureSuspendedException;
+    throws IOException, ProcedureSuspendedException;
 
   protected abstract boolean updateTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-      throws IOException, ProcedureSuspendedException;
+    throws IOException, ProcedureSuspendedException;
 
   protected abstract void finishTransition(MasterProcedureEnv env, RegionStateNode regionNode)
-      throws IOException, ProcedureSuspendedException;
+    throws IOException, ProcedureSuspendedException;
 
   protected abstract void reportTransition(MasterProcedureEnv env, RegionStateNode regionNode,
-      TransitionCode code, long seqId) throws UnexpectedStateException;
+    TransitionCode code, long seqId) throws UnexpectedStateException;
 
   @Override
   public abstract Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
-      ServerName serverName);
+    ServerName serverName);
 
   protected abstract boolean remoteCallFailed(MasterProcedureEnv env, RegionStateNode regionNode,
-      IOException exception);
+    IOException exception);
 
   @Override
   public synchronized void remoteCallFailed(final MasterProcedureEnv env,
-      final ServerName serverName, final IOException exception) {
+    final ServerName serverName, final IOException exception) {
   }
 
   @Override

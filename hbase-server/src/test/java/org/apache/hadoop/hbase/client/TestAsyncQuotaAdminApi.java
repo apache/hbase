@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncQuotaAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncQuotaAdminApi.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -69,26 +69,27 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
   public void testThrottleType() throws Exception {
     String userName = User.getCurrent().getShortName();
 
-    admin.setQuota(
-      QuotaSettingsFactory.throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES))
-        .get();
+    admin
+      .setQuota(
+        QuotaSettingsFactory.throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES))
+      .get();
     admin.setQuota(
       QuotaSettingsFactory.throttleUser(userName, ThrottleType.WRITE_NUMBER, 12, TimeUnit.MINUTES))
-        .get();
+      .get();
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true)).get();
 
     int countThrottle = 0;
     int countGlobalBypass = 0;
     for (QuotaSettings settings : admin.getQuota(null).get()) {
       switch (settings.getQuotaType()) {
-      case THROTTLE:
-        countThrottle++;
-        break;
-      case GLOBAL_BYPASS:
-        countGlobalBypass++;
-        break;
-      default:
-        fail("unexpected settings type: " + settings.getQuotaType());
+        case THROTTLE:
+          countThrottle++;
+          break;
+        case GLOBAL_BYPASS:
+          countGlobalBypass++;
+          break;
+        default:
+          fail("unexpected settings type: " + settings.getQuotaType());
       }
     }
     assertEquals(2, countThrottle);
@@ -103,14 +104,15 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
   @Test
   public void testQuotaRetrieverFilter() throws Exception {
     TableName[] tables = new TableName[] { TableName.valueOf("T0"), TableName.valueOf("T01"),
-        TableName.valueOf("NS0:T2"), };
+      TableName.valueOf("NS0:T2"), };
     String[] namespaces = new String[] { "NS0", "NS01", "NS2" };
     String[] users = new String[] { "User0", "User01", "User2" };
 
     for (String user : users) {
-      admin.setQuota(
-        QuotaSettingsFactory.throttleUser(user, ThrottleType.REQUEST_NUMBER, 1, TimeUnit.MINUTES))
-          .get();
+      admin
+        .setQuota(
+          QuotaSettingsFactory.throttleUser(user, ThrottleType.REQUEST_NUMBER, 1, TimeUnit.MINUTES))
+        .get();
 
       for (TableName table : tables) {
         admin.setQuota(QuotaSettingsFactory.throttleUser(user, table, ThrottleType.REQUEST_NUMBER,
@@ -127,7 +129,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     for (TableName table : tables) {
       admin.setQuota(
         QuotaSettingsFactory.throttleTable(table, ThrottleType.REQUEST_NUMBER, 4, TimeUnit.MINUTES))
-          .get();
+        .get();
     }
     assertNumResults(24, null);
 

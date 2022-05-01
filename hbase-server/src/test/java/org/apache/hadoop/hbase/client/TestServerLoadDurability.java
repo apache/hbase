@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,9 +45,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * HBASE-19496 noticed that the RegionLoad/ServerLoad may be corrupted if rpc server
- * reuses the bytebuffer backed, so this test call the Admin#getLastMajorCompactionTimestamp() to
- * invoke HMaster to iterate all stored server/region loads.
+ * HBASE-19496 noticed that the RegionLoad/ServerLoad may be corrupted if rpc server reuses the
+ * bytebuffer backed, so this test call the Admin#getLastMajorCompactionTimestamp() to invoke
+ * HMaster to iterate all stored server/region loads.
  */
 @RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
@@ -55,7 +55,7 @@ public class TestServerLoadDurability {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerLoadDurability.class);
+    HBaseClassTestRule.forClass(TestServerLoadDurability.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
 
@@ -79,8 +79,7 @@ public class TestServerLoadDurability {
 
   private static Configuration createConfigurationForNettyRpcServer() {
     Configuration conf = HBaseConfiguration.create();
-    conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        NettyRpcServer.class.getName());
+    conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, NettyRpcServer.class.getName());
     return conf;
   }
 

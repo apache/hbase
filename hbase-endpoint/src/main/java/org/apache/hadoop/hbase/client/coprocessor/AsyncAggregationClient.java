@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,10 +52,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public final class AsyncAggregationClient {
-  private AsyncAggregationClient() {}
+  private AsyncAggregationClient() {
+  }
 
   private static abstract class AbstractAggregationCallback<T>
-      implements CoprocessorCallback<AggregateResponse> {
+    implements CoprocessorCallback<AggregateResponse> {
     private final CompletableFuture<T> future;
 
     protected boolean finished = false;
@@ -82,8 +83,7 @@ public final class AsyncAggregationClient {
       completeExceptionally(error);
     }
 
-    protected abstract void aggregate(RegionInfo region, AggregateResponse resp)
-        throws IOException;
+    protected abstract void aggregate(RegionInfo region, AggregateResponse resp) throws IOException;
 
     @Override
     public synchronized void onRegionComplete(RegionInfo region, AggregateResponse resp) {
@@ -107,15 +107,15 @@ public final class AsyncAggregationClient {
   }
 
   private static <R, S, P extends Message, Q extends Message, T extends Message> R
-      getCellValueFromProto(ColumnInterpreter<R, S, P, Q, T> ci, AggregateResponse resp,
-          int firstPartIndex) throws IOException {
+    getCellValueFromProto(ColumnInterpreter<R, S, P, Q, T> ci, AggregateResponse resp,
+      int firstPartIndex) throws IOException {
     Q q = getParsedGenericInstance(ci.getClass(), 3, resp.getFirstPart(firstPartIndex));
     return ci.getCellValueFromProto(q);
   }
 
   private static <R, S, P extends Message, Q extends Message, T extends Message> S
-      getPromotedValueFromProto(ColumnInterpreter<R, S, P, Q, T> ci, AggregateResponse resp,
-          int firstPartIndex) throws IOException {
+    getPromotedValueFromProto(ColumnInterpreter<R, S, P, Q, T> ci, AggregateResponse resp,
+      int firstPartIndex) throws IOException {
     T t = getParsedGenericInstance(ci.getClass(), 4, resp.getFirstPart(firstPartIndex));
     return ci.getPromotedValueFromProto(t);
   }
@@ -125,7 +125,7 @@ public final class AsyncAggregationClient {
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message> CompletableFuture<R>
-      max(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+    max(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<R> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -154,15 +154,15 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getMax(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getMax(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message> CompletableFuture<R>
-      min(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+    min(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<R> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -192,16 +192,16 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getMin(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getMin(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message>
-      CompletableFuture<Long> rowCount(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci,
-          Scan scan) {
+    CompletableFuture<Long>
+    rowCount(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<Long> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -225,15 +225,15 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getRowNum(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getRowNum(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message> CompletableFuture<S>
-      sum(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+    sum(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<S> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -259,16 +259,16 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getSum(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getSum(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message>
-      CompletableFuture<Double> avg(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci,
-          Scan scan) {
+    CompletableFuture<Double>
+    avg(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<Double> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -296,16 +296,16 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getAvg(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getAvg(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   public static <R, S, P extends Message, Q extends Message, T extends Message>
-      CompletableFuture<Double> std(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci,
-          Scan scan) {
+    CompletableFuture<Double>
+    std(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<Double> future = new CompletableFuture<>();
     AggregateRequest req;
     try {
@@ -339,19 +339,19 @@ public final class AsyncAggregationClient {
       }
     };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getStd(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getStd(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   // the map key is the startRow of the region
   private static <R, S, P extends Message, Q extends Message, T extends Message>
-      CompletableFuture<NavigableMap<byte[], S>>
-      sumByRegion(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+    CompletableFuture<NavigableMap<byte[], S>>
+    sumByRegion(AsyncTable<?> table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
     CompletableFuture<NavigableMap<byte[], S>> future =
-        new CompletableFuture<NavigableMap<byte[], S>>();
+      new CompletableFuture<NavigableMap<byte[], S>>();
     AggregateRequest req;
     try {
       req = validateArgAndGetPB(scan, ci, false);
@@ -361,9 +361,9 @@ public final class AsyncAggregationClient {
     }
     int firstPartIndex = scan.getFamilyMap().get(scan.getFamilies()[0]).size() - 1;
     AbstractAggregationCallback<NavigableMap<byte[], S>> callback =
-        new AbstractAggregationCallback<NavigableMap<byte[], S>>(future) {
+      new AbstractAggregationCallback<NavigableMap<byte[], S>>(future) {
 
-      private final NavigableMap<byte[], S> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        private final NavigableMap<byte[], S> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
         @Override
         protected void aggregate(RegionInfo region, AggregateResponse resp) throws IOException {
@@ -378,16 +378,16 @@ public final class AsyncAggregationClient {
         }
       };
     table
-        .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
-          (stub, controller, rpcCallback) -> stub.getMedian(controller, req, rpcCallback), callback)
-        .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
-        .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
+      .<AggregateService, AggregateResponse> coprocessorService(AggregateService::newStub,
+        (stub, controller, rpcCallback) -> stub.getMedian(controller, req, rpcCallback), callback)
+      .fromRow(nullToEmpty(scan.getStartRow()), scan.includeStartRow())
+      .toRow(nullToEmpty(scan.getStopRow()), scan.includeStopRow()).execute();
     return future;
   }
 
   private static <R, S, P extends Message, Q extends Message, T extends Message> void findMedian(
-          CompletableFuture<R> future, AsyncTable<AdvancedScanResultConsumer> table,
-          ColumnInterpreter<R, S, P, Q, T> ci, Scan scan, NavigableMap<byte[], S> sumByRegion) {
+    CompletableFuture<R> future, AsyncTable<AdvancedScanResultConsumer> table,
+    ColumnInterpreter<R, S, P, Q, T> ci, Scan scan, NavigableMap<byte[], S> sumByRegion) {
     double halfSum = ci.divideForAvg(sumByRegion.values().stream().reduce(ci::add).get(), 2L);
     S movingSum = null;
     byte[] startRow = null;
@@ -453,9 +453,9 @@ public final class AsyncAggregationClient {
     });
   }
 
-  public static <R, S, P extends Message, Q extends Message, T extends Message>
-      CompletableFuture<R> median(AsyncTable<AdvancedScanResultConsumer> table,
-      ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) {
+  public static <R, S, P extends Message, Q extends Message, T extends Message> CompletableFuture<R>
+    median(AsyncTable<AdvancedScanResultConsumer> table, ColumnInterpreter<R, S, P, Q, T> ci,
+      Scan scan) {
     CompletableFuture<R> future = new CompletableFuture<>();
     addListener(sumByRegion(table, ci, scan), (sumByRegion, error) -> {
       if (error != null) {

@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,36 +19,37 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
- * This class is used to unify HTable calls with AsyncProcess Framework. HTable can use
- * AsyncProcess directly though this class. Also adds global timeout tracking on top of
- * RegionServerCallable and implements Cancellable.
- * Global timeout tracking conflicts with logic in RpcRetryingCallerImpl's callWithRetries. So you
- * can only use this callable in AsyncProcess which only uses callWithoutRetries and retries in its
- * own implementation.
+ * This class is used to unify HTable calls with AsyncProcess Framework. HTable can use AsyncProcess
+ * directly though this class. Also adds global timeout tracking on top of RegionServerCallable and
+ * implements Cancellable. Global timeout tracking conflicts with logic in RpcRetryingCallerImpl's
+ * callWithRetries. So you can only use this callable in AsyncProcess which only uses
+ * callWithoutRetries and retries in its own implementation.
  */
 @InterfaceAudience.Private
-abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<T> implements
-    Cancellable {
+abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<T>
+  implements Cancellable {
   private final RetryingTimeTracker tracker;
   private final int rpcTimeout;
+
   CancellableRegionServerCallable(Connection connection, TableName tableName, byte[] row,
-      RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker, int priority) {
+    RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker, int priority) {
     super(connection, tableName, row, rpcController, priority);
     this.rpcTimeout = rpcTimeout;
     this.tracker = tracker;
   }
 
-  /* Override so can mess with the callTimeout.
-   * (non-Javadoc)
+  /*
+   * Override so can mess with the callTimeout. (non-Javadoc)
    * @see org.apache.hadoop.hbase.client.RegionServerCallable#rpcCall(int)
    */
   @Override
@@ -92,30 +94,30 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
   }
 
   protected ClientProtos.MultiResponse doMulti(ClientProtos.MultiRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+    throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().multi(getRpcController(), request);
   }
 
   protected ClientProtos.ScanResponse doScan(ClientProtos.ScanRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+    throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().scan(getRpcController(), request);
   }
 
-  protected ClientProtos.PrepareBulkLoadResponse doPrepareBulkLoad(
-      ClientProtos.PrepareBulkLoadRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+  protected ClientProtos.PrepareBulkLoadResponse
+    doPrepareBulkLoad(ClientProtos.PrepareBulkLoadRequest request)
+      throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().prepareBulkLoad(getRpcController(), request);
   }
 
-  protected ClientProtos.BulkLoadHFileResponse doBulkLoadHFile(
-      ClientProtos.BulkLoadHFileRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+  protected ClientProtos.BulkLoadHFileResponse
+    doBulkLoadHFile(ClientProtos.BulkLoadHFileRequest request)
+      throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().bulkLoadHFile(getRpcController(), request);
   }
 
-  protected ClientProtos.CleanupBulkLoadResponse doCleanupBulkLoad(
-      ClientProtos.CleanupBulkLoadRequest request)
-  throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+  protected ClientProtos.CleanupBulkLoadResponse
+    doCleanupBulkLoad(ClientProtos.CleanupBulkLoadRequest request)
+      throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().cleanupBulkLoad(getRpcController(), request);
   }
 }

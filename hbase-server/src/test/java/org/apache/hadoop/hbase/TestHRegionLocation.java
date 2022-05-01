@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,17 +28,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHRegionLocation {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionLocation.class);
+    HBaseClassTestRule.forClass(TestHRegionLocation.class);
 
   /**
-   * HRegionLocations are equal if they have the same 'location' -- i.e. host and
-   * port -- even if they are carrying different regions.  Verify that is indeed
-   * the case.
+   * HRegionLocations are equal if they have the same 'location' -- i.e. host and port -- even if
+   * they are carrying different regions. Verify that is indeed the case.
    */
   @Test
   public void testHashAndEqualsCode() {
@@ -56,8 +55,8 @@ public class TestHRegionLocation {
     HRegionLocation hrl4 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
     // These have same HRI but different locations so should be different.
     assertFalse(hrl3.equals(hrl4));
-    HRegionLocation hrl5 = new HRegionLocation(hrl4.getRegionInfo(),
-        hrl4.getServerName(), hrl4.getSeqNum() + 1);
+    HRegionLocation hrl5 =
+      new HRegionLocation(hrl4.getRegionInfo(), hrl4.getServerName(), hrl4.getSeqNum() + 1);
     assertTrue(hrl4.equals(hrl5));
   }
 
@@ -72,16 +71,13 @@ public class TestHRegionLocation {
   @Test
   public void testCompareTo() {
     ServerName hsa1 = ServerName.valueOf("localhost", 1234, -1L);
-    HRegionLocation hsl1 =
-      new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
+    HRegionLocation hsl1 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa1);
     ServerName hsa2 = ServerName.valueOf("localhost", 1235, -1L);
-    HRegionLocation hsl2 =
-      new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
+    HRegionLocation hsl2 = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, hsa2);
     assertEquals(0, hsl1.compareTo(hsl1));
     assertEquals(0, hsl2.compareTo(hsl2));
     int compare1 = hsl1.compareTo(hsl2);
     int compare2 = hsl2.compareTo(hsl1);
-    assertTrue((compare1 > 0)? compare2 < 0: compare2 > 0);
+    assertTrue((compare1 > 0) ? compare2 < 0 : compare2 > 0);
   }
 }
-

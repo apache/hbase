@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -27,12 +26,11 @@ import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@link Number} of arbitrary precision and variable-length encoding. The
- * resulting length of encoded values is determined by the numerical (base
- * 100) precision, not absolute value. Use this data type anywhere you would
- * expect to use a {@code DECIMAL} type, a {@link BigDecimal}, a
- * {@link BigInteger}, or any time you've parsed floating precision values
- * from text. Built on {@link OrderedBytes#encodeNumeric(PositionedByteRange, BigDecimal, Order)}.
+ * An {@link Number} of arbitrary precision and variable-length encoding. The resulting length of
+ * encoded values is determined by the numerical (base 100) precision, not absolute value. Use this
+ * data type anywhere you would expect to use a {@code DECIMAL} type, a {@link BigDecimal}, a
+ * {@link BigInteger}, or any time you've parsed floating precision values from text. Built on
+ * {@link OrderedBytes#encodeNumeric(PositionedByteRange, BigDecimal, Order)}.
  */
 @InterfaceAudience.Public
 public class OrderedNumeric extends OrderedBytesBase<Number> {

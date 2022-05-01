@@ -31,7 +31,8 @@ public class SystemExitRule implements TestRule {
   @Override
   public Statement apply(final Statement s, Description d) {
     return new Statement() {
-      @Override public void evaluate() throws Throwable {
+      @Override
+      public void evaluate() throws Throwable {
 
         try {
           forbidSystemExitCall();
@@ -44,8 +45,8 @@ public class SystemExitRule implements TestRule {
     };
   };
 
-   // Exiting the JVM is not allowed in tests and this exception is thrown instead
-   // when it is done
+  // Exiting the JVM is not allowed in tests and this exception is thrown instead
+  // when it is done
   public static class SystemExitInTestException extends SecurityException {
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -109,7 +109,7 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
   }
 
   /**
-   * @param update new region state this node should be assigned.
+   * @param update   new region state this node should be assigned.
    * @param expected current state should be in this given list of expected states
    * @return true, if current state is in expected list; otherwise false.
    */
@@ -136,10 +136,10 @@ public class RegionStateNode implements Comparable<RegionStateNode> {
    * {@link UnexpectedStateException}.
    */
   public void transitionState(final State update, final State... expected)
-      throws UnexpectedStateException {
+    throws UnexpectedStateException {
     if (!setState(update, expected)) {
-      throw new UnexpectedStateException("Expected " + Arrays.toString(expected) +
-        " so could move to " + update + " but current state=" + getState());
+      throw new UnexpectedStateException("Expected " + Arrays.toString(expected)
+        + " so could move to " + update + " but current state=" + getState());
     }
   }
 

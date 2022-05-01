@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
@@ -56,12 +55,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 @Category(LargeTests.class)
 public class TestRegionServerReportForDuty {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerReportForDuty.class);
+    HBaseClassTestRule.forClass(TestRegionServerReportForDuty.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerReportForDuty.class);
 
@@ -92,10 +93,10 @@ public class TestRegionServerReportForDuty {
   }
 
   /**
-   * LogCapturer is similar to {@link org.apache.hadoop.test.GenericTestUtils.LogCapturer}
-   * except that this implementation has a default appender to the root logger.
-   * Hadoop 2.8+ supports the default appender in the LogCapture it ships and this can be replaced.
-   * TODO: This class can be removed after we upgrade Hadoop dependency.
+   * LogCapturer is similar to {@link org.apache.hadoop.test.GenericTestUtils.LogCapturer} except
+   * that this implementation has a default appender to the root logger. Hadoop 2.8+ supports the
+   * default appender in the LogCapture it ships and this can be replaced. TODO: This class can be
+   * removed after we upgrade Hadoop dependency.
    */
   static class LogCapturer {
     private StringWriter sw = new StringWriter();
@@ -108,8 +109,8 @@ public class TestRegionServerReportForDuty {
       if (defaultAppender == null) {
         defaultAppender = org.apache.log4j.Logger.getRootLogger().getAppender("console");
       }
-      final Layout layout = (defaultAppender == null) ? new PatternLayout() :
-          defaultAppender.getLayout();
+      final Layout layout =
+        (defaultAppender == null) ? new PatternLayout() : defaultAppender.getLayout();
       this.appender = new WriterAppender(layout, sw);
       this.logger.addAppender(this.appender);
     }
@@ -163,16 +164,16 @@ public class TestRegionServerReportForDuty {
 
     // Following asserts the actual retry number is in range (expectedRetry/2, expectedRetry*2).
     // Ideally we can assert the exact retry count. We relax here to tolerate contention error.
-    int expectedRetry = (int)Math.ceil(Math.log(interval - msginterval));
-    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d",
-        count, expectedRetry / 2), count > expectedRetry / 2);
-    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d",
-        count, expectedRetry * 2), count < expectedRetry * 2);
+    int expectedRetry = (int) Math.ceil(Math.log(interval - msginterval));
+    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d", count,
+      expectedRetry / 2), count > expectedRetry / 2);
+    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d", count,
+      expectedRetry * 2), count < expectedRetry * 2);
   }
 
   /**
-   * Tests region sever reportForDuty with backup master becomes primary master after
-   * the first master goes away.
+   * Tests region sever reportForDuty with backup master becomes primary master after the first
+   * master goes away.
    */
   @Test
   public void testReportForDutyWithMasterChange() throws Exception {
@@ -182,8 +183,10 @@ public class TestRegionServerReportForDuty {
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
     // master has a rs. defaultMinToStart = 2
     boolean tablesOnMaster = LoadBalancer.isTablesOnMaster(testUtil.getConfiguration());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, tablesOnMaster? 2: 1);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, tablesOnMaster? 2: 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+      tablesOnMaster ? 2 : 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
+      tablesOnMaster ? 2 : 1);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
@@ -211,9 +214,9 @@ public class TestRegionServerReportForDuty {
     // TODO: Add handling bindexception. Random port is not enough!!! Flakie test!
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      tablesOnMaster? 3: 2);
+      tablesOnMaster ? 3 : 2);
     cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART,
-      tablesOnMaster? 3: 2);
+      tablesOnMaster ? 3 : 2);
     backupMaster = cluster.addMaster();
     LOG.debug("Starting new master: " + backupMaster.getMaster().getServerName());
     backupMaster.start();
@@ -224,10 +227,10 @@ public class TestRegionServerReportForDuty {
     assertTrue(backupMaster.getMaster().isActiveMaster());
     assertTrue(backupMaster.getMaster().isInitialized());
     assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(),
-      tablesOnMaster? 3: 2);
+      tablesOnMaster ? 3 : 2);
 
   }
-  
+
   /**
    * Tests region sever reportForDuty with RS RPC retry
    */
@@ -328,8 +331,8 @@ public class TestRegionServerReportForDuty {
     private boolean rpcStubCreatedFlag = false;
     private boolean masterChanged = false;
 
-    public MyRegionServer(Configuration conf) throws IOException, KeeperException,
-        InterruptedException {
+    public MyRegionServer(Configuration conf)
+      throws IOException, KeeperException, InterruptedException {
       super(conf);
     }
 

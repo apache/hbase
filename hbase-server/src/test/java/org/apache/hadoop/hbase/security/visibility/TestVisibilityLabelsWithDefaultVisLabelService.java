@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,15 +56,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibilityLabels {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsWithDefaultVisLabelService.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsWithDefaultVisLabelService.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    TestVisibilityLabelsWithDefaultVisLabelService.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestVisibilityLabelsWithDefaultVisLabelService.class);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -72,7 +72,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     conf = TEST_UTIL.getConfiguration();
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -86,38 +86,37 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   @Test
   public void testAddLabels() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
-        VisibilityLabelsResponse response = null;
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          response = VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable e) {
-          fail("Should not have thrown exception");
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
+          VisibilityLabelsResponse response = null;
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            response = VisibilityClient.addLabels(conn, labels);
+          } catch (Throwable e) {
+            fail("Should not have thrown exception");
+          }
+          List<RegionActionResult> resultList = response.getResultList();
+          assertEquals(5, resultList.size());
+          assertTrue(resultList.get(0).getException().getValue().isEmpty());
+          assertEquals("org.apache.hadoop.hbase.DoNotRetryIOException",
+            resultList.get(1).getException().getName());
+          assertTrue(Bytes.toString(resultList.get(1).getException().getValue().toByteArray())
+            .contains("org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException: "
+              + "Label 'secret' already exists"));
+          assertTrue(resultList.get(2).getException().getValue().isEmpty());
+          assertTrue(resultList.get(3).getException().getValue().isEmpty());
+          assertTrue(resultList.get(4).getException().getValue().isEmpty());
+          return null;
         }
-        List<RegionActionResult> resultList = response.getResultList();
-        assertEquals(5, resultList.size());
-        assertTrue(resultList.get(0).getException().getValue().isEmpty());
-        assertEquals("org.apache.hadoop.hbase.DoNotRetryIOException", resultList.get(1)
-            .getException().getName());
-        assertTrue(Bytes.toString(resultList.get(1).getException().getValue().toByteArray())
-            .contains(
-                "org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException: "
-                    + "Label 'secret' already exists"));
-        assertTrue(resultList.get(2).getException().getValue().isEmpty());
-        assertTrue(resultList.get(3).getException().getValue().isEmpty());
-        assertTrue(resultList.get(4).getException().getValue().isEmpty());
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
   @Test
   public void testAddVisibilityLabelsOnRSRestart() throws Exception {
-    List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
-        .getRegionServerThreads();
+    List<RegionServerThread> regionServerThreads =
+      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     for (RegionServerThread rsThread : regionServerThreads) {
       rsThread.getRegionServer().abort("Aborting ");
     }
@@ -127,31 +126,31 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     final AtomicBoolean vcInitialized = new AtomicBoolean(true);
     do {
       PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-          new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-        @Override
-        public VisibilityLabelsResponse run() throws Exception {
-          String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
-          try (Connection conn = ConnectionFactory.createConnection(conf)) {
-            VisibilityLabelsResponse resp = VisibilityClient.addLabels(conn, labels);
-            List<RegionActionResult> results = resp.getResultList();
-            if (results.get(0).hasException()) {
-              NameBytesPair pair = results.get(0).getException();
-              Throwable t = ProtobufUtil.toException(pair);
-              LOG.debug("Got exception writing labels", t);
-              if (t instanceof VisibilityControllerNotReadyException) {
-                vcInitialized.set(false);
-                LOG.warn("VisibilityController was not yet initialized");
-                Threads.sleep(10);
-              } else {
-                vcInitialized.set(true);
-              }
-            } else LOG.debug("new labels added: " + resp);
-          } catch (Throwable t) {
-            throw new IOException(t);
+        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+          @Override
+          public VisibilityLabelsResponse run() throws Exception {
+            String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
+            try (Connection conn = ConnectionFactory.createConnection(conf)) {
+              VisibilityLabelsResponse resp = VisibilityClient.addLabels(conn, labels);
+              List<RegionActionResult> results = resp.getResultList();
+              if (results.get(0).hasException()) {
+                NameBytesPair pair = results.get(0).getException();
+                Throwable t = ProtobufUtil.toException(pair);
+                LOG.debug("Got exception writing labels", t);
+                if (t instanceof VisibilityControllerNotReadyException) {
+                  vcInitialized.set(false);
+                  LOG.warn("VisibilityController was not yet initialized");
+                  Threads.sleep(10);
+                } else {
+                  vcInitialized.set(true);
+                }
+              } else LOG.debug("new labels added: " + resp);
+            } catch (Throwable t) {
+              throw new IOException(t);
+            }
+            return null;
           }
-          return null;
-        }
-      };
+        };
       SUPERUSER.runAs(action);
     } while (!vcInitialized.get());
     // Scan the visibility label
@@ -160,7 +159,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
 
     int i = 0;
     try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);
-         ResultScanner scanner = ht.getScanner(s)) {
+      ResultScanner scanner = ht.getScanner(s)) {
       while (true) {
         Result next = scanner.next();
         if (next == null) {
@@ -176,54 +175,54 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   @Test
   public void testListLabels() throws Throwable {
     PrivilegedExceptionAction<ListLabelsResponse> action =
-        new PrivilegedExceptionAction<ListLabelsResponse>() {
-      @Override
-      public ListLabelsResponse run() throws Exception {
-        ListLabelsResponse response = null;
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          response = VisibilityClient.listLabels(conn, null);
-        } catch (Throwable e) {
-          fail("Should not have thrown exception");
+      new PrivilegedExceptionAction<ListLabelsResponse>() {
+        @Override
+        public ListLabelsResponse run() throws Exception {
+          ListLabelsResponse response = null;
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            response = VisibilityClient.listLabels(conn, null);
+          } catch (Throwable e) {
+            fail("Should not have thrown exception");
+          }
+          // The addLabels() in setup added:
+          // { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
+          // UNICODE_VIS_TAG, UC1, UC2 };
+          // The previous tests added 2 more labels: ABC, XYZ
+          // The 'system' label is excluded.
+          List<ByteString> labels = response.getLabelList();
+          assertEquals(12, labels.size());
+          assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
+          assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
+          assertTrue(labels.contains(ByteString.copyFrom(CONFIDENTIAL.getBytes())));
+          assertTrue(labels.contains(ByteString.copyFrom("ABC".getBytes())));
+          assertTrue(labels.contains(ByteString.copyFrom("XYZ".getBytes())));
+          assertFalse(labels.contains(ByteString.copyFrom(SYSTEM_LABEL.getBytes())));
+          return null;
         }
-        // The addLabels() in setup added:
-        // { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
-        //  UNICODE_VIS_TAG, UC1, UC2 };
-        // The previous tests added 2 more labels: ABC, XYZ
-        // The 'system' label is excluded.
-        List<ByteString> labels = response.getLabelList();
-        assertEquals(12, labels.size());
-        assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(CONFIDENTIAL.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom("ABC".getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom("XYZ".getBytes())));
-        assertFalse(labels.contains(ByteString.copyFrom(SYSTEM_LABEL.getBytes())));
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
   @Test
   public void testListLabelsWithRegEx() throws Throwable {
     PrivilegedExceptionAction<ListLabelsResponse> action =
-        new PrivilegedExceptionAction<ListLabelsResponse>() {
-      @Override
-      public ListLabelsResponse run() throws Exception {
-        ListLabelsResponse response = null;
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          response = VisibilityClient.listLabels(conn, ".*secret");
-        } catch (Throwable e) {
-          fail("Should not have thrown exception");
+      new PrivilegedExceptionAction<ListLabelsResponse>() {
+        @Override
+        public ListLabelsResponse run() throws Exception {
+          ListLabelsResponse response = null;
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            response = VisibilityClient.listLabels(conn, ".*secret");
+          } catch (Throwable e) {
+            fail("Should not have thrown exception");
+          }
+          // Only return the labels that end with 'secret'
+          List<ByteString> labels = response.getLabelList();
+          assertEquals(2, labels.size());
+          assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
+          assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
+          return null;
         }
-        // Only return the labels that end with 'secret'
-        List<ByteString> labels = response.getLabelList();
-        assertEquals(2, labels.size());
-        assertTrue(labels.contains(ByteString.copyFrom(SECRET.getBytes())));
-        assertTrue(labels.contains(ByteString.copyFrom(TOPSECRET.getBytes())));
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
@@ -231,9 +230,9 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   public void testVisibilityLabelsOnWALReplay() throws Exception {
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     try (Table table = createTableAndWriteDataWithLabels(tableName,
-        "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE);) {
-      List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
-          .getRegionServerThreads();
+      "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE);) {
+      List<RegionServerThread> regionServerThreads =
+        TEST_UTIL.getHBaseCluster().getRegionServerThreads();
       for (RegionServerThread rsThread : regionServerThreads) {
         rsThread.getRegionServer().abort("Aborting ");
       }

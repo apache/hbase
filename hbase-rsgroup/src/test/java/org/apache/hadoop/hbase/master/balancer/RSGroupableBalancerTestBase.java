@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,21 +51,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Base UT of RSGroupableBalancer.
  */
-public class RSGroupableBalancerTestBase extends BalancerTestBase{
+public class RSGroupableBalancerTestBase extends BalancerTestBase {
 
-  static String[] groups = new String[] {RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4"};
+  static String[] groups = new String[] { RSGroupInfo.DEFAULT_GROUP, "dg2", "dg3", "dg4" };
   static TableName table0 = TableName.valueOf("dt0");
-  static TableName[] tables =
-      new TableName[] { TableName.valueOf("dt1"),
-          TableName.valueOf("dt2"),
-          TableName.valueOf("dt3"),
-          TableName.valueOf("dt4")};
+  static TableName[] tables = new TableName[] { TableName.valueOf("dt1"), TableName.valueOf("dt2"),
+    TableName.valueOf("dt3"), TableName.valueOf("dt4") };
   static List<ServerName> servers;
   static Map<String, RSGroupInfo> groupMap;
   static Map<TableName, String> tableMap = new HashMap<>();
@@ -74,11 +72,10 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
   static int regionId = 0;
 
   /**
-   * Invariant is that all servers of a group have load between floor(avg) and
-   * ceiling(avg) number of regions.
+   * Invariant is that all servers of a group have load between floor(avg) and ceiling(avg) number
+   * of regions.
    */
-  protected void assertClusterAsBalanced(
-      ArrayListMultimap<String, ServerAndLoad> groupLoadMap) {
+  protected void assertClusterAsBalanced(ArrayListMultimap<String, ServerAndLoad> groupLoadMap) {
     for (String gName : groupLoadMap.keySet()) {
       List<ServerAndLoad> groupLoad = groupLoadMap.get(gName);
       int numServers = groupLoad.size();
@@ -112,10 +109,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
   /**
    * All regions have an assignment.
    */
-  protected void assertImmediateAssignment(List<RegionInfo> regions,
-                                         List<ServerName> servers,
-                                         Map<RegionInfo, ServerName> assignments)
-      throws IOException {
+  protected void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
+    Map<RegionInfo, ServerName> assignments) throws IOException {
     for (RegionInfo region : regions) {
       assertTrue(assignments.containsKey(region));
       ServerName server = assignments.get(region);
@@ -125,7 +120,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
       assertTrue(StringUtils.isNotEmpty(groupName));
       RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
       assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(server.getAddress()));
+        gInfo.containsServer(server.getAddress()));
     }
   }
 
@@ -135,21 +130,19 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
    * Must meet the following conditions:
    * <ul>
    * <li>Every input region has an assignment, and to an online server
-   * <li>If a region had an existing assignment to a server with the same
-   * address a a currently online server, it will be assigned to it
+   * <li>If a region had an existing assignment to a server with the same address a a currently
+   * online server, it will be assigned to it
    * </ul>
    */
-  protected void assertRetainedAssignment(
-      Map<RegionInfo, ServerName> existing, List<ServerName> servers,
-      Map<ServerName, List<RegionInfo>> assignment)
-      throws FileNotFoundException, IOException {
+  protected void assertRetainedAssignment(Map<RegionInfo, ServerName> existing,
+    List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment)
+    throws FileNotFoundException, IOException {
     // Verify condition 1, every region assigned, and to online server
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
     for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
-      assertTrue(
-          "Region assigned to server that was not listed as online",
-          onlineServerSet.contains(a.getKey()));
+      assertTrue("Region assigned to server that was not listed as online",
+        onlineServerSet.contains(a.getKey()));
       for (RegionInfo r : a.getValue()) {
         assignedRegions.add(r);
       }
@@ -167,17 +160,14 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
       for (RegionInfo r : a.getValue()) {
         ServerName oldAssignedServer = existing.get(r);
         TableName tableName = r.getTable();
-        String groupName =
-            getMockedGroupInfoManager().getRSGroupOfTable(tableName);
+        String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
         assertTrue(StringUtils.isNotEmpty(groupName));
-        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(
-            groupName);
-        assertTrue(
-            "Region is not correctly assigned to group servers.",
-            gInfo.containsServer(currentServer.getAddress()));
-        if (oldAssignedServer != null
-            && onlineHostNames.contains(oldAssignedServer
-            .getHostname())) {
+        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
+        assertTrue("Region is not correctly assigned to group servers.",
+          gInfo.containsServer(currentServer.getAddress()));
+        if (
+          oldAssignedServer != null && onlineHostNames.contains(oldAssignedServer.getHostname())
+        ) {
           // this region was previously assigned somewhere, and that
           // host is still around, then the host must have been is a
           // different group.
@@ -189,8 +179,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     }
   }
 
-  protected String printStats(
-      ArrayListMultimap<String, ServerAndLoad> groupBasedLoad) {
+  protected String printStats(ArrayListMultimap<String, ServerAndLoad> groupBasedLoad) {
     StringBuilder sb = new StringBuilder();
     sb.append("\n");
     for (String groupName : groupBasedLoad.keySet()) {
@@ -203,16 +192,15 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
       int totalRegions = 0;
       sb.append("Per Server Load: \n");
       for (ServerAndLoad sLoad : groupLoad) {
-        sb.append("Server :" + sLoad.getServerName() + " Load : "
-            + sLoad.getLoad() + "\n");
+        sb.append("Server :" + sLoad.getServerName() + " Load : " + sLoad.getLoad() + "\n");
         totalRegions += sLoad.getLoad();
       }
       sb.append(" Group Statistics : \n");
       float average = (float) totalRegions / numServers;
       int max = (int) Math.ceil(average);
       int min = (int) Math.floor(average);
-      sb.append("[srvr=" + numServers + " rgns=" + totalRegions + " avg="
-          + average + " max=" + max + " min=" + min + "]");
+      sb.append("[srvr=" + numServers + " rgns=" + totalRegions + " avg=" + average + " max=" + max
+        + " min=" + min + "]");
       sb.append("\n");
       sb.append("===============================");
       sb.append("\n");
@@ -220,34 +208,30 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     return sb.toString();
   }
 
-  protected ArrayListMultimap<String, ServerAndLoad> convertToGroupBasedMap(
-      final Map<ServerName, List<RegionInfo>> serversMap) throws IOException {
-    ArrayListMultimap<String, ServerAndLoad> loadMap = ArrayListMultimap
-        .create();
+  protected ArrayListMultimap<String, ServerAndLoad>
+    convertToGroupBasedMap(final Map<ServerName, List<RegionInfo>> serversMap) throws IOException {
+    ArrayListMultimap<String, ServerAndLoad> loadMap = ArrayListMultimap.create();
     for (RSGroupInfo gInfo : getMockedGroupInfoManager().listRSGroups()) {
       Set<Address> groupServers = gInfo.getServers();
       for (Address hostPort : groupServers) {
         ServerName actual = null;
-        for(ServerName entry: servers) {
-          if(entry.getAddress().equals(hostPort)) {
+        for (ServerName entry : servers) {
+          if (entry.getAddress().equals(hostPort)) {
             actual = entry;
             break;
           }
         }
         List<RegionInfo> regions = serversMap.get(actual);
         assertTrue("No load for " + actual, regions != null);
-        loadMap.put(gInfo.getName(),
-            new ServerAndLoad(actual, regions.size()));
+        loadMap.put(gInfo.getName(), new ServerAndLoad(actual, regions.size()));
       }
     }
     return loadMap;
   }
 
-  protected ArrayListMultimap<String, ServerAndLoad> reconcile(
-      ArrayListMultimap<String, ServerAndLoad> previousLoad,
-      List<RegionPlan> plans) {
-    ArrayListMultimap<String, ServerAndLoad> result = ArrayListMultimap
-        .create();
+  protected ArrayListMultimap<String, ServerAndLoad>
+    reconcile(ArrayListMultimap<String, ServerAndLoad> previousLoad, List<RegionPlan> plans) {
+    ArrayListMultimap<String, ServerAndLoad> result = ArrayListMultimap.create();
     result.putAll(previousLoad);
     if (plans != null) {
       for (RegionPlan plan : plans) {
@@ -260,9 +244,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     return result;
   }
 
-  protected void updateLoad(
-      ArrayListMultimap<String, ServerAndLoad> previousLoad,
-      final ServerName sn, final int diff) {
+  protected void updateLoad(ArrayListMultimap<String, ServerAndLoad> previousLoad,
+    final ServerName sn, final int diff) {
     for (String groupName : previousLoad.keySet()) {
       ServerAndLoad newSAL = null;
       ServerAndLoad oldSAL = null;
@@ -294,7 +277,6 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
 
   /**
    * Generate a list of regions evenly distributed between the tables.
-   *
    * @param numRegions The number of regions to be generated.
    * @return List of RegionInfo.
    */
@@ -309,21 +291,16 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
       int tableIndex = (i + regionIdx) % tables.length;
-      regions.add(RegionInfoBuilder.newBuilder(tables[tableIndex])
-          .setStartKey(start)
-          .setEndKey(end)
-          .setSplit(false)
-          .setRegionId(regionId++)
-          .build());
+      regions.add(RegionInfoBuilder.newBuilder(tables[tableIndex]).setStartKey(start).setEndKey(end)
+        .setSplit(false).setRegionId(regionId++).build());
     }
     return regions;
   }
 
   /**
    * Generate assigned regions to a given server using group information.
-   *
    * @param numRegions the num regions to generate
-   * @param sn the servername
+   * @param sn         the servername
    * @return the list of regions
    * @throws java.io.IOException Signals that an I/O exception has occurred.
    */
@@ -335,12 +312,8 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     Bytes.putInt(end, 0, (numRegions << 1) + 1);
     for (int i = 0; i < numRegions; i++) {
       TableName tableName = getTableName(sn);
-      regions.add(RegionInfoBuilder.newBuilder(tableName)
-          .setStartKey(start)
-          .setEndKey(end)
-          .setSplit(false)
-          .setRegionId(regionId++)
-          .build());
+      regions.add(RegionInfoBuilder.newBuilder(tableName).setStartKey(start).setEndKey(end)
+        .setSplit(false).setRegionId(regionId++).build());
     }
     return regions;
   }
@@ -358,13 +331,12 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
 
   /**
    * Construct group info, with each group having at least one server.
-   *
    * @param servers the servers
-   * @param groups the groups
+   * @param groups  the groups
    * @return the map
    */
-  protected static Map<String, RSGroupInfo> constructGroupInfo(
-      List<ServerName> servers, String[] groups) {
+  protected static Map<String, RSGroupInfo> constructGroupInfo(List<ServerName> servers,
+    String[] groups) {
     assertTrue(servers != null);
     assertTrue(servers.size() >= groups.length);
     int index = 0;
@@ -378,8 +350,7 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     Random rand = ThreadLocalRandom.current();
     while (index < servers.size()) {
       int grpIndex = rand.nextInt(groups.length);
-      groupMap.get(groups[grpIndex]).addServer(
-          servers.get(index).getAddress());
+      groupMap.get(groups[grpIndex]).addServer(servers.get(index).getAddress());
       index++;
     }
     return groupMap;
@@ -429,16 +400,14 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
         return groupMap.get(invocation.getArgument(0));
       }
     });
-    Mockito.when(gm.listRSGroups()).thenReturn(
-        Lists.newLinkedList(groupMap.values()));
+    Mockito.when(gm.listRSGroups()).thenReturn(Lists.newLinkedList(groupMap.values()));
     Mockito.when(gm.isOnline()).thenReturn(true);
-    Mockito.when(gm.getRSGroupOfTable(Mockito.any()))
-        .thenAnswer(new Answer<String>() {
-          @Override
-          public String answer(InvocationOnMock invocation) throws Throwable {
-            return tableMap.get(invocation.getArgument(0));
-          }
-        });
+    Mockito.when(gm.getRSGroupOfTable(Mockito.any())).thenAnswer(new Answer<String>() {
+      @Override
+      public String answer(InvocationOnMock invocation) throws Throwable {
+        return tableMap.get(invocation.getArgument(0));
+      }
+    });
     return gm;
   }
 
@@ -446,15 +415,15 @@ public class RSGroupableBalancerTestBase extends BalancerTestBase{
     TableName tableName = null;
     RSGroupInfoManager gm = getMockedGroupInfoManager();
     RSGroupInfo groupOfServer = null;
-    for(RSGroupInfo gInfo : gm.listRSGroups()){
-      if(gInfo.containsServer(sn.getAddress())){
+    for (RSGroupInfo gInfo : gm.listRSGroups()) {
+      if (gInfo.containsServer(sn.getAddress())) {
         groupOfServer = gInfo;
         break;
       }
     }
 
-    for(TableDescriptor desc : tableDescs){
-      if(gm.getRSGroupOfTable(desc.getTableName()).endsWith(groupOfServer.getName())){
+    for (TableDescriptor desc : tableDescs) {
+      if (gm.getRSGroupOfTable(desc.getTableName()).endsWith(groupOfServer.getName())) {
         tableName = desc.getTableName();
       }
     }

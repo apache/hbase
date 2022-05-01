@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -40,10 +38,9 @@ final public class OnlineLogRecord extends LogEntry {
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
-  private static final Gson GSON = GsonUtil.createGson()
-    .setPrettyPrinting()
-    .registerTypeAdapter(OnlineLogRecord.class, (JsonSerializer<OnlineLogRecord>)
-      (slowLogPayload, type, jsonSerializationContext) -> {
+  private static final Gson GSON =
+    GsonUtil.createGson().setPrettyPrinting().registerTypeAdapter(OnlineLogRecord.class,
+      (JsonSerializer<OnlineLogRecord>) (slowLogPayload, type, jsonSerializationContext) -> {
         Gson gson = new Gson();
         JsonObject jsonObj = (JsonObject) gson.toJsonTree(slowLogPayload);
         if (slowLogPayload.getMultiGetsCount() == 0) {
@@ -132,10 +129,10 @@ final public class OnlineLogRecord extends LogEntry {
   }
 
   private OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
-      final long responseSize, final String clientAddress, final String serverClass,
-      final String methodName, final String callDetails, final String param,
-      final String regionName, final String userName, final int multiGetsCount,
-      final int multiMutationsCount, final int multiServiceCalls) {
+    final long responseSize, final String clientAddress, final String serverClass,
+    final String methodName, final String callDetails, final String param, final String regionName,
+    final String userName, final int multiGetsCount, final int multiMutationsCount,
+    final int multiServiceCalls) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
@@ -239,9 +236,9 @@ final public class OnlineLogRecord extends LogEntry {
     }
 
     public OnlineLogRecord build() {
-      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
-        clientAddress, serverClass, methodName, callDetails, param, regionName,
-        userName, multiGetsCount, multiMutationsCount, multiServiceCalls);
+      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize, clientAddress,
+        serverClass, methodName, callDetails, param, regionName, userName, multiGetsCount,
+        multiMutationsCount, multiServiceCalls);
     }
   }
 
@@ -257,42 +254,22 @@ final public class OnlineLogRecord extends LogEntry {
 
     OnlineLogRecord that = (OnlineLogRecord) o;
 
-    return new EqualsBuilder()
-      .append(startTime, that.startTime)
-      .append(processingTime, that.processingTime)
-      .append(queueTime, that.queueTime)
-      .append(responseSize, that.responseSize)
-      .append(multiGetsCount, that.multiGetsCount)
+    return new EqualsBuilder().append(startTime, that.startTime)
+      .append(processingTime, that.processingTime).append(queueTime, that.queueTime)
+      .append(responseSize, that.responseSize).append(multiGetsCount, that.multiGetsCount)
       .append(multiMutationsCount, that.multiMutationsCount)
-      .append(multiServiceCalls, that.multiServiceCalls)
-      .append(clientAddress, that.clientAddress)
-      .append(serverClass, that.serverClass)
-      .append(methodName, that.methodName)
-      .append(callDetails, that.callDetails)
-      .append(param, that.param)
-      .append(regionName, that.regionName)
-      .append(userName, that.userName)
-      .isEquals();
+      .append(multiServiceCalls, that.multiServiceCalls).append(clientAddress, that.clientAddress)
+      .append(serverClass, that.serverClass).append(methodName, that.methodName)
+      .append(callDetails, that.callDetails).append(param, that.param)
+      .append(regionName, that.regionName).append(userName, that.userName).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(startTime)
-      .append(processingTime)
-      .append(queueTime)
-      .append(responseSize)
-      .append(clientAddress)
-      .append(serverClass)
-      .append(methodName)
-      .append(callDetails)
-      .append(param)
-      .append(regionName)
-      .append(userName)
-      .append(multiGetsCount)
-      .append(multiMutationsCount)
-      .append(multiServiceCalls)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(startTime).append(processingTime).append(queueTime)
+      .append(responseSize).append(clientAddress).append(serverClass).append(methodName)
+      .append(callDetails).append(param).append(regionName).append(userName).append(multiGetsCount)
+      .append(multiMutationsCount).append(multiServiceCalls).toHashCode();
   }
 
   @Override
@@ -302,22 +279,14 @@ final public class OnlineLogRecord extends LogEntry {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("startTime", startTime)
-      .append("processingTime", processingTime)
-      .append("queueTime", queueTime)
-      .append("responseSize", responseSize)
-      .append("clientAddress", clientAddress)
-      .append("serverClass", serverClass)
-      .append("methodName", methodName)
-      .append("callDetails", callDetails)
-      .append("param", param)
-      .append("regionName", regionName)
-      .append("userName", userName)
-      .append("multiGetsCount", multiGetsCount)
+    return new ToStringBuilder(this).append("startTime", startTime)
+      .append("processingTime", processingTime).append("queueTime", queueTime)
+      .append("responseSize", responseSize).append("clientAddress", clientAddress)
+      .append("serverClass", serverClass).append("methodName", methodName)
+      .append("callDetails", callDetails).append("param", param).append("regionName", regionName)
+      .append("userName", userName).append("multiGetsCount", multiGetsCount)
       .append("multiMutationsCount", multiMutationsCount)
-      .append("multiServiceCalls", multiServiceCalls)
-      .toString();
+      .append("multiServiceCalls", multiServiceCalls).toString();
   }
 
 }

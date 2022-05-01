@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,27 +44,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests unhandled exceptions thrown by coprocessors running on a regionserver..
- * Expected result is that the regionserver will abort with an informative
- * error message describing the set of its loaded coprocessors for crash
- * diagnosis. (HBASE-4014).
+ * Tests unhandled exceptions thrown by coprocessors running on a regionserver.. Expected result is
+ * that the regionserver will abort with an informative error message describing the set of its
+ * loaded coprocessors for crash diagnosis. (HBASE-4014).
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionServerCoprocessorExceptionWithAbort {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithAbort.class);
+    HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithAbort.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    TestRegionServerCoprocessorExceptionWithAbort.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 
   @Test
   public void testExceptionDuringInitialization() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2); // Let's fail fast.
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     TEST_UTIL.startMiniCluster(2);
@@ -92,7 +91,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   public void testExceptionFromCoprocessorDuringPut() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2); // Let's fail fast.
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, BuggyRegionObserver.class.getName());
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
     TEST_UTIL.startMiniCluster(2);
@@ -130,8 +129,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {
-          fail("InterruptedException while waiting for regionserver " +
-            "zk node to be deleted.");
+          fail("InterruptedException while waiting for regionserver " + "zk node to be deleted.");
         }
       }
       Assert.assertTrue("The region server should have aborted", aborted);
@@ -154,11 +152,10 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   public static class BuggyRegionObserver extends SimpleRegionObserver {
     @SuppressWarnings("null")
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
-                       final Put put, final WALEdit edit,
-                       final Durability durability) {
+    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+      final WALEdit edit, final Durability durability) {
       String tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
+        c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
         // Trigger a NPE to fail the coprocessor
         Integer i = null;

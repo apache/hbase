@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,13 +51,14 @@ public class TestProcedureUtil {
     // check Procedure to protobuf conversion
     final TestProcedure proc1 = new TestProcedure(10, 1, new byte[] { 65 });
     final ProcedureProtos.Procedure proto1 = ProcedureUtil.convertToProtoProcedure(proc1);
-    final TestProcedure proc2 = (TestProcedure)ProcedureUtil.convertToProcedure(proto1);
+    final TestProcedure proc2 = (TestProcedure) ProcedureUtil.convertToProcedure(proto1);
     final ProcedureProtos.Procedure proto2 = ProcedureUtil.convertToProtoProcedure(proc2);
     assertEquals(false, proto2.hasResult());
     assertEquals("Procedure protobuf does not match", proto1, proto2);
   }
 
   public static class TestProcedureNoDefaultConstructor extends TestProcedure {
-    public TestProcedureNoDefaultConstructor(int x) {}
+    public TestProcedureNoDefaultConstructor(int x) {
+    }
   }
 }

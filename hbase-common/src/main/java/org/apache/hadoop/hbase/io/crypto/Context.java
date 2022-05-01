@@ -1,23 +1,23 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.crypto;
 
 import java.security.Key;
-
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -56,8 +56,8 @@ public class Context implements Configurable {
 
   @Override
   public String toString() {
-    return "cipher=" + (cipher != null ? cipher.getName() : "NONE")
-        + " keyHash=" + (keyHash != null ? keyHash.substring(0, 8) + "..." : "NONE");
+    return "cipher=" + (cipher != null ? cipher.getName() : "NONE") + " keyHash="
+      + (keyHash != null ? keyHash.substring(0, 8) + "..." : "NONE");
   }
 
   public Cipher getCipher() {
@@ -90,8 +90,8 @@ public class Context implements Configurable {
     // validate the key length
     byte[] encoded = key.getEncoded();
     if (encoded.length != cipher.getKeyLength()) {
-      throw new RuntimeException("Illegal key length, have=" + encoded.length +
-        ", want=" + cipher.getKeyLength());
+      throw new RuntimeException(
+        "Illegal key length, have=" + encoded.length + ", want=" + cipher.getKeyLength());
     }
     this.key = key;
     this.keyHash = new String(Hex.encodeHex(Encryption.computeCryptoKeyHash(conf, encoded)));

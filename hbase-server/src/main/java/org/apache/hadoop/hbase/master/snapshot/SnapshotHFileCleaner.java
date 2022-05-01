@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
    * snapshots (ms)
    */
   public static final String HFILE_CACHE_REFRESH_PERIOD_CONF_KEY =
-      "hbase.master.hfilecleaner.plugins.snapshot.period";
+    "hbase.master.hfilecleaner.plugins.snapshot.period";
 
   /** Refresh cache, by default, every 5 minutes */
   private static final long DEFAULT_HFILE_CACHE_REFRESH_PERIOD = 300000;
@@ -90,8 +90,8 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
-      long cacheRefreshPeriod = conf.getLong(HFILE_CACHE_REFRESH_PERIOD_CONF_KEY,
-        DEFAULT_HFILE_CACHE_REFRESH_PERIOD);
+      long cacheRefreshPeriod =
+        conf.getLong(HFILE_CACHE_REFRESH_PERIOD_CONF_KEY, DEFAULT_HFILE_CACHE_REFRESH_PERIOD);
       final FileSystem fs = CommonFSUtils.getCurrentFileSystem(conf);
       Path rootDir = CommonFSUtils.getRootDir(conf);
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, conf);
@@ -100,18 +100,16 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
       cache = new SnapshotFileCache(fs, rootDir, workingFs, workingDir, cacheRefreshPeriod,
         cacheRefreshPeriod, "snapshot-hfile-cleaner-cache-refresher",
         new SnapshotFileCache.SnapshotFileInspector() {
-            @Override
-            public Collection<String> filesUnderSnapshot(final FileSystem fs,
-              final Path snapshotDir)
-                throws IOException {
-              return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
-            }
-          });
+          @Override
+          public Collection<String> filesUnderSnapshot(final FileSystem fs, final Path snapshotDir)
+            throws IOException {
+            return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
+          }
+        });
     } catch (IOException e) {
       LOG.error("Failed to create cleaner util", e);
     }
   }
-
 
   @Override
   public void stop(String why) {

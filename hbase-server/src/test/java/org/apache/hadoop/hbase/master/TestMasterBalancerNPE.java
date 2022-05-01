@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,7 +52,7 @@ public class TestMasterBalancerNPE {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterBalancerNPE.class);
+    HBaseClassTestRule.forClass(TestMasterBalancerNPE.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
@@ -87,13 +86,13 @@ public class TestMasterBalancerNPE {
     List<RegionInfo> regionInfos = TEST_UTIL.getAdmin().getRegions(tableName);
     assertTrue(regionInfos.size() == 1);
     final ServerName serverName1 =
-        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
     final ServerName serverName2 =
-        TEST_UTIL.getMiniHBaseCluster().getRegionServer(1).getServerName();
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(1).getServerName();
 
     final RegionInfo regionInfo = regionInfos.get(0);
 
-    StochasticLoadBalancer loadBalancer = (StochasticLoadBalancer)master.getLoadBalancer();
+    StochasticLoadBalancer loadBalancer = (StochasticLoadBalancer) master.getLoadBalancer();
     StochasticLoadBalancer spiedLoadBalancer = Mockito.spy(loadBalancer);
     final AtomicReference<RegionPlan> regionPlanRef = new AtomicReference<RegionPlan>();
 
@@ -104,13 +103,12 @@ public class TestMasterBalancerNPE {
     Mockito.doAnswer((InvocationOnMock invocation) -> {
       @SuppressWarnings("unchecked")
       Map<ServerName, List<RegionInfo>> regionServerNameToRegionInfos =
-          (Map<ServerName, List<RegionInfo>>) invocation.getArgument(1);
-
+        (Map<ServerName, List<RegionInfo>>) invocation.getArgument(1);
 
       List<ServerName> assignedRegionServerNames = new ArrayList<ServerName>();
       for (Map.Entry<ServerName, List<RegionInfo>> entry : regionServerNameToRegionInfos
-          .entrySet()) {
-        if (entry.getValue()!= null) {
+        .entrySet()) {
+        if (entry.getValue() != null) {
           entry.getValue().stream().forEach((reginInfo) -> {
             if (reginInfo.getTable().equals(tableName)) {
               assignedRegionServerNames.add(entry.getKey());
@@ -121,9 +119,9 @@ public class TestMasterBalancerNPE {
       assertTrue(assignedRegionServerNames.size() == 1);
       ServerName assignedRegionServerName = assignedRegionServerNames.get(0);
       ServerName notAssignedRegionServerName =
-          assignedRegionServerName.equals(serverName1) ? serverName2 : serverName1;
+        assignedRegionServerName.equals(serverName1) ? serverName2 : serverName1;
       RegionPlan regionPlan =
-          new RegionPlan(regionInfo, assignedRegionServerName, notAssignedRegionServerName);
+        new RegionPlan(regionInfo, assignedRegionServerName, notAssignedRegionServerName);
       regionPlanRef.set(regionPlan);
       return Arrays.asList(regionPlan);
     }).when(spiedLoadBalancer).balanceTable(Mockito.eq(HConstants.ENSEMBLE_TABLE_NAME),
@@ -159,7 +157,6 @@ public class TestMasterBalancerNPE {
       return invocation.callRealMethod();
     }).when(spiedAssignmentManager).balance(Mockito.any());
 
-
     try {
       final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
       Thread unassignThread = new Thread(() -> {
@@ -170,8 +167,8 @@ public class TestMasterBalancerNPE {
            */
           cyclicBarrier.await();
           spiedAssignmentManager.unassign(regionInfo);
-          assertTrue(spiedAssignmentManager.getRegionStates().getRegionAssignments()
-              .get(regionInfo) == null);
+          assertTrue(spiedAssignmentManager.getRegionStates().getRegionAssignments().get(regionInfo)
+              == null);
           /**
            * After {@link AssignmentManager#unassign} is completed,we could invoke
            * {@link AssignmentManager#balance}.
@@ -191,8 +188,8 @@ public class TestMasterBalancerNPE {
        */
       TEST_UTIL.getAdmin().balancerSwitch(true, false);
       /**
-       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)}
-       * which may throw NPE.
+       * Before HBASE-26712,here invokes {@link AssignmentManager#balance(RegionPlan)} which may
+       * throw NPE.
        */
       master.balance();
 

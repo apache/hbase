@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestFileSystemUtilizationChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFileSystemUtilizationChore.class);
+    HBaseClassTestRule.forClass(TestFileSystemUtilizationChore.class);
 
   @Test
   public void testNoOnlineRegions() {
@@ -64,9 +64,8 @@ public class TestFileSystemUtilizationChore {
     final Configuration conf = getDefaultHBaseConfiguration();
     final HRegionServer rs = mockRegionServer(conf);
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes)))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes))).when(rs)
+      .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region region = mockRegionWithSize(regionSizes);
     Mockito.doReturn(Arrays.asList(region)).when(rs).getRegions();
@@ -80,9 +79,8 @@ public class TestFileSystemUtilizationChore {
     final Configuration conf = getDefaultHBaseConfiguration();
     final HRegionServer rs = mockRegionServer(conf);
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes)))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(regionSizes))).when(rs)
+      .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region region = mockRegionWithSize(regionSizes);
     Mockito.doReturn(Arrays.asList(region)).when(rs).getRegions();
@@ -104,8 +102,7 @@ public class TestFileSystemUtilizationChore {
 
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum, r2Sum, r3Sum))))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+      .when(rs).reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionWithSize(r2Sizes);
@@ -120,13 +117,11 @@ public class TestFileSystemUtilizationChore {
     final HRegionServer rs = mockRegionServer(conf);
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
     // Verify that the expected default values are actually represented.
-    assertEquals(
-        FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_DEFAULT, chore.getPeriod());
-    assertEquals(
-        FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_DEFAULT, chore.getInitialDelay());
-    assertEquals(
-        TimeUnit.valueOf(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_TIMEUNIT_DEFAULT),
-        chore.getTimeUnit());
+    assertEquals(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_PERIOD_DEFAULT, chore.getPeriod());
+    assertEquals(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_DELAY_DEFAULT,
+      chore.getInitialDelay());
+    assertEquals(TimeUnit.valueOf(FileSystemUtilizationChore.FS_UTILIZATION_CHORE_TIMEUNIT_DEFAULT),
+      chore.getTimeUnit());
   }
 
   @Test
@@ -168,8 +163,7 @@ public class TestFileSystemUtilizationChore {
       }
     };
     doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(leftover1Sum, leftover2Sum))))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+      .when(rs).reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     // We shouldn't compute all of these region sizes, just the leftovers
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
@@ -198,9 +192,8 @@ public class TestFileSystemUtilizationChore {
         return Arrays.asList(lr1, lr2).iterator();
       }
     };
-    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(leftover1Sum))))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(leftover1Sum)))).when(rs)
+      .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     // We shouldn't compute all of these region sizes, just the leftovers
     final Region r1 = mockRegionWithSize(Arrays.asList(1024L, 2048L));
@@ -223,9 +216,8 @@ public class TestFileSystemUtilizationChore {
     final List<Long> r2Sizes = Arrays.asList(1024L * 1024L);
 
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum))))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+    doAnswer(new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1Sum)))).when(rs)
+      .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockSplitParentRegionWithSize(r2Sizes);
@@ -244,9 +236,8 @@ public class TestFileSystemUtilizationChore {
     final List<Long> r2Sizes = Arrays.asList(1024L * 1024L);
 
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(r1Sum))
-        .when(rs)
-        .reportRegionSizesForQuotas(any(RegionSizeStore.class));
+    doAnswer(new ExpectedRegionSizeSummationAnswer(r1Sum)).when(rs)
+      .reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region r1 = mockRegionWithSize(r1Sizes);
     final Region r2 = mockRegionReplicaWithSize(r2Sizes);
@@ -270,8 +261,8 @@ public class TestFileSystemUtilizationChore {
 
     // We expect that only the hfiles would be counted (hfile links are ignored)
     final FileSystemUtilizationChore chore = new FileSystemUtilizationChore(rs);
-    doAnswer(new ExpectedRegionSizeSummationAnswer(
-        sum(Arrays.asList(r1HFileSizeSum, r2HFileSizeSum))))
+    doAnswer(
+      new ExpectedRegionSizeSummationAnswer(sum(Arrays.asList(r1HFileSizeSum, r2HFileSizeSum))))
         .when(rs).reportRegionSizesForQuotas(any(RegionSizeStore.class));
 
     final Region r1 = mockRegionWithHFileLinks(r1StoreFileSizes, r1HFileSizes);
@@ -316,7 +307,6 @@ public class TestFileSystemUtilizationChore {
   /**
    * Creates a region with a number of Stores equal to the length of {@code storeSizes}. Each
    * {@link Store} will have a reported size corresponding to the element in {@code storeSizes}.
-   *
    * @param storeSizes A list of sizes for each Store.
    * @return A mocked Region.
    */
@@ -334,15 +324,15 @@ public class TestFileSystemUtilizationChore {
     return r;
   }
 
-  private Region mockRegionWithHFileLinks(Collection<Long> storeSizes, Collection<Long> hfileSizes) {
+  private Region mockRegionWithHFileLinks(Collection<Long> storeSizes,
+    Collection<Long> hfileSizes) {
     final Region r = mock(Region.class);
     final RegionInfo info = mock(RegionInfo.class);
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
     when(r.getStores()).thenReturn((List) stores);
-    assertEquals(
-        "Logic error, storeSizes and linkSizes must be equal in size", storeSizes.size(),
-        hfileSizes.size());
+    assertEquals("Logic error, storeSizes and linkSizes must be equal in size", storeSizes.size(),
+      hfileSizes.size());
     Iterator<Long> storeSizeIter = storeSizes.iterator();
     Iterator<Long> hfileSizeIter = hfileSizes.iterator();
     while (storeSizeIter.hasNext() && hfileSizeIter.hasNext()) {
@@ -358,7 +348,6 @@ public class TestFileSystemUtilizationChore {
 
   /**
    * Creates a region which is the parent of a split.
-   *
    * @param storeSizes A list of sizes for each Store.
    * @return A mocked Region.
    */
@@ -371,7 +360,6 @@ public class TestFileSystemUtilizationChore {
 
   /**
    * Creates a region who has a replicaId of <code>1</code>.
-   *
    * @param storeSizes A list of sizes for each Store.
    * @return A mocked Region.
    */
@@ -397,7 +385,7 @@ public class TestFileSystemUtilizationChore {
       Object[] args = invocation.getArguments();
       assertEquals(1, args.length);
       @SuppressWarnings("unchecked")
-      Map<RegionInfo,Long> regionSizes = (Map<RegionInfo,Long>) args[0];
+      Map<RegionInfo, Long> regionSizes = (Map<RegionInfo, Long>) args[0];
       long sum = 0L;
       for (Long regionSize : regionSizes.values()) {
         sum += regionSize;

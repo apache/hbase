@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +18,19 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Class that acts as a NoOpInterceptor. This class is used in case the
- * RetryingCallerInterceptor was not configured correctly or an
- * RetryingCallerInterceptor was never configured in the first place.
- *
+ * Class that acts as a NoOpInterceptor. This class is used in case the RetryingCallerInterceptor
+ * was not configured correctly or an RetryingCallerInterceptor was never configured in the first
+ * place.
  */
 @InterfaceAudience.Private
 class NoOpRetryableCallerInterceptor extends RetryingCallerInterceptor {
   private static final RetryingCallerInterceptorContext NO_OP_CONTEXT =
-      new NoOpRetryingInterceptorContext();
+    new NoOpRetryingInterceptorContext();
 
   public NoOpRetryableCallerInterceptor() {
   }
@@ -42,14 +40,13 @@ class NoOpRetryableCallerInterceptor extends RetryingCallerInterceptor {
   }
 
   @Override
-  public void intercept(
-      RetryingCallerInterceptorContext abstractRetryingCallerInterceptorContext)
-      throws PreemptiveFastFailException {
+  public void intercept(RetryingCallerInterceptorContext abstractRetryingCallerInterceptorContext)
+    throws PreemptiveFastFailException {
   }
 
   @Override
-  public void handleFailure(RetryingCallerInterceptorContext context,
-      Throwable t) throws IOException {
+  public void handleFailure(RetryingCallerInterceptorContext context, Throwable t)
+    throws IOException {
   }
 
   @Override

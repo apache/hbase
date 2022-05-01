@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,13 +46,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RunWith(Parameterized.class)
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdReadWriteLock {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIdReadWriteLock.class);
+    HBaseClassTestRule.forClass(TestIdReadWriteLock.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIdReadWriteLock.class);
 
@@ -96,7 +96,7 @@ public class TestIdReadWriteLock {
           String owner = idOwner.get(id);
           if (owner != null && LOG.isDebugEnabled()) {
             LOG.debug((readLock ? "Read" : "Write") + "lock of Id " + id + " already taken by "
-                + owner + ", we are " + clientId);
+              + owner + ", we are " + clientId);
           }
 
           idOwner.put(id, clientId);
@@ -107,7 +107,7 @@ public class TestIdReadWriteLock {
           lock.unlock();
           if (LOG.isDebugEnabled()) {
             LOG.debug("Release " + (readLock ? "Read" : "Write") + " lock of Id" + id + ", we are "
-                + clientId);
+              + clientId);
           }
         }
       }
@@ -131,17 +131,17 @@ public class TestIdReadWriteLock {
       LOG.debug("Size of entry pool after gc and purge: " + entryPoolSize);
       ReferenceType refType = idLock.getReferenceType();
       switch (refType) {
-      case WEAK:
-        // make sure the entry pool will be cleared after GC and purge call
-        assertEquals(0, entryPoolSize);
-        break;
-      case SOFT:
-        // make sure the entry pool won't be cleared when JVM memory is enough
-        // even after GC and purge call
-        assertEquals(NUM_IDS, entryPoolSize);
-        break;
-      default:
-        break;
+        case WEAK:
+          // make sure the entry pool will be cleared after GC and purge call
+          assertEquals(0, entryPoolSize);
+          break;
+        case SOFT:
+          // make sure the entry pool won't be cleared when JVM memory is enough
+          // even after GC and purge call
+          assertEquals(NUM_IDS, entryPoolSize);
+          break;
+        default:
+          break;
       }
     } finally {
       exec.shutdown();
@@ -149,6 +149,4 @@ public class TestIdReadWriteLock {
     }
   }
 
-
 }
-

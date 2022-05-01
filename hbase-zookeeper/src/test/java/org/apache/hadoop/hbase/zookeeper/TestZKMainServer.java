@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,9 +36,9 @@ import org.junit.experimental.categories.Category;
 public class TestZKMainServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKMainServer.class);
+    HBaseClassTestRule.forClass(TestZKMainServer.class);
 
-  // ZKMS calls System.exit.  Catch the call and prevent exit using trick described up in
+  // ZKMS calls System.exit. Catch the call and prevent exit using trick described up in
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit
   protected static class ExitException extends SecurityException {
     private static final long serialVersionUID = 1L;
@@ -82,8 +83,8 @@ public class TestZKMainServer {
       ZKUtil.checkExists(zkw, znode);
       boolean exception = false;
       try {
-        ZKMainServer.main(new String [] {"-server", htu.getZkCluster().getAddress().toString(),
-          "delete", znode});
+        ZKMainServer.main(
+          new String[] { "-server", htu.getZkCluster().getAddress().toString(), "delete", znode });
       } catch (ExitException ee) {
         // ZKMS calls System.exit which should trigger this exception.
         exception = true;

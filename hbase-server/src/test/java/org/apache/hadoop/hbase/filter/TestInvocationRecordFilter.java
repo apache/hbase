@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,18 +44,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test the invocation logic of the filters. A filter must be invoked only for
- * the columns that are requested for.
+ * Test the invocation logic of the filters. A filter must be invoked only for the columns that are
+ * requested for.
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestInvocationRecordFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestInvocationRecordFilter.class);
+    HBaseClassTestRule.forClass(TestInvocationRecordFilter.class);
 
-  private static final byte[] TABLE_NAME_BYTES = Bytes
-      .toBytes("invocationrecord");
+  private static final byte[] TABLE_NAME_BYTES = Bytes.toBytes("invocationrecord");
   private static final byte[] FAMILY_NAME_BYTES = Bytes.toBytes("mycf");
 
   private static final byte[] ROW_BYTES = Bytes.toBytes("row");
@@ -67,18 +66,17 @@ public class TestInvocationRecordFilter {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(
-        TableName.valueOf(TABLE_NAME_BYTES));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE_NAME_BYTES));
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
-        TEST_UTIL.getConfiguration(), htd);
+      TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);
     for (int i = 0; i < 10; i += 2) {
       // puts 0, 2, 4, 6 and 8
       put.addColumn(FAMILY_NAME_BYTES, Bytes.toBytes(QUALIFIER_PREFIX + i), (long) i,
-              Bytes.toBytes(VALUE_PREFIX + i));
+        Bytes.toBytes(VALUE_PREFIX + i));
     }
     this.region.put(put);
     this.region.flush(true);
@@ -91,50 +89,48 @@ public class TestInvocationRecordFilter {
 
     selectQualifiers.add(-1);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.clear();
 
     selectQualifiers.add(0);
     expectedQualifiers.add(0);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(3);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(4);
     expectedQualifiers.add(4);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(5);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(8);
     expectedQualifiers.add(8);
     verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
-        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
+      expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
   }
 
-  public void verifyInvocationResults(Integer[] selectQualifiers,
-      Integer[] expectedQualifiers) throws Exception {
+  public void verifyInvocationResults(Integer[] selectQualifiers, Integer[] expectedQualifiers)
+    throws Exception {
     Get get = new Get(ROW_BYTES);
     for (int i = 0; i < selectQualifiers.length; i++) {
-      get.addColumn(FAMILY_NAME_BYTES,
-          Bytes.toBytes(QUALIFIER_PREFIX + selectQualifiers[i]));
+      get.addColumn(FAMILY_NAME_BYTES, Bytes.toBytes(QUALIFIER_PREFIX + selectQualifiers[i]));
     }
 
     get.setFilter(new InvocationRecordFilter());
 
     List<KeyValue> expectedValues = new ArrayList<>();
     for (int i = 0; i < expectedQualifiers.length; i++) {
-      expectedValues.add(new KeyValue(ROW_BYTES, FAMILY_NAME_BYTES, Bytes
-          .toBytes(QUALIFIER_PREFIX + expectedQualifiers[i]),
-          expectedQualifiers[i], Bytes.toBytes(VALUE_PREFIX
-              + expectedQualifiers[i])));
+      expectedValues.add(new KeyValue(ROW_BYTES, FAMILY_NAME_BYTES,
+        Bytes.toBytes(QUALIFIER_PREFIX + expectedQualifiers[i]), expectedQualifiers[i],
+        Bytes.toBytes(VALUE_PREFIX + expectedQualifiers[i])));
     }
 
     Scan scan = new Scan(get);
@@ -146,15 +142,15 @@ public class TestInvocationRecordFilter {
       temp.clear();
     }
     actualValues.addAll(temp);
-    Assert.assertTrue("Actual values " + actualValues
-        + " differ from the expected values:" + expectedValues,
-        expectedValues.equals(actualValues));
+    Assert.assertTrue(
+      "Actual values " + actualValues + " differ from the expected values:" + expectedValues,
+      expectedValues.equals(actualValues));
   }
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = ((HRegion)region).getWAL();
-    ((HRegion)region).close();
+    WAL wal = ((HRegion) region).getWAL();
+    ((HRegion) region).close();
     wal.close();
   }
 

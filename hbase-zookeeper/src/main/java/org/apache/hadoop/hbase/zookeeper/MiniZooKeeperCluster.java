@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -30,7 +31,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.net.Address;
@@ -44,9 +44,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO: Most of the code in this class is ripped from ZooKeeper tests. Instead
- * of redoing it, we should contribute updates to their code which let us more
- * easily access testing helper objects.
+ * TODO: Most of the code in this class is ripped from ZooKeeper tests. Instead of redoing it, we
+ * should contribute updates to their code which let us more easily access testing helper objects.
  */
 @InterfaceAudience.Public
 public class MiniZooKeeperCluster {
@@ -85,13 +84,12 @@ public class MiniZooKeeperCluster {
     zooKeeperServers = new ArrayList<>();
     clientPortList = new ArrayList<>();
     standaloneServerFactoryList = new ArrayList<>();
-    connectionTimeout = configuration
-      .getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", DEFAULT_CONNECTION_TIMEOUT);
+    connectionTimeout = configuration.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster",
+      DEFAULT_CONNECTION_TIMEOUT);
   }
 
   /**
    * Add a client port to the list.
-   *
    * @param clientPort the specified port
    */
   public void addClientPort(int clientPort) {
@@ -100,7 +98,6 @@ public class MiniZooKeeperCluster {
 
   /**
    * Get the list of client ports.
-   *
    * @return clientPortList the client port list
    */
   @InterfaceAudience.Private
@@ -110,7 +107,6 @@ public class MiniZooKeeperCluster {
 
   /**
    * Check whether the client port in a specific position of the client port list is valid.
-   *
    * @param index the specified position
    */
   private boolean hasValidClientPortInList(int index) {
@@ -126,7 +122,6 @@ public class MiniZooKeeperCluster {
 
   /**
    * Selects a ZK client port.
-   *
    * @param seedPort the seed port to start with; -1 means first time.
    * @return a valid and unused client port
    */
@@ -194,12 +189,12 @@ public class MiniZooKeeperCluster {
    * @param baseDir             the base directory to use
    * @param numZooKeeperServers the number of ZooKeeper servers
    * @return ClientPort server bound to, -1 if there was a binding problem and we couldn't pick
-   *   another port.
+   *         another port.
    * @throws IOException          if an operation fails during the startup
    * @throws InterruptedException if the startup fails
    */
   public int startup(File baseDir, int numZooKeeperServers)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     if (numZooKeeperServers <= 0) {
       return -1;
     }
@@ -231,10 +226,10 @@ public class MiniZooKeeperCluster {
 
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
       // Setting {min,max}SessionTimeout defaults to be the same as in Zookeeper
-      server.setMinSessionTimeout(configuration.getInt("hbase.zookeeper.property.minSessionTimeout",
-        -1));
-      server.setMaxSessionTimeout(configuration.getInt("hbase.zookeeper.property.maxSessionTimeout",
-        -1));
+      server.setMinSessionTimeout(
+        configuration.getInt("hbase.zookeeper.property.minSessionTimeout", -1));
+      server.setMaxSessionTimeout(
+        configuration.getInt("hbase.zookeeper.property.maxSessionTimeout", -1));
       NIOServerCnxnFactory standaloneServerFactory;
       while (true) {
         try {
@@ -262,13 +257,12 @@ public class MiniZooKeeperCluster {
         getServerConfigurationOnOneLine(server));
       // Runs a 'stat' against the servers.
       if (!waitForServerUp(currentClientPort, connectionTimeout)) {
-        Threads.printThreadInfo(System.out,
-          "Why is zk standalone server not coming up?");
-        throw new IOException("Waiting for startup of standalone server; " +
-          "server isRunning=" + server.isRunning());
+        Threads.printThreadInfo(System.out, "Why is zk standalone server not coming up?");
+        throw new IOException(
+          "Waiting for startup of standalone server; " + "server isRunning=" + server.isRunning());
       }
 
-      // We have selected a port as a client port.  Update clientPortList if necessary.
+      // We have selected a port as a client port. Update clientPortList if necessary.
       if (clientPortList.size() <= i) { // it is not in the list, add the port
         clientPortList.add(currentClientPort);
       } else if (clientPortList.get(i) <= 0) { // the list has invalid port, update with valid port
@@ -291,12 +285,14 @@ public class MiniZooKeeperCluster {
   private String getServerConfigurationOnOneLine(ZooKeeperServer server) {
     StringWriter sw = new StringWriter();
     try (PrintWriter pw = new PrintWriter(sw) {
-      @Override public void println(int x) {
+      @Override
+      public void println(int x) {
         super.print(x);
         super.print(", ");
       }
 
-      @Override public void println(String x) {
+      @Override
+      public void println(String x) {
         super.print(x);
         super.print(", ");
       }
@@ -326,13 +322,13 @@ public class MiniZooKeeperCluster {
       int clientPort = clientPortList.get(i);
       standaloneServerFactory.shutdown();
       if (!waitForServerDown(clientPort, connectionTimeout)) {
-        throw new IOException("Waiting for shutdown of standalone server at port=" + clientPort +
-          ", timeout=" + this.connectionTimeout);
+        throw new IOException("Waiting for shutdown of standalone server at port=" + clientPort
+          + ", timeout=" + this.connectionTimeout);
       }
     }
     standaloneServerFactoryList.clear();
 
-    for (ZooKeeperServer zkServer: zooKeeperServers) {
+    for (ZooKeeperServer zkServer : zooKeeperServers) {
       // Explicitly close ZKDatabase since ZookeeperServer does not close them
       zkServer.getZKDatabase().close();
     }
@@ -348,8 +344,8 @@ public class MiniZooKeeperCluster {
   }
 
   /**
-   * @return clientPort return clientPort if there is another ZK backup can run
-   *         when killing the current active; return -1, if there is no backups.
+   * @return clientPort return clientPort if there is another ZK backup can run when killing the
+   *         current active; return -1, if there is no backups.
    * @throws IOException if waiting for the shutdown of a server fails
    */
   public int killCurrentActiveZooKeeperServer() throws IOException, InterruptedException {
@@ -387,15 +383,14 @@ public class MiniZooKeeperCluster {
 
   /**
    * Kill one back up ZK servers.
-   *
    * @throws IOException if waiting for the shutdown of a server fails
    */
   public void killOneBackupZooKeeperServer() throws IOException, InterruptedException {
     if (!started || activeZKServerIndex < 0 || standaloneServerFactoryList.size() <= 1) {
-      return ;
+      return;
     }
 
-    int backupZKServerIndex = activeZKServerIndex+1;
+    int backupZKServerIndex = activeZKServerIndex + 1;
     // Shutdown the current active one
     NIOServerCnxnFactory standaloneServerFactory =
       standaloneServerFactoryList.get(backupZKServerIndex);
@@ -420,7 +415,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        send4LetterWord(HOST, port, "stat", false, (int)timeout);
+        send4LetterWord(HOST, port, "stat", false, (int) timeout);
       } catch (IOException | X509Exception.SSLContextException e) {
         return true;
       }
@@ -431,7 +426,7 @@ public class MiniZooKeeperCluster {
       try {
         Thread.sleep(TIMEOUT);
       } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
     }
     return false;
@@ -443,7 +438,7 @@ public class MiniZooKeeperCluster {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String result = send4LetterWord(HOST, port, "stat", false, (int)timeout);
+        String result = send4LetterWord(HOST, port, "stat", false, (int) timeout);
         if (result.startsWith("Zookeeper version:") && !result.contains("READ-ONLY")) {
           return true;
         } else {
@@ -463,19 +458,20 @@ public class MiniZooKeeperCluster {
       try {
         Thread.sleep(TIMEOUT);
       } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
     }
     return false;
   }
 
   public int getClientPort() {
-    return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size() ? -1
-        : clientPortList.get(activeZKServerIndex);
+    return activeZKServerIndex < 0 || activeZKServerIndex >= clientPortList.size()
+      ? -1
+      : clientPortList.get(activeZKServerIndex);
   }
 
   /**
-   * @return Address for this  cluster instance.
+   * @return Address for this cluster instance.
    */
   public Address getAddress() {
     return Address.fromParts(HOST, getClientPort());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,8 +58,8 @@ public class TestSCPWithReplicasWithRSGroup extends TestSCPBase {
   @Test
   public void testCrashTargetRs() throws Exception {
     HMaster master = util.getHBaseCluster().getMaster();
-    util.waitFor(60000, (Predicate<Exception>) () ->
-        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+    util.waitFor(60000, (Predicate<Exception>) () -> master.isInitialized()
+      && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
     testRecoveryAndDoubleExecution(false, false);
   }
 }

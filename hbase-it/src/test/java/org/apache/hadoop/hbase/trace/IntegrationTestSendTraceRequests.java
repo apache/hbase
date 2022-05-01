@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.trace;
 
 import java.io.IOException;
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
@@ -38,6 +36,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
@@ -45,6 +44,7 @@ import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @Category(IntegrationTests.class)
@@ -113,55 +113,55 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private void doScans(ExecutorService service, final LinkedBlockingQueue<Long> rks) {
 
-      for (int i = 0; i < 100; i++) {
-        Runnable runnable = new Runnable() {
-          private final LinkedBlockingQueue<Long> rowKeyQueue = rks;
-          @Override
-          public void run() {
-            ResultScanner rs = null;
-            TraceUtil.addSampler(Sampler.ALWAYS);
-            try (TraceScope scope = TraceUtil.createTrace("Scan")){
-              Table ht = util.getConnection().getTable(tableName);
-              Scan s = new Scan();
-              s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
-              s.setBatch(7);
-              rs = ht.getScanner(s);
-              // Something to keep the jvm from removing the loop.
-              long accum = 0;
+    for (int i = 0; i < 100; i++) {
+      Runnable runnable = new Runnable() {
+        private final LinkedBlockingQueue<Long> rowKeyQueue = rks;
 
-              for(int x = 0; x < 1000; x++) {
-                Result r = rs.next();
-                accum |= Bytes.toLong(r.getRow());
-              }
+        @Override
+        public void run() {
+          ResultScanner rs = null;
+          TraceUtil.addSampler(Sampler.ALWAYS);
+          try (TraceScope scope = TraceUtil.createTrace("Scan")) {
+            Table ht = util.getConnection().getTable(tableName);
+            Scan s = new Scan();
+            s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
+            s.setBatch(7);
+            rs = ht.getScanner(s);
+            // Something to keep the jvm from removing the loop.
+            long accum = 0;
 
-              TraceUtil.addTimelineAnnotation("Accum result = " + accum);
-
-              ht.close();
-              ht = null;
-            } catch (IOException e) {
-              e.printStackTrace();
-              TraceUtil.addKVAnnotation("exception", e.getClass().getSimpleName());
-            } catch (Exception e) {
-            } finally {
-              if (rs != null) rs.close();
+            for (int x = 0; x < 1000; x++) {
+              Result r = rs.next();
+              accum |= Bytes.toLong(r.getRow());
             }
 
+            TraceUtil.addTimelineAnnotation("Accum result = " + accum);
+
+            ht.close();
+            ht = null;
+          } catch (IOException e) {
+            e.printStackTrace();
+            TraceUtil.addKVAnnotation("exception", e.getClass().getSimpleName());
+          } catch (Exception e) {
+          } finally {
+            if (rs != null) rs.close();
           }
-        };
-        service.submit(runnable);
-      }
+
+        }
+      };
+      service.submit(runnable);
+    }
 
   }
 
   private void doGets(ExecutorService service, final LinkedBlockingQueue<Long> rowKeys)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < 100; i++) {
       Runnable runnable = new Runnable() {
         private final LinkedBlockingQueue<Long> rowKeyQueue = rowKeys;
 
         @Override
         public void run() {
-
 
           Table ht = null;
           try {
@@ -185,7 +185,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
               }
               TraceUtil.addTimelineAnnotation("Accum = " + accum);
 
-            } catch (IOException|InterruptedException ie) {
+            } catch (IOException | InterruptedException ie) {
               // IGNORED
             }
           }

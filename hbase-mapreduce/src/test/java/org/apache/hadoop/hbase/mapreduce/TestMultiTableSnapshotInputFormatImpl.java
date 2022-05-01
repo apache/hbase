@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormatImpl.class);
+    HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormatImpl.class);
 
   private MultiTableSnapshotInputFormatImpl subject;
   private Map<String, Collection<Scan>> snapshotScans;
@@ -71,17 +71,15 @@ public class TestMultiTableSnapshotInputFormatImpl {
     // feels weird to introduce a RestoreSnapshotHelperFactory and inject that, which would
     // probably be the more "pure"
     // way of doing things. This is the lesser of two evils, perhaps?
-    doNothing().when(this.subject).
-        restoreSnapshot(any(), any(), any(),
-            any(), any());
+    doNothing().when(this.subject).restoreSnapshot(any(), any(), any(), any(), any());
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
     CommonFSUtils.setRootDir(conf, rootDir);
-    this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of("snapshot1",
-        ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
-        ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
-            new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
+    this.snapshotScans = ImmutableMap.<String, Collection<Scan>> of("snapshot1",
+      ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
+      ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
+        new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
 
     this.restoreDir = new Path(CommonFSUtils.getRootDir(conf), "restore-dir");
 
@@ -91,8 +89,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     subject.setInput(this.conf, snapshotScans, restoreDir);
   }
 
-  public Map<String, Collection<ScanWithEquals>> toScanWithEquals(
-      Map<String, Collection<Scan>> snapshotScans) throws IOException {
+  public Map<String, Collection<ScanWithEquals>>
+    toScanWithEquals(Map<String, Collection<Scan>> snapshotScans) throws IOException {
     Map<String, Collection<ScanWithEquals>> rtn = Maps.newHashMap();
 
     for (Map.Entry<String, Collection<Scan>> entry : snapshotScans.entrySet()) {
@@ -114,7 +112,6 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     /**
      * Creates a new instance of this class while copying all values.
-     *
      * @param scan The scan instance to copy from.
      * @throws java.io.IOException When copying the values fails.
      */
@@ -129,8 +126,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
         return false;
       }
       ScanWithEquals otherScan = (ScanWithEquals) obj;
-      return Objects.equals(this.startRow, otherScan.startRow) && Objects
-          .equals(this.stopRow, otherScan.stopRow);
+      return Objects.equals(this.startRow, otherScan.startRow)
+        && Objects.equals(this.stopRow, otherScan.stopRow);
     }
 
     @Override
@@ -140,9 +137,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     @Override
     public String toString() {
-      return org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.
-        toStringHelper(this).add("startRow", startRow)
-          .add("stopRow", stopRow).toString();
+      return org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.toStringHelper(this)
+        .add("startRow", startRow).add("stopRow", stopRow).toString();
     }
   }
 
@@ -177,7 +173,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     for (Path snapshotDir : restoreDirs.values()) {
       assertEquals("Expected " + snapshotDir + " to be a child of " + restoreDir, restoreDir,
-          snapshotDir.getParent());
+        snapshotDir.getParent());
     }
   }
 
@@ -189,7 +185,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     for (Map.Entry<String, Path> entry : snapshotDirs.entrySet()) {
       verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
-          eq(entry.getValue()), any());
+        eq(entry.getValue()), any());
     }
   }
 }

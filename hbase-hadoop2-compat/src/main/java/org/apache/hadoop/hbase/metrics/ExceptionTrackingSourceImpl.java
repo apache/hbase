@@ -15,19 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Common base implementation for metrics sources which need to track exceptions thrown or
- * received.
+ * Common base implementation for metrics sources which need to track exceptions thrown or received.
  */
 @InterfaceAudience.Private
-public class ExceptionTrackingSourceImpl extends BaseSourceImpl
-    implements ExceptionTrackingSource {
+public class ExceptionTrackingSourceImpl extends BaseSourceImpl implements ExceptionTrackingSource {
   protected MutableFastCounter exceptions;
   protected MutableFastCounter exceptionsOOO;
   protected MutableFastCounter exceptionsBusy;
@@ -44,7 +41,7 @@ public class ExceptionTrackingSourceImpl extends BaseSourceImpl
   protected MutableFastCounter otherExceptions;
 
   public ExceptionTrackingSourceImpl(String metricsName, String metricsDescription,
-                                     String metricsContext, String metricsJmxContext) {
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
@@ -52,32 +49,32 @@ public class ExceptionTrackingSourceImpl extends BaseSourceImpl
   public void init() {
     super.init();
     this.exceptions = this.getMetricsRegistry().newCounter(EXCEPTIONS_NAME, EXCEPTIONS_DESC, 0L);
-    this.exceptionsOOO = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_OOO_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsBusy = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsUnknown = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsScannerReset = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_SCANNER_RESET_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsSanity = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsMoved = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_MOVED_NAME, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsNSRE = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsOOO =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_OOO_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsBusy =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsUnknown =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsScannerReset =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_SCANNER_RESET_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsSanity =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsMoved =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_MOVED_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsNSRE =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
     this.exceptionsMultiTooLarge = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
+      .newCounter(EXCEPTIONS_MULTI_TOO_LARGE_NAME, EXCEPTIONS_MULTI_TOO_LARGE_DESC, 0L);
     this.exceptionsCallQueueTooBig = this.getMetricsRegistry()
-        .newCounter(EXCEPTIONS_CALL_QUEUE_TOO_BIG, EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC, 0L);
-    this.exceptionsQuotaExceeded = this.getMetricsRegistry()
-      .newCounter(EXCEPTIONS_QUOTA_EXCEEDED, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionsRpcThrottling = this.getMetricsRegistry()
-      .newCounter(EXCEPTIONS_RPC_THROTTLING, EXCEPTIONS_TYPE_DESC, 0L);
-    this.exceptionRequestTooBig = this.getMetricsRegistry()
-      .newCounter(EXCEPTIONS_REQUEST_TOO_BIG, EXCEPTIONS_TYPE_DESC, 0L);
-    this.otherExceptions = this.getMetricsRegistry()
-      .newCounter(OTHER_EXCEPTIONS, EXCEPTIONS_TYPE_DESC, 0L);
+      .newCounter(EXCEPTIONS_CALL_QUEUE_TOO_BIG, EXCEPTIONS_CALL_QUEUE_TOO_BIG_DESC, 0L);
+    this.exceptionsQuotaExceeded =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_QUOTA_EXCEEDED, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsRpcThrottling =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_RPC_THROTTLING, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionRequestTooBig =
+      this.getMetricsRegistry().newCounter(EXCEPTIONS_REQUEST_TOO_BIG, EXCEPTIONS_TYPE_DESC, 0L);
+    this.otherExceptions =
+      this.getMetricsRegistry().newCounter(OTHER_EXCEPTIONS, EXCEPTIONS_TYPE_DESC, 0L);
   }
 
   @Override

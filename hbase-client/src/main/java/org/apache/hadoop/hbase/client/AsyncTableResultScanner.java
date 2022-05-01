@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
   private ScanResumer resumer;
 
   public AsyncTableResultScanner(AsyncTable<AdvancedScanResultConsumer> table, Scan scan,
-      long maxCacheSize) {
+    long maxCacheSize) {
     this.rawTable = table;
     this.maxCacheSize = maxCacheSize;
     this.scan = scan;
@@ -72,9 +72,9 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("0x%x", System.identityHashCode(this)) +
-        " stop prefetching when scanning " + rawTable.getName() + " as the cache size " +
-        cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
+      LOG.debug(String.format("0x%x", System.identityHashCode(this))
+        + " stop prefetching when scanning " + rawTable.getName() + " as the cache size "
+        + cacheSize + " is greater than the maxCacheSize " + maxCacheSize);
     }
     resumer = controller.suspend();
   }

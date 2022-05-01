@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,9 +43,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 
 /**
- * A base class for a test Map/Reduce job over HBase tables. The map/reduce process we're testing
- * on our tables is simple - take every row in the table, reverse the value of a particular cell,
- * and write it back to the table. Implements common components between mapred and mapreduce
+ * A base class for a test Map/Reduce job over HBase tables. The map/reduce process we're testing on
+ * our tables is simple - take every row in the table, reverse the value of a particular cell, and
+ * write it back to the table. Implements common components between mapred and mapreduce
  * implementations.
  */
 public abstract class TestTableMapReduceBase {
@@ -56,10 +55,7 @@ public abstract class TestTableMapReduceBase {
   protected static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   protected static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
-  protected static final byte[][] columns = new byte[][] {
-    INPUT_FAMILY,
-    OUTPUT_FAMILY
-  };
+  protected static final byte[][] columns = new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY };
 
   /**
    * Retrieve my logger instance.
@@ -74,9 +70,8 @@ public abstract class TestTableMapReduceBase {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    Table table =
-        UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
-            OUTPUT_FAMILY });
+    Table table = UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME,
+      new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
     UTIL.createTable(TABLE_FOR_NEGATIVE_TESTS, new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY });
   }
@@ -88,8 +83,7 @@ public abstract class TestTableMapReduceBase {
   }
 
   /**
-   * Test a map/reduce against a multi-region table
-   * @throws IOException
+   * Test a map/reduce against a multi-region table n
    */
   @Test
   public void testMultiRegionTable() throws IOException {
@@ -111,11 +105,10 @@ public abstract class TestTableMapReduceBase {
     if (value.size() != 1) {
       throw new IOException("There should only be one input column");
     }
-    Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-      cf = value.getMap();
-    if(!cf.containsKey(INPUT_FAMILY)) {
-      throw new IOException("Wrong input columns. Missing: '" +
-        Bytes.toString(INPUT_FAMILY) + "'.");
+    Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cf = value.getMap();
+    if (!cf.containsKey(INPUT_FAMILY)) {
+      throw new IOException(
+        "Wrong input columns. Missing: '" + Bytes.toString(INPUT_FAMILY) + "'.");
     }
 
     // Get the original value and reverse it
@@ -157,11 +150,9 @@ public abstract class TestTableMapReduceBase {
   }
 
   /**
-   * Looks at every value of the mapreduce output and verifies that indeed
-   * the values have been reversed.
-   * @param table Table to scan.
-   * @throws IOException
-   * @throws NullPointerException if we failed to find a cell value
+   * Looks at every value of the mapreduce output and verifies that indeed the values have been
+   * reversed.
+   * @param table Table to scan. n * @throws NullPointerException if we failed to find a cell value
    */
   private void verifyAttempt(final Table table) throws IOException, NullPointerException {
     Scan scan = new Scan();
@@ -170,18 +161,17 @@ public abstract class TestTableMapReduceBase {
     try {
       Iterator<Result> itr = scanner.iterator();
       assertTrue(itr.hasNext());
-      while(itr.hasNext()) {
+      while (itr.hasNext()) {
         Result r = itr.next();
         if (getLog().isDebugEnabled()) {
-          if (r.size() > 2 ) {
-            throw new IOException("Too many results, expected 2 got " +
-              r.size());
+          if (r.size() > 2) {
+            throw new IOException("Too many results, expected 2 got " + r.size());
           }
         }
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-         for(Cell kv : r.listCells()) {
+        for (Cell kv : r.listCells()) {
           if (count == 0) {
             firstValue = CellUtil.cloneValue(kv);
           }
@@ -194,16 +184,13 @@ public abstract class TestTableMapReduceBase {
           }
         }
 
-
         if (firstValue == null) {
-          throw new NullPointerException(Bytes.toString(r.getRow()) +
-            ": first value is null");
+          throw new NullPointerException(Bytes.toString(r.getRow()) + ": first value is null");
         }
         String first = Bytes.toString(firstValue);
 
         if (secondValue == null) {
-          throw new NullPointerException(Bytes.toString(r.getRow()) +
-            ": second value is null");
+          throw new NullPointerException(Bytes.toString(r.getRow()) + ": second value is null");
         }
         byte[] secondReversed = new byte[secondValue.length];
         for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
@@ -213,9 +200,9 @@ public abstract class TestTableMapReduceBase {
 
         if (first.compareTo(second) != 0) {
           if (getLog().isDebugEnabled()) {
-            getLog().debug("second key is not the reverse of first. row=" +
-                Bytes.toStringBinary(r.getRow()) + ", first value=" + first +
-                ", second value=" + second);
+            getLog().debug(
+              "second key is not the reverse of first. row=" + Bytes.toStringBinary(r.getRow())
+                + ", first value=" + first + ", second value=" + second);
           }
           fail();
         }

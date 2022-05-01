@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public final class ReplicationUtils {
   }
 
   public static Configuration getPeerClusterConfiguration(ReplicationPeerConfig peerConfig,
-      Configuration baseConf) throws ReplicationException {
+    Configuration baseConf) throws ReplicationException {
     Configuration otherConf;
     try {
       otherConf = HBaseConfiguration.createClusterConf(baseConf, peerConfig.getClusterKey());
@@ -59,7 +59,7 @@ public final class ReplicationUtils {
   }
 
   public static void removeAllQueues(ReplicationQueueStorage queueStorage, String peerId)
-      throws ReplicationException {
+    throws ReplicationException {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
@@ -87,7 +87,7 @@ public final class ReplicationUtils {
   }
 
   private static boolean isTableCFsEqual(Map<TableName, List<String>> tableCFs1,
-      Map<TableName, List<String>> tableCFs2) {
+    Map<TableName, List<String>> tableCFs2) {
     if (tableCFs1 == null) {
       return tableCFs2 == null;
     }
@@ -112,16 +112,16 @@ public final class ReplicationUtils {
   }
 
   public static boolean isNamespacesAndTableCFsEqual(ReplicationPeerConfig rpc1,
-      ReplicationPeerConfig rpc2) {
+    ReplicationPeerConfig rpc2) {
     if (rpc1.replicateAllUserTables() != rpc2.replicateAllUserTables()) {
       return false;
     }
     if (rpc1.replicateAllUserTables()) {
-      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
-        isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
+      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces())
+        && isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
     } else {
-      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces()) &&
-        isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
+      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces())
+        && isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
     }
   }
 
@@ -135,10 +135,10 @@ public final class ReplicationUtils {
   }
 
   /**
-   * @deprecated Will be removed in HBase 3.
-   *             Use {@link ReplicationPeerConfig#needToReplicate(TableName)} instead.
+   * @deprecated Will be removed in HBase 3. Use
+   *             {@link ReplicationPeerConfig#needToReplicate(TableName)} instead.
    * @param peerConfig configuration for the replication peer cluster
-   * @param tableName name of the table
+   * @param tableName  name of the table
    * @return true if the table need replicate to the peer cluster
    */
   @Deprecated

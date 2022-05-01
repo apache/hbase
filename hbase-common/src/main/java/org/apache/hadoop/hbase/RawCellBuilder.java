@@ -18,28 +18,30 @@
 package org.apache.hadoop.hbase;
 
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Allows creating a cell with {@link Tag}
- * An instance of this type can be acquired by using RegionCoprocessorEnvironment#getCellBuilder
- * (for prod code) and {@link RawCellBuilderFactory} (for unit tests).
+ * Allows creating a cell with {@link Tag} An instance of this type can be acquired by using
+ * RegionCoprocessorEnvironment#getCellBuilder (for prod code) and {@link RawCellBuilderFactory}
+ * (for unit tests).
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface RawCellBuilder extends CellBuilder {
   @Override
   RawCellBuilder setRow(final byte[] row);
+
   @Override
   RawCellBuilder setRow(final byte[] row, final int rOffset, final int rLength);
 
   @Override
   RawCellBuilder setFamily(final byte[] family);
+
   @Override
   RawCellBuilder setFamily(final byte[] family, final int fOffset, final int fLength);
 
   @Override
   RawCellBuilder setQualifier(final byte[] qualifier);
+
   @Override
   RawCellBuilder setQualifier(final byte[] qualifier, final int qOffset, final int qLength);
 
@@ -51,6 +53,7 @@ public interface RawCellBuilder extends CellBuilder {
 
   @Override
   RawCellBuilder setValue(final byte[] value);
+
   @Override
   RawCellBuilder setValue(final byte[] value, final int vOffset, final int vLength);
 

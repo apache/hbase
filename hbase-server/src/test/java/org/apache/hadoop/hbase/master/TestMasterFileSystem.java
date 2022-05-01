@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the master filesystem in a local cluster
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterFileSystem {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFileSystem.class);
+    HBaseClassTestRule.forClass(TestMasterFileSystem.class);
 
   @Rule
   public TestName name = new TestName();
@@ -91,9 +91,8 @@ public class TestMasterFileSystem {
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final byte[] FAM = Bytes.toBytes("fam");
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d") };
 
     UTIL.createTable(tableName, FAM, splitKeys);
 
@@ -128,8 +127,8 @@ public class TestMasterFileSystem {
 
     // check for the existence of the archive directory
     for (HRegion region : regions) {
-      Path archiveDir = HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(),
-        region);
+      Path archiveDir =
+        HFileArchiveTestingUtil.getRegionArchiveDir(UTIL.getConfiguration(), region);
       assertTrue(fs.exists(archiveDir));
     }
 

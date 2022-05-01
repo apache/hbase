@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,11 +38,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestLogRoller {
 
   @ClassRule
@@ -86,8 +85,8 @@ public class TestLogRoller {
     // add multiple wal
     Map<FSHLog, Path> wals = new HashMap<>();
     for (int i = 1; i <= 3; i++) {
-      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
-        true, WAL_PREFIX, "." + i);
+      FSHLog wal =
+        new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null, true, WAL_PREFIX, "." + i);
       wal.init();
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);

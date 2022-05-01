@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,16 +47,16 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 @InterfaceAudience.Private
 public class TestProtobufRpcServiceImpl implements BlockingInterface {
 
-  public static final BlockingService SERVICE = TestProtobufRpcProto
-      .newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
+  public static final BlockingService SERVICE =
+    TestProtobufRpcProto.newReflectiveBlockingService(new TestProtobufRpcServiceImpl());
 
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
-      throws IOException {
+    throws IOException {
     return newBlockingStub(client, addr, User.getCurrent());
   }
 
   public static BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr,
-      User user) throws IOException {
+    User user) throws IOException {
     return TestProtobufRpcProto.newBlockingStub(client.createBlockingRpcChannel(
       ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()), user, 0));
   }
@@ -69,13 +69,13 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
 
   @Override
   public EmptyResponseProto ping(RpcController controller, EmptyRequestProto request)
-      throws ServiceException {
+    throws ServiceException {
     return EmptyResponseProto.getDefaultInstance();
   }
 
   @Override
   public EchoResponseProto echo(RpcController controller, EchoRequestProto request)
-      throws ServiceException {
+    throws ServiceException {
     if (controller instanceof HBaseRpcController) {
       HBaseRpcController pcrc = (HBaseRpcController) controller;
       // If cells, scan them to check we are able to iterate what we were given and since this is an
@@ -100,21 +100,21 @@ public class TestProtobufRpcServiceImpl implements BlockingInterface {
 
   @Override
   public EmptyResponseProto error(RpcController controller, EmptyRequestProto request)
-      throws ServiceException {
+    throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("server error!"));
   }
 
   @Override
   public EmptyResponseProto pause(RpcController controller, PauseRequestProto request)
-      throws ServiceException {
+    throws ServiceException {
     Threads.sleepWithoutInterrupt(request.getMs());
     return EmptyResponseProto.getDefaultInstance();
   }
 
   @Override
   public AddrResponseProto addr(RpcController controller, EmptyRequestProto request)
-      throws ServiceException {
+    throws ServiceException {
     return AddrResponseProto.newBuilder()
-        .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build();
+      .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build();
   }
 }

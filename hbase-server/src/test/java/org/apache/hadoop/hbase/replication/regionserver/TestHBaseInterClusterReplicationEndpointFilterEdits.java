@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -58,7 +57,7 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseInterClusterReplicationEndpointFilterEdits.class);
+    HBaseClassTestRule.forClass(TestHBaseInterClusterReplicationEndpointFilterEdits.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -80,8 +79,8 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     ReplicationPeerConfig rpc = mock(ReplicationPeerConfig.class);
     when(rpc.isSerial()).thenReturn(false);
     when(replicationPeer.getPeerConfig()).thenReturn(rpc);
-    Context context = new Context(UTIL.getConfiguration(), UTIL.getConfiguration(), null,
-        null, null, replicationPeer, null, null, null);
+    Context context = new Context(UTIL.getConfiguration(), UTIL.getConfiguration(), null, null,
+      null, replicationPeer, null, null, null);
     endpoint = new HBaseInterClusterReplicationEndpoint();
     endpoint.init(context);
 
@@ -98,14 +97,14 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     List<List<Entry>> entryList = new ArrayList<>();
     // should be filtered
     Cell c1 = new KeyValue(ROW, NON_EXISTING_FAMILY, QUALIFIER, System.currentTimeMillis(),
-        Type.Put, VALUE);
+      Type.Put, VALUE);
     Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c1));
+      new WALEdit().add(c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
     Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
     Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c2));
+      new WALEdit().add(c2));
     entryList.add(Lists.newArrayList(e2, e1));
     List<List<Entry>> filtered = endpoint.filterNotExistColumnFamilyEdits(entryList);
     assertEquals(1, filtered.size());
@@ -120,12 +119,12 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     // should be filtered
     Cell c1 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
     Entry e1 = new Entry(new WALKeyImpl(new byte[32], TABLE2, System.currentTimeMillis()),
-        new WALEdit().add(c1));
+      new WALEdit().add(c1));
     entryList.add(Lists.newArrayList(e1));
     // should be kept
     Cell c2 = new KeyValue(ROW, FAMILY, QUALIFIER, System.currentTimeMillis(), Type.Put, VALUE);
     Entry e2 = new Entry(new WALKeyImpl(new byte[32], TABLE1, System.currentTimeMillis()),
-        new WALEdit().add(c2));
+      new WALEdit().add(c2));
     entryList.add(Lists.newArrayList(e2));
     List<List<Entry>> filtered = endpoint.filterNotExistTableEdits(entryList);
     assertEquals(1, filtered.size());

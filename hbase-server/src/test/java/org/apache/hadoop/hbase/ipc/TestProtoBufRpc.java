@@ -60,7 +60,7 @@ public class TestProtoBufRpc {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProtoBufRpc.class);
+    HBaseClassTestRule.forClass(TestProtoBufRpc.class);
 
   public final static String ADDRESS = "localhost";
   private static int PORT = 0;
@@ -71,7 +71,7 @@ public class TestProtoBufRpc {
   @Parameters(name = "{index}: rpcServerImpl={0}")
   public static Collection<Object[]> parameters() {
     return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
-        new Object[] { NettyRpcServer.class.getName() });
+      new Object[] { NettyRpcServer.class.getName() });
   }
 
   @Parameter(0)
@@ -80,8 +80,7 @@ public class TestProtoBufRpc {
   @Before
   public void setUp() throws IOException { // Setup server for both protocols
     this.conf = HBaseConfiguration.create();
-    this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        rpcServerImpl);
+    this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
     org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer")
       .setLevel(org.apache.log4j.Level.ERROR);
     org.apache.log4j.Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace")
@@ -89,8 +88,8 @@ public class TestProtoBufRpc {
     // Create server side implementation
     // Get RPC server for server side implementation
     this.server = RpcServerFactory.createRpcServer(null, "testrpc",
-        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
-        new InetSocketAddress(ADDRESS, PORT), conf, new FifoRpcScheduler(conf, 10));
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
+      new InetSocketAddress(ADDRESS, PORT), conf, new FifoRpcScheduler(conf, 10));
     InetSocketAddress address = server.getListenerAddress();
     if (address == null) {
       throw new IOException("Listener channel is closed");
@@ -104,8 +103,8 @@ public class TestProtoBufRpc {
     server.stop();
   }
 
-  @Test (expected=org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class
-      /*Thrown when we call stub.error*/)
+  @Test(expected = org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class
+  /* Thrown when we call stub.error */)
   public void testProtoBufRpc() throws Exception {
     RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {

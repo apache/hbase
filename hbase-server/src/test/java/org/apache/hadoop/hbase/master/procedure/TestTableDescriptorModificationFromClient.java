@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,26 +48,25 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Verify that the HTableDescriptor is updated after
- * addColumn(), deleteColumn() and modifyTable() operations.
+ * Verify that the HTableDescriptor is updated after addColumn(), deleteColumn() and modifyTable()
+ * operations.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestTableDescriptorModificationFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableDescriptorModificationFromClient.class);
+    HBaseClassTestRule.forClass(TestTableDescriptorModificationFromClient.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = null;
   private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
   private static final byte[] FAMILY_1 = Bytes.toBytes("cf1");
 
   /**
-   * Start up a mini cluster and put a small table of empty regions into it.
-   *
-   * @throws Exception
+   * Start up a mini cluster and put a small table of empty regions into it. n
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -267,8 +266,8 @@ public class TestTableDescriptorModificationFromClient {
     }
   }
 
-  private void verifyTableDescriptor(final TableName tableName,
-                                     final byte[]... families) throws IOException {
+  private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
+    throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
@@ -278,17 +277,16 @@ public class TestTableDescriptorModificationFromClient {
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), tableName);
-    TableDescriptor td =
-        FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     verifyTableDescriptor(td, tableName, families);
   }
 
-  private void verifyTableDescriptor(final TableDescriptor htd,
-      final TableName tableName, final byte[]... families) {
+  private void verifyTableDescriptor(final TableDescriptor htd, final TableName tableName,
+    final byte[]... families) {
     Set<byte[]> htdFamilies = htd.getColumnFamilyNames();
     assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
-    for (byte[] familyName: families) {
+    for (byte[] familyName : families) {
       assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
     }
   }

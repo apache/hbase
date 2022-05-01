@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,12 +55,12 @@ public class TestGetProcedureResult {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGetProcedureResult.class);
+    HBaseClassTestRule.forClass(TestGetProcedureResult.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   public static final class DummyProcedure extends Procedure<MasterProcedureEnv>
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
 
     private final CountDownLatch failureSet = new CountDownLatch(1);
 
@@ -78,7 +78,7 @@ public class TestGetProcedureResult {
 
     @Override
     protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       setFailure("dummy", new IOException("inject error"));
       failureSet.countDown();
       return null;
@@ -114,7 +114,7 @@ public class TestGetProcedureResult {
   }
 
   private GetProcedureResultResponse.State getState(long procId)
-      throws MasterNotRunningException, IOException, ServiceException {
+    throws MasterNotRunningException, IOException, ServiceException {
     MasterProtos.MasterService.BlockingInterface master =
       ((ConnectionImplementation) UTIL.getConnection()).getMaster();
     GetProcedureResultResponse resp = master.getProcedureResult(null,
@@ -140,8 +140,8 @@ public class TestGetProcedureResult {
 
       @Override
       public String explainFailure() throws Exception {
-        return "Procedure pid=" + procId + " is still in " + getState(procId) +
-          " state, expected " + GetProcedureResultResponse.State.FINISHED;
+        return "Procedure pid=" + procId + " is still in " + getState(procId) + " state, expected "
+          + GetProcedureResultResponse.State.FINISHED;
       }
     });
   }

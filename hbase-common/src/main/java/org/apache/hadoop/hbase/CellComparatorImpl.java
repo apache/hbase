@@ -25,17 +25,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
- * <code>hbase:meta</code> cells.  Cells from these tables need a specialized comparator, one that
+ * Compare two HBase cells. Do not use this method comparing <code>-ROOT-</code> or
+ * <code>hbase:meta</code> cells. Cells from these tables need a specialized comparator, one that
  * takes account of the special formatting of the row where we have commas to delimit table from
- * regionname, from row.  See KeyValue for how it has a special comparator to do hbase:meta cells
- * and yet another for -ROOT-.
- * <p>While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
- * format should be taken into consideration, for which the instance of this comparator
- * should be used.  In all other cases the static APIs in this comparator would be enough
- * <p>HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare
- * faster will likely manifest at the macro level. See also
- * {@link BBKVComparator}. Use it when mostly {@link ByteBufferKeyValue}s.
+ * regionname, from row. See KeyValue for how it has a special comparator to do hbase:meta cells and
+ * yet another for -ROOT-.
+ * <p>
+ * While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
+ * format should be taken into consideration, for which the instance of this comparator should be
+ * used. In all other cases the static APIs in this comparator would be enough
+ * <p>
+ * HOT methods. We spend a good portion of CPU comparing. Anything that makes the compare faster
+ * will likely manifest at the macro level. See also {@link BBKVComparator}. Use it when mostly
+ * {@link ByteBufferKeyValue}s.
  * </p>
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UNKNOWN",
@@ -46,8 +48,8 @@ import org.apache.yetus.audience.InterfaceStability;
 public class CellComparatorImpl implements CellComparator {
 
   /**
-   * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
-   * of KeyValue only.
+   * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion of
+   * KeyValue only.
    */
   public static final CellComparatorImpl COMPARATOR = new CellComparatorImpl();
 
@@ -121,13 +123,14 @@ public class CellComparatorImpl implements CellComparator {
     int leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
     byte leftType = left.getTypeByte(leftKeyLength);
-    if (leftType == KeyValue.Type.Minimum.getCode()
-        && leftFamilyLength + leftQualifierLength == 0) {
+    if (
+      leftType == KeyValue.Type.Minimum.getCode() && leftFamilyLength + leftQualifierLength == 0
+    ) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
@@ -136,13 +139,14 @@ public class CellComparatorImpl implements CellComparator {
     int rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // No need of right row length below here.
 
     byte rightType = right.getTypeByte(rightKeyLength);
-    if (rightType == KeyValue.Type.Minimum.getCode()
-        && rightFamilyLength + rightQualifierLength == 0) {
+    if (
+      rightType == KeyValue.Type.Minimum.getCode() && rightFamilyLength + rightQualifierLength == 0
+    ) {
       return -1;
     }
 
@@ -184,8 +188,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
     int rightRowLength = right.getRowLength();
-    diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(),
-      leftRowLength, right.getRowByteBuffer(), right.getRowPosition(), rightRowLength);
+    diff = ByteBufferUtils.compareTo(left.getRowByteBuffer(), left.getRowPosition(), leftRowLength,
+      right.getRowByteBuffer(), right.getRowPosition(), rightRowLength);
     if (diff != 0) {
       return diff;
     }
@@ -202,13 +206,14 @@ public class CellComparatorImpl implements CellComparator {
     int leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
     byte leftType = left.getTypeByte(leftKeyLength);
-    if (leftType == KeyValue.Type.Minimum.getCode()
-        && leftFamilyLength + leftQualifierLength == 0) {
+    if (
+      leftType == KeyValue.Type.Minimum.getCode() && leftFamilyLength + leftQualifierLength == 0
+    ) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
@@ -217,13 +222,14 @@ public class CellComparatorImpl implements CellComparator {
     int rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // No need of right row length below here.
 
     byte rightType = right.getTypeByte(rightKeyLength);
-    if (rightType == KeyValue.Type.Minimum.getCode()
-        && rightFamilyLength + rightQualifierLength == 0) {
+    if (
+      rightType == KeyValue.Type.Minimum.getCode() && rightFamilyLength + rightQualifierLength == 0
+    ) {
       return -1;
     }
 
@@ -282,13 +288,14 @@ public class CellComparatorImpl implements CellComparator {
     int leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
     byte leftType = left.getTypeByte(leftKeyLength);
-    if (leftType == KeyValue.Type.Minimum.getCode()
-        && leftFamilyLength + leftQualifierLength == 0) {
+    if (
+      leftType == KeyValue.Type.Minimum.getCode() && leftFamilyLength + leftQualifierLength == 0
+    ) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
@@ -297,13 +304,14 @@ public class CellComparatorImpl implements CellComparator {
     int rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // No need of right row length below here.
 
     byte rightType = right.getTypeByte(rightKeyLength);
-    if (rightType == KeyValue.Type.Minimum.getCode()
-        && rightFamilyLength + rightQualifierLength == 0) {
+    if (
+      rightType == KeyValue.Type.Minimum.getCode() && rightFamilyLength + rightQualifierLength == 0
+    ) {
       return -1;
     }
 
@@ -352,7 +360,7 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   private int compareColumns(final Cell left, final int leftFamLen, final int leftQualLen,
-      final Cell right, final int rightFamLen, final int rightQualLen) {
+    final Cell right, final int rightFamLen, final int rightQualLen) {
     int diff = compareFamilies(left, leftFamLen, right, rightFamLen);
     if (diff != 0) {
       return diff;
@@ -418,27 +426,26 @@ public class CellComparatorImpl implements CellComparator {
   public final int compareFamilies(Cell left, Cell right) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
-          ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
+        ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
+        ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
     }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
-          right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+        ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
     }
     if (right instanceof ByteBufferExtendedCell) {
       // Notice how we flip the order of the compare here. We used to negate the return value but
       // see what FindBugs says
       // http://findbugs.sourceforge.net/bugDescriptions.html#RV_NEGATING_RESULT_OF_COMPARETO
       // It suggest flipping the order to get same effect and 'safer'.
-      return ByteBufferUtils.compareTo(
-          left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
-          ((ByteBufferExtendedCell)right).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell)right).getFamilyPosition(), right.getFamilyLength());
+      return ByteBufferUtils.compareTo(left.getFamilyArray(), left.getFamilyOffset(),
+        left.getFamilyLength(), ((ByteBufferExtendedCell) right).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) right).getFamilyPosition(), right.getFamilyLength());
     }
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
-        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+      right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
   }
 
   static int compareQualifiers(KeyValue left, KeyValue right) {
@@ -453,7 +460,7 @@ public class CellComparatorImpl implements CellComparator {
     byte leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
@@ -461,7 +468,7 @@ public class CellComparatorImpl implements CellComparator {
     byte rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // Compare families.
     int leftFamilyOffset = left.getFamilyOffset(leftFamilyLengthPosition);
@@ -485,7 +492,7 @@ public class CellComparatorImpl implements CellComparator {
     byte leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
@@ -493,16 +500,16 @@ public class CellComparatorImpl implements CellComparator {
     byte rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // Compare families.
     int leftFamilyOffset = left.getFamilyOffset(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
 
     // Compare qualifiers
-    return ByteBufferUtils.compareTo(left.getQualifierArray(),
-      leftFamilyOffset + leftFamilyLength, leftQualifierLength, right.getQualifierByteBuffer(),
-      rightFamilyPosition + rightFamilyLength, rightQualifierLength);
+    return ByteBufferUtils.compareTo(left.getQualifierArray(), leftFamilyOffset + leftFamilyLength,
+      leftQualifierLength, right.getQualifierByteBuffer(), rightFamilyPosition + rightFamilyLength,
+      rightQualifierLength);
   }
 
   static int compareQualifiers(ByteBufferKeyValue left, KeyValue right) {
@@ -517,7 +524,7 @@ public class CellComparatorImpl implements CellComparator {
     byte leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
@@ -525,7 +532,7 @@ public class CellComparatorImpl implements CellComparator {
     byte rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // Compare families.
     int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
@@ -549,7 +556,7 @@ public class CellComparatorImpl implements CellComparator {
     byte leftFamilyLength = left.getFamilyLength(leftFamilyLengthPosition);
     int leftKeyLength = left.getKeyLength();
     int leftQualifierLength =
-        left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
+      left.getQualifierLength(leftKeyLength, leftRowLength, leftFamilyLength);
 
     // No need of left row length below here.
 
@@ -557,7 +564,7 @@ public class CellComparatorImpl implements CellComparator {
     byte rightFamilyLength = right.getFamilyLength(rightFamilyLengthPosition);
     int rightKeyLength = right.getKeyLength();
     int rightQualifierLength =
-        right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
+      right.getQualifierLength(rightKeyLength, rightRowLength, rightFamilyLength);
 
     // Compare families.
     int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
@@ -612,9 +619,9 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   /**
-   * Compares the rows of the left and right cell.
-   * For the hbase:meta case this method is overridden such that it can handle hbase:meta cells.
-   * The caller should ensure using the appropriate comparator for hbase:meta.
+   * Compares the rows of the left and right cell. For the hbase:meta case this method is overridden
+   * such that it can handle hbase:meta cells. The caller should ensure using the appropriate
+   * comparator for hbase:meta.
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   @Override
@@ -629,14 +636,14 @@ public class CellComparatorImpl implements CellComparator {
     }
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), leftRowLength,
-          ((ByteBufferExtendedCell) right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) right).getRowPosition(), rightRowLength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), leftRowLength,
+        ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) right).getRowPosition(), rightRowLength);
     }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), leftRowLength,
-          right.getRowArray(), right.getRowOffset(), rightRowLength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), leftRowLength, right.getRowArray(),
+        right.getRowOffset(), rightRowLength);
     }
     if (right instanceof ByteBufferExtendedCell) {
       // Notice how we flip the order of the compare here. We used to negate the return value but
@@ -644,38 +651,31 @@ public class CellComparatorImpl implements CellComparator {
       // http://findbugs.sourceforge.net/bugDescriptions.html#RV_NEGATING_RESULT_OF_COMPARETO
       // It suggest flipping the order to get same effect and 'safer'.
       return ByteBufferUtils.compareTo(left.getRowArray(), left.getRowOffset(), leftRowLength,
-          ((ByteBufferExtendedCell)right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell)right).getRowPosition(), rightRowLength);
+        ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) right).getRowPosition(), rightRowLength);
     }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), leftRowLength,
-        right.getRowArray(), right.getRowOffset(), rightRowLength);
+      right.getRowArray(), right.getRowOffset(), rightRowLength);
   }
 
   /**
-   * Compares the row part of the cell with a simple plain byte[] like the
-   * stopRow in Scan. This should be used with context where for hbase:meta
-   * cells the {{@link MetaCellComparator#META_COMPARATOR} should be used
-   *
-   * @param left
-   *          the cell to be compared
-   * @param right
-   *          the kv serialized byte[] to be compared with
-   * @param roffset
-   *          the offset in the byte[]
-   * @param rlength
-   *          the length in the byte[]
-   * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger
-   *         than byte[], -1 otherwise
+   * Compares the row part of the cell with a simple plain byte[] like the stopRow in Scan. This
+   * should be used with context where for hbase:meta cells the
+   * {{@link MetaCellComparator#META_COMPARATOR} should be used n * the cell to be compared n * the
+   * kv serialized byte[] to be compared with n * the offset in the byte[] n * the length in the
+   * byte[]
+   * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger than byte[], -1
+   *         otherwise
    */
   @Override
   public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(), right,
-          roffset, rlength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(), right, roffset,
+        rlength);
     }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
-        roffset, rlength);
+      roffset, rlength);
   }
 
   @Override
@@ -690,13 +690,11 @@ public class CellComparatorImpl implements CellComparator {
     int rFamLength = right.getFamilyLength();
     int lQualLength = left.getQualifierLength();
     int rQualLength = right.getQualifierLength();
-    if (lFamLength + lQualLength == 0
-          && left.getTypeByte() == Type.Minimum.getCode()) {
+    if (lFamLength + lQualLength == 0 && left.getTypeByte() == Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (rFamLength + rQualLength == 0
-        && right.getTypeByte() == Type.Minimum.getCode()) {
+    if (rFamLength + rQualLength == 0 && right.getTypeByte() == Type.Minimum.getCode()) {
       return -1;
     }
     if (lFamLength != rFamLength) {
@@ -738,8 +736,8 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   /**
-   * Utility method that makes a guess at comparator to use based off passed tableName.
-   * Use in extreme when no comparator specified.
+   * Utility method that makes a guess at comparator to use based off passed tableName. Use in
+   * extreme when no comparator specified.
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getCellComparator(TableName tableName) {
@@ -747,13 +745,14 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   /**
-   * Utility method that makes a guess at comparator to use based off passed tableName.
-   * Use in extreme when no comparator specified.
+   * Utility method that makes a guess at comparator to use based off passed tableName. Use in
+   * extreme when no comparator specified.
    * @return CellComparator to use going off the {@code tableName} passed.
    */
-  public static CellComparator getCellComparator(byte [] tableName) {
+  public static CellComparator getCellComparator(byte[] tableName) {
     // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())?
-      MetaCellComparator.META_COMPARATOR: CellComparatorImpl.COMPARATOR;
+    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+      ? MetaCellComparator.META_COMPARATOR
+      : CellComparatorImpl.COMPARATOR;
   }
 }

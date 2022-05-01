@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_CO
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -64,7 +63,7 @@ public class TestCompactorMemLeak {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactorMemLeak.class);
+    HBaseClassTestRule.forClass(TestCompactorMemLeak.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -89,7 +88,7 @@ public class TestCompactorMemLeak {
 
   private void assertMajorCompactionOK(TableName tableName) {
     List<HRegion> regions = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
-        .getRegions(tableName);
+      .getRegions(tableName);
     Assert.assertEquals(regions.size(), 1);
     HRegion region = regions.get(0);
     Assert.assertEquals(region.getStores().size(), 1);
@@ -129,7 +128,7 @@ public class TestCompactorMemLeak {
 
     @Override
     protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
-        CompactionRequestImpl request) throws IOException {
+      CompactionRequestImpl request) throws IOException {
       HFileWriterImpl writerImpl = (HFileWriterImpl) writer.writer;
       Cell cell = writerImpl.getLastCell();
       // The cell should be backend with an KeyOnlyKeyValue.

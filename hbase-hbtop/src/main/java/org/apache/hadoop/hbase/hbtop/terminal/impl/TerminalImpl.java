@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * The implementation of the {@link Terminal} interface.
@@ -179,8 +178,8 @@ public class TerminalImpl implements Terminal {
   }
 
   private void sttyRaw() {
-    doStty("-ignbrk -brkint -parmrk -istrip -inlcr -igncr -icrnl -ixon -opost " +
-      "-echo -echonl -icanon -isig -iexten -parenb cs8 min 1");
+    doStty("-ignbrk -brkint -parmrk -istrip -inlcr -igncr -icrnl -ixon -opost "
+      + "-echo -echonl -icanon -isig -iexten -parenb cs8 min 1");
   }
 
   private void sttyCooked() {
@@ -188,7 +187,7 @@ public class TerminalImpl implements Terminal {
   }
 
   private String doStty(String sttyOptionsString) {
-    String [] cmd = {"/bin/sh", "-c", "stty " + sttyOptionsString + " < /dev/tty"};
+    String[] cmd = { "/bin/sh", "-c", "stty " + sttyOptionsString + " < /dev/tty" };
 
     try {
       Process process = Runtime.getRuntime().exec(cmd);
@@ -196,14 +195,14 @@ public class TerminalImpl implements Terminal {
       String ret;
 
       // stdout
-      try (BufferedReader stdout = new BufferedReader(new InputStreamReader(
-        process.getInputStream(), StandardCharsets.UTF_8))) {
+      try (BufferedReader stdout = new BufferedReader(
+        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
         ret = stdout.readLine();
       }
 
       // stderr
-      try (BufferedReader stderr = new BufferedReader(new InputStreamReader(
-        process.getErrorStream(), StandardCharsets.UTF_8))) {
+      try (BufferedReader stderr = new BufferedReader(
+        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
         String line = stderr.readLine();
         if ((line != null) && (line.length() > 0)) {
           LOGGER.error("Error output from stty: " + line);

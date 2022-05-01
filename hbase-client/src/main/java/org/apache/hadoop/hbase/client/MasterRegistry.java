@@ -46,6 +46,16 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.DNS.ServerType;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterIdRequest;
@@ -55,14 +65,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMasters
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.util.DNS.ServerType;
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.com.google.common.base.Strings;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Master based registry implementation. Makes RPCs to the configured master addresses from config
@@ -134,11 +136,11 @@ public class MasterRegistry implements ConnectionRegistry {
   void populateMasterStubs(Set<ServerName> masters) throws IOException {
     Preconditions.checkNotNull(masters);
     ImmutableMap.Builder<ServerName, ClientMetaService.Interface> builder =
-        ImmutableMap.builderWithExpectedSize(masters.size());
+      ImmutableMap.builderWithExpectedSize(masters.size());
     User user = User.getCurrent();
     for (ServerName masterAddr : masters) {
       builder.put(masterAddr,
-          ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
+        ClientMetaService.newStub(rpcClient.createRpcChannel(masterAddr, user, rpcTimeoutMs)));
     }
     masterAddr2Stub = builder.build();
   }
@@ -203,9 +205,9 @@ public class MasterRegistry implements ConnectionRegistry {
    * been tried and all of them are failed, we will fail the future.
    */
   private <T extends Message> void groupCall(CompletableFuture<T> future,
-      Set<ServerName> masterServers, List<ClientMetaService.Interface> masterStubs,
-      int startIndexInclusive, Callable<T> callable, Predicate<T> isValidResp, String debug,
-      ConcurrentLinkedQueue<Throwable> errors) {
+    Set<ServerName> masterServers, List<ClientMetaService.Interface> masterStubs,
+    int startIndexInclusive, Callable<T> callable, Predicate<T> isValidResp, String debug,
+    ConcurrentLinkedQueue<Throwable> errors) {
     int endIndexExclusive = Math.min(startIndexInclusive + hedgedReadFanOut, masterStubs.size());
     AtomicInteger remaining = new AtomicInteger(endIndexExclusive - startIndexInclusive);
     for (int i = startIndexInclusive; i < endIndexExclusive; i++) {
@@ -225,11 +227,10 @@ public class MasterRegistry implements ConnectionRegistry {
               // we are done, complete the future with exception
               RetriesExhaustedException ex = new RetriesExhaustedException("masters",
                 masterStubs.size(), new ArrayList<>(errors));
-              future.completeExceptionally(
-                new MasterRegistryFetchException(masterServers, ex));
+              future.completeExceptionally(new MasterRegistryFetchException(masterServers, ex));
             } else {
               groupCall(future, masterServers, masterStubs, endIndexExclusive, callable,
-                  isValidResp, debug, errors);
+                isValidResp, debug, errors);
             }
           }
         } else {
@@ -248,7 +249,7 @@ public class MasterRegistry implements ConnectionRegistry {
     Collections.shuffle(masterStubs, ThreadLocalRandom.current());
     CompletableFuture<T> future = new CompletableFuture<>();
     groupCall(future, masterServers, masterStubs, 0, callable, isValidResp, debug,
-        new ConcurrentLinkedQueue<>());
+      new ConcurrentLinkedQueue<>());
     return future;
   }
 
@@ -279,19 +280,18 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private static boolean hasActiveMaster(GetMastersResponse resp) {
-    List<GetMastersResponseEntry> activeMasters =
-        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
-        Collectors.toList());
+    List<GetMastersResponseEntry> activeMasters = resp.getMasterServersList().stream()
+      .filter(GetMastersResponseEntry::getIsActive).collect(Collectors.toList());
     return activeMasters.size() == 1;
   }
 
   private static ServerName filterActiveMaster(GetMastersResponse resp) throws IOException {
-    List<GetMastersResponseEntry> activeMasters =
-        resp.getMasterServersList().stream().filter(GetMastersResponseEntry::getIsActive).collect(
-            Collectors.toList());
+    List<GetMastersResponseEntry> activeMasters = resp.getMasterServersList().stream()
+      .filter(GetMastersResponseEntry::getIsActive).collect(Collectors.toList());
     if (activeMasters.size() != 1) {
-      throw new IOException(String.format("Incorrect number of active masters encountered." +
-          " Expected: 1 found: %d. Content: %s", activeMasters.size(), activeMasters));
+      throw new IOException(String.format(
+        "Incorrect number of active masters encountered." + " Expected: 1 found: %d. Content: %s",
+        activeMasters.size(), activeMasters));
     }
     return ProtobufUtil.toServerName(activeMasters.get(0).getServerName());
   }
@@ -306,7 +306,7 @@ public class MasterRegistry implements ConnectionRegistry {
         }
         ServerName result = null;
         try {
-          result = filterActiveMaster((GetMastersResponse)resp);
+          result = filterActiveMaster((GetMastersResponse) resp);
         } catch (IOException e) {
           future.completeExceptionally(e);
         }
@@ -316,15 +316,16 @@ public class MasterRegistry implements ConnectionRegistry {
   }
 
   private static List<ServerName> transformServerNames(GetMastersResponse resp) {
-    return resp.getMasterServersList().stream().map(s -> ProtobufUtil.toServerName(
-        s.getServerName())).collect(Collectors.toList());
+    return resp.getMasterServersList().stream()
+      .map(s -> ProtobufUtil.toServerName(s.getServerName())).collect(Collectors.toList());
   }
 
   CompletableFuture<List<ServerName>> getMasters() {
     return this
-        .<GetMastersResponse> call((c, s, d) -> s.getMasters(
-            c, GetMastersRequest.getDefaultInstance(), d), r -> r.getMasterServersCount() != 0,
-            "getMasters()").thenApply(MasterRegistry::transformServerNames);
+      .<GetMastersResponse> call(
+        (c, s, d) -> s.getMasters(c, GetMastersRequest.getDefaultInstance(), d),
+        r -> r.getMasterServersCount() != 0, "getMasters()")
+      .thenApply(MasterRegistry::transformServerNames);
   }
 
   Set<ServerName> getParsedMasterServers() {

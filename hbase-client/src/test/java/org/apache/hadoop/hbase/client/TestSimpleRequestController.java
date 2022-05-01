@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,26 +48,25 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestSimpleRequestController {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleRequestController.class);
+    HBaseClassTestRule.forClass(TestSimpleRequestController.class);
 
-  private static final TableName DUMMY_TABLE
-          = TableName.valueOf("DUMMY_TABLE");
+  private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
   private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
   private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
   private static final ServerName SN = ServerName.valueOf("s1,1,1");
   private static final ServerName SN2 = ServerName.valueOf("s2,2,2");
-  private static final HRegionInfo HRI1
-          = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
-  private static final HRegionInfo HRI2
-          = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW, false, 2);
-  private static final HRegionInfo HRI3
-          = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_3, HConstants.EMPTY_END_ROW, false, 3);
+  private static final HRegionInfo HRI1 =
+    new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
+  private static final HRegionInfo HRI2 =
+    new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW, false, 2);
+  private static final HRegionInfo HRI3 =
+    new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_3, HConstants.EMPTY_END_ROW, false, 3);
   private static final HRegionLocation LOC1 = new HRegionLocation(HRI1, SN);
   private static final HRegionLocation LOC2 = new HRegionLocation(HRI2, SN);
   private static final HRegionLocation LOC3 = new HRegionLocation(HRI3, SN2);
@@ -125,17 +124,15 @@ public class TestSimpleRequestController {
     final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
     final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
     SimpleRequestController.TaskCountChecker countChecker =
-        new SimpleRequestController.TaskCountChecker(
-            maxTotalConcurrentTasks,
-            maxConcurrentTasksPerServer,
-            maxConcurrentTasksPerRegion,
-            tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+      new SimpleRequestController.TaskCountChecker(maxTotalConcurrentTasks,
+        maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion, tasksInProgress,
+        taskCounterPerServer, taskCounterPerRegion);
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
     // unlimiited
     SimpleRequestController.RequestHeapSizeChecker sizeChecker =
-        new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
+      new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
     RequestController.Checker checker =
-        SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
+      SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
     ReturnCode loc1Code = checker.canTakeRow(LOC1, createPut(maxHeapSizePerRequest));
     assertEquals(ReturnCode.INCLUDE, loc1Code);
 
@@ -166,8 +163,8 @@ public class TestSimpleRequestController {
   @Test
   public void testRequestHeapSizeChecker() throws IOException {
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
-    SimpleRequestController.RequestHeapSizeChecker checker
-            = new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
+    SimpleRequestController.RequestHeapSizeChecker checker =
+      new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
@@ -208,10 +205,10 @@ public class TestSimpleRequestController {
   @Test
   public void testRequestRowsChecker() throws IOException {
     final long maxRowCount = 100;
-    SimpleRequestController.RequestRowsChecker checker
-      = new SimpleRequestController.RequestRowsChecker(maxRowCount);
+    SimpleRequestController.RequestRowsChecker checker =
+      new SimpleRequestController.RequestRowsChecker(maxRowCount);
 
-    final long heapSizeOfRow = 100; //unused
+    final long heapSizeOfRow = 100; // unused
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
       ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
@@ -253,8 +250,8 @@ public class TestSimpleRequestController {
   @Test
   public void testSubmittedSizeChecker() {
     final long maxHeapSizeSubmit = 2 * 1024 * 1024;
-    SimpleRequestController.SubmittedSizeChecker checker
-            = new SimpleRequestController.SubmittedSizeChecker(maxHeapSizeSubmit);
+    SimpleRequestController.SubmittedSizeChecker checker =
+      new SimpleRequestController.SubmittedSizeChecker(maxHeapSizeSubmit);
 
     for (int i = 0; i != 10; ++i) {
       ReturnCode include = checker.canTakeOperation(LOC1, 100000);
@@ -290,10 +287,8 @@ public class TestSimpleRequestController {
     Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
     Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
     SimpleRequestController.TaskCountChecker checker = new SimpleRequestController.TaskCountChecker(
-            maxTotalConcurrentTasks,
-            maxConcurrentTasksPerServer,
-            maxConcurrentTasksPerRegion,
-            tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+      maxTotalConcurrentTasks, maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion,
+      tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {

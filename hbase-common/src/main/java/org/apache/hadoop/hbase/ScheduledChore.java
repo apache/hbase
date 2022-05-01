@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,38 +86,44 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
-   * @param name Name assigned to Chore. Useful for identification amongst chores of the same type
+   * @param name    Name assigned to Chore. Useful for identification amongst chores of the same
+   *                type
    * @param stopper When {@link Stoppable#isStopped()} is true, this chore will cancel and cleanup
-   * @param period Period in millis with which this Chore repeats execution when scheduled.
+   * @param period  Period in millis with which this Chore repeats execution when scheduled.
    */
   public ScheduledChore(final String name, Stoppable stopper, final int period) {
     this(name, stopper, period, DEFAULT_INITIAL_DELAY);
   }
 
   /**
-   * @param name Name assigned to Chore. Useful for identification amongst chores of the same type
-   * @param stopper When {@link Stoppable#isStopped()} is true, this chore will cancel and cleanup
-   * @param period Period in millis with which this Chore repeats execution when scheduled.
+   * @param name         Name assigned to Chore. Useful for identification amongst chores of the
+   *                     same type
+   * @param stopper      When {@link Stoppable#isStopped()} is true, this chore will cancel and
+   *                     cleanup
+   * @param period       Period in millis with which this Chore repeats execution when scheduled.
    * @param initialDelay Delay before this Chore begins to execute once it has been scheduled. A
-   *          value of 0 means the chore will begin to execute immediately. Negative delays are
-   *          invalid and will be corrected to a value of 0.
+   *                     value of 0 means the chore will begin to execute immediately. Negative
+   *                     delays are invalid and will be corrected to a value of 0.
    */
   public ScheduledChore(final String name, Stoppable stopper, final int period,
-      final long initialDelay) {
+    final long initialDelay) {
     this(name, stopper, period, initialDelay, DEFAULT_TIME_UNIT);
   }
 
   /**
-   * @param name Name assigned to Chore. Useful for identification amongst chores of the same type
-   * @param stopper When {@link Stoppable#isStopped()} is true, this chore will cancel and cleanup
-   * @param period Period in Timeunit unit with which this Chore repeats execution when scheduled.
+   * @param name         Name assigned to Chore. Useful for identification amongst chores of the
+   *                     same type
+   * @param stopper      When {@link Stoppable#isStopped()} is true, this chore will cancel and
+   *                     cleanup
+   * @param period       Period in Timeunit unit with which this Chore repeats execution when
+   *                     scheduled.
    * @param initialDelay Delay in Timeunit unit before this Chore begins to execute once it has been
-   *          scheduled. A value of 0 means the chore will begin to execute immediately. Negative
-   *          delays are invalid and will be corrected to a value of 0.
-   * @param unit The unit that is used to measure period and initialDelay
+   *                     scheduled. A value of 0 means the chore will begin to execute immediately.
+   *                     Negative delays are invalid and will be corrected to a value of 0.
+   * @param unit         The unit that is used to measure period and initialDelay
    */
   public ScheduledChore(final String name, Stoppable stopper, final int period,
-      final long initialDelay, final TimeUnit unit) {
+    final long initialDelay, final TimeUnit unit) {
     this.name = name;
     this.stopper = stopper;
     this.period = period;
@@ -199,7 +204,7 @@ public abstract class ScheduledChore implements Runnable {
    */
   private synchronized boolean missedStartTime() {
     return isValidTime(timeOfLastRun) && isValidTime(timeOfThisRun)
-        && getTimeBetweenRuns() > getMaximumAllowedTimeBetweenRuns();
+      && getTimeBetweenRuns() > getMaximumAllowedTimeBetweenRuns();
   }
 
   /**
@@ -230,7 +235,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   @RestrictedApi(explanation = "Should only be called in ChoreService", link = "",
-    allowedOnPath = ".*/org/apache/hadoop/hbase/ChoreService.java")
+      allowedOnPath = ".*/org/apache/hadoop/hbase/ChoreService.java")
   synchronized void setChoreService(ChoreService service) {
     choreService = service;
     timeOfThisRun = -1;
@@ -298,7 +303,7 @@ public abstract class ScheduledChore implements Runnable {
 
   @InterfaceAudience.Private
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public synchronized void choreForTesting() {
     chore();
   }
@@ -343,14 +348,14 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
-   * A summation of this chore in human readable format. Downstream users should not presume
-   * parsing of this string can relaibly be done between versions. Instead, they should rely
-   * on the public accessor methods to get the information they desire.
+   * A summation of this chore in human readable format. Downstream users should not presume parsing
+   * of this string can relaibly be done between versions. Instead, they should rely on the public
+   * accessor methods to get the information they desire.
    */
   @InterfaceAudience.Private
   @Override
   public String toString() {
-    return "ScheduledChore name=" + getName() + ", period=" + getPeriod() +
-      ", unit=" + getTimeUnit();
+    return "ScheduledChore name=" + getName() + ", period=" + getPeriod() + ", unit="
+      + getTimeUnit();
   }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Makes the decision regarding proper sizing of the heap memory. Decides what percentage of heap
@@ -33,10 +32,8 @@ import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 public interface HeapMemoryTuner extends Configurable {
 
   /**
-   * Perform the heap memory tuning operation.
-   *
-   * @param context
-   * @return <code>TunerResult</code> including the heap percentage for memstore and block cache
+   * Perform the heap memory tuning operation. n * @return <code>TunerResult</code> including the
+   * heap percentage for memstore and block cache
    */
   TunerResult tune(TunerContext context);
 }

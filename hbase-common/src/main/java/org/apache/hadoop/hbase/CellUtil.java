@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.KeyValue.COLUMN_FAMILY_DELIMITER;
@@ -127,8 +126,7 @@ public final class CellUtil {
   }
 
   /**
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
-   *             Use {@link RawCell#cloneTags()}
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Use {@link RawCell#cloneTags()}
    */
   @Deprecated
   public static byte[] cloneTags(Cell cell) {
@@ -140,9 +138,7 @@ public final class CellUtil {
   /**
    * Returns tag value in a new byte array. If server-side, use {@link Tag#getValueArray()} with
    * appropriate {@link Tag#getValueOffset()} and {@link Tag#getValueLength()} instead to save on
-   * allocations.
-   * @param cell
-   * @return tag value in a new byte array.
+   * allocations. n * @return tag value in a new byte array.
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -155,10 +151,7 @@ public final class CellUtil {
   /**
    * Makes a column in family:qualifier form from separate byte arrays.
    * <p>
-   * Not recommended for usage as this is old-style API.
-   * @param family
-   * @param qualifier
-   * @return family:qualifier
+   * Not recommended for usage as this is old-style API. nn * @return family:qualifier
    */
   public static byte[] makeColumn(byte[] family, byte[] qualifier) {
     return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
@@ -202,8 +195,8 @@ public final class CellUtil {
 
   /**
    * Copies the row to the given byte[]
-   * @param cell the cell whose row has to be copied
-   * @param destination the destination byte[] to which the row has to be copied
+   * @param cell              the cell whose row has to be copied
+   * @param destination       the destination byte[] to which the row has to be copied
    * @param destinationOffset the offset in the destination byte[]
    * @return the offset of the byte[] after the copy has happened
    */
@@ -211,8 +204,8 @@ public final class CellUtil {
     short rowLen = cell.getRowLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition(), destinationOffset, rowLen);
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition(), destinationOffset, rowLen);
     } else {
       System.arraycopy(cell.getRowArray(), cell.getRowOffset(), destination, destinationOffset,
         rowLen);
@@ -222,8 +215,8 @@ public final class CellUtil {
 
   /**
    * Copies the row to the given bytebuffer
-   * @param cell cell the cell whose row has to be copied
-   * @param destination the destination bytebuffer to which the row has to be copied
+   * @param cell              cell the cell whose row has to be copied
+   * @param destination       the destination bytebuffer to which the row has to be copied
    * @param destinationOffset the offset in the destination byte[]
    * @return the offset of the bytebuffer after the copy has happened
    */
@@ -257,8 +250,8 @@ public final class CellUtil {
 
   /**
    * Copies the family to the given byte[]
-   * @param cell the cell whose family has to be copied
-   * @param destination the destination byte[] to which the family has to be copied
+   * @param cell              the cell whose family has to be copied
+   * @param destination       the destination byte[] to which the family has to be copied
    * @param destinationOffset the offset in the destination byte[]
    * @return the offset of the byte[] after the copy has happened
    */
@@ -266,8 +259,8 @@ public final class CellUtil {
     byte fLen = cell.getFamilyLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getFamilyPosition(), destinationOffset, fLen);
+        ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getFamilyPosition(), destinationOffset, fLen);
     } else {
       System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(), destination,
         destinationOffset, fLen);
@@ -277,8 +270,8 @@ public final class CellUtil {
 
   /**
    * Copies the family to the given bytebuffer
-   * @param cell the cell whose family has to be copied
-   * @param destination the destination bytebuffer to which the family has to be copied
+   * @param cell              the cell whose family has to be copied
+   * @param destination       the destination bytebuffer to which the family has to be copied
    * @param destinationOffset the offset in the destination bytebuffer
    * @return the offset of the bytebuffer after the copy has happened
    */
@@ -296,8 +289,8 @@ public final class CellUtil {
 
   /**
    * Copies the qualifier to the given byte[]
-   * @param cell the cell whose qualifier has to be copied
-   * @param destination the destination byte[] to which the qualifier has to be copied
+   * @param cell              the cell whose qualifier has to be copied
+   * @param destination       the destination byte[] to which the qualifier has to be copied
    * @param destinationOffset the offset in the destination byte[]
    * @return the offset of the byte[] after the copy has happened
    */
@@ -316,8 +309,8 @@ public final class CellUtil {
 
   /**
    * Copies the qualifier to the given bytebuffer
-   * @param cell the cell whose qualifier has to be copied
-   * @param destination the destination bytebuffer to which the qualifier has to be copied
+   * @param cell              the cell whose qualifier has to be copied
+   * @param destination       the destination bytebuffer to which the qualifier has to be copied
    * @param destinationOffset the offset in the destination bytebuffer
    * @return the offset of the bytebuffer after the copy has happened
    */
@@ -325,9 +318,8 @@ public final class CellUtil {
     int qlen = cell.getQualifierLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToBuffer(
-          ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
-          destination, ((ByteBufferExtendedCell) cell).getQualifierPosition(),
-          destinationOffset, qlen);
+        ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(), destination,
+        ((ByteBufferExtendedCell) cell).getQualifierPosition(), destinationOffset, qlen);
     } else {
       ByteBufferUtils.copyFromArrayToBuffer(destination, destinationOffset,
         cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
@@ -337,8 +329,8 @@ public final class CellUtil {
 
   /**
    * Copies the value to the given byte[]
-   * @param cell the cell whose value has to be copied
-   * @param destination the destination byte[] to which the value has to be copied
+   * @param cell              the cell whose value has to be copied
+   * @param destination       the destination byte[] to which the value has to be copied
    * @param destinationOffset the offset in the destination byte[]
    * @return the offset of the byte[] after the copy has happened
    */
@@ -346,8 +338,8 @@ public final class CellUtil {
     int vlen = cell.getValueLength();
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(destination,
-          ((ByteBufferExtendedCell) cell).getValueByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getValuePosition(), destinationOffset, vlen);
+        ((ByteBufferExtendedCell) cell).getValueByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getValuePosition(), destinationOffset, vlen);
     } else {
       System.arraycopy(cell.getValueArray(), cell.getValueOffset(), destination, destinationOffset,
         vlen);
@@ -357,8 +349,8 @@ public final class CellUtil {
 
   /**
    * Copies the value to the given bytebuffer
-   * @param cell the cell whose value has to be copied
-   * @param destination the destination bytebuffer to which the value has to be copied
+   * @param cell              the cell whose value has to be copied
+   * @param destination       the destination bytebuffer to which the value has to be copied
    * @param destinationOffset the offset in the destination bytebuffer
    * @return the offset of the bytebuffer after the copy has happened
    */
@@ -375,33 +367,25 @@ public final class CellUtil {
   }
 
   /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return position after tags
+   * Copies the tags info into the tag portion of the cell nnn * @return position after tags
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
    */
   @Deprecated
   public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
     int tlen = cell.getTagsLength();
     if (cell instanceof ByteBufferExtendedCell) {
-      ByteBufferUtils
-        .copyFromBufferToArray(destination, ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getTagsPosition(), destinationOffset, tlen);
+      ByteBufferUtils.copyFromBufferToArray(destination,
+        ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getTagsPosition(), destinationOffset, tlen);
     } else {
-      System
-        .arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset, tlen);
+      System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
+        tlen);
     }
     return destinationOffset + tlen;
   }
 
   /**
-   * Copies the tags info into the tag portion of the cell
-   * @param cell
-   * @param destination
-   * @param destinationOffset
-   * @return position after tags
+   * Copies the tags info into the tag portion of the cell nnn * @return position after tags
    * @deprecated As of HBase-2.0. Will be removed in 3.0.
    */
   @Deprecated
@@ -427,7 +411,7 @@ public final class CellUtil {
   public static byte getRowByte(Cell cell, int index) {
     if (cell instanceof ByteBufferExtendedCell) {
       return ((ByteBufferExtendedCell) cell).getRowByteBuffer()
-          .get(((ByteBufferExtendedCell) cell).getRowPosition() + index);
+        .get(((ByteBufferExtendedCell) cell).getRowPosition() + index);
     }
     return cell.getRowArray()[cell.getRowOffset() + index];
   }
@@ -438,13 +422,12 @@ public final class CellUtil {
   @Deprecated
   public static ByteBuffer getValueBufferShallowCopy(Cell cell) {
     ByteBuffer buffer =
-        ByteBuffer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      ByteBuffer.wrap(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     return buffer;
   }
 
   /**
-   * @param cell
-   * @return cell's qualifier wrapped into a ByteBuffer.
+   * n * @return cell's qualifier wrapped into a ByteBuffer.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -461,15 +444,10 @@ public final class CellUtil {
    */
   @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .build();
+    final long timestamp, final byte type, final byte[] value) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(timestamp).setType(type)
+      .setValue(value).build();
   }
 
   /**
@@ -479,22 +457,18 @@ public final class CellUtil {
    */
   @Deprecated
   public static Cell createCell(final byte[] rowArray, final int rowOffset, final int rowLength,
-      final byte[] familyArray, final int familyOffset, final int familyLength,
-      final byte[] qualifierArray, final int qualifierOffset, final int qualifierLength) {
+    final byte[] familyArray, final int familyOffset, final int familyLength,
+    final byte[] qualifierArray, final int qualifierOffset, final int qualifierLength) {
     // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(rowArray, rowOffset, rowLength)
-            .setFamily(familyArray, familyOffset, familyLength)
-            .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
-            .setTimestamp(HConstants.LATEST_TIMESTAMP)
-            .setType(KeyValue.Type.Maximum.getCode())
-            .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-            .build();
+      .setRow(rowArray, rowOffset, rowLength).setFamily(familyArray, familyOffset, familyLength)
+      .setQualifier(qualifierArray, qualifierOffset, qualifierLength)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length).build();
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with a memstoreTS/mvcc is an internal
+   * Marked as audience Private as of 1.2.0. Creating a Cell with a memstoreTS/mvcc is an internal
    * implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
@@ -502,13 +476,12 @@ public final class CellUtil {
   @InterfaceAudience.Private
   @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
+    final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
     return createCell(row, family, qualifier, timestamp, type, value, null, memstoreTS);
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags and a memstoreTS/mvcc is an
+   * Marked as audience Private as of 1.2.0. Creating a Cell with tags and a memstoreTS/mvcc is an
    * internal implementation detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
@@ -516,37 +489,28 @@ public final class CellUtil {
   @InterfaceAudience.Private
   @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, byte[] tags,
-      final long memstoreTS) {
-    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setTimestamp(timestamp)
-            .setType(type)
-            .setValue(value)
-            .setTags(tags)
-            .setSequenceId(memstoreTS)
-            .build();
+    final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setTimestamp(timestamp).setType(type)
+      .setValue(value).setTags(tags).setSequenceId(memstoreTS).build();
   }
 
   /**
-   * Marked as audience Private as of 1.2.0.
-   * Creating a Cell with tags is an internal implementation detail not for public use.
+   * Marked as audience Private as of 1.2.0. Creating a Cell with tags is an internal implementation
+   * detail not for public use.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link ExtendedCellBuilder} instead
    */
   @InterfaceAudience.Private
   @Deprecated
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, Type type, final byte[] value, byte[] tags) {
+    final long timestamp, Type type, final byte[] value, byte[] tags) {
     return createCell(row, family, qualifier, timestamp, type.getCode(), value, tags, 0);
   }
 
   /**
-   * Create a Cell with specific row. Other fields defaulted.
-   * @param row
-   * @return Cell with passed row but all other fields are arbitrary
+   * Create a Cell with specific row. Other fields defaulted. n * @return Cell with passed row but
+   * all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -556,10 +520,8 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row and value. Other fields are defaulted.
-   * @param row
-   * @param value
-   * @return Cell with passed row and value but all other fields are arbitrary
+   * Create a Cell with specific row and value. Other fields are defaulted. nn * @return Cell with
+   * passed row and value but all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -574,11 +536,8 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row. Other fields defaulted.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @return Cell with passed row but all other fields are arbitrary
+   * Create a Cell with specific row. Other fields defaulted. nnn * @return Cell with passed row but
+   * all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -590,11 +549,10 @@ public final class CellUtil {
   }
 
   /**
-   * Note : Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Note : Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *
    */
   @Deprecated
   public static Cell createCell(Cell cell, List<Tag> tags) {
@@ -602,8 +560,8 @@ public final class CellUtil {
   }
 
   /**
-   * Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @return A new cell which is having the extra tags also added to it.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
@@ -613,8 +571,8 @@ public final class CellUtil {
   }
 
   /**
-   * Now only CPs can create cell with tags using the CP environment
-   * Within CP, use {@link RawCell#createCell(Cell, List)} method instead
+   * Now only CPs can create cell with tags using the CP environment Within CP, use
+   * {@link RawCell#createCell(Cell, List)} method instead
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -623,11 +581,10 @@ public final class CellUtil {
   }
 
   /**
-   * @param cellScannerables
-   * @return CellScanner interface over <code>cellIterables</code>
+   * n * @return CellScanner interface over <code>cellIterables</code>
    */
   public static CellScanner
-      createCellScanner(final List<? extends CellScannable> cellScannerables) {
+    createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
       private final Iterator<? extends CellScannable> iterator = cellScannerables.iterator();
       private CellScanner cellScanner = null;
@@ -652,8 +609,7 @@ public final class CellUtil {
   }
 
   /**
-   * @param cellIterable
-   * @return CellScanner interface over <code>cellIterable</code>
+   * n * @return CellScanner interface over <code>cellIterable</code>
    */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
     if (cellIterable == null) return null;
@@ -661,9 +617,8 @@ public final class CellUtil {
   }
 
   /**
-   * @param cells
-   * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
-   *         null
+   * n * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code>
+   * is null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
     if (cells == null) return null;
@@ -686,8 +641,7 @@ public final class CellUtil {
   }
 
   /**
-   * @param cellArray
-   * @return CellScanner interface over <code>cellArray</code>
+   * n * @return CellScanner interface over <code>cellArray</code>
    */
   public static CellScanner createCellScanner(final Cell[] cellArray) {
     return new CellScanner() {
@@ -711,7 +665,7 @@ public final class CellUtil {
   /**
    * Flatten the map of cells out under the CellScanner
    * @param map Map of Cell Lists; for example, the map of families to Cells that is used inside
-   *          Put, etc., keeping Cells organized by family.
+   *            Put, etc., keeping Cells organized by family.
    * @return CellScanner interface over <code>cellIterable</code>
    */
   public static CellScanner createCellScanner(final NavigableMap<byte[], List<Cell>> map) {
@@ -744,9 +698,7 @@ public final class CellUtil {
   }
 
   /**
-   * @param left
-   * @param right
-   * @return True if the rows in <code>left</code> and <code>right</code> Cells match
+   * nn * @return True if the rows in <code>left</code> and <code>right</code> Cells match
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
    *             {@link #matchingRows(Cell, Cell)}
    */
@@ -757,7 +709,7 @@ public final class CellUtil {
 
   /**
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
-   *   {@link #matchingRows(Cell, byte[])}
+   *             {@link #matchingRows(Cell, byte[])}
    */
   @Deprecated
   public static boolean matchingRow(final Cell left, final byte[] buf) {
@@ -778,7 +730,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
-      final int length) {
+    final int length) {
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
         ((ByteBufferExtendedCell) left).getRowPosition(), left.getRowLength(), buf, offset, length);
@@ -794,7 +746,7 @@ public final class CellUtil {
   }
 
   public static boolean matchingFamily(final Cell left, final byte lfamlength, final Cell right,
-      final byte rfamlength) {
+    final byte rfamlength) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
         ((ByteBufferExtendedCell) left).getFamilyPosition(), lfamlength,
@@ -833,9 +785,8 @@ public final class CellUtil {
         ((ByteBufferExtendedCell) left).getFamilyPosition(), left.getFamilyLength(), buf, offset,
         length);
     }
-    return Bytes
-      .equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf, offset,
-        length);
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
+      offset, length);
   }
 
   public static boolean matchingQualifier(final Cell left, final Cell right) {
@@ -845,7 +796,7 @@ public final class CellUtil {
   }
 
   private static boolean matchingQualifier(final Cell left, final int lqlength, final Cell right,
-      final int rqlength) {
+    final int rqlength) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
         ((ByteBufferExtendedCell) left).getQualifierPosition(), lqlength,
@@ -867,9 +818,8 @@ public final class CellUtil {
   }
 
   /**
-   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal
-   * @param left
-   * @param buf the serialized keyvalue format byte[]
+   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal n * @param buf
+   * the serialized keyvalue format byte[]
    * @return true if the qualifier matches, false otherwise
    */
   public static boolean matchingQualifier(final Cell left, final byte[] buf) {
@@ -880,9 +830,8 @@ public final class CellUtil {
   }
 
   /**
-   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal
-   * @param left
-   * @param buf the serialized keyvalue format byte[]
+   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal n * @param buf
+   * the serialized keyvalue format byte[]
    * @param offset the offset of the qualifier in the byte[]
    * @param length the length of the qualifier in the byte[]
    * @return true if the qualifier matches, false otherwise
@@ -899,9 +848,8 @@ public final class CellUtil {
         ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(), buf,
         offset, length);
     }
-    return Bytes
-      .equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(), buf,
-        offset, length);
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
+      left.getQualifierLength(), buf, offset, length);
   }
 
   public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
@@ -912,7 +860,7 @@ public final class CellUtil {
    * @return True if matching column family and the qualifier starts with <code>qual</code>
    */
   public static boolean matchingColumnFamilyAndQualifierPrefix(final Cell left, final byte[] fam,
-      final byte[] qual) {
+    final byte[] qual) {
     return matchingFamily(left, fam) && PrivateCellUtil.qualifierStartsWith(left, qual);
   }
 
@@ -921,7 +869,7 @@ public final class CellUtil {
    */
   @Deprecated
   public static boolean matchingColumn(final Cell left, final byte[] fam, final int foffset,
-      final int flength, final byte[] qual, final int qoffset, final int qlength) {
+    final int flength, final byte[] qual, final int qoffset, final int qlength) {
     if (!PrivateCellUtil.matchingFamily(left, fam, foffset, flength)) return false;
     return PrivateCellUtil.matchingQualifier(left, qual, qoffset, qlength);
   }
@@ -932,7 +880,7 @@ public final class CellUtil {
   }
 
   private static boolean matchingColumn(final Cell left, final byte lFamLen, final int lQualLength,
-      final Cell right, final byte rFamLen, final int rQualLength) {
+    final Cell right, final byte rFamLen, final int rQualLength) {
     if (!matchingFamily(left, lFamLen, right, rFamLen)) {
       return false;
     }
@@ -1039,10 +987,8 @@ public final class CellUtil {
   /**
    * Estimate based on keyvalue's serialization format in the RPC layer. Note that there is an extra
    * SIZEOF_INT added to the size here that indicates the actual length of the cell for cases where
-   * cell's are serialized in a contiguous format (For eg in RPCs).
-   * @param cell
-   * @return Estimate of the <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the
-   *         actual cell length.
+   * cell's are serialized in a contiguous format (For eg in RPCs). n * @return Estimate of the
+   * <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the actual cell length.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -1054,27 +1000,26 @@ public final class CellUtil {
     return getSumOfCellElementLengths(cell) +
     // Use the KeyValue's infrastructure size presuming that another implementation would have
     // same basic cost.
-        KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE +
-        // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
-        Bytes.SIZEOF_INT;
+      KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE +
+      // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
+      Bytes.SIZEOF_INT;
   }
 
   /**
-   * @param cell
-   * @return Sum of the lengths of all the elements in a Cell; does not count in any infrastructure
+   * n * @return Sum of the lengths of all the elements in a Cell; does not count in any
+   * infrastructure
    */
   private static int getSumOfCellElementLengths(final Cell cell) {
     return getSumOfCellKeyElementLengths(cell) + cell.getValueLength() + cell.getTagsLength();
   }
 
   /**
-   * @param cell
-   * @return Sum of all elements that make up a key; does not include infrastructure, tags or
-   *         values.
+   * n * @return Sum of all elements that make up a key; does not include infrastructure, tags or
+   * values.
    */
   private static int getSumOfCellKeyElementLengths(final Cell cell) {
     return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
-        + KeyValue.TIMESTAMP_TYPE_SIZE;
+      + KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   /**
@@ -1087,18 +1032,16 @@ public final class CellUtil {
   public static int estimatedSerializedSizeOfKey(final Cell cell) {
     if (cell instanceof KeyValue) return ((KeyValue) cell).getKeyLength();
     return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
-        + KeyValue.KEY_INFRASTRUCTURE_SIZE;
+      + KeyValue.KEY_INFRASTRUCTURE_SIZE;
   }
 
   /**
    * This is an estimate of the heap space occupied by a cell. When the cell is of type
    * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
    * cases we just consider the bytes occupied by the cell components ie. row, CF, qualifier,
-   * timestamp, type, value and tags.
-   * @param cell
-   * @return estimate of the heap space
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link RawCell#getTags()}
+   * timestamp, type, value and tags. n * @return estimate of the heap space
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link RawCell#getTags()}
    */
   @Deprecated
   public static long estimatedHeapSizeOf(final Cell cell) {
@@ -1107,11 +1050,7 @@ public final class CellUtil {
 
   /********************* tags *************************************/
   /**
-   * Util method to iterate through the tags
-   * @param tags
-   * @param offset
-   * @param length
-   * @return iterator for the tags
+   * Util method to iterate through the tags nnn * @return iterator for the tags
    * @deprecated As of 2.0.0 and will be removed in 3.0.0 Instead use
    *             {@link PrivateCellUtil#tagsIterator(Cell)}
    */
@@ -1164,8 +1103,7 @@ public final class CellUtil {
    * @param cell The Cell
    * @param type Type of the Tag to retrieve
    * @return null if there is no tag of the passed in tag type
-   * @deprecated As of 2.0.0 and will be removed in HBase-3.0.0
-   *             Use {@link RawCell#getTag(byte)}
+   * @deprecated As of 2.0.0 and will be removed in HBase-3.0.0 Use {@link RawCell#getTag(byte)}
    */
   @Deprecated
   public static Tag getTag(Cell cell, byte type) {
@@ -1184,17 +1122,15 @@ public final class CellUtil {
    */
   @Deprecated
   public static boolean overlappingKeys(final byte[] start1, final byte[] end1, final byte[] start2,
-      final byte[] end2) {
+    final byte[] end2) {
     return (end2.length == 0 || start1.length == 0 || Bytes.compareTo(start1, end2) < 0)
-        && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2, end1) < 0);
+      && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2, end1) < 0);
   }
 
   /**
    * Sets the given seqId to the cell. Marked as audience Private as of 1.2.0. Setting a Cell
-   * sequenceid is an internal implementation detail not for general public use.
-   * @param cell
-   * @param seqId
-   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
+   * sequenceid is an internal implementation detail not for general public use. nn * @throws
+   * IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -1203,10 +1139,8 @@ public final class CellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell.
-   * @param cell
-   * @param ts
-   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
+   * Sets the given timestamp to the cell. nn * @throws IOException when the passed cell is not of
+   * type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
    */
   @Deprecated
@@ -1215,9 +1149,7 @@ public final class CellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell.
-   * @param cell
-   * @param ts buffer containing the timestamp value
+   * Sets the given timestamp to the cell. n * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
@@ -1229,10 +1161,7 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}.
-   * @param cell
-   * @param ts
-   * @return True if cell timestamp is modified.
+   * {@link HConstants#LATEST_TIMESTAMP}. nn * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
@@ -1243,9 +1172,7 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}.
-   * @param cell
-   * @param ts buffer containing the timestamp value
+   * {@link HConstants#LATEST_TIMESTAMP}. n * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
@@ -1259,11 +1186,8 @@ public final class CellUtil {
   /**
    * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
    * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
-   * timestamp&gt;&lt;1 byte type&gt;
-   * @param cell
-   * @param out
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   * @throws IOException
+   * timestamp&gt;&lt;1 byte type&gt; nn * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
+   * n
    */
   @Deprecated
   public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
@@ -1274,13 +1198,13 @@ public final class CellUtil {
     // component of cell
     if (cell instanceof ByteBufferExtendedCell) {
       out.writeShort(rowLen);
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition(), rowLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition(), rowLen);
       out.writeByte(fLen);
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getFamilyPosition(), fLen);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getFamilyByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getFamilyPosition(), fLen);
       ByteBufferUtils.copyBufferToStream((DataOutput) out,
         ((ByteBufferExtendedCell) cell).getQualifierByteBuffer(),
         ((ByteBufferExtendedCell) cell).getQualifierPosition(), qLen);
@@ -1297,27 +1221,24 @@ public final class CellUtil {
 
   /**
    * Writes the row from the given cell to the output stream excluding the common prefix
-   * @param out The dataoutputstream to which the data has to be written
-   * @param cell The cell whose contents has to be written
-   * @param rlength the row length
-   * @throws IOException
-   * @deprecated As of 2.0. Will be removed in hbase-3.0
+   * @param out     The dataoutputstream to which the data has to be written
+   * @param cell    The cell whose contents has to be written
+   * @param rlength the row length n * @deprecated As of 2.0. Will be removed in hbase-3.0
    */
   @Deprecated
   public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
     int commonPrefix) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
-      ByteBufferUtils
-        .copyBufferToStream((DataOutput) out, ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
+      ByteBufferUtils.copyBufferToStream((DataOutput) out,
+        ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) cell).getRowPosition() + commonPrefix, rlength - commonPrefix);
     } else {
       out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rlength - commonPrefix);
     }
   }
 
   /**
-   * @param cell
-   * @return The Key portion of the passed <code>cell</code> as a String.
+   * n * @return The Key portion of the passed <code>cell</code> as a String.
    */
   public static String getCellKeyAsString(Cell cell) {
     return getCellKeyAsString(cell,
@@ -1325,19 +1246,22 @@ public final class CellUtil {
   }
 
   /**
-   * @param cell the cell to convert
+   * @param cell         the cell to convert
    * @param rowConverter used to convert the row of the cell to a string
    * @return The Key portion of the passed <code>cell</code> as a String.
    */
   public static String getCellKeyAsString(Cell cell, Function<Cell, String> rowConverter) {
     StringBuilder sb = new StringBuilder(rowConverter.apply(cell));
     sb.append('/');
-    sb.append(cell.getFamilyLength() == 0 ? "" :
-      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+    sb.append(cell.getFamilyLength() == 0
+      ? ""
+      : Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength()));
     // KeyValue only added ':' if family is non-null. Do same.
     if (cell.getFamilyLength() > 0) sb.append(':');
-    sb.append(cell.getQualifierLength() == 0 ? "" :
-      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+    sb.append(cell.getQualifierLength() == 0
+      ? ""
+      : Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength()));
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
@@ -1355,10 +1279,9 @@ public final class CellUtil {
   /**
    * This method exists just to encapsulate how we serialize keys. To be replaced by a factory that
    * we query to figure what the Cell implementation is and then, what serialization engine to use
-   * and further, how to serialize the key for inclusion in hfile index. TODO.
-   * @param cell
-   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if passed
-   *         a null <code>cell</code>
+   * and further, how to serialize the key for inclusion in hfile index. TODO. n * @return The key
+   * portion of the Cell serialized in the old-school KeyValue way or null if passed a null
+   * <code>cell</code>
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -1370,17 +1293,12 @@ public final class CellUtil {
   }
 
   /**
-   * Write rowkey excluding the common part.
-   * @param cell
-   * @param rLen
-   * @param commonPrefix
-   * @param out
-   * @throws IOException
-   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
+   * Write rowkey excluding the common part. nnnnn * @deprecated As of HBase-2.0. Will be removed in
+   * HBase-3.0
    */
   @Deprecated
   public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
-      DataOutputStream out) throws IOException {
+    DataOutputStream out) throws IOException {
     if (commonPrefix == 0) {
       out.writeShort(rLen);
     } else if (commonPrefix == 1) {
@@ -1398,11 +1316,11 @@ public final class CellUtil {
    * Find length of common prefix in keys of the cells, considering key as byte[] if serialized in
    * {@link KeyValue}. The key format is &lt;2 bytes rk len&gt;&lt;rk&gt;&lt;1 byte cf
    * len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes timestamp&gt;&lt;1 byte type&gt;
-   * @param c1 the cell
-   * @param c2 the cell
+   * @param c1                the cell
+   * @param c2                the cell
    * @param bypassFamilyCheck when true assume the family bytes same in both cells. Pass it as true
-   *          when dealing with Cells in same CF so as to avoid some checks
-   * @param withTsType when true check timestamp and type bytes also.
+   *                          when dealing with Cells in same CF so as to avoid some checks
+   * @param withTsType        when true check timestamp and type bytes also.
    * @return length of common prefix
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
@@ -1415,15 +1333,14 @@ public final class CellUtil {
     int commonPrefix = KeyValue.ROW_LENGTH_SIZE;
     if (rLen1 != rLen2) {
       // early out when the RK length itself is not matching
-      return ByteBufferUtils
-        .findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE, Bytes.toBytes(rLen2),
-          0, KeyValue.ROW_LENGTH_SIZE);
+      return ByteBufferUtils.findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE,
+        Bytes.toBytes(rLen2), 0, KeyValue.ROW_LENGTH_SIZE);
     }
     // Compare the RKs
     int rkCommonPrefix = 0;
     if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-      rkCommonPrefix = ByteBufferUtils
-        .findCommonPrefix(((ByteBufferExtendedCell) c1).getRowByteBuffer(),
+      rkCommonPrefix =
+        ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getRowByteBuffer(),
           ((ByteBufferExtendedCell) c1).getRowPosition(), rLen1,
           ((ByteBufferExtendedCell) c2).getRowByteBuffer(),
           ((ByteBufferExtendedCell) c2).getRowPosition(), rLen2);
@@ -1433,9 +1350,8 @@ public final class CellUtil {
       // in flush or compactions. In flushes both cells are KV and in case of compaction it will be
       // either
       // KV or BBCell
-      rkCommonPrefix = ByteBufferUtils
-        .findCommonPrefix(c1.getRowArray(), c1.getRowOffset(), rLen1, c2.getRowArray(),
-          c2.getRowOffset(), rLen2);
+      rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(), rLen1,
+        c2.getRowArray(), c2.getRowOffset(), rLen2);
     }
     commonPrefix += rkCommonPrefix;
     if (rkCommonPrefix != rLen1) {
@@ -1459,15 +1375,14 @@ public final class CellUtil {
       // Compare the CF names
       int fCommonPrefix;
       if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-        fCommonPrefix = ByteBufferUtils
-          .findCommonPrefix(((ByteBufferExtendedCell) c1).getFamilyByteBuffer(),
+        fCommonPrefix =
+          ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getFamilyByteBuffer(),
             ((ByteBufferExtendedCell) c1).getFamilyPosition(), fLen1,
             ((ByteBufferExtendedCell) c2).getFamilyByteBuffer(),
             ((ByteBufferExtendedCell) c2).getFamilyPosition(), fLen2);
       } else {
-        fCommonPrefix = ByteBufferUtils
-          .findCommonPrefix(c1.getFamilyArray(), c1.getFamilyOffset(), fLen1, c2.getFamilyArray(),
-            c2.getFamilyOffset(), fLen2);
+        fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(), c1.getFamilyOffset(),
+          fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
       }
       commonPrefix += fCommonPrefix;
       if (fCommonPrefix != fLen1) {
@@ -1479,24 +1394,22 @@ public final class CellUtil {
     int qLen2 = c2.getQualifierLength();
     int qCommon;
     if (c1 instanceof ByteBufferExtendedCell && c2 instanceof ByteBufferExtendedCell) {
-      qCommon = ByteBufferUtils
-        .findCommonPrefix(((ByteBufferExtendedCell) c1).getQualifierByteBuffer(),
+      qCommon =
+        ByteBufferUtils.findCommonPrefix(((ByteBufferExtendedCell) c1).getQualifierByteBuffer(),
           ((ByteBufferExtendedCell) c1).getQualifierPosition(), qLen1,
           ((ByteBufferExtendedCell) c2).getQualifierByteBuffer(),
           ((ByteBufferExtendedCell) c2).getQualifierPosition(), qLen2);
     } else {
-      qCommon = ByteBufferUtils
-        .findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(), qLen1,
-          c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
+      qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
+        qLen1, c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
     }
     commonPrefix += qCommon;
     if (!withTsType || Math.max(qLen1, qLen2) != qCommon) {
       return commonPrefix;
     }
     // Compare the timestamp parts
-    int tsCommonPrefix = ByteBufferUtils
-      .findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE,
-        Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
+    int tsCommonPrefix = ByteBufferUtils.findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0,
+      KeyValue.TIMESTAMP_SIZE, Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
     commonPrefix += tsCommonPrefix;
     if (tsCommonPrefix != KeyValue.TIMESTAMP_SIZE) {
       return commonPrefix;
@@ -1524,8 +1437,8 @@ public final class CellUtil {
         tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
       }
       if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
-        value = Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength());
+        value =
+          Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
       }
     }
 
@@ -1569,7 +1482,7 @@ public final class CellUtil {
 
   public static boolean equals(Cell a, Cell b) {
     return matchingRows(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
-        && matchingTimestamp(a, b) && PrivateCellUtil.matchingType(a, b);
+      && matchingTimestamp(a, b) && PrivateCellUtil.matchingType(a, b);
   }
 
   public static boolean matchingTimestamp(Cell a, Cell b) {
@@ -1585,10 +1498,7 @@ public final class CellUtil {
   }
 
   /**
-   * Compares the row of two keyvalues for equality
-   * @param left
-   * @param right
-   * @return True if rows match.
+   * Compares the row of two keyvalues for equality nn * @return True if rows match.
    */
   public static boolean matchingRows(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
@@ -1597,33 +1507,31 @@ public final class CellUtil {
   }
 
   public static boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
-      final short rrowlength) {
+    final short rrowlength) {
     if (lrowlength != rrowlength) return false;
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength,
-          ((ByteBufferExtendedCell) right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength,
+        ((ByteBufferExtendedCell) right).getRowByteBuffer(),
+        ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength);
     }
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength, right.getRowArray(),
-          right.getRowOffset(), rrowlength);
+        ((ByteBufferExtendedCell) left).getRowPosition(), lrowlength, right.getRowArray(),
+        right.getRowOffset(), rrowlength);
     }
     if (right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.equals(((ByteBufferExtendedCell) right).getRowByteBuffer(),
-          ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength, left.getRowArray(),
-          left.getRowOffset(), lrowlength);
+        ((ByteBufferExtendedCell) right).getRowPosition(), rrowlength, left.getRowArray(),
+        left.getRowOffset(), lrowlength);
     }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-        right.getRowOffset(), rrowlength);
+      right.getRowOffset(), rrowlength);
   }
 
   /**
-   * Compares the row and column of two keyvalues for equality
-   * @param left
-   * @param right
-   * @return True if same row and column.
+   * Compares the row and column of two keyvalues for equality nn * @return True if same row and
+   * column.
    */
   public static boolean matchingRowColumn(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
@@ -1665,25 +1573,28 @@ public final class CellUtil {
     }
 
     // match row
-    if (!Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-        right.getRowOffset(), rrowlength)) {
+    if (
+      !Bytes.equals(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
+        right.getRowOffset(), rrowlength)
+    ) {
       return false;
     }
-    //match family
-    if (!Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), lfamlength,
-        right.getFamilyArray(), right.getFamilyOffset(), rfamlength)) {
+    // match family
+    if (
+      !Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), lfamlength,
+        right.getFamilyArray(), right.getFamilyOffset(), rfamlength)
+    ) {
       return false;
     }
-    //match qualifier
-    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
-        lqlength, right.getQualifierArray(), right.getQualifierOffset(),
-        rqlength);
+    // match qualifier
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), lqlength,
+      right.getQualifierArray(), right.getQualifierOffset(), rqlength);
   }
 
   /**
    * Compares the cell's qualifier with the given byte[]
-   * @param left the cell for which the qualifier has to be compared
-   * @param right the byte[] having the qualifier
+   * @param left    the cell for which the qualifier has to be compared
+   * @param right   the byte[] having the qualifier
    * @param rOffset the offset of the qualifier
    * @param rLength the length of the qualifier
    * @return greater than 0 if left cell's qualifier is bigger than byte[], lesser than 0 if left
@@ -1692,8 +1603,8 @@ public final class CellUtil {
   public final static int compareQualifiers(Cell left, byte[] right, int rOffset, int rLength) {
     if (left instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getQualifierByteBuffer(),
-          ((ByteBufferExtendedCell) left).getQualifierPosition(),
-          left.getQualifierLength(), right, rOffset, rLength);
+        ((ByteBufferExtendedCell) left).getQualifierPosition(), left.getQualifierLength(), right,
+        rOffset, rLength);
     }
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
       left.getQualifierLength(), right, rOffset, rLength);
@@ -1705,10 +1616,10 @@ public final class CellUtil {
    * the KeyValue serialization format If the KeyValue (Cell's) serialization format changes this
    * method cannot be used.
    * @param comparator the cell comparator
-   * @param left the cell to be compared
-   * @param key the serialized key part of a KeyValue
-   * @param offset the offset in the key byte[]
-   * @param length the length of the key byte[]
+   * @param left       the cell to be compared
+   * @param key        the serialized key part of a KeyValue
+   * @param offset     the offset in the key byte[]
+   * @param length     the length of the key byte[]
    * @return an int greater than 0 if left is greater than right lesser than 0 if left is lesser
    *         than right equal to 0 if left is equal to right
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
@@ -1716,7 +1627,7 @@ public final class CellUtil {
   @InterfaceAudience.Private
   @Deprecated
   public static final int compare(CellComparator comparator, Cell left, byte[] key, int offset,
-      int length) {
+    int length) {
     // row
     short rrowlength = Bytes.toShort(key, offset);
     int c = comparator.compareRows(left, key, offset + Bytes.SIZEOF_SHORT, rrowlength);
@@ -1730,8 +1641,8 @@ public final class CellUtil {
 
   /**
    * Compares the cell's family with the given byte[]
-   * @param left the cell for which the family has to be compared
-   * @param right the byte[] having the family
+   * @param left    the cell for which the family has to be compared
+   * @param right   the byte[] having the family
    * @param roffset the offset of the family
    * @param rlength the length of the family
    * @return greater than 0 if left cell's family is bigger than byte[], lesser than 0 if left
@@ -1749,8 +1660,8 @@ public final class CellUtil {
 
   /**
    * Compares the cell's column (family and qualifier) with the given byte[]
-   * @param left the cell for which the column has to be compared
-   * @param right the byte[] having the column
+   * @param left     the cell for which the column has to be compared
+   * @param right    the byte[] having the column
    * @param rfoffset the offset of the family
    * @param rflength the length of the family
    * @param rqoffset the offset of the qualifier
@@ -1759,7 +1670,7 @@ public final class CellUtil {
    *         cell's column is lesser than byte[] and 0 otherwise
    */
   public final static int compareColumns(Cell left, byte[] right, int rfoffset, int rflength,
-      int rqoffset, int rqlength) {
+    int rqoffset, int rqlength) {
     int diff = compareFamilies(left, right, rfoffset, rflength);
     if (diff != 0) return diff;
     return compareQualifiers(left, right, rqoffset, rqlength);

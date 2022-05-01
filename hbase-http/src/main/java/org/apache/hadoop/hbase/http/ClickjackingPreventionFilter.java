@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.http;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -28,10 +27,8 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -46,7 +43,7 @@ public class ClickjackingPreventionFilter implements Filter {
 
   @Override
   public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
-        throws IOException, ServletException {
+    throws IOException, ServletException {
     HttpServletResponse httpRes = (HttpServletResponse) res;
     httpRes.addHeader("X-Frame-Options", filterConfig.getInitParameter("xframeoptions"));
     chain.doFilter(req, res);
@@ -58,8 +55,8 @@ public class ClickjackingPreventionFilter implements Filter {
 
   public static Map<String, String> getDefaultParameters(Configuration conf) {
     Map<String, String> params = new HashMap<>();
-    params.put("xframeoptions", conf.get("hbase.http.filter.xframeoptions.mode",
-        DEFAULT_XFRAMEOPTIONS));
+    params.put("xframeoptions",
+      conf.get("hbase.http.filter.xframeoptions.mode", DEFAULT_XFRAMEOPTIONS));
     return params;
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,29 +25,24 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCellBuilder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellBuilder.class);
+    HBaseClassTestRule.forClass(TestCellBuilder.class);
 
   private static final byte OLD_DATA = 87;
   private static final byte NEW_DATA = 100;
 
   @Test
   public void testCellBuilderWithDeepCopy() {
-    byte[] row = new byte[]{OLD_DATA};
-    byte[] family = new byte[]{OLD_DATA};
-    byte[] qualifier = new byte[]{OLD_DATA};
-    byte[] value = new byte[]{OLD_DATA};
-    Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setType(Cell.Type.Put)
-            .setValue(value)
-            .build();
+    byte[] row = new byte[] { OLD_DATA };
+    byte[] family = new byte[] { OLD_DATA };
+    byte[] qualifier = new byte[] { OLD_DATA };
+    byte[] value = new byte[] { OLD_DATA };
+    Cell cell = CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row).setFamily(family)
+      .setQualifier(qualifier).setType(Cell.Type.Put).setValue(value).build();
     row[0] = NEW_DATA;
     family[0] = NEW_DATA;
     qualifier[0] = NEW_DATA;
@@ -60,17 +55,12 @@ public class TestCellBuilder {
 
   @Test
   public void testCellBuilderWithShallowCopy() {
-    byte[] row = new byte[]{OLD_DATA};
-    byte[] family = new byte[]{OLD_DATA};
-    byte[] qualifier = new byte[]{OLD_DATA};
-    byte[] value = new byte[]{OLD_DATA};
-    Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setType(Cell.Type.Put)
-            .setValue(value)
-            .build();
+    byte[] row = new byte[] { OLD_DATA };
+    byte[] family = new byte[] { OLD_DATA };
+    byte[] qualifier = new byte[] { OLD_DATA };
+    byte[] value = new byte[] { OLD_DATA };
+    Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setType(Cell.Type.Put).setValue(value).build();
     row[0] = NEW_DATA;
     family[0] = NEW_DATA;
     qualifier[0] = NEW_DATA;
@@ -83,21 +73,15 @@ public class TestCellBuilder {
 
   @Test
   public void testExtendedCellBuilderWithShallowCopy() {
-    byte[] row = new byte[]{OLD_DATA};
-    byte[] family = new byte[]{OLD_DATA};
-    byte[] qualifier = new byte[]{OLD_DATA};
-    byte[] value = new byte[]{OLD_DATA};
-    byte[] tags = new byte[]{OLD_DATA};
+    byte[] row = new byte[] { OLD_DATA };
+    byte[] family = new byte[] { OLD_DATA };
+    byte[] qualifier = new byte[] { OLD_DATA };
+    byte[] value = new byte[] { OLD_DATA };
+    byte[] tags = new byte[] { OLD_DATA };
     long seqId = 999;
-    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setType(KeyValue.Type.Put.getCode())
-            .setValue(value)
-            .setTags(tags)
-            .setSequenceId(seqId)
-            .build();
+    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setType(KeyValue.Type.Put.getCode())
+      .setValue(value).setTags(tags).setSequenceId(seqId).build();
     row[0] = NEW_DATA;
     family[0] = NEW_DATA;
     qualifier[0] = NEW_DATA;
@@ -113,21 +97,15 @@ public class TestCellBuilder {
 
   @Test
   public void testExtendedCellBuilderWithDeepCopy() {
-    byte[] row = new byte[]{OLD_DATA};
-    byte[] family = new byte[]{OLD_DATA};
-    byte[] qualifier = new byte[]{OLD_DATA};
-    byte[] value = new byte[]{OLD_DATA};
-    byte[] tags = new byte[]{OLD_DATA};
+    byte[] row = new byte[] { OLD_DATA };
+    byte[] family = new byte[] { OLD_DATA };
+    byte[] qualifier = new byte[] { OLD_DATA };
+    byte[] value = new byte[] { OLD_DATA };
+    byte[] tags = new byte[] { OLD_DATA };
     long seqId = 999;
-    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier)
-            .setType(KeyValue.Type.Put.getCode())
-            .setValue(value)
-            .setTags(tags)
-            .setSequenceId(seqId)
-            .build();
+    Cell cell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(row)
+      .setFamily(family).setQualifier(qualifier).setType(KeyValue.Type.Put.getCode())
+      .setValue(value).setTags(tags).setSequenceId(seqId).build();
     row[0] = NEW_DATA;
     family[0] = NEW_DATA;
     qualifier[0] = NEW_DATA;

@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,26 +19,25 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * This is a Filter wrapper class which is used in the server side. Some filter
- * related hooks can be defined in this wrapper. The only way to create a
- * FilterWrapper instance is passing a client side Filter instance through
- * {@link org.apache.hadoop.hbase.client.Scan#getFilter()}.
- *
+ * This is a Filter wrapper class which is used in the server side. Some filter related hooks can be
+ * defined in this wrapper. The only way to create a FilterWrapper instance is passing a client side
+ * Filter instance through {@link org.apache.hadoop.hbase.client.Scan#getFilter()}.
  */
 @InterfaceAudience.Private
 final public class FilterWrapper extends Filter {
   Filter filter = null;
 
-  public FilterWrapper( Filter filter ) {
+  public FilterWrapper(Filter filter) {
     if (null == filter) {
       // ensure the filter instance is not null
       throw new NullPointerException("Cannot create FilterWrapper with null Filter");
@@ -53,8 +50,7 @@ final public class FilterWrapper extends Filter {
    */
   @Override
   public byte[] toByteArray() throws IOException {
-    FilterProtos.FilterWrapper.Builder builder =
-      FilterProtos.FilterWrapper.newBuilder();
+    FilterProtos.FilterWrapper.Builder builder = FilterProtos.FilterWrapper.newBuilder();
     builder.setFilter(ProtobufUtil.toFilter(this.filter));
     return builder.build().toByteArray();
   }
@@ -65,8 +61,7 @@ final public class FilterWrapper extends Filter {
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
-  public static FilterWrapper parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static FilterWrapper parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FilterWrapper proto;
     try {
       proto = FilterProtos.FilterWrapper.parseFrom(pbBytes);
@@ -141,16 +136,17 @@ final public class FilterWrapper extends Filter {
 
   public enum FilterRowRetCode {
     NOT_CALLED,
-    INCLUDE,     // corresponds to filter.filterRow() returning false
-    EXCLUDE,     // corresponds to filter.filterRow() returning true
-    INCLUDE_THIS_FAMILY  // exclude other families
+    INCLUDE, // corresponds to filter.filterRow() returning false
+    EXCLUDE, // corresponds to filter.filterRow() returning true
+    INCLUDE_THIS_FAMILY // exclude other families
   }
+
   public FilterRowRetCode filterRowCellsWithRet(List<Cell> kvs) throws IOException {
-    //To fix HBASE-6429,
-    //Filter with filterRow() returning true is incompatible with scan with limit
-    //1. hasFilterRow() returns true, if either filterRow() or filterRow(kvs) is implemented.
-    //2. filterRow() is merged with filterRow(kvs),
-    //so that to make all those row related filtering stuff in the same function.
+    // To fix HBASE-6429,
+    // Filter with filterRow() returning true is incompatible with scan with limit
+    // 1. hasFilterRow() returns true, if either filterRow() or filterRow(kvs) is implemented.
+    // 2. filterRow() is merged with filterRow(kvs),
+    // so that to make all those row related filtering stuff in the same function.
     this.filter.filterRowCells(kvs);
     if (!kvs.isEmpty()) {
       if (this.filter.filterRow()) {
@@ -169,15 +165,15 @@ final public class FilterWrapper extends Filter {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FilterWrapper)) return false;
 
-    FilterWrapper other = (FilterWrapper)o;
+    FilterWrapper other = (FilterWrapper) o;
     return this.filter.areSerializedFieldsEqual(other.filter);
   }
 }

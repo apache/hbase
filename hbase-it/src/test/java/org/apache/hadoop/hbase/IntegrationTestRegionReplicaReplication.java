@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -48,15 +47,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * written items available to readers. This means that a reader will only start reading from a row
  * written by the writer / updater after 5secs has passed. The reader thread performs the reads from
  * the given region replica id (default 1) to perform the reads. Async wal replication has to finish
- * with the replication of the edits before read_delay_ms to the given region replica id so that
- * the read and verify will not fail.
- *
- * The job will run for <b>at least</b> given runtime (default 10min) by running a concurrent
- * writer and reader workload followed by a concurrent updater and reader workload for
- * num_keys_per_server.
+ * with the replication of the edits before read_delay_ms to the given region replica id so that the
+ * read and verify will not fail. The job will run for <b>at least</b> given runtime (default 10min)
+ * by running a concurrent writer and reader workload followed by a concurrent updater and reader
+ * workload for num_keys_per_server.
  * <p>
  * Example usage:
  * </p>
+ *
  * <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestRegionReplicaReplication
  * -DIntegrationTestRegionReplicaReplication.num_keys_per_server=10000
@@ -71,14 +69,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Category(IntegrationTests.class)
 public class IntegrationTestRegionReplicaReplication extends IntegrationTestIngest {
 
-  private static final String TEST_NAME
-    = IntegrationTestRegionReplicaReplication.class.getSimpleName();
+  private static final String TEST_NAME =
+    IntegrationTestRegionReplicaReplication.class.getSimpleName();
 
   private static final String OPT_READ_DELAY_MS = "read_delay_ms";
 
   private static final int DEFAULT_REGION_REPLICATION = 2;
   private static final int SERVER_COUNT = 1; // number of slaves for the smallest cluster
-  private static final String[] DEFAULT_COLUMN_FAMILIES = new String[] {"f1", "f2", "f3"};
+  private static final String[] DEFAULT_COLUMN_FAMILIES = new String[] { "f1", "f2", "f3" };
 
   @Override
   protected int getMinServerCount() {
@@ -87,12 +85,10 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
   @Override
   public void setConf(Configuration conf) {
-    conf.setIfUnset(
-      String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_REGION_REPLICATION),
+    conf.setIfUnset(String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_REGION_REPLICATION),
       String.valueOf(DEFAULT_REGION_REPLICATION));
 
-    conf.setIfUnset(
-      String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_COLUMN_FAMILIES),
+    conf.setIfUnset(String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_COLUMN_FAMILIES),
       StringUtils.join(",", DEFAULT_COLUMN_FAMILIES));
 
     conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
@@ -114,15 +110,17 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
   /**
    * This extends MultiThreadedWriter to add a configurable delay to the keys written by the writer
-   * threads to become available to the MultiThradedReader threads. We add this delay because of
-   * the async nature of the wal replication to region replicas.
+   * threads to become available to the MultiThradedReader threads. We add this delay because of the
+   * async nature of the wal replication to region replicas.
    */
   public static class DelayingMultiThreadedWriter extends MultiThreadedWriter {
     private long delayMs;
+
     public DelayingMultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
-        TableName tableName) throws IOException {
+      TableName tableName) throws IOException {
       super(dataGen, conf, tableName);
     }
+
     @Override
     protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
       this.delayMs = conf.getLong(String.format("%s.%s",
@@ -133,15 +131,17 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
   /**
    * This extends MultiThreadedWriter to add a configurable delay to the keys written by the writer
-   * threads to become available to the MultiThradedReader threads. We add this delay because of
-   * the async nature of the wal replication to region replicas.
+   * threads to become available to the MultiThradedReader threads. We add this delay because of the
+   * async nature of the wal replication to region replicas.
    */
   public static class DelayingMultiThreadedUpdater extends MultiThreadedUpdater {
     private long delayMs;
+
     public DelayingMultiThreadedUpdater(LoadTestDataGenerator dataGen, Configuration conf,
-        TableName tableName, double updatePercent) throws IOException {
+      TableName tableName, double updatePercent) throws IOException {
       super(dataGen, conf, tableName, updatePercent);
     }
+
     @Override
     protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
       this.delayMs = conf.getLong(String.format("%s.%s",
@@ -152,16 +152,15 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
   @Override
   protected void runIngestTest(long defaultRunTime, long keysPerServerPerIter, int colsPerKey,
-      int recordSize, int writeThreads, int readThreads) throws Exception {
+    int recordSize, int writeThreads, int readThreads) throws Exception {
 
     LOG.info("Running ingest");
-    LOG.info("Cluster size:" + util.getHBaseClusterInterface()
-      .getClusterMetrics().getLiveServerMetrics().size());
+    LOG.info("Cluster size:"
+      + util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size());
 
     // sleep for some time so that the cache for disabled tables does not interfere.
-    Threads.sleep(
-      getConf().getInt("hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs",
-        5000) + 1000);
+    Threads.sleep(getConf().getInt(
+      "hbase.region.replica.replication.cache.disabledAndDroppedTables.expiryMs", 5000) + 1000);
 
     long start = System.currentTimeMillis();
     String runtimeKey = String.format(RUN_TIME_KEY, this.getClass().getSimpleName());
@@ -170,14 +169,14 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
     long numKeys = getNumKeys(keysPerServerPerIter);
     while (System.currentTimeMillis() - start < 0.9 * runtime) {
-      LOG.info("Intended run time: " + (runtime/60000) + " min, left:" +
-          ((runtime - (System.currentTimeMillis() - start))/60000) + " min");
+      LOG.info("Intended run time: " + (runtime / 60000) + " min, left:"
+        + ((runtime - (System.currentTimeMillis() - start)) / 60000) + " min");
 
       int verifyPercent = 100;
       int updatePercent = 20;
       int ret = -1;
-      int regionReplicaId = conf.getInt(String.format("%s.%s"
-        , TEST_NAME, LoadTestTool.OPT_REGION_REPLICA_ID), 1);
+      int regionReplicaId =
+        conf.getInt(String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_REGION_REPLICA_ID), 1);
 
       // we will run writers and readers at the same time.
       List<String> args = Lists.newArrayList(getArgsForLoadTestTool("", "", startKey, numKeys));

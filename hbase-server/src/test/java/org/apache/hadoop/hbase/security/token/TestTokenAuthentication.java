@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,15 +102,15 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 // This test does a fancy trick where it uses RpcServer and plugs in the Token Service for RpcServer
 // to offer up. It worked find pre-hbase-2.0.0 but post the shading project, it fails because
 // RpcServer is all about shaded protobuf whereas the Token Service is a CPEP which does non-shaded
-// protobufs. Since hbase-2.0.0, we added convertion from shaded to  non-shaded so this test keeps
+// protobufs. Since hbase-2.0.0, we added convertion from shaded to non-shaded so this test keeps
 // working.
 @RunWith(Parameterized.class)
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestTokenAuthentication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTokenAuthentication.class);
+    HBaseClassTestRule.forClass(TestTokenAuthentication.class);
 
   static {
     // Setting whatever system properties after recommendation from
@@ -122,8 +122,8 @@ public class TestTokenAuthentication {
   /**
    * Basic server process for RPC authentication testing
    */
-  private static class TokenServer extends TokenProvider implements
-      AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
+  private static class TokenServer extends TokenProvider
+    implements AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
     private static final Logger LOG = LoggerFactory.getLogger(TokenServer.class);
     private Configuration conf;
     private HBaseTestingUtility TEST_UTIL;
@@ -160,9 +160,8 @@ public class TestTokenAuthentication {
         new org.apache.hbase.thirdparty.com.google.protobuf.BlockingService() {
           @Override
           public Message callBlockingMethod(MethodDescriptor md,
-              org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller,
-              Message param)
-              throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+            org.apache.hbase.thirdparty.com.google.protobuf.RpcController controller, Message param)
+            throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
             com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor =
               service.getDescriptorForType().findMethodByName(md.getName());
             com.google.protobuf.Message request = service.getRequestPrototype(methodDescriptor);
@@ -196,7 +195,7 @@ public class TestTokenAuthentication {
       sai.add(new BlockingServiceAndInterface(proxy,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
       this.rpcServer = RpcServerFactory.createRpcServer(this, "tokenServer", sai, initialIsa, conf,
-          new FifoRpcScheduler(conf, 1));
+        new FifoRpcScheduler(conf, 1));
       InetSocketAddress address = rpcServer.getListenerAddress();
       if (address == null) {
         throw new IOException("Listener channel is closed");
@@ -247,7 +246,7 @@ public class TestTokenAuthentication {
 
     @Override
     public void abort(String reason, Throwable error) {
-      LOG.error(HBaseMarkers.FATAL, "Aborting on: "+reason, error);
+      LOG.error(HBaseMarkers.FATAL, "Aborting on: " + reason, error);
       this.aborted = true;
       this.stopped = true;
       sleeper.skipSleepCycle();
@@ -257,20 +256,19 @@ public class TestTokenAuthentication {
       // ZK configuration must _not_ have hbase.security.authentication or it will require SASL auth
       Configuration zkConf = new Configuration(conf);
       zkConf.set(User.HBASE_SECURITY_CONF_KEY, "simple");
-      this.zookeeper = new ZKWatcher(zkConf, TokenServer.class.getSimpleName(),
-          this, true);
+      this.zookeeper = new ZKWatcher(zkConf, TokenServer.class.getSimpleName(), this, true);
       this.rpcServer.start();
 
       // Mock up region coprocessor environment
       RegionCoprocessorEnvironment mockRegionCpEnv = mock(RegionCoprocessorEnvironment.class,
-          Mockito.withSettings().extraInterfaces(HasRegionServerServices.class));
+        Mockito.withSettings().extraInterfaces(HasRegionServerServices.class));
       when(mockRegionCpEnv.getConfiguration()).thenReturn(conf);
-      when(mockRegionCpEnv.getClassLoader()).then(
-          (var1) -> Thread.currentThread().getContextClassLoader());
+      when(mockRegionCpEnv.getClassLoader())
+        .then((var1) -> Thread.currentThread().getContextClassLoader());
       RegionServerServices mockRss = mock(RegionServerServices.class);
       when(mockRss.getRpcServer()).thenReturn(rpcServer);
       when(((HasRegionServerServices) mockRegionCpEnv).getRegionServerServices())
-          .thenReturn(mockRss);
+        .thenReturn(mockRss);
 
       super.start(mockRegionCpEnv);
       started = true;
@@ -295,7 +293,7 @@ public class TestTokenAuthentication {
 
     @Override
     public void stop(String reason) {
-      LOG.info("Stopping due to: "+reason);
+      LOG.info("Stopping due to: " + reason);
       this.stopped = true;
       sleeper.skipSleepCycle();
     }
@@ -310,18 +308,19 @@ public class TestTokenAuthentication {
     }
 
     public SecretManager<? extends TokenIdentifier> getSecretManager() {
-      return ((RpcServer)rpcServer).getSecretManager();
+      return ((RpcServer) rpcServer).getSecretManager();
     }
 
     @Override
     public AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
-        RpcController controller, AuthenticationProtos.GetAuthenticationTokenRequest request)
+      RpcController controller, AuthenticationProtos.GetAuthenticationTokenRequest request)
       throws ServiceException {
       LOG.debug("Authentication token request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
-      final NonShadedBlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>
-        callback = new NonShadedBlockingRpcCallback<>();
+      final NonShadedBlockingRpcCallback<
+        AuthenticationProtos.GetAuthenticationTokenResponse> callback =
+          new NonShadedBlockingRpcCallback<>();
       getAuthenticationToken(null, request, callback);
       try {
         serverController.checkFailed();
@@ -332,14 +331,13 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public AuthenticationProtos.WhoAmIResponse whoAmI(
-        RpcController controller, AuthenticationProtos.WhoAmIRequest request)
-      throws ServiceException {
+    public AuthenticationProtos.WhoAmIResponse whoAmI(RpcController controller,
+      AuthenticationProtos.WhoAmIRequest request) throws ServiceException {
       LOG.debug("whoAmI() request from " + RpcServer.getRequestUserName().orElse(null));
       // Ignore above passed in controller -- it is always null
       ServerRpcController serverController = new ServerRpcController();
       NonShadedBlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
-          new NonShadedBlockingRpcCallback<>();
+        new NonShadedBlockingRpcCallback<>();
       whoAmI(null, request, callback);
       try {
         serverController.checkFailed();
@@ -369,7 +367,7 @@ public class TestTokenAuthentication {
   @Parameters(name = "{index}: rpcServerImpl={0}")
   public static Collection<Object[]> parameters() {
     return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
-        new Object[] { NettyRpcServer.class.getName() });
+      new Object[] { NettyRpcServer.class.getName() });
   }
 
   @Parameter(0)
@@ -387,7 +385,7 @@ public class TestTokenAuthentication {
     // Override the connection registry to avoid spinning up a mini cluster for the connection below
     // to go through.
     TEST_UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        HConstants.ZK_CONNECTION_REGISTRY_CLASS);
+      HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     TEST_UTIL.startMiniZKCluster();
     // register token type for protocol
     SecurityInfo.addInfo(AuthenticationProtos.AuthenticationService.getDescriptor().getName(),
@@ -401,7 +399,8 @@ public class TestTokenAuthentication {
     conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
     server = new TokenServer(conf, TEST_UTIL);
     serverThread = new Thread(server);
-    Threads.setDaemonThreadRunning(serverThread, "TokenServer:"+server.getServerName().toString());
+    Threads.setDaemonThreadRunning(serverThread,
+      "TokenServer:" + server.getServerName().toString());
     // wait for startup
     while (!server.isStarted() && !server.isStopped()) {
       Thread.sleep(10);
@@ -409,14 +408,13 @@ public class TestTokenAuthentication {
     server.rpcServer.refreshAuthManager(conf, new PolicyProvider() {
       @Override
       public Service[] getServices() {
-        return new Service [] {
-          new Service("security.client.protocol.acl",
-            AuthenticationProtos.AuthenticationService.BlockingInterface.class)};
+        return new Service[] { new Service("security.client.protocol.acl",
+          AuthenticationProtos.AuthenticationService.BlockingInterface.class) };
       }
     });
     ZKClusterId.setClusterId(server.getZooKeeper(), clusterId);
-    secretManager = (AuthenticationTokenSecretManager)server.getSecretManager();
-    while(secretManager.getCurrentKey() == null) {
+    secretManager = (AuthenticationTokenSecretManager) server.getSecretManager();
+    while (secretManager.getCurrentKey() == null) {
       Thread.sleep(1);
     }
   }
@@ -430,75 +428,75 @@ public class TestTokenAuthentication {
 
   @Test
   public void testTokenCreation() throws Exception {
-    Token<AuthenticationTokenIdentifier> token =
-        secretManager.generateToken("testuser");
+    Token<AuthenticationTokenIdentifier> token = secretManager.generateToken("testuser");
 
     AuthenticationTokenIdentifier ident = new AuthenticationTokenIdentifier();
     Writables.getWritable(token.getIdentifier(), ident);
-    assertEquals("Token username should match", "testuser",
-        ident.getUsername());
+    assertEquals("Token username should match", "testuser", ident.getUsername());
     byte[] passwd = secretManager.retrievePassword(ident);
     assertTrue("Token password and password from secret manager should match",
-        Bytes.equals(token.getPassword(), passwd));
+      Bytes.equals(token.getPassword(), passwd));
   }
-// This won't work any more now RpcServer takes Shaded Service. It depends on RPCServer being able to provide a
-// non-shaded service. TODO: FIX. Tried to make RPC generic but then it ripples; have to make Connection generic.
-// And Call generic, etc.
-//
-//  @Test
-//  public void testTokenAuthentication() throws Exception {
-//    UserGroupInformation testuser =
-//        UserGroupInformation.createUserForTesting("testuser", new String[]{"testgroup"});
-//    testuser.setAuthenticationMethod(
-//        UserGroupInformation.AuthenticationMethod.TOKEN);
-//    final Configuration conf = TEST_UTIL.getConfiguration();
-//    UserGroupInformation.setConfiguration(conf);
-//    Token<AuthenticationTokenIdentifier> token = secretManager.generateToken("testuser");
-//    LOG.debug("Got token: " + token.toString());
-//    testuser.addToken(token);
-//    // Verify the server authenticates us as this token user
-//    testuser.doAs(new PrivilegedExceptionAction<Object>() {
-//      public Object run() throws Exception {
-//        Configuration c = server.getConfiguration();
-//        final RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
-//        ServerName sn =
-//            ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
-//                System.currentTimeMillis());
-//        try {
-//          // Make a proxy to go between the shaded RpcController that rpc expects and the
-//          // non-shaded controller this CPEP is providing. This is because this test does a neat
-//          // little trick of testing the CPEP Service by inserting it as RpcServer Service. This
-//          // worked fine before we shaded PB. Now we need these proxies.
-//          final org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel channel =
-//              rpcClient.createBlockingRpcChannel(sn, User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-//          AuthenticationProtos.AuthenticationService.BlockingInterface stub =
-//              AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
-//          AuthenticationProtos.WhoAmIResponse response =
-//              stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
-//          String myname = response.getUsername();
-//          assertEquals("testuser", myname);
-//          String authMethod = response.getAuthMethod();
-//          assertEquals("TOKEN", authMethod);
-//        } finally {
-//          rpcClient.close();
-//        }
-//        return null;
-//      }
-//    });
-//  }
+  // This won't work any more now RpcServer takes Shaded Service. It depends on RPCServer being able
+  // to provide a
+  // non-shaded service. TODO: FIX. Tried to make RPC generic but then it ripples; have to make
+  // Connection generic.
+  // And Call generic, etc.
+  //
+  // @Test
+  // public void testTokenAuthentication() throws Exception {
+  // UserGroupInformation testuser =
+  // UserGroupInformation.createUserForTesting("testuser", new String[]{"testgroup"});
+  // testuser.setAuthenticationMethod(
+  // UserGroupInformation.AuthenticationMethod.TOKEN);
+  // final Configuration conf = TEST_UTIL.getConfiguration();
+  // UserGroupInformation.setConfiguration(conf);
+  // Token<AuthenticationTokenIdentifier> token = secretManager.generateToken("testuser");
+  // LOG.debug("Got token: " + token.toString());
+  // testuser.addToken(token);
+  // // Verify the server authenticates us as this token user
+  // testuser.doAs(new PrivilegedExceptionAction<Object>() {
+  // public Object run() throws Exception {
+  // Configuration c = server.getConfiguration();
+  // final RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
+  // ServerName sn =
+  // ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
+  // System.currentTimeMillis());
+  // try {
+  // // Make a proxy to go between the shaded RpcController that rpc expects and the
+  // // non-shaded controller this CPEP is providing. This is because this test does a neat
+  // // little trick of testing the CPEP Service by inserting it as RpcServer Service. This
+  // // worked fine before we shaded PB. Now we need these proxies.
+  // final org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel channel =
+  // rpcClient.createBlockingRpcChannel(sn, User.getCurrent(),
+  // HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+  // AuthenticationProtos.AuthenticationService.BlockingInterface stub =
+  // AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
+  // AuthenticationProtos.WhoAmIResponse response =
+  // stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+  // String myname = response.getUsername();
+  // assertEquals("testuser", myname);
+  // String authMethod = response.getAuthMethod();
+  // assertEquals("TOKEN", authMethod);
+  // } finally {
+  // rpcClient.close();
+  // }
+  // return null;
+  // }
+  // });
+  // }
 
   @Test
   public void testUseExistingToken() throws Exception {
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser2",
-        new String[]{"testgroup"});
-    Token<AuthenticationTokenIdentifier> token =
-        secretManager.generateToken(user.getName());
+      new String[] { "testgroup" });
+    Token<AuthenticationTokenIdentifier> token = secretManager.generateToken(user.getName());
     assertNotNull(token);
     user.addToken(token);
 
     // make sure we got a token
     Token<AuthenticationTokenIdentifier> firstToken =
-        new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+      new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
     assertNotNull(firstToken);
     assertEquals(token, firstToken);
 
@@ -507,7 +505,7 @@ public class TestTokenAuthentication {
       assertFalse(TokenUtil.addTokenIfMissing(conn, user));
       // make sure we still have the same token
       Token<AuthenticationTokenIdentifier> secondToken =
-          new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+        new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
       assertEquals(firstToken, secondToken);
     } finally {
       conn.close();
@@ -515,12 +513,12 @@ public class TestTokenAuthentication {
   }
 
   /**
-   * A copy of the BlockingRpcCallback class for use locally. Only difference is that it makes
-   * use of non-shaded protobufs; i.e. refers to com.google.protobuf.* rather than to
+   * A copy of the BlockingRpcCallback class for use locally. Only difference is that it makes use
+   * of non-shaded protobufs; i.e. refers to com.google.protobuf.* rather than to
    * org.apache.hbase.thirdparty.com.google.protobuf.*
    */
-  private static class NonShadedBlockingRpcCallback<R> implements
-      com.google.protobuf.RpcCallback<R> {
+  private static class NonShadedBlockingRpcCallback<R>
+    implements com.google.protobuf.RpcCallback<R> {
     private R result;
     private boolean resultSet = false;
 
@@ -540,7 +538,7 @@ public class TestTokenAuthentication {
 
     /**
      * Returns the parameter passed to {@link #run(Object)} or {@code null} if a null value was
-     * passed.  When used asynchronously, this method will block until the {@link #run(Object)}
+     * passed. When used asynchronously, this method will block until the {@link #run(Object)}
      * method has been called.
      * @return the response object or {@code null} if no response was passed
      */

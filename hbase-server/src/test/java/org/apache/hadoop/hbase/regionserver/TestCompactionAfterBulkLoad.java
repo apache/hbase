@@ -30,7 +30,6 @@ import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
@@ -62,7 +61,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
 
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
@@ -87,18 +86,18 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     when(regionServerServices.getConfiguration()).thenReturn(conf);
     when(regionServerServices.getCompactionRequestor()).thenReturn(compactionRequester);
     when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
-        .thenAnswer(new Answer() {
-          @Override
-          public Object answer(InvocationOnMock invocation) {
-            WALKeyImpl walKey = invocation.getArgument(1);
-            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-            if (mvcc != null) {
-              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-              walKey.setWriteEntry(we);
-            }
-            return 01L;
+      .thenAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock invocation) {
+          WALKeyImpl walKey = invocation.getArgument(1);
+          MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+          if (mvcc != null) {
+            MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+            walKey.setWriteEntry(we);
           }
-        });
+          return 01L;
+        }
+      });
 
     Mockito.doNothing().when(compactionRequester).requestCompaction(any(), any(), any(), anyInt(),
       any(), any());

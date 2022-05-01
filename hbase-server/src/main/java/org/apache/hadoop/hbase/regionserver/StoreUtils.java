@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -80,7 +78,7 @@ public class StoreUtils {
    */
   static Optional<HStoreFile> getLargestFile(Collection<HStoreFile> candidates) {
     return candidates.stream().filter(f -> f.getReader() != null)
-        .max((f1, f2) -> Long.compare(f1.getReader().length(), f2.getReader().length()));
+      .max((f1, f2) -> Long.compare(f1.getReader().length(), f2.getReader().length()));
   }
 
   /**
@@ -90,7 +88,7 @@ public class StoreUtils {
    */
   public static OptionalLong getMaxMemStoreTSInList(Collection<HStoreFile> sfs) {
     return sfs.stream().filter(sf -> !sf.isBulkLoadResult()).mapToLong(HStoreFile::getMaxMemStoreTS)
-        .max();
+      .max();
   }
 
   /**
@@ -102,12 +100,12 @@ public class StoreUtils {
 
   /**
    * Gets the approximate mid-point of the given file that is optimal for use in splitting it.
-   * @param file the store file
+   * @param file       the store file
    * @param comparator Comparator used to compare KVs.
    * @return The split point row, or null if splitting is not possible, or reader is null.
    */
   static Optional<byte[]> getFileSplitPoint(HStoreFile file, CellComparator comparator)
-      throws IOException {
+    throws IOException {
     StoreFileReader reader = file.getReader();
     if (reader == null) {
       LOG.warn("Storefile " + file + " Reader is null; cannot get split point");
@@ -124,8 +122,9 @@ public class StoreUtils {
     Cell firstKey = reader.getFirstKey().get();
     Cell lastKey = reader.getLastKey().get();
     // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
-    if (comparator.compareRows(midKey, firstKey) == 0 ||
-        comparator.compareRows(midKey, lastKey) == 0) {
+    if (
+      comparator.compareRows(midKey, firstKey) == 0 || comparator.compareRows(midKey, lastKey) == 0
+    ) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("cannot split {} because midkey is the same as first or last row", file);
       }
@@ -138,10 +137,11 @@ public class StoreUtils {
    * Gets the mid point of the largest file passed in as split point.
    */
   static Optional<byte[]> getSplitPoint(Collection<HStoreFile> storefiles,
-      CellComparator comparator) throws IOException {
+    CellComparator comparator) throws IOException {
     Optional<HStoreFile> largestFile = StoreUtils.getLargestFile(storefiles);
-    return largestFile.isPresent() ? StoreUtils.getFileSplitPoint(largestFile.get(), comparator)
-        : Optional.empty();
+    return largestFile.isPresent()
+      ? StoreUtils.getFileSplitPoint(largestFile.get(), comparator)
+      : Optional.empty();
   }
 
   /**
@@ -160,15 +160,14 @@ public class StoreUtils {
    * @return The bytesPerChecksum that is set in the configuration
    */
   public static int getBytesPerChecksum(Configuration conf) {
-    return conf.getInt(HConstants.BYTES_PER_CHECKSUM,
-        HFile.DEFAULT_BYTES_PER_CHECKSUM);
+    return conf.getInt(HConstants.BYTES_PER_CHECKSUM, HFile.DEFAULT_BYTES_PER_CHECKSUM);
   }
 
   public static Configuration createStoreConfiguration(Configuration conf, TableDescriptor td,
-      ColumnFamilyDescriptor cfd) {
+    ColumnFamilyDescriptor cfd) {
     // CompoundConfiguration will look for keys in reverse order of addition, so we'd
     // add global config first, then table and cf overrides, then cf metadata.
     return new CompoundConfiguration().add(conf).addBytesMap(td.getValues())
-        .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
+      .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
   }
 }

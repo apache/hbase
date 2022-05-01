@@ -1,16 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.balancer;
 
@@ -39,13 +42,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import static junit.framework.TestCase.assertTrue;
-
 @Category({ MasterTests.class, MediumTests.class })
 public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
   @Rule
   public TestName name = new TestName();
 
@@ -68,8 +69,8 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
   @Before
   public void before() throws IOException {
     // New rules file name per test.
-    this.rulesFilename = HTU.getDataTestDir(
-      this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME).toString();
+    this.rulesFilename =
+      HTU.getDataTestDir(this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME).toString();
     // Set the created rules filename into the configuration.
     HTU.getConfiguration().set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
@@ -128,8 +129,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends BalancerTe
     this.costFunction.loadRules();
     Assert.assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
 
-    createRulesFile(this.rulesFilename, Arrays.asList("srv[1-2] 10",
-      "bad_rules format", "a"));
+    createRulesFile(this.rulesFilename, Arrays.asList("srv[1-2] 10", "bad_rules format", "a"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
     Assert.assertEquals(1, this.costFunction.getNumberOfRulesLoaded());

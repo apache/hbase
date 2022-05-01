@@ -48,13 +48,13 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplica.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplica.class);
 
   @Test
   public void testReplicaCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction costFunction =
-        new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
+      new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
       costFunction.init(cluster);
@@ -68,7 +68,7 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
   public void testReplicaCostForReplicas() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction costFunction =
-        new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
+      new StochasticLoadBalancer.RegionReplicaHostCostFunction(conf);
 
     int[] servers = new int[] { 3, 3, 3, 3, 3 };
     TreeMap<ServerName, List<RegionInfo>> clusterState = mockClusterServers(servers);
@@ -82,7 +82,7 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
 
     // replicate the region from first server to the last server
     RegionInfo replica1 =
-        RegionReplicaUtil.getRegionInfoForReplica(clusterState.firstEntry().getValue().get(0), 1);
+      RegionReplicaUtil.getRegionInfoForReplica(clusterState.firstEntry().getValue().get(0), 1);
     clusterState.lastEntry().getValue().add(replica1);
 
     cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
@@ -164,9 +164,8 @@ public class TestStochasticLoadBalancerRegionReplica extends BalancerTestBase {
     map.put(s2, regionsOnS2);
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
-    assertFalse(
-      loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-        new Cluster(map, null, null, new ForTestRackManagerOne())));
+    assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
+      new Cluster(map, null, null, new ForTestRackManagerOne())));
   }
 
   @Test

@@ -7,14 +7,13 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.security.access;
 
@@ -28,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -52,6 +50,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -59,7 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 public class AccessChecker {
   private static final Logger LOG = LoggerFactory.getLogger(AccessChecker.class);
   private static final Logger AUDITLOG =
-      LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
+    LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
   private final AuthManager authManager;
 
   /** Group service to retrieve the user group information */
@@ -71,7 +70,6 @@ public class AccessChecker {
 
   /**
    * Constructor with existing configuration
-   *
    * @param conf Existing configuration to use
    */
   public AccessChecker(final Configuration conf) {
@@ -85,27 +83,26 @@ public class AccessChecker {
 
   /**
    * Authorizes that the current user has any of the given permissions to access the table.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type.
+   * @param user        Active user to which authorization checks should be applied
+   * @param request     Request type.
    * @param tableName   Table requested
    * @param permissions Actions being requested
-   * @throws IOException if obtaining the current user fails
+   * @throws IOException           if obtaining the current user fails
    * @throws AccessDeniedException if user has no authorization
    */
-  public void requireAccess(User user, String request, TableName tableName,
-      Action... permissions) throws IOException {
+  public void requireAccess(User user, String request, TableName tableName, Action... permissions)
+    throws IOException {
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.accessUserTable(user, tableName, permission)) {
-        result = AuthResult.allow(request, "Table permission granted",
-            user, permission, tableName, null, null);
+        result = AuthResult.allow(request, "Table permission granted", user, permission, tableName,
+          null, null);
         break;
       } else {
         // rest of the world
-        result = AuthResult.deny(request, "Insufficient permissions",
-            user, permission, tableName, null, null);
+        result = AuthResult.deny(request, "Insufficient permissions", user, permission, tableName,
+          null, null);
       }
     }
     logResult(result);
@@ -116,33 +113,30 @@ public class AccessChecker {
 
   /**
    * Authorizes that the current user has global privileges for the given action.
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
+   * @param user       Active user to which authorization checks should be applied
+   * @param request    Request type
    * @param filterUser User name to be filtered from permission as requested
-   * @param perm The action being requested
-   * @throws IOException if obtaining the current user fails
+   * @param perm       The action being requested
+   * @throws IOException           if obtaining the current user fails
    * @throws AccessDeniedException if authorization is denied
    */
   public void requirePermission(User user, String request, String filterUser, Action perm)
-      throws IOException {
+    throws IOException {
     requireGlobalPermission(user, request, perm, null, null, filterUser);
   }
 
   /**
-   * Checks that the user has the given global permission. The generated
-   * audit log message will contain context information for the operation
-   * being authorized, based on the given parameters.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
-   * @param perm      Action being requested
-   * @param tableName Affected table name.
-   * @param familyMap Affected column families.
+   * Checks that the user has the given global permission. The generated audit log message will
+   * contain context information for the operation being authorized, based on the given parameters.
+   * @param user       Active user to which authorization checks should be applied
+   * @param request    Request type
+   * @param perm       Action being requested
+   * @param tableName  Affected table name.
+   * @param familyMap  Affected column families.
    * @param filterUser User name to be filtered from permission as requested
    */
-  public void requireGlobalPermission(User user, String request,
-      Action perm, TableName tableName,
-      Map<byte[], ? extends Collection<byte[]>> familyMap, String filterUser) throws IOException {
+  public void requireGlobalPermission(User user, String request, Action perm, TableName tableName,
+    Map<byte[], ? extends Collection<byte[]>> familyMap, String filterUser) throws IOException {
     AuthResult result;
     if (authManager.authorizeUserGlobal(user, perm)) {
       result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
@@ -154,23 +148,21 @@ public class AccessChecker {
     logResult(result);
     if (!result.isAllowed()) {
       throw new AccessDeniedException(
-          "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
-              + "' (global, action=" + perm.toString() + ")");
+        "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
+          + "' (global, action=" + perm.toString() + ")");
     }
   }
 
   /**
-   * Checks that the user has the given global permission. The generated
-   * audit log message will contain context information for the operation
-   * being authorized, based on the given parameters.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
+   * Checks that the user has the given global permission. The generated audit log message will
+   * contain context information for the operation being authorized, based on the given parameters.
+   * @param user      Active user to which authorization checks should be applied
+   * @param request   Request type
    * @param perm      Action being requested
    * @param namespace The given namespace
    */
-  public void requireGlobalPermission(User user, String request, Action perm,
-      String namespace) throws IOException {
+  public void requireGlobalPermission(User user, String request, Action perm, String namespace)
+    throws IOException {
     AuthResult authResult;
     if (authManager.authorizeUserGlobal(user, perm)) {
       authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
@@ -181,27 +173,27 @@ public class AccessChecker {
       authResult.getParams().setNamespace(namespace);
       logResult(authResult);
       throw new AccessDeniedException(
-          "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
-              + "' (global, action=" + perm.toString() + ")");
+        "Insufficient permissions for user '" + (user != null ? user.getShortName() : "null")
+          + "' (global, action=" + perm.toString() + ")");
     }
   }
 
   /**
    * Checks that the user has the given global or namespace permission.
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
-   * @param namespace Name space as requested
-   * @param filterUser User name to be filtered from permission as requested
+   * @param user        Active user to which authorization checks should be applied
+   * @param request     Request type
+   * @param namespace   Name space as requested
+   * @param filterUser  User name to be filtered from permission as requested
    * @param permissions Actions being requested
    */
   public void requireNamespacePermission(User user, String request, String namespace,
-      String filterUser, Action... permissions) throws IOException {
+    String filterUser, Action... permissions) throws IOException {
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorizeUserNamespace(user, namespace, permission)) {
         result =
-            AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
+          AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         break;
       } else {
         // rest of the world
@@ -217,23 +209,22 @@ public class AccessChecker {
 
   /**
    * Checks that the user has the given global or namespace permission.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
-   * @param namespace  The given namespace
-   * @param tableName Table requested
-   * @param familyMap    Column family map requested
+   * @param user        Active user to which authorization checks should be applied
+   * @param request     Request type
+   * @param namespace   The given namespace
+   * @param tableName   Table requested
+   * @param familyMap   Column family map requested
    * @param permissions Actions being requested
    */
   public void requireNamespacePermission(User user, String request, String namespace,
-      TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap,
-      Action... permissions) throws IOException {
+    TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap, Action... permissions)
+    throws IOException {
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorizeUserNamespace(user, namespace, permission)) {
         result =
-            AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
+          AuthResult.allow(request, "Namespace permission granted", user, permission, namespace);
         result.getParams().setTableName(tableName).setFamilies(familyMap);
         break;
       } else {
@@ -249,32 +240,31 @@ public class AccessChecker {
   }
 
   /**
-   * Authorizes that the current user has any of the given permissions for the
-   * given table, column family and column qualifier.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
-   * @param tableName Table requested
-   * @param family    Column family requested
-   * @param qualifier Column qualifier requested
-   * @param filterUser User name to be filtered from permission as requested
+   * Authorizes that the current user has any of the given permissions for the given table, column
+   * family and column qualifier.
+   * @param user        Active user to which authorization checks should be applied
+   * @param request     Request type
+   * @param tableName   Table requested
+   * @param family      Column family requested
+   * @param qualifier   Column qualifier requested
+   * @param filterUser  User name to be filtered from permission as requested
    * @param permissions Actions being requested
-   * @throws IOException if obtaining the current user fails
+   * @throws IOException           if obtaining the current user fails
    * @throws AccessDeniedException if user has no authorization
    */
   public void requirePermission(User user, String request, TableName tableName, byte[] family,
-      byte[] qualifier, String filterUser, Action... permissions) throws IOException {
+    byte[] qualifier, String filterUser, Action... permissions) throws IOException {
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorizeUserTable(user, tableName, family, qualifier, permission)) {
-        result = AuthResult.allow(request, "Table permission granted",
-            user, permission, tableName, family, qualifier);
+        result = AuthResult.allow(request, "Table permission granted", user, permission, tableName,
+          family, qualifier);
         break;
       } else {
         // rest of the world
-        result = AuthResult.deny(request, "Insufficient permissions",
-          user, permission, tableName, family, qualifier);
+        result = AuthResult.deny(request, "Insufficient permissions", user, permission, tableName,
+          family, qualifier);
       }
     }
     result.getParams().addExtraParam("filterUser", filterUser);
@@ -285,32 +275,30 @@ public class AccessChecker {
   }
 
   /**
-   * Authorizes that the current user has any of the given permissions for the
-   * given table, column family and column qualifier.
-   *
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
+   * Authorizes that the current user has any of the given permissions for the given table, column
+   * family and column qualifier.
+   * @param user      Active user to which authorization checks should be applied
+   * @param request   Request type
    * @param tableName Table requested
    * @param family    Column family param
    * @param qualifier Column qualifier param
    * @throws IOException           if obtaining the current user fails
    * @throws AccessDeniedException if user has no authorization
    */
-  public void requireTablePermission(User user, String request,
-      TableName tableName,byte[] family, byte[] qualifier,
-      Action... permissions) throws IOException {
+  public void requireTablePermission(User user, String request, TableName tableName, byte[] family,
+    byte[] qualifier, Action... permissions) throws IOException {
     AuthResult result = null;
 
     for (Action permission : permissions) {
       if (authManager.authorizeUserTable(user, tableName, permission)) {
-        result = AuthResult.allow(request, "Table permission granted",
-            user, permission, tableName, null, null);
+        result = AuthResult.allow(request, "Table permission granted", user, permission, tableName,
+          null, null);
         result.getParams().setFamily(family).setQualifier(qualifier);
         break;
       } else {
         // rest of the world
-        result = AuthResult.deny(request, "Insufficient permissions",
-                user, permission, tableName, family, qualifier);
+        result = AuthResult.deny(request, "Insufficient permissions", user, permission, tableName,
+          family, qualifier);
         result.getParams().setFamily(family).setQualifier(qualifier);
       }
     }
@@ -322,13 +310,13 @@ public class AccessChecker {
 
   /**
    * Check if caller is granting or revoking superusers's or supergroups's permissions.
-   * @param request request name
-   * @param caller caller
+   * @param request         request name
+   * @param caller          caller
    * @param userToBeChecked target user or group
    * @throws IOException AccessDeniedException if target user is superuser
    */
   public void performOnSuperuser(String request, User caller, String userToBeChecked)
-      throws IOException {
+    throws IOException {
     List<String> userGroups = new ArrayList<>();
     userGroups.add(userToBeChecked);
     if (!AuthUtil.isGroupPrincipal(userToBeChecked)) {
@@ -338,28 +326,23 @@ public class AccessChecker {
     }
     for (String name : userGroups) {
       if (Superusers.isSuperUser(name)) {
-        AuthResult result = AuthResult.deny(
-          request,
-          "Granting or revoking superusers's or supergroups's permissions is not allowed",
-          caller,
-          Action.ADMIN,
-          NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+        AuthResult result = AuthResult.deny(request,
+          "Granting or revoking superusers's or supergroups's permissions is not allowed", caller,
+          Action.ADMIN, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
         logResult(result);
         throw new AccessDeniedException(result.getReason());
       }
     }
   }
 
-  public void checkLockPermissions(User user, String namespace,
-      TableName tableName, RegionInfo[] regionInfos, String reason)
-      throws IOException {
+  public void checkLockPermissions(User user, String namespace, TableName tableName,
+    RegionInfo[] regionInfos, String reason) throws IOException {
     if (namespace != null && !namespace.isEmpty()) {
       requireNamespacePermission(user, reason, namespace, null, Action.ADMIN, Action.CREATE);
     } else if (tableName != null || (regionInfos != null && regionInfos.length > 0)) {
       // So, either a table or regions op. If latter, check perms ons table.
-      TableName tn = tableName != null? tableName: regionInfos[0].getTable();
-      requireTablePermission(user, reason, tn, null, null,
-          Action.ADMIN, Action.CREATE);
+      TableName tn = tableName != null ? tableName : regionInfos[0].getTable();
+      requireTablePermission(user, reason, tn, null, null, Action.ADMIN, Action.CREATE);
     } else {
       throw new DoNotRetryIOException("Invalid lock level when requesting permissions.");
     }
@@ -370,13 +353,12 @@ public class AccessChecker {
       User user = result.getUser();
       UserGroupInformation ugi = user != null ? user.getUGI() : null;
       AUDITLOG.trace(
-        "Access {} for user {}; reason: {}; remote address: {}; request: {}; context: {};" +
-          "auth method: {}",
+        "Access {} for user {}; reason: {}; remote address: {}; request: {}; context: {};"
+          + "auth method: {}",
         (result.isAllowed() ? "allowed" : "denied"),
-        (user != null ? user.getShortName() : "UNKNOWN"),
-        result.getReason(), RpcServer.getRemoteAddress().map(InetAddress::toString).orElse(""),
-        result.getRequest(), result.toContextString(),
-        ugi != null ? ugi.getAuthenticationMethod() : "UNKNOWN");
+        (user != null ? user.getShortName() : "UNKNOWN"), result.getReason(),
+        RpcServer.getRemoteAddress().map(InetAddress::toString).orElse(""), result.getRequest(),
+        result.toContextString(), ugi != null ? ugi.getAuthenticationMethod() : "UNKNOWN");
     }
   }
 
@@ -385,7 +367,7 @@ public class AccessChecker {
    * any privilege but for others caller must have ADMIN privilege.
    */
   public User validateCallerWithFilterUser(User caller, TablePermission tPerm, String inputUserName)
-      throws IOException {
+    throws IOException {
     User filterUser = null;
     if (!caller.getShortName().equals(inputUserName)) {
       // User should have admin privilege if checking permission for other users
@@ -425,7 +407,7 @@ public class AccessChecker {
           this.shortName = new HadoopKerberosName(this.name).getShortName();
         } catch (IOException ioe) {
           throw new IllegalArgumentException(
-              "Illegal principal name " + this.name + ": " + ioe.toString(), ioe);
+            "Illegal principal name " + this.name + ": " + ioe.toString(), ioe);
         }
       }
       return shortName;
@@ -444,14 +426,14 @@ public class AccessChecker {
     @Override
     public <T> T runAs(PrivilegedAction<T> action) {
       throw new UnsupportedOperationException(
-          "Method not supported, this class has limited implementation");
+        "Method not supported, this class has limited implementation");
     }
 
     @Override
     public <T> T runAs(PrivilegedExceptionAction<T> action)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       throw new UnsupportedOperationException(
-          "Method not supported, this class has limited implementation");
+        "Method not supported, this class has limited implementation");
     }
 
     @Override
@@ -476,8 +458,7 @@ public class AccessChecker {
 
   /**
    * Retrieve the groups of the given user.
-   * @param user User name
-   * @return Groups
+   * @param user User name n
    */
   public static List<String> getUserGroups(String user) {
     try {
@@ -490,8 +471,8 @@ public class AccessChecker {
 
   /**
    * Authorizes that if the current user has the given permissions.
-   * @param user Active user to which authorization checks should be applied
-   * @param request Request type
+   * @param user       Active user to which authorization checks should be applied
+   * @param request    Request type
    * @param permission Actions being requested
    * @return True if the user has the specific permission
    */
@@ -512,10 +493,10 @@ public class AccessChecker {
       for (Action action : nsPerm.getActions()) {
         if (getAuthManager().authorizeUserNamespace(user, nsPerm.getNamespace(), action)) {
           authResult =
-              AuthResult.allow(request, "Namespace action allowed", user, action, null, null);
+            AuthResult.allow(request, "Namespace action allowed", user, action, null, null);
         } else {
           authResult =
-              AuthResult.deny(request, "Namespace action denied", user, action, null, null);
+            AuthResult.deny(request, "Namespace action denied", user, action, null, null);
         }
         AccessChecker.logResult(authResult);
         if (!authResult.isAllowed()) {
@@ -540,7 +521,7 @@ public class AccessChecker {
   }
 
   private AuthResult permissionGranted(String request, User user, Action permRequest,
-      TableName tableName, byte[] family, byte[] qualifier) {
+    TableName tableName, byte[] family, byte[] qualifier) {
     Map<byte[], ? extends Collection<byte[]>> map = makeFamilyMap(family, qualifier);
     return permissionGranted(request, user, permRequest, tableName, map);
   }
@@ -552,15 +533,15 @@ public class AccessChecker {
    * Note: Ordering of the authorization checks has been carefully optimized to short-circuit the
    * most common requests and minimize the amount of processing required.
    * </p>
-   * @param request User request
-   * @param user User name
+   * @param request     User request
+   * @param user        User name
    * @param permRequest the action being requested
-   * @param tableName Table name
-   * @param families the map of column families to qualifiers present in the request
+   * @param tableName   Table name
+   * @param families    the map of column families to qualifiers present in the request
    * @return an authorization result
    */
   public AuthResult permissionGranted(String request, User user, Action permRequest,
-      TableName tableName, Map<byte[], ? extends Collection<?>> families) {
+    TableName tableName, Map<byte[], ? extends Collection<?>> families) {
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
     if (TableName.META_TABLE_NAME.equals(tableName)) {
@@ -596,8 +577,10 @@ public class AccessChecker {
             // for each qualifier of the family
             Set<byte[]> familySet = (Set<byte[]>) family.getValue();
             for (byte[] qualifier : familySet) {
-              if (!getAuthManager().authorizeUserTable(user, tableName, family.getKey(), qualifier,
-                permRequest)) {
+              if (
+                !getAuthManager().authorizeUserTable(user, tableName, family.getKey(), qualifier,
+                  permRequest)
+              ) {
                 return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
                   tableName, makeFamilyMap(family.getKey(), qualifier));
               }
@@ -605,8 +588,10 @@ public class AccessChecker {
           } else if (family.getValue() instanceof List) { // List<Cell>
             List<Cell> cellList = (List<Cell>) family.getValue();
             for (Cell cell : cellList) {
-              if (!getAuthManager().authorizeUserTable(user, tableName, family.getKey(),
-                CellUtil.cloneQualifier(cell), permRequest)) {
+              if (
+                !getAuthManager().authorizeUserTable(user, tableName, family.getKey(),
+                  CellUtil.cloneQualifier(cell), permRequest)
+              ) {
                 return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
                   tableName, makeFamilyMap(family.getKey(), CellUtil.cloneQualifier(cell)));
               }

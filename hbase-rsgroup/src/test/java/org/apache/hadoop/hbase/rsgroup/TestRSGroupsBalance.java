@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -193,8 +193,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-        rsGroupAdminEndpoint.getGroupAdminServer()
-            .getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
+      rsGroupAdminEndpoint.getGroupAdminServer()
+        .getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
   }

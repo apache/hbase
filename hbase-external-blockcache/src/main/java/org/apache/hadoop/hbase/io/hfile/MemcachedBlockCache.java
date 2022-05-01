@@ -1,22 +1,20 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
@@ -27,13 +25,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
-
 import net.spy.memcached.CachedData;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.transcoders.Transcoder;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -47,10 +43,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to store blocks into memcached.
- * This should only be used on a cluster of Memcached daemons that are tuned well and have a
- * good network connection to the HBase regionservers. Any other use will likely slow down HBase
- * greatly.
+ * Class to store blocks into memcached. This should only be used on a cluster of Memcached daemons
+ * that are tuned well and have a good network connection to the HBase regionservers. Any other use
+ * will likely slow down HBase greatly.
  */
 @InterfaceAudience.Private
 public class MemcachedBlockCache implements BlockCache {
@@ -83,13 +78,25 @@ public class MemcachedBlockCache implements BlockCache {
     long queueTimeout = c.getLong(MEMCACHED_TIMEOUT_KEY, opTimeout + MEMCACHED_DEFAULT_TIMEOUT);
     boolean optimize = c.getBoolean(MEMCACHED_OPTIMIZE_KEY, MEMCACHED_OPTIMIZE_DEFAULT);
 
-    ConnectionFactoryBuilder builder = new ConnectionFactoryBuilder()
-        .setOpTimeout(opTimeout)
-        .setOpQueueMaxBlockTime(queueTimeout) // Cap the max time before anything times out
-        .setFailureMode(FailureMode.Redistribute)
-        .setShouldOptimize(optimize)
-        .setDaemon(true)                      // Don't keep threads around past the end of days.
-        .setUseNagleAlgorithm(false)          // Ain't nobody got time for that
+    ConnectionFactoryBuilder builder =
+      new ConnectionFactoryBuilder().setOpTimeout(opTimeout).setOpQueueMaxBlockTime(queueTimeout) // Cap
+                                                                                                  // the
+                                                                                                  // max
+                                                                                                  // time
+                                                                                                  // before
+                                                                                                  // anything
+                                                                                                  // times
+                                                                                                  // out
+        .setFailureMode(FailureMode.Redistribute).setShouldOptimize(optimize).setDaemon(true) // Don't
+                                                                                              // keep
+                                                                                              // threads
+                                                                                              // around
+                                                                                              // past
+                                                                                              // the
+                                                                                              // end
+                                                                                              // of
+                                                                                              // days.
+        .setUseNagleAlgorithm(false) // Ain't nobody got time for that
         .setReadBufferSize(HConstants.DEFAULT_BLOCKSIZE * 4 * 1024); // Much larger just in case
 
     // Assume only the localhost is serving memecached.
@@ -98,10 +105,10 @@ public class MemcachedBlockCache implements BlockCache {
     // If this config is a pool of memecached servers they will all be used according to the
     // default hashing scheme defined by the memcache client. Spy Memecache client in this
     // case.
-    String serverListString = c.get(MEMCACHED_CONFIG_KEY,"localhost:11211");
+    String serverListString = c.get(MEMCACHED_CONFIG_KEY, "localhost:11211");
     String[] servers = serverListString.split(",");
     List<InetSocketAddress> serverAddresses = new ArrayList<>(servers.length);
-    for (String s:servers) {
+    for (String s : servers) {
       serverAddresses.add(Addressing.createInetSocketAddressFromHostAndPortStr(s));
     }
 
@@ -119,15 +126,15 @@ public class MemcachedBlockCache implements BlockCache {
       client.add(cacheKey.toString(), MAX_SIZE, (HFileBlock) buf, tc);
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("MemcachedBlockCache can not cache Cacheable's of type "
-            + buf.getClass().toString());
+        LOG.debug(
+          "MemcachedBlockCache can not cache Cacheable's of type " + buf.getClass().toString());
       }
     }
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
-                            boolean repeat, boolean updateCacheMetrics) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+    boolean updateCacheMetrics) {
     // Assume that nothing is the block cache
     HFileBlock result = null;
 
@@ -137,9 +144,9 @@ public class MemcachedBlockCache implements BlockCache {
       // Catch a pretty broad set of exceptions to limit any changes in the memecache client
       // and how it handles failures from leaking into the read path.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Exception pulling from memcached [ "
-            + cacheKey.toString()
-            + " ]. Treating as a miss.", e);
+        LOG.debug(
+          "Exception pulling from memcached [ " + cacheKey.toString() + " ]. Treating as a miss.",
+          e);
       }
       result = null;
     } finally {

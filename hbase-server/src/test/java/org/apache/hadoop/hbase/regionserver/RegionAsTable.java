@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,11 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 /**
  * An implementation of {@link Table} that sits directly on a Region; it decorates the passed in
  * Region instance with the Table API. Some API is not implemented yet (throws
- * {@link UnsupportedOperationException}) mostly because no need as yet or it necessitates copying
- * a load of code local from RegionServer.
- * 
- * <p>Use as an instance of a {@link Table} in-the-small -- no networking or servers
- * necessary -- or to write a test that can run directly against the datastore and then
- * over the network.
+ * {@link UnsupportedOperationException}) mostly because no need as yet or it necessitates copying a
+ * load of code local from RegionServer.
+ * <p>
+ * Use as an instance of a {@link Table} in-the-small -- no networking or servers necessary -- or to
+ * write a test that can run directly against the datastore and then over the network.
  */
 public class RegionAsTable implements Table {
   private final Region region;
@@ -102,9 +101,9 @@ public class RegionAsTable implements Table {
 
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
-    boolean [] results = new boolean[gets.size()];
+    boolean[] results = new boolean[gets.size()];
     int index = 0;
-    for (Get get: gets) {
+    for (Get get : gets) {
       results[index++] = exists(get);
     }
     return results;
@@ -112,14 +111,13 @@ public class RegionAsTable implements Table {
 
   @Override
   public void batch(List<? extends Row> actions, Object[] results)
-  throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public <R> void batchCallback(List<? extends Row> actions, Object[] results,
-      Callback<R> callback)
-  throws IOException, InterruptedException {
+  public <R> void batchCallback(List<? extends Row> actions, Object[] results, Callback<R> callback)
+    throws IOException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 
@@ -130,16 +128,16 @@ public class RegionAsTable implements Table {
 
   @Override
   public Result[] get(List<Get> gets) throws IOException {
-    Result [] results = new Result[gets.size()];
+    Result[] results = new Result[gets.size()];
     int index = 0;
-    for (Get get: gets) {
+    for (Get get : gets) {
       results[index++] = get(get);
     }
     return results;
   }
 
   static class RegionScannerToResultScannerAdaptor implements ResultScanner {
-    private static final Result [] EMPTY_RESULT_ARRAY = new Result[0];
+    private static final Result[] EMPTY_RESULT_ARRAY = new Result[0];
     private final RegionScanner regionScanner;
 
     RegionScannerToResultScannerAdaptor(final RegionScanner regionScanner) {
@@ -154,7 +152,7 @@ public class RegionAsTable implements Table {
     @Override
     public Result next() throws IOException {
       List<Cell> cells = new ArrayList<>();
-      return regionScanner.next(cells)? Result.create(cells): null;
+      return regionScanner.next(cells) ? Result.create(cells) : null;
     }
 
     @Override
@@ -210,29 +208,28 @@ public class RegionAsTable implements Table {
 
   @Override
   public void put(List<Put> puts) throws IOException {
-    for (Put put: puts) put(put);
+    for (Put put : puts)
+      put(put);
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put)
-  throws IOException {
+    throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @Deprecated
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
-      byte[] value, Put put)
-  throws IOException {
+    byte[] value, Put put) throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @Deprecated
-  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-                             CompareOperator compareOp, byte[] value, Put put)
-  throws IOException {
+  public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, CompareOperator compareOp,
+    byte[] value, Put put) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -243,29 +240,27 @@ public class RegionAsTable implements Table {
 
   @Override
   public void delete(List<Delete> deletes) throws IOException {
-    for(Delete delete: deletes) delete(delete);
+    for (Delete delete : deletes)
+      delete(delete);
   }
 
   @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value,
-      Delete delete)
-  throws IOException {
+    Delete delete) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  @Deprecated
+  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+    byte[] value, Delete delete) throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @Deprecated
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-      CompareOp compareOp, byte[] value, Delete delete)
-  throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  @Deprecated
-  public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-                                CompareOperator compareOp, byte[] value, Delete delete)
-  throws IOException {
+    CompareOperator compareOp, byte[] value, Delete delete) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -296,14 +291,13 @@ public class RegionAsTable implements Table {
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount)
-  throws IOException {
+    throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount,
-      Durability durability)
-  throws IOException {
+    Durability durability) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -321,45 +315,41 @@ public class RegionAsTable implements Table {
 
   @Override
   public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service, byte[] startKey,
-      byte[] endKey, Call<T, R> callable)
-  throws ServiceException, Throwable {
+    byte[] endKey, Call<T, R> callable) throws ServiceException, Throwable {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
-      byte[] endKey, Call<T, R> callable, Callback<R> callback)
-  throws ServiceException, Throwable {
+    byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public <R extends Message> Map<byte[], R> batchCoprocessorService(MethodDescriptor
-      methodDescriptor, Message request,
-      byte[] startKey, byte[] endKey, R responsePrototype)
-  throws ServiceException, Throwable {
+  public <R extends Message> Map<byte[], R> batchCoprocessorService(
+    MethodDescriptor methodDescriptor, Message request, byte[] startKey, byte[] endKey,
+    R responsePrototype) throws ServiceException, Throwable {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
-      Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
-  throws ServiceException, Throwable {
+    Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
+    throws ServiceException, Throwable {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @Deprecated
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
-      byte[] value, RowMutations mutation)
-  throws IOException {
+    byte[] value, RowMutations mutation) throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
   @Deprecated
   public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-      CompareOperator compareOp, byte[] value, RowMutations mutation) throws IOException {
+    CompareOperator compareOp, byte[] value, RowMutations mutation) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -388,7 +378,9 @@ public class RegionAsTable implements Table {
 
   @Override
   @Deprecated
-  public void setWriteRpcTimeout(int writeRpcTimeout) {throw new UnsupportedOperationException(); }
+  public void setWriteRpcTimeout(int writeRpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public long getOperationTimeout(TimeUnit unit) {
@@ -397,7 +389,9 @@ public class RegionAsTable implements Table {
 
   @Override
   @Deprecated
-  public void setReadRpcTimeout(int readRpcTimeout) {throw new UnsupportedOperationException(); }
+  public void setReadRpcTimeout(int readRpcTimeout) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public long getWriteRpcTimeout(TimeUnit unit) {

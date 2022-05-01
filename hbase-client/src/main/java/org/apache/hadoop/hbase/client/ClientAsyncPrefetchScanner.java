@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Queue;
@@ -36,14 +37,13 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ClientAsyncPrefetchScanner implements async scanner behaviour.
- * Specifically, the cache used by this scanner is a concurrent queue which allows both
- * the producer (hbase client) and consumer (application) to access the queue in parallel.
- * The number of rows returned in a prefetch is defined by the caching factor and the result size
- * factor.
- * This class allocates a buffer cache, whose size is a function of both factors.
- * The prefetch is invoked when the cache is half­filled, instead of waiting for it to be empty.
- * This is defined in the method {@link ClientAsyncPrefetchScanner#prefetchCondition()}.
+ * ClientAsyncPrefetchScanner implements async scanner behaviour. Specifically, the cache used by
+ * this scanner is a concurrent queue which allows both the producer (hbase client) and consumer
+ * (application) to access the queue in parallel. The number of rows returned in a prefetch is
+ * defined by the caching factor and the result size factor. This class allocates a buffer cache,
+ * whose size is a function of both factors. The prefetch is invoked when the cache is half­filled,
+ * instead of waiting for it to be empty. This is defined in the method
+ * {@link ClientAsyncPrefetchScanner#prefetchCondition()}.
  */
 @InterfaceAudience.Private
 public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
@@ -60,11 +60,11 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   private final Condition notFull = lock.newCondition();
 
   public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
-      ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
-      RpcControllerFactory rpcControllerFactory, ExecutorService pool,
-      int replicaCallTimeoutMicroSecondScan) throws IOException {
+    ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
+    RpcControllerFactory rpcControllerFactory, ExecutorService pool,
+    int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-        replicaCallTimeoutMicroSecondScan);
+      replicaCallTimeoutMicroSecondScan);
     exceptionsQueue = new ConcurrentLinkedQueue<>();
     Threads.setDaemonThreadRunning(new Thread(new PrefetchRunnable()), name + ".asyncPrefetcher");
   }
@@ -132,8 +132,8 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   }
 
   private void handleException() throws IOException {
-    //The prefetch task running in the background puts any exception it
-    //catches into this exception queue.
+    // The prefetch task running in the background puts any exception it
+    // catches into this exception queue.
     // Rethrow the exception so the application can handle it.
     while (!exceptionsQueue.isEmpty()) {
       Exception first = exceptionsQueue.peek();

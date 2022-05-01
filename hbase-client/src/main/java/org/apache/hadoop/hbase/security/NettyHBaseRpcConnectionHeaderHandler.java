@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,8 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
@@ -24,9 +27,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 /**
@@ -43,7 +44,7 @@ public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHa
   private final ByteBuf connectionHeaderWithLength;
 
   public NettyHBaseRpcConnectionHeaderHandler(Promise<Boolean> saslPromise, Configuration conf,
-                                              ByteBuf connectionHeaderWithLength) {
+    ByteBuf connectionHeaderWithLength) {
     this.saslPromise = saslPromise;
     this.conf = conf;
     this.connectionHeaderWithLength = connectionHeaderWithLength;
@@ -57,12 +58,12 @@ public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHa
     msg.readBytes(buff);
 
     RPCProtos.ConnectionHeaderResponse connectionHeaderResponse =
-        RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
+      RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
 
     // Get the CryptoCipherMeta, update the HBaseSaslRpcClient for Crypto Cipher
     if (connectionHeaderResponse.hasCryptoCipherMeta()) {
-      CryptoAES cryptoAES = EncryptionUtil.createCryptoAES(
-          connectionHeaderResponse.getCryptoCipherMeta(), conf);
+      CryptoAES cryptoAES =
+        EncryptionUtil.createCryptoAES(connectionHeaderResponse.getCryptoCipherMeta(), conf);
       // replace the Sasl handler with Crypto AES handler
       setupCryptoAESHandler(ctx.pipeline(), cryptoAES);
     }

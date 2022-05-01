@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
   /**
@@ -21,8 +21,8 @@
   -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.4.13-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
@@ -36,15 +36,15 @@
     <maven.test.skip>true</maven.test.skip>
   </properties>
   <!-- hack until we break things out into a project pom and parent pom -->
-  <dependencies />
+  <dependencies/>
   <build>
     <plugins>
       <plugin>
-          <!--Make it so assembly:single does nothing in here-->
-          <artifactId>maven-assembly-plugin</artifactId>
-          <configuration>
-              <skipAssembly>true</skipAssembly>
-          </configuration>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

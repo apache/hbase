@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -56,7 +55,7 @@ public class TestMemStoreSegmentsIterator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
+    HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
 
   protected static String TABLE = "test_mscsi";
   protected static String FAMILY = "f";
@@ -91,7 +90,7 @@ public class TestMemStoreSegmentsIterator {
   public void testMemStoreCompactorSegmentsIteratorNext() throws IOException {
     List<ImmutableSegment> segments = Arrays.asList(createTestImmutableSegment());
     MemStoreCompactorSegmentsIterator iterator = new MemStoreCompactorSegmentsIterator(segments,
-        this.comparator, this.compactionKVMax, this.store);
+      this.comparator, this.compactionKVMax, this.store);
     verifyNext(iterator);
     closeTestSegments(segments);
   }
@@ -100,7 +99,7 @@ public class TestMemStoreSegmentsIterator {
   public void testMemStoreMergerSegmentsIteratorNext() throws IOException {
     List<ImmutableSegment> segments = Arrays.asList(createTestImmutableSegment());
     MemStoreMergerSegmentsIterator iterator =
-        new MemStoreMergerSegmentsIterator(segments, this.comparator, this.compactionKVMax);
+      new MemStoreMergerSegmentsIterator(segments, this.comparator, this.compactionKVMax);
     verifyNext(iterator);
     closeTestSegments(segments);
   }

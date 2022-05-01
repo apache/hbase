@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
 
   /**
    * Whether the cache contains the block with specified cacheKey
-   *
    * @param cacheKey cache key for the block
    * @return true if it contains the block
    */
@@ -37,7 +36,6 @@ public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
   /**
    * Specifies the secondary cache. An entry that is evicted from this cache due to a size
    * constraint will be inserted into the victim cache.
-   *
    * @param victimCache the second level cache
    * @throws IllegalArgumentException if the victim cache had already been set
    */

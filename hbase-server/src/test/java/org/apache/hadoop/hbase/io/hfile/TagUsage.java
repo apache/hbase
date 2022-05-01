@@ -1,5 +1,4 @@
- /*
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,14 +20,14 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used in testcases only.  
+ * Used in testcases only.
  */
 @InterfaceAudience.Private
 public enum TagUsage {
   // No tags would be added
-  NO_TAG, 
-  // KVs with tags 
-  ONLY_TAG, 
+  NO_TAG,
+  // KVs with tags
+  ONLY_TAG,
   // kvs with and without tags
   PARTIAL_TAG;
 

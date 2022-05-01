@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -84,7 +84,7 @@ public class TestAsyncRegionLocator {
 
     @Override
     public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan)
-        throws IOException {
+      throws IOException {
       if (SLEEP_MS > 0) {
         Threads.sleepWithoutInterrupt(SLEEP_MS);
       }
@@ -100,7 +100,7 @@ public class TestAsyncRegionLocator {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ConnectionRegistry registry =
-        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), User.getCurrent());
     LOCATOR = CONN.getLocator();

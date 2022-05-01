@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.nio.ByteBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -39,7 +36,7 @@ public final class TagBuilderFactory {
  */
 class TagBuilderImpl implements TagBuilder {
   // This assumes that we never create tag with value less than 0.
-  private byte tagType = (byte)-1;
+  private byte tagType = (byte) -1;
   private byte[] tagBytes = null;
   public static final String TAG_TYPE_NOT_SET_EXCEPTION = "Need to set type of the tag.";
   public static final String TAG_VALUE_NULL_EXCEPTION = "TagBytes can't be null";

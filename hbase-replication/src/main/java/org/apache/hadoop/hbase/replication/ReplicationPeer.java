@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
@@ -99,7 +98,7 @@ public interface ReplicationPeer {
 
   /**
    * @deprecated since 2.1.0 and will be removed in 4.0.0. Use
-   *   {@link #registerPeerConfigListener(ReplicationPeerConfigListener)} instead.
+   *             {@link #registerPeerConfigListener(ReplicationPeerConfigListener)} instead.
    * @see #registerPeerConfigListener(ReplicationPeerConfigListener)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-10573">HBASE-19573</a>
    */

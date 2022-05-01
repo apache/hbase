@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -74,15 +73,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 
 public class TestThriftConnection {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestThriftConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftConnection.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThriftConnection.class);
+    HBaseClassTestRule.forClass(TestThriftConnection.class);
 
   private static final byte[] FAMILYA = Bytes.toBytes("fa");
   private static final byte[] FAMILYB = Bytes.toBytes("fb");
@@ -102,7 +100,6 @@ public class TestThriftConnection {
   private static final long ONE_HOUR = 60 * 60 * 1000;
   private static final long TS_2 = System.currentTimeMillis();
   private static final long TS_1 = TS_2 - ONE_HOUR;
-
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -126,7 +123,7 @@ public class TestThriftConnection {
     }
     ThriftServer server = new ThriftServer(thriftServerConf);
     Thread thriftServerThread = new Thread(() -> {
-      try{
+      try {
         server.run();
       } catch (Exception t) {
         LOG.error("Thrift Server failed", t);
@@ -144,11 +141,10 @@ public class TestThriftConnection {
 
   private static Connection createConnection(int port, boolean useHttp) throws IOException {
     Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
-        ThriftConnection.class.getName());
+    conf.set(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL, ThriftConnection.class.getName());
     if (useHttp) {
       conf.set(Constants.HBASE_THRIFT_CLIENT_BUIDLER_CLASS,
-          ThriftConnection.HTTPThriftClientBuilder.class.getName());
+        ThriftConnection.HTTPThriftClientBuilder.class.getName());
     }
     String host = HConstants.LOCALHOST;
     if (useHttp) {
@@ -159,11 +155,10 @@ public class TestThriftConnection {
     return ConnectionFactory.createConnection(conf);
   }
 
-
   @BeforeClass
   public static void setUp() throws Exception {
     // Do not start info server
-    TEST_UTIL.getConfiguration().setInt(THRIFT_INFO_SERVER_PORT , -1);
+    TEST_UTIL.getConfiguration().setInt(THRIFT_INFO_SERVER_PORT, -1);
     TEST_UTIL.startMiniCluster();
     thriftPort = HBaseTestingUtility.randomFreePort();
     httpPort = HBaseTestingUtility.randomFreePort();
@@ -200,7 +195,7 @@ public class TestThriftConnection {
   public void testThrfitAdmin() throws Exception {
     testThriftAdmin(thriftConnection, "testThrfitAdminNamesapce", "testThrfitAdminTable");
     testThriftAdmin(thriftHttpConnection, "testThrfitHttpAdminNamesapce",
-        "testThrfitHttpAdminTable");
+      "testThrfitHttpAdminTable");
   }
 
   @Test
@@ -212,7 +207,7 @@ public class TestThriftConnection {
 
   public void testGet(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Get get = new Get(ROW_1);
       Result result = table.get(get);
       byte[] value1 = result.getValue(FAMILYA, QUALIFIER_1);
@@ -301,7 +296,7 @@ public class TestThriftConnection {
       get.setMaxVersions(2);
       result = table.get(get);
       int count = 0;
-      for (Cell kv: result.listCells()) {
+      for (Cell kv : result.listCells()) {
         if (CellUtil.matchingFamily(kv, FAMILYA) && TS_1 == kv.getTimestamp()) {
           assertTrue(CellUtil.matchingValue(kv, VALUE_1)); // @TS_1
           count++;
@@ -317,14 +312,14 @@ public class TestThriftConnection {
   }
 
   @Test
-  public void testHBASE22011()throws Exception{
+  public void testHBASE22011() throws Exception {
     testHBASE22011(thriftConnection, "testHBASE22011Table");
     testHBASE22011(thriftHttpConnection, "testHBASE22011HttpTable");
   }
 
   public void testHBASE22011(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Get get = new Get(ROW_2);
       Result result = table.get(get);
       assertEquals(2, result.listCells().size());
@@ -344,7 +339,7 @@ public class TestThriftConnection {
 
   public void testMultiGet(Connection connection, String tableName) throws Exception {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       ArrayList<Get> gets = new ArrayList<>(2);
       gets.add(new Get(ROW_1));
       gets.add(new Get(ROW_2));
@@ -354,7 +349,7 @@ public class TestThriftConnection {
       assertEquals(1, results[0].size());
       assertEquals(2, results[1].size());
 
-      //Test Versions
+      // Test Versions
       gets = new ArrayList<>(2);
       Get g = new Get(ROW_1);
       g.setMaxVersions(3);
@@ -394,7 +389,7 @@ public class TestThriftConnection {
 
   public void testPut(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Put put = new Put(ROW_3);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
       table.put(put);
@@ -445,7 +440,7 @@ public class TestThriftConnection {
 
   public void testDelete(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Put put = new Put(ROW_3);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
       put.addColumn(FAMILYB, QUALIFIER_2, VALUE_2);
@@ -535,7 +530,7 @@ public class TestThriftConnection {
 
   public void testScanner(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       List<Put> puts = new ArrayList<>(4);
       Put put = new Put(ROW_1);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
@@ -583,7 +578,7 @@ public class TestThriftConnection {
 
       scanner.close();
 
-      scanner = table.getScanner(FAMILYA,QUALIFIER_1);
+      scanner = table.getScanner(FAMILYA, QUALIFIER_1);
       results = scanner.next(4);
       assertNotNull(results);
       assertEquals(4, results.length);
@@ -602,10 +597,9 @@ public class TestThriftConnection {
     testCheckAndDelete(thriftHttpConnection, "testCheckAndDeleteHttpTable");
   }
 
-
   public void testCheckAndDelete(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Get get = new Get(ROW_1);
       Result result = table.get(get);
       byte[] value1 = result.getValue(FAMILYA, QUALIFIER_1);
@@ -617,18 +611,18 @@ public class TestThriftConnection {
       assertEquals(1, table.existsAll(Collections.singletonList(get)).length);
       Delete delete = new Delete(ROW_1);
 
-      table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1)
-          .ifEquals(VALUE_1).thenDelete(delete);
+      table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1).ifEquals(VALUE_1)
+        .thenDelete(delete);
       assertFalse(table.exists(get));
 
       Put put = new Put(ROW_1);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
       table.put(put);
 
-      assertTrue(table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1)
-          .ifEquals(VALUE_1).thenPut(put));
-      assertFalse(table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1)
-          .ifEquals(VALUE_2).thenPut(put));
+      assertTrue(
+        table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1).ifEquals(VALUE_1).thenPut(put));
+      assertFalse(
+        table.checkAndMutate(ROW_1, FAMILYA).qualifier(QUALIFIER_1).ifEquals(VALUE_2).thenPut(put));
     }
 
   }
@@ -641,7 +635,7 @@ public class TestThriftConnection {
 
   public void testIteratorScanner(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       List<Put> puts = new ArrayList<>(4);
       Put put = new Put(ROW_1);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
@@ -679,7 +673,7 @@ public class TestThriftConnection {
 
   public void testReverseScan(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       List<Put> puts = new ArrayList<>(4);
       Put put = new Put(ROW_1);
       put.addColumn(FAMILYA, QUALIFIER_1, VALUE_1);
@@ -715,7 +709,6 @@ public class TestThriftConnection {
 
   }
 
-
   @Test
   public void testScanWithFilters() throws Exception {
     testScanWithFilters(thriftConnection, "testScanWithFiltersTable");
@@ -724,11 +717,11 @@ public class TestThriftConnection {
 
   private void testScanWithFilters(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
-    try (Table table = connection.getTable(TableName.valueOf(tableName))){
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       FilterList filterList = new FilterList();
       PrefixFilter prefixFilter = new PrefixFilter(Bytes.toBytes("testrow"));
-      ColumnValueFilter columnValueFilter = new ColumnValueFilter(FAMILYA, QUALIFIER_1,
-          CompareOperator.EQUAL, VALUE_1);
+      ColumnValueFilter columnValueFilter =
+        new ColumnValueFilter(FAMILYA, QUALIFIER_1, CompareOperator.EQUAL, VALUE_1);
       filterList.addFilter(prefixFilter);
       filterList.addFilter(columnValueFilter);
       Scan scan = new Scan();
@@ -746,18 +739,17 @@ public class TestThriftConnection {
     }
   }
 
-
   private TableDescriptor createTable(Admin admin, String tableName) throws IOException {
-    TableDescriptorBuilder builder = TableDescriptorBuilder
-        .newBuilder(TableName.valueOf(tableName));
-    ColumnFamilyDescriptorBuilder familyABuilder = ColumnFamilyDescriptorBuilder
-        .newBuilder(FAMILYA);
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
+    ColumnFamilyDescriptorBuilder familyABuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA);
     familyABuilder.setMaxVersions(3);
-    ColumnFamilyDescriptorBuilder familyBBuilder = ColumnFamilyDescriptorBuilder
-        .newBuilder(FAMILYB);
+    ColumnFamilyDescriptorBuilder familyBBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILYB);
     familyBBuilder.setMaxVersions(3);
-    ColumnFamilyDescriptorBuilder familyCBuilder = ColumnFamilyDescriptorBuilder
-        .newBuilder(FAMILYC);
+    ColumnFamilyDescriptorBuilder familyCBuilder =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILYC);
     familyCBuilder.setMaxVersions(3);
     builder.setColumnFamily(familyABuilder.build());
     builder.setColumnFamily(familyBBuilder.build());
@@ -780,14 +772,14 @@ public class TestThriftConnection {
   }
 
   private void testThriftAdmin(Connection connection, String namespace, String table)
-      throws Exception {
-    try (Admin admin = connection.getAdmin()){
-      //create name space
+    throws Exception {
+    try (Admin admin = connection.getAdmin()) {
+      // create name space
       NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
       namespaceDescriptor.setConfiguration("key1", "value1");
       namespaceDescriptor.setConfiguration("key2", "value2");
       admin.createNamespace(namespaceDescriptor);
-      //list namespace
+      // list namespace
       NamespaceDescriptor[] namespaceDescriptors = admin.listNamespaceDescriptors();
       boolean found = false;
       for (NamespaceDescriptor nd : namespaceDescriptors) {
@@ -797,56 +789,56 @@ public class TestThriftConnection {
         }
       }
       assertTrue(found);
-      //modify namesapce
+      // modify namesapce
       namespaceDescriptor.setConfiguration("kye3", "value3");
       admin.modifyNamespace(namespaceDescriptor);
-      //get namespace
+      // get namespace
       NamespaceDescriptor namespaceDescriptorReturned = admin.getNamespaceDescriptor(namespace);
       assertTrue(namespaceDescriptorReturned.getConfiguration().size() == 3);
-      //create table
+      // create table
       TableDescriptor tableDescriptor = createTable(admin, table);
-      //modify table
+      // modify table
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
       builder.setDurability(Durability.ASYNC_WAL);
       admin.modifyTable(builder.build());
-      //modify column family
+      // modify column family
       ColumnFamilyDescriptor familyA = tableDescriptor.getColumnFamily(FAMILYA);
-      ColumnFamilyDescriptorBuilder familyABuilder = ColumnFamilyDescriptorBuilder
-          .newBuilder(familyA);
+      ColumnFamilyDescriptorBuilder familyABuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(familyA);
       familyABuilder.setInMemory(true);
       admin.modifyColumnFamily(tableDescriptor.getTableName(), familyABuilder.build());
-      //add column family
-      ColumnFamilyDescriptorBuilder familyDBuilder = ColumnFamilyDescriptorBuilder
-          .newBuilder(FAMILYD);
+      // add column family
+      ColumnFamilyDescriptorBuilder familyDBuilder =
+        ColumnFamilyDescriptorBuilder.newBuilder(FAMILYD);
       familyDBuilder.setDataBlockEncoding(DataBlockEncoding.PREFIX);
       admin.addColumnFamily(tableDescriptor.getTableName(), familyDBuilder.build());
-      //get table descriptor
+      // get table descriptor
       TableDescriptor tableDescriptorReturned = admin.getDescriptor(tableDescriptor.getTableName());
       assertTrue(tableDescriptorReturned.getColumnFamilies().length == 4);
-      assertTrue(tableDescriptorReturned.getDurability() ==  Durability.ASYNC_WAL);
-      ColumnFamilyDescriptor columnFamilyADescriptor1Returned = tableDescriptorReturned
-          .getColumnFamily(FAMILYA);
+      assertTrue(tableDescriptorReturned.getDurability() == Durability.ASYNC_WAL);
+      ColumnFamilyDescriptor columnFamilyADescriptor1Returned =
+        tableDescriptorReturned.getColumnFamily(FAMILYA);
       assertTrue(columnFamilyADescriptor1Returned.isInMemory() == true);
-      //delete column family
+      // delete column family
       admin.deleteColumnFamily(tableDescriptor.getTableName(), FAMILYA);
       tableDescriptorReturned = admin.getDescriptor(tableDescriptor.getTableName());
       assertTrue(tableDescriptorReturned.getColumnFamilies().length == 3);
-      //disable table
+      // disable table
       admin.disableTable(tableDescriptor.getTableName());
       assertTrue(admin.isTableDisabled(tableDescriptor.getTableName()));
-      //enable table
+      // enable table
       admin.enableTable(tableDescriptor.getTableName());
       assertTrue(admin.isTableEnabled(tableDescriptor.getTableName()));
       assertTrue(admin.isTableAvailable(tableDescriptor.getTableName()));
-      //truncate table
+      // truncate table
       admin.disableTable(tableDescriptor.getTableName());
       admin.truncateTable(tableDescriptor.getTableName(), true);
       assertTrue(admin.isTableAvailable(tableDescriptor.getTableName()));
-      //delete table
+      // delete table
       admin.disableTable(tableDescriptor.getTableName());
       admin.deleteTable(tableDescriptor.getTableName());
       assertFalse(admin.tableExists(tableDescriptor.getTableName()));
-      //delete namespace
+      // delete namespace
       admin.deleteNamespace(namespace);
       namespaceDescriptors = admin.listNamespaceDescriptors();
       // should have 2 namespace, default and hbase

@@ -35,14 +35,15 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestMasterAddressRefresher {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterAddressRefresher.class);
+    HBaseClassTestRule.forClass(TestMasterAddressRefresher.class);
 
   private class DummyMasterRegistry extends MasterRegistry {
 
@@ -77,8 +78,8 @@ public class TestMasterAddressRefresher {
     conf.setLong(MasterAddressRefresher.MIN_SECS_BETWEEN_REFRESHES, 0);
     try (DummyMasterRegistry registry = new DummyMasterRegistry(conf)) {
       // Wait for > 3 seconds to see that at least 3 getMasters() RPCs have been made.
-      Waiter.waitFor(
-          conf, 5000, (Waiter.Predicate<Exception>) () -> registry.getMastersCount() > 3);
+      Waiter.waitFor(conf, 5000,
+        (Waiter.Predicate<Exception>) () -> registry.getMastersCount() > 3);
     }
   }
 
@@ -98,8 +99,8 @@ public class TestMasterAddressRefresher {
       // Overall wait time is 10000 ms, so the number of requests should be <=10
       List<Long> callTimeStamps = registry.getCallTimeStamps();
       // Actual calls to getMasters() should be much lower than the refresh count.
-      Assert.assertTrue(
-          String.valueOf(registry.getMastersCount()), registry.getMastersCount() <= 20);
+      Assert.assertTrue(String.valueOf(registry.getMastersCount()),
+        registry.getMastersCount() <= 20);
       Assert.assertTrue(callTimeStamps.size() > 0);
       // Verify that the delta between subsequent RPCs is at least 1sec as configured.
       for (int i = 1; i < callTimeStamps.size() - 1; i++) {

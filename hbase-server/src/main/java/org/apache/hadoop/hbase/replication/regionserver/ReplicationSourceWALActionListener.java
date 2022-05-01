@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   /**
    * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys from
    * compaction WAL edits and if the scope is local.
-   * @param logKey Key that may get scoped according to its edits
+   * @param logKey  Key that may get scoped according to its edits
    * @param logEdit Edits used to lookup the scopes
    */
   static void scopeWALEdits(WALKey logKey, WALEdit logEdit, Configuration conf) {
@@ -69,8 +69,9 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
       return;
     }
     // For replay, or if all the cells are markers, do not need to store replication scope.
-    if (logEdit.isReplay() ||
-      logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))) {
+    if (
+      logEdit.isReplay() || logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))
+    ) {
       ((WALKeyImpl) logKey).clearReplicationScope();
     }
   }

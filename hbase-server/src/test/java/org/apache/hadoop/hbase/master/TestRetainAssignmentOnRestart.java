@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -46,7 +45,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRetainAssignmentOnRestart.class);
+    HBaseClassTestRule.forClass(TestRetainAssignmentOnRestart.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRetainAssignmentOnRestart.class);
 
@@ -75,7 +74,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     // We don't have to use SnapshotOfRegionAssignmentFromMeta. We use it here because AM used to
     // use it to load all user region placements
     SnapshotOfRegionAssignmentFromMeta snapshot =
-        new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
+      new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
     Map<RegionInfo, ServerName> regionToRegionServerMap = snapshot.getRegionToRegionServerMap();
     for (ServerName serverName : regionToRegionServerMap.values()) {
@@ -142,7 +141,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     // We don't have to use SnapshotOfRegionAssignmentFromMeta. We use it here because AM used to
     // use it to load all user region placements
     SnapshotOfRegionAssignmentFromMeta snapshot =
-        new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
+      new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
     Map<RegionInfo, ServerName> regionToRegionServerMap = snapshot.getRegionToRegionServerMap();
     for (ServerName serverName : regionToRegionServerMap.values()) {

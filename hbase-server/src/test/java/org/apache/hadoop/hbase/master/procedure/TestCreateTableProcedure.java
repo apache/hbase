@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ import org.junit.rules.TestName;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
@@ -76,15 +76,14 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   @Test
   public void testSimpleCreateWithSplits() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     testSimpleCreate(tableName, splitKeys);
   }
 
   private void testSimpleCreate(final TableName tableName, byte[][] splitKeys) throws Exception {
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      getMasterProcedureExecutor(), tableName, splitKeys, F1, F2);
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, F1, F2);
     MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, F1, F2);
   }
 
@@ -101,17 +100,16 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor htd = builder.build();
     final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
 
-    long procId =
-        ProcedureTestingUtility.submitAndWait(procExec,
-            new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
     final Procedure<?> result = procExec.getResult(procId);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
     assertTrue("expected DoNotRetryIOException, got " + cause,
-        cause instanceof DoNotRetryIOException);
+      cause instanceof DoNotRetryIOException);
   }
 
-  @Test(expected=TableExistsException.class)
+  @Test(expected = TableExistsException.class)
   public void testCreateExisting() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -119,13 +117,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
 
     // create the table
-    long procId1 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    long procId1 =
+      procExec.submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // create another with the same name
     ProcedurePrepareLatch latch2 = new ProcedurePrepareLatch.CompatibilityLatch();
-    long procId2 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2));
+    long procId2 = procExec
+      .submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
@@ -146,8 +144,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     byte[][] splitKeys = null;
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
-    long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    long procId =
+      procExec.submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
@@ -165,11 +163,9 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
   public void testRollbackAndDoubleExecutionOnMobTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, F1, F2);
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd)
-            .modifyColumnFamily(ColumnFamilyDescriptorBuilder
-              .newBuilder(htd.getColumnFamily(Bytes.toBytes(F1)))
-              .setMobEnabled(true)
-              .build());
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(htd.getColumnFamily(Bytes.toBytes(F1))).setMobEnabled(true).build());
     testRollbackAndDoubleExecution(builder);
   }
 
@@ -179,14 +175,13 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Create procedure && kill the executor
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     builder.setRegionReplication(3);
     TableDescriptor htd = builder.build();
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
-    long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
+    long procId =
+      procExec.submitProcedure(new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     int lastStep = 2; // failing before CREATE_TABLE_WRITE_FS_LAYOUT
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
@@ -217,8 +212,9 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
     protected Flow executeFromState(MasterProcedureEnv env,
       MasterProcedureProtos.CreateTableState state) throws InterruptedException {
 
-      if (!failOnce &&
-        state == MasterProcedureProtos.CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT) {
+      if (
+        !failOnce && state == MasterProcedureProtos.CreateTableState.CREATE_TABLE_WRITE_FS_LAYOUT
+      ) {
         try {
           // To emulate an HDFS failure, create only the first region directory
           RegionInfo regionInfo = getFirstRegionInfo();
@@ -247,9 +243,8 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
     // create the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
     TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, splitKeys);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,

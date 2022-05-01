@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class ExportSnapshotException extends HBaseSnapshotException {
 
   /**
    * @param message message describing the exception
-   * @param e the actual cause of the exception
+   * @param e       the actual cause of the exception
    */
   public ExportSnapshotException(String message, Exception e) {
     super(message, e);

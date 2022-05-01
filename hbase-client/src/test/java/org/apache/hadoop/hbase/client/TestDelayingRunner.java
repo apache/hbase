@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,18 +36,17 @@ public class TestDelayingRunner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDelayingRunner.class);
+    HBaseClassTestRule.forClass(TestDelayingRunner.class);
 
-  private static final TableName DUMMY_TABLE =
-      TableName.valueOf("DUMMY_TABLE");
+  private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
   private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
   private static HRegionInfo hri1 =
-      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
+    new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2, false, 1);
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
   @Test
-  public void testDelayingRunner() throws Exception{
+  public void testDelayingRunner() throws Exception {
     MultiAction ma = new MultiAction();
     ma.add(hri1.getRegionName(), new Action(new Put(DUMMY_BYTES_1), 0));
     final AtomicLong endTime = new AtomicLong();
@@ -63,7 +62,7 @@ public class TestDelayingRunner {
     runner.run();
     long delay = endTime.get() - startTime;
     assertTrue("DelayingRunner did not delay long enough", delay >= sleepTime);
-    assertFalse("DelayingRunner delayed too long", delay > sleepTime + sleepTime*0.2);
+    assertFalse("DelayingRunner delayed too long", delay > sleepTime + sleepTime * 0.2);
   }
 
 }

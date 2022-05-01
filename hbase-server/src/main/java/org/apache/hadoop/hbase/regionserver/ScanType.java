@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceStability;
 /**
  * Enum to distinguish general scan types.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public enum ScanType {
   COMPACT_DROP_DELETES,

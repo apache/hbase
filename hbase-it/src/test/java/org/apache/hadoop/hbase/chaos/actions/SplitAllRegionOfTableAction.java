@@ -43,7 +43,8 @@ public class SplitAllRegionOfTableAction extends Action {
     this.maxFullTableSplits = getConf().getInt(MAX_SPLIT_KEY, DEFAULT_MAX_SPLITS);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -56,8 +57,10 @@ public class SplitAllRegionOfTableAction extends Action {
       return;
     }
     // Don't always split. This should allow splitting of a full table later in the run
-    if (ThreadLocalRandom.current().nextDouble()
-        < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)) {
+    if (
+      ThreadLocalRandom.current().nextDouble()
+          < (((double) splits) / ((double) maxFullTableSplits)) / ((double) 2)
+    ) {
       splits++;
       getLogger().info("Performing action: Split all regions of {}", tableName);
       admin.split(tableName);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,12 +61,12 @@ public class TestFlushLifeCycleTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFlushLifeCycleTracker.class);
+    HBaseClassTestRule.forClass(TestFlushLifeCycleTracker.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName NAME =
-      TableName.valueOf(TestFlushLifeCycleTracker.class.getSimpleName());
+    TableName.valueOf(TestFlushLifeCycleTracker.class.getSimpleName());
 
   private static final byte[] CF = Bytes.toBytes("CF");
 
@@ -89,7 +89,7 @@ public class TestFlushLifeCycleTracker {
 
     @Override
     public void preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-        FlushLifeCycleTracker tracker) throws IOException {
+      FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -97,7 +97,7 @@ public class TestFlushLifeCycleTracker {
 
     @Override
     public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -106,7 +106,7 @@ public class TestFlushLifeCycleTracker {
 
     @Override
     public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-        FlushLifeCycleTracker tracker) throws IOException {
+      FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -114,7 +114,7 @@ public class TestFlushLifeCycleTracker {
 
     @Override
     public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
+      StoreFile resultFile, FlushLifeCycleTracker tracker) throws IOException {
       if (TRACKER != null) {
         assertSame(tracker, TRACKER);
       }
@@ -181,9 +181,9 @@ public class TestFlushLifeCycleTracker {
   @Before
   public void setUp() throws IOException {
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
-            .setCoprocessor(FlushObserver.class.getName()).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
+        .setCoprocessor(FlushObserver.class.getName()).build());
     region = UTIL.getHBaseCluster().getRegions(NAME).get(0);
   }
 
@@ -199,15 +199,10 @@ public class TestFlushLifeCycleTracker {
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row, true)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row, true).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+            .setFamily(CF).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+            .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
     }
     Tracker tracker = new Tracker();
@@ -233,15 +228,10 @@ public class TestFlushLifeCycleTracker {
     try (Table table = UTIL.getConnection().getTable(NAME)) {
       for (int i = 0; i < 100; i++) {
         byte[] row = Bytes.toBytes(i);
-        table.put(new Put(row, true)
-                    .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                        .setRow(row)
-                        .setFamily(CF)
-                        .setQualifier(QUALIFIER)
-                        .setTimestamp(HConstants.LATEST_TIMESTAMP)
-                        .setType(Type.Put)
-                        .setValue(Bytes.toBytes(i))
-                        .build()));
+        table.put(
+          new Put(row, true).add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row)
+            .setFamily(CF).setQualifier(QUALIFIER).setTimestamp(HConstants.LATEST_TIMESTAMP)
+            .setType(Type.Put).setValue(Bytes.toBytes(i)).build()));
       }
     }
     // here we may have overlap when calling the CP hooks so we do not assert on TRACKER

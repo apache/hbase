@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase.hbtop.screen.help;
 
 import java.util.Arrays;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The presentation logic for the help screen.
@@ -30,24 +28,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class HelpScreenPresenter {
 
-  private static final CommandDescription[] COMMAND_DESCRIPTIONS = new CommandDescription[] {
-    new CommandDescription("f", "Add/Remove/Order/Sort the fields"),
-    new CommandDescription("R", "Toggle the sort order (ascending/descending)"),
-    new CommandDescription("m", "Select mode"),
-    new CommandDescription("o", "Add a filter with ignoring case"),
-    new CommandDescription("O", "Add a filter with case sensitive"),
-    new CommandDescription("^o", "Show the current filters"),
-    new CommandDescription("=", "Clear the current filters"),
-    new CommandDescription("i", "Drill down"),
-    new CommandDescription(
-      Arrays.asList("up", "down", "left", "right", "pageUp", "pageDown", "home", "end"),
-      "Scroll the metrics"),
-    new CommandDescription("d", "Change the refresh delay"),
-    new CommandDescription("X", "Adjust the field length"),
-    new CommandDescription("<Enter>", "Refresh the display"),
-    new CommandDescription("h", "Display this screen"),
-    new CommandDescription(Arrays.asList("q", "<Esc>"), "Quit")
-  };
+  private static final CommandDescription[] COMMAND_DESCRIPTIONS =
+    new CommandDescription[] { new CommandDescription("f", "Add/Remove/Order/Sort the fields"),
+      new CommandDescription("R", "Toggle the sort order (ascending/descending)"),
+      new CommandDescription("m", "Select mode"),
+      new CommandDescription("o", "Add a filter with ignoring case"),
+      new CommandDescription("O", "Add a filter with case sensitive"),
+      new CommandDescription("^o", "Show the current filters"),
+      new CommandDescription("=", "Clear the current filters"),
+      new CommandDescription("i", "Drill down"),
+      new CommandDescription(
+        Arrays.asList("up", "down", "left", "right", "pageUp", "pageDown", "home", "end"),
+        "Scroll the metrics"),
+      new CommandDescription("d", "Change the refresh delay"),
+      new CommandDescription("X", "Adjust the field length"),
+      new CommandDescription("<Enter>", "Refresh the display"),
+      new CommandDescription("h", "Display this screen"),
+      new CommandDescription(Arrays.asList("q", "<Esc>"), "Quit") };
 
   private final HelpScreenView helpScreenView;
   private final long refreshDelay;

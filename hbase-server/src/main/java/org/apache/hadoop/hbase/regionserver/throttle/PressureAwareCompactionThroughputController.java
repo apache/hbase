@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 
 /**
  * A throughput controller which uses the follow schema to limit throughput
@@ -42,28 +42,28 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class PressureAwareCompactionThroughputController extends PressureAwareThroughputController {
 
-  private final static Logger LOG = LoggerFactory
-      .getLogger(PressureAwareCompactionThroughputController.class);
+  private final static Logger LOG =
+    LoggerFactory.getLogger(PressureAwareCompactionThroughputController.class);
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND =
-      "hbase.hstore.compaction.throughput.higher.bound";
+    "hbase.hstore.compaction.throughput.higher.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND =
-      100L * 1024 * 1024;
+    100L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND =
-      "hbase.hstore.compaction.throughput.lower.bound";
+    "hbase.hstore.compaction.throughput.lower.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND =
-      50L * 1024 * 1024;
+    50L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK =
-      "hbase.hstore.compaction.throughput.offpeak";
+    "hbase.hstore.compaction.throughput.offpeak";
 
   private static final long DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK = Long.MAX_VALUE;
 
   public static final String HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD =
-      "hbase.hstore.compaction.throughput.tune.period";
+    "hbase.hstore.compaction.throughput.tune.period";
 
   private static final int DEFAULT_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD = 60 * 1000;
 
@@ -75,8 +75,8 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
 
   @Override
   public void setup(final RegionServerServices server) {
-    server.getChoreService().scheduleChore(
-      new ScheduledChore("CompactionThroughputTuner", this, tuningPeriod) {
+    server.getChoreService()
+      .scheduleChore(new ScheduledChore("CompactionThroughputTuner", this, tuningPeriod) {
 
         @Override
         protected void chore() {
@@ -95,17 +95,16 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     } else {
       // compactionPressure is between 0.0 and 1.0, we use a simple linear formula to
       // calculate the throughput limitation.
-      maxThroughputToSet =
-          maxThroughputLowerBound + (maxThroughputUpperBound - maxThroughputLowerBound)
-              * compactionPressure;
+      maxThroughputToSet = maxThroughputLowerBound
+        + (maxThroughputUpperBound - maxThroughputLowerBound) * compactionPressure;
     }
     if (LOG.isDebugEnabled()) {
       if (Math.abs(maxThroughputToSet - getMaxThroughput()) < .0000001) {
         LOG.debug("CompactionPressure is " + compactionPressure + ", tune throughput to "
-            + throughputDesc(maxThroughputToSet));
+          + throughputDesc(maxThroughputToSet));
       } else if (LOG.isTraceEnabled()) {
         LOG.trace("CompactionPressure is " + compactionPressure + ", keep throughput throttling to "
-            + throughputDesc(maxThroughputToSet));
+          + throughputDesc(maxThroughputToSet));
       }
     }
     this.setMaxThroughput(maxThroughputToSet);
@@ -117,33 +116,27 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
     if (conf == null) {
       return;
     }
-    this.maxThroughputUpperBound =
-        conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
-          DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND);
-    this.maxThroughputLowerBound =
-        conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
-          DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND);
-    this.maxThroughputOffpeak =
-        conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK,
-          DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK);
+    this.maxThroughputUpperBound = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
+      DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND);
+    this.maxThroughputLowerBound = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
+      DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND);
+    this.maxThroughputOffpeak = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK,
+      DEFAULT_HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_OFFPEAK);
     this.offPeakHours = OffPeakHours.getInstance(conf);
-    this.controlPerSize =
-        conf.getLong(HBASE_HSTORE_COMPACTION_THROUGHPUT_CONTROL_CHECK_INTERVAL,
-          this.maxThroughputLowerBound);
+    this.controlPerSize = conf.getLong(HBASE_HSTORE_COMPACTION_THROUGHPUT_CONTROL_CHECK_INTERVAL,
+      this.maxThroughputLowerBound);
     this.setMaxThroughput(this.maxThroughputLowerBound);
-    this.tuningPeriod =
-        getConf().getInt(HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD,
-          DEFAULT_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD);
+    this.tuningPeriod = getConf().getInt(HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD,
+      DEFAULT_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD);
     LOG.info("Compaction throughput configurations, higher bound: "
-        + throughputDesc(maxThroughputUpperBound) + ", lower bound "
-        + throughputDesc(maxThroughputLowerBound) + ", off peak: "
-        + throughputDesc(maxThroughputOffpeak) + ", tuning period: " + tuningPeriod + " ms");
+      + throughputDesc(maxThroughputUpperBound) + ", lower bound "
+      + throughputDesc(maxThroughputLowerBound) + ", off peak: "
+      + throughputDesc(maxThroughputOffpeak) + ", tuning period: " + tuningPeriod + " ms");
   }
 
   @Override
   public String toString() {
     return "DefaultCompactionThroughputController [maxThroughput="
-        + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size()
-        + "]";
+      + throughputDesc(getMaxThroughput()) + ", activeCompactions=" + activeOperations.size() + "]";
   }
 }

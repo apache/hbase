@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,23 +38,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Entry point for users of the Write Ahead Log.
- * Acts as the shim between internal use and the particular WALProvider we use to handle wal
- * requests.
- *
- * Configure which provider gets used with the configuration setting "hbase.wal.provider". Available
- * implementations:
+ * Entry point for users of the Write Ahead Log. Acts as the shim between internal use and the
+ * particular WALProvider we use to handle wal requests. Configure which provider gets used with the
+ * configuration setting "hbase.wal.provider". Available implementations:
  * <ul>
- *   <li><em>defaultProvider</em> : whatever provider is standard for the hbase version. Currently
- *                                  "asyncfs"</li>
- *   <li><em>asyncfs</em> : a provider that will run on top of an implementation of the Hadoop
- *                             FileSystem interface via an asynchronous client.</li>
- *   <li><em>filesystem</em> : a provider that will run on top of an implementation of the Hadoop
- *                             FileSystem interface via HDFS's synchronous DFSClient.</li>
- *   <li><em>multiwal</em> : a provider that will use multiple "filesystem" wal instances per region
- *                           server.</li>
+ * <li><em>defaultProvider</em> : whatever provider is standard for the hbase version. Currently
+ * "asyncfs"</li>
+ * <li><em>asyncfs</em> : a provider that will run on top of an implementation of the Hadoop
+ * FileSystem interface via an asynchronous client.</li>
+ * <li><em>filesystem</em> : a provider that will run on top of an implementation of the Hadoop
+ * FileSystem interface via HDFS's synchronous DFSClient.</li>
+ * <li><em>multiwal</em> : a provider that will use multiple "filesystem" wal instances per region
+ * server.</li>
  * </ul>
- *
  * Alternatively, you may provide a custom implementation of {@link WALProvider} by class name.
  */
 @InterfaceAudience.Private
@@ -73,6 +68,7 @@ public class WALFactory {
     asyncfs(AsyncFSWALProvider.class);
 
     final Class<? extends WALProvider> clazz;
+
     Providers(Class<? extends WALProvider> clazz) {
       this.clazz = clazz;
     }
@@ -134,8 +130,10 @@ public class WALFactory {
       // AsyncFSWALProvider is not guaranteed to work on all Hadoop versions, when it's chosen as
       // the default and we can't use it, we want to fall back to FSHLog which we know works on
       // all versions.
-      if (provider == getDefaultProvider() && provider.clazz == AsyncFSWALProvider.class
-          && !AsyncFSWALProvider.load()) {
+      if (
+        provider == getDefaultProvider() && provider.clazz == AsyncFSWALProvider.class
+          && !AsyncFSWALProvider.load()
+      ) {
         // AsyncFSWAL has better performance in most cases, and also uses less resources, we will
         // try to use it if possible. It deeply hacks into the internal of DFSClient so will be
         // easily broken when upgrading hadoop.
@@ -156,7 +154,7 @@ public class WALFactory {
   }
 
   WALProvider createProvider(Class<? extends WALProvider> clazz, String providerId)
-      throws IOException {
+    throws IOException {
     LOG.info("Instantiating WALProvider of type " + clazz);
     try {
       final WALProvider result = clazz.getDeclaredConstructor().newInstance();
@@ -185,8 +183,8 @@ public class WALFactory {
   }
 
   /**
-   * @param conf must not be null, will keep a reference to read params in later reader/writer
-   *          instances.
+   * @param conf      must not be null, will keep a reference to read params in later reader/writer
+   *                  instances.
    * @param abortable the server to abort
    */
   public WALFactory(Configuration conf, String factoryId, Abortable abortable) throws IOException {
@@ -211,9 +209,8 @@ public class WALFactory {
   }
 
   /**
-   * Shutdown all WALs and clean up any underlying storage.
-   * Use only when you will not need to replay and edits that have gone to any wals from this
-   * factory.
+   * Shutdown all WALs and clean up any underlying storage. Use only when you will not need to
+   * replay and edits that have gone to any wals from this factory.
    */
   public void close() throws IOException {
     final WALProvider metaProvider = this.metaProvider.get();
@@ -228,9 +225,9 @@ public class WALFactory {
   }
 
   /**
-   * Tell the underlying WAL providers to shut down, but do not clean up underlying storage.
-   * If you are not ending cleanly and will need to replay edits from this factory's wals,
-   * use this method if you can as it will try to leave things as tidy as possible.
+   * Tell the underlying WAL providers to shut down, but do not clean up underlying storage. If you
+   * are not ending cleanly and will need to replay edits from this factory's wals, use this method
+   * if you can as it will try to leave things as tidy as possible.
    */
   public void shutdown() throws IOException {
     IOException exception = null;
@@ -238,7 +235,7 @@ public class WALFactory {
     if (null != metaProvider) {
       try {
         metaProvider.shutdown();
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         exception = ioe;
       }
     }
@@ -271,7 +268,7 @@ public class WALFactory {
           // the WAL provider should be an enum. Proceed
         }
       }
-      if (clz == null){
+      if (clz == null) {
         clz = getProviderClass(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
       }
       provider = createProvider(clz, AbstractFSWALProvider.META_WAL_PROVIDER_ID);
@@ -289,8 +286,10 @@ public class WALFactory {
    */
   public WAL getWAL(RegionInfo region) throws IOException {
     // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
-    if (region != null && region.isMetaRegion() &&
-      region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID) {
+    if (
+      region != null && region.isMetaRegion()
+        && region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID
+    ) {
       return getMetaProvider().getWAL(region);
     } else {
       return provider.getWAL(region);
@@ -298,24 +297,24 @@ public class WALFactory {
   }
 
   public Reader createReader(final FileSystem fs, final Path path) throws IOException {
-    return createReader(fs, path, (CancelableProgressable)null);
+    return createReader(fs, path, (CancelableProgressable) null);
   }
 
   /**
-   * Create a reader for the WAL. If you are reading from a file that's being written to and need
-   * to reopen it multiple times, use {@link WAL.Reader#reset()} instead of this method
-   * then just seek back to the last known good position.
-   * @return A WAL reader.  Close when done with it.
+   * Create a reader for the WAL. If you are reading from a file that's being written to and need to
+   * reopen it multiple times, use {@link WAL.Reader#reset()} instead of this method then just seek
+   * back to the last known good position.
+   * @return A WAL reader. Close when done with it.
    */
-  public Reader createReader(final FileSystem fs, final Path path,
-      CancelableProgressable reporter) throws IOException {
+  public Reader createReader(final FileSystem fs, final Path path, CancelableProgressable reporter)
+    throws IOException {
     return createReader(fs, path, reporter, true);
   }
 
   public Reader createReader(final FileSystem fs, final Path path, CancelableProgressable reporter,
-      boolean allowCustom) throws IOException {
+    boolean allowCustom) throws IOException {
     Class<? extends AbstractFSWALProvider.Reader> lrClass =
-        allowCustom ? logReaderClass : ProtobufLogReader.class;
+      allowCustom ? logReaderClass : ProtobufLogReader.class;
     try {
       // A wal file could be under recovery, so it may take several
       // tries to get it open. Instead of claiming it is corrupted, retry
@@ -344,10 +343,11 @@ public class WALFactory {
           // Only inspect the Exception to consider retry when it's an IOException
           if (e instanceof IOException) {
             String msg = e.getMessage();
-            if (msg != null
-                && (msg.contains("Cannot obtain block length")
-                    || msg.contains("Could not obtain the last block") || msg
-                      .matches("Blocklist for [^ ]* has changed.*"))) {
+            if (
+              msg != null && (msg.contains("Cannot obtain block length")
+                || msg.contains("Could not obtain the last block")
+                || msg.matches("Blocklist for [^ ]* has changed.*"))
+            ) {
               if (++nbAttempt == 1) {
                 LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
               }
@@ -356,7 +356,7 @@ public class WALFactory {
               }
               if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
                 LOG.error("Can't open after " + nbAttempt + " attempts and "
-                    + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
+                  + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms " + " for " + path);
               } else {
                 try {
                   Thread.sleep(nbAttempt < 3 ? 500 : 1000);
@@ -383,8 +383,7 @@ public class WALFactory {
   }
 
   /**
-   * Create a writer for the WAL.
-   * Uses defaults.
+   * Create a writer for the WAL. Uses defaults.
    * <p>
    * Should be package-private. public only for tests and
    * {@link org.apache.hadoop.hbase.regionserver.wal.Compressor}
@@ -395,12 +394,11 @@ public class WALFactory {
   }
 
   /**
-   * Should be package-private, visible for recovery testing.
-   * Uses defaults.
+   * Should be package-private, visible for recovery testing. Uses defaults.
    * @return an overwritable writer for recovered edits. caller should close.
    */
   public Writer createRecoveredEditsWriter(final FileSystem fs, final Path path)
-      throws IOException {
+    throws IOException {
     return FSHLogProvider.createWriter(conf, fs, path, true);
   }
 
@@ -410,7 +408,7 @@ public class WALFactory {
   // For now, first Configuration object wins. Practically this just impacts the reader/writer class
   private static final AtomicReference<WALFactory> singleton = new AtomicReference<>();
   private static final String SINGLETON_ID = WALFactory.class.getName();
-  
+
   // Public only for FSHLog
   public static WALFactory getInstance(Configuration configuration) {
     WALFactory factory = singleton.get();
@@ -432,55 +430,51 @@ public class WALFactory {
   }
 
   /**
-   * Create a reader for the given path, accept custom reader classes from conf.
-   * If you already have a WALFactory, you should favor the instance method.
+   * Create a reader for the given path, accept custom reader classes from conf. If you already have
+   * a WALFactory, you should favor the instance method.
    * @return a WAL Reader, caller must close.
    */
   public static Reader createReader(final FileSystem fs, final Path path,
-      final Configuration configuration) throws IOException {
+    final Configuration configuration) throws IOException {
     return getInstance(configuration).createReader(fs, path);
   }
 
   /**
-   * Create a reader for the given path, accept custom reader classes from conf.
-   * If you already have a WALFactory, you should favor the instance method.
+   * Create a reader for the given path, accept custom reader classes from conf. If you already have
+   * a WALFactory, you should favor the instance method.
    * @return a WAL Reader, caller must close.
    */
   static Reader createReader(final FileSystem fs, final Path path,
-      final Configuration configuration, final CancelableProgressable reporter) throws IOException {
+    final Configuration configuration, final CancelableProgressable reporter) throws IOException {
     return getInstance(configuration).createReader(fs, path, reporter);
   }
 
   /**
-   * Create a reader for the given path, ignore custom reader classes from conf.
-   * If you already have a WALFactory, you should favor the instance method.
-   * only public pending move of {@link org.apache.hadoop.hbase.regionserver.wal.Compressor}
+   * Create a reader for the given path, ignore custom reader classes from conf. If you already have
+   * a WALFactory, you should favor the instance method. only public pending move of
+   * {@link org.apache.hadoop.hbase.regionserver.wal.Compressor}
    * @return a WAL Reader, caller must close.
    */
   public static Reader createReaderIgnoreCustomClass(final FileSystem fs, final Path path,
-      final Configuration configuration) throws IOException {
+    final Configuration configuration) throws IOException {
     return getInstance(configuration).createReader(fs, path, null, false);
   }
 
   /**
-   * If you already have a WALFactory, you should favor the instance method.
-   * Uses defaults.
+   * If you already have a WALFactory, you should favor the instance method. Uses defaults.
    * @return a Writer that will overwrite files. Caller must close.
    */
   static Writer createRecoveredEditsWriter(final FileSystem fs, final Path path,
-      final Configuration configuration)
-      throws IOException {
+    final Configuration configuration) throws IOException {
     return FSHLogProvider.createWriter(configuration, fs, path, true);
   }
 
   /**
-   * If you already have a WALFactory, you should favor the instance method.
-   * Uses defaults.
+   * If you already have a WALFactory, you should favor the instance method. Uses defaults.
    * @return a writer that won't overwrite files. Caller must close.
    */
   public static Writer createWALWriter(final FileSystem fs, final Path path,
-      final Configuration configuration)
-      throws IOException {
+    final Configuration configuration) throws IOException {
     return FSHLogProvider.createWriter(configuration, fs, path, false);
   }
 

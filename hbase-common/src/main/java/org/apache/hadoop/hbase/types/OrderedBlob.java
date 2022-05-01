@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,9 +43,9 @@ public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
   @Override
   public int encodedLength(byte[] val) {
-    return null == val ?
-      (Order.ASCENDING == order ? 1 : 2) :
-      (Order.ASCENDING == order ? val.length + 1 : val.length + 2);
+    return null == val
+      ? (Order.ASCENDING == order ? 1 : 2)
+      : (Order.ASCENDING == order ? val.length + 1 : val.length + 2);
   }
 
   @Override

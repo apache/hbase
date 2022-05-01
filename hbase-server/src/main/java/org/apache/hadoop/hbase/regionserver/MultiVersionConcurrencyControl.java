@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +30,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects.ToStringHe
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what
- * entries to ignore, and a mechanism for writers to obtain new write numbers, then "commit"
- * the new writes for readers to read (thus forming atomic transactions).
+ * entries to ignore, and a mechanism for writers to obtain new write numbers, then "commit" the new
+ * writes for readers to read (thus forming atomic transactions).
  */
 @InterfaceAudience.Private
 public class MultiVersionConcurrencyControl {
@@ -73,8 +72,7 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Step the MVCC forward on to a new read/write basis.
-   * @param newStartPoint
+   * Step the MVCC forward on to a new read/write basis. n
    */
   public void advanceTo(long newStartPoint) {
     while (true) {
@@ -91,18 +89,18 @@ public class MultiVersionConcurrencyControl {
   /**
    * Step the MVCC forward on to a new read/write basis.
    * @param newStartPoint Point to move read and write points to.
-   * @param expected If not -1 (#NONE)
-   * @return Returns false if <code>expected</code> is not equal to the
-   * current <code>readPoint</code> or if <code>startPoint</code> is less than current
-   * <code>readPoint</code>
+   * @param expected      If not -1 (#NONE)
+   * @return Returns false if <code>expected</code> is not equal to the current
+   *         <code>readPoint</code> or if <code>startPoint</code> is less than current
+   *         <code>readPoint</code>
    */
   boolean tryAdvanceTo(long newStartPoint, long expected) {
     synchronized (writeQueue) {
       long currentRead = this.readPoint.get();
       long currentWrite = this.writePoint.get();
       if (currentRead != currentWrite) {
-        throw new RuntimeException("Already used this mvcc; currentRead=" + currentRead +
-          ", currentWrite=" + currentWrite + "; too late to tryAdvanceTo");
+        throw new RuntimeException("Already used this mvcc; currentRead=" + currentRead
+          + ", currentWrite=" + currentWrite + "; too late to tryAdvanceTo");
       }
       if (expected != NONE && expected != currentRead) {
         return false;
@@ -122,7 +120,8 @@ public class MultiVersionConcurrencyControl {
    * Call {@link #begin(Runnable)} with an empty {@link Runnable}.
    */
   public WriteEntry begin() {
-    return begin(() -> {});
+    return begin(() -> {
+    });
   }
 
   /**
@@ -148,8 +147,8 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Wait until the read point catches up to the write point; i.e. wait on all outstanding mvccs
-   * to complete.
+   * Wait until the read point catches up to the write point; i.e. wait on all outstanding mvccs to
+   * complete.
    */
   public void await() {
     // Add a write and then wait on reads to catch up to it.
@@ -157,11 +156,10 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Complete a {@link WriteEntry} that was created by {@link #begin()} then wait until the
-   * read point catches up to our write.
-   *
-   * At the end of this call, the global read point is at least as large as the write point
-   * of the passed in WriteEntry.  Thus, the write is visible to MVCC readers.
+   * Complete a {@link WriteEntry} that was created by {@link #begin()} then wait until the read
+   * point catches up to our write. At the end of this call, the global read point is at least as
+   * large as the write point of the passed in WriteEntry. Thus, the write is visible to MVCC
+   * readers.
    */
   public void completeAndWait(WriteEntry e) {
     if (!complete(e)) {
@@ -170,17 +168,11 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Mark the {@link WriteEntry} as complete and advance the read point as much as possible.
-   * Call this even if the write has FAILED (AFTER backing out the write transaction
-   * changes completely) so we can clean up the outstanding transaction.
-   *
-   * How much is the read point advanced?
-   *
-   * Let S be the set of all write numbers that are completed. Set the read point to the highest
-   * numbered write of S.
-   *
-   * @param writeEntry
-   *
+   * Mark the {@link WriteEntry} as complete and advance the read point as much as possible. Call
+   * this even if the write has FAILED (AFTER backing out the write transaction changes completely)
+   * so we can clean up the outstanding transaction. How much is the read point advanced? Let S be
+   * the set of all write numbers that are completed. Set the read point to the highest numbered
+   * write of S. n *
    * @return true if e is visible to MVCC readers (that is, readpoint >= e.writeNumber)
    */
   public boolean complete(WriteEntry writeEntry) {
@@ -195,7 +187,7 @@ public class MultiVersionConcurrencyControl {
         if (nextReadValue > 0) {
           if (nextReadValue + 1 != queueFirst.getWriteNumber()) {
             throw new RuntimeException("Invariant in complete violated, nextReadValue="
-                + nextReadValue + ", writeNumber=" + queueFirst.getWriteNumber());
+              + nextReadValue + ", writeNumber=" + queueFirst.getWriteNumber());
           }
         }
 
@@ -250,8 +242,8 @@ public class MultiVersionConcurrencyControl {
 
   @Override
   public String toString() {
-    ToStringHelper helper = MoreObjects.toStringHelper(this).add("readPoint", readPoint)
-        .add("writePoint", writePoint);
+    ToStringHelper helper =
+      MoreObjects.toStringHelper(this).add("readPoint", readPoint).add("writePoint", writePoint);
     if (this.regionName != null) {
       helper.add("regionName", this.regionName);
     }
@@ -267,8 +259,8 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Write number and whether write has completed given out at start of a write transaction.
-   * Every created WriteEntry must be completed by calling mvcc#complete or #completeAndWait.
+   * Write number and whether write has completed given out at start of a write transaction. Every
+   * created WriteEntry must be completed by calling mvcc#complete or #completeAndWait.
    */
   @InterfaceAudience.Private
   public static class WriteEntry {
@@ -297,8 +289,6 @@ public class MultiVersionConcurrencyControl {
     }
   }
 
-  public static final long FIXED_SIZE = ClassSize.align(
-      ClassSize.OBJECT +
-      2 * Bytes.SIZEOF_LONG +
-      2 * ClassSize.REFERENCE);
+  public static final long FIXED_SIZE =
+    ClassSize.align(ClassSize.OBJECT + 2 * Bytes.SIZEOF_LONG + 2 * ClassSize.REFERENCE);
 }

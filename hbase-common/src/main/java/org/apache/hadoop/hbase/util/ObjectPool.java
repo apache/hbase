@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
@@ -24,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -34,15 +32,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class ObjectPool<K, V> {
   /**
-   * An {@code ObjectFactory} object is used to create
-   * new shared objects on demand.
+   * An {@code ObjectFactory} object is used to create new shared objects on demand.
    */
   public interface ObjectFactory<K, V> {
     /**
-     * Creates a new shared object associated with the given {@code key},
-     * identified by the {@code equals} method.
-     * This method may be simultaneously called by multiple threads
-     * with the same key, and the excessive objects are just discarded.
+     * Creates a new shared object associated with the given {@code key}, identified by the
+     * {@code equals} method. This method may be simultaneously called by multiple threads with the
+     * same key, and the excessive objects are just discarded.
      */
     V createObject(K key);
   }
@@ -58,23 +54,19 @@ public abstract class ObjectPool<K, V> {
   private final Lock purgeLock = new ReentrantLock();
 
   /**
-   * The default initial capacity,
-   * used when not otherwise specified in a constructor.
+   * The default initial capacity, used when not otherwise specified in a constructor.
    */
   public static final int DEFAULT_INITIAL_CAPACITY = 16;
 
   /**
-   * The default concurrency level,
-   * used when not otherwise specified in a constructor.
+   * The default concurrency level, used when not otherwise specified in a constructor.
    */
   public static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
   /**
-   * Creates a new pool with the default initial capacity (16)
-   * and the default concurrency level (16).
-   *
+   * Creates a new pool with the default initial capacity (16) and the default concurrency level
+   * (16).
    * @param objectFactory the factory to supply new objects on demand
-   *
    * @throws NullPointerException if {@code objectFactory} is null
    */
   public ObjectPool(ObjectFactory<K, V> objectFactory) {
@@ -82,13 +74,10 @@ public abstract class ObjectPool<K, V> {
   }
 
   /**
-   * Creates a new pool with the given initial capacity
-   * and the default concurrency level (16).
-   *
-   * @param objectFactory the factory to supply new objects on demand
+   * Creates a new pool with the given initial capacity and the default concurrency level (16).
+   * @param objectFactory   the factory to supply new objects on demand
    * @param initialCapacity the initial capacity to keep objects in the pool
-   *
-   * @throws NullPointerException if {@code objectFactory} is null
+   * @throws NullPointerException     if {@code objectFactory} is null
    * @throws IllegalArgumentException if {@code initialCapacity} is negative
    */
   public ObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity) {
@@ -96,21 +85,15 @@ public abstract class ObjectPool<K, V> {
   }
 
   /**
-   * Creates a new pool with the given initial capacity
-   * and the given concurrency level.
-   *
-   * @param objectFactory the factory to supply new objects on demand
-   * @param initialCapacity the initial capacity to keep objects in the pool
+   * Creates a new pool with the given initial capacity and the given concurrency level.
+   * @param objectFactory    the factory to supply new objects on demand
+   * @param initialCapacity  the initial capacity to keep objects in the pool
    * @param concurrencyLevel the estimated count of concurrently accessing threads
-   *
-   * @throws NullPointerException if {@code objectFactory} is null
+   * @throws NullPointerException     if {@code objectFactory} is null
    * @throws IllegalArgumentException if {@code initialCapacity} is negative or
-   *    {@code concurrencyLevel} is non-positive
+   *                                  {@code concurrencyLevel} is non-positive
    */
-  public ObjectPool(
-      ObjectFactory<K, V> objectFactory,
-      int initialCapacity,
-      int concurrencyLevel) {
+  public ObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity, int concurrencyLevel) {
 
     if (objectFactory == null) {
       throw new NullPointerException("Given object factory instance is NULL");
@@ -118,7 +101,7 @@ public abstract class ObjectPool<K, V> {
     this.objectFactory = objectFactory;
 
     this.referenceCache =
-        new ConcurrentHashMap<K, Reference<V>>(initialCapacity, 0.75f, concurrencyLevel);
+      new ConcurrentHashMap<K, Reference<V>>(initialCapacity, 0.75f, concurrencyLevel);
   }
 
   /**
@@ -162,8 +145,8 @@ public abstract class ObjectPool<K, V> {
   public abstract K getReferenceKey(Reference<V> ref);
 
   /**
-   * Returns a shared object associated with the given {@code key},
-   * which is identified by the {@code equals} method.
+   * Returns a shared object associated with the given {@code key}, which is identified by the
+   * {@code equals} method.
    * @throws NullPointerException if {@code key} is null
    */
   public V get(K key) {
@@ -193,9 +176,8 @@ public abstract class ObjectPool<K, V> {
   }
 
   /**
-   * Returns an estimated count of objects kept in the pool.
-   * This also counts stale references,
-   * and you might want to call {@link #purge()} beforehand.
+   * Returns an estimated count of objects kept in the pool. This also counts stale references, and
+   * you might want to call {@link #purge()} beforehand.
    */
   public int size() {
     return referenceCache.size();

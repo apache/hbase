@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 public class TestShortCircuitGet {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestShortCircuitGet.class);
+    HBaseClassTestRule.forClass(TestShortCircuitGet.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -168,8 +168,7 @@ public class TestShortCircuitGet {
   }
 
   private static class MyRegionServer extends MiniHBaseClusterRegionServer {
-    public MyRegionServer(Configuration conf)
-        throws IOException, InterruptedException {
+    public MyRegionServer(Configuration conf) throws IOException, InterruptedException {
       super(conf);
     }
 
@@ -181,6 +180,7 @@ public class TestShortCircuitGet {
 
   private static class MyRSRpcServices extends RSRpcServices {
     private static AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
+
     public MyRSRpcServices(HRegionServer rs) throws IOException {
       super(rs);
     }
@@ -202,7 +202,7 @@ public class TestShortCircuitGet {
 
     @Override
     public ScanResponse scan(RpcController controller, ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
       try {
         if (!MyScanObserver.inCP) {
           return super.scan(controller, request);
@@ -213,8 +213,9 @@ public class TestShortCircuitGet {
           region = this.getRegion(request.getRegion());
         }
 
-        if (region != null
-            && TableName.isMetaTableName(region.getTableDescriptor().getTableName())) {
+        if (
+          region != null && TableName.isMetaTableName(region.getTableDescriptor().getTableName())
+        ) {
           return super.scan(controller, request);
         }
 
@@ -237,8 +238,9 @@ public class TestShortCircuitGet {
         if (request.hasRegion()) {
           region = this.getRegion(request.getRegion());
         }
-        if (region != null
-            && TableName.isMetaTableName(region.getTableDescriptor().getTableName())) {
+        if (
+          region != null && TableName.isMetaTableName(region.getTableDescriptor().getTableName())
+        ) {
           return super.get(controller, request);
         }
 
@@ -255,6 +257,7 @@ public class TestShortCircuitGet {
 
     private static volatile boolean inCP = false;
     private static AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>(null);
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
@@ -263,8 +266,8 @@ public class TestShortCircuitGet {
     @SuppressWarnings("rawtypes")
     @Override
     public RegionScanner postScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> observerContext, final Scan scan,
-        final RegionScanner regionScanner) throws IOException {
+      final ObserverContext<RegionCoprocessorEnvironment> observerContext, final Scan scan,
+      final RegionScanner regionScanner) throws IOException {
 
       if (inCP) {
         return regionScanner;
@@ -276,7 +279,7 @@ public class TestShortCircuitGet {
       Get get2 = new Get(r2);
       inCP = true;
       try (Connection connection = observerContext.getEnvironment()
-          .createConnection(observerContext.getEnvironment().getConfiguration())) {
+        .createConnection(observerContext.getEnvironment().getConfiguration())) {
         try {
           table1 = connection.getTable(tableName);
           Result result = table1.get(get2);

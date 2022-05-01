@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 /**
  * Simple delegating controller for use with the {@link RpcControllerFactory} to help override
@@ -130,7 +129,7 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
 
   @Override
   public void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action)
-      throws IOException {
+    throws IOException {
     delegate.notifyOnCancel(callback, action);
   }
 }

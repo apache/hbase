@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestServerLoad {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerLoad.class);
+    HBaseClassTestRule.forClass(TestServerLoad.class);
 
   @Test
   public void testRegionLoadAggregation() {
@@ -94,9 +94,8 @@ public class TestServerLoad {
         .setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
         .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
 
-    ClusterStatusProtos.ServerLoad sl =
-      ClusterStatusProtos.ServerLoad.newBuilder().addRegionLoads(rlOne).
-        addRegionLoads(rlTwo).build();
+    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
+      .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();
     return sl;
   }
 

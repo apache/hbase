@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,18 +27,19 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestHMasterCommandLine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHMasterCommandLine.class);
+    HBaseClassTestRule.forClass(TestHMasterCommandLine.class);
 
   private static final HBaseTestingUtility TESTING_UTIL = new HBaseTestingUtility();
+
   @Test
   public void testRun() throws Exception {
     HMasterCommandLine masterCommandLine = new HMasterCommandLine(HMaster.class);
     masterCommandLine.setConf(TESTING_UTIL.getConfiguration());
-    assertEquals(0, masterCommandLine.run(new String [] {"clear"}));
+    assertEquals(0, masterCommandLine.run(new String[] { "clear" }));
   }
 }

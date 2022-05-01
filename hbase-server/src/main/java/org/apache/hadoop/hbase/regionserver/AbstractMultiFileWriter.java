@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,8 +43,9 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
 
   public interface WriterFactory {
     public StoreFileWriter createWriter() throws IOException;
+
     default StoreFileWriter createWriterWithStoragePolicy(String fileStoragePolicy)
-        throws IOException {
+      throws IOException {
       return createWriter();
     };
   }
@@ -52,7 +53,7 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
   /**
    * Initializes multi-writer before usage.
    * @param sourceScanner Optional store scanner to obtain the information about read progress.
-   * @param factory Factory used to produce individual file writers.
+   * @param factory       Factory used to produce individual file writers.
    */
   public void init(StoreScanner sourceScanner, WriterFactory factory) {
     this.writerFactory = factory;
@@ -71,13 +72,12 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
   }
 
   public List<Path> commitWriters(long maxSeqId, boolean majorCompaction,
-      Collection<HStoreFile> storeFiles) throws IOException {
+    Collection<HStoreFile> storeFiles) throws IOException {
     preCommitWriters();
     Collection<StoreFileWriter> writers = this.writers();
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction=" +
-              majorCompaction);
+      LOG.debug("Commit " + writers.size() + " writers, maxSeqId=" + maxSeqId + ", majorCompaction="
+        + majorCompaction);
     }
     List<Path> paths = new ArrayList<>();
     for (StoreFileWriter writer : writers) {

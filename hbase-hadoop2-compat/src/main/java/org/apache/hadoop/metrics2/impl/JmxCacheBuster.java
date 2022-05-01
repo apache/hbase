@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
@@ -32,11 +31,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * JMX caches the beans that have been exported; even after the values are removed from hadoop's
- * metrics system the keys and old values will still remain.  This class stops and restarts the
- * Hadoop metrics system, forcing JMX to clear the cache of exported metrics.
- *
- * This class need to be in the o.a.h.metrics2.impl namespace as many of the variables/calls used
- * are package private.
+ * metrics system the keys and old values will still remain. This class stops and restarts the
+ * Hadoop metrics system, forcing JMX to clear the cache of exported metrics. This class need to be
+ * in the o.a.h.metrics2.impl namespace as many of the variables/calls used are package private.
  */
 @InterfaceAudience.Private
 public final class JmxCacheBuster {
@@ -56,7 +53,7 @@ public final class JmxCacheBuster {
     if (LOG.isTraceEnabled()) {
       LOG.trace("clearing JMX Cache" + StringUtils.stringifyException(new Exception()));
     }
-    //If there are more then 100 ms before the executor will run then everything should be merged.
+    // If there are more then 100 ms before the executor will run then everything should be merged.
     ScheduledFuture future = fut.get();
     if ((future != null && (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
       // BAIL OUT
@@ -104,9 +101,9 @@ public final class JmxCacheBuster {
           Thread.sleep(500);
           DefaultMetricsSystem.instance().start();
         }
-      }  catch (Exception exception)  {
+      } catch (Exception exception) {
         LOG.debug("error clearing the jmx it appears the metrics system hasn't been started",
-            exception);
+          exception);
       }
     }
   }

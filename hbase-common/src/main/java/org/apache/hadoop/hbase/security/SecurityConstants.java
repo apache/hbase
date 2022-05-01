@@ -26,8 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class SecurityConstants {
 
   /**
-   * Configuration keys for programmatic JAAS configuration for secured master
-   * and regionserver interaction
+   * Configuration keys for programmatic JAAS configuration for secured master and regionserver
+   * interaction
    */
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
   public static final String MASTER_KRB_KEYTAB_FILE = "hbase.master.keytab.file";

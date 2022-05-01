@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,11 +73,11 @@ import org.junit.experimental.categories.Category;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestTableScan {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableScan.class);
+    HBaseClassTestRule.forClass(TestTableScan.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScanResource");
   private static final String CFA = "a";
@@ -92,8 +92,7 @@ public class TestTableScan {
   private static Configuration conf;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -101,8 +100,7 @@ public class TestTableScan {
     conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName());
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
-    client = new Client(new Cluster().add("localhost",
-      REST_TEST_UTIL.getServletPort()));
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     Admin admin = TEST_UTIL.getAdmin();
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
@@ -132,8 +130,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_LIMIT + "=10");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
@@ -143,13 +140,12 @@ public class TestTableScan {
     assertEquals(10, count);
     checkRowsNotNull(model);
 
-    //Test with no limit.
+    // Test with no limit.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_XML);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = (CellSetModel) ush.unmarshal(response.getStream());
@@ -157,7 +153,7 @@ public class TestTableScan {
     assertEquals(expectedRows1, count);
     checkRowsNotNull(model);
 
-    //Test with start and end row.
+    // Test with start and end row.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -166,8 +162,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_XML);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     model = (CellSetModel) ush.unmarshal(response.getStream());
     count = TestScannerResource.countCellSet(model);
@@ -178,7 +173,7 @@ public class TestTableScan {
     assertEquals(24, count);
     checkRowsNotNull(model);
 
-    //Test with start row and limit.
+    // Test with start row and limit.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -187,8 +182,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_LIMIT + "=15");
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_XML);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = (CellSetModel) ush.unmarshal(response.getStream());
@@ -208,24 +202,22 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_LIMIT + "=2");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
     int count = TestScannerResource.countCellSet(model);
     assertEquals(2, count);
     checkRowsNotNull(model);
 
-    //Test scanning with no limit.
+    // Test scanning with no limit.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_2);
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     model = mapper.readValue(response.getStream(), CellSetModel.class);
@@ -233,7 +225,7 @@ public class TestTableScan {
     assertEquals(expectedRows2, count);
     checkRowsNotNull(model);
 
-    //Test with start row and end row.
+    // Test with start row and end row.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -242,8 +234,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     model = mapper.readValue(response.getStream(), CellSetModel.class);
     RowModel startRow = model.getRows().get(0);
@@ -267,12 +258,11 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_LIMIT + "=10");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    JAXBContext context = JAXBContext.newInstance(ClientSideCellSetModel.class, RowModel.class,
-      CellModel.class);
+    JAXBContext context =
+      JAXBContext.newInstance(ClientSideCellSetModel.class, RowModel.class, CellModel.class);
     Unmarshaller unmarshaller = context.createUnmarshaller();
 
     final ClientSideCellSetModel.Listener listener = new ClientSideCellSetModel.Listener() {
@@ -285,19 +275,19 @@ public class TestTableScan {
 
     // install the callback on all ClientSideCellSetModel instances
     unmarshaller.setListener(new Unmarshaller.Listener() {
-        @Override
-        public void beforeUnmarshal(Object target, Object parent) {
-          if (target instanceof ClientSideCellSetModel) {
-            ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
-          }
+      @Override
+      public void beforeUnmarshal(Object target, Object parent) {
+        if (target instanceof ClientSideCellSetModel) {
+          ((ClientSideCellSetModel) target).setCellSetModelListener(listener);
         }
+      }
 
-        @Override
-        public void afterUnmarshal(Object target, Object parent) {
-          if (target instanceof ClientSideCellSetModel) {
-            ((ClientSideCellSetModel) target).setCellSetModelListener(null);
-          }
+      @Override
+      public void afterUnmarshal(Object target, Object parent) {
+        if (target instanceof ClientSideCellSetModel) {
+          ((ClientSideCellSetModel) target).setCellSetModelListener(null);
         }
+      }
     });
 
     // create a new XML parser
@@ -313,7 +303,7 @@ public class TestTableScan {
 
   @Test
   public void testStreamingJSON() throws Exception {
-    //Test with start row and end row.
+    // Test with start row and end row.
     StringBuilder builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -322,18 +312,17 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_JSON);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
 
     int count = 0;
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     JsonFactory jfactory = new JsonFactory(mapper);
     JsonParser jParser = jfactory.createJsonParser(response.getStream());
     boolean found = false;
     while (jParser.nextToken() != JsonToken.END_OBJECT) {
-      if(jParser.getCurrentToken() == JsonToken.START_OBJECT && found) {
+      if (jParser.getCurrentToken() == JsonToken.START_OBJECT && found) {
         RowModel row = jParser.readValueAs(RowModel.class);
         assertNotNull(row.getKey());
         for (int i = 0; i < row.getCells().size(); i++) {
@@ -361,14 +350,13 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_LIMIT + "=15");
-    Response response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_PROTOBUF);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     int rowCount = readProtobufStream(response.getStream());
     assertEquals(15, rowCount);
 
-    //Test with start row and end row.
+    // Test with start row and end row.
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -377,8 +365,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_START_ROW + "=aaa");
     builder.append("&");
     builder.append(Constants.SCAN_END_ROW + "=aay");
-    response = client.get("/" + TABLE + builder.toString(),
-      Constants.MIMETYPE_PROTOBUF);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_PROTOBUF);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     rowCount = readProtobufStream(response.getStream());
@@ -386,7 +373,7 @@ public class TestTableScan {
   }
 
   private void checkRowsNotNull(CellSetModel model) {
-    for (RowModel row: model.getRows()) {
+    for (RowModel row : model.getRows()) {
       assertTrue(row.getKey() != null);
       assertTrue(row.getCells().size() > 0);
     }
@@ -398,7 +385,7 @@ public class TestTableScan {
    * @return The number of rows in the cell set model.
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  public int readProtobufStream(InputStream inputStream) throws IOException{
+  public int readProtobufStream(InputStream inputStream) throws IOException {
     DataInputStream stream = new DataInputStream(inputStream);
     CellSetModel model = null;
     int rowCount = 0;
@@ -433,8 +420,7 @@ public class TestTableScan {
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=a:test");
-    Response response = client.get("/" + TABLE  + builder.toString(),
-      Constants.MIMETYPE_JSON);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
@@ -456,8 +442,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_END_ROW + "=aay");
     builder.append("&");
     builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("PrefixFilter('aab')", "UTF-8"));
-    Response response =
-        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
     Unmarshaller ush = ctx.createUnmarshaller();
@@ -465,7 +450,7 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(1, count);
     assertEquals("aab",
-        new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
+      new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -473,10 +458,9 @@ public class TestTableScan {
     StringBuilder builder = new StringBuilder();
     builder.append("/abc*");
     builder.append("?");
-    builder.append(Constants.SCAN_FILTER + "="
-        + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
-    Response response =
-        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    builder.append(
+      Constants.SCAN_FILTER + "=" + URLEncoder.encode("QualifierFilter(=,'binary:1')", "UTF-8"));
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
     Unmarshaller ush = ctx.createUnmarshaller();
@@ -484,7 +468,7 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(1, count);
     assertEquals("abc",
-        new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
+      new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -493,9 +477,8 @@ public class TestTableScan {
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_FILTER + "="
-        + URLEncoder.encode("PrefixFilter('abc') AND QualifierFilter(=,'binary:1')", "UTF-8"));
-    Response response =
-        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+      + URLEncoder.encode("PrefixFilter('abc') AND QualifierFilter(=,'binary:1')", "UTF-8"));
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
     Unmarshaller ush = ctx.createUnmarshaller();
@@ -503,7 +486,7 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(1, count);
     assertEquals("abc",
-        new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
+      new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -514,8 +497,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
-    Response response =
-        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
     Unmarshaller ush = ctx.createUnmarshaller();
@@ -523,7 +505,7 @@ public class TestTableScan {
     int count = TestScannerResource.countCellSet(model);
     assertEquals(1, count);
     assertEquals("abc",
-        new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
+      new String(model.getRows().get(0).getCells().get(0).getValue(), StandardCharsets.UTF_8));
   }
 
   @Test
@@ -534,8 +516,7 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
-    Response response =
-        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
     Unmarshaller ush = ctx.createUnmarshaller();
@@ -564,7 +545,7 @@ public class TestTableScan {
     assertEquals(24, count);
     List<RowModel> rowModels = model.getRows().subList(1, count);
 
-    //reversed
+    // reversed
     builder = new StringBuilder();
     builder.append("/*");
     builder.append("?");
@@ -589,9 +570,9 @@ public class TestTableScan {
       RowModel reversedRowModel = reversedRowModels.get(i);
 
       assertEquals(new String(rowModel.getKey(), "UTF-8"),
-          new String(reversedRowModel.getKey(), "UTF-8"));
+        new String(reversedRowModel.getKey(), "UTF-8"));
       assertEquals(new String(rowModel.getCells().get(0).getValue(), "UTF-8"),
-          new String(reversedRowModel.getCells().get(0).getValue(), "UTF-8"));
+        new String(reversedRowModel.getCells().get(0).getValue(), "UTF-8"));
     }
   }
 
@@ -602,12 +583,11 @@ public class TestTableScan {
     builder.append("/*");
     builder.append("?");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_EMPTY);
-    Response response = client.get("/" + TABLE + builder.toString(),
-        Constants.MIMETYPE_JSON);
+    Response response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    ObjectMapper mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
     int count = TestScannerResource.countCellSet(model);
     assertEquals(expectedRows3, count);
@@ -623,12 +603,11 @@ public class TestTableScan {
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
     builder.append("&");
     builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_EMPTY);
-    response = client.get("/" + TABLE + builder.toString(),
-        Constants.MIMETYPE_JSON);
+    response = client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
-    mapper = new JacksonJaxbJsonProvider()
-        .locateMapper(CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     model = mapper.readValue(response.getStream(), CellSetModel.class);
     count = TestScannerResource.countCellSet(model);
     assertEquals(expectedRows1 + expectedRows3, count);
@@ -667,14 +646,13 @@ public class TestTableScan {
      * This list is not a real list; instead it will notify a listener whenever JAXB has
      * unmarshalled the next row.
      */
-    @XmlElement(name="Row")
+    @XmlElement(name = "Row")
     private List<RowModel> row;
 
     static boolean listenerInvoked = false;
 
     /**
-     * Install a listener for row model on this object. If l is null, the listener
-     * is removed again.
+     * Install a listener for row model on this object. If l is null, the listener is removed again.
      */
     public void setCellSetModelListener(final Listener l) {
       row = (l == null) ? null : new ArrayList<RowModel>() {

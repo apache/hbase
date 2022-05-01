@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRegionLocationFinder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocationFinder.class);
+    HBaseClassTestRule.forClass(TestRegionLocationFinder.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
@@ -93,13 +93,13 @@ public class TestRegionLocationFinder {
         // get region's hdfs block distribution by region and RegionLocationFinder,
         // they should have same result
         HDFSBlocksDistribution blocksDistribution1 = region.getHDFSBlocksDistribution();
-        HDFSBlocksDistribution blocksDistribution2 = finder.getBlockDistribution(region
-            .getRegionInfo());
+        HDFSBlocksDistribution blocksDistribution2 =
+          finder.getBlockDistribution(region.getRegionInfo());
         assertEquals(blocksDistribution1.getUniqueBlocksTotalWeight(),
           blocksDistribution2.getUniqueBlocksTotalWeight());
         if (blocksDistribution1.getUniqueBlocksTotalWeight() != 0) {
-          assertEquals(blocksDistribution1.getTopHosts().get(0), blocksDistribution2.getTopHosts()
-              .get(0));
+          assertEquals(blocksDistribution1.getTopHosts().get(0),
+            blocksDistribution2.getTopHosts().get(0));
         }
       }
     }
@@ -129,8 +129,7 @@ public class TestRegionLocationFinder {
     for (int i = 0; i < ServerNum; i++) {
       HRegionServer server = cluster.getRegionServer(i);
       for (HRegion region : server.getRegions(tableName)) {
-        List<ServerName> servers = finder.getTopBlockLocations(region
-            .getRegionInfo());
+        List<ServerName> servers = finder.getTopBlockLocations(region.getRegionInfo());
         // test table may have empty region
         if (region.getHDFSBlocksDistribution().getUniqueBlocksTotalWeight() == 0) {
           continue;

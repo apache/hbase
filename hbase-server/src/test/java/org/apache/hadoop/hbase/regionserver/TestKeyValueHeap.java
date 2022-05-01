@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestKeyValueHeap extends HBaseTestCase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestKeyValueHeap.class);
+    HBaseClassTestRule.forClass(TestKeyValueHeap.class);
 
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
@@ -74,17 +74,17 @@ public class TestKeyValueHeap extends HBaseTestCase {
   List<KeyValueScanner> scanners = new ArrayList<>(Arrays.asList(s1, s2, s3));
 
   /*
-   * Uses {@code scanners} to build a KeyValueHeap, iterates over it and asserts that returned
-   * Cells are same as {@code expected}.
+   * Uses {@code scanners} to build a KeyValueHeap, iterates over it and asserts that returned Cells
+   * are same as {@code expected}.
    * @return List of Cells returned from scanners.
    */
   public List<Cell> assertCells(List<Cell> expected, List<KeyValueScanner> scanners)
-      throws IOException {
-    //Creating KeyValueHeap
+    throws IOException {
+    // Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     List<Cell> actual = new ArrayList<>();
-    while(kvh.peek() != null){
+    while (kvh.peek() != null) {
       actual.add(kvh.next());
     }
 
@@ -99,42 +99,41 @@ public class TestKeyValueHeap extends HBaseTestCase {
   }
 
   @Test
-  public void testSorted() throws IOException{
-    //Cases that need to be checked are:
-    //1. The "smallest" Cell is in the same scanners as current
-    //2. Current scanner gets empty
+  public void testSorted() throws IOException {
+    // Cases that need to be checked are:
+    // 1. The "smallest" Cell is in the same scanners as current
+    // 2. Current scanner gets empty
 
-    List<Cell> expected = Arrays.asList(
-        kv111, kv112, kv113, kv114, kv115, kv121, kv122, kv211, kv212, kv213);
+    List<Cell> expected =
+      Arrays.asList(kv111, kv112, kv113, kv114, kv115, kv121, kv122, kv211, kv212, kv213);
 
     List<Cell> actual = assertCells(expected, scanners);
 
-    //Check if result is sorted according to Comparator
-    for(int i=0; i<actual.size()-1; i++){
-      int ret = CellComparatorImpl.COMPARATOR.compare(actual.get(i), actual.get(i+1));
+    // Check if result is sorted according to Comparator
+    for (int i = 0; i < actual.size() - 1; i++) {
+      int ret = CellComparatorImpl.COMPARATOR.compare(actual.get(i), actual.get(i + 1));
       assertTrue(ret < 0);
     }
   }
 
   @Test
   public void testSeek() throws IOException {
-    //Cases:
-    //1. Seek Cell that is not in scanner
-    //2. Check that smallest that is returned from a seek is correct
+    // Cases:
+    // 1. Seek Cell that is not in scanner
+    // 2. Check that smallest that is returned from a seek is correct
 
     List<Cell> expected = Arrays.asList(kv211);
 
-    //Creating KeyValueHeap
-    KeyValueHeap kvh =
-      new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
+    // Creating KeyValueHeap
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
     Cell seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
 
     List<Cell> actual = Arrays.asList(kvh.peek());
 
-    assertEquals("Expected = " + Arrays.toString(expected.toArray())
-        + "\n Actual = " + Arrays.toString(actual.toArray()), expected, actual);
+    assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
+      + Arrays.toString(actual.toArray()), expected, actual);
   }
 
   @Test
@@ -144,10 +143,11 @@ public class TestKeyValueHeap extends HBaseTestCase {
     TestScanner s4 = new TestScanner(new ArrayList<>());
     scanners.add(s4);
 
-    //Creating KeyValueHeap
+    // Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
 
-    while(kvh.next() != null);
+    while (kvh.next() != null)
+      ;
     // Once the internal scanners go out of Cells, those will be removed from KVHeap's priority
     // queue and added to a Set for lazy close. The actual close will happen only on KVHeap#close()
     assertEquals(4, kvh.scannersForDelayedClose.size());
@@ -156,8 +156,8 @@ public class TestKeyValueHeap extends HBaseTestCase {
     assertTrue(kvh.scannersForDelayedClose.contains(s3));
     assertTrue(kvh.scannersForDelayedClose.contains(s4));
     kvh.close();
-    for(KeyValueScanner scanner : scanners) {
-      assertTrue(((TestScanner)scanner).isClosed());
+    for (KeyValueScanner scanner : scanners) {
+      assertTrue(((TestScanner) scanner).isClosed());
     }
   }
 
@@ -179,7 +179,8 @@ public class TestKeyValueHeap extends HBaseTestCase {
       for (KeyValueScanner scanner : scanners) {
         ((SeekTestScanner) scanner).setRealSeekDone(false);
       }
-      while (kvh.next() != null);
+      while (kvh.next() != null)
+        ;
       // The pollRealKV should throw IOE.
       assertTrue(false);
     } catch (IOException ioe) {
@@ -231,7 +232,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
 
     @Override
-    public void close(){
+    public void close() {
       closed = true;
     }
 

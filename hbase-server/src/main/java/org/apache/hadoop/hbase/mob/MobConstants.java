@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,8 +21,8 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The constants used in mob.
@@ -48,8 +47,8 @@ public final class MobConstants {
 
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";
   public static final String MOB_CACHE_EVICT_REMAIN_RATIO = "hbase.mob.cache.evict.remain.ratio";
-  public static final Tag MOB_REF_TAG = new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE,
-      HConstants.EMPTY_BYTE_ARRAY);
+  public static final Tag MOB_REF_TAG =
+    new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE, HConstants.EMPTY_BYTE_ARRAY);
 
   public static final float DEFAULT_EVICT_REMAIN_RATIO = 0.5f;
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600L;
@@ -66,37 +65,33 @@ public final class MobConstants {
     "hbase.mob.compaction.mergeable.threshold";
   public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 10 * 128 * 1024 * 1024;
   /**
-   * The max number of del files that is allowed in the mob file compaction. In the mob
-   * compaction, when the number of existing del files is larger than this value, they are merged
-   * until number of del files is not larger this value. The default value is 3.
+   * The max number of del files that is allowed in the mob file compaction. In the mob compaction,
+   * when the number of existing del files is larger than this value, they are merged until number
+   * of del files is not larger this value. The default value is 3.
    */
   public static final String MOB_DELFILE_MAX_COUNT = "hbase.mob.delfile.max.count";
   public static final int DEFAULT_MOB_DELFILE_MAX_COUNT = 3;
   /**
-   * The max number of the mob files that is allowed in a batch of the mob compaction.
-   * The mob compaction merges the small mob files to bigger ones. If the number of the
-   * small files is very large, it could lead to a "too many opened file handlers" in the merge.
-   * And the merge has to be split into batches. This value limits the number of mob files
-   * that are selected in a batch of the mob compaction. The default value is 100.
+   * The max number of the mob files that is allowed in a batch of the mob compaction. The mob
+   * compaction merges the small mob files to bigger ones. If the number of the small files is very
+   * large, it could lead to a "too many opened file handlers" in the merge. And the merge has to be
+   * split into batches. This value limits the number of mob files that are selected in a batch of
+   * the mob compaction. The default value is 100.
    */
-  public static final String MOB_COMPACTION_BATCH_SIZE =
-    "hbase.mob.compaction.batch.size";
+  public static final String MOB_COMPACTION_BATCH_SIZE = "hbase.mob.compaction.batch.size";
   public static final int DEFAULT_MOB_COMPACTION_BATCH_SIZE = 100;
   /**
-   * The period that MobCompactionChore runs. The unit is second.
-   * The default value is one week.
+   * The period that MobCompactionChore runs. The unit is second. The default value is one week.
    */
-  public static final String MOB_COMPACTION_CHORE_PERIOD =
-    "hbase.mob.compaction.chore.period";
-  public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD =
-    24 * 60 * 60 * 7; // a week
+  public static final String MOB_COMPACTION_CHORE_PERIOD = "hbase.mob.compaction.chore.period";
+  public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD = 24 * 60 * 60 * 7; // a week
   public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
   /**
    * The max number of threads used in MobCompactor.
    */
-  public static final String MOB_COMPACTION_THREADS_MAX =
-    "hbase.mob.compaction.threads.max";
+  public static final String MOB_COMPACTION_THREADS_MAX = "hbase.mob.compaction.threads.max";
   public static final int DEFAULT_MOB_COMPACTION_THREADS_MAX = 1;
+
   private MobConstants() {
 
   }

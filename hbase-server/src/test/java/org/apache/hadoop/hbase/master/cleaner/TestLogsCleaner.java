@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,21 +67,20 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestLogsCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLogsCleaner.class);
+    HBaseClassTestRule.forClass(TestLogsCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLogsCleaner.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final Path OLD_WALS_DIR =
-      new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_OLDLOGDIR_NAME);
+    new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_OLDLOGDIR_NAME);
 
-  private static final Path OLD_PROCEDURE_WALS_DIR =
-      new Path(OLD_WALS_DIR, "masterProcedureWALs");
+  private static final Path OLD_PROCEDURE_WALS_DIR = new Path(OLD_WALS_DIR, "masterProcedureWALs");
 
   private static Configuration conf;
 
@@ -114,21 +113,11 @@ public class TestLogsCleaner {
   }
 
   /**
-   * This tests verifies LogCleaner works correctly with WALs and Procedure WALs located
-   * in the same oldWALs directory.
-   * Created files:
-   * - 2 invalid files
-   * - 5 old Procedure WALs
-   * - 30 old WALs from which 3 are in replication
-   * - 5 recent Procedure WALs
-   * - 1 recent WAL
-   * - 1 very new WAL (timestamp in future)
-   * - masterProcedureWALs subdirectory
-   * Files which should stay:
-   * - 3 replication WALs
-   * - 2 new WALs
-   * - 5 latest Procedure WALs
-   * - masterProcedureWALs subdirectory
+   * This tests verifies LogCleaner works correctly with WALs and Procedure WALs located in the same
+   * oldWALs directory. Created files: - 2 invalid files - 5 old Procedure WALs - 30 old WALs from
+   * which 3 are in replication - 5 recent Procedure WALs - 1 recent WAL - 1 very new WAL (timestamp
+   * in future) - masterProcedureWALs subdirectory Files which should stay: - 3 replication WALs - 2
+   * new WALs - 5 latest Procedure WALs - masterProcedureWALs subdirectory
    */
   @Test
   public void testLogCleaning() throws Exception {
@@ -141,10 +130,10 @@ public class TestLogsCleaner {
     HMaster.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
     ReplicationQueueStorage queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+      ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
 
-    String fakeMachineName = URLEncoder.encode(
-        server.getServerName().toString(), StandardCharsets.UTF_8.name());
+    String fakeMachineName =
+      URLEncoder.encode(server.getServerName().toString(), StandardCharsets.UTF_8.name());
 
     final FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(OLD_PROCEDURE_WALS_DIR);
@@ -157,8 +146,7 @@ public class TestLogsCleaner {
 
     // Case 2: 5 Procedure WALs that are old which would be deleted
     for (int i = 1; i <= 5; i++) {
-      final Path fileName =
-          new Path(OLD_PROCEDURE_WALS_DIR, String.format("pv2-%020d.log", i));
+      final Path fileName = new Path(OLD_PROCEDURE_WALS_DIR, String.format("pv2-%020d.log", i));
       fs.createNewFile(fileName);
     }
 
@@ -179,8 +167,7 @@ public class TestLogsCleaner {
 
     // Case 5: 5 Procedure WALs that are new, will stay
     for (int i = 6; i <= 10; i++) {
-      Path fileName =
-          new Path(OLD_PROCEDURE_WALS_DIR, String.format("pv2-%020d.log", i));
+      Path fileName = new Path(OLD_PROCEDURE_WALS_DIR, String.format("pv2-%020d.log", i));
       fs.createNewFile(fileName);
     }
 
@@ -205,18 +192,17 @@ public class TestLogsCleaner {
 
     // In oldWALs we end up with the current WAL, a newer WAL, the 3 old WALs which
     // are scheduled for replication and masterProcedureWALs directory
-    TEST_UTIL.waitFor(1000, (Waiter.Predicate<Exception>) () -> 6 == fs
-        .listStatus(OLD_WALS_DIR).length);
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () -> 6 == fs.listStatus(OLD_WALS_DIR).length);
     // In masterProcedureWALs we end up with 5 newer Procedure WALs
-    TEST_UTIL.waitFor(1000, (Waiter.Predicate<Exception>) () -> 5 == fs
-        .listStatus(OLD_PROCEDURE_WALS_DIR).length);
+    TEST_UTIL.waitFor(1000,
+      (Waiter.Predicate<Exception>) () -> 5 == fs.listStatus(OLD_PROCEDURE_WALS_DIR).length);
 
     if (LOG.isDebugEnabled()) {
       FileStatus[] statusOldWALs = fs.listStatus(OLD_WALS_DIR);
       FileStatus[] statusProcedureWALs = fs.listStatus(OLD_PROCEDURE_WALS_DIR);
       LOG.debug("Kept log file for oldWALs: {}", Arrays.toString(statusOldWALs));
-      LOG.debug("Kept log file for masterProcedureWALs: {}",
-          Arrays.toString(statusProcedureWALs));
+      LOG.debug("Kept log file for masterProcedureWALs: {}", Arrays.toString(statusProcedureWALs));
     }
   }
 
@@ -229,12 +215,11 @@ public class TestLogsCleaner {
     ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
 
     List<FileStatus> dummyFiles = Arrays.asList(
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
-        new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2"))
-    );
+      new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log1")),
+      new FileStatus(100, false, 3, 100, System.currentTimeMillis(), new Path("log2")));
 
-    try (FaultyZooKeeperWatcher faultyZK = new FaultyZooKeeperWatcher(conf,
-        "testZooKeeperAbort-faulty", null)) {
+    try (FaultyZooKeeperWatcher faultyZK =
+      new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null)) {
       faultyZK.init();
       cleaner.setConf(conf, faultyZK);
       cleaner.preClean();
@@ -270,10 +255,9 @@ public class TestLogsCleaner {
     // Subtract 1000 from current time so modtime is for sure older
     // than 'now'.
     long modTime = System.currentTimeMillis() - 1000;
-    List<FileStatus> dummyFiles = Arrays.asList(
-        new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
-        new FileStatus(100, false, 3, 100, modTime, new Path("log2"))
-    );
+    List<FileStatus> dummyFiles =
+      Arrays.asList(new FileStatus(100, false, 3, 100, modTime, new Path("log1")),
+        new FileStatus(100, false, 3, 100, modTime, new Path("log2")));
 
     ZKWatcher zkw = new ZKWatcher(conf, "testZooKeeperAbort-normal", null);
     try {
@@ -300,7 +284,7 @@ public class TestLogsCleaner {
     LogCleaner cleaner = new LogCleaner(3000, server, conf, fs, OLD_WALS_DIR, POOL);
     int size = cleaner.getSizeOfCleaners();
     assertEquals(LogCleaner.DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
-        cleaner.getCleanerThreadTimeoutMsec());
+      cleaner.getCleanerThreadTimeoutMsec());
     // Create dir and files for test
     int numOfFiles = 10;
     createFiles(fs, OLD_WALS_DIR, numOfFiles);
@@ -369,7 +353,8 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public void abort(String why, Throwable e) {}
+    public void abort(String why, Throwable e) {
+    }
 
     @Override
     public boolean isAborted() {
@@ -377,7 +362,8 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public void stop(String why) {}
+    public void stop(String why) {
+    }
 
     @Override
     public boolean isStopped() {
@@ -414,14 +400,14 @@ public class TestLogsCleaner {
     private RecoverableZooKeeper zk;
 
     public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
-        throws ZooKeeperConnectionException, IOException {
+      throws ZooKeeperConnectionException, IOException {
       super(conf, identifier, abortable);
     }
 
     public void init() throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
-      doThrow(new KeeperException.ConnectionLossException())
-        .when(zk).getChildren("/hbase/replication/rs", null);
+      doThrow(new KeeperException.ConnectionLossException()).when(zk)
+        .getChildren("/hbase/replication/rs", null);
     }
 
     @Override

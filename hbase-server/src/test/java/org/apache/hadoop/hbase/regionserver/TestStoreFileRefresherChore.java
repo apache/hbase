@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestStoreFileRefresherChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStoreFileRefresherChore.class);
+    HBaseClassTestRule.forClass(TestStoreFileRefresherChore.class);
 
   private HBaseTestingUtility TEST_UTIL;
   private Path testDir;
@@ -81,11 +81,11 @@ public class TestStoreFileRefresherChore {
   }
 
   private TableDescriptor getTableDesc(TableName tableName, int regionReplication,
-      byte[]... families) {
+    byte[]... families) {
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     Arrays.stream(families).map(family -> ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::setColumnFamily);
+      .setMaxVersions(Integer.MAX_VALUE).build()).forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
@@ -93,7 +93,7 @@ public class TestStoreFileRefresherChore {
     boolean fail = false;
 
     FailingHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir,
-        RegionInfo regionInfo) {
+      RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
 
@@ -107,22 +107,20 @@ public class TestStoreFileRefresherChore {
   }
 
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
-      throws IOException {
+    throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
-        .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
+      .setEndKey(stopKey).setRegionId(0L).setReplicaId(replicaId).build();
     HRegionFileSystem fs =
-        new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
+      new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    HRegion region =
-        new HRegion(fs, wals.getWAL(info),
-            conf, htd, null);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    HRegion region = new HRegion(fs, wals.getWAL(info), conf, htd, null);
 
     region.initialize();
 
@@ -130,7 +128,7 @@ public class TestStoreFileRefresherChore {
   }
 
   private void putData(Region region, int startRow, int numRows, byte[] qf, byte[]... families)
-      throws IOException {
+    throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
@@ -142,7 +140,7 @@ public class TestStoreFileRefresherChore {
   }
 
   private void verifyDataExpectFail(Region newReg, int startRow, int numRows, byte[] qf,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     boolean threw = false;
     try {
       verifyData(newReg, startRow, numRows, qf, families);
@@ -155,7 +153,7 @@ public class TestStoreFileRefresherChore {
   }
 
   private void verifyData(Region newReg, int startRow, int numRows, byte[] qf, byte[]... families)
-      throws IOException {
+    throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       byte[] row = Bytes.toBytes("" + i);
       Get get = new Get(row);
@@ -175,10 +173,12 @@ public class TestStoreFileRefresherChore {
 
   static class StaleStorefileRefresherChore extends StorefileRefresherChore {
     boolean isStale = false;
+
     public StaleStorefileRefresherChore(int period, HRegionServer regionServer,
-        Stoppable stoppable) {
+      Stoppable stoppable) {
       super(period, false, regionServer, stoppable);
     }
+
     @Override
     protected boolean isRegionStale(String encodedName, long time) {
       return isStale;
@@ -188,7 +188,7 @@ public class TestStoreFileRefresherChore {
   @Test
   public void testIsStale() throws IOException {
     int period = 0;
-    byte[][] families = new byte[][] {Bytes.toBytes("cf")};
+    byte[][] families = new byte[][] { Bytes.toBytes("cf") };
     byte[] qf = Bytes.toBytes("cq");
 
     HRegionServer regionServer = mock(HRegionServer.class);
@@ -202,8 +202,8 @@ public class TestStoreFileRefresherChore {
     regions.add(primary);
     regions.add(replica1);
 
-    StaleStorefileRefresherChore chore = new StaleStorefileRefresherChore(period, regionServer,
-      new StoppableImplementation());
+    StaleStorefileRefresherChore chore =
+      new StaleStorefileRefresherChore(period, regionServer, new StoppableImplementation());
 
     // write some data to primary and flush
     putData(primary, 0, 100, qf, families);
@@ -215,7 +215,7 @@ public class TestStoreFileRefresherChore {
     verifyData(replica1, 0, 100, qf, families);
 
     // simulate an fs failure where we cannot refresh the store files for the replica
-    ((FailingHRegionFileSystem)replica1.getRegionFileSystem()).fail = true;
+    ((FailingHRegionFileSystem) replica1.getRegionFileSystem()).fail = true;
 
     // write some more data to primary and flush
     putData(primary, 100, 100, qf, families);
@@ -228,11 +228,11 @@ public class TestStoreFileRefresherChore {
     verifyDataExpectFail(replica1, 100, 100, qf, families);
 
     chore.isStale = true;
-    chore.chore(); //now after this, we cannot read back any value
+    chore.chore(); // now after this, we cannot read back any value
     try {
       verifyData(replica1, 0, 100, qf, families);
       fail("should have failed with IOException");
-    } catch(IOException ex) {
+    } catch (IOException ex) {
       // expected
     }
   }

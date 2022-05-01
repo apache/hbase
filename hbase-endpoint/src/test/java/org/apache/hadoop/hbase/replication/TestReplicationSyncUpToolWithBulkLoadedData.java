@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -112,7 +112,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void mimicSyncUpAfterBulkLoad(Iterator<String> randomHFileRangeListIterator)
-      throws Exception {
+    throws Exception {
     LOG.debug("mimicSyncUpAfterBulkLoad");
     shutDownTargetHBaseCluster();
 
@@ -163,16 +163,16 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
         LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i +
-          ", with rowCount_ht1TargetPeer1 =" + rowCountHt1TargetAtPeer1 +
-          " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
+        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
+          + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
+          + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }
   }
 
   private void loadAndReplicateHFiles(boolean verifyReplicationOnSlave,
-      Iterator<String> randomHFileRangeListIterator) throws Exception {
+    Iterator<String> randomHFileRangeListIterator) throws Exception {
     LOG.debug("loadAndReplicateHFiles");
 
     // Load 100 + 3 hfiles to t1_syncup.
@@ -210,7 +210,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void loadAndValidateHFileReplication(String testName, byte[] row, byte[] fam,
-      Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
+    Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
     Path dir = UTIL1.getDataTestDirOnTestFS(testName);
     FileSystem fs = UTIL1.getTestFileSystem();
     dir = dir.makeQualified(fs);
@@ -230,7 +230,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void wait(Table target, int expectedCount, String msg)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     for (int i = 0; i < NB_RETRIES; i++) {
       int rowCountHt2TargetAtPeer1 = UTIL2.countRows(target);
       if (i == NB_RETRIES - 1) {

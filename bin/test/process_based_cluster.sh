@@ -68,7 +68,7 @@ while [ $# -ne 0 ]; do
     -h|--help)
       print_usage ;;
     --kill)
-      IS_KILL=1 
+      IS_KILL=1
       cmd_specified ;;
     --show)
       IS_SHOW=1
@@ -106,5 +106,3 @@ else
   echo "No command specified" >&2
   exit 1
 fi
-
-

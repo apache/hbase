@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,19 +54,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test the optimization that does not scan files where all timestamps are
- * expired.
+ * Test the optimization that does not scan files where all timestamps are expired.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, LargeTests.class})
+@Category({ IOTests.class, LargeTests.class })
 public class TestScannerSelectionUsingTTL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerSelectionUsingTTL.class);
+    HBaseClassTestRule.forClass(TestScannerSelectionUsingTTL.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestScannerSelectionUsingTTL.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");
@@ -96,8 +94,7 @@ public class TestScannerSelectionUsingTTL {
     return params;
   }
 
-  public TestScannerSelectionUsingTTL(int numFreshFiles,
-      boolean explicitCompaction) {
+  public TestScannerSelectionUsingTTL(int numFreshFiles, boolean explicitCompaction) {
     this.numFreshFiles = numFreshFiles;
     this.totalNumFiles = numFreshFiles + NUM_EXPIRED_FILES;
     this.explicitCompaction = explicitCompaction;
@@ -109,15 +106,16 @@ public class TestScannerSelectionUsingTTL {
     conf.setBoolean("hbase.store.delete.expired.storefile", false);
     LruBlockCache cache = (LruBlockCache) BlockCacheFactory.createBlockCache(conf);
 
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setMaxVersions(Integer.MAX_VALUE)
-            .setTimeToLive(TTL_SECONDS).build()).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES)
+        .setMaxVersions(Integer.MAX_VALUE).setTimeToLive(TTL_SECONDS).build())
+      .build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
-    HRegion region = HBaseTestingUtility
-        .createRegionAndWAL(info, TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cache);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info,
+      TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cache);
 
     long ts = EnvironmentEdgeManager.currentTime();
-    long version = 0; //make sure each new set of Put's have a new ts
+    long version = 0; // make sure each new set of Put's have a new ts
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {
         Threads.sleepWithoutInterrupt(TTL_MS);
@@ -128,7 +126,7 @@ public class TestScannerSelectionUsingTTL {
         Put put = new Put(Bytes.toBytes("row" + iRow));
         for (int iCol = 0; iCol < NUM_COLS_PER_ROW; ++iCol) {
           put.addColumn(FAMILY_BYTES, Bytes.toBytes("col" + iCol), ts + version,
-                  Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
+            Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
         }
         region.put(put);
       }

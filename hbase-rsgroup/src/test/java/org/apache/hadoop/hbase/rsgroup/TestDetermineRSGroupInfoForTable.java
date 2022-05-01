@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -78,8 +77,7 @@ public class TestDetermineRSGroupInfoForTable {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.getConfiguration().set(
-      HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+    UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       RSGroupBasedLoadBalancer.class.getName());
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       RSGroupAdminEndpoint.class.getName());
@@ -88,21 +86,20 @@ public class TestDetermineRSGroupInfoForTable {
     admin = UTIL.getAdmin();
     rsGroupAdminClient = new RSGroupAdminClient(UTIL.getConnection());
 
-    UTIL.waitFor(60000, (Predicate<Exception>) () ->
-        master.isInitialized() && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
+    UTIL.waitFor(60000, (Predicate<Exception>) () -> master.isInitialized()
+      && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline());
 
     List<RSGroupAdminEndpoint> cps =
-        master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class);
+      master.getMasterCoprocessorHost().findCoprocessors(RSGroupAdminEndpoint.class);
     assertTrue(cps.size() > 0);
     rsGroupInfoManager = cps.get(0).getGroupInfoManager();
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
     rsGroupAdminClient.addRSGroup(GROUP_NAME);
-    rsGroupAdminClient.moveServers(
-      Collections.singleton(rs.getServerName().getAddress()), GROUP_NAME);
+    rsGroupAdminClient.moveServers(Collections.singleton(rs.getServerName().getAddress()),
+      GROUP_NAME);
     admin.createNamespace(NamespaceDescriptor.create(NAMESPACE_NAME)
-      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, GROUP_NAME)
-      .build());
+      .addConfiguration(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP, GROUP_NAME).build());
     admin.createNamespace(NamespaceDescriptor.create(OTHER_NAMESPACE_NAME).build());
   }
 
@@ -115,8 +112,7 @@ public class TestDetermineRSGroupInfoForTable {
 
   @Test
   public void testByDefault() throws IOException {
-    RSGroupInfo group =
-      rsGroupInfoManager.determineRSGroupInfoForTable(TableName.valueOf("tb"));
+    RSGroupInfo group = rsGroupInfoManager.determineRSGroupInfoForTable(TableName.valueOf("tb"));
     assertEquals(group.getName(), RSGroupInfo.DEFAULT_GROUP);
   }
 
@@ -125,8 +121,8 @@ public class TestDetermineRSGroupInfoForTable {
     RSGroupInfo group = rsGroupInfoManager.determineRSGroupInfoForTable(TABLE_NAME);
     assertEquals(group.getName(), GROUP_NAME);
 
-    group = rsGroupInfoManager.determineRSGroupInfoForTable(
-      TableName.valueOf(OTHER_NAMESPACE_NAME, "tb"));
+    group = rsGroupInfoManager
+      .determineRSGroupInfoForTable(TableName.valueOf(OTHER_NAMESPACE_NAME, "tb"));
     assertEquals(group.getName(), RSGroupInfo.DEFAULT_GROUP);
   }
 

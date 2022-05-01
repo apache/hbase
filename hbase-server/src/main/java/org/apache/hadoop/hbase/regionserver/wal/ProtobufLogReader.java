@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.EOFException;
@@ -25,28 +23,27 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader.Builder;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader.Builder;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
 /**
  * A Protobuf based WAL has the following structure:
@@ -55,12 +52,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
  * &lt;TrailerSize&gt; &lt;PB_WAL_COMPLETE_MAGIC&gt;
  * </p>
  * The Reader reads meta information (WAL Compression state, WALTrailer, etc) in
- * ProtobufLogReader#initReader(FSDataInputStream). A WALTrailer is an extensible structure
- * which is appended at the end of the WAL. This is empty for now; it can contain some meta
- * information such as Region level stats, etc in future.
+ * ProtobufLogReader#initReader(FSDataInputStream). A WALTrailer is an extensible structure which is
+ * appended at the end of the WAL. This is empty for now; it can contain some meta information such
+ * as Region level stats, etc in future.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
-  HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
+  HBaseInterfaceAudience.CONFIG })
 public class ProtobufLogReader extends ReaderBase {
   private static final Logger LOG = LoggerFactory.getLogger(ProtobufLogReader.class);
   // public for WALFactory until we move everything to o.a.h.h.wal
@@ -94,7 +91,7 @@ public class ProtobufLogReader extends ReaderBase {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
     writerClsNames.add(AsyncProtobufLogWriter.class.getSimpleName());
   }
-  
+
   // cell codec classname
   private String codecClsName = null;
 
@@ -102,12 +99,12 @@ public class ProtobufLogReader extends ReaderBase {
   public long trailerSize() {
     if (trailerPresent) {
       // sizeof PB_WAL_COMPLETE_MAGIC + sizof trailerSize + trailer
-      final long calculatedSize = (long) PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT
-          + trailer.getSerializedSize();
+      final long calculatedSize =
+        (long) PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT + trailer.getSerializedSize();
       final long expectedSize = fileLength - walEditsStopOffset;
       if (expectedSize != calculatedSize) {
         LOG.warn("After parsing the trailer, we expect the total footer to be {} bytes, but we "
-            + "calculate it as being {}", expectedSize, calculatedSize);
+          + "calculate it as being {}", expectedSize, calculatedSize);
       }
       return expectedSize;
     } else {
@@ -116,23 +113,25 @@ public class ProtobufLogReader extends ReaderBase {
   }
 
   enum WALHdrResult {
-    EOF,                   // stream is at EOF when method starts
+    EOF, // stream is at EOF when method starts
     SUCCESS,
-    UNKNOWN_WRITER_CLS     // name of writer class isn't recognized
+    UNKNOWN_WRITER_CLS // name of writer class isn't recognized
   }
-  
+
   // context for WALHdr carrying information such as Cell Codec classname
   static class WALHdrContext {
     WALHdrResult result;
     String cellCodecClsName;
-    
+
     WALHdrContext(WALHdrResult result, String cellCodecClsName) {
       this.result = result;
       this.cellCodecClsName = cellCodecClsName;
     }
+
     WALHdrResult getResult() {
       return result;
     }
+
     String getCellCodecClsName() {
       return cellCodecClsName;
     }
@@ -163,7 +162,7 @@ public class ProtobufLogReader extends ReaderBase {
 
   @Override
   public void init(FileSystem fs, Path path, Configuration conf, FSDataInputStream stream)
-      throws IOException {
+    throws IOException {
     this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
     super.init(fs, path, conf, stream);
   }
@@ -179,31 +178,28 @@ public class ProtobufLogReader extends ReaderBase {
   public List<String> getWriterClsNames() {
     return writerClsNames;
   }
-  
+
   /*
    * Returns the cell codec classname
    */
   public String getCodecClsName() {
-      return codecClsName;
+    return codecClsName;
   }
 
-  protected WALHdrContext readHeader(Builder builder, FSDataInputStream stream)
-      throws IOException {
-     boolean res = builder.mergeDelimitedFrom(stream);
-     if (!res) return new WALHdrContext(WALHdrResult.EOF, null);
-     if (builder.hasWriterClsName() &&
-         !getWriterClsNames().contains(builder.getWriterClsName())) {
-       return new WALHdrContext(WALHdrResult.UNKNOWN_WRITER_CLS, null);
-     }
-     String clsName = null;
-     if (builder.hasCellCodecClsName()) {
-       clsName = builder.getCellCodecClsName();
-     }
-     return new WALHdrContext(WALHdrResult.SUCCESS, clsName);
+  protected WALHdrContext readHeader(Builder builder, FSDataInputStream stream) throws IOException {
+    boolean res = builder.mergeDelimitedFrom(stream);
+    if (!res) return new WALHdrContext(WALHdrResult.EOF, null);
+    if (builder.hasWriterClsName() && !getWriterClsNames().contains(builder.getWriterClsName())) {
+      return new WALHdrContext(WALHdrResult.UNKNOWN_WRITER_CLS, null);
+    }
+    String clsName = null;
+    if (builder.hasCellCodecClsName()) {
+      clsName = builder.getCellCodecClsName();
+    }
+    return new WALHdrContext(WALHdrResult.SUCCESS, clsName);
   }
 
-  private String initInternal(FSDataInputStream stream, boolean isFirst)
-      throws IOException {
+  private String initInternal(FSDataInputStream stream, boolean isFirst) throws IOException {
     close();
     if (!isFirst) {
       // Re-compute the file length.
@@ -239,11 +235,13 @@ public class ProtobufLogReader extends ReaderBase {
     this.seekOnFs(currentPosition);
     if (LOG.isTraceEnabled()) {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
-          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false") + ", currentPosition: " + currentPosition);
+        + ", fileLength: " + this.fileLength + ", " + "trailerPresent: "
+        + (trailerPresent ? "true, size: " + trailer.getSerializedSize() : "false")
+        + ", currentPosition: " + currentPosition);
     }
-    
+
     codecClsName = hdrCtxt.getCellCodecClsName();
-    
+
     return hdrCtxt.getCellCodecClsName();
   }
 
@@ -261,8 +259,7 @@ public class ProtobufLogReader extends ReaderBase {
    * </ul>
    * <p>
    * In case the trailer size > this.trailerMaxSize, it is read after a WARN message.
-   * @return true if a valid trailer is present
-   * @throws IOException
+   * @return true if a valid trailer is present n
    */
   private boolean setTrailerIfPresent() {
     try {
@@ -301,7 +298,7 @@ public class ProtobufLogReader extends ReaderBase {
   }
 
   protected WALCellCodec getCodec(Configuration conf, String cellCodecClsName,
-      CompressionContext compressionContext) throws IOException {
+    CompressionContext compressionContext) throws IOException {
     return WALCellCodec.create(conf, cellCodecClsName, compressionContext);
   }
 
@@ -309,7 +306,7 @@ public class ProtobufLogReader extends ReaderBase {
   protected void initAfterCompression() throws IOException {
     initAfterCompression(null);
   }
-  
+
   @Override
   protected void initAfterCompression(String cellCodecClsName) throws IOException {
     WALCellCodec codec = getCodec(this.conf, cellCodecClsName, this.compressionContext);
@@ -350,28 +347,25 @@ public class ProtobufLogReader extends ReaderBase {
           throw new EOFException();
         }
         size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
-        // available may be < 0 on local fs for instance.  If so, can't depend on it.
+        // available may be < 0 on local fs for instance. If so, can't depend on it.
         available = this.inputStream.available();
         if (available > 0 && available < size) {
-          throw new EOFException(
-            "Available stream not enough for edit, " + "inputStream.available()= "
-              + this.inputStream.available() + ", " + "entry size= " + size + " at offset = "
-              + this.inputStream.getPos());
+          throw new EOFException("Available stream not enough for edit, "
+            + "inputStream.available()= " + this.inputStream.available() + ", " + "entry size= "
+            + size + " at offset = " + this.inputStream.getPos());
         }
         ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size), (int) size);
       } catch (InvalidProtocolBufferException ipbe) {
         resetPosition = true;
-        throw (EOFException) new EOFException(
-          "Invalid PB, EOF? Ignoring; originalPosition=" + originalPosition + ", currentPosition="
-            + this.inputStream.getPos() + ", messageSize=" + size + ", currentAvailable="
-            + available).initCause(ipbe);
+        throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition="
+          + originalPosition + ", currentPosition=" + this.inputStream.getPos() + ", messageSize="
+          + size + ", currentAvailable=" + available).initCause(ipbe);
       }
       if (!builder.isInitialized()) {
         // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
-        //       If we can get the KV count, we could, theoretically, try to get next record.
-        throw new EOFException(
-          "Partial PB while reading WAL, " + "probably an unexpected EOF, ignoring. current offset="
-            + this.inputStream.getPos());
+        // If we can get the KV count, we could, theoretically, try to get next record.
+        throw new EOFException("Partial PB while reading WAL, "
+          + "probably an unexpected EOF, ignoring. current offset=" + this.inputStream.getPos());
       }
       WALKey walKey = builder.build();
       entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
@@ -396,12 +390,11 @@ public class ProtobufLogReader extends ReaderBase {
         } catch (Throwable t) {
           LOG.trace("Error getting pos for error message - ignoring", t);
         }
-        String message =
-          " while reading " + expectedCells + " WAL KVs; started reading at " + posBefore
-            + " and read up to " + posAfterStr;
+        String message = " while reading " + expectedCells + " WAL KVs; started reading at "
+          + posBefore + " and read up to " + posAfterStr;
         IOException realEofEx = extractHiddenEof(ex);
-        throw (EOFException) new EOFException("EOF " + message).
-          initCause(realEofEx != null ? realEofEx : ex);
+        throw (EOFException) new EOFException("EOF " + message)
+          .initCause(realEofEx != null ? realEofEx : ex);
       }
       if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
         LOG.error(
@@ -412,8 +405,10 @@ public class ProtobufLogReader extends ReaderBase {
     } catch (EOFException eof) {
       // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
       if (originalPosition < 0) {
-        LOG.debug("Encountered a malformed edit, but can't seek back to last good position "
-          + "because originalPosition is negative. last offset={}", this.inputStream.getPos(), eof);
+        LOG.debug(
+          "Encountered a malformed edit, but can't seek back to last good position "
+            + "because originalPosition is negative. last offset={}",
+          this.inputStream.getPos(), eof);
         throw eof;
       }
       // If stuck at the same place and we got an exception, lets go back at the beginning.
@@ -442,12 +437,14 @@ public class ProtobufLogReader extends ReaderBase {
     // for EOF, not EOFException; and scanner further hides it inside RuntimeException.
     IOException ioEx = null;
     if (ex instanceof EOFException) {
-      return (EOFException)ex;
+      return (EOFException) ex;
     } else if (ex instanceof IOException) {
-      ioEx = (IOException)ex;
-    } else if (ex instanceof RuntimeException
-        && ex.getCause() != null && ex.getCause() instanceof IOException) {
-      ioEx = (IOException)ex.getCause();
+      ioEx = (IOException) ex;
+    } else if (
+      ex instanceof RuntimeException && ex.getCause() != null
+        && ex.getCause() instanceof IOException
+    ) {
+      ioEx = (IOException) ex.getCause();
     }
     if ((ioEx != null) && (ioEx.getMessage() != null)) {
       if (ioEx.getMessage().contains("EOF")) return ioEx;

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master;
 
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Server;
@@ -56,10 +55,9 @@ import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A curated subset of services provided by {@link HMaster}.
- * For use internally only. Passed to Managers, Services and Chores so can pass less-than-a
- * full-on HMaster at test-time. Be judicious adding API. Changes cause ripples through
- * the code base.
+ * A curated subset of services provided by {@link HMaster}. For use internally only. Passed to
+ * Managers, Services and Chores so can pass less-than-a full-on HMaster at test-time. Be judicious
+ * adding API. Changes cause ripples through the code base.
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
@@ -145,176 +143,109 @@ public interface MasterServices extends Server {
 
   /**
    * Check table is modifiable; i.e. exists and is offline.
-   * @param tableName Name of table to check.
-   * @throws TableNotDisabledException
-   * @throws TableNotFoundException
-   * @throws IOException
+   * @param tableName Name of table to check. nnn
    */
   // We actually throw the exceptions mentioned in the
   void checkTableModifiable(final TableName tableName)
-      throws IOException, TableNotFoundException, TableNotDisabledException;
+    throws IOException, TableNotFoundException, TableNotDisabledException;
 
   /**
    * Create a table using the given table definition.
-   * @param desc The table definition
-   * @param splitKeys Starting row keys for the initial table regions.  If null
-   * @param nonceGroup
-   * @param nonce
-   *     a single region is created.
+   * @param desc      The table definition
+   * @param splitKeys Starting row keys for the initial table regions. If null nn * a single region
+   *                  is created.
    */
-  long createTable(
-      final TableDescriptor desc,
-      final byte[][] splitKeys,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long createTable(final TableDescriptor desc, final byte[][] splitKeys, final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * Create a system table using the given table definition.
-   * @param tableDescriptor The system table definition
-   *     a single region is created.
+   * @param tableDescriptor The system table definition a single region is created.
    */
   long createSystemTable(final TableDescriptor tableDescriptor) throws IOException;
 
   /**
    * Delete a table
-   * @param tableName The table name
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName The table name nnn
    */
-  long deleteTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException;
 
   /**
    * Truncate a table
-   * @param tableName The table name
-   * @param preserveSplits True if the splits should be preserved
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName      The table name
+   * @param preserveSplits True if the splits should be preserved nnn
    */
-  public long truncateTable(
-      final TableName tableName,
-      final boolean preserveSplits,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  public long truncateTable(final TableName tableName, final boolean preserveSplits,
+    final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
-   * @param tableName The table name
-   * @param descriptor The updated table descriptor
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName  The table name
+   * @param descriptor The updated table descriptor nnn
    */
-  long modifyTable(
-      final TableName tableName,
-      final TableDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Enable an existing table
-   * @param tableName The table name
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName The table name nnn
    */
-  long enableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException;
 
   /**
    * Disable an existing table
-   * @param tableName The table name
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName The table name nnn
    */
-  long disableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException;
-
+  long disableTable(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException;
 
   /**
    * Add a new column to an existing table
    * @param tableName The table name
-   * @param column The column definition
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param column    The column definition nnn
    */
-  long addColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor column,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long addColumn(final TableName tableName, final ColumnFamilyDescriptor column,
+    final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Modify the column descriptor of an existing column in an existing table
-   * @param tableName The table name
-   * @param descriptor The updated column definition
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName  The table name
+   * @param descriptor The updated column definition nnn
    */
-  long modifyColumn(
-      final TableName tableName,
-      final ColumnFamilyDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Delete a column from an existing table
-   * @param tableName The table name
-   * @param columnName The column name
-   * @param nonceGroup
-   * @param nonce
-   * @throws IOException
+   * @param tableName  The table name
+   * @param columnName The column name nnn
    */
-  long deleteColumn(
-      final TableName tableName,
-      final byte[] columnName,
-      final long nonceGroup,
-      final long nonce)
-      throws IOException;
+  long deleteColumn(final TableName tableName, final byte[] columnName, final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * Merge regions in a table.
    * @param regionsToMerge daughter regions to merge
-   * @param forcible whether to force to merge even two regions are not adjacent
-   * @param nonceGroup used to detect duplicate
-   * @param nonce used to detect duplicate
-   * @return  procedure Id
-   * @throws IOException
+   * @param forcible       whether to force to merge even two regions are not adjacent
+   * @param nonceGroup     used to detect duplicate
+   * @param nonce          used to detect duplicate
+   * @return procedure Id n
    */
-  long mergeRegions(
-      final RegionInfo[] regionsToMerge,
-      final boolean forcible,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long mergeRegions(final RegionInfo[] regionsToMerge, final boolean forcible,
+    final long nonceGroup, final long nonce) throws IOException;
 
   /**
    * Split a region.
    * @param regionInfo region to split
-   * @param splitRow split point
+   * @param splitRow   split point
    * @param nonceGroup used to detect duplicate
-   * @param nonce used to detect duplicate
-   * @return  procedure Id
-   * @throws IOException
+   * @param nonce      used to detect duplicate
+   * @return procedure Id n
    */
-  long splitRegion(
-      final RegionInfo regionInfo,
-      final byte [] splitRow,
-      final long nonceGroup,
-      final long nonce) throws IOException;
+  long splitRegion(final RegionInfo regionInfo, final byte[] splitRow, final long nonceGroup,
+    final long nonce) throws IOException;
 
   /**
    * @return Return table descriptors implementation.
@@ -359,57 +290,48 @@ public interface MasterServices extends Server {
 
   /**
    * Abort a procedure.
-   * @param procId ID of the procedure
+   * @param procId                ID of the procedure
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
-   * @return true if aborted, false if procedure already completed or does not exist
-   * @throws IOException
+   * @return true if aborted, false if procedure already completed or does not exist n
    */
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
-      throws IOException;
+    throws IOException;
 
   /**
    * Get procedures
-   * @return procedure list
-   * @throws IOException
+   * @return procedure list n
    */
   public List<Procedure<?>> getProcedures() throws IOException;
 
   /**
    * Get locks
-   * @return lock list
-   * @throws IOException
+   * @return lock list n
    */
   public List<LockedResource> getLocks() throws IOException;
 
   /**
    * Get list of table descriptors by namespace
-   * @param name namespace name
-   * @return descriptors
-   * @throws IOException
+   * @param name namespace name nn
    */
   public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
 
   /**
    * Get list of table names by namespace
    * @param name namespace name
-   * @return table names
-   * @throws IOException
+   * @return table names n
    */
   public List<TableName> listTableNamesByNamespace(String name) throws IOException;
 
   /**
    * @param table the table for which last successful major compaction time is queried
-   * @return the timestamp of the last successful major compaction for the passed table,
-   * or 0 if no HFile resulting from a major compaction exists
-   * @throws IOException
+   * @return the timestamp of the last successful major compaction for the passed table, or 0 if no
+   *         HFile resulting from a major compaction exists n
    */
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
 
   /**
-   * @param regionName
-   * @return the timestamp of the last successful major compaction for the passed region
-   * or 0 if no HFile resulting from a major compaction exists
-   * @throws IOException
+   * n * @return the timestamp of the last successful major compaction for the passed region or 0 if
+   * no HFile resulting from a major compaction exists n
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 
@@ -427,12 +349,12 @@ public interface MasterServices extends Server {
 
   /**
    * Add a new replication peer for replicating data to slave cluster
-   * @param peerId a short name that identifies the peer
+   * @param peerId     a short name that identifies the peer
    * @param peerConfig configuration for the replication slave cluster
-   * @param enabled peer state, true if ENABLED and false if DISABLED
+   * @param enabled    peer state, true if ENABLED and false if DISABLED
    */
   long addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws ReplicationException, IOException;
+    throws ReplicationException, IOException;
 
   /**
    * Removes a peer and stops the replication
@@ -457,8 +379,8 @@ public interface MasterServices extends Server {
    * @param peerId a short name that identifies the peer
    * @return ReplicationPeerConfig for the peer
    */
-  ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
-      IOException;
+  ReplicationPeerConfig getReplicationPeerConfig(String peerId)
+    throws ReplicationException, IOException;
 
   /**
    * Returns the {@link ReplicationPeerManager}.
@@ -467,19 +389,19 @@ public interface MasterServices extends Server {
 
   /**
    * Update the peerConfig for the specified peer
-   * @param peerId a short name that identifies the peer
+   * @param peerId     a short name that identifies the peer
    * @param peerConfig new config for the peer
    */
   long updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException, IOException;
+    throws ReplicationException, IOException;
 
   /**
    * Return a list of replication peers.
    * @param regex The regular expression to match peer id
    * @return a list of replication peers description
    */
-  List<ReplicationPeerDescription> listReplicationPeers(String regex) throws ReplicationException,
-      IOException;
+  List<ReplicationPeerDescription> listReplicationPeers(String regex)
+    throws ReplicationException, IOException;
 
   /**
    * @return {@link LockManager} to lock namespaces/tables/regions.
@@ -489,9 +411,8 @@ public interface MasterServices extends Server {
   public String getRegionServerVersion(final ServerName sn);
 
   /**
-   * Called when a new RegionServer is added to the cluster.
-   * Checks if new server has a newer version than any existing server and will move system tables
-   * there if so.
+   * Called when a new RegionServer is added to the cluster. Checks if new server has a newer
+   * version than any existing server and will move system tables there if so.
    */
   public void checkIfShouldMoveSystemRegionAsync();
 
@@ -505,7 +426,7 @@ public interface MasterServices extends Server {
   /**
    * @return return null if current is zk-based WAL splitting
    */
-  default SplitWALManager getSplitWALManager(){
+  default SplitWALManager getSplitWALManager() {
     return null;
   }
 
@@ -533,13 +454,13 @@ public interface MasterServices extends Server {
 
   /**
    * Perform normalization of cluster.
-   * @param ntfp Selection criteria for identifying which tables to normalize.
-   * @param isHighPriority {@code true} when these requested tables should skip to the front of
-   *   the queue.
+   * @param ntfp           Selection criteria for identifying which tables to normalize.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of the
+   *                       queue.
    * @return {@code true} when the request was submitted, {@code false} otherwise.
    */
-  boolean normalizeRegions(
-    final NormalizeTableFilterParams ntfp, final boolean isHighPriority) throws IOException;
+  boolean normalizeRegions(final NormalizeTableFilterParams ntfp, final boolean isHighPriority)
+    throws IOException;
 
   /**
    * Get the meta location syncer.

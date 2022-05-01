@@ -24,13 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A ByteBuffAllocator that rewrite the bytebuffers right after released.
- * It can be used for test whether there are prematurely releasing backing bytebuffers.
+ * A ByteBuffAllocator that rewrite the bytebuffers right after released. It can be used for test
+ * whether there are prematurely releasing backing bytebuffers.
  */
 @InterfaceAudience.Private
-public class DeallocateRewriteByteBuffAllocator  extends ByteBuffAllocator {
-  private static final Logger LOG = LoggerFactory.getLogger(
-    DeallocateRewriteByteBuffAllocator.class);
+public class DeallocateRewriteByteBuffAllocator extends ByteBuffAllocator {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(DeallocateRewriteByteBuffAllocator.class);
 
   DeallocateRewriteByteBuffAllocator(boolean reservoirEnabled, int maxBufCount, int bufSize,
     int minSizeForReservoirUse) {

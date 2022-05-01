@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import static org.junit.Assert.assertEquals;
@@ -35,14 +34,14 @@ import org.mockito.Mockito;
 public class TestRpcServerTraceLogging {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-      .forClass(TestRpcServerTraceLogging.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRpcServerTraceLogging.class);
 
   static org.apache.log4j.Logger rpcServerLog = org.apache.log4j.Logger.getLogger(RpcServer.class);
 
   static final String TRACE_LOG_MSG =
-      "This is dummy message for testing:: region { type: REGION_NAME value: \"hbase:meta,,1\" }"
-          + " scan { column { family: \"info\" } time_range { from: 0 to: 9223372036854775807 } "
+    "This is dummy message for testing:: region { type: REGION_NAME value: \"hbase:meta,,1\" }"
+      + " scan { column { family: \"info\" } time_range { from: 0 to: 9223372036854775807 } "
       + "max_versions: 1 cache_blocks: true max_result_size: 2097152 caching: 2147483647 } "
       + "number_of_rows: 2147483647 close_scanner: false client_handles_partials: "
       + "true client_handles_heartbeats: true track_scan_metrics: false";

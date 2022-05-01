@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +41,12 @@ import org.junit.rules.TestName;
  * Ensure Coprocessors get ShortCircuit Connections when they get a Connection from their
  * CoprocessorEnvironment.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestCoprocessorShortCircuitRPC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorShortCircuitRPC.class);
+    HBaseClassTestRule.forClass(TestCoprocessorShortCircuitRPC.class);
 
   @Rule
   public TestName name = new TestName();
@@ -60,11 +60,11 @@ public class TestCoprocessorShortCircuitRPC {
     // Set my test Coprocessors into the Configuration before we start up the cluster.
     Configuration conf = HTU.getConfiguration();
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        TestMasterCoprocessor.class.getName());
+      TestMasterCoprocessor.class.getName());
     conf.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
-        TestRegionServerCoprocessor.class.getName());
+      TestRegionServerCoprocessor.class.getName());
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        TestRegionCoprocessor.class.getName());
+      TestRegionCoprocessor.class.getName());
     HTU.startMiniCluster();
   }
 

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +18,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.yetus.audience.InterfaceAudience;
-
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class RSStatusServlet extends HttpServlet {
@@ -34,8 +31,9 @@ public class RSStatusServlet extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-  throws ServletException, IOException {
-    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
+    throws ServletException, IOException {
+    HRegionServer hrs =
+      (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
     resp.setContentType("text/html");
@@ -47,14 +45,10 @@ public class RSStatusServlet extends HttpServlet {
     }
 
     RSStatusTmpl tmpl = new RSStatusTmpl();
-    if (req.getParameter("format") != null)
-      tmpl.setFormat(req.getParameter("format"));
-    if (req.getParameter("filter") != null)
-      tmpl.setFilter(req.getParameter("filter"));
-    if (req.getParameter("bcn") != null)
-      tmpl.setBcn(req.getParameter("bcn"));
-    if (req.getParameter("bcv") != null)
-      tmpl.setBcv(req.getParameter("bcv"));
+    if (req.getParameter("format") != null) tmpl.setFormat(req.getParameter("format"));
+    if (req.getParameter("filter") != null) tmpl.setFilter(req.getParameter("filter"));
+    if (req.getParameter("bcn") != null) tmpl.setBcn(req.getParameter("bcn"));
+    if (req.getParameter("bcv") != null) tmpl.setBcv(req.getParameter("bcv"));
     tmpl.render(resp.getWriter(), hrs);
   }
 }

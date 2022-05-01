@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,18 +50,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestStripeStoreFileManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStripeStoreFileManager.class);
+    HBaseClassTestRule.forClass(TestStripeStoreFileManager.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path BASEDIR =
-      TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
-  private static final Path CFDIR = HRegionFileSystem.getStoreHomedir(BASEDIR, "region",
-    Bytes.toBytes("cf"));
+    TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
+  private static final Path CFDIR =
+    HRegionFileSystem.getStoreHomedir(BASEDIR, "region", Bytes.toBytes("cf"));
 
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("aab");
@@ -99,8 +100,8 @@ public class TestStripeStoreFileManager {
     assertTrue(filesForGet.contains(sf));
 
     // Add some stripes and make sure we get this file for every stripe.
-    manager.addCompactionResults(al(), al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, OPEN_KEY)));
+    manager.addCompactionResults(al(),
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, OPEN_KEY)));
     assertTrue(manager.getFilesForScan(KEY_A, true, KEY_A, true).contains(sf));
     assertTrue(manager.getFilesForScan(KEY_C, true, KEY_C, true).contains(sf));
   }
@@ -110,8 +111,8 @@ public class TestStripeStoreFileManager {
     StripeStoreFileManager manager = createManager();
     manager.insertNewFiles(al(createFile()));
     manager.insertNewFiles(al(createFile()));
-    manager.addCompactionResults(al(), al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, OPEN_KEY)));
+    manager.addCompactionResults(al(),
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, OPEN_KEY)));
     assertEquals(4, manager.getStorefileCount());
     Collection<HStoreFile> allFiles = manager.clearFiles();
     assertEquals(4, allFiles.size());
@@ -205,40 +206,39 @@ public class TestStripeStoreFileManager {
   @Test
   public void testGetStripeBoundarySplits() throws Exception {
     /* First number - split must be after this stripe; further numbers - stripes */
-    verifySplitPointScenario(5, false, 0f,     2, 1, 1, 1, 1, 1, 10);
-    verifySplitPointScenario(0, false, 0f,     6, 3, 1, 1, 2);
-    verifySplitPointScenario(2, false, 0f,     1, 1, 1, 1, 2);
-    verifySplitPointScenario(0, false, 0f,     5, 4);
-    verifySplitPointScenario(2, false, 0f,     5, 2, 5, 5, 5);
+    verifySplitPointScenario(5, false, 0f, 2, 1, 1, 1, 1, 1, 10);
+    verifySplitPointScenario(0, false, 0f, 6, 3, 1, 1, 2);
+    verifySplitPointScenario(2, false, 0f, 1, 1, 1, 1, 2);
+    verifySplitPointScenario(0, false, 0f, 5, 4);
+    verifySplitPointScenario(2, false, 0f, 5, 2, 5, 5, 5);
   }
 
   @Test
   public void testGetUnbalancedSplits() throws Exception {
     /* First number - split must be inside/after this stripe; further numbers - stripes */
-    verifySplitPointScenario(0, false, 2.1f,      4, 4, 4); // 8/4 is less than 2.1f
-    verifySplitPointScenario(1, true,  1.5f,      4, 4, 4); // 8/4 > 6/6
-    verifySplitPointScenario(1, false, 1.1f,      3, 4, 1, 1, 2, 2); // 7/6 < 8/5
-    verifySplitPointScenario(1, false, 1.1f,      3, 6, 1, 1, 2, 2); // 9/6 == 9/6
-    verifySplitPointScenario(1, true,  1.1f,      3, 8, 1, 1, 2, 2); // 11/6 > 10/7
-    verifySplitPointScenario(3, false, 1.1f,      2, 2, 1, 1, 4, 3); // reverse order
-    verifySplitPointScenario(4, true,  1.1f,      2, 2, 1, 1, 8, 3); // reverse order
-    verifySplitPointScenario(0, true,  1.5f,      10, 4); // 10/4 > 9/5
-    verifySplitPointScenario(0, false, 1.4f,      6, 4);  // 6/4 == 6/4
-    verifySplitPointScenario(1, true,  1.5f,      4, 10); // reverse just in case
-    verifySplitPointScenario(0, false, 1.4f,      4, 6);  // reverse just in case
+    verifySplitPointScenario(0, false, 2.1f, 4, 4, 4); // 8/4 is less than 2.1f
+    verifySplitPointScenario(1, true, 1.5f, 4, 4, 4); // 8/4 > 6/6
+    verifySplitPointScenario(1, false, 1.1f, 3, 4, 1, 1, 2, 2); // 7/6 < 8/5
+    verifySplitPointScenario(1, false, 1.1f, 3, 6, 1, 1, 2, 2); // 9/6 == 9/6
+    verifySplitPointScenario(1, true, 1.1f, 3, 8, 1, 1, 2, 2); // 11/6 > 10/7
+    verifySplitPointScenario(3, false, 1.1f, 2, 2, 1, 1, 4, 3); // reverse order
+    verifySplitPointScenario(4, true, 1.1f, 2, 2, 1, 1, 8, 3); // reverse order
+    verifySplitPointScenario(0, true, 1.5f, 10, 4); // 10/4 > 9/5
+    verifySplitPointScenario(0, false, 1.4f, 6, 4); // 6/4 == 6/4
+    verifySplitPointScenario(1, true, 1.5f, 4, 10); // reverse just in case
+    verifySplitPointScenario(0, false, 1.4f, 4, 6); // reverse just in case
   }
-
 
   /**
    * Verifies scenario for finding a split point.
-   * @param splitPointAfter Stripe to expect the split point at/after.
-   * @param shouldSplitStripe If true, the split point is expected in the middle of the above
-   *                          stripe; if false, should be at the end.
+   * @param splitPointAfter    Stripe to expect the split point at/after.
+   * @param shouldSplitStripe  If true, the split point is expected in the middle of the above
+   *                           stripe; if false, should be at the end.
    * @param splitRatioToVerify Maximum split imbalance ratio.
-   * @param sizes Stripe sizes.
+   * @param sizes              Stripe sizes.
    */
   private void verifySplitPointScenario(int splitPointAfter, boolean shouldSplitStripe,
-      float splitRatioToVerify, int... sizes) throws Exception {
+    float splitRatioToVerify, int... sizes) throws Exception {
     assertTrue(sizes.length > 1);
     ArrayList<HStoreFile> sfs = new ArrayList<>();
     for (int sizeIx = 0; sizeIx < sizes.length; ++sizeIx) {
@@ -273,9 +273,9 @@ public class TestStripeStoreFileManager {
     // Populate one L0 file.
     MockHStoreFile sf0 = createFile();
     manager.insertNewFiles(al(sf0));
-    verifyGetAndScanScenario(manager, null, null,   sf0);
-    verifyGetAndScanScenario(manager, null, KEY_C,  sf0);
-    verifyGetAndScanScenario(manager, KEY_B, null,  sf0);
+    verifyGetAndScanScenario(manager, null, null, sf0);
+    verifyGetAndScanScenario(manager, null, KEY_C, sf0);
+    verifyGetAndScanScenario(manager, KEY_B, null, sf0);
     verifyGetAndScanScenario(manager, KEY_B, KEY_C, sf0);
 
     // Populate a bunch of files for stripes, keep L0.
@@ -286,19 +286,19 @@ public class TestStripeStoreFileManager {
     MockHStoreFile sfE = createFile(KEY_D, OPEN_KEY);
     manager.addCompactionResults(al(), al(sfA, sfB, sfC, sfD, sfE));
 
-    verifyGetAndScanScenario(manager, null, null,              sf0, sfA, sfB, sfC, sfD, sfE);
-    verifyGetAndScanScenario(manager, keyAfter(KEY_A), null,   sf0, sfB, sfC, sfD, sfE);
-    verifyGetAndScanScenario(manager, null, keyAfter(KEY_C),   sf0, sfA, sfB, sfC, sfD);
-    verifyGetAndScanScenario(manager, KEY_B, null,             sf0, sfC, sfD, sfE);
-    verifyGetAndScanScenario(manager, null, KEY_C,             sf0, sfA, sfB, sfC, sfD);
-    verifyGetAndScanScenario(manager, KEY_B, keyAfter(KEY_B),  sf0, sfC);
-    verifyGetAndScanScenario(manager, keyAfter(KEY_A), KEY_B,  sf0, sfB, sfC);
-    verifyGetAndScanScenario(manager, KEY_D, KEY_D,            sf0, sfE);
+    verifyGetAndScanScenario(manager, null, null, sf0, sfA, sfB, sfC, sfD, sfE);
+    verifyGetAndScanScenario(manager, keyAfter(KEY_A), null, sf0, sfB, sfC, sfD, sfE);
+    verifyGetAndScanScenario(manager, null, keyAfter(KEY_C), sf0, sfA, sfB, sfC, sfD);
+    verifyGetAndScanScenario(manager, KEY_B, null, sf0, sfC, sfD, sfE);
+    verifyGetAndScanScenario(manager, null, KEY_C, sf0, sfA, sfB, sfC, sfD);
+    verifyGetAndScanScenario(manager, KEY_B, keyAfter(KEY_B), sf0, sfC);
+    verifyGetAndScanScenario(manager, keyAfter(KEY_A), KEY_B, sf0, sfB, sfC);
+    verifyGetAndScanScenario(manager, KEY_D, KEY_D, sf0, sfE);
     verifyGetAndScanScenario(manager, keyAfter(KEY_B), keyAfter(KEY_C), sf0, sfC, sfD);
   }
 
   private void verifyGetAndScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
-      HStoreFile... results) throws Exception {
+    HStoreFile... results) throws Exception {
     verifyGetOrScanScenario(manager, start, end, results);
   }
 
@@ -309,11 +309,10 @@ public class TestStripeStoreFileManager {
     // files that overlap valid stripes in various ways). Note that the 4th way to overlap the
     // stripes will cause the structure to be mostly scraped, and is tested separately.
     ArrayList<HStoreFile> validStripeFiles = al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY),
-        createFile(KEY_C, OPEN_KEY));
+      createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY), createFile(KEY_C, OPEN_KEY));
     ArrayList<HStoreFile> filesToGoToL0 = al(createFile(), createFile(null, KEY_A),
-        createFile(KEY_D, null), createFile(KEY_D, KEY_A), createFile(keyAfter(KEY_A), KEY_C),
-        createFile(OPEN_KEY, KEY_D), createFile(KEY_D, keyAfter(KEY_D)));
+      createFile(KEY_D, null), createFile(KEY_D, KEY_A), createFile(keyAfter(KEY_A), KEY_C),
+      createFile(OPEN_KEY, KEY_D), createFile(KEY_D, keyAfter(KEY_D)));
     ArrayList<HStoreFile> allFilesToGo = flattenLists(validStripeFiles, filesToGoToL0);
     Collections.shuffle(allFilesToGo);
     StripeStoreFileManager manager = createManager(allFilesToGo);
@@ -329,9 +328,8 @@ public class TestStripeStoreFileManager {
   public void testLoadFilesWithBadStripe() throws Exception {
     // Current "algorithm" will see the after-B key before C key, add it as valid stripe,
     // and then fail all other stripes. So everything would end up in L0.
-    ArrayList<HStoreFile> allFilesToGo = al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY),
-        createFile(KEY_B, keyAfter(KEY_B)));
+    ArrayList<HStoreFile> allFilesToGo = al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, KEY_C),
+      createFile(KEY_C, OPEN_KEY), createFile(KEY_B, keyAfter(KEY_B)));
     Collections.shuffle(allFilesToGo);
     StripeStoreFileManager manager = createManager(allFilesToGo);
     assertEquals(allFilesToGo.size(), manager.getLevel0Files().size());
@@ -378,12 +376,12 @@ public class TestStripeStoreFileManager {
 
     // Try compacting with invalid new branches (gaps, overlaps) - no effect.
     verifyInvalidCompactionScenario(manager, al(sf_L0_0a), al(createFile(OPEN_KEY, KEY_B)));
-    verifyInvalidCompactionScenario(manager, al(sf_L0_0a), al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_C, OPEN_KEY)));
-    verifyInvalidCompactionScenario(manager, al(sf_L0_0a), al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, OPEN_KEY), createFile(KEY_A, KEY_D)));
-    verifyInvalidCompactionScenario(manager, al(sf_L0_0a), al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_A, KEY_B), createFile(KEY_B, OPEN_KEY)));
+    verifyInvalidCompactionScenario(manager, al(sf_L0_0a),
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_C, OPEN_KEY)));
+    verifyInvalidCompactionScenario(manager, al(sf_L0_0a),
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, OPEN_KEY), createFile(KEY_A, KEY_D)));
+    verifyInvalidCompactionScenario(manager, al(sf_L0_0a),
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_A, KEY_B), createFile(KEY_B, OPEN_KEY)));
 
     HStoreFile sf_i2B_0 = createFile(OPEN_KEY, KEY_B);
     HStoreFile sf_B2C_0 = createFile(KEY_B, KEY_C);
@@ -492,8 +490,8 @@ public class TestStripeStoreFileManager {
     HStoreFile sf0b = createFile();
     manager.insertNewFiles(al(sf0a));
     manager.insertNewFiles(al(sf0b));
-    ArrayList<HStoreFile> compacted = al(createFile(OPEN_KEY, KEY_B),
-        createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY));
+    ArrayList<HStoreFile> compacted =
+      al(createFile(OPEN_KEY, KEY_B), createFile(KEY_B, KEY_C), createFile(KEY_C, OPEN_KEY));
     manager.addCompactionResults(al(sf0a), compacted);
     manager.removeCompactedFiles(al(sf0a));
     // Next L0 compaction only produces file for the first and last stripe.
@@ -507,21 +505,21 @@ public class TestStripeStoreFileManager {
   @Test
   public void testPriority() throws Exception {
     // Expected priority, file limit, stripe count, files per stripe, l0 files.
-    testPriorityScenario(5,    5, 0, 0, 0);
-    testPriorityScenario(2,    5, 0, 0, 3);
-    testPriorityScenario(4,   25, 5, 1, 0); // example case.
-    testPriorityScenario(3,   25, 5, 1, 1); // L0 files counts for all stripes.
-    testPriorityScenario(3,   25, 5, 2, 0); // file to each stripe - same as one L0 file.
-    testPriorityScenario(2,   25, 5, 4, 0); // 1 is priority user, so 2 is returned.
-    testPriorityScenario(2,   25, 5, 4, 4); // don't return higher than user unless over limit.
-    testPriorityScenario(2,   25, 5, 1, 10); // same.
-    testPriorityScenario(0,   25, 5, 4, 5); // at limit.
-    testPriorityScenario(-5,  25, 5, 6, 0); // over limit!
-    testPriorityScenario(-1,  25, 0, 0, 26); // over limit with just L0
+    testPriorityScenario(5, 5, 0, 0, 0);
+    testPriorityScenario(2, 5, 0, 0, 3);
+    testPriorityScenario(4, 25, 5, 1, 0); // example case.
+    testPriorityScenario(3, 25, 5, 1, 1); // L0 files counts for all stripes.
+    testPriorityScenario(3, 25, 5, 2, 0); // file to each stripe - same as one L0 file.
+    testPriorityScenario(2, 25, 5, 4, 0); // 1 is priority user, so 2 is returned.
+    testPriorityScenario(2, 25, 5, 4, 4); // don't return higher than user unless over limit.
+    testPriorityScenario(2, 25, 5, 1, 10); // same.
+    testPriorityScenario(0, 25, 5, 4, 5); // at limit.
+    testPriorityScenario(-5, 25, 5, 6, 0); // over limit!
+    testPriorityScenario(-1, 25, 0, 0, 26); // over limit with just L0
   }
 
-  private void testPriorityScenario(int expectedPriority,
-      int limit, int stripes, int filesInStripe, int l0Files) throws Exception {
+  private void testPriorityScenario(int expectedPriority, int limit, int stripes, int filesInStripe,
+    int l0Files) throws Exception {
     final byte[][] keys = { KEY_A, KEY_B, KEY_C, KEY_D };
     assertTrue(stripes <= keys.length + 1);
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -533,8 +531,8 @@ public class TestStripeStoreFileManager {
     for (int i = 0; i < filesInStripe; ++i) {
       ArrayList<HStoreFile> stripe = new ArrayList<>();
       for (int j = 0; j < stripes; ++j) {
-        stripe.add(createFile(
-            (j == 0) ? OPEN_KEY : keys[j - 1], (j == stripes - 1) ? OPEN_KEY : keys[j]));
+        stripe.add(
+          createFile((j == 0) ? OPEN_KEY : keys[j - 1], (j == stripes - 1) ? OPEN_KEY : keys[j]));
       }
       sfm.addCompactionResults(al(), stripe);
     }
@@ -542,7 +540,7 @@ public class TestStripeStoreFileManager {
   }
 
   private void verifyInvalidCompactionScenario(StripeStoreFileManager manager,
-      ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
+    ArrayList<HStoreFile> filesToCompact, ArrayList<HStoreFile> filesToInsert) throws Exception {
     Collection<HStoreFile> allFiles = manager.getStorefiles();
     try {
       manager.addCompactionResults(filesToCompact, filesToInsert);
@@ -554,12 +552,12 @@ public class TestStripeStoreFileManager {
   }
 
   private void verifyGetOrScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
-      HStoreFile... results) throws Exception {
+    HStoreFile... results) throws Exception {
     verifyGetOrScanScenario(manager, start, end, Arrays.asList(results));
   }
 
   private void verifyGetOrScanScenario(StripeStoreFileManager manager, byte[] start, byte[] end,
-      Collection<HStoreFile> results) throws Exception {
+    Collection<HStoreFile> results) throws Exception {
     start = start != null ? start : HConstants.EMPTY_START_ROW;
     end = end != null ? end : HConstants.EMPTY_END_ROW;
     Collection<HStoreFile> sfs = manager.getFilesForScan(start, true, end, false);
@@ -569,14 +567,14 @@ public class TestStripeStoreFileManager {
     }
   }
 
-  private void verifyAllFiles(
-      StripeStoreFileManager manager, Collection<HStoreFile> results) throws Exception {
+  private void verifyAllFiles(StripeStoreFileManager manager, Collection<HStoreFile> results)
+    throws Exception {
     verifyGetOrScanScenario(manager, null, null, results);
   }
 
   // TODO: replace with Mockito?
-  private static MockHStoreFile createFile(
-      long size, long seqNum, byte[] startKey, byte[] endKey) throws Exception {
+  private static MockHStoreFile createFile(long size, long seqNum, byte[] startKey, byte[] endKey)
+    throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path testFilePath = StoreFileWriter.getUniqueFile(fs, CFDIR);
     fs.create(testFilePath).close();
@@ -610,12 +608,12 @@ public class TestStripeStoreFileManager {
     return createManager(sfs, TEST_UTIL.getConfiguration());
   }
 
-  private static StripeStoreFileManager createManager(
-      ArrayList<HStoreFile> sfs, Configuration conf) throws Exception {
-    StripeStoreConfig config = new StripeStoreConfig(
-        conf, Mockito.mock(StoreConfigInformation.class));
-    StripeStoreFileManager result = new StripeStoreFileManager(CellComparatorImpl.COMPARATOR, conf,
-        config);
+  private static StripeStoreFileManager createManager(ArrayList<HStoreFile> sfs, Configuration conf)
+    throws Exception {
+    StripeStoreConfig config =
+      new StripeStoreConfig(conf, Mockito.mock(StoreConfigInformation.class));
+    StripeStoreFileManager result =
+      new StripeStoreFileManager(CellComparatorImpl.COMPARATOR, conf, config);
     result.loadFiles(sfs);
     return result;
   }

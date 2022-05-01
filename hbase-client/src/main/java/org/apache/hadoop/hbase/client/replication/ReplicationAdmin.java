@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,32 +36,30 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 /**
  * <p>
- * This class provides the administrative interface to HBase cluster
- * replication.
+ * This class provides the administrative interface to HBase cluster replication.
  * </p>
  * <p>
- * Adding a new peer results in creating new outbound connections from every
- * region server to a subset of region servers on the slave cluster. Each
- * new stream of replication will start replicating from the beginning of the
- * current WAL, meaning that edits from that past will be replicated.
+ * Adding a new peer results in creating new outbound connections from every region server to a
+ * subset of region servers on the slave cluster. Each new stream of replication will start
+ * replicating from the beginning of the current WAL, meaning that edits from that past will be
+ * replicated.
  * </p>
  * <p>
- * Removing a peer is a destructive and irreversible operation that stops
- * all the replication streams for the given cluster and deletes the metadata
- * used to keep track of the replication state.
+ * Removing a peer is a destructive and irreversible operation that stops all the replication
+ * streams for the given cluster and deletes the metadata used to keep track of the replication
+ * state.
  * </p>
  * <p>
- * To see which commands are available in the shell, type
- * <code>replication</code>.
+ * To see which commands are available in the shell, type <code>replication</code>.
  * </p>
- *
  * @deprecated use {@link org.apache.hadoop.hbase.client.Admin} instead.
  */
 @InterfaceAudience.Public
@@ -76,8 +73,8 @@ public class ReplicationAdmin implements Closeable {
   // only Global for now, can add other type
   // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
   public static final String REPLICATIONTYPE = "replicationType";
-  public static final String REPLICATIONGLOBAL = Integer
-      .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
+  public static final String REPLICATIONGLOBAL =
+    Integer.toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
   private final Connection connection;
   private Admin admin;
@@ -85,7 +82,7 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
    * @param conf Configuration to use
-   * @throws IOException if an internal replication error occurs
+   * @throws IOException      if an internal replication error occurs
    * @throws RuntimeException if replication isn't enabled.
    */
   public ReplicationAdmin(Configuration conf) throws IOException {
@@ -95,19 +92,19 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Add a new remote slave cluster for replication.
-   * @param id a short name that identifies the cluster
+   * @param id         a short name that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
-   * @param tableCfs the table and column-family list which will be replicated for this peer.
-   * A map from tableName to column family names. An empty collection can be passed
-   * to indicate replicating all column families. Pass null for replicating all table and column
-   * families
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
-   * use {@link #addPeer(String, ReplicationPeerConfig)} instead.
+   * @param tableCfs   the table and column-family list which will be replicated for this peer. A
+   *                   map from tableName to column family names. An empty collection can be passed
+   *                   to indicate replicating all column families. Pass null for replicating all
+   *                   table and column families
+   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0, use
+   *             {@link #addPeer(String, ReplicationPeerConfig)} instead.
    */
   @Deprecated
   public void addPeer(String id, ReplicationPeerConfig peerConfig,
-      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException,
-      IOException {
+    Map<TableName, ? extends Collection<String>> tableCfs)
+    throws ReplicationException, IOException {
     if (tableCfs != null) {
       peerConfig.setTableCFsMap(tableCfs);
     }
@@ -116,21 +113,21 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Add a new remote slave cluster for replication.
-   * @param id a short name that identifies the cluster
+   * @param id         a short name that identifies the cluster
    * @param peerConfig configuration for the replication slave cluster
    * @deprecated use
    *             {@link org.apache.hadoop.hbase.client.Admin#addReplicationPeer(String, ReplicationPeerConfig)}
    *             instead
    */
   @Deprecated
-  public void addPeer(String id, ReplicationPeerConfig peerConfig) throws ReplicationException,
-      IOException {
+  public void addPeer(String id, ReplicationPeerConfig peerConfig)
+    throws ReplicationException, IOException {
     this.admin.addReplicationPeer(id, peerConfig);
   }
 
   /**
-   *  @deprecated as release of 2.0.0, and it will be removed in 3.0.0
-   * */
+   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0
+   */
   @Deprecated
   public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
     return ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCFsConfig);
@@ -149,7 +146,8 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Removes a peer cluster and stops the replication to it.
    * @param id a short name that identifies the cluster
-   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#removeReplicationPeer(String)} instead
+   * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#removeReplicationPeer(String)}
+   *             instead
    */
   @Deprecated
   public void removePeer(String id) throws IOException {
@@ -180,9 +178,7 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Get the number of slave clusters the local cluster has.
-   * @return number of slave clusters
-   * @throws IOException
-   * @deprecated
+   * @return number of slave clusters n * @deprecated
    */
   @Deprecated
   public int getPeersCount() throws IOException {
@@ -214,9 +210,9 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Get the replicable table-cf config of the specified peer.
    * @param id a short name that identifies the cluster
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
-   * use {@link #getPeerConfig(String)} instead.
-   * */
+   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0, use
+   *             {@link #getPeerConfig(String)} instead.
+   */
   @Deprecated
   public String getPeerTableCFs(String id) throws IOException {
     ReplicationPeerConfig peerConfig = admin.getReplicationPeerConfig(id);
@@ -225,62 +221,52 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Append the replicable table-cf config of the specified peer
-   * @param id a short that identifies the cluster
-   * @param tableCfs table-cfs config str
-   * @throws ReplicationException
-   * @throws IOException
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
-   * use {@link #appendPeerTableCFs(String, Map)} instead.
+   * @param id       a short that identifies the cluster
+   * @param tableCfs table-cfs config str nn * @deprecated as release of 2.0.0, and it will be
+   *                 removed in 3.0.0, use {@link #appendPeerTableCFs(String, Map)} instead.
    */
   @Deprecated
-  public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException,
-      IOException {
+  public void appendPeerTableCFs(String id, String tableCfs)
+    throws ReplicationException, IOException {
     appendPeerTableCFs(id, ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCfs));
   }
 
   /**
    * Append the replicable table-cf config of the specified peer
-   * @param id a short that identifies the cluster
-   * @param tableCfs A map from tableName to column family names
-   * @throws ReplicationException
-   * @throws IOException
+   * @param id       a short that identifies the cluster
+   * @param tableCfs A map from tableName to column family names nn
    */
   @Deprecated
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws ReplicationException, IOException {
+    throws ReplicationException, IOException {
     this.admin.appendReplicationPeerTableCFs(id, copyTableCFs(tableCfs));
   }
 
   /**
    * Remove some table-cfs from table-cfs config of the specified peer
-   * @param id a short name that identifies the cluster
-   * @param tableCf table-cfs config str
-   * @throws ReplicationException
-   * @throws IOException
-   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0,
-   * use {@link #removePeerTableCFs(String, Map)} instead.
+   * @param id      a short name that identifies the cluster
+   * @param tableCf table-cfs config str nn * @deprecated as release of 2.0.0, and it will be
+   *                removed in 3.0.0, use {@link #removePeerTableCFs(String, Map)} instead.
    */
   @Deprecated
-  public void removePeerTableCFs(String id, String tableCf) throws ReplicationException,
-      IOException {
+  public void removePeerTableCFs(String id, String tableCf)
+    throws ReplicationException, IOException {
     removePeerTableCFs(id, ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableCf));
   }
 
   /**
    * Remove some table-cfs from config of the specified peer
-   * @param id a short name that identifies the cluster
-   * @param tableCfs A map from tableName to column family names
-   * @throws ReplicationException
-   * @throws IOException
+   * @param id       a short name that identifies the cluster
+   * @param tableCfs A map from tableName to column family names nn
    */
   @Deprecated
   public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws ReplicationException, IOException {
+    throws ReplicationException, IOException {
     this.admin.removeReplicationPeerTableCFs(id, copyTableCFs(tableCfs));
   }
 
   private Map<TableName, List<String>>
-      copyTableCFs(Map<TableName, ? extends Collection<String>> tableCfs) {
+    copyTableCFs(Map<TableName, ? extends Collection<String>> tableCfs) {
     Map<TableName, List<String>> newTableCfs = new HashMap<>();
     if (tableCfs != null) {
       tableCfs.forEach(
@@ -291,15 +277,15 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Set the replicable table-cf config of the specified peer
-   * @param id a short name that identifies the cluster
-   * @param tableCfs the table and column-family list which will be replicated for this peer.
-   * A map from tableName to column family names. An empty collection can be passed
-   * to indicate replicating all column families. Pass null for replicating all table and column
-   * families
+   * @param id       a short name that identifies the cluster
+   * @param tableCfs the table and column-family list which will be replicated for this peer. A map
+   *                 from tableName to column family names. An empty collection can be passed to
+   *                 indicate replicating all column families. Pass null for replicating all table
+   *                 and column families
    */
   @Deprecated
   public void setPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
-      throws IOException {
+    throws IOException {
     ReplicationPeerConfig peerConfig = getPeerConfig(id);
     peerConfig.setTableCFsMap(tableCfs);
     updatePeerConfig(id, peerConfig);
@@ -307,8 +293,8 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Get the state of the specified peer cluster
-   * @param id String format of the Short name that identifies the peer,
-   * an IllegalArgumentException is thrown if it doesn't exist
+   * @param id String format of the Short name that identifies the peer, an IllegalArgumentException
+   *           is thrown if it doesn't exist
    * @return true if replication is enabled to that peer, false if it isn't
    */
   @Deprecated
@@ -330,32 +316,26 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Find all column families that are replicated from this cluster
-   * @return the full list of the replicated column families of this cluster as:
-   *        tableName, family name, replicationType
-   *
-   * Currently replicationType is Global. In the future, more replication
-   * types may be extended here. For example
-   *  1) the replication may only apply to selected peers instead of all peers
-   *  2) the replicationType may indicate the host Cluster servers as Slave
-   *     for the table:columnFam.
+   * @return the full list of the replicated column families of this cluster as: tableName, family
+   *         name, replicationType Currently replicationType is Global. In the future, more
+   *         replication types may be extended here. For example 1) the replication may only apply
+   *         to selected peers instead of all peers 2) the replicationType may indicate the host
+   *         Cluster servers as Slave for the table:columnFam.
    * @deprecated use {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()} instead
    */
   @Deprecated
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<>();
-    admin.listReplicatedTableCFs().forEach(
-      (tableCFs) -> {
-        String table = tableCFs.getTable().getNameAsString();
-        tableCFs.getColumnFamilyMap()
-            .forEach(
-              (cf, scope) -> {
-                HashMap<String, String> replicationEntry = new HashMap<>();
-                replicationEntry.put(TNAME, table);
-                replicationEntry.put(CFNAME, cf);
-                replicationEntry.put(REPLICATIONTYPE, REPLICATIONGLOBAL);
-                replicationColFams.add(replicationEntry);
-              });
+    admin.listReplicatedTableCFs().forEach((tableCFs) -> {
+      String table = tableCFs.getTable().getNameAsString();
+      tableCFs.getColumnFamilyMap().forEach((cf, scope) -> {
+        HashMap<String, String> replicationEntry = new HashMap<>();
+        replicationEntry.put(TNAME, table);
+        replicationEntry.put(CFNAME, cf);
+        replicationEntry.put(REPLICATIONTYPE, REPLICATIONGLOBAL);
+        replicationColFams.add(replicationEntry);
       });
+    });
     return replicationColFams;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,17 +49,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALFiltering {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALFiltering.class);
+    HBaseClassTestRule.forClass(TestWALFiltering.class);
 
   private static final int NUM_RS = 4;
 
-  private static final TableName TABLE_NAME =
-      TableName.valueOf("TestWALFiltering");
+  private static final TableName TABLE_NAME = TableName.valueOf("TestWALFiltering");
   private static final byte[] CF1 = Bytes.toBytes("MyCF1");
   private static final byte[] CF2 = Bytes.toBytes("MyCF2");
   private static final byte[][] FAMILIES = { CF1, CF2 };
@@ -78,8 +77,8 @@ public class TestWALFiltering {
   }
 
   private void fillTable() throws IOException, InterruptedException {
-    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES, 3,
-        Bytes.toBytes("row0"), Bytes.toBytes("row99"), NUM_RS);
+    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES, 3, Bytes.toBytes("row0"),
+      Bytes.toBytes("row99"), NUM_RS);
     Random rand = new Random(19387129L);
     for (int iStoreFile = 0; iStoreFile < 4; ++iStoreFile) {
       for (int iRow = 0; iRow < 100; ++iRow) {
@@ -91,9 +90,9 @@ public class TestWALFiltering {
           final long ts = Math.abs(rand.nextInt());
           final byte[] qual = Bytes.toBytes("col" + iCol);
           if (rand.nextBoolean()) {
-            final byte[] value = Bytes.toBytes("value_for_row_" + iRow +
-                "_cf_" + Bytes.toStringBinary(cf) + "_col_" + iCol + "_ts_" +
-                ts + "_random_" + rand.nextLong());
+            final byte[] value =
+              Bytes.toBytes("value_for_row_" + iRow + "_cf_" + Bytes.toStringBinary(cf) + "_col_"
+                + iCol + "_ts_" + ts + "_random_" + rand.nextLong());
             put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
             del.addColumn(cf, qual, ts);
@@ -109,9 +108,8 @@ public class TestWALFiltering {
   }
 
   @Test
-  public void testFlushedSequenceIdsSentToHMaster()
-  throws IOException, InterruptedException,
-  org.apache.hbase.thirdparty.com.google.protobuf.ServiceException, ServiceException {
+  public void testFlushedSequenceIdsSentToHMaster() throws IOException, InterruptedException,
+    org.apache.hbase.thirdparty.com.google.protobuf.ServiceException, ServiceException {
     SortedMap<byte[], Long> allFlushedSequenceIds = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < NUM_RS; ++i) {
       flushAllRegions(i);
@@ -124,9 +122,8 @@ public class TestWALFiltering {
           GetLastFlushedSequenceIdRequest req =
             RequestConverter.buildGetLastFlushedSequenceIdRequest(regionName);
 
-          assertEquals((long)allFlushedSequenceIds.get(regionName),
-            master.getMasterRpcServices().getLastFlushedSequenceId(
-              null, req).getLastFlushedSequenceId());
+          assertEquals((long) allFlushedSequenceIds.get(regionName), master.getMasterRpcServices()
+            .getLastFlushedSequenceId(null, req).getLastFlushedSequenceId());
         }
       }
     }
@@ -145,13 +142,11 @@ public class TestWALFiltering {
     return TEST_UTIL.getMiniHBaseCluster().getRegionServer(rsId);
   }
 
-  private void flushAllRegions(int rsId)
-  throws ServiceException,
-  org.apache.hbase.thirdparty.com.google.protobuf.ServiceException, IOException {
+  private void flushAllRegions(int rsId) throws ServiceException,
+    org.apache.hbase.thirdparty.com.google.protobuf.ServiceException, IOException {
     HRegionServer hrs = getRegionServer(rsId);
     for (byte[] regionName : getRegionsByServer(rsId)) {
-      FlushRegionRequest request =
-        RequestConverter.buildFlushRegionRequest(regionName);
+      FlushRegionRequest request = RequestConverter.buildFlushRegionRequest(regionName);
       hrs.getRSRpcServices().flushRegion(null, request);
     }
   }

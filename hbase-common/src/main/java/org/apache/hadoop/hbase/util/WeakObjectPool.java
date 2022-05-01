@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,20 +19,17 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@code WeakReference} based shared object pool.
- * The objects are kept in weak references and
- * associated with keys which are identified by the {@code equals} method.
- * The objects are created by {@link org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory} on
- * demand. The object creation is expected to be lightweight, and the objects may be excessively
- * created and discarded.
- * Thread safe.
+ * A {@code WeakReference} based shared object pool. The objects are kept in weak references and
+ * associated with keys which are identified by the {@code equals} method. The objects are created
+ * by {@link org.apache.hadoop.hbase.util.ObjectPool.ObjectFactory} on demand. The object creation
+ * is expected to be lightweight, and the objects may be excessively created and discarded. Thread
+ * safe.
  */
 @InterfaceAudience.Private
-public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
+public class WeakObjectPool<K, V> extends ObjectPool<K, V> {
 
   public WeakObjectPool(ObjectFactory<K, V> objectFactory) {
     super(objectFactory);
@@ -43,7 +40,7 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
   }
 
   public WeakObjectPool(ObjectFactory<K, V> objectFactory, int initialCapacity,
-      int concurrencyLevel) {
+    int concurrencyLevel) {
     super(objectFactory, initialCapacity, concurrencyLevel);
   }
 
@@ -63,7 +60,7 @@ public class WeakObjectPool<K,V> extends ObjectPool<K,V> {
 
   @Override
   public K getReferenceKey(Reference<V> ref) {
-    return ((WeakObjectReference)ref).key;
+    return ((WeakObjectReference) ref).key;
   }
 
 }

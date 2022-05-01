@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Facade to create Cells for HFileOutputFormat. The created Cells are of <code>Put</code> type.
@@ -34,97 +33,91 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class CellCreator {
 
   public static final String VISIBILITY_EXP_RESOLVER_CLASS =
-      "hbase.mapreduce.visibility.expression.resolver.class";
+    "hbase.mapreduce.visibility.expression.resolver.class";
 
   private VisibilityExpressionResolver visExpResolver;
 
   public CellCreator(Configuration conf) {
-    Class<? extends VisibilityExpressionResolver> clazz = conf.getClass(
-        VISIBILITY_EXP_RESOLVER_CLASS, DefaultVisibilityExpressionResolver.class,
+    Class<? extends VisibilityExpressionResolver> clazz =
+      conf.getClass(VISIBILITY_EXP_RESOLVER_CLASS, DefaultVisibilityExpressionResolver.class,
         VisibilityExpressionResolver.class);
     this.visExpResolver = ReflectionUtils.newInstance(clazz, conf);
     this.visExpResolver.init();
   }
 
   /**
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @return created Cell
-   * @throws IOException
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
+   * @return created Cell n
    */
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
-      byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
-      int vlength) throws IOException {
+    byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
+    int vlength) throws IOException {
     return create(row, roffset, rlength, family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, value, voffset, vlength, (List<Tag>)null);
+      timestamp, value, voffset, vlength, (List<Tag>) null);
   }
 
   /**
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
-   * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
+   * @param row           row key
+   * @param roffset       row offset
+   * @param rlength       row length
+   * @param family        family name
+   * @param foffset       family offset
+   * @param flength       family length
+   * @param qualifier     column qualifier
+   * @param qoffset       qualifier offset
+   * @param qlength       qualifier length
+   * @param timestamp     version timestamp
+   * @param value         column value
+   * @param voffset       value offset
+   * @param vlength       value length
    * @param visExpression visibility expression to be associated with cell
-   * @return created Cell
-   * @throws IOException
-   * @deprecated since 0.98.9
+   * @return created Cell n * @deprecated since 0.98.9
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-10560">HBASE-10560</a>
    */
   @Deprecated
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
-      byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
-      int vlength, String visExpression) throws IOException {
+    byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
+    int vlength, String visExpression) throws IOException {
     List<Tag> visTags = null;
     if (visExpression != null) {
       visTags = this.visExpResolver.createVisibilityExpTags(visExpression);
     }
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-        qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, visTags);
+      qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, visTags);
   }
 
   /**
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @param tags
-   * @return created Cell
-   * @throws IOException
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length n * @return created Cell n
    */
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
-      byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
-      int vlength, List<Tag> tags) throws IOException {
+    byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
+    int vlength, List<Tag> tags) throws IOException {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-        qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, tags);
+      qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, tags);
   }
 
   /**

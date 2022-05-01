@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +18,14 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
-import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -47,13 +42,16 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
-
 /**
- * A job with a a map and reduce phase to count cells in a table.
- * The counter lists the following stats for a given table:
+ * A job with a a map and reduce phase to count cells in a table. The counter lists the following
+ * stats for a given table:
+ *
  * <pre>
  * 1. Total number of rows in the table
  * 2. Total number of CFs across all rows
@@ -63,17 +61,14 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * 6. Total number of versions of each qualifier.
  * </pre>
  *
- * The cellcounter can take optional parameters to use a user
- * supplied row/family/qualifier string to use in the report and
- * second a regex based or prefix based row filter to restrict the
- * count operation to a limited subset of rows from the table or a
- * start time and/or end time to limit the count to a time range.
+ * The cellcounter can take optional parameters to use a user supplied row/family/qualifier string
+ * to use in the report and second a regex based or prefix based row filter to restrict the count
+ * operation to a limited subset of rows from the table or a start time and/or end time to limit the
+ * count to a time range.
  */
 @InterfaceAudience.Public
 public class CellCounter extends Configured implements Tool {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(CellCounter.class.getName());
-
+  private static final Logger LOG = LoggerFactory.getLogger(CellCounter.class.getName());
 
   /**
    * Name of this 'program'.
@@ -85,8 +80,7 @@ public class CellCounter extends Configured implements Tool {
   /**
    * Mapper that runs the count.
    */
-  static class CellCounterMapper
-  extends TableMapper<Text, IntWritable> {
+  static class CellCounterMapper extends TableMapper<Text, IntWritable> {
     /**
      * Counter enumeration to count the actual rows.
      */
@@ -114,12 +108,11 @@ public class CellCounter extends Configured implements Tool {
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
       conf = context.getConfiguration();
-      separator = conf.get("ReportSeparator",":");
+      separator = conf.get("ReportSeparator", ":");
     }
 
     /**
      * Maps the data.
-     *
      * @param row     The current table row key.
      * @param values  The columns.
      * @param context The current context.
@@ -127,13 +120,10 @@ public class CellCounter extends Configured implements Tool {
      */
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
-      justification="Findbugs is blind to the Precondition null check")
-    public void map(ImmutableBytesWritable row, Result values,
-                    Context context)
-        throws IOException {
-      Preconditions.checkState(values != null,
-          "values passed to the map is null");
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
+        justification = "Findbugs is blind to the Precondition null check")
+    public void map(ImmutableBytesWritable row, Result values, Context context) throws IOException {
+      Preconditions.checkState(values != null, "values passed to the map is null");
 
       try {
         byte[] currentRow = values.getRow();
@@ -161,12 +151,11 @@ public class CellCounter extends Configured implements Tool {
             }
             if (currentQualifier == null || !CellUtil.matchingQualifier(value, currentQualifier)) {
               currentQualifier = CellUtil.cloneQualifier(value);
-              currentQualifierName = currentFamilyName + separator +
-                  Bytes.toStringBinary(currentQualifier);
+              currentQualifierName =
+                currentFamilyName + separator + Bytes.toStringBinary(currentQualifier);
               currentRowQualifierName = currentRowKey + separator + currentQualifierName;
 
-              context.write(new Text("Total Qualifiers across all Rows"),
-                  new IntWritable(1));
+              context.write(new Text("Total Qualifiers across all Rows"), new IntWritable(1));
               context.write(new Text(currentQualifierName), new IntWritable(1));
             }
             // Increment versions
@@ -180,13 +169,12 @@ public class CellCounter extends Configured implements Tool {
     }
   }
 
-  static class IntSumReducer<Key> extends Reducer<Key, IntWritable,
-      Key, IntWritable> {
+  static class IntSumReducer<Key> extends Reducer<Key, IntWritable, Key, IntWritable> {
 
     private IntWritable result = new IntWritable();
-    public void reduce(Key key, Iterable<IntWritable> values,
-      Context context)
-    throws IOException, InterruptedException {
+
+    public void reduce(Key key, Iterable<IntWritable> values, Context context)
+      throws IOException, InterruptedException {
       int sum = 0;
       for (IntWritable val : values) {
         sum += val.get();
@@ -198,23 +186,21 @@ public class CellCounter extends Configured implements Tool {
 
   /**
    * Sets up the actual job.
-   *
    * @param conf The current configuration.
    * @param args The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args)
-      throws IOException {
+  public static Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
     String tableName = args[0];
     Path outputDir = new Path(args[1]);
-    String reportSeparatorString = (args.length > 2) ? args[2]: ":";
+    String reportSeparatorString = (args.length > 2) ? args[2] : ":";
     conf.set("ReportSeparator", reportSeparatorString);
     Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CellCounter.class);
     Scan scan = getConfiguredScanForJob(conf, args);
-    TableMapReduceUtil.initTableMapperJob(tableName, scan,
-        CellCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
+    TableMapReduceUtil.initTableMapperJob(tableName, scan, CellCounterMapper.class,
+      ImmutableBytesWritable.class, Result.class, job);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(IntWritable.class);
     job.setOutputFormatClass(TextOutputFormat.class);
@@ -227,7 +213,7 @@ public class CellCounter extends Configured implements Tool {
   }
 
   private static Scan getConfiguredScanForJob(Configuration conf, String[] args)
-      throws IOException {
+    throws IOException {
     // create scan with any properties set from TableInputFormat
     Scan s = TableInputFormat.createScanFromConfiguration(conf);
     // Set Scan Versions
@@ -238,7 +224,7 @@ public class CellCounter extends Configured implements Tool {
     s.setCacheBlocks(false);
     // Set RowFilter or Prefix Filter if applicable.
     Filter rowFilter = getRowFilter(args);
-    if (rowFilter!= null) {
+    if (rowFilter != null) {
       LOG.info("Setting Row Filter for counter.");
       s.setFilter(rowFilter);
     }
@@ -251,10 +237,9 @@ public class CellCounter extends Configured implements Tool {
     return s;
   }
 
-
   private static Filter getRowFilter(String[] args) {
     Filter rowFilter = null;
-    String filterCriteria = (args.length > 3) ? args[3]: null;
+    String filterCriteria = (args.length > 3) ? args[3] : null;
     if (filterCriteria == null) return null;
     if (filterCriteria.startsWith("^")) {
       String regexPattern = filterCriteria.substring(1, filterCriteria.length());
@@ -281,11 +266,10 @@ public class CellCounter extends Configured implements Tool {
       }
     }
 
-    if (startTime == 0 && endTime == 0)
-      return null;
+    if (startTime == 0 && endTime == 0) return null;
 
     endTime = endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime;
-    return new long [] {startTime, endTime};
+    return new long[] { startTime, endTime };
   }
 
   @Override
@@ -301,15 +285,14 @@ public class CellCounter extends Configured implements Tool {
   private void printUsage(int parameterCount) {
     System.err.println("ERROR: Wrong number of parameters: " + parameterCount);
     System.err.println("Usage: hbase cellcounter <tablename> <outputDir> [reportSeparator] "
-        + "[^[regex pattern] or [Prefix]] [--starttime=<starttime> --endtime=<endtime>]");
+      + "[^[regex pattern] or [Prefix]] [--starttime=<starttime> --endtime=<endtime>]");
     System.err.println("  Note: -D properties will be applied to the conf used.");
     System.err.println("  Additionally, all of the SCAN properties from TableInputFormat can be "
-        + "specified to get fine grained control on what is counted.");
+      + "specified to get fine grained control on what is counted.");
     System.err.println("   -D" + TableInputFormat.SCAN_ROW_START + "=<rowkey>");
     System.err.println("   -D" + TableInputFormat.SCAN_ROW_STOP + "=<rowkey>");
     System.err.println("   -D" + TableInputFormat.SCAN_COLUMNS + "=\"<col1> <col2>...\"");
-    System.err.println("   -D" + TableInputFormat.SCAN_COLUMN_FAMILY
-        + "=<family1>,<family2>, ...");
+    System.err.println("   -D" + TableInputFormat.SCAN_COLUMN_FAMILY + "=<family1>,<family2>, ...");
     System.err.println("   -D" + TableInputFormat.SCAN_TIMESTAMP + "=<timestamp>");
     System.err.println("   -D" + TableInputFormat.SCAN_TIMERANGE_START + "=<timestamp>");
     System.err.println("   -D" + TableInputFormat.SCAN_TIMERANGE_END + "=<timestamp>");
@@ -317,10 +300,10 @@ public class CellCounter extends Configured implements Tool {
     System.err.println("   -D" + TableInputFormat.SCAN_CACHEDROWS + "=<count>");
     System.err.println("   -D" + TableInputFormat.SCAN_BATCHSIZE + "=<count>");
     System.err.println(" <reportSeparator> parameter can be used to override the default report "
-        + "separator string : used to separate the rowId/column family name and qualifier name.");
+      + "separator string : used to separate the rowId/column family name and qualifier name.");
     System.err.println(" [^[regex pattern] or [Prefix] parameter can be used to limit the cell "
-        + "counter count operation to a limited subset of rows from the table based on regex or "
-        + "prefix pattern.");
+      + "counter count operation to a limited subset of rows from the table based on regex or "
+      + "prefix pattern.");
   }
 
   /**

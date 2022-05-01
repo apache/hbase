@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +31,8 @@ import org.slf4j.LoggerFactory;
 public final class ProcessUtils {
   private static Logger LOG = LoggerFactory.getLogger(ProcessUtils.class);
 
-  private ProcessUtils() { }
+  private ProcessUtils() {
+  }
 
   public static Integer getPid() {
     // JVM_PID is exported by bin/hbase run script

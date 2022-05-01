@@ -35,7 +35,7 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
 
   @Parameter(0)
   public String tableType;

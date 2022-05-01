@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
@@ -87,14 +86,14 @@ public class RESTServer implements Constants {
   static final String REST_CSRF_ENABLED_KEY = "hbase.rest.csrf.enabled";
   static final boolean REST_CSRF_ENABLED_DEFAULT = false;
   boolean restCSRFEnabled = false;
-  static final String REST_CSRF_CUSTOM_HEADER_KEY ="hbase.rest.csrf.custom.header";
+  static final String REST_CSRF_CUSTOM_HEADER_KEY = "hbase.rest.csrf.custom.header";
   static final String REST_CSRF_CUSTOM_HEADER_DEFAULT = "X-XSRF-HEADER";
   static final String REST_CSRF_METHODS_TO_IGNORE_KEY = "hbase.rest.csrf.methods.to.ignore";
   static final String REST_CSRF_METHODS_TO_IGNORE_DEFAULT = "GET,OPTIONS,HEAD,TRACE";
   public static final String SKIP_LOGIN_KEY = "hbase.rest.skip.login";
   static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
   static final String HTTP_HEADER_CACHE_SIZE = "hbase.rest.http.header.cache.size";
-  static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE -1;
+  static final int DEFAULT_HTTP_HEADER_CACHE_SIZE = Character.MAX_VALUE - 1;
 
   private static final String PATH_SPEC_ANY = "/*";
 
@@ -106,8 +105,8 @@ public class RESTServer implements Constants {
 
   // HACK, making this static for AuthFilter to get at our configuration. Necessary for unit tests.
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value={"ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL"},
-    justification="For testing")
+      value = { "ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD", "MS_CANNOT_BE_FINAL" },
+      justification = "For testing")
   public static Configuration conf = null;
   private final UserProvider userProvider;
   private Server server;
@@ -121,16 +120,17 @@ public class RESTServer implements Constants {
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("hbase rest start", "", options,
-      "\nTo run the REST server as a daemon, execute " +
-      "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n", true);
+      "\nTo run the REST server as a daemon, execute "
+        + "hbase-daemon.sh start|stop rest [-i <port>] [-p <port>] [-ro]\n",
+      true);
     System.exit(exitCode);
   }
 
   void addCSRFFilter(ServletContextHandler ctxHandler, Configuration conf) {
     restCSRFEnabled = conf.getBoolean(REST_CSRF_ENABLED_KEY, REST_CSRF_ENABLED_DEFAULT);
     if (restCSRFEnabled) {
-      Map<String, String> restCsrfParams = RestCsrfPreventionFilter
-          .getFilterParams(conf, "hbase.rest-csrf.");
+      Map<String, String> restCsrfParams =
+        RestCsrfPreventionFilter.getFilterParams(conf, "hbase.rest-csrf.");
       FilterHolder holder = new FilterHolder();
       holder.setName("csrf");
       holder.setClassName(RestCsrfPreventionFilter.class.getName());
@@ -140,7 +140,7 @@ public class RESTServer implements Constants {
   }
 
   private void addClickjackingPreventionFilter(ServletContextHandler ctxHandler,
-      Configuration conf) {
+    Configuration conf) {
     FilterHolder holder = new FilterHolder();
     holder.setName("clickjackingprevention");
     holder.setClassName(ClickjackingPreventionFilter.class.getName());
@@ -148,8 +148,8 @@ public class RESTServer implements Constants {
     ctxHandler.addFilter(holder, PATH_SPEC_ANY, EnumSet.allOf(DispatcherType.class));
   }
 
-  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler,
-    Configuration conf, boolean isSecure) {
+  private void addSecurityHeadersFilter(ServletContextHandler ctxHandler, Configuration conf,
+    boolean isSecure) {
     FilterHolder holder = new FilterHolder();
     holder.setName("securityheaders");
     holder.setClassName(SecurityHeadersFilter.class.getName());
@@ -158,13 +158,12 @@ public class RESTServer implements Constants {
   }
 
   // login the server principal (if using secure Hadoop)
-  private static Pair<FilterHolder, Class<? extends ServletContainer>> loginServerPrincipal(
-    UserProvider userProvider, Configuration conf) throws Exception {
+  private static Pair<FilterHolder, Class<? extends ServletContainer>>
+    loginServerPrincipal(UserProvider userProvider, Configuration conf) throws Exception {
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
     if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
-      String machineName = Strings.domainNamePointerToHostName(
-        DNS.getDefaultHost(conf.get(REST_DNS_INTERFACE, "default"),
-          conf.get(REST_DNS_NAMESERVER, "default")));
+      String machineName = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+        conf.get(REST_DNS_INTERFACE, "default"), conf.get(REST_DNS_NAMESERVER, "default")));
       String keytabFilename = conf.get(REST_KEYTAB_FILE);
       Preconditions.checkArgument(keytabFilename != null && !keytabFilename.isEmpty(),
         REST_KEYTAB_FILE + " should be set if security is enabled");
@@ -180,7 +179,7 @@ public class RESTServer implements Constants {
         FilterHolder authFilter = new FilterHolder();
         authFilter.setClassName(AuthFilter.class.getName());
         authFilter.setName("AuthenticationFilter");
-        return new Pair<>(authFilter,containerClass);
+        return new Pair<>(authFilter, containerClass);
       }
     }
     return new Pair<>(null, containerClass);
@@ -189,8 +188,8 @@ public class RESTServer implements Constants {
   private static void parseCommandLine(String[] args, Configuration conf) {
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
-    options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
-      "method requests [default: false]");
+    options.addOption("ro", "readonly", false,
+      "Respond only to GET HTTP " + "method requests [default: false]");
     options.addOption("i", "infoport", true, "Port for WEB UI");
 
     CommandLine commandLine = null;
@@ -249,23 +248,22 @@ public class RESTServer implements Constants {
     }
   }
 
-
   /**
    * Runs the REST server.
    */
   public synchronized void run() throws Exception {
-    Pair<FilterHolder, Class<? extends ServletContainer>> pair = loginServerPrincipal(
-      userProvider, conf);
+    Pair<FilterHolder, Class<? extends ServletContainer>> pair =
+      loginServerPrincipal(userProvider, conf);
     FilterHolder authFilter = pair.getFirst();
     Class<? extends ServletContainer> containerClass = pair.getSecond();
     RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
 
-
     // Set up the Jersey servlet container for Jetty
     // The Jackson1Feature is a signal to Jersey that it should use jackson doing json.
-    // See here: https://stackoverflow.com/questions/39458230/how-register-jacksonfeature-on-clientconfig
-    ResourceConfig application = new ResourceConfig().
-        packages("org.apache.hadoop.hbase.rest").register(JacksonJaxbJsonProvider.class);
+    // See here:
+    // https://stackoverflow.com/questions/39458230/how-register-jacksonfeature-on-clientconfig
+    ResourceConfig application = new ResourceConfig().packages("org.apache.hadoop.hbase.rest")
+      .register(JacksonJaxbJsonProvider.class);
     // Using our custom ServletContainer is tremendously important. This is what makes sure the
     // UGI.doAs() is done for the remoteUser, and calls are not made as the REST server itself.
     ServletContainer servletContainer = ReflectionUtils.newInstance(containerClass, application);
@@ -281,23 +279,24 @@ public class RESTServer implements Constants {
     // Use the default queue (unbounded with Jetty 9.3) if the queue size is negative, otherwise use
     // bounded {@link ArrayBlockingQueue} with the given size
     int queueSize = servlet.getConfiguration().getInt(REST_THREAD_POOL_TASK_QUEUE_SIZE, -1);
-    int idleTimeout = servlet.getConfiguration().getInt(REST_THREAD_POOL_THREAD_IDLE_TIMEOUT, 60000);
-    QueuedThreadPool threadPool = queueSize > 0 ?
-        new QueuedThreadPool(maxThreads, minThreads, idleTimeout, new ArrayBlockingQueue<>(queueSize)) :
-        new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
+    int idleTimeout =
+      servlet.getConfiguration().getInt(REST_THREAD_POOL_THREAD_IDLE_TIMEOUT, 60000);
+    QueuedThreadPool threadPool = queueSize > 0
+      ? new QueuedThreadPool(maxThreads, minThreads, idleTimeout,
+        new ArrayBlockingQueue<>(queueSize))
+      : new QueuedThreadPool(maxThreads, minThreads, idleTimeout);
 
     this.server = new Server(threadPool);
 
     // Setup JMX
-    MBeanContainer mbContainer=new MBeanContainer(ManagementFactory.getPlatformMBeanServer());
+    MBeanContainer mbContainer = new MBeanContainer(ManagementFactory.getPlatformMBeanServer());
     server.addEventListener(mbContainer);
     server.addBean(mbContainer);
 
-
     String host = servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0");
     int servicePort = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
-    int httpHeaderCacheSize = servlet.getConfiguration().getInt(HTTP_HEADER_CACHE_SIZE,
-      DEFAULT_HTTP_HEADER_CACHE_SIZE);
+    int httpHeaderCacheSize =
+      servlet.getConfiguration().getInt(HTTP_HEADER_CACHE_SIZE, DEFAULT_HTTP_HEADER_CACHE_SIZE);
     HttpConfiguration httpConfig = new HttpConfiguration();
     httpConfig.setSecureScheme("https");
     httpConfig.setSecurePort(servicePort);
@@ -317,56 +316,55 @@ public class RESTServer implements Constants {
       SslContextFactory sslCtxFactory = new SslContextFactory();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
       String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
-      String password = HBaseConfiguration.getPassword(conf,
-          REST_SSL_KEYSTORE_PASSWORD, null);
-      String keyPassword = HBaseConfiguration.getPassword(conf,
-          REST_SSL_KEYSTORE_KEYPASSWORD, password);
+      String password = HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null);
+      String keyPassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password);
       sslCtxFactory.setKeyStorePath(keystore);
-      if(StringUtils.isNotBlank(keystoreType)) {
+      if (StringUtils.isNotBlank(keystoreType)) {
         sslCtxFactory.setKeyStoreType(keystoreType);
       }
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
       String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
-      if(StringUtils.isNotBlank(trustStore)) {
+      if (StringUtils.isNotBlank(trustStore)) {
         sslCtxFactory.setTrustStorePath(trustStore);
       }
       String trustStorePassword =
         HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
-      if(StringUtils.isNotBlank(trustStorePassword)) {
+      if (StringUtils.isNotBlank(trustStorePassword)) {
         sslCtxFactory.setTrustStorePassword(trustStorePassword);
       }
       String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
-      if(StringUtils.isNotBlank(trustStoreType)) {
+      if (StringUtils.isNotBlank(trustStoreType)) {
         sslCtxFactory.setTrustStoreType(trustStoreType);
       }
 
-      String[] excludeCiphers = servlet.getConfiguration().getStrings(
-          REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      String[] excludeCiphers = servlet.getConfiguration()
+        .getStrings(REST_SSL_EXCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
       if (excludeCiphers.length != 0) {
         sslCtxFactory.setExcludeCipherSuites(excludeCiphers);
       }
-      String[] includeCiphers = servlet.getConfiguration().getStrings(
-          REST_SSL_INCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
+      String[] includeCiphers = servlet.getConfiguration()
+        .getStrings(REST_SSL_INCLUDE_CIPHER_SUITES, ArrayUtils.EMPTY_STRING_ARRAY);
       if (includeCiphers.length != 0) {
         sslCtxFactory.setIncludeCipherSuites(includeCiphers);
       }
 
-      String[] excludeProtocols = servlet.getConfiguration().getStrings(
-          REST_SSL_EXCLUDE_PROTOCOLS, ArrayUtils.EMPTY_STRING_ARRAY);
+      String[] excludeProtocols = servlet.getConfiguration().getStrings(REST_SSL_EXCLUDE_PROTOCOLS,
+        ArrayUtils.EMPTY_STRING_ARRAY);
       if (excludeProtocols.length != 0) {
         sslCtxFactory.setExcludeProtocols(excludeProtocols);
       }
-      String[] includeProtocols = servlet.getConfiguration().getStrings(
-          REST_SSL_INCLUDE_PROTOCOLS, ArrayUtils.EMPTY_STRING_ARRAY);
+      String[] includeProtocols = servlet.getConfiguration().getStrings(REST_SSL_INCLUDE_PROTOCOLS,
+        ArrayUtils.EMPTY_STRING_ARRAY);
       if (includeProtocols.length != 0) {
         sslCtxFactory.setIncludeProtocols(includeProtocols);
       }
 
       serverConnector = new ServerConnector(server,
-          new SslConnectionFactory(sslCtxFactory, HttpVersion.HTTP_1_1.toString()),
-          new HttpConnectionFactory(httpsConfig));
+        new SslConnectionFactory(sslCtxFactory, HttpVersion.HTTP_1_1.toString()),
+        new HttpConnectionFactory(httpsConfig));
     } else {
       serverConnector = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
     }
@@ -383,15 +381,16 @@ public class RESTServer implements Constants {
     server.setStopAtShutdown(true);
 
     // set up context
-    ServletContextHandler ctxHandler = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
+    ServletContextHandler ctxHandler =
+      new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS);
     ctxHandler.addServlet(sh, PATH_SPEC_ANY);
     if (authFilter != null) {
       ctxHandler.addFilter(authFilter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
     }
 
     // Load filters from configuration.
-    String[] filterClasses = servlet.getConfiguration().getStrings(FILTER_CLASSES,
-        GzipFilter.class.getName());
+    String[] filterClasses =
+      servlet.getConfiguration().getStrings(FILTER_CLASSES, GzipFilter.class.getName());
     for (String filter : filterClasses) {
       filter = filter.trim();
       ctxHandler.addFilter(filter, PATH_SPEC_ANY, EnumSet.of(DispatcherType.REQUEST));
@@ -400,7 +399,7 @@ public class RESTServer implements Constants {
     addClickjackingPreventionFilter(ctxHandler, conf);
     addSecurityHeadersFilter(ctxHandler, conf, isSecure);
     HttpServerUtil.constrainHttpMethods(ctxHandler, servlet.getConfiguration()
-        .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
+      .getBoolean(REST_HTTP_ALLOW_OPTIONS_METHOD, REST_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT));
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);

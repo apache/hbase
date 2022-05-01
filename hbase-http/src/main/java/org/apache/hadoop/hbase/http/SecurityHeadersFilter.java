@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,16 +6,15 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
@@ -37,10 +36,10 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecurityHeadersFilter implements Filter {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(SecurityHeadersFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SecurityHeadersFilter.class);
   private static final String DEFAULT_HSTS = "max-age=63072000;includeSubDomains;preload";
-  private static final String DEFAULT_CSP = "default-src https: data: 'unsafe-inline' 'unsafe-eval'";
+  private static final String DEFAULT_CSP =
+    "default-src https: data: 'unsafe-inline' 'unsafe-eval'";
   private FilterConfig filterConfig;
 
   @Override
@@ -51,7 +50,7 @@ public class SecurityHeadersFilter implements Filter {
 
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-      throws IOException, ServletException {
+    throws IOException, ServletException {
     HttpServletResponse httpResponse = (HttpServletResponse) response;
     httpResponse.addHeader("X-Content-Type-Options", "nosniff");
     httpResponse.addHeader("X-XSS-Protection", "1; mode=block");
@@ -71,7 +70,7 @@ public class SecurityHeadersFilter implements Filter {
   }
 
   /**
-   * @param conf configuration
+   * @param conf     configuration
    * @param isSecure use secure defaults if 'true'
    * @return default parameters, as a map
    */
@@ -86,7 +85,7 @@ public class SecurityHeadersFilter implements Filter {
    * @param conf configuration
    * @return default parameters, as a map
    * @deprecated Use {@link SecurityHeadersFilter#getDefaultParameters(Configuration, boolean)}
-   *   instead.
+   *             instead.
    */
   @Deprecated
   public static Map<String, String> getDefaultParameters(Configuration conf) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,36 +31,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is a class loader that can load classes dynamically from new
- * jar files under a configured folder. The paths to the jar files are
- * converted to URLs, and URLClassLoader logic is actually used to load
- * classes. This class loader always uses its parent class loader
- * to load a class at first. Only if its parent class loader
- * can not load a class, we will try to load it using the logic here.
+ * This is a class loader that can load classes dynamically from new jar files under a configured
+ * folder. The paths to the jar files are converted to URLs, and URLClassLoader logic is actually
+ * used to load classes. This class loader always uses its parent class loader to load a class at
+ * first. Only if its parent class loader can not load a class, we will try to load it using the
+ * logic here.
  * <p>
- * The configured folder can be a HDFS path. In this case, the jar files
- * under that folder will be copied to local at first under ${hbase.local.dir}/jars/.
- * The local copy will be updated if the remote copy is updated, according to its
- * last modified timestamp.
+ * The configured folder can be a HDFS path. In this case, the jar files under that folder will be
+ * copied to local at first under ${hbase.local.dir}/jars/. The local copy will be updated if the
+ * remote copy is updated, according to its last modified timestamp.
  * <p>
- * We can't unload a class already loaded. So we will use the existing
- * jar files we already know to load any class which can't be loaded
- * using the parent class loader. If we still can't load the class from
- * the existing jar files, we will check if any new jar file is added,
- * if so, we will load the new jar file and try to load the class again.
- * If still failed, a class not found exception will be thrown.
+ * We can't unload a class already loaded. So we will use the existing jar files we already know to
+ * load any class which can't be loaded using the parent class loader. If we still can't load the
+ * class from the existing jar files, we will check if any new jar file is added, if so, we will
+ * load the new jar file and try to load the class again. If still failed, a class not found
+ * exception will be thrown.
  * <p>
- * Be careful in uploading new jar files and make sure all classes
- * are consistent, otherwise, we may not be able to load your
- * classes properly.
+ * Be careful in uploading new jar files and make sure all classes are consistent, otherwise, we may
+ * not be able to load your classes properly.
  */
 @InterfaceAudience.Private
 public class DynamicClassLoader extends ClassLoaderBase {
   private static final Logger LOG = LoggerFactory.getLogger(DynamicClassLoader.class);
 
   // Dynamic jars are put under ${hbase.local.dir}/jars/
-  private static final String DYNAMIC_JARS_DIR = File.separator
-    + "jars" + File.separator;
+  private static final String DYNAMIC_JARS_DIR = File.separator + "jars" + File.separator;
 
   private static final String DYNAMIC_JARS_DIR_KEY = "hbase.dynamic.jars.dir";
 
@@ -83,18 +77,17 @@ public class DynamicClassLoader extends ClassLoaderBase {
   private HashMap<String, Long> jarModifiedTime;
 
   /**
-   * Creates a DynamicClassLoader that can load classes dynamically
-   * from jar files under a specific folder.
-   *
-   * @param conf the configuration for the cluster.
+   * Creates a DynamicClassLoader that can load classes dynamically from jar files under a specific
+   * folder.
+   * @param conf   the configuration for the cluster.
    * @param parent the parent ClassLoader to set.
    */
   public DynamicClassLoader(final Configuration conf, final ClassLoader parent) {
     super(parent);
 
     // Save off the user's original configuration value for the DynamicClassLoader
-    userConfigUseDynamicJars = conf.getBoolean(
-        DYNAMIC_JARS_OPTIONAL_CONF_KEY, DYNAMIC_JARS_OPTIONAL_DEFAULT);
+    userConfigUseDynamicJars =
+      conf.getBoolean(DYNAMIC_JARS_OPTIONAL_CONF_KEY, DYNAMIC_JARS_OPTIONAL_DEFAULT);
 
     boolean dynamicJarsEnabled = userConfigUseDynamicJars;
     if (dynamicJarsEnabled) {
@@ -103,8 +96,8 @@ public class DynamicClassLoader extends ClassLoaderBase {
         dynamicJarsEnabled = true;
       } catch (Exception e) {
         LOG.error("Disabling the DynamicClassLoader as it failed to initialize its temp directory."
-            + " Check your configuration and filesystem permissions. Custom coprocessor code may"
-            + " not be loaded as a result of this failure.", e);
+          + " Check your configuration and filesystem permissions. Custom coprocessor code may"
+          + " not be loaded as a result of this failure.", e);
         dynamicJarsEnabled = false;
       }
     }
@@ -115,32 +108,29 @@ public class DynamicClassLoader extends ClassLoaderBase {
   // remoteDirFs and jarModifiedTime being part synchronized protected.
   private synchronized void initTempDir(final Configuration conf) {
     jarModifiedTime = new HashMap<>();
-    String localDirPath = conf.get(
-      LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;
+    String localDirPath = conf.get(LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;
     localDir = new File(localDirPath);
     if (!localDir.mkdirs() && !localDir.isDirectory()) {
-      throw new RuntimeException("Failed to create local dir " + localDir.getPath()
-        + ", DynamicClassLoader failed to init");
+      throw new RuntimeException(
+        "Failed to create local dir " + localDir.getPath() + ", DynamicClassLoader failed to init");
     }
 
     String remotePath = conf.get(DYNAMIC_JARS_DIR_KEY);
     if (remotePath == null || remotePath.equals(localDirPath)) {
-      remoteDir = null;  // ignore if it is the same as the local path
+      remoteDir = null; // ignore if it is the same as the local path
     } else {
       remoteDir = new Path(remotePath);
       try {
         remoteDirFs = remoteDir.getFileSystem(conf);
       } catch (IOException ioe) {
-        LOG.warn("Failed to identify the fs of dir "
-          + remoteDir + ", ignored", ioe);
+        LOG.warn("Failed to identify the fs of dir " + remoteDir + ", ignored", ioe);
         remoteDir = null;
       }
     }
   }
 
   @Override
-  public Class<?> loadClass(String name)
-      throws ClassNotFoundException {
+  public Class<?> loadClass(String name) throws ClassNotFoundException {
     try {
       return parent.loadClass(name);
     } catch (ClassNotFoundException e) {
@@ -150,7 +140,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
       } else if (userConfigUseDynamicJars) {
         // If the user tried to enable the DCL, then warn again.
         LOG.debug("Not checking DynamicClassLoader for missing class because it is disabled."
-            + " See the log for previous errors.");
+          + " See the log for previous errors.");
       }
       throw e;
     }
@@ -227,7 +217,7 @@ public class DynamicClassLoader extends ClassLoaderBase {
       return; // no remote files at all
     }
 
-    for (FileStatus status: statuses) {
+    for (FileStatus status : statuses) {
       if (status.isDirectory()) {
         continue; // No recursive lookup
       }

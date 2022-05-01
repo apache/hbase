@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,11 +55,11 @@ public class TestFilterListOrOperatorWithBlkCnt {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFilterListOrOperatorWithBlkCnt.class);
+    HBaseClassTestRule.forClass(TestFilterListOrOperatorWithBlkCnt.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFilterListOrOperatorWithBlkCnt.class);
+    LoggerFactory.getLogger(TestFilterListOrOperatorWithBlkCnt.class);
   private byte[] family = Bytes.toBytes("family");
   private byte[] qf = Bytes.toBytes("qf");
   private byte[] value = Bytes.toBytes("val");
@@ -70,15 +70,14 @@ public class TestFilterListOrOperatorWithBlkCnt {
   public TestName name = new TestName();
 
   /**
-   * @throws Exception
+   * n
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     long blkSize = 4096;
     /*
-     * dfs block size is adjusted so that the specified number of rows would result in
-     * multiple blocks (8 for this test).
-     * Later in the test, assertion is made on the number of blocks read.
+     * dfs block size is adjusted so that the specified number of rows would result in multiple
+     * blocks (8 for this test). Later in the test, assertion is made on the number of blocks read.
      */
     TEST_UTIL.getConfiguration().setLong("dfs.blocksize", blkSize);
     TEST_UTIL.getConfiguration().setLong("dfs.bytes-per-checksum", blkSize);
@@ -86,7 +85,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   }
 
   /**
-   * @throws Exception
+   * n
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
@@ -141,7 +140,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   }
 
   private void generateRows(int numberOfRows, Table ht, byte[] family, byte[] qf, byte[] value)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < numberOfRows; i++) {
       byte[] row = Bytes.toBytes(i);
       Put p = new Put(row);
@@ -155,10 +154,10 @@ public class TestFilterListOrOperatorWithBlkCnt {
   private List<Cell> getScanResult(byte[] startRow, byte[] stopRow, Table ht) throws IOException {
     Scan scan = new Scan();
     scan.setMaxVersions();
-    if(!Bytes.toString(startRow).isEmpty()) {
+    if (!Bytes.toString(startRow).isEmpty()) {
       scan.setStartRow(startRow);
     }
-    if(!Bytes.toString(stopRow).isEmpty()) {
+    if (!Bytes.toString(stopRow).isEmpty()) {
       scan.setStopRow(stopRow);
     }
     ResultScanner scanner = ht.getScanner(scan);

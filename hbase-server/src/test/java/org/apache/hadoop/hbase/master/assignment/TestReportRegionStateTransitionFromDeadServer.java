@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,9 +101,11 @@ public class TestReportRegionStateTransitionFromDeadServer {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
-      if (ARRIVE_REPORT != null && req.getTransitionList().stream()
-        .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())) {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      if (
+        ARRIVE_REPORT != null && req.getTransitionList().stream()
+          .allMatch(t -> !ProtobufUtil.toRegionInfo(t.getRegionInfo(0)).isMetaRegion())
+      ) {
         ARRIVE_REPORT.countDown();
         try {
           RESUME_REPORT.await();

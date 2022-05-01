@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.trace;
 
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.SpanId;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -28,6 +25,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
+import org.apache.htrace.core.Span;
+import org.apache.htrace.core.SpanId;
 
 /**
  * Used to create the graph formed by spans.
@@ -35,13 +34,12 @@ import java.util.TreeSet;
 public class TraceTree {
 
   public static class SpansByParent {
-    private static Comparator<Span> COMPARATOR =
-        new Comparator<Span>() {
-          @Override
-          public int compare(Span a, Span b) {
-            return a.getSpanId().compareTo(b.getSpanId());
-          }
-        };
+    private static Comparator<Span> COMPARATOR = new Comparator<Span>() {
+      @Override
+      public int compare(Span a, Span b) {
+        return a.getSpanId().compareTo(b.getSpanId());
+      }
+    };
 
     private final TreeSet<Span> treeSet;
 
@@ -86,13 +84,12 @@ public class TraceTree {
   }
 
   public static class SpansByProcessId {
-    private static Comparator<Span> COMPARATOR =
-        new Comparator<Span>() {
-          @Override
-          public int compare(Span a, Span b) {
-            return a.getSpanId().compareTo(b.getSpanId());
-          }
-        };
+    private static Comparator<Span> COMPARATOR = new Comparator<Span>() {
+      @Override
+      public int compare(Span a, Span b) {
+        return a.getSpanId().compareTo(b.getSpanId());
+      }
+    };
 
     private final TreeSet<Span> treeSet;
 
@@ -114,9 +111,8 @@ public class TraceTree {
 
   /**
    * Create a new TraceTree
-   *
-   * @param spans The collection of spans to use to create this TraceTree. Should
-   *              have at least one root span.
+   * @param spans The collection of spans to use to create this TraceTree. Should have at least one
+   *              root span.
    */
   public TraceTree(Collection<Span> spans) {
     if (spans == null) {

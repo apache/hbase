@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -75,10 +75,12 @@ public class TestAsyncTableUseMetaReplicas {
 
     @Override
     public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
-        throws IOException {
+      throws IOException {
       RegionInfo region = c.getEnvironment().getRegionInfo();
-      if (FAIL_PRIMARY_SCAN && TableName.isMetaTableName(region.getTable()) &&
-        region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID) {
+      if (
+        FAIL_PRIMARY_SCAN && TableName.isMetaTableName(region.getTable())
+          && region.getReplicaId() == RegionReplicaUtil.DEFAULT_REPLICA_ID
+      ) {
         throw new IOException("Inject error");
       }
     }
@@ -116,7 +118,7 @@ public class TestAsyncTableUseMetaReplicas {
   }
 
   private void testRead(boolean useMetaReplicas)
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     FAIL_PRIMARY_SCAN = true;
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.setBoolean(HConstants.USE_META_REPLICAS, useMetaReplicas);
@@ -130,7 +132,7 @@ public class TestAsyncTableUseMetaReplicas {
 
   @Test(expected = RetriesExhaustedException.class)
   public void testNotUseMetaReplicas()
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     testRead(false);
   }
 

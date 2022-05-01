@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,47 +15,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Context that holds the various dictionaries for compression in WAL.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 public class CompressionContext {
 
-  static final String ENABLE_WAL_TAGS_COMPRESSION =
-      "hbase.regionserver.wal.tags.enablecompression";
+  static final String ENABLE_WAL_TAGS_COMPRESSION = "hbase.regionserver.wal.tags.enablecompression";
 
   public enum DictionaryIndex {
-    REGION, TABLE, FAMILY, QUALIFIER, ROW
+    REGION,
+    TABLE,
+    FAMILY,
+    QUALIFIER,
+    ROW
   }
 
   private final Map<DictionaryIndex, Dictionary> dictionaries =
-      new EnumMap<>(DictionaryIndex.class);
+    new EnumMap<>(DictionaryIndex.class);
   // Context used for compressing tags
   TagCompressionContext tagCompressionContext = null;
 
   public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits,
-      boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
-      InstantiationException, IllegalAccessException, InvocationTargetException {
-    Constructor<? extends Dictionary> dictConstructor =
-        dictType.getConstructor();
+    boolean hasTagCompression) throws SecurityException, NoSuchMethodException,
+    InstantiationException, IllegalAccessException, InvocationTargetException {
+    Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
     for (DictionaryIndex dictionaryIndex : DictionaryIndex.values()) {
       Dictionary newDictionary = dictConstructor.newInstance();
       dictionaries.put(dictionaryIndex, newDictionary);
     }
-    if(recoveredEdits) {
+    if (recoveredEdits) {
       getDictionary(DictionaryIndex.REGION).init(1);
       getDictionary(DictionaryIndex.TABLE).init(1);
     } else {
@@ -77,7 +77,7 @@ public class CompressionContext {
   }
 
   void clear() {
-    for(Dictionary dictionary : dictionaries.values()){
+    for (Dictionary dictionary : dictionaries.values()) {
       dictionary.clear();
     }
     if (tagCompressionContext != null) {

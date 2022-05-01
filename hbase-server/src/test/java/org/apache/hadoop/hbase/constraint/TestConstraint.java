@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,15 +44,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestConstraint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConstraint.class);
+    HBaseClassTestRule.forClass(TestConstraint.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestConstraint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestConstraint.class);
 
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -68,8 +67,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that we run a passing constraint
-   * @throws Exception
+   * Test that we run a passing constraint n
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -99,8 +97,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that constraints will fail properly
-   * @throws Exception
+   * Test that constraints will fail properly n
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -134,8 +131,7 @@ public class TestConstraint {
   }
 
   /**
-   * Check that if we just disable one constraint, then
-   * @throws Throwable
+   * Check that if we just disable one constraint, then n
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -170,8 +166,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that if we disable all constraints, then nothing gets run
-   * @throws Throwable
+   * Test that if we disable all constraints, then nothing gets run n
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -204,8 +199,7 @@ public class TestConstraint {
   }
 
   /**
-   * Check to make sure a constraint is unloaded when it fails
-   * @throws Exception
+   * Check to make sure a constraint is unloaded when it fails n
    */
   @Test
   public void testIsUnloaded() throws Exception {
@@ -229,9 +223,9 @@ public class TestConstraint {
     byte[] qualifier = new byte[0];
     put.addColumn(dummy, qualifier, Bytes.toBytes("pass"));
 
-    try{
-    table.put(put);
-    fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
+    try {
+      table.put(put);
+      fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");
     } catch (Exception e) {// NOOP
     }
 

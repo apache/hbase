@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,12 +50,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestExecutorService {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExecutorService.class);
+    HBaseClassTestRule.forClass(TestExecutorService.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExecutorService.class);
 
@@ -70,11 +70,9 @@ public class TestExecutorService {
 
     // Start an executor service pool with max 5 threads
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, maxThreads);
+    executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS, maxThreads);
 
-    Executor executor =
-      executorService.getExecutor(ExecutorType.MASTER_SERVER_OPERATIONS);
+    Executor executor = executorService.getExecutor(ExecutorType.MASTER_SERVER_OPERATIONS);
     ThreadPoolExecutor pool = executor.threadPoolExecutor;
 
     // Assert no threads yet
@@ -85,9 +83,8 @@ public class TestExecutorService {
 
     // Submit maxThreads executors.
     for (int i = 0; i < maxThreads; i++) {
-      executorService.submit(
-        new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
-            lock, counter));
+      executorService
+        .submit(new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN, lock, counter));
     }
 
     // The TestEventHandler will increment counter when it starts.
@@ -106,7 +103,6 @@ public class TestExecutorService {
     assertTrue(status.queuedEvents.isEmpty());
     assertEquals(5, status.running.size());
     checkStatusDump(status);
-
 
     // Now interrupt the running Executor
     synchronized (lock) {
@@ -127,9 +123,8 @@ public class TestExecutorService {
     // Add more than the number of threads items.
     // Make sure we don't get RejectedExecutionException.
     for (int i = 0; i < (2 * maxThreads); i++) {
-      executorService.submit(
-        new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
-            lock, counter));
+      executorService
+        .submit(new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN, lock, counter));
     }
     // Now interrupt the running Executor
     synchronized (lock) {
@@ -146,9 +141,8 @@ public class TestExecutorService {
     assertEquals(0, executorService.getAllExecutorStatuses().size());
 
     // Test that submit doesn't throw NPEs
-    executorService.submit(
-      new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN,
-            lock, counter));
+    executorService
+      .submit(new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN, lock, counter));
   }
 
   private void checkStatusDump(ExecutorStatus status) throws IOException {
@@ -164,8 +158,8 @@ public class TestExecutorService {
     private final AtomicBoolean lock;
     private AtomicInteger counter;
 
-    public TestEventHandler(Server server, EventType eventType,
-                            AtomicBoolean lock, AtomicInteger counter) {
+    public TestEventHandler(Server server, EventType eventType, AtomicBoolean lock,
+      AtomicInteger counter) {
       super(server, eventType);
       this.lock = lock;
       this.counter = counter;
@@ -174,8 +168,7 @@ public class TestExecutorService {
     @Override
     public void process() throws IOException {
       int num = counter.incrementAndGet();
-      LOG.info("Running process #" + num + ", threadName=" +
-        Thread.currentThread().getName());
+      LOG.info("Running process #" + num + ", threadName=" + Thread.currentThread().getName());
       synchronized (lock) {
         while (lock.get()) {
           try {
@@ -196,9 +189,7 @@ public class TestExecutorService {
     when(server.getConfiguration()).thenReturn(conf);
 
     ExecutorService executorService = new ExecutorService("unit_test");
-    executorService.startExecutorService(
-      ExecutorType.MASTER_SERVER_OPERATIONS, 1);
-
+    executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS, 1);
 
     executorService.submit(new EventHandler(server, EventType.M_SERVER_SHUTDOWN) {
       @Override
@@ -245,17 +236,16 @@ public class TestExecutorService {
       }
     });
 
-    //Wait EventHandler to start
+    // Wait EventHandler to start
     waitForEventToStart.await(10, TimeUnit.SECONDS);
     int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
-        .getThreadPoolExecutor().getActiveCount();
+      .getThreadPoolExecutor().getActiveCount();
     Assert.assertEquals(1, activeCount);
     latch.countDown();
     Waiter.waitFor(conf, 3000, () -> {
       int count = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
-          .getThreadPoolExecutor().getActiveCount();
+        .getThreadPoolExecutor().getActiveCount();
       return count == 0;
     });
   }
 }
-

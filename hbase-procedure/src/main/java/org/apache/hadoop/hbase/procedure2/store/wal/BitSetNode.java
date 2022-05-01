@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -415,7 +415,7 @@ class BitSetNode {
     } catch (ArrayIndexOutOfBoundsException aioobe) {
       // We've gotten a AIOOBE in here; add detail to help debug.
       ArrayIndexOutOfBoundsException aioobe2 =
-          new ArrayIndexOutOfBoundsException("pid=" + procId + ", deleted=" + isDeleted);
+        new ArrayIndexOutOfBoundsException("pid=" + procId + ", deleted=" + isDeleted);
       aioobe2.initCause(aioobe);
       throw aioobe2;
     }

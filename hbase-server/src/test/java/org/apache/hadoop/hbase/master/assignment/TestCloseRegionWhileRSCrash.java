@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ public class TestCloseRegionWhileRSCrash {
   private static CountDownLatch RESUME = new CountDownLatch(1);
 
   public static final class DummyServerProcedure extends Procedure<MasterProcedureEnv>
-      implements ServerProcedureInterface {
+    implements ServerProcedureInterface {
 
     private ServerName serverName;
 
@@ -100,7 +100,7 @@ public class TestCloseRegionWhileRSCrash {
 
     @Override
     protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       ARRIVE.countDown();
       RESUME.await();
       return null;

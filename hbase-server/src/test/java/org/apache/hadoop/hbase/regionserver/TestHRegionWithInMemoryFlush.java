@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -37,50 +36,51 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
- * A test similar to TestHRegion, but with in-memory flush families.
- * Also checks wal truncation after in-memory compaction.
+ * A test similar to TestHRegion, but with in-memory flush families. Also checks wal truncation
+ * after in-memory compaction.
  */
-@Category({VerySlowRegionServerTests.class, LargeTests.class})
+@Category({ VerySlowRegionServerTests.class, LargeTests.class })
 @SuppressWarnings("deprecation")
 public class TestHRegionWithInMemoryFlush extends TestHRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionWithInMemoryFlush.class);
+    HBaseClassTestRule.forClass(TestHRegionWithInMemoryFlush.class);
 
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
   // over in TestHRegionOnCluster.
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionWithInMemoryFlush.class);
 
   /**
-   * @return A region on which you must call
-   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
+   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   *         when done.
    */
   @Override
   public HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
-      throws IOException {
+    Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
+    throws IOException {
     boolean[] inMemory = new boolean[families.length];
-    for(int i = 0; i < inMemory.length; i++) {
+    for (int i = 0; i < inMemory.length; i++) {
       inMemory[i] = true;
     }
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    return TEST_UTIL.createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey,
-        conf, isReadOnly, durability, wal, inMemory, families);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    return TEST_UTIL.createLocalHRegionWithInMemoryFlags(tableName, startKey, stopKey, conf,
+      isReadOnly, durability, wal, inMemory, families);
   }
 
-  @Override int getTestCountForTestWritesWhileScanning() {
+  @Override
+  int getTestCountForTestWritesWhileScanning() {
     return 10;
   }
 
   /**
-   * testWritesWhileScanning is flakey when called out of this class. Need to dig in. Meantime
-   * go easy on it. See if that helps.
+   * testWritesWhileScanning is flakey when called out of this class. Need to dig in. Meantime go
+   * easy on it. See if that helps.
    */
-  @Override int getNumQualifiersForTestWritesWhileScanning() {
+  @Override
+  int getNumQualifiersForTestWritesWhileScanning() {
     return 10;
   }
 
@@ -100,10 +100,9 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
         Put put = new Put(row);
         put.addColumn(family, family, row);
         region.put(put);
-        //In memory flush every 1000 puts
+        // In memory flush every 1000 puts
         if (count++ % 1000 == 0) {
-          ((CompactingMemStore) (region.getStore(family).memstore))
-              .flushInMemory();
+          ((CompactingMemStore) (region.getStore(family).memstore)).flushInMemory();
         }
       }
       region.flush(true);
@@ -122,4 +121,3 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
     }
   }
 }
-

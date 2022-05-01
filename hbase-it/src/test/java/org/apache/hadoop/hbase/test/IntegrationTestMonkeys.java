@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,8 +28,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * This is an integration test for showing a simple usage of how to use {@link Monkeys}
- * to control {@link ChaosMonkeyRunner}.
+ * This is an integration test for showing a simple usage of how to use {@link Monkeys} to control
+ * {@link ChaosMonkeyRunner}.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestMonkeys extends ChaosMonkeyRunner {

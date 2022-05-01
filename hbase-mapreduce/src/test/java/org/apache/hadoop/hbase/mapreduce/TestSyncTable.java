@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -58,7 +57,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 public class TestSyncTable {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncTable.class);
+    HBaseClassTestRule.forClass(TestSyncTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSyncTable.class);
 
@@ -79,9 +78,9 @@ public class TestSyncTable {
   }
 
   private static byte[][] generateSplits(int numRows, int numRegions) {
-    byte[][] splitRows = new byte[numRegions-1][];
+    byte[][] splitRows = new byte[numRegions - 1][];
     for (int i = 1; i < numRegions; i++) {
-      splitRows[i-1] = Bytes.toBytes(numRows * i / numRegions);
+      splitRows[i - 1] = Bytes.toBytes(numRows * i / numRegions);
     }
     return splitRows;
   }
@@ -116,8 +115,8 @@ public class TestSyncTable {
 
     writeTestData(sourceTableName, targetTableName);
     hashSourceTable(sourceTableName, testDir);
-    Counters syncCounters = syncTables(sourceTableName, targetTableName,
-        testDir, "--doDeletes=false");
+    Counters syncCounters =
+      syncTables(sourceTableName, targetTableName, testDir, "--doDeletes=false");
     assertTargetDoDeletesFalse(100, sourceTableName, targetTableName);
 
     assertEquals(60, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
@@ -139,8 +138,7 @@ public class TestSyncTable {
 
     writeTestData(sourceTableName, targetTableName);
     hashSourceTable(sourceTableName, testDir);
-    Counters syncCounters = syncTables(sourceTableName, targetTableName,
-        testDir, "--doPuts=false");
+    Counters syncCounters = syncTables(sourceTableName, targetTableName, testDir, "--doPuts=false");
     assertTargetDoPutsFalse(70, sourceTableName, targetTableName);
 
     assertEquals(60, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
@@ -162,8 +160,8 @@ public class TestSyncTable {
     long current = System.currentTimeMillis();
     writeTestData(sourceTableName, targetTableName, current - 1000, current);
     hashSourceTable(sourceTableName, testDir, "--ignoreTimestamps=true");
-    Counters syncCounters = syncTables(sourceTableName, targetTableName,
-      testDir, "--ignoreTimestamps=true");
+    Counters syncCounters =
+      syncTables(sourceTableName, targetTableName, testDir, "--ignoreTimestamps=true");
     assertEqualTables(90, sourceTableName, targetTableName, true);
 
     assertEquals(50, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
@@ -178,7 +176,7 @@ public class TestSyncTable {
   }
 
   private void assertEqualTables(int expectedRows, TableName sourceTableName,
-      TableName targetTableName, boolean ignoreTimestamps) throws Exception {
+    TableName targetTableName, boolean ignoreTimestamps) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -190,27 +188,23 @@ public class TestSyncTable {
       Result targetRow = targetScanner.next();
 
       LOG.debug("SOURCE row: " + (sourceRow == null ? "null" : Bytes.toInt(sourceRow.getRow()))
-          + " cells:" + sourceRow);
+        + " cells:" + sourceRow);
       LOG.debug("TARGET row: " + (targetRow == null ? "null" : Bytes.toInt(targetRow.getRow()))
-          + " cells:" + targetRow);
+        + " cells:" + targetRow);
 
       if (sourceRow == null) {
-        Assert.fail("Expected " + expectedRows
-            + " source rows but only found " + i);
+        Assert.fail("Expected " + expectedRows + " source rows but only found " + i);
       }
       if (targetRow == null) {
-        Assert.fail("Expected " + expectedRows
-            + " target rows but only found " + i);
+        Assert.fail("Expected " + expectedRows + " target rows but only found " + i);
       }
       Cell[] sourceCells = sourceRow.rawCells();
       Cell[] targetCells = targetRow.rawCells();
       if (sourceCells.length != targetCells.length) {
         LOG.debug("Source cells: " + Arrays.toString(sourceCells));
         LOG.debug("Target cells: " + Arrays.toString(targetCells));
-        Assert.fail("Row " + Bytes.toInt(sourceRow.getRow())
-            + " has " + sourceCells.length
-            + " cells in source table but " + targetCells.length
-            + " cells in target table");
+        Assert.fail("Row " + Bytes.toInt(sourceRow.getRow()) + " has " + sourceCells.length
+          + " cells in source table but " + targetCells.length + " cells in target table");
       }
       for (int j = 0; j < sourceCells.length; j++) {
         Cell sourceCell = sourceCells[j];
@@ -239,13 +233,13 @@ public class TestSyncTable {
     }
     Result sourceRow = sourceScanner.next();
     if (sourceRow != null) {
-      Assert.fail("Source table has more than " + expectedRows
-          + " rows.  Next row: " + Bytes.toInt(sourceRow.getRow()));
+      Assert.fail("Source table has more than " + expectedRows + " rows.  Next row: "
+        + Bytes.toInt(sourceRow.getRow()));
     }
     Result targetRow = targetScanner.next();
     if (targetRow != null) {
-      Assert.fail("Target table has more than " + expectedRows
-          + " rows.  Next row: " + Bytes.toInt(targetRow.getRow()));
+      Assert.fail("Target table has more than " + expectedRows + " rows.  Next row: "
+        + Bytes.toInt(targetRow.getRow()));
     }
     sourceScanner.close();
     targetScanner.close();
@@ -254,7 +248,7 @@ public class TestSyncTable {
   }
 
   private void assertTargetDoDeletesFalse(int expectedRows, TableName sourceTableName,
-      TableName targetTableName) throws Exception {
+    TableName targetTableName) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -265,19 +259,17 @@ public class TestSyncTable {
     int rowsCount = 0;
     while (targetRow != null) {
       rowsCount++;
-      //only compares values for existing rows, skipping rows existing on
-      //target only that were not deleted given --doDeletes=false
+      // only compares values for existing rows, skipping rows existing on
+      // target only that were not deleted given --doDeletes=false
       if (Bytes.toInt(sourceRow.getRow()) != Bytes.toInt(targetRow.getRow())) {
         targetRow = targetScanner.next();
         continue;
       }
 
-      LOG.debug("SOURCE row: " + (sourceRow == null ? "null"
-          : Bytes.toInt(sourceRow.getRow()))
-          + " cells:" + sourceRow);
-      LOG.debug("TARGET row: " + (targetRow == null ? "null"
-          : Bytes.toInt(targetRow.getRow()))
-          + " cells:" + targetRow);
+      LOG.debug("SOURCE row: " + (sourceRow == null ? "null" : Bytes.toInt(sourceRow.getRow()))
+        + " cells:" + sourceRow);
+      LOG.debug("TARGET row: " + (targetRow == null ? "null" : Bytes.toInt(targetRow.getRow()))
+        + " cells:" + targetRow);
 
       Cell[] sourceCells = sourceRow.rawCells();
       Cell[] targetCells = targetRow.rawCells();
@@ -286,18 +278,16 @@ public class TestSyncTable {
         if (sourceCells.length == targetCells.length) {
           LOG.debug("Source cells: " + Arrays.toString(sourceCells));
           LOG.debug("Target cells: " + Arrays.toString(targetCells));
-          Assert.fail("Row " + targetRowKey + " should have more cells in "
-              + "target than in source");
+          Assert
+            .fail("Row " + targetRowKey + " should have more cells in " + "target than in source");
         }
 
       } else {
         if (sourceCells.length != targetCells.length) {
           LOG.debug("Source cells: " + Arrays.toString(sourceCells));
           LOG.debug("Target cells: " + Arrays.toString(targetCells));
-          Assert.fail("Row " + Bytes.toInt(sourceRow.getRow())
-              + " has " + sourceCells.length
-              + " cells in source table but " + targetCells.length
-              + " cells in target table");
+          Assert.fail("Row " + Bytes.toInt(sourceRow.getRow()) + " has " + sourceCells.length
+            + " cells in source table but " + targetCells.length + " cells in target table");
         }
       }
       for (int j = 0; j < sourceCells.length; j++) {
@@ -313,7 +303,7 @@ public class TestSyncTable {
           if (!CellUtil.matchingQualifier(sourceCell, targetCell)) {
             Assert.fail("Qualifiers don't match");
           }
-          if (targetRowKey < 80 && targetRowKey >= 90){
+          if (targetRowKey < 80 && targetRowKey >= 90) {
             if (!CellUtil.matchingTimestamp(sourceCell, targetCell)) {
               Assert.fail("Timestamps don't match");
             }
@@ -322,16 +312,14 @@ public class TestSyncTable {
             Assert.fail("Values don't match");
           }
         } catch (Throwable t) {
-          LOG.debug("Source cell: " + sourceCell + " target cell: "
-              + targetCell);
+          LOG.debug("Source cell: " + sourceCell + " target cell: " + targetCell);
           Throwables.propagate(t);
         }
       }
       targetRow = targetScanner.next();
       sourceRow = sourceScanner.next();
     }
-    assertEquals("Target expected rows does not match.",expectedRows,
-        rowsCount);
+    assertEquals("Target expected rows does not match.", expectedRows, rowsCount);
     sourceScanner.close();
     targetScanner.close();
     sourceTable.close();
@@ -339,7 +327,7 @@ public class TestSyncTable {
   }
 
   private void assertTargetDoPutsFalse(int expectedRows, TableName sourceTableName,
-      TableName targetTableName) throws Exception {
+    TableName targetTableName) throws Exception {
     Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
     Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
 
@@ -349,22 +337,18 @@ public class TestSyncTable {
     Result sourceRow = sourceScanner.next();
     int rowsCount = 0;
 
-    while (targetRow!=null) {
-      //only compares values for existing rows, skipping rows existing on
-      //source only that were not added to target given --doPuts=false
+    while (targetRow != null) {
+      // only compares values for existing rows, skipping rows existing on
+      // source only that were not added to target given --doPuts=false
       if (Bytes.toInt(sourceRow.getRow()) != Bytes.toInt(targetRow.getRow())) {
         sourceRow = sourceScanner.next();
         continue;
       }
 
-      LOG.debug("SOURCE row: " + (sourceRow == null ?
-          "null" :
-          Bytes.toInt(sourceRow.getRow()))
-          + " cells:" + sourceRow);
-      LOG.debug("TARGET row: " + (targetRow == null ?
-          "null" :
-          Bytes.toInt(targetRow.getRow()))
-          + " cells:" + targetRow);
+      LOG.debug("SOURCE row: " + (sourceRow == null ? "null" : Bytes.toInt(sourceRow.getRow()))
+        + " cells:" + sourceRow);
+      LOG.debug("TARGET row: " + (targetRow == null ? "null" : Bytes.toInt(targetRow.getRow()))
+        + " cells:" + targetRow);
 
       LOG.debug("rowsCount: " + rowsCount);
 
@@ -375,27 +359,26 @@ public class TestSyncTable {
         LOG.debug("Source cells: " + Arrays.toString(sourceCells));
         LOG.debug("Target cells: " + Arrays.toString(targetCells));
         Assert.fail("There shouldn't exist any rows between 40 and 60, since "
-            + "Puts are disabled and Deletes are enabled.");
+          + "Puts are disabled and Deletes are enabled.");
       } else if (targetRowKey >= 60 && targetRowKey < 70) {
         if (sourceCells.length == targetCells.length) {
           LOG.debug("Source cells: " + Arrays.toString(sourceCells));
           LOG.debug("Target cells: " + Arrays.toString(targetCells));
-          Assert.fail("Row " + Bytes.toInt(sourceRow.getRow())
-              + " shouldn't have same number of cells.");
+          Assert.fail(
+            "Row " + Bytes.toInt(sourceRow.getRow()) + " shouldn't have same number of cells.");
         }
       } else if (targetRowKey >= 80 && targetRowKey < 90) {
         LOG.debug("Source cells: " + Arrays.toString(sourceCells));
         LOG.debug("Target cells: " + Arrays.toString(targetCells));
         Assert.fail("There should be no rows between 80 and 90 on target, as "
-            + "these had different timestamps and should had been deleted.");
+          + "these had different timestamps and should had been deleted.");
       } else if (targetRowKey >= 90 && targetRowKey < 100) {
         for (int j = 0; j < sourceCells.length; j++) {
           Cell sourceCell = sourceCells[j];
           Cell targetCell = targetCells[j];
           if (CellUtil.matchingValue(sourceCell, targetCell)) {
             Assert.fail("Cells values should not match for rows between "
-                + "90 and 100. Target row id: " + (Bytes.toInt(targetRow
-                .getRow())));
+              + "90 and 100. Target row id: " + (Bytes.toInt(targetRow.getRow())));
           }
         }
       } else {
@@ -419,8 +402,7 @@ public class TestSyncTable {
               Assert.fail("Values don't match");
             }
           } catch (Throwable t) {
-            LOG.debug(
-                "Source cell: " + sourceCell + " target cell: " + targetCell);
+            LOG.debug("Source cell: " + sourceCell + " target cell: " + targetCell);
             Throwables.propagate(t);
           }
         }
@@ -429,21 +411,20 @@ public class TestSyncTable {
       targetRow = targetScanner.next();
       sourceRow = sourceScanner.next();
     }
-    assertEquals("Target expected rows does not match.",expectedRows,
-        rowsCount);
+    assertEquals("Target expected rows does not match.", expectedRows, rowsCount);
     sourceScanner.close();
     targetScanner.close();
     sourceTable.close();
     targetTable.close();
   }
 
-  private Counters syncTables(TableName sourceTableName, TableName targetTableName,
-      Path testDir, String... options) throws Exception {
+  private Counters syncTables(TableName sourceTableName, TableName targetTableName, Path testDir,
+    String... options) throws Exception {
     SyncTable syncTable = new SyncTable(TEST_UTIL.getConfiguration());
-    String[] args = Arrays.copyOf(options, options.length+3);
+    String[] args = Arrays.copyOf(options, options.length + 3);
     args[options.length] = testDir.toString();
-    args[options.length+1] = sourceTableName.getNameAsString();
-    args[options.length+2] = targetTableName.getNameAsString();
+    args[options.length + 1] = sourceTableName.getNameAsString();
+    args[options.length + 2] = targetTableName.getNameAsString();
     int code = syncTable.run(args);
     assertEquals("sync table job failed", 0, code);
 
@@ -452,12 +433,12 @@ public class TestSyncTable {
   }
 
   private void hashSourceTable(TableName sourceTableName, Path testDir, String... options)
-      throws Exception {
+    throws Exception {
     int numHashFiles = 3;
-    long batchSize = 100;  // should be 2 batches per region
+    long batchSize = 100; // should be 2 batches per region
     int scanBatch = 1;
     HashTable hashTable = new HashTable(TEST_UTIL.getConfiguration());
-    String[] args = Arrays.copyOf(options, options.length+5);
+    String[] args = Arrays.copyOf(options, options.length + 5);
     args[options.length] = "--batchsize=" + batchSize;
     args[options.length + 1] = "--numhashfiles=" + numHashFiles;
     args[options.length + 2] = "--scanbatch=" + scanBatch;
@@ -478,7 +459,7 @@ public class TestSyncTable {
   }
 
   private void writeTestData(TableName sourceTableName, TableName targetTableName,
-      long... timestamps) throws Exception {
+    long... timestamps) throws Exception {
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -491,14 +472,14 @@ public class TestSyncTable {
     int targetRegions = 6;
     if (ArrayUtils.isEmpty(timestamps)) {
       long current = System.currentTimeMillis();
-      timestamps = new long[]{current,current};
+      timestamps = new long[] { current, current };
     }
 
-    Table sourceTable = TEST_UTIL.createTable(sourceTableName,
-        family, generateSplits(numRows, sourceRegions));
+    Table sourceTable =
+      TEST_UTIL.createTable(sourceTableName, family, generateSplits(numRows, sourceRegions));
 
-    Table targetTable = TEST_UTIL.createTable(targetTableName,
-        family, generateSplits(numRows, targetRegions));
+    Table targetTable =
+      TEST_UTIL.createTable(targetTableName, family, generateSplits(numRows, targetRegions));
 
     int rowIndex = 0;
     // a bunch of identical rows
@@ -570,8 +551,8 @@ public class TestSyncTable {
       sourceTable.put(sourcePut);
 
       Put targetPut = new Put(Bytes.toBytes(rowIndex));
-      targetPut.addColumn(family, column1, timestamps[1]+1, column1);
-      targetPut.addColumn(family, column2, timestamps[1]-1, value2);
+      targetPut.addColumn(family, column1, timestamps[1] + 1, column1);
+      targetPut.addColumn(family, column2, timestamps[1] - 1, value2);
       targetTable.put(targetPut);
     }
     // some rows with different values

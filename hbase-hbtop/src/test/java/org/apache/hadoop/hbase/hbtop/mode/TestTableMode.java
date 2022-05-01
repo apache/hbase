@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
-
 
 @Category(SmallTests.class)
 public class TestTableMode extends TestModeBase {
@@ -68,8 +67,7 @@ public class TestTableMode extends TestModeBase {
         break;
 
       case "namespace:table3":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(),
-          is("NAMESPACE==namespace"));
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==namespace"));
         assertThat(drillDownInfo.getInitialFilters().get(1).toString(), is("TABLE==table3"));
         break;
 

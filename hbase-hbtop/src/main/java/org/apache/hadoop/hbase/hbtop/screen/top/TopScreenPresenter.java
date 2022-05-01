@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.hbtop.screen.mode.ModeScreenView;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalSize;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The presentation logic for the top screen.
@@ -131,8 +130,7 @@ public class TopScreenPresenter {
       for (Field f : topScreenModel.getFields()) {
         if (f.isAutoAdjust()) {
           int maxLength = topScreenModel.getRecords().stream()
-            .map(r -> r.get(f).asString().length())
-            .max(Integer::compareTo).orElse(0);
+            .map(r -> r.get(f).asString().length()).max(Integer::compareTo).orElse(0);
           fieldLengthMap.put(f, Math.max(maxLength, f.getHeader().length()));
         }
       }
@@ -141,8 +139,7 @@ public class TopScreenPresenter {
 
   private List<Header> getDisplayedHeaders() {
     List<Field> displayFields =
-      topScreenModel.getFields().stream()
-        .filter(fieldDisplayMap::get).collect(Collectors.toList());
+      topScreenModel.getFields().stream().filter(fieldDisplayMap::get).collect(Collectors.toList());
 
     if (displayFields.isEmpty()) {
       horizontalScroll = 0;
@@ -230,8 +227,7 @@ public class TopScreenPresenter {
   }
 
   private int getHeaderSize() {
-    return (int) topScreenModel.getFields().stream()
-      .filter(fieldDisplayMap::get).count();
+    return (int) topScreenModel.getFields().stream().filter(fieldDisplayMap::get).count();
   }
 
   public void switchSortOrder() {
@@ -249,10 +245,8 @@ public class TopScreenPresenter {
   }
 
   public ScreenView transitionToFieldScreen(Screen screen, Terminal terminal) {
-    return new FieldScreenView(screen, terminal,
-      topScreenModel.getCurrentSortField(), topScreenModel.getFields(),
-      fieldDisplayMap,
-      (sortField, fields, fieldDisplayMap) -> {
+    return new FieldScreenView(screen, terminal, topScreenModel.getCurrentSortField(),
+      topScreenModel.getFields(), fieldDisplayMap, (sortField, fields, fieldDisplayMap) -> {
         topScreenModel.setSortFieldAndFields(sortField, fields);
         this.fieldDisplayMap.clear();
         this.fieldDisplayMap.putAll(fieldDisplayMap);
@@ -323,10 +317,9 @@ public class TopScreenPresenter {
   public ScreenView goToInputModeForFilter(Screen screen, Terminal terminal, int row,
     boolean ignoreCase) {
     return new InputModeScreenView(screen, terminal, row,
-      "add filter #" + (topScreenModel.getFilters().size() + 1) +
-        " (" + (ignoreCase ? "ignoring case" : "case sensitive") + ") as: [!]FLD?VAL",
-      topScreenModel.getFilterHistories(),
-      (inputString) -> {
+      "add filter #" + (topScreenModel.getFilters().size() + 1) + " ("
+        + (ignoreCase ? "ignoring case" : "case sensitive") + ") as: [!]FLD?VAL",
+      topScreenModel.getFilterHistories(), (inputString) -> {
         if (inputString.isEmpty()) {
           return topScreenView;
         }

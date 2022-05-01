@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
@@ -27,7 +26,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
@@ -41,16 +39,15 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedWriterBase.class);
 
   /**
-   * A temporary place to keep track of inserted/updated keys. This is written to by
-   * all writers and is drained on a separate thread that populates
-   * {@link #wroteUpToKey}, the maximum key in the contiguous range of keys
-   * being inserted/updated. This queue is supposed to stay small.
+   * A temporary place to keep track of inserted/updated keys. This is written to by all writers and
+   * is drained on a separate thread that populates {@link #wroteUpToKey}, the maximum key in the
+   * contiguous range of keys being inserted/updated. This queue is supposed to stay small.
    */
   protected BlockingQueue<Long> wroteKeys;
 
   /**
-   * This is the current key to be inserted/updated by any thread. Each thread does an
-   * atomic get and increment operation and inserts the current value.
+   * This is the current key to be inserted/updated by any thread. Each thread does an atomic get
+   * and increment operation and inserts the current value.
    */
   protected AtomicLong nextKeyToWrite = new AtomicLong();
 
@@ -63,9 +60,8 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   protected Set<Long> failedKeySet = new ConcurrentSkipListSet<>();
 
   /**
-   * The total size of the temporary inserted/updated key set that have not yet lined
-   * up in a our contiguous sequence starting from startKey. Supposed to stay
-   * small.
+   * The total size of the temporary inserted/updated key set that have not yet lined up in a our
+   * contiguous sequence starting from startKey. Supposed to stay small.
    */
   protected AtomicLong wroteKeyQueueSize = new AtomicLong();
 
@@ -73,7 +69,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   protected boolean trackWroteKeys;
 
   public MultiThreadedWriterBase(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, String actionLetter) throws IOException {
+    TableName tableName, String actionLetter) throws IOException {
     super(dataGen, conf, tableName, actionLetter);
     this.wroteKeys = createWriteKeysQueue(conf);
   }
@@ -90,7 +86,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
 
     if (trackWroteKeys) {
       new Thread(new WroteKeysTracker(),
-          "MultiThreadedWriterBase-WroteKeysTracker-" + System.currentTimeMillis()).start();
+        "MultiThreadedWriterBase-WroteKeysTracker-" + System.currentTimeMillis()).start();
       numThreadsWorking.incrementAndGet();
     }
   }
@@ -119,8 +115,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   }
 
   /**
-   * A thread that keeps track of the highest key in the contiguous range of
-   * inserted/updated keys.
+   * A thread that keeps track of the highest key in the contiguous range of inserted/updated keys.
    */
   private class WroteKeysTracker implements Runnable {
 
@@ -151,8 +146,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
           }
 
           // See if we have a sequence of contiguous keys lined up.
-          while (!sortedKeys.isEmpty()
-              && ((k = sortedKeys.peek()) == expectedKey)) {
+          while (!sortedKeys.isEmpty() && ((k = sortedKeys.peek()) == expectedKey)) {
             sortedKeys.poll();
             wroteUpToKey.set(k);
             ++expectedKey;
@@ -193,8 +187,8 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   }
 
   /**
-   * Used for a joint write/read workload. Enables tracking the last inserted/updated
-   * key, which requires a blocking queue and a consumer thread.
+   * Used for a joint write/read workload. Enables tracking the last inserted/updated key, which
+   * requires a blocking queue and a consumer thread.
    * @param enable whether to enable tracking the last inserted/updated key
    */
   public void setTrackWroteKeys(boolean enable) {

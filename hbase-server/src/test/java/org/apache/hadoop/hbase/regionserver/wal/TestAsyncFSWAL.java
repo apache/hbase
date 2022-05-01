@@ -55,13 +55,13 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.AsyncWriter;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
@@ -75,7 +75,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncFSWAL.class);
+    HBaseClassTestRule.forClass(TestAsyncFSWAL.class);
 
   private static EventLoopGroup GROUP;
 
@@ -98,19 +98,19 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
 
   @Override
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix) throws IOException {
-    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf,
-      listeners, failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
+    Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists, String prefix,
+    String suffix) throws IOException {
+    AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
+      failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS);
     asyncFSWAL.init();
     return asyncFSWAL;
   }
 
   @Override
   protected AbstractFSWAL<?> newSlowWAL(FileSystem fs, Path rootDir, String logDir,
-      String archiveDir, Configuration conf, List<WALActionsListener> listeners,
-      boolean failIfWALExists, String prefix, String suffix, final Runnable action)
-      throws IOException {
+    String archiveDir, Configuration conf, List<WALActionsListener> listeners,
+    boolean failIfWALExists, String prefix, String suffix, final Runnable action)
+    throws IOException {
     AsyncFSWAL asyncFSWAL = new AsyncFSWAL(fs, rootDir, logDir, archiveDir, conf, listeners,
       failIfWALExists, prefix, suffix, GROUP, CHANNEL_CLASS) {
       @Override
@@ -129,7 +129,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     RegionServerServices services = mock(RegionServerServices.class);
     when(services.getConfiguration()).thenReturn(CONF);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("table"))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -140,49 +140,49 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
     String testName = currentTest.getMethodName();
     AtomicInteger failedCount = new AtomicInteger(0);
     try (LogRoller roller = new LogRoller(services);
-        AsyncFSWAL wal = new AsyncFSWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
-            testName, CONF, null, true, null, null, GROUP, CHANNEL_CLASS) {
+      AsyncFSWAL wal = new AsyncFSWAL(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(),
+        testName, CONF, null, true, null, null, GROUP, CHANNEL_CLASS) {
 
-          @Override
-          protected AsyncWriter createWriterInstance(Path path) throws IOException {
-            AsyncWriter writer = super.createWriterInstance(path);
-            return new AsyncWriter() {
+        @Override
+        protected AsyncWriter createWriterInstance(Path path) throws IOException {
+          AsyncWriter writer = super.createWriterInstance(path);
+          return new AsyncWriter() {
 
-              @Override
-              public void close() throws IOException {
-                writer.close();
+            @Override
+            public void close() throws IOException {
+              writer.close();
+            }
+
+            @Override
+            public long getLength() {
+              return writer.getLength();
+            }
+
+            @Override
+            public long getSyncedLength() {
+              return writer.getSyncedLength();
+            }
+
+            @Override
+            public CompletableFuture<Long> sync(boolean forceSync) {
+              CompletableFuture<Long> result = writer.sync(forceSync);
+              if (failedCount.incrementAndGet() < 1000) {
+                CompletableFuture<Long> future = new CompletableFuture<>();
+                FutureUtils.addListener(result,
+                  (r, e) -> future.completeExceptionally(new IOException("Inject Error")));
+                return future;
+              } else {
+                return result;
               }
+            }
 
-              @Override
-              public long getLength() {
-                return writer.getLength();
-              }
-
-              @Override
-              public long getSyncedLength() {
-                return writer.getSyncedLength();
-              }
-
-              @Override
-              public CompletableFuture<Long> sync(boolean forceSync) {
-                CompletableFuture<Long> result = writer.sync(forceSync);
-                if (failedCount.incrementAndGet() < 1000) {
-                  CompletableFuture<Long> future = new CompletableFuture<>();
-                  FutureUtils.addListener(result,
-                    (r, e) -> future.completeExceptionally(new IOException("Inject Error")));
-                  return future;
-                } else {
-                  return result;
-                }
-              }
-
-              @Override
-              public void append(Entry entry) {
-                writer.append(entry);
-              }
-            };
-          }
-        }) {
+            @Override
+            public void append(Entry entry) {
+              writer.append(entry);
+            }
+          };
+        }
+      }) {
       wal.init();
       roller.addWAL(wal);
       roller.start();
@@ -199,8 +199,8 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
             WALEdit cols = new WALEdit();
             cols.add(new KeyValue(row, row, row, timestamp + index, row));
             WALKeyImpl key = new WALKeyImpl(ri.getEncodedNameAsBytes(), td.getTableName(),
-                SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
-                HConstants.NO_NONCE, mvcc, scopes);
+              SequenceId.NO_SEQUENCE_ID, timestamp, WALKey.EMPTY_UUIDS, HConstants.NO_NONCE,
+              HConstants.NO_NONCE, mvcc, scopes);
             try {
               wal.append(ri, key, cols, true);
             } catch (IOException e) {

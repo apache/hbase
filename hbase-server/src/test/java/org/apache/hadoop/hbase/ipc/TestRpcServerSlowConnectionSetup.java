@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,7 @@ public class TestRpcServerSlowConnectionSetup {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRpcServerSlowConnectionSetup.class);
+    HBaseClassTestRule.forClass(TestRpcServerSlowConnectionSetup.class);
 
   private RpcServer server;
 
@@ -114,8 +114,8 @@ public class TestRpcServerSlowConnectionSetup {
     socket.getOutputStream().flush();
 
     ConnectionHeader header = ConnectionHeader.newBuilder()
-        .setServiceName(TestRpcServiceProtos.TestProtobufRpcProto.getDescriptor().getName())
-        .setVersionInfo(ProtobufUtil.getVersionInfo()).build();
+      .setServiceName(TestRpcServiceProtos.TestProtobufRpcProto.getDescriptor().getName())
+      .setVersionInfo(ProtobufUtil.getVersionInfo()).build();
     DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
     dos.writeInt(header.getSerializedSize());
     header.writeTo(dos);
@@ -123,8 +123,8 @@ public class TestRpcServerSlowConnectionSetup {
 
     int callId = 10;
     Call call = new Call(callId, TestProtobufRpcProto.getDescriptor().findMethodByName("ping"),
-        EmptyRequestProto.getDefaultInstance(), null, EmptyResponseProto.getDefaultInstance(), 1000,
-        HConstants.NORMAL_QOS, null, MetricsConnection.newCallStats());
+      EmptyRequestProto.getDefaultInstance(), null, EmptyResponseProto.getDefaultInstance(), 1000,
+      HConstants.NORMAL_QOS, null, MetricsConnection.newCallStats());
     RequestHeader requestHeader = IPCUtil.buildRequestHeader(call, null);
     dos.writeInt(IPCUtil.getTotalSizeWhenWrittenDelimited(requestHeader, call.param));
     requestHeader.writeDelimitedTo(dos);

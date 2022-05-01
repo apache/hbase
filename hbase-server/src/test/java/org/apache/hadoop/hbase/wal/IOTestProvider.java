@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +27,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
-// imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -75,6 +72,7 @@ public class IOTestProvider implements WALProvider {
   private static final Logger LOG = LoggerFactory.getLogger(IOTestProvider.class);
 
   private static final String ALLOWED_OPERATIONS = "hbase.wal.iotestprovider.operations";
+
   private enum AllowedOperations {
     all,
     append,
@@ -93,22 +91,22 @@ public class IOTestProvider implements WALProvider {
   protected AtomicBoolean initialized = new AtomicBoolean(false);
 
   private List<WALActionsListener> listeners = new ArrayList<>();
+
   /**
-   * @param factory factory that made us, identity used for FS layout. may not be null
-   * @param conf may not be null
+   * @param factory    factory that made us, identity used for FS layout. may not be null
+   * @param conf       may not be null
    * @param providerId differentiate between providers from one facotry, used for FS layout. may be
    *                   null
    */
   @Override
   public void init(WALFactory factory, Configuration conf, String providerId, Abortable abortable)
-      throws IOException {
+    throws IOException {
     if (!initialized.compareAndSet(false, true)) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
     }
     this.factory = factory;
     this.conf = conf;
     this.providerId = providerId != null ? providerId : DEFAULT_PROVIDER_ID;
-
 
   }
 
@@ -120,9 +118,9 @@ public class IOTestProvider implements WALProvider {
   private FSHLog createWAL() throws IOException {
     String logPrefix = factory.factoryId + WAL_FILE_NAME_DELIMITER + providerId;
     return new IOTestWAL(CommonFSUtils.getWALFileSystem(conf), CommonFSUtils.getWALRootDir(conf),
-        AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
-        HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
-        META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+      AbstractFSWALProvider.getWALDirectoryName(factory.factoryId),
+      HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, logPrefix,
+      META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
   }
 
   @Override
@@ -165,38 +163,31 @@ public class IOTestProvider implements WALProvider {
     private final boolean initialized;
 
     /**
-     * Create an edit log at the given <code>dir</code> location.
-     *
-     * You should never have to load an existing log. If there is a log at
-     * startup, it should have already been processed and deleted by the time the
-     * WAL object is started up.
-     *
-     * @param fs filesystem handle
-     * @param rootDir path to where logs and oldlogs
-     * @param logDir dir where wals are stored
-     * @param archiveDir dir where wals are archived
-     * @param conf configuration to use
-     * @param listeners Listeners on WAL events. Listeners passed here will
-     * be registered before we do anything else; e.g. the
-     * Constructor {@link #rollWriter()}.
+     * Create an edit log at the given <code>dir</code> location. You should never have to load an
+     * existing log. If there is a log at startup, it should have already been processed and deleted
+     * by the time the WAL object is started up.
+     * @param fs              filesystem handle
+     * @param rootDir         path to where logs and oldlogs
+     * @param logDir          dir where wals are stored
+     * @param archiveDir      dir where wals are archived
+     * @param conf            configuration to use
+     * @param listeners       Listeners on WAL events. Listeners passed here will be registered
+     *                        before we do anything else; e.g. the Constructor
+     *                        {@link #rollWriter()}.
      * @param failIfWALExists If true IOException will be thrown if files related to this wal
-     *        already exist.
-     * @param prefix should always be hostname and port in distributed env and
-     *        it will be URL encoded before being used.
-     *        If prefix is null, "wal" will be used
-     * @param suffix will be url encoded. null is treated as empty. non-empty must start with
-     *        {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
-     * @throws IOException
+     *                        already exist.
+     * @param prefix          should always be hostname and port in distributed env and it will be
+     *                        URL encoded before being used. If prefix is null, "wal" will be used
+     * @param suffix          will be url encoded. null is treated as empty. non-empty must start
+     *                        with {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER} n
      */
     public IOTestWAL(final FileSystem fs, final Path rootDir, final String logDir,
-        final String archiveDir, final Configuration conf,
-        final List<WALActionsListener> listeners,
-        final boolean failIfWALExists, final String prefix, final String suffix)
-        throws IOException {
+      final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,
+      final boolean failIfWALExists, final String prefix, final String suffix) throws IOException {
       super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix);
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
-      doFileRolls = operations.isEmpty() || operations.contains(AllowedOperations.all.name()) ||
-          operations.contains(AllowedOperations.fileroll.name());
+      doFileRolls = operations.isEmpty() || operations.contains(AllowedOperations.all.name())
+        || operations.contains(AllowedOperations.fileroll.name());
       initialized = true;
       LOG.info("Initialized with file rolling " + (doFileRolls ? "enabled" : "disabled"));
     }
@@ -216,8 +207,8 @@ public class IOTestProvider implements WALProvider {
         try {
           writer.init(fs, path, conf, false, this.blocksize);
         } catch (CommonFSUtils.StreamLacksCapabilityException exception) {
-          throw new IOException("Can't create writer instance because underlying FileSystem " +
-              "doesn't support needed stream capabilities.", exception);
+          throw new IOException("Can't create writer instance because underlying FileSystem "
+            + "doesn't support needed stream capabilities.", exception);
         }
         if (!initialized) {
           LOG.info("storing initial writer instance in case file rolling isn't allowed.");
@@ -242,7 +233,7 @@ public class IOTestProvider implements WALProvider {
 
     @Override
     public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-        long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+      long blocksize) throws IOException, CommonFSUtils.StreamLacksCapabilityException {
       Collection<String> operations = conf.getStringCollection(ALLOWED_OPERATIONS);
       if (operations.isEmpty() || operations.contains(AllowedOperations.all.name())) {
         doAppends = doSyncs = true;
@@ -252,8 +243,8 @@ public class IOTestProvider implements WALProvider {
         doAppends = operations.contains(AllowedOperations.append.name());
         doSyncs = operations.contains(AllowedOperations.sync.name());
       }
-      LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled") +
-          " and syncs " + (doSyncs ? "enabled" : "disabled"));
+      LOG.info("IOTestWriter initialized with appends " + (doAppends ? "enabled" : "disabled")
+        + " and syncs " + (doSyncs ? "enabled" : "disabled"));
       super.init(fs, path, conf, overwritable, blocksize);
     }
 

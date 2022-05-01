@@ -1,18 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
@@ -24,10 +25,9 @@ import java.util.Random;
 /**
  * A class that generates random numbers that follow some distribution.
  * <p>
- * Copied from
- * <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
- * Remove after tfile is committed and use the tfile version of this class
- * instead.</p>
+ * Copied from <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
+ * Remove after tfile is committed and use the tfile version of this class instead.
+ * </p>
  */
 public class RandomDistribution {
   /**
@@ -36,7 +36,6 @@ public class RandomDistribution {
   public interface DiscreteRNG {
     /**
      * Get the next random number
-     *
      * @return the next random number.
      */
     int nextInt();
@@ -51,16 +50,8 @@ public class RandomDistribution {
     private final int max;
 
     /**
-     * Generate random integers from min (inclusive) to max (exclusive)
-     * following even distribution.
-     *
-     * @param random
-     *          The basic random number generator.
-     * @param min
-     *          Minimum integer
-     * @param max
-     *          maximum integer (exclusive).
-     *
+     * Generate random integers from min (inclusive) to max (exclusive) following even distribution.
+     * n * The basic random number generator. n * Minimum integer n * maximum integer (exclusive).
      */
     public Flat(Random random, int min, int max) {
       if (min >= max) {
@@ -81,9 +72,7 @@ public class RandomDistribution {
   }
 
   /**
-   * Zipf distribution. The ratio of the probabilities of integer i and j is
-   * defined as follows:
-   *
+   * Zipf distribution. The ratio of the probabilities of integer i and j is defined as follows:
    * P(i)/P(j)=((j-min+1)/(i-min+1))^sigma.
    */
   public static final class Zipf implements DiscreteRNG {
@@ -93,38 +82,20 @@ public class RandomDistribution {
     private final ArrayList<Double> v;
 
     /**
-     * Constructor
-     *
-     * @param r
-     *          The random number generator.
-     * @param min
-     *          minimum integer (inclusvie)
-     * @param max
-     *          maximum integer (exclusive)
-     * @param sigma
-     *          parameter sigma. (sigma > 1.0)
+     * Constructor n * The random number generator. n * minimum integer (inclusvie) n * maximum
+     * integer (exclusive) n * parameter sigma. (sigma > 1.0)
      */
     public Zipf(Random r, int min, int max, double sigma) {
       this(r, min, max, sigma, DEFAULT_EPSILON);
     }
 
     /**
-     * Constructor.
-     *
-     * @param r
-     *          The random number generator.
-     * @param min
-     *          minimum integer (inclusvie)
-     * @param max
-     *          maximum integer (exclusive)
-     * @param sigma
-     *          parameter sigma. (sigma > 1.0)
-     * @param epsilon
-     *          Allowable error percentage (0 < epsilon < 1.0).
+     * Constructor. n * The random number generator. n * minimum integer (inclusvie) n * maximum
+     * integer (exclusive) n * parameter sigma. (sigma > 1.0) n * Allowable error percentage (0 <
+     * epsilon < 1.0).
      */
     public Zipf(Random r, int min, int max, double sigma, double epsilon) {
-      if ((max <= min) || (sigma <= 1) || (epsilon <= 0)
-          || (epsilon >= 0.5)) {
+      if ((max <= min) || (sigma <= 1) || (epsilon <= 0) || (epsilon >= 0.5)) {
         throw new IllegalArgumentException("Invalid arguments");
       }
       random = r;
@@ -164,8 +135,7 @@ public class RandomDistribution {
 
       if (idx > 0) {
         ++idx;
-      }
-      else {
+      } else {
         idx = -(idx + 1);
       }
 
@@ -185,10 +155,7 @@ public class RandomDistribution {
   }
 
   /**
-   * Binomial distribution.
-   *
-   * P(k)=select(n, k)*p^k*(1-p)^(n-k) (k = 0, 1, ..., n)
-   *
+   * Binomial distribution. P(k)=select(n, k)*p^k*(1-p)^(n-k) (k = 0, 1, ..., n)
    * P(k)=select(max-min-1, k-min)*p^(k-min)*(1-p)^(k-min)*(1-p)^(max-k-1)
    */
   public static final class Binomial implements DiscreteRNG {
@@ -210,18 +177,9 @@ public class RandomDistribution {
     }
 
     /**
-     * Generate random integers from min (inclusive) to max (exclusive)
-     * following Binomial distribution.
-     *
-     * @param random
-     *          The basic random number generator.
-     * @param min
-     *          Minimum integer
-     * @param max
-     *          maximum integer (exclusive).
-     * @param p
-     *          parameter.
-     *
+     * Generate random integers from min (inclusive) to max (exclusive) following Binomial
+     * distribution. n * The basic random number generator. n * Minimum integer n * maximum integer
+     * (exclusive). n * parameter.
      */
     public Binomial(Random random, int min, int max, double p) {
       if (min >= max) {
@@ -240,8 +198,7 @@ public class RandomDistribution {
         for (int i = 0; i <= n; ++i) {
           v[i] /= sum;
         }
-      }
-      else {
+      } else {
         v = null;
       }
     }

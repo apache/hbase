@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
@@ -79,8 +78,7 @@ public abstract class MultiTableInputFormatTestBase {
     // create and fill table
     for (String tableName : TABLES) {
       try (Table table =
-          TEST_UTIL.createMultiRegionTable(TableName.valueOf(tableName),
-            INPUT_FAMILY, 4)) {
+        TEST_UTIL.createMultiRegionTable(TableName.valueOf(tableName), INPUT_FAMILY, 4)) {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
       }
     }
@@ -100,19 +98,18 @@ public abstract class MultiTableInputFormatTestBase {
   /**
    * Pass the key and value to reducer.
    */
-  public static class ScanMapper extends
-      TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
+  public static class ScanMapper
+    extends TableMapper<ImmutableBytesWritable, ImmutableBytesWritable> {
     /**
      * Pass the key and value to reduce.
-     *
-     * @param key The key, here "aaa", "aab" etc.
-     * @param value The value is the same as the key.
+     * @param key     The key, here "aaa", "aab" etc.
+     * @param value   The value is the same as the key.
      * @param context The task context.
      * @throws IOException When reading the rows fails.
      */
     @Override
     public void map(ImmutableBytesWritable key, Result value, Context context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       makeAssertions(key, value);
       context.write(key, key);
     }
@@ -121,15 +118,13 @@ public abstract class MultiTableInputFormatTestBase {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
-      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cf =
-          value.getMap();
+      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cf = value.getMap();
       if (!cf.containsKey(INPUT_FAMILY)) {
-        throw new IOException("Wrong input columns. Missing: '" +
-            Bytes.toString(INPUT_FAMILY) + "'.");
+        throw new IOException(
+          "Wrong input columns. Missing: '" + Bytes.toString(INPUT_FAMILY) + "'.");
       }
       String val = Bytes.toStringBinary(value.getValue(INPUT_FAMILY, null));
-      LOG.debug("map: key -> " + Bytes.toStringBinary(key.get()) +
-          ", value -> " + val);
+      LOG.debug("map: key -> " + Bytes.toStringBinary(key.get()) + ", value -> " + val);
     }
   }
 
@@ -137,26 +132,23 @@ public abstract class MultiTableInputFormatTestBase {
    * Checks the last and first keys seen against the scanner boundaries.
    */
   public static class ScanReducer
-      extends
-      Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-          NullWritable, NullWritable> {
+    extends Reducer<ImmutableBytesWritable, ImmutableBytesWritable, NullWritable, NullWritable> {
     private String first = null;
     private String last = null;
 
     @Override
-    protected void reduce(ImmutableBytesWritable key,
-        Iterable<ImmutableBytesWritable> values, Context context)
-        throws IOException, InterruptedException {
+    protected void reduce(ImmutableBytesWritable key, Iterable<ImmutableBytesWritable> values,
+      Context context) throws IOException, InterruptedException {
       makeAssertions(key, values);
     }
 
     protected void makeAssertions(ImmutableBytesWritable key,
-        Iterable<ImmutableBytesWritable> values) {
+      Iterable<ImmutableBytesWritable> values) {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
-        LOG.debug("reduce: key[" + count + "] -> " +
-            Bytes.toStringBinary(key.get()) + ", value -> " + val);
+        LOG.debug(
+          "reduce: key[" + count + "] -> " + Bytes.toStringBinary(key.get()) + ", value -> " + val);
         if (first == null) first = val;
         last = val;
         count++;
@@ -165,8 +157,7 @@ public abstract class MultiTableInputFormatTestBase {
     }
 
     @Override
-    protected void cleanup(Context context) throws IOException,
-        InterruptedException {
+    protected void cleanup(Context context) throws IOException, InterruptedException {
       Configuration c = context.getConfiguration();
       cleanup(c);
     }
@@ -174,10 +165,8 @@ public abstract class MultiTableInputFormatTestBase {
     protected void cleanup(Configuration c) {
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
-      LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" +
-          startRow + "\"");
-      LOG.info("cleanup: last -> \"" + last + "\", last row -> \"" + lastRow +
-          "\"");
+      LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" + startRow + "\"");
+      LOG.info("cleanup: last -> \"" + last + "\", last row -> \"" + lastRow + "\"");
       if (startRow != null && startRow.length() > 0) {
         assertEquals(startRow, first);
       }
@@ -188,41 +177,35 @@ public abstract class MultiTableInputFormatTestBase {
   }
 
   @Test
-  public void testScanEmptyToEmpty() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanEmptyToEmpty()
+    throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, null, null);
   }
 
   @Test
-  public void testScanEmptyToAPP() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanEmptyToAPP()
+    throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "app", "apo");
   }
 
   @Test
-  public void testScanOBBToOPP() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanOBBToOPP() throws IOException, InterruptedException, ClassNotFoundException {
     testScan("obb", "opp", "opo");
   }
 
   @Test
-  public void testScanYZYToEmpty() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanYZYToEmpty()
+    throws IOException, InterruptedException, ClassNotFoundException {
     testScan("yzy", null, "zzz");
   }
 
   /**
-   * Tests a MR scan using specific start and stop rows.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
+   * Tests a MR scan using specific start and stop rows. nnn
    */
   private void testScan(String start, String stop, String last)
-      throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName =
-        "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To" +
-            (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
+    throws IOException, InterruptedException, ClassNotFoundException {
+    String jobName = "Scan" + (start != null ? start.toUpperCase(Locale.ROOT) : "Empty") + "To"
+      + (stop != null ? stop.toUpperCase(Locale.ROOT) : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -253,7 +236,7 @@ public abstract class MultiTableInputFormatTestBase {
   }
 
   protected void runJob(String jobName, Configuration c, List<Scan> scans)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     Job job = new Job(c, jobName);
 
     initJob(scans, job);
@@ -267,6 +250,5 @@ public abstract class MultiTableInputFormatTestBase {
   }
 
   protected abstract void initJob(List<Scan> scans, Job job) throws IOException;
-
 
 }

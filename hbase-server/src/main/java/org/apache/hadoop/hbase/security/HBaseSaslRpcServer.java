@@ -42,8 +42,8 @@ public class HBaseSaslRpcServer {
   private final SaslServer saslServer;
 
   public HBaseSaslRpcServer(SaslServerAuthenticationProvider provider,
-      Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
-          throws IOException {
+    Map<String, String> saslProps, SecretManager<TokenIdentifier> secretManager)
+    throws IOException {
     serverWithProvider = provider.createServer(secretManager, saslProps);
     saslServer = serverWithProvider.getServer();
   }
@@ -62,9 +62,7 @@ public class HBaseSaslRpcServer {
   }
 
   public String getAttemptingUser() {
-    return serverWithProvider.getAttemptingUser()
-      .map(Object::toString)
-      .orElse("Unknown");
+    return serverWithProvider.getAttemptingUser().map(Object::toString).orElse("Unknown");
   }
 
   public byte[] wrap(byte[] buf, int off, int len) throws SaslException {
@@ -84,7 +82,7 @@ public class HBaseSaslRpcServer {
   }
 
   public static <T extends TokenIdentifier> T getIdentifier(String id,
-      SecretManager<T> secretManager) throws InvalidToken {
+    SecretManager<T> secretManager) throws InvalidToken {
     byte[] tokenId = SaslUtil.decodeIdentifier(id);
     T tokenIdentifier = secretManager.createIdentifier();
     try {

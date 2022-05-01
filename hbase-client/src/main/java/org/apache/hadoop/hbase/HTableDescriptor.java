@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +40,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * HTableDescriptor contains the details about an HBase table  such as the descriptors of
- * all the column families, is the table a catalog table, <code> hbase:meta </code>,
- * if the table is read only, the maximum size of the memstore,
- * when the region split should occur, coprocessors associated with it etc...
- * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
- *             Use {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
+ * HTableDescriptor contains the details about an HBase table such as the descriptors of all the
+ * column families, is the table a catalog table, <code> hbase:meta </code>, if the table is read
+ * only, the maximum size of the memstore, when the region split should occur, coprocessors
+ * associated with it etc...
+ * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+ *             {@link TableDescriptorBuilder} to build {@link HTableDescriptor}.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -57,7 +56,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final Bytes OWNER_KEY = TableDescriptorBuilder.OWNER_KEY;
   public static final String READONLY = TableDescriptorBuilder.READONLY;
   public static final String COMPACTION_ENABLED = TableDescriptorBuilder.COMPACTION_ENABLED;
-  public static final boolean DEFAULT_NORMALIZATION_ENABLED = TableDescriptorBuilder.DEFAULT_NORMALIZATION_ENABLED;
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED =
+    TableDescriptorBuilder.DEFAULT_NORMALIZATION_ENABLED;
   public static final String SPLIT_ENABLED = TableDescriptorBuilder.SPLIT_ENABLED;
   public static final String MERGE_ENABLED = TableDescriptorBuilder.MERGE_ENABLED;
   public static final String MEMSTORE_FLUSHSIZE = TableDescriptorBuilder.MEMSTORE_FLUSHSIZE;
@@ -66,24 +66,30 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String IS_META = TableDescriptorBuilder.IS_META;
   public static final String DURABILITY = TableDescriptorBuilder.DURABILITY;
   public static final String REGION_REPLICATION = TableDescriptorBuilder.REGION_REPLICATION;
-  public static final String REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION;
+  public static final String REGION_MEMSTORE_REPLICATION =
+    TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION;
   public static final String NORMALIZATION_ENABLED = TableDescriptorBuilder.NORMALIZATION_ENABLED;
   public static final String NORMALIZER_TARGET_REGION_COUNT =
-      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
+    TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
   public static final String NORMALIZER_TARGET_REGION_SIZE =
-      TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE;
+    TableDescriptorBuilder.NORMALIZER_TARGET_REGION_SIZE;
   public static final String PRIORITY = TableDescriptorBuilder.PRIORITY;
   public static final boolean DEFAULT_READONLY = TableDescriptorBuilder.DEFAULT_READONLY;
-  public static final boolean DEFAULT_COMPACTION_ENABLED = TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
-  public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
-  public static final int DEFAULT_REGION_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
-  public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
+  public static final boolean DEFAULT_COMPACTION_ENABLED =
+    TableDescriptorBuilder.DEFAULT_COMPACTION_ENABLED;
+  public static final long DEFAULT_MEMSTORE_FLUSH_SIZE =
+    TableDescriptorBuilder.DEFAULT_MEMSTORE_FLUSH_SIZE;
+  public static final int DEFAULT_REGION_REPLICATION =
+    TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
+  public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION =
+    TableDescriptorBuilder.DEFAULT_REGION_MEMSTORE_REPLICATION;
   protected final ModifyableTableDescriptor delegatee;
 
   /**
    * Construct a table descriptor specifying a TableName object
    * @param name Table name.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-174">HADOOP-1581 HBASE: (HBASE-174) Un-openable tablename bug</a>
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-174">HADOOP-1581 HBASE: (HBASE-174)
+   *      Un-openable tablename bug</a>
    */
   public HTableDescriptor(final TableName name) {
     this(new ModifyableTableDescriptor(name));
@@ -92,8 +98,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   /**
    * Construct a table descriptor by cloning the descriptor passed as a parameter.
    * <p>
-   * Makes a deep copy of the supplied descriptor.
-   * Can make a modifiable descriptor from an ImmutableHTableDescriptor.
+   * Makes a deep copy of the supplied descriptor. Can make a modifiable descriptor from an
+   * ImmutableHTableDescriptor.
    * @param desc The descriptor.
    */
   public HTableDescriptor(final HTableDescriptor desc) {
@@ -101,8 +107,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   protected HTableDescriptor(final HTableDescriptor desc, boolean deepClone) {
-    this(deepClone ? new ModifyableTableDescriptor(desc.getTableName(), desc)
-      : desc.delegatee);
+    this(deepClone ? new ModifyableTableDescriptor(desc.getTableName(), desc) : desc.delegatee);
   }
 
   public HTableDescriptor(final TableDescriptor desc) {
@@ -110,11 +115,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Construct a table descriptor by cloning the descriptor passed as a parameter
-   * but using a different table name.
+   * Construct a table descriptor by cloning the descriptor passed as a parameter but using a
+   * different table name.
    * <p>
-   * Makes a deep copy of the supplied descriptor.
-   * Can make a modifiable descriptor from an ImmutableHTableDescriptor.
+   * Makes a deep copy of the supplied descriptor. Can make a modifiable descriptor from an
+   * ImmutableHTableDescriptor.
    * @param name Table name.
    * @param desc The descriptor.
    */
@@ -128,7 +133,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * This is vestigial API. It will be removed in 3.0.
-   *
    * @return always return the false
    */
   public boolean isRootRegion() {
@@ -136,11 +140,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Checks if this table is <code> hbase:meta </code>
-   * region.
-   *
-   * @return true if this table is <code> hbase:meta </code>
-   * region
+   * Checks if this table is <code> hbase:meta </code> region.
+   * @return true if this table is <code> hbase:meta </code> region
    */
   @Override
   public boolean isMetaRegion() {
@@ -149,7 +150,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Checks if the table is a <code>hbase:meta</code> table
-   *
    * @return true if table is <code> hbase:meta </code> region.
    */
   @Override
@@ -167,8 +167,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setter for storing metadata as a (key, value) pair in map
-   *
-   * @param key The key.
+   * @param key   The key.
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(byte[] key, byte[] value) {
@@ -178,7 +177,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /*
    * Setter for storing metadata as a (key, value) pair in map
-   *
    * @param key The key.
    * @param value The value. If null, removes the setting.
    */
@@ -189,8 +187,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setter for storing metadata as a (key, value) pair in map
-   *
-   * @param key The key.
+   * @param key   The key.
    * @param value The value. If null, removes the setting.
    */
   public HTableDescriptor setValue(String key, String value) {
@@ -200,9 +197,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Remove metadata represented by the key from the map
-   *
-   * @param key Key whose key and value we're to remove from HTableDescriptor
-   * parameters.
+   * @param key Key whose key and value we're to remove from HTableDescriptor parameters.
    */
   public void remove(final String key) {
     getDelegateeForModification().removeValue(Bytes.toBytes(key));
@@ -210,9 +205,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Remove metadata represented by the key from the map
-   *
-   * @param key Key whose key and value we're to remove from HTableDescriptor
-   * parameters.
+   * @param key Key whose key and value we're to remove from HTableDescriptor parameters.
    */
   public void remove(Bytes key) {
     getDelegateeForModification().removeValue(key);
@@ -220,18 +213,15 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Remove metadata represented by the key from the map
-   *
-   * @param key Key whose key and value we're to remove from HTableDescriptor
-   * parameters.
+   * @param key Key whose key and value we're to remove from HTableDescriptor parameters.
    */
-  public void remove(final byte [] key) {
+  public void remove(final byte[] key) {
     getDelegateeForModification().removeValue(key);
   }
 
   /**
-   * Check if the readOnly flag of the table is set. If the readOnly flag is
-   * set then the contents of the table can only be read from but not modified.
-   *
+   * Check if the readOnly flag of the table is set. If the readOnly flag is set then the contents
+   * of the table can only be read from but not modified.
    * @return true if all columns in the table should be read only
    */
   @Override
@@ -240,12 +230,10 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Setting the table as read only sets all the columns in the table as read
-   * only. By default all tables are modifiable, but if the readOnly flag is
-   * set to true then the contents of the table can only be read but not modified.
-   *
-   * @param readOnly True if all of the columns in the table should be read
-   * only.
+   * Setting the table as read only sets all the columns in the table as read only. By default all
+   * tables are modifiable, but if the readOnly flag is set to true then the contents of the table
+   * can only be read but not modified.
+   * @param readOnly True if all of the columns in the table should be read only.
    */
   public HTableDescriptor setReadOnly(final boolean readOnly) {
     getDelegateeForModification().setReadOnly(readOnly);
@@ -253,9 +241,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Check if the compaction enable flag of the table is true. If flag is
-   * false then no minor/major compactions will be done in real.
-   *
+   * Check if the compaction enable flag of the table is true. If flag is false then no minor/major
+   * compactions will be done in real.
    * @return true if table compaction enabled
    */
   @Override
@@ -265,7 +252,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setting the table compaction enable flag.
-   *
    * @param isEnable True if enable compaction.
    */
   public HTableDescriptor setCompactionEnabled(final boolean isEnable) {
@@ -274,9 +260,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Check if the region split enable flag of the table is true. If flag is
-   * false then no split will be done.
-   *
+   * Check if the region split enable flag of the table is true. If flag is false then no split will
+   * be done.
    * @return true if table region split enabled
    */
   @Override
@@ -286,7 +271,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setting the table region split enable flag.
-   *
    * @param isEnable True if enable split.
    */
   public HTableDescriptor setSplitEnabled(final boolean isEnable) {
@@ -294,11 +278,9 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return this;
   }
 
-
   /**
-   * Check if the region merge enable flag of the table is true. If flag is
-   * false then no merge will be done.
-   *
+   * Check if the region merge enable flag of the table is true. If flag is false then no merge will
+   * be done.
    * @return true if table region merge enabled
    */
   @Override
@@ -308,7 +290,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setting the table region merge enable flag.
-   *
    * @param isEnable True if enable merge.
    */
   public HTableDescriptor setMergeEnabled(final boolean isEnable) {
@@ -317,9 +298,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Check if normalization enable flag of the table is true. If flag is
-   * false then no region normalizer won't attempt to normalize this table.
-   *
+   * Check if normalization enable flag of the table is true. If flag is false then no region
+   * normalizer won't attempt to normalize this table.
    * @return true if region normalization is enabled for this table
    */
   @Override
@@ -329,7 +309,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Setting the table normalization enable flag.
-   *
    * @param isEnable True if enable normalization.
    */
   public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
@@ -376,9 +355,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Get the name of the table
-   *
-   * @return TableName
+   * Get the name of the table n
    */
   @Override
   public TableName getTableName() {
@@ -387,7 +364,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Get the name of the table as a String
-   *
    * @return name of table as a String
    */
   public String getNameAsString() {
@@ -395,9 +371,9 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * This sets the class associated with the region split policy which
-   * determines when a region split should occur.  The class used by
-   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
+   * This sets the class associated with the region split policy which determines when a region
+   * split should occur. The class used by default is defined in
+   * org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
    * @param clazz the class name
    */
   public HTableDescriptor setRegionSplitPolicyClassName(String clazz) {
@@ -406,46 +382,40 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * This gets the class associated with the region split policy which
-   * determines when a region split should occur.  The class used by
-   * default is defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
-   *
-   * @return the class name of the region split policy for this table.
-   * If this returns null, the default split policy is used.
+   * This gets the class associated with the region split policy which determines when a region
+   * split should occur. The class used by default is defined in
+   * org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
+   * @return the class name of the region split policy for this table. If this returns null, the
+   *         default split policy is used.
    */
   @Override
-   public String getRegionSplitPolicyClassName() {
+  public String getRegionSplitPolicyClassName() {
     return delegatee.getRegionSplitPolicyClassName();
   }
 
   /**
-   * Returns the maximum size upto which a region can grow to after which a region
-   * split is triggered. The region size is represented by the size of the biggest
-   * store file in that region.
-   *
+   * Returns the maximum size upto which a region can grow to after which a region split is
+   * triggered. The region size is represented by the size of the biggest store file in that region.
    * @return max hregion size for table, -1 if not set.
-   *
    * @see #setMaxFileSize(long)
    */
-   @Override
+  @Override
   public long getMaxFileSize() {
     return delegatee.getMaxFileSize();
   }
 
   /**
-   * Sets the maximum size upto which a region can grow to after which a region
-   * split is triggered. The region size is represented by the size of the biggest
-   * store file in that region, i.e. If the biggest store file grows beyond the
-   * maxFileSize, then the region split is triggered. This defaults to a value of
-   * 256 MB.
+   * Sets the maximum size upto which a region can grow to after which a region split is triggered.
+   * The region size is represented by the size of the biggest store file in that region, i.e. If
+   * the biggest store file grows beyond the maxFileSize, then the region split is triggered. This
+   * defaults to a value of 256 MB.
    * <p>
-   * This is not an absolute value and might vary. Assume that a single row exceeds
-   * the maxFileSize then the storeFileSize will be greater than maxFileSize since
-   * a single row cannot be split across multiple regions
+   * This is not an absolute value and might vary. Assume that a single row exceeds the maxFileSize
+   * then the storeFileSize will be greater than maxFileSize since a single row cannot be split
+   * across multiple regions
    * </p>
-   *
-   * @param maxFileSize The maximum file size that a store file can grow to
-   * before a split is triggered.
+   * @param maxFileSize The maximum file size that a store file can grow to before a split is
+   *                    triggered.
    */
   public HTableDescriptor setMaxFileSize(long maxFileSize) {
     getDelegateeForModification().setMaxFileSize(maxFileSize);
@@ -454,9 +424,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Returns the size of the memstore after which a flush to filesystem is triggered.
-   *
    * @return memory cache flush size for each hregion, -1 if not set.
-   *
    * @see #setMemStoreFlushSize(long)
    */
   @Override
@@ -465,9 +433,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Represents the maximum size of the memstore after which the contents of the
-   * memstore are flushed to the filesystem. This defaults to a size of 64 MB.
-   *
+   * Represents the maximum size of the memstore after which the contents of the memstore are
+   * flushed to the filesystem. This defaults to a size of 64 MB.
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
   public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
@@ -499,8 +466,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Adds a column family.
-   * For the updating purpose please use {@link #modifyFamily(HColumnDescriptor)} instead.
+   * Adds a column family. For the updating purpose please use
+   * {@link #modifyFamily(HColumnDescriptor)} instead.
    * @param family HColumnDescriptor of family to add.
    */
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
@@ -523,13 +490,12 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @param familyName Family name or column name.
    * @return true if the table contains the specified family name
    */
-  public boolean hasFamily(final byte [] familyName) {
+  public boolean hasFamily(final byte[] familyName) {
     return delegatee.hasColumnFamily(familyName);
   }
 
   /**
-   * @return Name of this table and then a map of all of the column family
-   * descriptors.
+   * @return Name of this table and then a map of all of the column family descriptors.
    * @see #getNameAsString()
    */
   @Override
@@ -538,8 +504,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * @return Name of this table and then a map of all of the column family
-   * descriptors (with only the non-default column family attributes)
+   * @return Name of this table and then a map of all of the column family descriptors (with only
+   *         the non-default column family attributes)
    */
   @Override
   public String toStringCustomizedValues() {
@@ -550,16 +516,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * @return map of all table attributes formatted into string.
    */
   public String toStringTableAttributes() {
-   return delegatee.toStringTableAttributes();
+    return delegatee.toStringTableAttributes();
   }
 
   /**
-   * Compare the contents of the descriptor with another one passed as a parameter.
-   * Checks if the obj passed is an instance of HTableDescriptor, if yes then the
-   * contents of the descriptors are compared.
-   *
+   * Compare the contents of the descriptor with another one passed as a parameter. Checks if the
+   * obj passed is an instance of HTableDescriptor, if yes then the contents of the descriptors are
+   * compared.
    * @return true if the contents of the the two descriptors exactly match
-   *
    * @see java.lang.Object#equals(java.lang.Object)
    */
   @Override
@@ -584,11 +548,10 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   // Comparable
 
   /**
-   * Compares the descriptor with another descriptor which is passed as a parameter.
-   * This compares the content of the two descriptors and not the reference.
-   *
-   * @return 0 if the contents of the descriptors are exactly matching,
-   *         1 if there is a mismatch in the contents
+   * Compares the descriptor with another descriptor which is passed as a parameter. This compares
+   * the content of the two descriptors and not the reference.
+   * @return 0 if the contents of the descriptors are exactly matching, 1 if there is a mismatch in
+   *         the contents
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
@@ -596,19 +559,17 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Returns an unmodifiable collection of all the {@link HColumnDescriptor}
-   * of all the column families of the table.
+   * Returns an unmodifiable collection of all the {@link HColumnDescriptor} of all the column
+   * families of the table.
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getColumnFamilies()} instead.
-   * @return Immutable collection of {@link HColumnDescriptor} of all the
-   * column families.
+   * @return Immutable collection of {@link HColumnDescriptor} of all the column families.
    * @see #getColumnFamilies()
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>
    */
   @Deprecated
   public Collection<HColumnDescriptor> getFamilies() {
-    return Stream.of(delegatee.getColumnFamilies())
-            .map(this::toHColumnDescriptor)
-            .collect(Collectors.toList());
+    return Stream.of(delegatee.getColumnFamilies()).map(this::toHColumnDescriptor)
+      .collect(Collectors.toList());
   }
 
   /**
@@ -629,8 +590,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #hasRegionMemStoreReplication()} instead
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #hasRegionMemStoreReplication()} instead
    */
   @Deprecated
   public boolean hasRegionMemstoreReplication() {
@@ -646,8 +607,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Use {@link #setRegionMemStoreReplication(boolean)} instead
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #setRegionMemStoreReplication(boolean)} instead
    */
   @Deprecated
   public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
@@ -655,13 +616,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Enable or Disable the memstore replication from the primary region to the replicas.
-   * The replication will be used only for meta operations (e.g. flush, compaction, ...)
-   *
-   * @param memstoreReplication true if the new data written to the primary region
-   *                                 should be replicated.
-   *                            false if the secondaries can tollerate to have new
-   *                                  data only when the primary flushes the memstore.
+   * Enable or Disable the memstore replication from the primary region to the replicas. The
+   * replication will be used only for meta operations (e.g. flush, compaction, ...)
+   * @param memstoreReplication true if the new data written to the primary region should be
+   *                            replicated. false if the secondaries can tollerate to have new data
+   *                            only when the primary flushes the memstore.
    */
   public HTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
     getDelegateeForModification().setRegionMemStoreReplication(memstoreReplication);
@@ -679,15 +638,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Returns all the column family names of the current table. The map of
-   * HTableDescriptor contains mapping of family name to HColumnDescriptors.
-   * This returns all the keys of the family map which represents the column
-   * family names of the table.
-   *
+   * Returns all the column family names of the current table. The map of HTableDescriptor contains
+   * mapping of family name to HColumnDescriptors. This returns all the keys of the family map which
+   * represents the column family names of the table.
    * @return Immutable sorted set of the keys of the families.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>).
-   *             Use {@link #getColumnFamilyNames()}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>). Use
+   *             {@link #getColumnFamilyNames()}.
    */
   @Deprecated
   public Set<byte[]> getFamiliesKeys() {
@@ -696,7 +653,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Returns the count of the column families of the table.
-   *
    * @return Count of column families of the table
    */
   @Override
@@ -705,9 +661,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Returns an array all the {@link HColumnDescriptor} of the column families
-   * of the table.
-   *
+   * Returns an array all the {@link HColumnDescriptor} of the column families of the table.
    * @return Array of all the HColumnDescriptors of the current table
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see #getFamilies()
@@ -716,19 +670,17 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   @Deprecated
   @Override
   public HColumnDescriptor[] getColumnFamilies() {
-    return Stream.of(delegatee.getColumnFamilies())
-            .map(this::toHColumnDescriptor)
-            .toArray(size -> new HColumnDescriptor[size]);
+    return Stream.of(delegatee.getColumnFamilies()).map(this::toHColumnDescriptor)
+      .toArray(size -> new HColumnDescriptor[size]);
   }
 
   /**
-   * Returns the HColumnDescriptor for a specific column family with name as
-   * specified by the parameter column.
+   * Returns the HColumnDescriptor for a specific column family with name as specified by the
+   * parameter column.
    * @param column Column family name
-   * @return Column descriptor for the passed family name or the family on
-   * passed in column.
+   * @return Column descriptor for the passed family name or the family on passed in column.
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getColumnFamily(byte[])}
-   *   instead.
+   *             instead.
    * @see #getColumnFamily(byte[])
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>
    */
@@ -737,16 +689,13 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return toHColumnDescriptor(delegatee.getColumnFamily(column));
   }
 
-
   /**
-   * Removes the HColumnDescriptor with name specified by the parameter column
-   * from the table descriptor
-   *
+   * Removes the HColumnDescriptor with name specified by the parameter column from the table
+   * descriptor
    * @param column Name of the column family to be removed.
-   * @return Column descriptor for the passed family name or the family on
-   * passed in column.
+   * @return Column descriptor for the passed family name or the family on passed in column.
    */
-  public HColumnDescriptor removeFamily(final byte [] column) {
+  public HColumnDescriptor removeFamily(final byte[] column) {
     return toHColumnDescriptor(getDelegateeForModification().removeColumnFamily(column));
   }
 
@@ -768,13 +717,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
-   * It won't check if the class can be loaded or not.
-   * Whether a coprocessor is loadable or not will be determined when
-   * a region is opened.
-   * @param className Full class name.
-   * @throws IOException
+   * Add a table coprocessor to this table. The coprocessor type must be
+   * org.apache.hadoop.hbase.coprocessor.RegionCoprocessor. It won't check if the class can be
+   * loaded or not. Whether a coprocessor is loadable or not will be determined when a region is
+   * opened.
+   * @param className Full class name. n
    */
   public HTableDescriptor addCoprocessor(String className) throws IOException {
     getDelegateeForModification().setCoprocessor(className);
@@ -782,39 +729,31 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
-   * It won't check if the class can be loaded or not.
-   * Whether a coprocessor is loadable or not will be determined when
-   * a region is opened.
-   * @param jarFilePath Path of the jar file. If it's null, the class will be
-   * loaded from default classloader.
-   * @param className Full class name.
-   * @param priority Priority
-   * @param kvs Arbitrary key-value parameter pairs passed into the coprocessor.
-   * @throws IOException
+   * Add a table coprocessor to this table. The coprocessor type must be
+   * org.apache.hadoop.hbase.coprocessor.RegionCoprocessor. It won't check if the class can be
+   * loaded or not. Whether a coprocessor is loadable or not will be determined when a region is
+   * opened.
+   * @param jarFilePath Path of the jar file. If it's null, the class will be loaded from default
+   *                    classloader.
+   * @param className   Full class name.
+   * @param priority    Priority
+   * @param kvs         Arbitrary key-value parameter pairs passed into the coprocessor. n
    */
-  public HTableDescriptor addCoprocessor(String className, Path jarFilePath,
-                             int priority, final Map<String, String> kvs)
-  throws IOException {
-    getDelegateeForModification().setCoprocessor(
-      CoprocessorDescriptorBuilder.newBuilder(className)
-        .setJarPath(jarFilePath == null ? null : jarFilePath.toString())
-        .setPriority(priority)
-        .setProperties(kvs == null ? Collections.emptyMap() : kvs)
-        .build());
+  public HTableDescriptor addCoprocessor(String className, Path jarFilePath, int priority,
+    final Map<String, String> kvs) throws IOException {
+    getDelegateeForModification().setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(className)
+      .setJarPath(jarFilePath == null ? null : jarFilePath.toString()).setPriority(priority)
+      .setProperties(kvs == null ? Collections.emptyMap() : kvs).build());
     return this;
   }
 
   /**
-   * Add a table coprocessor to this table. The coprocessor
-   * type must be org.apache.hadoop.hbase.coprocessor.RegionCoprocessor.
-   * It won't check if the class can be loaded or not.
-   * Whether a coprocessor is loadable or not will be determined when
-   * a region is opened.
+   * Add a table coprocessor to this table. The coprocessor type must be
+   * org.apache.hadoop.hbase.coprocessor.RegionCoprocessor. It won't check if the class can be
+   * loaded or not. Whether a coprocessor is loadable or not will be determined when a region is
+   * opened.
    * @param specStr The Coprocessor specification all in in one String formatted so matches
-   * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
-   * @throws IOException
+   *                {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN} n
    */
   public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
     getDelegateeForModification().setCoprocessorWithSpec(specStr);
@@ -823,7 +762,6 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * Check if the table has an attached co-processor represented by the name className
-   *
    * @param classNameToMatch - Class name of the co-processor
    * @return true of the table has a co-processor className
    */
@@ -846,12 +784,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   public final static String NAMESPACE_FAMILY_INFO = TableDescriptorBuilder.NAMESPACE_FAMILY_INFO;
-  public final static byte[] NAMESPACE_FAMILY_INFO_BYTES = TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES;
-  public final static byte[] NAMESPACE_COL_DESC_BYTES = TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES;
+  public final static byte[] NAMESPACE_FAMILY_INFO_BYTES =
+    TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES;
+  public final static byte[] NAMESPACE_COL_DESC_BYTES =
+    TableDescriptorBuilder.NAMESPACE_COL_DESC_BYTES;
 
   /** Table descriptor for namespace table */
-  public static final HTableDescriptor NAMESPACE_TABLEDESC
-    = new HTableDescriptor(TableDescriptorBuilder.NAMESPACE_TABLEDESC);
+  public static final HTableDescriptor NAMESPACE_TABLEDESC =
+    new HTableDescriptor(TableDescriptorBuilder.NAMESPACE_TABLEDESC);
 
   /**
    * @deprecated since 0.94.1
@@ -894,13 +834,11 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
 
   /**
    * @param bytes A pb serialized {@link HTableDescriptor} instance with pb magic prefix
-   * @return An instance of {@link HTableDescriptor} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @throws IOException
-   * @see #toByteArray()
+   * @return An instance of {@link HTableDescriptor} made from <code>bytes</code> nn * @see
+   *         #toByteArray()
    */
-  public static HTableDescriptor parseFrom(final byte [] bytes)
-  throws DeserializationException, IOException {
+  public static HTableDescriptor parseFrom(final byte[] bytes)
+    throws DeserializationException, IOException {
     TableDescriptor desc = TableDescriptorBuilder.parseFrom(bytes);
     if (desc instanceof ModifyableTableDescriptor) {
       return new HTableDescriptor((ModifyableTableDescriptor) desc);
@@ -920,16 +858,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * Getter for fetching an unmodifiable map.
    */
   public Map<String, String> getConfiguration() {
-    return delegatee.getValues().entrySet().stream()
-            .collect(Collectors.toMap(
-                    e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(), e.getKey().getLength()),
-                    e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(), e.getValue().getLength())
-            ));
+    return delegatee.getValues().entrySet().stream().collect(Collectors.toMap(
+      e -> Bytes.toString(e.getKey().get(), e.getKey().getOffset(), e.getKey().getLength()),
+      e -> Bytes.toString(e.getValue().get(), e.getValue().getOffset(), e.getValue().getLength())));
   }
 
   /**
    * Setter for storing a configuration setting in map.
-   * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
+   * @param key   Config key. Same as XML config key e.g. hbase.something.or.other.
    * @param value String value. If null, removes the setting.
    */
   public HTableDescriptor setConfiguration(String key, String value) {

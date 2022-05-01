@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -31,26 +28,26 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * StoreEngine is a factory that can create the objects necessary for HStore to operate.
- * Since not all compaction policies, compactors and store file managers are compatible,
- * they are tied together and replaced together via StoreEngine-s.
+ * StoreEngine is a factory that can create the objects necessary for HStore to operate. Since not
+ * all compaction policies, compactors and store file managers are compatible, they are tied
+ * together and replaced together via StoreEngine-s.
  */
 @InterfaceAudience.Private
-public abstract class StoreEngine<SF extends StoreFlusher,
-    CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
+public abstract class StoreEngine<SF extends StoreFlusher, CP extends CompactionPolicy,
+  C extends Compactor, SFM extends StoreFileManager> {
   protected SF storeFlusher;
   protected CP compactionPolicy;
   protected C compactor;
   protected SFM storeFileManager;
 
   /**
-   * The name of the configuration parameter that specifies the class of
-   * a store engine that is used to manage and compact HBase store files.
+   * The name of the configuration parameter that specifies the class of a store engine that is used
+   * to manage and compact HBase store files.
    */
   public static final String STORE_ENGINE_CLASS_KEY = "hbase.hstore.engine.class";
 
-  private static final Class<? extends StoreEngine<?, ?, ?, ?>>
-    DEFAULT_STORE_ENGINE_CLASS = DefaultStoreEngine.class;
+  private static final Class<? extends StoreEngine<?, ?, ?, ?>> DEFAULT_STORE_ENGINE_CLASS =
+    DefaultStoreEngine.class;
 
   /**
    * @return Compaction policy to use.
@@ -87,8 +84,8 @@ public abstract class StoreEngine<SF extends StoreFlusher,
   public abstract boolean needsCompaction(List<HStoreFile> filesCompacting);
 
   /**
-   * Creates an instance of a compaction context specific to this engine.
-   * Doesn't actually select or start a compaction. See CompactionContext class comment.
+   * Creates an instance of a compaction context specific to this engine. Doesn't actually select or
+   * start a compaction. See CompactionContext class comment.
    * @return New CompactionContext object.
    */
   public abstract CompactionContext createCompaction() throws IOException;
@@ -96,32 +93,32 @@ public abstract class StoreEngine<SF extends StoreFlusher,
   /**
    * Create the StoreEngine's components.
    */
-  protected abstract void createComponents(
-      Configuration conf, HStore store, CellComparator cellComparator) throws IOException;
+  protected abstract void createComponents(Configuration conf, HStore store,
+    CellComparator cellComparator) throws IOException;
 
-  private void createComponentsOnce(
-      Configuration conf, HStore store, CellComparator cellComparator) throws IOException {
-    assert compactor == null && compactionPolicy == null
-        && storeFileManager == null && storeFlusher == null;
+  private void createComponentsOnce(Configuration conf, HStore store, CellComparator cellComparator)
+    throws IOException {
+    assert compactor == null && compactionPolicy == null && storeFileManager == null
+      && storeFlusher == null;
     createComponents(conf, store, cellComparator);
-    assert compactor != null && compactionPolicy != null
-        && storeFileManager != null && storeFlusher != null;
+    assert compactor != null && compactionPolicy != null && storeFileManager != null
+      && storeFlusher != null;
   }
 
   /**
    * Create the StoreEngine configured for the given Store.
-   * @param store The store. An unfortunate dependency needed due to it
-   *              being passed to coprocessors via the compactor.
-   * @param conf Store configuration.
+   * @param store          The store. An unfortunate dependency needed due to it being passed to
+   *                       coprocessors via the compactor.
+   * @param conf           Store configuration.
    * @param cellComparator CellComparator for storeFileManager.
    * @return StoreEngine to use.
    */
-  public static StoreEngine<?, ?, ?, ?> create(
-      HStore store, Configuration conf, CellComparator cellComparator) throws IOException {
+  public static StoreEngine<?, ?, ?, ?> create(HStore store, Configuration conf,
+    CellComparator cellComparator) throws IOException {
     String className = conf.get(STORE_ENGINE_CLASS_KEY, DEFAULT_STORE_ENGINE_CLASS.getName());
     try {
-      StoreEngine<?,?,?,?> se = ReflectionUtils.instantiateWithCustomCtor(
-          className, new Class[] { }, new Object[] { });
+      StoreEngine<?, ?, ?, ?> se =
+        ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {}, new Object[] {});
       se.createComponentsOnce(conf, store, cellComparator);
       return se;
     } catch (Exception e) {

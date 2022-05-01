@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestJMXConnectorServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
+    HBaseClassTestRule.forClass(TestJMXConnectorServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXConnectorServer.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -176,7 +176,7 @@ public class TestJMXConnectorServer {
 
     @Override
     public void preStopRegionServer(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       if (!hasAccess) {
         throw new AccessDeniedException("Insufficient permissions to stop region server.");
       }
@@ -191,7 +191,7 @@ public class TestJMXConnectorServer {
 
     @Override
     public void preExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       // FIXME: ignore the procedure permission check since in our UT framework master is neither
       // the systemuser nor the superuser so we can not call executeProcedures...
     }

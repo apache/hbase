@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,7 +102,8 @@ public class TestHFileProcedurePrettyPrinter extends RegionProcedureStoreTestBas
     store.cleanup();
     store.region.flush(true);
     Path tableDir = CommonFSUtils.getTableDir(
-      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR), MasterRegionFactory.TABLE_NAME);
+      new Path(htu.getDataTestDir(), MasterRegionFactory.MASTER_STORE_DIR),
+      MasterRegionFactory.TABLE_NAME);
     FileSystem fs = tableDir.getFileSystem(htu.getConfiguration());
     Path regionDir =
       fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]

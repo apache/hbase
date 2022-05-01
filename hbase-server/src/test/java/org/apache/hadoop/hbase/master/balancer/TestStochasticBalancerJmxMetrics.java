@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -67,7 +66,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticBalancerJmxMetrics.class);
+    HBaseClassTestRule.forClass(TestStochasticBalancerJmxMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStochasticBalancerJmxMetrics.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -222,7 +221,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     MBeanServerConnection mb = null;
     try {
       connector =
-          JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
+        JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
       mb = connector.getMBeanServerConnection();
 
       Hashtable<String, String> pairs = new Hashtable<>();

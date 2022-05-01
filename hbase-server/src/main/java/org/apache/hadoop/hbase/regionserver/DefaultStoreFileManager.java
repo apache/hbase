@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -34,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableCollection;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -50,26 +49,25 @@ class DefaultStoreFileManager implements StoreFileManager {
   private final int blockingFileCount;
   private final Comparator<HStoreFile> storeFileComparator;
   /**
-   * List of store files inside this store. This is an immutable list that
-   * is atomically replaced when its contents change.
+   * List of store files inside this store. This is an immutable list that is atomically replaced
+   * when its contents change.
    */
   private volatile ImmutableList<HStoreFile> storefiles = ImmutableList.of();
   /**
-   * List of compacted files inside this store that needs to be excluded in reads
-   * because further new reads will be using only the newly created files out of compaction.
-   * These compacted files will be deleted/cleared once all the existing readers on these
-   * compacted files are done.
+   * List of compacted files inside this store that needs to be excluded in reads because further
+   * new reads will be using only the newly created files out of compaction. These compacted files
+   * will be deleted/cleared once all the existing readers on these compacted files are done.
    */
   private volatile ImmutableList<HStoreFile> compactedfiles = ImmutableList.of();
 
   public DefaultStoreFileManager(CellComparator cellComparator,
-      Comparator<HStoreFile> storeFileComparator, Configuration conf,
-      CompactionConfiguration comConf) {
+    Comparator<HStoreFile> storeFileComparator, Configuration conf,
+    CompactionConfiguration comConf) {
     this.cellComparator = cellComparator;
     this.storeFileComparator = storeFileComparator;
     this.comConf = comConf;
     this.blockingFileCount =
-        conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
+      conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
   }
 
   @Override
@@ -90,7 +88,7 @@ class DefaultStoreFileManager implements StoreFileManager {
   @Override
   public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
     this.storefiles =
-        ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
+      ImmutableList.sortedCopyOf(storeFileComparator, Iterables.concat(this.storefiles, sfs));
   }
 
   @Override
@@ -119,9 +117,9 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void addCompactionResults(Collection<HStoreFile> newCompactedfiles,
-      Collection<HStoreFile> results) {
+    Collection<HStoreFile> results) {
     this.storefiles = ImmutableList.sortedCopyOf(storeFileComparator, Iterables
-        .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
+      .concat(Iterables.filter(storefiles, sf -> !newCompactedfiles.contains(sf)), results));
     // Mark the files as compactedAway once the storefiles and compactedfiles list is finalized
     // Let a background thread close the actual reader on these compacted files and also
     // ensure to evict the blocks from block cache so that they are no longer in
@@ -133,10 +131,10 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public void removeCompactedFiles(Collection<HStoreFile> removedCompactedfiles)
-      throws IOException {
+    throws IOException {
     this.compactedfiles =
-        this.compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
-            .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
+      this.compactedfiles.stream().filter(sf -> !removedCompactedfiles.contains(sf))
+        .sorted(storeFileComparator).collect(ImmutableList.toImmutableList());
   }
 
   @Override
@@ -146,7 +144,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public Iterator<HStoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<HStoreFile> candidateFiles, KeyValue targetKey, Cell candidate) {
+    Iterator<HStoreFile> candidateFiles, KeyValue targetKey, Cell candidate) {
     // Default store has nothing useful to do here.
     // TODO: move this comment when implementing Level:
     // Level store can trim the list by range, removing all the files which cannot have
@@ -161,7 +159,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public final Collection<HStoreFile> getFilesForScan(byte[] startRow, boolean includeStartRow,
-      byte[] stopRow, boolean includeStopRow) {
+    byte[] stopRow, boolean includeStopRow) {
     // We cannot provide any useful input and already have the files sorted by seqNum.
     return getStorefiles();
   }
@@ -181,7 +179,7 @@ class DefaultStoreFileManager implements StoreFileManager {
       long fileTs = sf.getReader().getMaxTimestamp();
       if (fileTs < maxTs && !filesCompacting.contains(sf)) {
         LOG.info("Found an expired store file {} whose maxTimestamp is {}, which is below {}",
-            sf.getPath(), fileTs,  maxTs);
+          sf.getPath(), fileTs, maxTs);
         return true;
       } else {
         return false;
@@ -204,4 +202,3 @@ class DefaultStoreFileManager implements StoreFileManager {
     return storeFileComparator;
   }
 }
-

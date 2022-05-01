@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -42,22 +43,22 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({FlakeyTests.class, LargeTests.class})
+@Category({ FlakeyTests.class, LargeTests.class })
 public class TestMasterFailover {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFailover.class);
+    HBaseClassTestRule.forClass(TestMasterFailover.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterFailover.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Simple test of master failover.
    * <p>
-   * Starts with three masters.  Kills a backup master.  Then kills the active
-   * master.  Ensures the final master becomes active and we can still contact
-   * the cluster.
+   * Starts with three masters. Kills a backup master. Then kills the active master. Ensures the
+   * final master becomes active and we can still contact the cluster.
    */
   @Test
   public void testSimpleMasterFailover() throws Exception {
@@ -67,8 +68,8 @@ public class TestMasterFailover {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     try {
-      StartMiniClusterOption option = StartMiniClusterOption.builder()
-          .numMasters(NUM_MASTERS).numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
+      StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(NUM_MASTERS)
+        .numRegionServers(NUM_RS).numDataNodes(NUM_RS).build();
       TEST_UTIL.startMiniCluster(option);
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
@@ -122,14 +123,14 @@ public class TestMasterFailover {
       assertEquals(2, masterThreads.size());
       int rsCount = masterThreads.get(activeIndex).getMaster().getClusterMetrics()
         .getLiveServerMetrics().size();
-      LOG.info("Active master " + active.getServerName() + " managing " + rsCount +
-          " regions servers");
+      LOG.info(
+        "Active master " + active.getServerName() + " managing " + rsCount + " regions servers");
       assertEquals(3, rsCount);
 
       // wait for the active master to acknowledge loss of the backup from ZK
       final HMaster activeFinal = active;
-      TEST_UTIL.waitFor(
-        TimeUnit.SECONDS.toMillis(30), () -> activeFinal.getBackupMasters().size() == 1);
+      TEST_UTIL.waitFor(TimeUnit.SECONDS.toMillis(30),
+        () -> activeFinal.getBackupMasters().size() == 1);
 
       // Check that ClusterStatus reports the correct active and backup masters
       assertNotNull(active);
@@ -168,9 +169,9 @@ public class TestMasterFailover {
   }
 
   /**
-   * Test meta in transition when master failover.
-   * This test used to manipulate region state up in zk. That is not allowed any more in hbase2
-   * so I removed that messing. That makes this test anemic.
+   * Test meta in transition when master failover. This test used to manipulate region state up in
+   * zk. That is not allowed any more in hbase2 so I removed that messing. That makes this test
+   * anemic.
    */
   @Test
   public void testMetaInTransitionWhenMasterFailover() throws Exception {
@@ -193,8 +194,7 @@ public class TestMasterFailover {
 
       // meta should remain where it was
       RegionState metaState = MetaTableLocator.getMetaRegionState(hrs.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS",
-          metaState.getServerName(), metaServerName);
+      assertEquals("hbase:meta should be online on RS", metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
 
       // Start up a new master
@@ -206,8 +206,7 @@ public class TestMasterFailover {
 
       // ensure meta is still deployed on RS
       metaState = MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
-      assertEquals("hbase:meta should be online on RS",
-          metaState.getServerName(), metaServerName);
+      assertEquals("hbase:meta should be online on RS", metaState.getServerName(), metaServerName);
       assertEquals("hbase:meta should be online on RS", State.OPEN, metaState.getState());
 
       // Done, shutdown the cluster
@@ -216,4 +215,3 @@ public class TestMasterFailover {
     }
   }
 }
-

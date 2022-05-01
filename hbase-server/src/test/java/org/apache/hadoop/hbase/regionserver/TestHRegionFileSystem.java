@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,20 +58,19 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestHRegionFileSystem {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
+    HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
-  private static final byte[][] FAMILIES = {
-    Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
-    Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
+  private static final byte[][] FAMILIES =
+    { Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")), Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
 
   @Rule
@@ -114,8 +113,10 @@ public class TestHRegionFileSystem {
       // alter through setting HStore#BLOCK_STORAGE_POLICY_KEY in HColumnDescriptor
       hcdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
       admin.modifyColumnFamily(TABLE_NAME, hcdA);
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-          getRegionStates().hasRegionsInTransition()) {
+      while (
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .hasRegionsInTransition()
+      ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
@@ -123,8 +124,10 @@ public class TestHRegionFileSystem {
       HColumnDescriptor hcdB = new HColumnDescriptor(Bytes.toString(FAMILIES[1]));
       hcdB.setStoragePolicy("ALL_SSD");
       admin.modifyColumnFamily(TABLE_NAME, hcdB);
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .hasRegionsInTransition()) {
+      while (
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .hasRegionsInTransition()
+      ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
@@ -276,7 +279,7 @@ public class TestHRegionFileSystem {
 
     @Override
     public FSDataOutputStream create(Path arg0, FsPermission arg1, boolean arg2, int arg3,
-        short arg4, long arg5, Progressable arg6) throws IOException {
+      short arg4, long arg5, Progressable arg6) throws IOException {
       LOG.debug("Create, " + retryCount);
       if (retryCount++ < successRetryCount) throw new IOException("Something bad happen");
       return null;

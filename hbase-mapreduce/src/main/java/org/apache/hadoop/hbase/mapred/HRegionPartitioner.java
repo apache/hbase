@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,9 +20,6 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -31,18 +27,18 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This is used to partition the output keys into groups of keys.
- * Keys are grouped according to the regions that currently exist
- * so that each reducer fills a single region so load is distributed.
- *
+ * This is used to partition the output keys into groups of keys. Keys are grouped according to the
+ * regions that currently exist so that each reducer fills a single region so load is distributed.
  * @param <K2>
  * @param <V2>
  */
 @InterfaceAudience.Public
-public class HRegionPartitioner<K2,V2>
-implements Partitioner<ImmutableBytesWritable, V2> {
+public class HRegionPartitioner<K2, V2> implements Partitioner<ImmutableBytesWritable, V2> {
   private static final Logger LOG = LoggerFactory.getLogger(HRegionPartitioner.class);
   // Connection and locator are not cleaned up; they just die when partitioner is done.
   private Connection connection;
@@ -70,7 +66,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
   public int getPartition(ImmutableBytesWritable key, V2 value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
-    if (this.startKeys.length == 1){
+    if (this.startKeys.length == 1) {
       return 0;
     }
     try {
@@ -80,12 +76,11 @@ implements Partitioner<ImmutableBytesWritable, V2> {
     } catch (IOException e) {
       LOG.error(e.toString(), e);
     }
-    for (int i = 0; i < this.startKeys.length; i++){
-      if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){
-        if (i >= numPartitions){
+    for (int i = 0; i < this.startKeys.length; i++) {
+      if (Bytes.compareTo(region, this.startKeys[i]) == 0) {
+        if (i >= numPartitions) {
           // cover if we have less reduces then regions.
-          return (Integer.toString(i).hashCode()
-              & Integer.MAX_VALUE) % numPartitions;
+          return (Integer.toString(i).hashCode() & Integer.MAX_VALUE) % numPartitions;
         }
         return i;
       }

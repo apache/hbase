@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -42,7 +41,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
   private User userOwner;
 
   public MultiThreadedWriterWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, User userOwner) throws IOException {
+    TableName tableName, User userOwner) throws IOException {
     super(dataGen, conf, tableName);
     this.userOwner = userOwner;
   }
@@ -80,7 +79,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
         try {
           table.close();
         } catch (Exception e) {
-          LOG.error("Error in closing the table "+table.getName(), e);
+          LOG.error("Error in closing the table " + table.getName(), e);
         }
       }
     }
@@ -136,8 +135,8 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
   }
 
-  private void recordFailure(final Table table, final Put put, final long keyBase,
-      final long start, IOException e) {
+  private void recordFailure(final Table table, final Put put, final long keyBase, final long start,
+    IOException e) {
     failedKeySet.add(keyBase);
     String exceptionInfo;
     if (e instanceof RetriesExhaustedWithDetailsException) {
@@ -151,7 +150,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       exceptionInfo = StringUtils.stringifyException(e);
     }
     LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start)
-        + "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
-        + exceptionInfo);
+      + "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
+      + exceptionInfo);
   }
 }

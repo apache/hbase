@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class ReplicationFactory {
   }
 
   public static ReplicationTracker getReplicationTracker(ZKWatcher zookeeper, Abortable abortable,
-      Stoppable stopper) {
+    Stoppable stopper) {
     return new ReplicationTrackerZKImpl(zookeeper, abortable, stopper);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -42,6 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 @Category(MediumTests.class)
@@ -49,7 +51,7 @@ public class TestReplicator extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicator.class);
+    HBaseClassTestRule.forClass(TestReplicator.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
@@ -70,7 +72,7 @@ public class TestReplicator extends TestReplicationBase {
     // Replace the peer set up for us by the base class with a wrapper for this test
     admin.addPeer("testReplicatorBatching",
       new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()),
+        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()),
       null);
 
     ReplicationEndpointForTest.setBatchCount(0);
@@ -118,9 +120,9 @@ public class TestReplicator extends TestReplicationBase {
     truncateTable(UTIL2, tableName);
 
     // Replace the peer set up for us by the base class with a wrapper for this test
-    admin.addPeer("testReplicatorWithErrors",
-      new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()),
+    admin.addPeer(
+      "testReplicatorWithErrors", new ReplicationPeerConfig().setClusterKey(UTIL2.getClusterKey())
+        .setReplicationEndpointImpl(FailureInjectingReplicationEndpointForTest.class.getName()),
       null);
 
     FailureInjectingReplicationEndpointForTest.setBatchCount(0);
@@ -240,7 +242,7 @@ public class TestReplicator extends TestReplicationBase {
   }
 
   public static class FailureInjectingReplicationEndpointForTest
-      extends ReplicationEndpointForTest {
+    extends ReplicationEndpointForTest {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override

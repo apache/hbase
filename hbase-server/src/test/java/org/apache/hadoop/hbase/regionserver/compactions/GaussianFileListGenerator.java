@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,8 +43,7 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
         ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int i = 0; i < NUM_FILES_GEN; i++) {
           files.add(createMockStoreFile(
-              (int) Math.ceil(Math.max(0, gen.nextNormalizedDouble() * 32 + 32)))
-          );
+            (int) Math.ceil(Math.max(0, gen.nextNormalizedDouble() * 32 + 32))));
         }
 
         return files;

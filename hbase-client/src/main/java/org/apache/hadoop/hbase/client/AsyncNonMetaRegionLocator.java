@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,10 +59,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 
 /**
  * The asynchronous locator for regions other than meta.
@@ -157,7 +158,7 @@ class AsyncNonMetaRegionLocator {
     }
 
     private boolean tryComplete(LocateRequest req, CompletableFuture<RegionLocations> future,
-        RegionLocations locations) {
+      RegionLocations locations) {
       if (future.isDone()) {
         return true;
       }
@@ -177,8 +178,8 @@ class AsyncNonMetaRegionLocator {
         // endKey.
         byte[] endKey = loc.getRegion().getEndKey();
         int c = Bytes.compareTo(endKey, req.row);
-        completed = c == 0 || ((c > 0 || Bytes.equals(EMPTY_END_ROW, endKey)) &&
-          Bytes.compareTo(loc.getRegion().getStartKey(), req.row) < 0);
+        completed = c == 0 || ((c > 0 || Bytes.equals(EMPTY_END_ROW, endKey))
+          && Bytes.compareTo(loc.getRegion().getStartKey(), req.row) < 0);
       } else {
         completed = loc.getRegion().containsRow(req.row);
       }
@@ -199,21 +200,21 @@ class AsyncNonMetaRegionLocator {
       conn.getConfiguration().getInt(LOCATE_PREFETCH_LIMIT, DEFAULT_LOCATE_PREFETCH_LIMIT);
 
     // Get the region locator's meta replica mode.
-    this.metaReplicaMode = CatalogReplicaMode.fromString(conn.getConfiguration()
-      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+    this.metaReplicaMode = CatalogReplicaMode.fromString(
+      conn.getConfiguration().get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
 
     switch (this.metaReplicaMode) {
       case LOAD_BALANCE:
-        String replicaSelectorClass = conn.getConfiguration().
-          get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
-          CatalogReplicaLoadBalanceSimpleSelector.class.getName());
+        String replicaSelectorClass =
+          conn.getConfiguration().get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+            CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
-        this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory.createSelector(
-          replicaSelectorClass, META_TABLE_NAME, conn.getChoreService(), () -> {
+        this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
+          .createSelector(replicaSelectorClass, META_TABLE_NAME, conn.getChoreService(), () -> {
             int numOfReplicas = CatalogReplicaLoadBalanceSelector.UNINITIALIZED_NUM_OF_REPLICAS;
             try {
-              RegionLocations metaLocations = conn.registry.getMetaRegionLocations().get(
-                conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
+              RegionLocations metaLocations = conn.registry.getMetaRegionLocations()
+                .get(conn.connConf.getReadRpcTimeoutNs(), TimeUnit.NANOSECONDS);
               numOfReplicas = metaLocations.size();
             } catch (Exception e) {
               LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
@@ -224,8 +225,8 @@ class AsyncNonMetaRegionLocator {
       case NONE:
         // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
 
-        boolean useMetaReplicas = conn.getConfiguration().getBoolean(USE_META_REPLICAS,
-          DEFAULT_USE_META_REPLICAS);
+        boolean useMetaReplicas =
+          conn.getConfiguration().getBoolean(USE_META_REPLICAS, DEFAULT_USE_META_REPLICAS);
         if (useMetaReplicas) {
           this.metaReplicaMode = CatalogReplicaMode.HEDGED_READ;
         }
@@ -286,9 +287,9 @@ class AsyncNonMetaRegionLocator {
         RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
         if (isEqual(mergedLocs, oldLocs)) {
           // the merged one is the same with the old one, give up
-          LOG.trace("Will not add {} to cache because the old value {} " +
-            " is newer than us or has the same server name." +
-            " Maybe it is updated before we replace it", locs, oldLocs);
+          LOG.trace("Will not add {} to cache because the old value {} "
+            + " is newer than us or has the same server name."
+            + " Maybe it is updated before we replace it", locs, oldLocs);
           return oldLocs;
         }
         if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
@@ -298,8 +299,8 @@ class AsyncNonMetaRegionLocator {
         // the region is different, here we trust the one we fetched. This maybe wrong but finally
         // the upper layer can detect this and trigger removal of the wrong locations
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The newnly fetch region {} is different from the old one {} for row '{}'," +
-            " try replaing the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
+          LOG.debug("The newnly fetch region {} is different from the old one {} for row '{}',"
+            + " try replaing the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
         }
         if (tableCache.cache.replace(startKey, oldLocs, locs)) {
           return locs;
@@ -309,10 +310,10 @@ class AsyncNonMetaRegionLocator {
   }
 
   private void complete(TableName tableName, LocateRequest req, RegionLocations locs,
-      Throwable error) {
+    Throwable error) {
     if (error != null) {
-      LOG.warn("Failed to locate region in '" + tableName + "', row='" +
-        Bytes.toStringBinary(req.row) + "', locateType=" + req.locateType, error);
+      LOG.warn("Failed to locate region in '" + tableName + "', row='"
+        + Bytes.toStringBinary(req.row) + "', locateType=" + req.locateType, error);
     }
     Optional<LocateRequest> toSend = Optional.empty();
     TableCache tableCache = getTableCache(tableName);
@@ -392,7 +393,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   private RegionLocations locateRowInCache(TableCache tableCache, TableName tableName, byte[] row,
-      int replicaId) {
+    int replicaId) {
     Map.Entry<byte[], RegionLocations> entry = tableCache.cache.floorEntry(row);
     if (entry == null) {
       recordCacheMiss();
@@ -419,7 +420,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   private RegionLocations locateRowBeforeInCache(TableCache tableCache, TableName tableName,
-      byte[] row, int replicaId) {
+    byte[] row, int replicaId) {
     boolean isEmptyStopRow = isEmptyStopRow(row);
     Map.Entry<byte[], RegionLocations> entry =
       isEmptyStopRow ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(row);
@@ -433,8 +434,10 @@ class AsyncNonMetaRegionLocator {
       recordCacheMiss();
       return null;
     }
-    if (isEmptyStopRow(loc.getRegion().getEndKey()) ||
-      (!isEmptyStopRow && Bytes.compareTo(loc.getRegion().getEndKey(), row) >= 0)) {
+    if (
+      isEmptyStopRow(loc.getRegion().getEndKey())
+        || (!isEmptyStopRow && Bytes.compareTo(loc.getRegion().getEndKey(), row) >= 0)
+    ) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Found {} in cache for {}, row='{}', locateType={}, replicaId={}", loc, tableName,
           Bytes.toStringBinary(row), RegionLocateType.BEFORE, replicaId);
@@ -449,8 +452,8 @@ class AsyncNonMetaRegionLocator {
 
   private void locateInMeta(TableName tableName, LocateRequest req) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row) +
-        "', locateType=" + req.locateType + " in meta");
+      LOG.trace("Try locate '" + tableName + "', row='" + Bytes.toStringBinary(req.row)
+        + "', locateType=" + req.locateType + " in meta");
     }
     byte[] metaStartKey;
     if (req.locateType.equals(RegionLocateType.BEFORE)) {
@@ -549,7 +552,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   private RegionLocations locateInCache(TableCache tableCache, TableName tableName, byte[] row,
-      int replicaId, RegionLocateType locateType) {
+    int replicaId, RegionLocateType locateType) {
     return locateType.equals(RegionLocateType.BEFORE)
       ? locateRowBeforeInCache(tableCache, tableName, row, replicaId)
       : locateRowInCache(tableCache, tableName, row, replicaId);
@@ -559,7 +562,7 @@ class AsyncNonMetaRegionLocator {
   // placed before it. Used for reverse scan. See the comment of
   // AsyncRegionLocator.getPreviousRegionLocation.
   private CompletableFuture<RegionLocations> getRegionLocationsInternal(TableName tableName,
-      byte[] row, int replicaId, RegionLocateType locateType, boolean reload) {
+    byte[] row, int replicaId, RegionLocateType locateType, boolean reload) {
     // AFTER should be convert to CURRENT before calling this method
     assert !locateType.equals(RegionLocateType.AFTER);
     TableCache tableCache = getTableCache(tableName);
@@ -598,7 +601,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      int replicaId, RegionLocateType locateType, boolean reload) {
+    int replicaId, RegionLocateType locateType, boolean reload) {
     // as we know the exact row after us, so we can just create the new row, and use the same
     // algorithm to locate it.
     if (locateType.equals(RegionLocateType.AFTER)) {

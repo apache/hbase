@@ -56,6 +56,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -88,13 +89,13 @@ public class TestBulkloadBase {
   }
 
   protected Pair<byte[], String> withInvalidColumnFamilyButProperHFileLocation(byte[] family)
-      throws IOException {
+    throws IOException {
     createHFileForFamilies(family);
     return new Pair<>(new byte[] { 0x00, 0x01, 0x02 }, getNotExistFilePath());
   }
 
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
@@ -137,8 +138,8 @@ public class TestBulkloadBase {
       HFile.Writer writer = hFileFactory.create();
       try {
         writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(randomBytes).setFamily(family).setQualifier(randomBytes).setTimestamp(0L)
-            .setType(KeyValue.Type.Put.getCode()).setValue(randomBytes).build()));
+          .setRow(randomBytes).setFamily(family).setQualifier(randomBytes).setTimestamp(0L)
+          .setType(KeyValue.Type.Put.getCode()).setValue(randomBytes).build()));
       } finally {
         writer.close();
       }
@@ -153,7 +154,7 @@ public class TestBulkloadBase {
   }
 
   protected static Matcher<WALEdit> bulkLogWalEdit(byte[] typeBytes, byte[] tableName,
-      byte[] familyName, List<String> storeFileNames) {
+    byte[] familyName, List<String> storeFileNames) {
     return new WalMatcher(typeBytes, tableName, familyName, storeFileNames);
   }
 
@@ -168,7 +169,7 @@ public class TestBulkloadBase {
     }
 
     public WalMatcher(byte[] typeBytes, byte[] tableName, byte[] familyName,
-        List<String> storeFileNames) {
+      List<String> storeFileNames) {
       this.typeBytes = typeBytes;
       this.tableName = tableName;
       this.familyName = familyName;

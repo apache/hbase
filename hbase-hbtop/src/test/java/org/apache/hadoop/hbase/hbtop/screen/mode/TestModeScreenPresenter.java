@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestModeScreenPresenter {
@@ -69,7 +68,7 @@ public class TestModeScreenPresenter {
     int modeDescriptionMaxLength = Mode.REGION_SERVER.getDescription().length();
 
     verify(modeScreenView).showModeScreen(eq(Mode.REGION), eq(Arrays.asList(Mode.values())),
-      eq(Mode.REGION.ordinal()) , eq(modeHeaderMaxLength), eq(modeDescriptionMaxLength));
+      eq(Mode.REGION.ordinal()), eq(modeHeaderMaxLength), eq(modeDescriptionMaxLength));
   }
 
   @Test

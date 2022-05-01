@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,13 +36,13 @@ import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
@@ -70,7 +70,7 @@ public class RegionServerTracker extends ZKListener {
   private final ExecutorService executor;
 
   public RegionServerTracker(ZKWatcher watcher, MasterServices server,
-      ServerManager serverManager) {
+    ServerManager serverManager) {
     super(watcher);
     this.server = server;
     this.serverManager = serverManager;
@@ -79,7 +79,7 @@ public class RegionServerTracker extends ZKListener {
   }
 
   private Pair<ServerName, RegionServerInfo> getServerInfo(String name)
-      throws KeeperException, IOException {
+    throws KeeperException, IOException {
     ServerName serverName = ServerName.parseServerName(name);
     String nodePath = ZNodePaths.joinZNode(watcher.getZNodePaths().rsZNode, name);
     byte[] data;
@@ -115,24 +115,24 @@ public class RegionServerTracker extends ZKListener {
    * current master instance, we will schedule a SCP for it. This is done in
    * {@link ServerManager#findDeadServersAndProcess(Set, Set)}, we call it here under the lock
    * protection to prevent concurrency issues with server expiration operation.
-   * @param deadServersFromPE the region servers which already have SCP associated.
-   * @param liveServersFromWALDir the live region servers from wal directory.
+   * @param deadServersFromPE          the region servers which already have SCP associated.
+   * @param liveServersFromWALDir      the live region servers from wal directory.
    * @param splittingServersFromWALDir Servers whose WALs are being actively 'split'.
    */
   public void start(Set<ServerName> deadServersFromPE, Set<ServerName> liveServersFromWALDir,
-      Set<ServerName> splittingServersFromWALDir)
-      throws KeeperException, IOException {
-    LOG.info("Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} " +
-        "possibly 'live' servers, and {} 'splitting'.", deadServersFromPE.size(),
-        liveServersFromWALDir.size(), splittingServersFromWALDir.size());
+    Set<ServerName> splittingServersFromWALDir) throws KeeperException, IOException {
+    LOG.info(
+      "Starting RegionServerTracker; {} have existing ServerCrashProcedures, {} "
+        + "possibly 'live' servers, and {} 'splitting'.",
+      deadServersFromPE.size(), liveServersFromWALDir.size(), splittingServersFromWALDir.size());
     // deadServersFromPE is made from a list of outstanding ServerCrashProcedures.
     // splittingServersFromWALDir are being actively split -- the directory in the FS ends in
     // '-SPLITTING'. Each splitting server should have a corresponding SCP. Log if not.
-    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s)).
-      forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
-    //create ServerNode for all possible live servers from wal directory
+    splittingServersFromWALDir.stream().filter(s -> !deadServersFromPE.contains(s))
+      .forEach(s -> LOG.error("{} has no matching ServerCrashProcedure", s));
+    // create ServerNode for all possible live servers from wal directory
     liveServersFromWALDir
-        .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
+      .forEach(sn -> server.getAssignmentManager().getRegionStates().getOrCreateServer(sn));
     watcher.registerListener(this);
     synchronized (this) {
       List<String> servers =
@@ -143,10 +143,11 @@ public class RegionServerTracker extends ZKListener {
           ServerName serverName = pair.getFirst();
           RegionServerInfo info = pair.getSecond();
           regionServers.add(serverName);
-          ServerMetrics serverMetrics = info != null ?
-            ServerMetricsBuilder.of(serverName, VersionInfoUtil.getVersionNumber(info.getVersionInfo()),
-              info.getVersionInfo().getVersion()) :
-            ServerMetricsBuilder.of(serverName);
+          ServerMetrics serverMetrics = info != null
+            ? ServerMetricsBuilder.of(serverName,
+              VersionInfoUtil.getVersionNumber(info.getVersionInfo()),
+              info.getVersionInfo().getVersion())
+            : ServerMetricsBuilder.of(serverName);
           serverManager.checkAndRecordNewServer(serverName, serverMetrics);
         }
       }
@@ -168,8 +169,9 @@ public class RegionServerTracker extends ZKListener {
       server.abort("Unexpected zk exception getting RS nodes", e);
       return;
     }
-    Set<ServerName> servers = CollectionUtils.isEmpty(names) ? Collections.emptySet() :
-      names.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+    Set<ServerName> servers = CollectionUtils.isEmpty(names)
+      ? Collections.emptySet()
+      : names.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
 
     for (Iterator<ServerName> iter = regionServers.iterator(); iter.hasNext();) {
       ServerName sn = iter.next();
@@ -197,8 +199,9 @@ public class RegionServerTracker extends ZKListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.getZNodePaths().rsZNode) && !server.isAborted() &&
-      !server.isStopped()) {
+    if (
+      path.equals(watcher.getZNodePaths().rsZNode) && !server.isAborted() && !server.isStopped()
+    ) {
       executor.execute(this::refresh);
     }
   }

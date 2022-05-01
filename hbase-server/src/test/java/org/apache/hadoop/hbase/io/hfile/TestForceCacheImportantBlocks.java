@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,21 +45,20 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Make sure we always cache important block types, such as index blocks, as
- * long as we have a block cache, even though block caching might be disabled
- * for the column family.
- *
- * <p>TODO: This test writes a lot of data and only tests the most basic of metrics.  Cache stats
- * need to reveal more about what is being cached whether DATA or INDEX blocks and then we could
- * do more verification in this test.
+ * Make sure we always cache important block types, such as index blocks, as long as we have a block
+ * cache, even though block caching might be disabled for the column family.
+ * <p>
+ * TODO: This test writes a lot of data and only tests the most basic of metrics. Cache stats need
+ * to reveal more about what is being cached whether DATA or INDEX blocks and then we could do more
+ * verification in this test.
  */
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestForceCacheImportantBlocks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
+    HBaseClassTestRule.forClass(TestForceCacheImportantBlocks.class);
 
   private final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
@@ -77,8 +76,7 @@ public class TestForceCacheImportantBlocks {
   /** Extremely small block size, so that we can get some index blocks */
   private static final int BLOCK_SIZE = 256;
 
-  private static final Algorithm COMPRESSION_ALGORITHM =
-      Compression.Algorithm.GZ;
+  private static final Algorithm COMPRESSION_ALGORITHM = Compression.Algorithm.GZ;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
 
   @SuppressWarnings("unused")
@@ -89,10 +87,7 @@ public class TestForceCacheImportantBlocks {
   @Parameters
   public static Collection<Object[]> parameters() {
     // HFile versions
-    return Arrays.asList(
-      new Object[] { 3, true },
-      new Object[] { 3, false }
-    );
+    return Arrays.asList(new Object[] { 3, true }, new Object[] { 3, false });
   }
 
   public TestForceCacheImportantBlocks(int hfileVersion, boolean cfCacheEnabled) {
@@ -112,16 +107,16 @@ public class TestForceCacheImportantBlocks {
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, BLOCK_SIZE);
     BlockCache blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
     ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS)
-            .setCompressionType(COMPRESSION_ALGORITHM).setBloomFilterType(BLOOM_TYPE)
-            .setBlocksize(BLOCK_SIZE).setBlockCacheEnabled(cfCacheEnabled).build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS)
+        .setCompressionType(COMPRESSION_ALGORITHM).setBloomFilterType(BLOOM_TYPE)
+        .setBlocksize(BLOCK_SIZE).setBlockCacheEnabled(cfCacheEnabled).build();
     HRegion region = TEST_UTIL.createTestRegion(TABLE, cfd, blockCache);
     CacheStats stats = blockCache.getStats();
     writeTestData(region);
     assertEquals(0, stats.getHitCount());
     assertEquals(0, HFile.DATABLOCK_READ_COUNT.sum());
-    // Do a single get, take count of caches.  If we are NOT caching DATA blocks, the miss
-    // count should go up.  Otherwise, all should be cached and the miss count should not rise.
+    // Do a single get, take count of caches. If we are NOT caching DATA blocks, the miss
+    // count should go up. Otherwise, all should be cached and the miss count should not rise.
     region.get(new Get(Bytes.toBytes("row" + 0)));
     assertTrue(stats.getHitCount() > 0);
     assertTrue(HFile.DATABLOCK_READ_COUNT.sum() > 0);
@@ -137,7 +132,7 @@ public class TestForceCacheImportantBlocks {
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         for (long ts = 1; ts < NUM_TIMESTAMPS_PER_COL; ++ts) {
           put.addColumn(CF_BYTES, Bytes.toBytes("col" + j), ts,
-                  Bytes.toBytes("value" + i + "_" + j + "_" + ts));
+            Bytes.toBytes("value" + i + "_" + j + "_" + ts));
         }
       }
       region.put(put);

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +41,7 @@ public final class PrefetchExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(PrefetchExecutor.class);
 
   /** Futures for tracking block prefetch activity */
-  private static final Map<Path,Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
+  private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
@@ -58,15 +57,14 @@ public final class PrefetchExecutor {
     prefetchDelayMillis = conf.getInt("hbase.hfile.prefetch.delay", 1000);
     prefetchDelayVariation = conf.getFloat("hbase.hfile.prefetch.delay.variation", 0.2f);
     int prefetchThreads = conf.getInt("hbase.hfile.thread.prefetch", 4);
-    prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads,
-      new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-          String name = "hfile-prefetch-" + System.currentTimeMillis();
-          Thread t = new Thread(r, name);
-          t.setDaemon(true);
-          return t;
-        }
+    prefetchExecutorPool = new ScheduledThreadPoolExecutor(prefetchThreads, new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        String name = "hfile-prefetch-" + System.currentTimeMillis();
+        Thread t = new Thread(r, name);
+        t.setDaemon(true);
+        return t;
+      }
     });
   }
 
@@ -74,24 +72,17 @@ public final class PrefetchExecutor {
   // prefetching of file blocks but the Store level is where path convention
   // knowledge should be contained
   private static final Pattern prefetchPathExclude =
-      Pattern.compile(
-        "(" +
-          Path.SEPARATOR_CHAR +
-            HConstants.HBASE_TEMP_DIRECTORY.replace(".", "\\.") +
-            Path.SEPARATOR_CHAR +
-        ")|(" +
-          Path.SEPARATOR_CHAR +
-            HConstants.HREGION_COMPACTIONDIR_NAME.replace(".", "\\.") +
-            Path.SEPARATOR_CHAR +
-        ")");
+    Pattern.compile("(" + Path.SEPARATOR_CHAR + HConstants.HBASE_TEMP_DIRECTORY.replace(".", "\\.")
+      + Path.SEPARATOR_CHAR + ")|(" + Path.SEPARATOR_CHAR
+      + HConstants.HREGION_COMPACTIONDIR_NAME.replace(".", "\\.") + Path.SEPARATOR_CHAR + ")");
 
   public static void request(Path path, Runnable runnable) {
     if (!prefetchPathExclude.matcher(path.toString()).find()) {
       long delay;
       if (prefetchDelayMillis > 0) {
-        delay = (long)((prefetchDelayMillis * (1.0f - (prefetchDelayVariation/2))) +
-          (prefetchDelayMillis * (prefetchDelayVariation/2) *
-          ThreadLocalRandom.current().nextFloat()));
+        delay = (long) ((prefetchDelayMillis * (1.0f - (prefetchDelayVariation / 2)))
+          + (prefetchDelayMillis * (prefetchDelayVariation / 2)
+            * ThreadLocalRandom.current().nextFloat()));
       } else {
         delay = 0;
       }
@@ -99,8 +90,8 @@ public final class PrefetchExecutor {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Prefetch requested for " + path + ", delay=" + delay + " ms");
         }
-        prefetchFutures.put(path, prefetchExecutorPool.schedule(runnable, delay,
-          TimeUnit.MILLISECONDS));
+        prefetchFutures.put(path,
+          prefetchExecutorPool.schedule(runnable, delay, TimeUnit.MILLISECONDS));
       } catch (RejectedExecutionException e) {
         prefetchFutures.remove(path);
         LOG.warn("Prefetch request rejected for " + path);
@@ -135,5 +126,6 @@ public final class PrefetchExecutor {
     return true;
   }
 
-  private PrefetchExecutor() {}
+  private PrefetchExecutor() {
+  }
 }

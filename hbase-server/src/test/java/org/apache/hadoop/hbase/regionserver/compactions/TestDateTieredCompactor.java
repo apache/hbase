@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,7 @@ public class TestDateTieredCompactor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDateTieredCompactor.class);
+    HBaseClassTestRule.forClass(TestDateTieredCompactor.class);
 
   private static final byte[] NAME_OF_THINGS = Bytes.toBytes("foo");
 
@@ -94,7 +94,7 @@ public class TestDateTieredCompactor {
   public boolean usePrivateReaders;
 
   private DateTieredCompactor createCompactor(StoreFileWritersCapture writers,
-      final KeyValue[] input, List<HStoreFile> storefiles) throws Exception {
+    final KeyValue[] input, List<HStoreFile> storefiles) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.regionserver.compaction.private.readers", usePrivateReaders);
     final Scanner scanner = new Scanner(input);
@@ -108,10 +108,10 @@ public class TestDateTieredCompactor {
     when(store.areWritesEnabled()).thenReturn(true);
     when(store.getFileSystem()).thenReturn(mock(FileSystem.class));
     when(store.getRegionInfo()).thenReturn(new HRegionInfo(TABLE_NAME));
-    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
-      anyBoolean(), anyBoolean(), anyBoolean())).thenAnswer(writers);
-    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(),
-      anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyString())).thenAnswer(writers);
+    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(), anyBoolean(), anyBoolean(),
+      anyBoolean())).thenAnswer(writers);
+    when(store.createWriterInTmp(anyLong(), any(), anyBoolean(), anyBoolean(), anyBoolean(),
+      anyBoolean(), anyLong(), anyString())).thenAnswer(writers);
     when(store.getComparator()).thenReturn(CellComparatorImpl.COMPARATOR);
     OptionalLong maxSequenceId = StoreUtils.getMaxSequenceIdInList(storefiles);
     when(store.getMaxSequenceId()).thenReturn(maxSequenceId);
@@ -119,22 +119,22 @@ public class TestDateTieredCompactor {
     return new DateTieredCompactor(conf, store) {
       @Override
       protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
-          List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
-          byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
+        List<StoreFileScanner> scanners, long smallestReadPoint, long earliestPutTs,
+        byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
         return scanner;
       }
 
       @Override
       protected InternalScanner createScanner(HStore store, ScanInfo scanInfo,
-          List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
-          long earliestPutTs) throws IOException {
+        List<StoreFileScanner> scanners, ScanType scanType, long smallestReadPoint,
+        long earliestPutTs) throws IOException {
         return scanner;
       }
     };
   }
 
   private void verify(KeyValue[] input, List<Long> boundaries, KeyValue[][] output,
-      boolean allFiles) throws Exception {
+    boolean allFiles) throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     HStoreFile sf1 = createDummyStoreFile(1L);
     HStoreFile sf2 = createDummyStoreFile(2L);
@@ -167,8 +167,8 @@ public class TestDateTieredCompactor {
   public void testEmptyOutputFile() throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     CompactionRequestImpl request = createDummyRequest();
-    DateTieredCompactor dtc = createCompactor(writers, new KeyValue[0],
-      new ArrayList<>(request.getFiles()));
+    DateTieredCompactor dtc =
+      createCompactor(writers, new KeyValue[0], new ArrayList<>(request.getFiles()));
     List<Path> paths = dtc.compact(request, Arrays.asList(Long.MIN_VALUE, Long.MAX_VALUE),
       new HashMap<Long, String>(), NoLimitThroughputController.INSTANCE, null);
     assertEquals(1, paths.size());

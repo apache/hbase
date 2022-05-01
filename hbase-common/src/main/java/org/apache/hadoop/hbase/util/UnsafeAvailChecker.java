@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,7 +161,7 @@ public class UnsafeAvailChecker {
           unaligned = (Boolean) m.invoke(null);
         } catch (Exception e) {
           LOG.warn("java.nio.Bits#unaligned() check failed."
-              + "Unsafe based read/write of primitive types won't be used", e);
+            + "Unsafe based read/write of primitive types won't be used", e);
         }
       }
     }

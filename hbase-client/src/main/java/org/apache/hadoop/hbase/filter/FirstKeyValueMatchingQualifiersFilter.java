@@ -15,33 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * The filter looks for the given columns in KeyValue. Once there is a match for
- * any one of the columns, it returns ReturnCode.NEXT_ROW for remaining
- * KeyValues in the row.
+ * The filter looks for the given columns in KeyValue. Once there is a match for any one of the
+ * columns, it returns ReturnCode.NEXT_ROW for remaining KeyValues in the row.
  * <p>
- * Note : It may emit KVs which do not have the given columns in them, if
- * these KVs happen to occur before a KV which does have a match. Given this
- * caveat, this filter is only useful for special cases
- * like org.apache.hadoop.hbase.mapreduce.RowCounter.
+ * Note : It may emit KVs which do not have the given columns in them, if these KVs happen to occur
+ * before a KV which does have a match. Given this caveat, this filter is only useful for special
+ * cases like org.apache.hadoop.hbase.mapreduce.RowCounter.
  * <p>
  * @deprecated Deprecated in 2.0.0 and will be removed in 3.0.0.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-13347">HBASE-13347</a>
@@ -50,15 +47,14 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 @Deprecated
 public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
-  private Set<byte []> qualifiers;
+  private Set<byte[]> qualifiers;
 
   /**
-   * Constructor which takes a set of columns. As soon as first KeyValue
-   * matching any of these columns is found, filter moves to next row.
-   * 
+   * Constructor which takes a set of columns. As soon as first KeyValue matching any of these
+   * columns is found, filter moves to next row.
    * @param qualifiers the set of columns to me matched.
    */
-  public FirstKeyValueMatchingQualifiersFilter(Set<byte []> qualifiers) {
+  public FirstKeyValueMatchingQualifiersFilter(Set<byte[]> qualifiers) {
     this.qualifiers = qualifiers;
   }
 
@@ -91,7 +87,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     FilterProtos.FirstKeyValueMatchingQualifiersFilter.Builder builder =
       FilterProtos.FirstKeyValueMatchingQualifiersFilter.newBuilder();
     for (byte[] qualifier : qualifiers) {
@@ -102,12 +98,11 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   /**
    * @param pbBytes A pb serialized {@link FirstKeyValueMatchingQualifiersFilter} instance
-   * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray
+   * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from
+   *         <code>bytes</code> n * @see #toByteArray
    */
-  public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     FilterProtos.FirstKeyValueMatchingQualifiersFilter proto;
     try {
       proto = FilterProtos.FirstKeyValueMatchingQualifiersFilter.parseFrom(pbBytes);
@@ -115,7 +110,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
       throw new DeserializationException(e);
     }
 
-    TreeSet<byte []> qualifiers = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    TreeSet<byte[]> qualifiers = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     for (ByteString qualifier : proto.getQualifiersList()) {
       qualifiers.add(qualifier.toByteArray());
     }
@@ -124,15 +119,15 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof FirstKeyValueMatchingQualifiersFilter)) return false;
 
-    FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter)o;
+    FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter) o;
     return this.qualifiers.equals(other.qualifiers);
   }
 

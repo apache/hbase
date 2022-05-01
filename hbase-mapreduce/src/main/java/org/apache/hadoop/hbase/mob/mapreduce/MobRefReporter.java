@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +61,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * Scans a given table + CF for all mob reference cells to get the list of backing mob files. For
@@ -168,8 +166,8 @@ public class MobRefReporter extends Configured implements Tool {
 
   public static class MobRefMapper extends TableMapper<Text, ImmutableBytesWritable> {
     @Override
-    public void map(ImmutableBytesWritable r, Result columns, Context context) throws IOException,
-        InterruptedException {
+    public void map(ImmutableBytesWritable r, Result columns, Context context)
+      throws IOException, InterruptedException {
       if (columns == null) {
         return;
       }
@@ -189,24 +187,27 @@ public class MobRefReporter extends Configured implements Tool {
             files.add(fileName);
           }
           final int cellsize = MobUtils.getMobValueLength(c);
-          context.getCounter("SIZES OF CELLS", "Number of cells with size in the " +
-              log10GroupedString(cellsize) + "s of bytes").increment(1L);
+          context
+            .getCounter("SIZES OF CELLS",
+              "Number of cells with size in the " + log10GroupedString(cellsize) + "s of bytes")
+            .increment(1L);
           size += cellsize;
           count++;
         } else {
           LOG.debug("cell is not a mob ref, even though we asked for only refs. cell={}", c);
         }
       }
-      context.getCounter("CELLS PER ROW", "Number of rows with " + log10GroupedString(count) +
-          "s of cells per row").increment(1L);
-      context.getCounter("SIZES OF ROWS", "Number of rows with total size in the " +
-          log10GroupedString(size) + "s of bytes").increment(1L);
-      context.getCounter("MOB","NUM_CELLS").increment(count);
+      context.getCounter("CELLS PER ROW",
+        "Number of rows with " + log10GroupedString(count) + "s of cells per row").increment(1L);
+      context
+        .getCounter("SIZES OF ROWS",
+          "Number of rows with total size in the " + log10GroupedString(size) + "s of bytes")
+        .increment(1L);
+      context.getCounter("MOB", "NUM_CELLS").increment(count);
     }
   }
 
-  public static class MobRefReducer extends
-      Reducer<Text, ImmutableBytesWritable, Text, Text> {
+  public static class MobRefReducer extends Reducer<Text, ImmutableBytesWritable, Text, Text> {
 
     TableName table;
     String mobRegion;
@@ -220,7 +221,7 @@ public class MobRefReporter extends Configured implements Tool {
     final Text OK_HLINK_CLONE = new Text("HLINK TO ARCHIVE FOR OTHER TABLE");
     /* Results that mean something is incorrect */
     final Text INCONSISTENT_ARCHIVE_BAD_LINK =
-        new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
+      new Text("ARCHIVE WITH HLINK BUT NOT FROM OUR TABLE");
     final Text INCONSISTENT_ARCHIVE_STALE = new Text("ARCHIVE BUT NO HLINKS");
     final Text INCONSISTENT_ARCHIVE_IOE = new Text("ARCHIVE BUT FAILURE WHILE CHECKING HLINKS");
     /* Results that mean data is probably already gone */
@@ -245,21 +246,21 @@ public class MobRefReporter extends Configured implements Tool {
       mob = MobUtils.getMobFamilyPath(conf, table, family);
       LOG.info("Using active mob area '{}'", mob);
       archive = HFileArchiveUtil.getStoreArchivePath(conf, table,
-          MobUtils.getMobRegionInfo(table).getEncodedName(), family);
+        MobUtils.getMobRegionInfo(table).getEncodedName(), family);
       LOG.info("Using archive mob area '{}'", archive);
       seperator = conf.get(TextOutputFormat.SEPERATOR, "\t");
     }
 
     @Override
     public void reduce(Text key, Iterable<ImmutableBytesWritable> rows, Context context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       final Configuration conf = context.getConfiguration();
       final String file = key.toString();
       // active mob area
       if (mob.getFileSystem(conf).exists(new Path(mob, file))) {
         LOG.debug("Found file '{}' in mob area", file);
         context.write(OK_MOB_DIR, key);
-      // archive area - is there an hlink back reference (from a snapshot from same table)
+        // archive area - is there an hlink back reference (from a snapshot from same table)
       } else if (archive.getFileSystem(conf).exists(new Path(archive, file))) {
 
         Path backRefDir = HFileLink.getBackReferencesDir(archive, file);
@@ -268,37 +269,38 @@ public class MobRefReporter extends Configured implements Tool {
           if (backRefs != null) {
             boolean found = false;
             for (FileStatus backRef : backRefs) {
-              Pair<TableName, String> refParts = HFileLink.parseBackReferenceName(
-                  backRef.getPath().getName());
+              Pair<TableName, String> refParts =
+                HFileLink.parseBackReferenceName(backRef.getPath().getName());
               if (table.equals(refParts.getFirst()) && mobRegion.equals(refParts.getSecond())) {
-                Path hlinkPath = HFileLink.getHFileFromBackReference(MobUtils.getMobHome(conf),
-                    backRef.getPath());
+                Path hlinkPath =
+                  HFileLink.getHFileFromBackReference(MobUtils.getMobHome(conf), backRef.getPath());
                 if (hlinkPath.getFileSystem(conf).exists(hlinkPath)) {
                   found = true;
                 } else {
-                  LOG.warn("Found file '{}' in archive area with a back reference to the mob area "
+                  LOG.warn(
+                    "Found file '{}' in archive area with a back reference to the mob area "
                       + "for our table, but the mob area does not have a corresponding hfilelink.",
-                      file);
+                    file);
                 }
               }
             }
             if (found) {
               LOG.debug("Found file '{}' in archive area. has proper hlink back references to "
-                  + "suggest it is from a restored snapshot for this table.", file);
+                + "suggest it is from a restored snapshot for this table.", file);
               context.write(OK_HLINK_RESTORE, key);
             } else {
               LOG.warn("Found file '{}' in archive area, but the hlink back references do not "
-                  + "properly point to the mob area for our table.", file);
+                + "properly point to the mob area for our table.", file);
               context.write(INCONSISTENT_ARCHIVE_BAD_LINK, encodeRows(context, key, rows));
             }
           } else {
             LOG.warn("Found file '{}' in archive area, but there are no hlinks pointing to it. Not "
-                + "yet used snapshot or an error.", file);
+              + "yet used snapshot or an error.", file);
             context.write(INCONSISTENT_ARCHIVE_STALE, encodeRows(context, key, rows));
           }
         } catch (IOException e) {
           LOG.warn("Found file '{}' in archive area, but got an error while checking "
-              + "on back references.", file, e);
+            + "on back references.", file, e);
           context.write(INCONSISTENT_ARCHIVE_IOE, encodeRows(context, key, rows));
         }
 
@@ -306,19 +308,18 @@ public class MobRefReporter extends Configured implements Tool {
         // check for an hlink in the active mob area (from a snapshot of a different table)
         try {
           /**
-           * we are doing this ourselves instead of using FSUtils.getReferenceFilePaths because
-           * we know the mob region never splits, so we can only have HFileLink references
-           * and looking for just them is cheaper then listing everything.
-           *
-           * This glob should match the naming convention for HFileLinks to our referenced hfile.
-           * As simplified explanation those file names look like "table=region-hfile". For details
-           * see the {@link HFileLink#createHFileLinkName HFileLink implementation}.
+           * we are doing this ourselves instead of using FSUtils.getReferenceFilePaths because we
+           * know the mob region never splits, so we can only have HFileLink references and looking
+           * for just them is cheaper then listing everything. This glob should match the naming
+           * convention for HFileLinks to our referenced hfile. As simplified explanation those file
+           * names look like "table=region-hfile". For details see the
+           * {@link HFileLink#createHFileLinkName HFileLink implementation}.
            */
           FileStatus[] hlinks = mob.getFileSystem(conf).globStatus(new Path(mob + "/*=*-" + file));
           if (hlinks != null && hlinks.length != 0) {
             if (hlinks.length != 1) {
-              LOG.warn("Found file '{}' as hfilelinks in the mob area, but there are more than " +
-                  "one: {}", file, Arrays.deepToString(hlinks));
+              LOG.warn("Found file '{}' as hfilelinks in the mob area, but there are more than "
+                + "one: {}", file, Arrays.deepToString(hlinks));
             }
             HFileLink found = null;
             for (FileStatus hlink : hlinks) {
@@ -335,24 +336,24 @@ public class MobRefReporter extends Configured implements Tool {
               context.write(OK_HLINK_CLONE, key);
             } else {
               LOG.warn("Found file '{}' as ref(s) in the mob area but they do not point to an hfile"
-                  + " that exists.", file);
+                + " that exists.", file);
               context.write(DATALOSS_HLINK_DANGLING, encodeRows(context, key, rows));
             }
           } else {
             LOG.error("Could not find referenced file '{}'. See the docs on this tool.", file);
             LOG.debug("Note that we don't have the server-side tag from the mob cells that says "
-                + "what table the reference is originally from. So if the HFileLink in this table "
-                + "is missing but the referenced file is still in the table from that tag, then "
-                + "lookups of these impacted rows will work. Do a scan of the reference details "
-                + "of the cell for the hfile name and then check the entire hbase install if this "
-                + "table was made from a snapshot of another table. see the ref guide section on "
-                + "mob for details.");
+              + "what table the reference is originally from. So if the HFileLink in this table "
+              + "is missing but the referenced file is still in the table from that tag, then "
+              + "lookups of these impacted rows will work. Do a scan of the reference details "
+              + "of the cell for the hfile name and then check the entire hbase install if this "
+              + "table was made from a snapshot of another table. see the ref guide section on "
+              + "mob for details.");
             context.write(DATALOSS_MISSING, encodeRows(context, key, rows));
           }
         } catch (IOException e) {
           LOG.error(
-              "Exception while checking mob area of our table for HFileLinks that point to {}",
-              file, e);
+            "Exception while checking mob area of our table for HFileLinks that point to {}", file,
+            e);
           context.write(DATALOSS_MISSING_IOE, encodeRows(context, key, rows));
         }
       }
@@ -363,7 +364,7 @@ public class MobRefReporter extends Configured implements Tool {
      * of base64 encoded row keys
      */
     private Text encodeRows(Context context, Text key, Iterable<ImmutableBytesWritable> rows)
-        throws IOException {
+      throws IOException {
       StringBuilder sb = new StringBuilder(key.toString());
       sb.append(seperator);
       boolean moreThanOne = false;
@@ -378,25 +379,27 @@ public class MobRefReporter extends Configured implements Tool {
       }
       context.getCounter("PROBLEM", "Problem MOB files").increment(1L);
       context.getCounter("PROBLEM", "Affected rows").increment(count);
-      context.getCounter("ROWS WITH PROBLEMS PER FILE", "Number of HFiles with " +
-          log10GroupedString(count) + "s of affected rows").increment(1L);
+      context
+        .getCounter("ROWS WITH PROBLEMS PER FILE",
+          "Number of HFiles with " + log10GroupedString(count) + "s of affected rows")
+        .increment(1L);
       key.set(sb.toString());
       return key;
     }
   }
 
   /**
-   * Returns the string representation of the given number after grouping it
-   * into log10 buckets. e.g. 0-9 -> 1, 10-99 -> 10, ..., 100,000-999,999 -> 100,000, etc.
+   * Returns the string representation of the given number after grouping it into log10 buckets.
+   * e.g. 0-9 -> 1, 10-99 -> 10, ..., 100,000-999,999 -> 100,000, etc.
    */
   static String log10GroupedString(long number) {
-    return String.format("%,d", (long)(Math.pow(10d, Math.floor(Math.log10(number)))));
+    return String.format("%,d", (long) (Math.pow(10d, Math.floor(Math.log10(number)))));
   }
 
   /**
    * Main method for the tool.
-   * @return 0 if success, 1 for bad args. 2 if job aborted with an exception,
-   *   3 if mr job was unsuccessful
+   * @return 0 if success, 1 for bad args. 2 if job aborted with an exception, 3 if mr job was
+   *         unsuccessful
    */
   public int run(String[] args) throws IOException, InterruptedException {
     // TODO make family and table optional
@@ -417,8 +420,8 @@ public class MobRefReporter extends Configured implements Tool {
       if (hbaseRootFileStat.length > 0) {
         String owner = hbaseRootFileStat[0].getOwner();
         if (!owner.equals(currentUserName)) {
-          String errorMsg = "The current user[" + currentUserName
-              + "] does not have hbase root credentials."
+          String errorMsg =
+            "The current user[" + currentUserName + "] does not have hbase root credentials."
               + " If this job fails due to an inability to read HBase's internal directories, "
               + "you will need to rerun as a user with sufficient permissions. The HBase superuser "
               + "is a safe choice.";
@@ -426,7 +429,7 @@ public class MobRefReporter extends Configured implements Tool {
         }
       } else {
         LOG.error("The passed configs point to an HBase dir does not exist: {}",
-            conf.get(HConstants.HBASE_DIR));
+          conf.get(HConstants.HBASE_DIR));
         throw new IOException("The target HBase does not exist");
       }
 
@@ -434,7 +437,7 @@ public class MobRefReporter extends Configured implements Tool {
       int maxVersions;
       TableName tn = TableName.valueOf(tableName);
       try (Connection connection = ConnectionFactory.createConnection(conf);
-           Admin admin = connection.getAdmin()) {
+        Admin admin = connection.getAdmin()) {
         TableDescriptor htd = admin.getDescriptor(tn);
         ColumnFamilyDescriptor hcd = htd.getColumnFamily(Bytes.toBytes(familyName));
         if (hcd == null || !hcd.isMobEnabled()) {
@@ -443,7 +446,6 @@ public class MobRefReporter extends Configured implements Tool {
         family = hcd.getName();
         maxVersions = hcd.getMaxVersions();
       }
-
 
       String id = getClass().getSimpleName() + UUID.randomUUID().toString().replace("-", "");
       Job job = null;
@@ -461,8 +463,8 @@ public class MobRefReporter extends Configured implements Tool {
 
       job = Job.getInstance(conf);
       job.setJarByClass(getClass());
-      TableMapReduceUtil.initTableMapperJob(tn, scan,
-          MobRefMapper.class, Text.class, ImmutableBytesWritable.class, job);
+      TableMapReduceUtil.initTableMapperJob(tn, scan, MobRefMapper.class, Text.class,
+        ImmutableBytesWritable.class, job);
 
       job.setReducerClass(MobRefReducer.class);
       job.setOutputFormatClass(TextOutputFormat.class);
@@ -497,7 +499,7 @@ public class MobRefReporter extends Configured implements Tool {
 
   private void printUsage() {
     System.err.println("Usage:\n" + "--------------------------\n" + MobRefReporter.class.getName()
-        + " output-dir tableName familyName");
+      + " output-dir tableName familyName");
     System.err.println(" output-dir       Where to write output report.");
     System.err.println(" tableName        The table name");
     System.err.println(" familyName       The column family name");

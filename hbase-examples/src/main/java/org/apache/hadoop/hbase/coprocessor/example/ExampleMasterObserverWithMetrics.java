@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,11 +38,10 @@ import org.slf4j.LoggerFactory;
 /**
  * An example coprocessor that collects some metrics to demonstrate the usage of exporting custom
  * metrics from the coprocessor.
- *
  * <p>
  * These metrics will be available through the regular Hadoop metrics2 sinks (ganglia, opentsdb,
- * etc) as well as JMX output. You can view a snapshot of the metrics by going to the http web UI
- * of the master page, something like http://mymasterhost:16010/jmx
+ * etc) as well as JMX output. You can view a snapshot of the metrics by going to the http web UI of
+ * the master page, something like http://mymasterhost:16010/jmx
  * </p>
  * @see ExampleRegionObserverWithMetrics
  */
@@ -74,7 +73,7 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                             TableDescriptor desc, RegionInfo[] regions) throws IOException {
+    TableDescriptor desc, RegionInfo[] regions) throws IOException {
     // we rely on the fact that there is only 1 instance of our MasterObserver. We keep track of
     // when the operation starts before the operation is executing.
     this.createTableStartTime = System.currentTimeMillis();
@@ -82,7 +81,7 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
 
   @Override
   public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                              TableDescriptor desc, RegionInfo[] regions) throws IOException {
+    TableDescriptor desc, RegionInfo[] regions) throws IOException {
     if (this.createTableStartTime > 0) {
       long time = System.currentTimeMillis() - this.createTableStartTime;
       LOG.info("Create table took: " + time);
@@ -94,7 +93,7 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
 
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
+    TableName tableName) throws IOException {
     // Increment the Counter for disable table operations
     this.disableTableCounter.increment();
   }
@@ -108,8 +107,7 @@ public class ExampleMasterObserverWithMetrics implements MasterCoprocessor, Mast
     if (env instanceof MasterCoprocessorEnvironment) {
       // Obtain the MetricRegistry for the Master. Metrics from this registry will be reported
       // at the master level per-server.
-      MetricRegistry registry =
-          ((MasterCoprocessorEnvironment) env).getMetricRegistryForMaster();
+      MetricRegistry registry = ((MasterCoprocessorEnvironment) env).getMetricRegistryForMaster();
 
       if (createTableTimer == null) {
         // Create a new Counter, or get the already registered counter.

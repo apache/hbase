@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,12 @@ import org.junit.rules.TestName;
  * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
  * input
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHColumnDescriptorDefaultVersions {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHColumnDescriptorDefaultVersions.class);
+    HBaseClassTestRule.forClass(TestHColumnDescriptorDefaultVersions.class);
 
   @Rule
   public TestName name = new TestName();
@@ -57,8 +57,7 @@ public class TestHColumnDescriptorDefaultVersions {
   private static final byte[] FAMILY = Bytes.toBytes("cf0");
 
   /**
-   * Start up a mini cluster and put a small table of empty regions into it.
-   * @throws Exception
+   * Start up a mini cluster and put a small table of empty regions into it. n
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -152,7 +151,7 @@ public class TestHColumnDescriptorDefaultVersions {
   }
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
-      final byte[]... families) throws IOException {
+    final byte[]... families) throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
 
     // Verify descriptor from master
@@ -169,8 +168,7 @@ public class TestHColumnDescriptorDefaultVersions {
   }
 
   private void verifyHColumnDescriptor(int expected, final ColumnFamilyDescriptor[] hcds,
-      final TableName tableName,
-      final byte[]... families) {
+    final TableName tableName, final byte[]... families) {
     for (ColumnFamilyDescriptor hcd : hcds) {
       assertEquals(expected, hcd.getMaxVersions());
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -62,8 +61,7 @@ class StringRange {
   private boolean startInclusive = true;
   private boolean endInclusive = false;
 
-  public StringRange(String start, boolean startInclusive, String end,
-      boolean endInclusive) {
+  public StringRange(String start, boolean startInclusive, String end, boolean endInclusive) {
     this.start = start;
     this.startInclusive = startInclusive;
     this.end = end;
@@ -111,22 +109,18 @@ class StringRange {
       return false;
     }
     StringRange oth = (StringRange) obj;
-    return this.startInclusive == oth.startInclusive &&
-        this.endInclusive == oth.endInclusive &&
-        Objects.equals(this.start, oth.start) &&
-        Objects.equals(this.end, oth.end);
+    return this.startInclusive == oth.startInclusive && this.endInclusive == oth.endInclusive
+      && Objects.equals(this.start, oth.start) && Objects.equals(this.end, oth.end);
   }
 
   @Override
   public String toString() {
-    String result = (this.startInclusive ? "[" : "(")
-          + (this.start == null ? null : this.start) + ", "
-          + (this.end == null ? null : this.end)
-          + (this.endInclusive ? "]" : ")");
+    String result = (this.startInclusive ? "[" : "(") + (this.start == null ? null : this.start)
+      + ", " + (this.end == null ? null : this.end) + (this.endInclusive ? "]" : ")");
     return result;
   }
 
-   public boolean inRange(String value) {
+  public boolean inRange(String value) {
     boolean afterStart = true;
     if (this.start != null) {
       int startCmp = value.compareTo(this.start);
@@ -144,13 +138,12 @@ class StringRange {
 
 }
 
-
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestColumnRangeFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnRangeFilter.class);
+    HBaseClassTestRule.forClass(TestColumnRangeFilter.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -182,8 +175,8 @@ public class TestColumnRangeFilter {
   @Test
   public void TestColumnRangeFilterClient() throws Exception {
     String family = "Family";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()),
-        Bytes.toBytes(family), Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(family),
+      Integer.MAX_VALUE);
 
     List<String> rows = generateRandomWords(10, 8);
     long maxTimestamp = 2;
@@ -193,14 +186,10 @@ public class TestColumnRangeFilter {
 
     Map<StringRange, List<KeyValue>> rangeMap = new HashMap<>();
 
-    rangeMap.put(new StringRange(null, true, "b", false),
-        new ArrayList<>());
-    rangeMap.put(new StringRange("p", true, "q", false),
-        new ArrayList<>());
-    rangeMap.put(new StringRange("r", false, "s", true),
-        new ArrayList<>());
-    rangeMap.put(new StringRange("z", false, null, false),
-        new ArrayList<>());
+    rangeMap.put(new StringRange(null, true, "b", false), new ArrayList<>());
+    rangeMap.put(new StringRange("p", true, "q", false), new ArrayList<>());
+    rangeMap.put(new StringRange("r", false, "s", true), new ArrayList<>());
+    rangeMap.put(new StringRange("z", false, null, false), new ArrayList<>());
     String valueString = "ValueString";
 
     for (String row : rows) {
@@ -208,8 +197,7 @@ public class TestColumnRangeFilter {
       p.setDurability(Durability.SKIP_WAL);
       for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           p.add(kv);
           kvList.add(kv);
           for (StringRange s : rangeMap.keySet()) {
@@ -229,8 +217,8 @@ public class TestColumnRangeFilter {
     scan.setMaxVersions();
     for (StringRange s : rangeMap.keySet()) {
       filter = new ColumnRangeFilter(s.getStart() == null ? null : Bytes.toBytes(s.getStart()),
-          s.isStartInclusive(), s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),
-          s.isEndInclusive());
+        s.isStartInclusive(), s.getEnd() == null ? null : Bytes.toBytes(s.getEnd()),
+        s.isEndInclusive());
       assertEquals(rangeMap.get(s).size(), cellsCount(ht, filter));
     }
     ht.close();
@@ -241,7 +229,7 @@ public class TestColumnRangeFilter {
     String family = "Family";
     String table = "TestColumnRangeFilterWithColumnPaginationFilter";
     try (Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(family), Integer.MAX_VALUE)) {
+      TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(family), Integer.MAX_VALUE)) {
       // one row.
       String row = "row";
       // One version
@@ -254,7 +242,7 @@ public class TestColumnRangeFilter {
       p.setDurability(Durability.SKIP_WAL);
       for (int column : columns) {
         KeyValue kv =
-            KeyValueTestUtil.create(row, family, Integer.toString(column), timestamp, valueString);
+          KeyValueTestUtil.create(row, family, Integer.toString(column), timestamp, valueString);
         p.add(kv);
       }
       ht.put(p);
@@ -263,9 +251,9 @@ public class TestColumnRangeFilter {
 
       // Column range from 1 to 9.
       StringRange stringRange = new StringRange("1", true, "9", false);
-      ColumnRangeFilter filter1 = new ColumnRangeFilter(Bytes.toBytes(stringRange.getStart()),
-          stringRange.isStartInclusive(), Bytes.toBytes(stringRange.getEnd()),
-          stringRange.isEndInclusive());
+      ColumnRangeFilter filter1 =
+        new ColumnRangeFilter(Bytes.toBytes(stringRange.getStart()), stringRange.isStartInclusive(),
+          Bytes.toBytes(stringRange.getEnd()), stringRange.isEndInclusive());
 
       ColumnPaginationFilter filter2 = new ColumnPaginationFilter(5, 0);
       ColumnPaginationFilter filter3 = new ColumnPaginationFilter(5, 1);
@@ -308,4 +296,3 @@ public class TestColumnRangeFilter {
   }
 
 }
-

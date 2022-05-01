@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Collections;
@@ -25,33 +24,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Namespace POJO class. Used to represent and define namespaces.
- *
- * Descriptors will be persisted in an hbase table.
- * This works since namespaces are essentially metadata of a group of tables
- * as opposed to a more tangible container.
+ * Namespace POJO class. Used to represent and define namespaces. Descriptors will be persisted in
+ * an hbase table. This works since namespaces are essentially metadata of a group of tables as
+ * opposed to a more tangible container.
  */
 @InterfaceAudience.Public
 public class NamespaceDescriptor {
 
   /** System namespace name. */
-  public static final byte [] SYSTEM_NAMESPACE_NAME = Bytes.toBytes("hbase");
-  public static final String SYSTEM_NAMESPACE_NAME_STR =
-      Bytes.toString(SYSTEM_NAMESPACE_NAME);
+  public static final byte[] SYSTEM_NAMESPACE_NAME = Bytes.toBytes("hbase");
+  public static final String SYSTEM_NAMESPACE_NAME_STR = Bytes.toString(SYSTEM_NAMESPACE_NAME);
   /** Default namespace name. */
-  public static final byte [] DEFAULT_NAMESPACE_NAME = Bytes.toBytes("default");
-  public static final String DEFAULT_NAMESPACE_NAME_STR =
-      Bytes.toString(DEFAULT_NAMESPACE_NAME);
+  public static final byte[] DEFAULT_NAMESPACE_NAME = Bytes.toBytes("default");
+  public static final String DEFAULT_NAMESPACE_NAME_STR = Bytes.toString(DEFAULT_NAMESPACE_NAME);
 
-  public static final NamespaceDescriptor DEFAULT_NAMESPACE = NamespaceDescriptor.create(
-    DEFAULT_NAMESPACE_NAME_STR).build();
-  public static final NamespaceDescriptor SYSTEM_NAMESPACE = NamespaceDescriptor.create(
-    SYSTEM_NAMESPACE_NAME_STR).build();
+  public static final NamespaceDescriptor DEFAULT_NAMESPACE =
+    NamespaceDescriptor.create(DEFAULT_NAMESPACE_NAME_STR).build();
+  public static final NamespaceDescriptor SYSTEM_NAMESPACE =
+    NamespaceDescriptor.create(SYSTEM_NAMESPACE_NAME_STR).build();
 
   public final static Set<String> RESERVED_NAMESPACES;
   static {
@@ -63,7 +57,7 @@ public class NamespaceDescriptor {
   public final static Set<byte[]> RESERVED_NAMESPACES_BYTES;
   static {
     Set<byte[]> set = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
-    for(String name: RESERVED_NAMESPACES) {
+    for (String name : RESERVED_NAMESPACES) {
       set.add(Bytes.toBytes(name));
     }
     RESERVED_NAMESPACES_BYTES = Collections.unmodifiableSet(set);
@@ -73,13 +67,13 @@ public class NamespaceDescriptor {
   private Map<String, String> configuration;
 
   public static final Comparator<NamespaceDescriptor> NAMESPACE_DESCRIPTOR_COMPARATOR =
-      new Comparator<NamespaceDescriptor>() {
-    @Override
-    public int compare(NamespaceDescriptor namespaceDescriptor,
+    new Comparator<NamespaceDescriptor>() {
+      @Override
+      public int compare(NamespaceDescriptor namespaceDescriptor,
         NamespaceDescriptor namespaceDescriptor2) {
-      return namespaceDescriptor.getName().compareTo(namespaceDescriptor2.getName());
-    }
-  };
+        return namespaceDescriptor.getName().compareTo(namespaceDescriptor2.getName());
+      }
+    };
 
   private NamespaceDescriptor() {
   }
@@ -109,7 +103,7 @@ public class NamespaceDescriptor {
 
   /**
    * Setter for storing a configuration setting in {@link #configuration} map.
-   * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
+   * @param key   Config key. Same as XML config key e.g. hbase.something.or.other.
    * @param value String value. If null, removes the setting.
    */
   public void setConfiguration(String key, String value) {
@@ -189,8 +183,8 @@ public class NamespaceDescriptor {
     }
 
     public NamespaceDescriptor build() {
-      if (this.bName == null){
-         throw new IllegalArgumentException("A name has to be specified in a namespace.");
+      if (this.bName == null) {
+        throw new IllegalArgumentException("A name has to be specified in a namespace.");
       }
 
       NamespaceDescriptor desc = new NamespaceDescriptor(this.bName);

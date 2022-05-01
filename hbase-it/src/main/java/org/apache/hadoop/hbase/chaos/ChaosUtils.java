@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,10 +33,8 @@ public class ChaosUtils {
     return InetAddress.getLocalHost().getHostName();
   }
 
-
   public static String getZKQuorum(Configuration conf) {
-    String port =
-      Integer.toString(conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
+    String port = Integer.toString(conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181));
     String[] serverHosts = conf.getStrings(HConstants.ZOOKEEPER_QUORUM, "localhost");
     for (int i = 0; i < serverHosts.length; i++) {
       serverHosts[i] = serverHosts[i] + ":" + port;

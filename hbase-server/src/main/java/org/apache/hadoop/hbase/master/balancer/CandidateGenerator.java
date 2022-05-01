@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Map;
@@ -34,19 +33,17 @@ abstract class CandidateGenerator {
    * From a list of regions pick a random one. Null can be returned which
    * {@link StochasticLoadBalancer#balanceCluster(Map)} recognize as signal to try a region move
    * rather than swap.
-   *
-   * @param cluster The state of the cluster
-   * @param server index of the server
-   * @param chanceOfNoSwap Chance that this will decide to try a move rather
-   *   than a swap.
-   * @return a random {@link RegionInfo} or null if an asymmetrical move is
-   *   suggested.
+   * @param cluster        The state of the cluster
+   * @param server         index of the server
+   * @param chanceOfNoSwap Chance that this will decide to try a move rather than a swap.
+   * @return a random {@link RegionInfo} or null if an asymmetrical move is suggested.
    */
-  int pickRandomRegion(BaseLoadBalancer.Cluster cluster, int server,
-    double chanceOfNoSwap) {
+  int pickRandomRegion(BaseLoadBalancer.Cluster cluster, int server, double chanceOfNoSwap) {
     // Check to see if this is just a move.
-    if (cluster.regionsPerServer[server].length == 0
-        || StochasticLoadBalancer.RANDOM.nextFloat() < chanceOfNoSwap) {
+    if (
+      cluster.regionsPerServer[server].length == 0
+        || StochasticLoadBalancer.RANDOM.nextFloat() < chanceOfNoSwap
+    ) {
       // signal a move only.
       return -1;
     }
@@ -114,14 +111,14 @@ abstract class CandidateGenerator {
     return getAction(thisServer, thisRegion, otherServer, otherRegion);
   }
 
-  protected BaseLoadBalancer.Cluster.Action getAction(int fromServer, int fromRegion,
-      int toServer, int toRegion) {
+  protected BaseLoadBalancer.Cluster.Action getAction(int fromServer, int fromRegion, int toServer,
+    int toRegion) {
     if (fromServer < 0 || toServer < 0) {
       return BaseLoadBalancer.Cluster.NullAction;
     }
     if (fromRegion >= 0 && toRegion >= 0) {
-      return new BaseLoadBalancer.Cluster.SwapRegionsAction(fromServer, fromRegion,
-        toServer, toRegion);
+      return new BaseLoadBalancer.Cluster.SwapRegionsAction(fromServer, fromRegion, toServer,
+        toRegion);
     } else if (fromRegion >= 0) {
       return new BaseLoadBalancer.Cluster.MoveRegionAction(fromRegion, fromServer, toServer);
     } else if (toRegion >= 0) {

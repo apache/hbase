@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +19,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,9 +32,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class FileArchiverNotifierFactoryImpl implements FileArchiverNotifierFactory {
   private static final FileArchiverNotifierFactoryImpl DEFAULT_INSTANCE =
-      new FileArchiverNotifierFactoryImpl();
+    new FileArchiverNotifierFactoryImpl();
   private static volatile FileArchiverNotifierFactory CURRENT_INSTANCE = DEFAULT_INSTANCE;
-  private final ConcurrentHashMap<TableName,FileArchiverNotifier> CACHE;
+  private final ConcurrentHashMap<TableName, FileArchiverNotifier> CACHE;
 
   private FileArchiverNotifierFactoryImpl() {
     CACHE = new ConcurrentHashMap<>();
@@ -54,12 +54,11 @@ public final class FileArchiverNotifierFactoryImpl implements FileArchiverNotifi
 
   /**
    * Returns the {@link FileArchiverNotifier} instance for the given {@link TableName}.
-   *
    * @param tn The table to obtain a notifier for
    * @return The notifier for the given {@code tablename}.
    */
-  public FileArchiverNotifier get(
-      Connection conn, Configuration conf, FileSystem fs, TableName tn) {
+  public FileArchiverNotifier get(Connection conn, Configuration conf, FileSystem fs,
+    TableName tn) {
     // Ensure that only one instance is exposed to callers
     final FileArchiverNotifier newMapping = new FileArchiverNotifierImpl(conn, conf, fs, tn);
     final FileArchiverNotifier previousMapping = CACHE.putIfAbsent(tn, newMapping);
@@ -94,7 +93,7 @@ public final class FileArchiverNotifierFactoryImpl implements FileArchiverNotifi
       CacheKey other = (CacheKey) o;
       // TableName should be the only thing differing..
       return tn.equals(other.tn) && conn.equals(other.conn) && conf.equals(other.conf)
-          && fs.equals(other.fs);
+        && fs.equals(other.fs);
     }
 
     @Override

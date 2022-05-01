@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -47,7 +46,7 @@ public class TestMasterObserverToModifyTableSchema {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterObserverToModifyTableSchema.class);
+    HBaseClassTestRule.forClass(TestMasterObserverToModifyTableSchema.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableName TABLENAME = TableName.valueOf("TestTable");
@@ -59,7 +58,7 @@ public class TestMasterObserverToModifyTableSchema {
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        OnlyOneVersionAllowedMasterObserver.class.getName());
+      OnlyOneVersionAllowedMasterObserver.class.getName());
     UTIL.startMiniCluster(1);
   }
 
@@ -72,16 +71,15 @@ public class TestMasterObserverToModifyTableSchema {
   public void testMasterObserverToModifyTableSchema() throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLENAME);
     for (int i = 1; i <= 3; i++) {
-      builder.setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf" + i)).setMaxVersions(i)
-              .build());
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf" + i))
+        .setMaxVersions(i).build());
     }
     try (Admin admin = UTIL.getAdmin()) {
       admin.createTable(builder.build());
       assertOneVersion(admin.getDescriptor(TABLENAME));
 
       builder.modifyColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf1"))
-          .setMaxVersions(Integer.MAX_VALUE).build());
+        .setMaxVersions(Integer.MAX_VALUE).build());
       admin.modifyTable(builder.build());
       assertOneVersion(admin.getDescriptor(TABLENAME));
     }
@@ -94,7 +92,7 @@ public class TestMasterObserverToModifyTableSchema {
   }
 
   public static class OnlyOneVersionAllowedMasterObserver
-      implements MasterCoprocessor, MasterObserver {
+    implements MasterCoprocessor, MasterObserver {
 
     @Override
     public Optional<MasterObserver> getMasterObserver() {
@@ -103,24 +101,23 @@ public class TestMasterObserverToModifyTableSchema {
 
     @Override
     public TableDescriptor preCreateTableRegionsInfos(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc)
-        throws IOException {
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor desc) throws IOException {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(desc);
       for (ColumnFamilyDescriptor cfd : desc.getColumnFamilies()) {
         builder.modifyColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(1).build());
+          ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(1).build());
       }
       return builder.build();
     }
 
     @Override
     public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableName tableName, final TableDescriptor currentDescriptor,
-        final TableDescriptor newDescriptor) throws IOException {
+      TableName tableName, final TableDescriptor currentDescriptor,
+      final TableDescriptor newDescriptor) throws IOException {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(newDescriptor);
       for (ColumnFamilyDescriptor cfd : newDescriptor.getColumnFamilies()) {
         builder.modifyColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(1).build());
+          ColumnFamilyDescriptorBuilder.newBuilder(cfd).setMaxVersions(1).build());
       }
       return builder.build();
     }

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -87,8 +86,8 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     // Find server that does not have hbase:namespace on it. This tests holds up SCPs. If it
     // holds up the server w/ hbase:namespace, the Master initialization will be held up
     // because this table is not online and test fails.
-    for (JVMClusterUtil.RegionServerThread rst:
-        UTIL.getHBaseCluster().getLiveRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread rst : UTIL.getHBaseCluster()
+      .getLiveRegionServerThreads()) {
       HRegionServer rs = rst.getRegionServer();
       if (rs.getRegions(TableName.NAMESPACE_TABLE_NAME).isEmpty()) {
         SERVER_FOR_TEST = rs.getServerName();
@@ -98,65 +97,66 @@ public class TestClusterRestartFailover extends AbstractTestRestartCluster {
     ServerStateNode serverNode = getServerStateNode(SERVER_FOR_TEST);
     assertNotNull(serverNode);
     assertTrue("serverNode should be ONLINE when cluster runs normally",
-        serverNode.isInState(ServerState.ONLINE));
+      serverNode.isInState(ServerState.ONLINE));
 
     SCP_LATCH = new CountDownLatch(1);
 
     // Shutdown cluster and restart
     List<Integer> ports =
-        UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServersList().stream()
-            .map(serverName -> serverName.getPort()).collect(Collectors.toList());
+      UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServersList().stream()
+        .map(serverName -> serverName.getPort()).collect(Collectors.toList());
     LOG.info("Shutting down cluster");
     UTIL.getHBaseCluster().killAll();
     UTIL.getHBaseCluster().waitUntilShutDown();
     LOG.info("Restarting cluster");
     UTIL.restartHBaseCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
-        .numMasters(1).numRegionServers(3).rsPorts(ports).build());
+      .numMasters(1).numRegionServers(3).rsPorts(ports).build());
     LOG.info("Started cluster");
     UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().isInitialized());
     LOG.info("Started cluster master, waiting for {}", SERVER_FOR_TEST);
     UTIL.waitFor(60000, () -> getServerStateNode(SERVER_FOR_TEST) != null);
     serverNode = getServerStateNode(SERVER_FOR_TEST);
     assertFalse("serverNode should not be ONLINE during SCP processing",
-        serverNode.isInState(ServerState.ONLINE));
+      serverNode.isInState(ServerState.ONLINE));
     Optional<Procedure<?>> procedure = UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .filter(p -> (p instanceof ServerCrashProcedure) &&
-            ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST)).findAny();
+      .filter(p -> (p instanceof ServerCrashProcedure)
+        && ((ServerCrashProcedure) p).getServerName().equals(SERVER_FOR_TEST))
+      .findAny();
     assertTrue("Should have one SCP for " + SERVER_FOR_TEST, procedure.isPresent());
     assertTrue("Submit the SCP for the same serverName " + SERVER_FOR_TEST + " which should fail",
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
-          Procedure.NO_PROC_ID);
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST)
+          == Procedure.NO_PROC_ID);
 
     // Wait the SCP to finish
     LOG.info("Waiting on latch");
     SCP_LATCH.countDown();
     UTIL.waitFor(60000, () -> procedure.get().isFinished());
 
-    assertFalse("Even when the SCP is finished, the duplicate SCP should not be scheduled for " +
-            SERVER_FOR_TEST,
-      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST) ==
-        Procedure.NO_PROC_ID);
+    assertFalse(
+      "Even when the SCP is finished, the duplicate SCP should not be scheduled for "
+        + SERVER_FOR_TEST,
+      UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(SERVER_FOR_TEST)
+          == Procedure.NO_PROC_ID);
     serverNode = UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-        .getServerNode(SERVER_FOR_TEST);
+      .getServerNode(SERVER_FOR_TEST);
     assertNull("serverNode should be deleted after SCP finished", serverNode);
 
-    MetricsMasterSource masterSource = UTIL.getHBaseCluster().getMaster().getMasterMetrics()
-      .getMetricsSource();
-    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount",
+    MetricsMasterSource masterSource =
+      UTIL.getHBaseCluster().getMaster().getMasterMetrics().getMetricsSource();
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       4, masterSource);
   }
 
   private void setupCluster() throws Exception {
     LOG.info("Setup cluster");
-    UTIL.startMiniCluster(
-        StartMiniClusterOption.builder().masterClass(HMasterForTest.class).numMasters(1)
-            .numRegionServers(3).build());
+    UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
+      .numMasters(1).numRegionServers(3).build());
     LOG.info("Cluster is up");
     UTIL.waitFor(60000, () -> UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     LOG.info("Master is up");
     // wait for all SCPs finished
     UTIL.waitFor(60000, () -> UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .noneMatch(p -> p instanceof ServerCrashProcedure));
+      .noneMatch(p -> p instanceof ServerCrashProcedure));
     LOG.info("No SCPs");
   }
 

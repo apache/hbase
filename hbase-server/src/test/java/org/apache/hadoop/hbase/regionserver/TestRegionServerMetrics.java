@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -72,12 +71,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRegionServerMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerMetrics.class);
+    HBaseClassTestRule.forClass(TestRegionServerMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
 
@@ -113,7 +112,7 @@ public class TestRegionServerMetrics {
     // testMobMetrics creates few hfiles and manages compaction manually.
     conf.setInt("hbase.hstore.compactionThreshold", 100);
     conf.setInt("hbase.hstore.compaction.max", 100);
-    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4*60);
+    conf.setInt("hbase.regionserver.periodicmemstoreflusher.rangeofdelayseconds", 4 * 60);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
 
     TEST_UTIL.startMiniCluster();
@@ -122,9 +121,10 @@ public class TestRegionServerMetrics {
     admin = TEST_UTIL.getAdmin();
     connection = TEST_UTIL.getConnection();
 
-    while (cluster.getLiveRegionServerThreads().isEmpty() &&
-        cluster.getRegionServer(0) == null &&
-        rs.getMetrics() == null) {
+    while (
+      cluster.getLiveRegionServerThreads().isEmpty() && cluster.getRegionServer(0) == null
+        && rs.getMetrics() == null
+    ) {
       Threads.sleep(100);
     }
     rs = cluster.getRegionServer(0);
@@ -160,11 +160,9 @@ public class TestRegionServerMetrics {
     while (true) {
       HTableDescriptor[] tables = admin.listTables();
       for (HTableDescriptor htd : tables) {
-        if (htd.getNameAsString() == name.getNameAsString())
-          return;
+        if (htd.getNameAsString() == name.getNameAsString()) return;
       }
-      if (System.currentTimeMillis() - start > timeoutInMillis)
-        return;
+      if (System.currentTimeMillis() - start > timeoutInMillis) return;
       Thread.sleep(1000);
     }
   }
@@ -180,14 +178,12 @@ public class TestRegionServerMetrics {
   // Aggregates metrics from regions and assert given list of metrics and expected values.
   public void assertRegionMetrics(String metric, long expectedValue) throws Exception {
     try (RegionLocator locator = connection.getRegionLocator(tableName)) {
-      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+      for (HRegionLocation location : locator.getAllRegionLocations()) {
         HRegionInfo hri = location.getRegionInfo();
         MetricsRegionAggregateSource agg =
-            rs.getRegion(hri.getRegionName()).getMetrics().getSource().getAggregateSource();
-        String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR +
-            "_table_" + tableName.getNameAsString() +
-            "_region_" + hri.getEncodedName()+
-            "_metric_";
+          rs.getRegion(hri.getRegionName()).getMetrics().getSource().getAggregateSource();
+        String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR + "_table_"
+          + tableName.getNameAsString() + "_region_" + hri.getEncodedName() + "_metric_";
         metricsHelper.assertCounter(prefix + metric, expectedValue, agg);
       }
     }
@@ -233,14 +229,14 @@ public class TestRegionServerMetrics {
     ResultScanner scanner = table.getScanner(scan);
     for (int i = 0; i < n; i++) {
       Result res = scanner.next();
-      LOG.debug("Result row: " + Bytes.toString(res.getRow()) + ", value: " +
-          Bytes.toString(res.getValue(cf, qualifier)));
+      LOG.debug("Result row: " + Bytes.toString(res.getRow()) + ", value: "
+        + Bytes.toString(res.getValue(cf, qualifier)));
     }
   }
 
   @Test
   public void testRegionCount() throws Exception {
-    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER? 1: 3, serverSource);
+    metricsHelper.assertGauge("regionCount", TABLES_ON_MASTER ? 1 : 3, serverSource);
   }
 
   @Test
@@ -279,7 +275,7 @@ public class TestRegionServerMetrics {
     assertRegionMetrics("getCount", 10);
     assertRegionMetrics("putCount", 31);
 
-    doNGets(10, true);  // true = batch
+    doNGets(10, true); // true = batch
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     if (TABLES_ON_MASTER) {
@@ -287,7 +283,6 @@ public class TestRegionServerMetrics {
       assertCounter("totalRowActionRequestCount", rowActionRequests + 50);
       assertCounter("readRequestCount", readRequests + 20);
     }
-
 
     assertCounter("writeRequestCount", writeRequests + 30);
 
@@ -333,8 +328,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testMutationsWithoutWal() throws Exception {
-    Put p = new Put(row).addColumn(cf, qualifier, val)
-        .setDurability(Durability.SKIP_WAL);
+    Put p = new Put(row).addColumn(cf, qualifier, val).setDurability(Durability.SKIP_WAL);
     table.put(p);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
@@ -356,7 +350,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testStoreFileAge() throws Exception {
-    //Force a hfile.
+    // Force a hfile.
     doNPuts(1, false);
     TEST_UTIL.getAdmin().flush(tableName);
 
@@ -394,7 +388,7 @@ public class TestRegionServerMetrics {
     Put p = new Put(row).addColumn(cf, qualifier, Bytes.toBytes(0L));
     table.put(p);
 
-    for(int count = 0; count < 13; count++) {
+    for (int count = 0; count < 13; count++) {
       Increment inc = new Increment(row);
       inc.addColumn(cf, qualifier, 100);
       table.increment(inc);
@@ -408,7 +402,7 @@ public class TestRegionServerMetrics {
   public void testAppend() throws Exception {
     doNPuts(1, false);
 
-    for(int count = 0; count< 73; count++) {
+    for (int count = 0; count < 73; count++) {
       Append append = new Append(row);
       append.addColumn(cf, qualifier, Bytes.toBytes(",Test"));
       table.append(append);
@@ -420,7 +414,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testScanSize() throws Exception {
-    doNPuts(100, true);  // batch put
+    doNPuts(100, true); // batch put
     Scan s = new Scan();
     s.setBatch(1);
     s.setCaching(1);
@@ -504,7 +498,7 @@ public class TestRegionServerMetrics {
       Scan scan = new Scan(Bytes.toBytes(0), Bytes.toBytes(numHfiles));
       ResultScanner scanner = table.getScanner(scan);
       scanner.next(100);
-      numScanNext++;  // this is an ugly construct
+      numScanNext++; // this is an ugly construct
       scanner.close();
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("mobScanCellsCount", numHfiles);
@@ -519,7 +513,7 @@ public class TestRegionServerMetrics {
 
       scanner = table.getScanner(scan);
       scanner.next(100);
-      numScanNext++;  // this is an ugly construct
+      numScanNext++; // this is an ugly construct
       metricsRegionServer.getRegionServerWrapper().forceRecompute();
       assertCounter("mobScanCellsCount", 0);
 
@@ -548,16 +542,12 @@ public class TestRegionServerMetrics {
   }
 
   private static Region setMobThreshold(Region region, byte[] cfName, long modThreshold) {
-    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
-            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
-            .setMobThreshold(modThreshold)
-            .build();
-    TableDescriptor td = TableDescriptorBuilder
-            .newBuilder(region.getTableDescriptor())
-            .removeColumnFamily(cfName)
-            .setColumnFamily(cfd)
-            .build();
-    ((HRegion)region).setTableDescriptor(td);
+    ColumnFamilyDescriptor cfd =
+      ColumnFamilyDescriptorBuilder.newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+        .setMobThreshold(modThreshold).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(region.getTableDescriptor())
+      .removeColumnFamily(cfName).setColumnFamily(cfd).build();
+    ((HRegion) region).setTableDescriptor(td);
     return region;
   }
 
@@ -565,7 +555,7 @@ public class TestRegionServerMetrics {
   @Ignore
   public void testRangeCountMetrics() throws Exception {
     final long[] timeranges =
-        { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
+      { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
     final String timeRangeType = "TimeRangeCount";
     final String timeRangeMetricName = "Mutate";
     boolean timeRangeCountUpdated = false;
@@ -593,7 +583,7 @@ public class TestRegionServerMetrics {
     String dynamicMetricName;
     for (int i = 0; i < timeranges.length; i++) {
       dynamicMetricName =
-          timeRangeMetricName + "_" + timeRangeType + "_" + prior + "-" + timeranges[i];
+        timeRangeMetricName + "_" + timeRangeType + "_" + prior + "-" + timeranges[i];
       if (metricsHelper.checkCounterExists(dynamicMetricName, serverSource)) {
         long count = metricsHelper.getGaugeLong(dynamicMetricName, serverSource);
         if (count > 0) {
@@ -604,7 +594,7 @@ public class TestRegionServerMetrics {
       prior = timeranges[i];
     }
     dynamicMetricName =
-        timeRangeMetricName + "_" + timeRangeType + "_" + timeranges[timeranges.length - 1] + "-inf";
+      timeRangeMetricName + "_" + timeRangeType + "_" + timeranges[timeranges.length - 1] + "-inf";
     if (metricsHelper.checkCounterExists(dynamicMetricName, serverSource)) {
       long count = metricsHelper.getCounter(dynamicMetricName, serverSource);
       if (count > 0) {
@@ -616,7 +606,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testAverageRegionSize() throws Exception {
-    //Force a hfile.
+    // Force a hfile.
     doNPuts(1, false);
     TEST_UTIL.getAdmin().flush(tableName);
 
@@ -633,12 +623,12 @@ public class TestRegionServerMetrics {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
 
     assertTrue("Total read bytes should be larger than 0",
-        metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
+      metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
     assertTrue("Total local read bytes should be larger than 0",
-        metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
+      metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
     assertEquals("Total short circuit read bytes should be equal to 0", 0,
-        metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
+      metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
     assertEquals("Total zero-byte read bytes should be equal to 0", 0,
-        metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
+      metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
   }
 }

@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress;
 
@@ -21,7 +22,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
-
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.CompressorStream;
@@ -32,8 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fixes an inefficiency in Hadoop's Gzip codec, allowing to reuse compression
- * streams.
+ * Fixes an inefficiency in Hadoop's Gzip codec, allowing to reuse compression streams.
  */
 @InterfaceAudience.Private
 public class ReusableStreamGzipCodec extends GzipCodec {
@@ -41,16 +40,14 @@ public class ReusableStreamGzipCodec extends GzipCodec {
   private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
 
   /**
-   * A bridge that wraps around a DeflaterOutputStream to make it a
-   * CompressionOutputStream.
+   * A bridge that wraps around a DeflaterOutputStream to make it a CompressionOutputStream.
    */
   protected static class ReusableGzipOutputStream extends CompressorStream {
 
     private static final int GZIP_HEADER_LENGTH = 10;
 
     /**
-     * Fixed ten-byte gzip header. See {@link GZIPOutputStream}'s source for
-     * details.
+     * Fixed ten-byte gzip header. See {@link GZIPOutputStream}'s source for details.
      */
     private static final byte[] GZIP_HEADER;
 
@@ -60,7 +57,7 @@ public class ReusableStreamGzipCodec extends GzipCodec {
       byte[] header = null;
       GZIPOutputStream gzipStream = null;
       try {
-        gzipStream  = new GZIPOutputStream(baos);
+        gzipStream = new GZIPOutputStream(baos);
         gzipStream.finish();
         header = Arrays.copyOfRange(baos.toByteArray(), 0, GZIP_HEADER_LENGTH);
       } catch (IOException e) {
@@ -93,8 +90,8 @@ public class ReusableStreamGzipCodec extends GzipCodec {
       }
 
       /**
-       * Override because certain implementation calls def.end() which
-       * causes problem when resetting the stream for reuse.
+       * Override because certain implementation calls def.end() which causes problem when resetting
+       * the stream for reuse.
        */
       @Override
       public void finish() throws IOException {
@@ -125,24 +122,23 @@ public class ReusableStreamGzipCodec extends GzipCodec {
       }
 
       /** re-implement because the relative method in jdk is invisible */
-      private void writeTrailer(byte[] paramArrayOfByte, int paramInt)
-          throws IOException {
-        writeInt((int)this.crc.getValue(), paramArrayOfByte, paramInt);
+      private void writeTrailer(byte[] paramArrayOfByte, int paramInt) throws IOException {
+        writeInt((int) this.crc.getValue(), paramArrayOfByte, paramInt);
         writeInt(this.def.getTotalIn(), paramArrayOfByte, paramInt + 4);
       }
 
       /** re-implement because the relative method in jdk is invisible */
       private void writeInt(int paramInt1, byte[] paramArrayOfByte, int paramInt2)
-          throws IOException {
+        throws IOException {
         writeShort(paramInt1 & 0xFFFF, paramArrayOfByte, paramInt2);
         writeShort(paramInt1 >> 16 & 0xFFFF, paramArrayOfByte, paramInt2 + 2);
       }
 
       /** re-implement because the relative method in jdk is invisible */
       private void writeShort(int paramInt1, byte[] paramArrayOfByte, int paramInt2)
-          throws IOException {
-        paramArrayOfByte[paramInt2] = (byte)(paramInt1 & 0xFF);
-        paramArrayOfByte[(paramInt2 + 1)] = (byte)(paramInt1 >> 8 & 0xFF);
+        throws IOException {
+        paramArrayOfByte[paramInt2] = (byte) (paramInt1 & 0xFF);
+        paramArrayOfByte[(paramInt2 + 1)] = (byte) (paramInt1 >> 8 & 0xFF);
       }
     }
 
@@ -182,8 +178,7 @@ public class ReusableStreamGzipCodec extends GzipCodec {
   }
 
   @Override
-  public CompressionOutputStream createOutputStream(OutputStream out)
-      throws IOException {
+  public CompressionOutputStream createOutputStream(OutputStream out) throws IOException {
     if (ZlibFactory.isNativeZlibLoaded(getConf())) {
       return super.createOutputStream(out);
     }

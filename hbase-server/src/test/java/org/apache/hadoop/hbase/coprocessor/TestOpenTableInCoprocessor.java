@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -51,21 +50,24 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Test that a coprocessor can open a connection and write to another table, inside a hook.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestOpenTableInCoprocessor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestOpenTableInCoprocessor.class);
+    HBaseClassTestRule.forClass(TestOpenTableInCoprocessor.class);
 
   private static final TableName otherTable = TableName.valueOf("otherTable");
   private static final TableName primaryTable = TableName.valueOf("primary");
   private static final byte[] family = new byte[] { 'f' };
 
   private static boolean[] completed = new boolean[1];
+
   /**
    * Custom coprocessor that just copies the write to another table.
    */
@@ -78,9 +80,8 @@ public class TestOpenTableInCoprocessor {
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-        final WALEdit edit, final Durability durability) throws IOException {
-      try (Table table = e.getEnvironment().getConnection().
-          getTable(otherTable)) {
+      final WALEdit edit, final Durability durability) throws IOException {
+      try (Table table = e.getEnvironment().getConnection().getTable(otherTable)) {
         table.put(put);
         completed[0] = true;
       }
@@ -89,6 +90,7 @@ public class TestOpenTableInCoprocessor {
   }
 
   private static boolean[] completedWithPool = new boolean[1];
+
   /**
    * Coprocessor that creates an HTable with a pool to write to another table
    */
@@ -116,10 +118,10 @@ public class TestOpenTableInCoprocessor {
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-        final WALEdit edit, final Durability durability) throws IOException {
+      final WALEdit edit, final Durability durability) throws IOException {
       try (Table table = e.getEnvironment().getConnection().getTable(otherTable, getPool())) {
-        Put p = new Put(new byte[]{'a'});
-        p.addColumn(family, null, new byte[]{'a'});
+        Put p = new Put(new byte[] { 'a' });
+        p.addColumn(family, null, new byte[] { 'a' });
         try {
           table.batch(Collections.singletonList(put), null);
         } catch (InterruptedException e1) {
@@ -163,9 +165,9 @@ public class TestOpenTableInCoprocessor {
   }
 
   private void runCoprocessorConnectionToRemoteTable(Class clazz, boolean[] completeCheck)
-      throws Throwable {
+    throws Throwable {
     // Check if given class implements RegionObserver.
-    assert(RegionObserver.class.isAssignableFrom(clazz));
+    assert (RegionObserver.class.isAssignableFrom(clazz));
     HTableDescriptor primary = new HTableDescriptor(primaryTable);
     primary.addFamily(new HColumnDescriptor(family));
     // add our coprocessor
@@ -174,14 +176,13 @@ public class TestOpenTableInCoprocessor {
     HTableDescriptor other = new HTableDescriptor(otherTable);
     other.addFamily(new HColumnDescriptor(family));
 
-
     Admin admin = UTIL.getAdmin();
     admin.createTable(primary);
     admin.createTable(other);
 
     Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
-    p.addColumn(family, null, new byte[]{'a'});
+    p.addColumn(family, null, new byte[] { 'a' });
     table.put(p);
     table.close();
 
@@ -194,8 +195,7 @@ public class TestOpenTableInCoprocessor {
   /**
    * Count the number of keyvalue in the table. Scans all possible versions
    * @param table table to scan
-   * @return number of keyvalues over all rows in the table
-   * @throws IOException
+   * @return number of keyvalues over all rows in the table n
    */
   private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();

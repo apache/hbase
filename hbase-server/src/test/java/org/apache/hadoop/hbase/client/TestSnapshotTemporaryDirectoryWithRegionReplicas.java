@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,11 +24,11 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestSnapshotTemporaryDirectoryWithRegionReplicas
-    extends TestSnapshotTemporaryDirectory {
+  extends TestSnapshotTemporaryDirectory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotTemporaryDirectoryWithRegionReplicas.class);
+    HBaseClassTestRule.forClass(TestSnapshotTemporaryDirectoryWithRegionReplicas.class);
 
   @Override
   protected int getNumReplicas() {

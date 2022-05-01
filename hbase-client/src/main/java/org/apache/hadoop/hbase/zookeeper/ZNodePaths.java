@@ -42,9 +42,8 @@ public class ZNodePaths {
   public final String baseZNode;
 
   /**
-   * The prefix of meta znode. Does not include baseZNode.
-   * Its a 'prefix' because meta replica id integer can be tagged on the end (if
-   * no number present, it is 'default' replica).
+   * The prefix of meta znode. Does not include baseZNode. Its a 'prefix' because meta replica id
+   * integer can be tagged on the end (if no number present, it is 'default' replica).
    */
   private final String metaZNodePrefix;
 
@@ -97,51 +96,44 @@ public class ZNodePaths {
     drainingZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.draining.rs", "draining"));
     masterAddressZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.master", "master"));
     backupMasterAddressesZNode =
-        joinZNode(baseZNode, conf.get("zookeeper.znode.backup.masters", "backup-masters"));
+      joinZNode(baseZNode, conf.get("zookeeper.znode.backup.masters", "backup-masters"));
     clusterStateZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.state", "running"));
     tableZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.tableEnableDisable", "table"));
     clusterIdZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.clusterId", "hbaseid"));
     splitLogZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.splitlog", SPLIT_LOGDIR_NAME));
     balancerZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.balancer", "balancer"));
     regionNormalizerZNode =
-        joinZNode(baseZNode, conf.get("zookeeper.znode.regionNormalizer", "normalizer"));
+      joinZNode(baseZNode, conf.get("zookeeper.znode.regionNormalizer", "normalizer"));
     switchZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.switch", "switch"));
     namespaceZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.namespace", "namespace"));
     masterMaintZNode =
-        joinZNode(baseZNode, conf.get("zookeeper.znode.masterMaintenance", "master-maintenance"));
+      joinZNode(baseZNode, conf.get("zookeeper.znode.masterMaintenance", "master-maintenance"));
     replicationZNode = joinZNode(baseZNode, conf.get("zookeeper.znode.replication", "replication"));
     peersZNode =
-        joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.peers", "peers"));
+      joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.peers", "peers"));
     queuesZNode = joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.rs", "rs"));
-    hfileRefsZNode = joinZNode(replicationZNode,
-      conf.get("zookeeper.znode.replication.hfile.refs", "hfile-refs"));
+    hfileRefsZNode =
+      joinZNode(replicationZNode, conf.get("zookeeper.znode.replication.hfile.refs", "hfile-refs"));
     snapshotCleanupZNode = joinZNode(baseZNode,
-        conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
+      conf.get("zookeeper.znode.snapshot.cleanup", DEFAULT_SNAPSHOT_CLEANUP_ZNODE));
   }
 
   @Override
   public String toString() {
-    return new StringBuilder()
-        .append("ZNodePaths [baseZNode=").append(baseZNode)
-        .append(", rsZNode=").append(rsZNode)
-        .append(", drainingZNode=").append(drainingZNode)
-        .append(", masterAddressZNode=").append(masterAddressZNode)
-        .append(", backupMasterAddressesZNode=").append(backupMasterAddressesZNode)
-        .append(", clusterStateZNode=").append(clusterStateZNode)
-        .append(", tableZNode=").append(tableZNode)
-        .append(", clusterIdZNode=").append(clusterIdZNode)
-        .append(", splitLogZNode=").append(splitLogZNode)
-        .append(", balancerZNode=").append(balancerZNode)
-        .append(", regionNormalizerZNode=").append(regionNormalizerZNode)
-        .append(", switchZNode=").append(switchZNode)
-        .append(", namespaceZNode=").append(namespaceZNode)
-        .append(", masterMaintZNode=").append(masterMaintZNode)
-        .append(", replicationZNode=").append(replicationZNode)
-        .append(", peersZNode=").append(peersZNode)
-        .append(", queuesZNode=").append(queuesZNode)
-        .append(", hfileRefsZNode=").append(hfileRefsZNode)
-        .append(", snapshotCleanupZNode=").append(snapshotCleanupZNode)
-        .append("]").toString();
+    return new StringBuilder().append("ZNodePaths [baseZNode=").append(baseZNode)
+      .append(", rsZNode=").append(rsZNode).append(", drainingZNode=").append(drainingZNode)
+      .append(", masterAddressZNode=").append(masterAddressZNode)
+      .append(", backupMasterAddressesZNode=").append(backupMasterAddressesZNode)
+      .append(", clusterStateZNode=").append(clusterStateZNode).append(", tableZNode=")
+      .append(tableZNode).append(", clusterIdZNode=").append(clusterIdZNode)
+      .append(", splitLogZNode=").append(splitLogZNode).append(", balancerZNode=")
+      .append(balancerZNode).append(", regionNormalizerZNode=").append(regionNormalizerZNode)
+      .append(", switchZNode=").append(switchZNode).append(", namespaceZNode=")
+      .append(namespaceZNode).append(", masterMaintZNode=").append(masterMaintZNode)
+      .append(", replicationZNode=").append(replicationZNode).append(", peersZNode=")
+      .append(peersZNode).append(", queuesZNode=").append(queuesZNode).append(", hfileRefsZNode=")
+      .append(hfileRefsZNode).append(", snapshotCleanupZNode=").append(snapshotCleanupZNode)
+      .append("]").toString();
   }
 
   /**
@@ -157,8 +149,7 @@ public class ZNodePaths {
 
   /**
    * Parses the meta replicaId from the passed path.
-   * @param path the name of the full path which includes baseZNode.
-   * @return replicaId
+   * @param path the name of the full path which includes baseZNode. n
    */
   public int getMetaReplicaIdFromPath(String path) {
     // Extract the znode from path. The prefix is of the following format.
@@ -169,13 +160,12 @@ public class ZNodePaths {
 
   /**
    * Parse the meta replicaId from the passed znode
-   * @param znode the name of the znode, does not include baseZNode
-   * @return replicaId
+   * @param znode the name of the znode, does not include baseZNode n
    */
   public int getMetaReplicaIdFromZNode(String znode) {
-    return znode.equals(metaZNodePrefix)?
-        RegionInfo.DEFAULT_REPLICA_ID:
-        Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
+    return znode.equals(metaZNodePrefix)
+      ? RegionInfo.DEFAULT_REPLICA_ID
+      : Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
   }
 
   /**
@@ -201,8 +191,8 @@ public class ZNodePaths {
     // Developer notice: These znodes are world readable. DO NOT add more znodes here UNLESS
     // all clients need to access this data to work. Using zk for sharing data to clients (other
     // than service lookup case is not a recommended design pattern.
-    return path.equals(baseZNode) || isMetaZNodePath(path) || path.equals(masterAddressZNode) ||
-      path.equals(clusterIdZNode) || path.equals(rsZNode) ||
+    return path.equals(baseZNode) || isMetaZNodePath(path) || path.equals(masterAddressZNode)
+      || path.equals(clusterIdZNode) || path.equals(rsZNode) ||
       // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
       path.equals(tableZNode) || path.startsWith(tableZNode + "/");
   }

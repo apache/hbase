@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,12 +64,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRestoreSnapshotHelper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRestoreSnapshotHelper.class);
+    HBaseClassTestRule.forClass(TestRestoreSnapshotHelper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotHelper.class);
 
@@ -178,7 +178,7 @@ public class TestRestoreSnapshotHelper {
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
-      throws IOException {
+    throws IOException {
     byte[] column = Bytes.toBytes("A");
     Table table = TEST_UTIL.createTable(tableName, column, 2);
     TEST_UTIL.loadTable(table, column);
@@ -187,8 +187,8 @@ public class TestRestoreSnapshotHelper {
 
   private void checkNoHFileLinkInTableDir(TableName tableName) throws IOException {
     Path[] tableDirs = new Path[] { CommonFSUtils.getTableDir(rootDir, tableName),
-        CommonFSUtils.getTableDir(new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY), tableName),
-        CommonFSUtils.getTableDir(MobUtils.getMobHome(rootDir), tableName) };
+      CommonFSUtils.getTableDir(new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY), tableName),
+      CommonFSUtils.getTableDir(MobUtils.getMobHome(rootDir), tableName) };
     for (Path tableDir : tableDirs) {
       Assert.assertFalse(hasHFileLink(tableDir));
     }
@@ -207,7 +207,8 @@ public class TestRestoreSnapshotHelper {
     return false;
   }
 
-  private void restoreAndVerify(final String snapshotName, final String tableName) throws IOException {
+  private void restoreAndVerify(final String snapshotName, final String tableName)
+    throws IOException {
     // Test Rolling-Upgrade like Snapshot.
     // half machines writing using v1 and the others using v2 format.
     SnapshotMock snapshotMock = createSnapshotMock();
@@ -226,10 +227,8 @@ public class TestRestoreSnapshotHelper {
     verifyRestore(rootDir, htd, htdClone);
 
     // Test clone a clone ("link to link")
-    SnapshotDescription cloneDesc = SnapshotDescription.newBuilder()
-        .setName("cloneSnapshot")
-        .setTable("testtb-clone")
-        .build();
+    SnapshotDescription cloneDesc =
+      SnapshotDescription.newBuilder().setName("cloneSnapshot").setTable("testtb-clone").build();
     Path cloneDir = CommonFSUtils.getTableDir(rootDir, htdClone.getTableName());
     TableDescriptor htdClone2 = snapshotMock.createHtd("testtb-clone2");
     testRestore(cloneDir, cloneDesc, htdClone2);
@@ -237,19 +236,20 @@ public class TestRestoreSnapshotHelper {
   }
 
   private void verifyRestore(final Path rootDir, final TableDescriptor sourceHtd,
-      final TableDescriptor htdClone) throws IOException {
+    final TableDescriptor htdClone) throws IOException {
     List<String> files = SnapshotTestingUtils.listHFileNames(fs,
       CommonFSUtils.getTableDir(rootDir, htdClone.getTableName()));
     assertEquals(12, files.size());
     for (int i = 0; i < files.size(); i += 2) {
       String linkFile = files.get(i);
-      String refFile = files.get(i+1);
+      String refFile = files.get(i + 1);
       assertTrue(linkFile + " should be a HFileLink", HFileLink.isHFileLink(linkFile));
       assertTrue(refFile + " should be a Referene", StoreFileInfo.isReference(refFile));
       assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(linkFile));
       Path refPath = getReferredToFile(refFile);
       LOG.debug("get reference name for file " + refFile + " = " + refPath);
-      assertTrue(refPath.getName() + " should be a HFileLink", HFileLink.isHFileLink(refPath.getName()));
+      assertTrue(refPath.getName() + " should be a HFileLink",
+        HFileLink.isHFileLink(refPath.getName()));
       assertEquals(linkFile, refPath.getName());
     }
   }
@@ -257,11 +257,11 @@ public class TestRestoreSnapshotHelper {
   /**
    * Execute the restore operation
    * @param snapshotDir The snapshot directory to use as "restore source"
-   * @param sd The snapshot descriptor
-   * @param htdClone The HTableDescriptor of the table to restore/clone.
+   * @param sd          The snapshot descriptor
+   * @param htdClone    The HTableDescriptor of the table to restore/clone.
    */
   private void testRestore(final Path snapshotDir, final SnapshotDescription sd,
-      final TableDescriptor htdClone) throws IOException {
+    final TableDescriptor htdClone) throws IOException {
     LOG.debug("pre-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
 
@@ -277,13 +277,12 @@ public class TestRestoreSnapshotHelper {
    * Initialize the restore helper, based on the snapshot and table information provided.
    */
   private RestoreSnapshotHelper getRestoreHelper(final Path rootDir, final Path snapshotDir,
-      final SnapshotDescription sd, final TableDescriptor htdClone) throws IOException {
+    final SnapshotDescription sd, final TableDescriptor htdClone) throws IOException {
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
-    return new RestoreSnapshotHelper(conf, fs, manifest,
-      htdClone, rootDir, monitor, status);
+    return new RestoreSnapshotHelper(conf, fs, manifest, htdClone, rootDir, monitor, status);
   }
 
   private Path getReferredToFile(final String referenceName) {

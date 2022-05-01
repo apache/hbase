@@ -304,8 +304,10 @@ public class TestCatalogJanitorCluster {
     assertFalse(lastReport.isEmpty());
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = new LinkedList<>();
     for (Pair<RegionInfo, RegionInfo> hole : lastReport.getHoles()) {
-      if (hole.getFirst().getTable().equals(tableName) ||
-        hole.getSecond().getTable().equals(tableName)) {
+      if (
+        hole.getFirst().getTable().equals(tableName)
+          || hole.getSecond().getTable().equals(tableName)
+      ) {
         holes.add(hole);
       }
     }

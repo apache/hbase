@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.mockito.Mockito.mock;
@@ -58,9 +57,8 @@ class MockStoreFileGenerator {
   protected HStoreFile createMockStoreFile(final long sizeInBytes, final long seqId) {
     HStoreFile mockSf = mock(HStoreFile.class);
     StoreFileReader reader = mock(StoreFileReader.class);
-    String stringPath = "/hbase/testTable/regionA/" +
-        RandomStringUtils.random(FILENAME_LENGTH, 0, 0, true, true, null,
-          ThreadLocalRandom.current());
+    String stringPath = "/hbase/testTable/regionA/" + RandomStringUtils.random(FILENAME_LENGTH, 0,
+      0, true, true, null, ThreadLocalRandom.current());
     Path path = new Path(stringPath);
 
     when(reader.getSequenceID()).thenReturn(seqId);
@@ -72,11 +70,9 @@ class MockStoreFileGenerator {
     when(mockSf.isReference()).thenReturn(false); // TODO come back to
     // this when selection takes this into account
     when(mockSf.getReader()).thenReturn(reader);
-    String toString = MoreObjects.toStringHelper("MockStoreFile")
-        .add("isReference", false)
-        .add("fileSize", StringUtils.humanReadableInt(sizeInBytes))
-        .add("seqId", seqId)
-        .add("path", stringPath).toString();
+    String toString = MoreObjects.toStringHelper("MockStoreFile").add("isReference", false)
+      .add("fileSize", StringUtils.humanReadableInt(sizeInBytes)).add("seqId", seqId)
+      .add("path", stringPath).toString();
     when(mockSf.toString()).thenReturn(toString);
 
     return mockSf;

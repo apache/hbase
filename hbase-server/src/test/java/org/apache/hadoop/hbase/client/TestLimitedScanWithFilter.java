@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestLimitedScanWithFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLimitedScanWithFilter.class);
+    HBaseClassTestRule.forClass(TestLimitedScanWithFilter.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -55,7 +55,7 @@ public class TestLimitedScanWithFilter {
   private static final byte[] FAMILY = Bytes.toBytes("cf");
 
   private static final byte[][] CQS =
-      { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3"), Bytes.toBytes("cq4") };
+    { Bytes.toBytes("cq1"), Bytes.toBytes("cq2"), Bytes.toBytes("cq3"), Bytes.toBytes("cq4") };
 
   private static int ROW_COUNT = 10;
 
@@ -82,9 +82,9 @@ public class TestLimitedScanWithFilter {
   public void testCompleteResult() throws IOException {
     int limit = 5;
     Scan scan =
-        new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1).setLimit(limit);
+      new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1).setLimit(limit);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (int i = 0; i < limit; i++) {
         Result result = scanner.next();
         assertEquals(i, Bytes.toInt(result.getRow()));
@@ -101,9 +101,9 @@ public class TestLimitedScanWithFilter {
   public void testAllowPartial() throws IOException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(2)).setMaxResultSize(1)
-        .setAllowPartialResults(true).setLimit(limit);
+      .setAllowPartialResults(true).setLimit(limit);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (int i = 0; i < 2 * limit; i++) {
         int key = i / 2;
         Result result = scanner.next();
@@ -121,9 +121,9 @@ public class TestLimitedScanWithFilter {
   public void testBatchAllowPartial() throws IOException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(3)).setBatch(2).setMaxResultSize(1)
-        .setAllowPartialResults(true).setLimit(limit);
+      .setAllowPartialResults(true).setLimit(limit);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (int i = 0; i < 3 * limit; i++) {
         int key = i / 3;
         Result result = scanner.next();
@@ -141,9 +141,9 @@ public class TestLimitedScanWithFilter {
   public void testBatch() throws IOException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(2)).setBatch(2).setMaxResultSize(1)
-        .setLimit(limit);
+      .setLimit(limit);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (int i = 0; i < limit; i++) {
         Result result = scanner.next();
         assertEquals(i, Bytes.toInt(result.getRow()));
@@ -160,9 +160,9 @@ public class TestLimitedScanWithFilter {
   public void testBatchAndFilterDiffer() throws IOException {
     int limit = 5;
     Scan scan = new Scan().setFilter(new ColumnCountOnRowFilter(3)).setBatch(2).setMaxResultSize(1)
-        .setLimit(limit);
+      .setLimit(limit);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       for (int i = 0; i < limit; i++) {
         Result result = scanner.next();
         assertEquals(i, Bytes.toInt(result.getRow()));

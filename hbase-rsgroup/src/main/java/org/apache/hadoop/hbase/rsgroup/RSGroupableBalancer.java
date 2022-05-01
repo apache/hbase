@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Marker Interface. RSGroups feature will check for a LoadBalancer
- * marked with this Interface before it runs.
+ * Marker Interface. RSGroups feature will check for a LoadBalancer marked with this Interface
+ * before it runs.
  */
 @InterfaceAudience.Private
 public interface RSGroupableBalancer extends LoadBalancer {

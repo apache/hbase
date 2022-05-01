@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,8 +49,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Category(SmallTests.class)
 public class TestStoreHotnessProtector {
 
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStoreHotnessProtector.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestStoreHotnessProtector.class);
 
   @Test
   public void testPreparePutCounter() throws Exception {
@@ -82,8 +83,8 @@ public class TestStoreHotnessProtector {
 
     // PreparePutCounter not access limit
 
-    int threadCount = conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT, 10) * conf
-        .getInt(PARALLEL_PREPARE_PUT_STORE_MULTIPLIER, 3);
+    int threadCount = conf.getInt(PARALLEL_PUT_STORE_THREADS_LIMIT, 10)
+      * conf.getInt(PARALLEL_PREPARE_PUT_STORE_MULTIPLIER, 3);
     CountDownLatch countDownLatch = new CountDownLatch(threadCount);
 
     for (int i = 0; i < threadCount; i++) {
@@ -100,11 +101,11 @@ public class TestStoreHotnessProtector {
     }
 
     countDownLatch.await(60, TimeUnit.SECONDS);
-    //no exception
+    // no exception
     Assert.assertEquals(exception.get(), null);
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
-        threadCount);
+      threadCount);
 
     // access limit
 
@@ -120,11 +121,11 @@ public class TestStoreHotnessProtector {
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
     // when access limit, counter will not changed.
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
-        threadCount + 1);
+      threadCount + 1);
 
     storeHotnessProtector.finish(familyMaps);
     Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
-        threadCount);
+      threadCount);
   }
 
 }

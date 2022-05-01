@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -104,12 +103,14 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 @Category(LargeTests.class)
 public class TestMobCompactor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactor.class);
+    HBaseClassTestRule.forClass(TestMobCompactor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactor.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -177,8 +178,8 @@ public class TestMobCompactor {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, 5000);
-    TEST_UTIL.getConfiguration()
-        .set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+      KeyProviderForTesting.class.getName());
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     TEST_UTIL.getConfiguration().setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 1);
@@ -192,7 +193,7 @@ public class TestMobCompactor {
     admin = TEST_UTIL.getAdmin();
 
     // Initialize timestamps for these days
-    Calendar calendar =  Calendar.getInstance();
+    Calendar calendar = Calendar.getInstance();
     calendar.set(2015, 8, 7, 10, 20);
     tsFor20150907Monday = calendar.getTimeInMillis();
 
@@ -249,7 +250,7 @@ public class TestMobCompactor {
 
   // Set up for mob compaction policy testing
   private void setUpForPolicyTest(String tableNameAsString, MobCompactPartitionPolicy type)
-      throws IOException {
+    throws IOException {
     tableName = TableName.valueOf(tableNameAsString);
     hcd1 = new HColumnDescriptor(family1);
     hcd1.setMobEnabled(true);
@@ -263,8 +264,7 @@ public class TestMobCompactor {
   }
 
   // alter mob compaction policy
-  private void alterForPolicyTest(final MobCompactPartitionPolicy type)
-      throws Exception {
+  private void alterForPolicyTest(final MobCompactPartitionPolicy type) throws Exception {
 
     hcd1.setMobCompactPartitionPolicy(type);
     desc.modifyFamily(hcd1);
@@ -307,8 +307,8 @@ public class TestMobCompactor {
 
     assertEquals("Before compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
       countMobRows(table));
-    assertEquals("Before compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("Before compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     assertEquals("Before compaction: family1 mob file count", regionNum * count,
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: family2 mob file count", regionNum * count,
@@ -324,8 +324,8 @@ public class TestMobCompactor {
 
     assertEquals("After compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
       countMobRows(table));
-    assertEquals("After compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("After compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     // After the compaction, the files smaller than the mob compaction merge size
     // is merge to one file
     assertEquals("After compaction: family1 mob file count", largeFilesCount + regionNum,
@@ -345,19 +345,18 @@ public class TestMobCompactor {
     // change the mob compaction merge size
     conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
 
-    commonPolicyTestLogic("testMinorCompactionWithWeeklyPolicy",
-        MobCompactPartitionPolicy.WEEKLY, false, 6,
-        new String[] { "20150907", "20151120", "20151128", "20151130", "20151205", "20160103" },
-        true);
+    commonPolicyTestLogic("testMinorCompactionWithWeeklyPolicy", MobCompactPartitionPolicy.WEEKLY,
+      false, 6,
+      new String[] { "20150907", "20151120", "20151128", "20151130", "20151205", "20160103" },
+      true);
   }
 
   @Test
   public void testMajorCompactionWithWeeklyPolicy() throws Exception {
     resetConf();
 
-    commonPolicyTestLogic("testMajorCompactionWithWeeklyPolicy",
-        MobCompactPartitionPolicy.WEEKLY, true, 5,
-        new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
+    commonPolicyTestLogic("testMajorCompactionWithWeeklyPolicy", MobCompactPartitionPolicy.WEEKLY,
+      true, 5, new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
   }
 
   @Test
@@ -367,18 +366,16 @@ public class TestMobCompactor {
     // change the mob compaction merge size
     conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
 
-    commonPolicyTestLogic("testMinorCompactionWithMonthlyPolicy",
-        MobCompactPartitionPolicy.MONTHLY, false, 4,
-        new String[] { "20150907", "20151130", "20151231", "20160103" }, true);
+    commonPolicyTestLogic("testMinorCompactionWithMonthlyPolicy", MobCompactPartitionPolicy.MONTHLY,
+      false, 4, new String[] { "20150907", "20151130", "20151231", "20160103" }, true);
   }
 
   @Test
   public void testMajorCompactionWithMonthlyPolicy() throws Exception {
     resetConf();
 
-    commonPolicyTestLogic("testMajorCompactionWithMonthlyPolicy",
-        MobCompactPartitionPolicy.MONTHLY, true, 4,
-        new String[] {"20150907", "20151130", "20151231", "20160103"}, true);
+    commonPolicyTestLogic("testMajorCompactionWithMonthlyPolicy", MobCompactPartitionPolicy.MONTHLY,
+      true, 4, new String[] { "20150907", "20151130", "20151231", "20160103" }, true);
   }
 
   @Test
@@ -386,12 +383,12 @@ public class TestMobCompactor {
     resetConf();
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthly",
-        MobCompactPartitionPolicy.WEEKLY, true, 5,
-        new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
+      MobCompactPartitionPolicy.WEEKLY, true, 5,
+      new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthly",
-        MobCompactPartitionPolicy.MONTHLY, true, 4,
-        new String[] {"20150907", "20151128", "20151205", "20160103" }, false);
+      MobCompactPartitionPolicy.MONTHLY, true, 4,
+      new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
   }
 
   @Test
@@ -399,16 +396,16 @@ public class TestMobCompactor {
     resetConf();
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByWeekly",
-        MobCompactPartitionPolicy.WEEKLY, true, 5,
-        new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
+      MobCompactPartitionPolicy.WEEKLY, true, 5,
+      new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByWeekly",
-        MobCompactPartitionPolicy.MONTHLY, true, 4,
-        new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
+      MobCompactPartitionPolicy.MONTHLY, true, 4,
+      new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByWeekly",
-        MobCompactPartitionPolicy.WEEKLY, true, 4,
-        new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
+      MobCompactPartitionPolicy.WEEKLY, true, 4,
+      new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
   }
 
   @Test
@@ -416,16 +413,16 @@ public class TestMobCompactor {
     resetConf();
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByDaily",
-        MobCompactPartitionPolicy.WEEKLY, true, 5,
-        new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
+      MobCompactPartitionPolicy.WEEKLY, true, 5,
+      new String[] { "20150907", "20151120", "20151128", "20151205", "20160103" }, true);
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByDaily",
-        MobCompactPartitionPolicy.MONTHLY, true, 4,
-        new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
+      MobCompactPartitionPolicy.MONTHLY, true, 4,
+      new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
 
     commonPolicyTestLogic("testMajorCompactionWithWeeklyFollowedByMonthlyFollowedByDaily",
-        MobCompactPartitionPolicy.DAILY, true, 4,
-        new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
+      MobCompactPartitionPolicy.DAILY, true, 4,
+      new String[] { "20150907", "20151128", "20151205", "20160103" }, false);
   }
 
   @Test
@@ -447,8 +444,8 @@ public class TestMobCompactor {
 
     assertEquals("Before compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
       countMobRows(table));
-    assertEquals("Before compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("Before compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     assertEquals("Before compaction: family1 mob file count", regionNum * count,
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: family2 mob file count", regionNum * count,
@@ -462,10 +459,10 @@ public class TestMobCompactor {
     MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
-    assertEquals("After first compaction: mob rows count", regionNum
-      * (rowNumPerRegion - delRowNum), countMobRows(table));
-    assertEquals("After first compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("After first compaction: mob rows count",
+      regionNum * (rowNumPerRegion - delRowNum), countMobRows(table));
+    assertEquals("After first compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     assertEquals("After first compaction: family1 mob file count", regionNum,
       countFiles(tableName, true, family1));
     assertEquals("After first compaction: family2 mob file count", regionNum * count,
@@ -484,8 +481,8 @@ public class TestMobCompactor {
 
     assertEquals("After restoring snapshot: mob rows count", regionNum * rowNumPerRegion,
       countMobRows(table));
-    assertEquals("After restoring snapshot: mob cells count", regionNum * cellNumPerRow
-      * rowNumPerRegion, countMobCells(table));
+    assertEquals("After restoring snapshot: mob cells count",
+      regionNum * cellNumPerRow * rowNumPerRegion, countMobCells(table));
     assertEquals("After restoring snapshot: family1 mob file count", regionNum * count,
       countFiles(tableName, true, family1));
     assertEquals("After restoring snapshot: family2 mob file count", regionNum * count,
@@ -502,8 +499,8 @@ public class TestMobCompactor {
 
     assertEquals("After second compaction: mob rows count", regionNum * rowNumPerRegion,
       countMobRows(table));
-    assertEquals("After second compaction: mob cells count", regionNum * cellNumPerRow
-      * rowNumPerRegion, countMobCells(table));
+    assertEquals("After second compaction: mob cells count",
+      regionNum * cellNumPerRow * rowNumPerRegion, countMobCells(table));
     assertEquals("After second compaction: family1 mob file count", regionNum,
       countFiles(tableName, true, family1));
     assertEquals("After second compaction: family2 mob file count", regionNum * count,
@@ -561,8 +558,8 @@ public class TestMobCompactor {
 
     assertEquals("Before compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
       countMobRows(table));
-    assertEquals("Before compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("Before compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     assertEquals("Before compaction: family1 mob file count", regionNum * count,
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: family2 mob file count", regionNum * count,
@@ -578,8 +575,8 @@ public class TestMobCompactor {
     waitUntilMobCompactionFinished(tableName);
     assertEquals("After compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
       countMobRows(table));
-    assertEquals("After compaction: mob cells count", regionNum
-      * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
+    assertEquals("After compaction: mob cells count",
+      regionNum * (cellNumPerRow * rowNumPerRegion - delCellNum), countMobCells(table));
     assertEquals("After compaction: family1 mob file count", regionNum,
       countFiles(tableName, true, family1));
     assertEquals("After compaction: family2 mob file count", regionNum * count,
@@ -642,15 +639,15 @@ public class TestMobCompactor {
       }
     }
     assertEquals("After compaction: number of mob files:", 1, paths.size());
-    assertEquals("After compaction: mob file name:", MobUtils.getMobFileName(cell), paths.get(0)
-      .getName());
+    assertEquals("After compaction: mob file name:", MobUtils.getMobFileName(cell),
+      paths.get(0).getName());
   }
 
   /**
-   * This case tests the following mob compaction and normal compaction scenario,
-   * after mob compaction, the mob reference in new bulkloaded hfile will win even after it
-   * is compacted with some other normal hfiles. This is to make sure the mvcc is included
-   * after compaction for mob enabled store files.
+   * This case tests the following mob compaction and normal compaction scenario, after mob
+   * compaction, the mob reference in new bulkloaded hfile will win even after it is compacted with
+   * some other normal hfiles. This is to make sure the mvcc is included after compaction for mob
+   * enabled store files.
    */
   @Test
   public void testGetAfterCompaction() throws Exception {
@@ -719,7 +716,7 @@ public class TestMobCompactor {
     while (fileList.length != num) {
       Thread.sleep(50);
       fileList = fs.listStatus(path);
-      for (FileStatus fileStatus: fileList) {
+      for (FileStatus fileStatus : fileList) {
         LOG.info(Objects.toString(fileStatus));
       }
     }
@@ -738,8 +735,7 @@ public class TestMobCompactor {
 
     @Override
     public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker)
-        throws IOException {
+      List<? extends StoreFile> candidates, CompactionLifeCycleTracker tracker) throws IOException {
       int count = candidates.size();
       if (count >= 2) {
         for (int i = 0; i < count - 2; i++) {
@@ -750,8 +746,8 @@ public class TestMobCompactor {
     }
   }
 
-  private void waitUntilMobCompactionFinished(TableName tableName) throws IOException,
-    InterruptedException {
+  private void waitUntilMobCompactionFinished(TableName tableName)
+    throws IOException, InterruptedException {
     long finished = EnvironmentEdgeManager.currentTime() + 60000;
     CompactionState state = admin.getCompactionState(tableName, CompactType.MOB);
     while (EnvironmentEdgeManager.currentTime() < finished) {
@@ -766,7 +762,7 @@ public class TestMobCompactor {
 
   /**
    * Gets the number of rows in the given table.
-   * @param table to get the  scanner
+   * @param table to get the scanner
    * @return the number of rows
    */
   private int countMobRows(final Table table) throws IOException {
@@ -778,7 +774,7 @@ public class TestMobCompactor {
 
   /**
    * Gets the number of cells in the given table.
-   * @param table to get the  scanner
+   * @param table to get the scanner
    * @return the number of cells
    */
   private int countMobCells(final Table table) throws IOException {
@@ -796,7 +792,7 @@ public class TestMobCompactor {
 
   /**
    * Gets the number of files in the mob path.
-   * @param isMobFile gets number of the mob files or del files
+   * @param isMobFile  gets number of the mob files or del files
    * @param familyName the family name
    * @return the number of the files
    */
@@ -830,8 +826,8 @@ public class TestMobCompactor {
       Assert.assertTrue(hasFiles);
       Path path = files[0].getPath();
       CacheConfig cacheConf = new CacheConfig(conf);
-      HStoreFile sf = new HStoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
-        BloomType.NONE, true);
+      HStoreFile sf =
+        new HStoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf, BloomType.NONE, true);
       sf.initReader();
       HFile.Reader reader = sf.getReader().getHFileReader();
       byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
@@ -863,8 +859,8 @@ public class TestMobCompactor {
 
   /**
    * Gets the number of files.
-   * @param size the size of the file
-   * @param tableName the current table name
+   * @param size       the size of the file
+   * @param tableName  the current table name
    * @param familyName the family name
    * @return the number of files large than the size
    */
@@ -918,63 +914,64 @@ public class TestMobCompactor {
   }
 
   private void loadDataForPartitionPolicy(Admin admin, BufferedMutator table, TableName tableName)
-      throws IOException {
+    throws IOException {
 
     Put[] pArray = new Put[1000];
 
-    for (int i = 0; i < 1000; i ++) {
+    for (int i = 0; i < 1000; i++) {
       Put put0 = new Put(Bytes.toBytes("r0" + i));
-      put0.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151130Monday, Bytes.toBytes(mobValue0));
+      put0.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151130Monday,
+        Bytes.toBytes(mobValue0));
       pArray[i] = put0;
     }
     loadData(admin, bufMut, tableName, pArray);
 
     Put put06 = new Put(mobKey06);
-    put06.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151128Saturday, Bytes.toBytes(mobValue0));
+    put06.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151128Saturday,
+      Bytes.toBytes(mobValue0));
 
     loadData(admin, bufMut, tableName, new Put[] { put06 });
 
     Put put1 = new Put(mobKey1);
     put1.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151201Tuesday,
-        Bytes.toBytes(mobValue1));
+      Bytes.toBytes(mobValue1));
     loadData(admin, bufMut, tableName, new Put[] { put1 });
 
     Put put2 = new Put(mobKey2);
     put2.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151205Saturday,
-        Bytes.toBytes(mobValue2));
+      Bytes.toBytes(mobValue2));
     loadData(admin, bufMut, tableName, new Put[] { put2 });
 
     Put put3 = new Put(mobKey3);
     put3.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151228Monday,
-        Bytes.toBytes(mobValue3));
+      Bytes.toBytes(mobValue3));
     loadData(admin, bufMut, tableName, new Put[] { put3 });
 
     Put put4 = new Put(mobKey4);
     put4.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151231Thursday,
-        Bytes.toBytes(mobValue4));
+      Bytes.toBytes(mobValue4));
     loadData(admin, bufMut, tableName, new Put[] { put4 });
 
     Put put5 = new Put(mobKey5);
     put5.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20160101Friday,
-        Bytes.toBytes(mobValue5));
+      Bytes.toBytes(mobValue5));
     loadData(admin, bufMut, tableName, new Put[] { put5 });
 
     Put put6 = new Put(mobKey6);
     put6.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20160103Sunday,
-        Bytes.toBytes(mobValue6));
+      Bytes.toBytes(mobValue6));
     loadData(admin, bufMut, tableName, new Put[] { put6 });
 
     Put put7 = new Put(mobKey7);
     put7.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20150907Monday,
-        Bytes.toBytes(mobValue7));
+      Bytes.toBytes(mobValue7));
     loadData(admin, bufMut, tableName, new Put[] { put7 });
 
     Put put8 = new Put(mobKey8);
     put8.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), tsFor20151120Sunday,
-        Bytes.toBytes(mobValue8));
+      Bytes.toBytes(mobValue8));
     loadData(admin, bufMut, tableName, new Put[] { put8 });
   }
-
 
   /**
    * delete the row, family and cell to create the del file
@@ -1005,6 +1002,7 @@ public class TestMobCompactor {
       region.compact(true);
     }
   }
+
   /**
    * Creates the dummy data with a specific size.
    * @param size the size of value
@@ -1053,17 +1051,17 @@ public class TestMobCompactor {
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     ResultScanner results = table.getScanner(scan);
-    Path mobFamilyPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(),
-        tableName, familyName);
+    Path mobFamilyPath =
+      MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, familyName);
     List<Path> actualFilePaths = new ArrayList<>();
     List<Path> expectFilePaths = new ArrayList<>();
     for (Result res : results) {
       for (Cell cell : res.listCells()) {
         byte[] referenceValue = CellUtil.cloneValue(cell);
         String fileName = Bytes.toString(referenceValue, Bytes.SIZEOF_INT,
-            referenceValue.length - Bytes.SIZEOF_INT);
+          referenceValue.length - Bytes.SIZEOF_INT);
         Path targetPath = new Path(mobFamilyPath, fileName);
-        if(!actualFilePaths.contains(targetPath)) {
+        if (!actualFilePaths.contains(targetPath)) {
           actualFilePaths.add(targetPath);
         }
       }
@@ -1099,79 +1097,78 @@ public class TestMobCompactor {
     Get get = new Get(mobKey01);
     Result result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey02);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey03);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey04);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey05);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey06);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue0)));
+      Bytes.toBytes(mobValue0)));
 
     get = new Get(mobKey1);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue1)));
+      Bytes.toBytes(mobValue1)));
 
     get = new Get(mobKey2);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue2)));
+      Bytes.toBytes(mobValue2)));
 
     get = new Get(mobKey3);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue3)));
+      Bytes.toBytes(mobValue3)));
 
     get = new Get(mobKey4);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue4)));
+      Bytes.toBytes(mobValue4)));
 
     get = new Get(mobKey5);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue5)));
+      Bytes.toBytes(mobValue5)));
 
     get = new Get(mobKey6);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue6)));
+      Bytes.toBytes(mobValue6)));
 
     get = new Get(mobKey7);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue7)));
+      Bytes.toBytes(mobValue7)));
 
     get = new Get(mobKey8);
     result = table.get(get);
     assertTrue(Arrays.equals(result.getValue(Bytes.toBytes(family1), Bytes.toBytes(qf1)),
-        Bytes.toBytes(mobValue8)));
+      Bytes.toBytes(mobValue8)));
   }
 
-  private void commonPolicyTestLogic (final String tableNameAsString,
-      final MobCompactPartitionPolicy pType, final boolean majorCompact,
-      final int expectedFileNumbers, final String[] expectedFileNames,
-      final boolean setupAndLoadData
-      ) throws Exception {
+  private void commonPolicyTestLogic(final String tableNameAsString,
+    final MobCompactPartitionPolicy pType, final boolean majorCompact,
+    final int expectedFileNumbers, final String[] expectedFileNames, final boolean setupAndLoadData)
+    throws Exception {
     if (setupAndLoadData) {
       setUpForPolicyTest(tableNameAsString, pType);
 
@@ -1191,7 +1188,7 @@ public class TestMobCompactor {
     // Run cleaner to make sure that files in archive directory are cleaned up
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
 
-    //check the number of files
+    // check the number of files
     Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableName, family1);
     FileStatus[] fileList = fs.listStatus(mobDirPath);
 
@@ -1214,4 +1211,4 @@ public class TestMobCompactor {
 
     verifyPolicyValues();
   }
- }
+}

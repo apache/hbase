@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class TestCISleep extends AbstractTestCITimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCISleep.class);
+    HBaseClassTestRule.forClass(TestCISleep.class);
 
   private static Logger LOG = LoggerFactory.getLogger(TestCISleep.class);
 
@@ -60,8 +60,7 @@ public class TestCISleep extends AbstractTestCITimeout {
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM))
       .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SleepAndFailFirstTime.class.getName())
-        .setProperty(SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY, String.valueOf(2000))
-        .build())
+        .setProperty(SleepAndFailFirstTime.SLEEP_TIME_CONF_KEY, String.valueOf(2000)).build())
       .build();
     TEST_UTIL.getAdmin().createTable(htd);
 
@@ -95,8 +94,8 @@ public class TestCISleep extends AbstractTestCITimeout {
     TEST_UTIL.createTable(tableName, FAM_NAM);
     ClientServiceCallable<Object> regionServerCallable =
       new ClientServiceCallable<Object>(TEST_UTIL.getConnection(), tableName, FAM_NAM,
-          new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
-          HConstants.PRIORITY_UNSET) {
+        new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
+        HConstants.PRIORITY_UNSET) {
         @Override
         protected Object rpcCall() throws Exception {
           return null;
@@ -112,7 +111,7 @@ public class TestCISleep extends AbstractTestCITimeout {
 
     RegionAdminServiceCallable<Object> regionAdminServiceCallable =
       new RegionAdminServiceCallable<Object>((ClusterConnection) TEST_UTIL.getConnection(),
-          new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, FAM_NAM) {
+        new RpcControllerFactory(TEST_UTIL.getConfiguration()), tableName, FAM_NAM) {
         @Override
         public Object call(HBaseRpcController controller) throws Exception {
           return null;
@@ -128,7 +127,7 @@ public class TestCISleep extends AbstractTestCITimeout {
 
     try (
       MasterCallable<Object> masterCallable = new MasterCallable<Object>(TEST_UTIL.getConnection(),
-          new RpcControllerFactory(TEST_UTIL.getConfiguration())) {
+        new RpcControllerFactory(TEST_UTIL.getConfiguration())) {
         @Override
         protected Object rpcCall() throws Exception {
           return null;

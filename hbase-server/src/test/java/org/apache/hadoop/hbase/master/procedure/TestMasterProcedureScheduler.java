@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -642,7 +642,7 @@ public class TestMasterProcedureScheduler {
   }
 
   private void testInheritedXLockAndChildrenSharedLock(final TableName tableName,
-      final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs) throws Exception {
+    final TestTableProcedure rootProc, final TestRegionProcedure[] childProcs) throws Exception {
     queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
@@ -698,7 +698,7 @@ public class TestMasterProcedureScheduler {
   }
 
   private void testInheritedXLockAndChildrenXLock(final TableName tableName,
-      final TestTableProcedure rootProc, final TestTableProcedure childProc) throws Exception {
+    final TestTableProcedure rootProc, final TestTableProcedure childProc) throws Exception {
     queue.addBack(rootProc);
 
     // fetch and acquire first xlock proc
@@ -805,12 +805,12 @@ public class TestMasterProcedureScheduler {
     }
 
     public TestTableProcedure(long parentProcId, long procId, TableName tableName,
-        TableOperationType opType) {
+      TableOperationType opType) {
       this(-1, parentProcId, procId, tableName, opType);
     }
 
     public TestTableProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
-        TableOperationType opType) {
+      TableOperationType opType) {
       super(procId, parentProcId, rootProcId, null);
       this.tableName = tableName;
       this.opType = opType;
@@ -839,7 +839,7 @@ public class TestMasterProcedureScheduler {
     private final ProcedureEvent<?> event;
 
     public TestTableProcedureWithEvent(long procId, TableName tableName,
-        TableOperationType opType) {
+      TableOperationType opType) {
       super(procId, tableName, opType);
       event = new ProcedureEvent<>(tableName + " procId=" + procId);
     }
@@ -857,17 +857,17 @@ public class TestMasterProcedureScheduler {
     }
 
     public TestRegionProcedure(long procId, TableName tableName, TableOperationType opType,
-        RegionInfo... regionInfos) {
+      RegionInfo... regionInfos) {
       this(-1, procId, tableName, opType, regionInfos);
     }
 
     public TestRegionProcedure(long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, RegionInfo... regionInfos) {
+      TableOperationType opType, RegionInfo... regionInfos) {
       this(-1, parentProcId, procId, tableName, opType, regionInfos);
     }
 
     public TestRegionProcedure(long rootProcId, long parentProcId, long procId, TableName tableName,
-        TableOperationType opType, RegionInfo... regionInfos) {
+      TableOperationType opType, RegionInfo... regionInfos) {
       super(rootProcId, parentProcId, procId, tableName, opType);
       this.regionInfos = regionInfos;
     }
@@ -886,7 +886,7 @@ public class TestMasterProcedureScheduler {
   }
 
   public static class TestNamespaceProcedure extends TestProcedure
-      implements TableProcedureInterface {
+    implements TableProcedureInterface {
     private final TableOperationType opType;
     private final String nsName;
 
@@ -941,7 +941,7 @@ public class TestMasterProcedureScheduler {
   }
 
   private static LockProcedure createLockProcedure(LockType lockType, long procId)
-      throws Exception {
+    throws Exception {
     LockProcedure procedure = new LockProcedure();
 
     Field typeField = LockProcedure.class.getDeclaredField("type");
@@ -964,7 +964,7 @@ public class TestMasterProcedureScheduler {
   }
 
   private static void assertLockResource(LockedResource resource, LockedResourceType resourceType,
-      String resourceName) {
+    String resourceName) {
     assertEquals(resourceType, resource.getResourceType());
     assertEquals(resourceName, resource.getResourceName());
   }

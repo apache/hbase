@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,12 +74,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverScannerOpenHook {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionObserverScannerOpenHook.class);
+    HBaseClassTestRule.forClass(TestRegionObserverScannerOpenHook.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   static final Path DIR = UTIL.getDataTestDir();
@@ -126,13 +126,13 @@ public class TestRegionObserverScannerOpenHook {
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
-        List<Cell> result) throws IOException {
+      List<Cell> result) throws IOException {
       c.bypass();
     }
 
     @Override
     public void preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Scan scan)
-        throws IOException {
+      throws IOException {
       scan.setFilter(new NoDataFilter());
     }
   }
@@ -145,8 +145,10 @@ public class TestRegionObserverScannerOpenHook {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+    }
   };
+
   /**
    * Don't allow any data in a flush by creating a custom {@link StoreScanner}.
    */
@@ -158,7 +160,7 @@ public class TestRegionObserverScannerOpenHook {
 
     @Override
     public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       return NO_DATA;
     }
   }
@@ -175,20 +177,20 @@ public class TestRegionObserverScannerOpenHook {
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-        CompactionRequest request) throws IOException {
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
       return NO_DATA;
     }
   }
 
   HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);
@@ -264,9 +266,9 @@ public class TestRegionObserverScannerOpenHook {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
     @SuppressWarnings("deprecation")
-    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, RegionInfo info,
-        TableDescriptor htd, RegionServerServices rsServices) {
+    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log, FileSystem fs,
+      Configuration confParam, RegionInfo info, TableDescriptor htd,
+      RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
 
@@ -289,7 +291,7 @@ public class TestRegionObserverScannerOpenHook {
 
     @Override
     public boolean compact(CompactionContext compaction, HStore store,
-        ThroughputController throughputController, User user) throws IOException {
+      ThroughputController throughputController, User user) throws IOException {
       boolean ret = super.compact(compaction, store, throughputController, user);
       if (ret) compactionStateChangeLatch.countDown();
       return ret;
@@ -331,8 +333,8 @@ public class TestRegionObserverScannerOpenHook {
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     Region region = regions.get(0);
     admin.flushRegion(region.getRegionInfo().getRegionName());
-    CountDownLatch latch = ((CompactionCompletionNotifyingRegion)region)
-        .getCompactionStateChangeLatch();
+    CountDownLatch latch =
+      ((CompactionCompletionNotifyingRegion) region).getCompactionStateChangeLatch();
 
     // put another row and flush that too
     put = new Put(Bytes.toBytes("anotherrow"));

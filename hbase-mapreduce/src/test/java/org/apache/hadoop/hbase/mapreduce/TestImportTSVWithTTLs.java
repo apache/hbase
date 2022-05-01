@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,20 +55,19 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestImportTSVWithTTLs implements Configurable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImportTSVWithTTLs.class);
+    HBaseClassTestRule.forClass(TestImportTSVWithTTLs.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestImportTSVWithTTLs.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
   /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
+   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is false.
    */
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
@@ -114,10 +113,9 @@ public class TestImportTSVWithTTLs implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_TTL",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_TTL",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001b1000000\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -125,14 +123,14 @@ public class TestImportTSVWithTTLs implements Configurable {
   }
 
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
-      String[] args, int valueMultiplier) throws Exception {
+    String[] args, int valueMultiplier) throws Exception {
     TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());
 
     // populate input file
     FileSystem fs = FileSystem.get(conf);
-    Path inputPath = fs.makeQualified(new Path(util
-        .getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
+    Path inputPath =
+      fs.makeQualified(new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
     FSDataOutputStream op = fs.create(inputPath, true);
     op.write(Bytes.toBytes(data));
     op.close();
@@ -171,10 +169,11 @@ public class TestImportTSVWithTTLs implements Configurable {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
-      if (!region.getRegionInfo().isMetaRegion()
-          && !region.getRegionInfo().getTable().isSystemTable()) {
+      if (
+        !region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().getTable().isSystemTable()
+      ) {
         // The put carries the TTL attribute
         if (put.getTTL() != Long.MAX_VALUE) {
           return;

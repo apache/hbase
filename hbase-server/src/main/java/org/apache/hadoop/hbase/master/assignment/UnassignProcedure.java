@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -104,7 +101,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   @Override
   protected boolean startTransition(final MasterProcedureEnv env,
-      final RegionStateNode regionNode) {
+    final RegionStateNode regionNode) {
     // nothing to do here. we skip the step in the constructor
     // by jumping to REGION_TRANSITION_DISPATCH
     throw new UnsupportedOperationException();
@@ -112,24 +109,24 @@ public class UnassignProcedure extends RegionTransitionProcedure {
 
   @Override
   protected boolean updateTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
-      throws IOException {
+    throws IOException {
     return true;
   }
 
   @Override
   protected void finishTransition(final MasterProcedureEnv env, final RegionStateNode regionNode)
-      throws IOException {
+    throws IOException {
   }
 
   @Override
   public Optional<RemoteOperation> remoteCallBuild(final MasterProcedureEnv env,
-      final ServerName serverName) {
+    final ServerName serverName) {
     return Optional.empty();
   }
 
   @Override
   protected void reportTransition(final MasterProcedureEnv env, final RegionStateNode regionNode,
-      final TransitionCode code, final long seqId) throws UnexpectedStateException {
+    final TransitionCode code, final long seqId) throws UnexpectedStateException {
   }
 
   /**
@@ -137,7 +134,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
    */
   @Override
   protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,
-      final IOException exception) {
+    final IOException exception) {
     return true;
   }
 

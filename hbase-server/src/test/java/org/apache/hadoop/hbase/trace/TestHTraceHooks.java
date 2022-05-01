@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,12 @@ import org.junit.rules.TestName;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Ignore // We don't support htrace in hbase-2.0.0 and this flakey is a little flakey.
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHTraceHooks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHTraceHooks.class);
+    HBaseClassTestRule.forClass(TestHTraceHooks.class);
 
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -64,8 +64,8 @@ public class TestHTraceHooks {
 
   @BeforeClass
   public static void before() throws Exception {
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(2).numRegionServers(3).numDataNodes(3).build();
+    StartMiniClusterOption option =
+      StartMiniClusterOption.builder().numMasters(2).numRegionServers(3).numDataNodes(3).build();
     TEST_UTIL.startMiniCluster(option);
     rcvr = new POJOSpanReceiver(new HBaseHTraceConfiguration(TEST_UTIL.getConfiguration()));
     TraceUtil.addReceiver(rcvr);
@@ -93,10 +93,11 @@ public class TestHTraceHooks {
       table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY_BYTES);
     }
 
-    // Some table creation is async.  Need to make sure that everything is full in before
+    // Some table creation is async. Need to make sure that everything is full in before
     // checking to see if the spans are there.
     TEST_UTIL.waitFor(10000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         return (rcvr == null) ? true : rcvr.getSpans().size() >= 5;
       }
     });

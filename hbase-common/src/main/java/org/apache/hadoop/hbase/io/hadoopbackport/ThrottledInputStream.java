@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,27 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hadoopbackport;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The ThrottleInputStream provides bandwidth throttling on a specified
- * InputStream. It is implemented as a wrapper on top of another InputStream
- * instance.
- * The throttling works by examining the number of bytes read from the underlying
- * InputStream from the beginning, and sleep()ing for a time interval if
- * the byte-transfer is found exceed the specified tolerable maximum.
- * (Thus, while the read-rate might exceed the maximum for a given short interval,
- * the average tends towards the specified maximum, overall.)
+ * The ThrottleInputStream provides bandwidth throttling on a specified InputStream. It is
+ * implemented as a wrapper on top of another InputStream instance. The throttling works by
+ * examining the number of bytes read from the underlying InputStream from the beginning, and
+ * sleep()ing for a time interval if the byte-transfer is found exceed the specified tolerable
+ * maximum. (Thus, while the read-rate might exceed the maximum for a given short interval, the
+ * average tends towards the specified maximum, overall.)
  */
 @InterfaceAudience.Private
 public class ThrottledInputStream extends InputStream {
@@ -96,23 +92,16 @@ public class ThrottledInputStream extends InputStream {
   }
 
   /**
-   * Read bytes starting from the specified position. This requires rawStream is
-   * an instance of {@link PositionedReadable}.
-   * @param position
-   * @param buffer
-   * @param offset
-   * @param length
-   * @return the number of bytes read
+   * Read bytes starting from the specified position. This requires rawStream is an instance of
+   * {@link PositionedReadable}. nnnn * @return the number of bytes read
    */
-  public int read(long position, byte[] buffer, int offset, int length)
-      throws IOException {
+  public int read(long position, byte[] buffer, int offset, int length) throws IOException {
     if (!(rawStream instanceof PositionedReadable)) {
       throw new UnsupportedOperationException(
         "positioned read is not supported by the internal stream");
     }
     throttle();
-    int readLen = ((PositionedReadable) rawStream).read(position, buffer,
-      offset, length);
+    int readLen = ((PositionedReadable) rawStream).read(position, buffer, offset, length);
     if (readLen != -1) {
       bytesRead += readLen;
     }
@@ -159,8 +148,8 @@ public class ThrottledInputStream extends InputStream {
   }
 
   /**
-   * Getter for the read-rate from this stream, since creation.
-   * Calculated as bytesRead/elapsedTimeSinceStart.
+   * Getter for the read-rate from this stream, since creation. Calculated as
+   * bytesRead/elapsedTimeSinceStart.
    * @return Read rate, in bytes/sec.
    */
   public long getBytesPerSec() {
@@ -183,11 +172,7 @@ public class ThrottledInputStream extends InputStream {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "ThrottledInputStream{" +
-        "bytesRead=" + bytesRead +
-        ", maxBytesPerSec=" + maxBytesPerSec +
-        ", bytesPerSec=" + getBytesPerSec() +
-        ", totalSleepTime=" + totalSleepTime +
-        '}';
+    return "ThrottledInputStream{" + "bytesRead=" + bytesRead + ", maxBytesPerSec=" + maxBytesPerSec
+      + ", bytesPerSec=" + getBytesPerSec() + ", totalSleepTime=" + totalSleepTime + '}';
   }
 }

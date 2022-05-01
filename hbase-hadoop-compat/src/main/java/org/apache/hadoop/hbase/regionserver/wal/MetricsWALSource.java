@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.hbase.TableName;
@@ -27,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MetricsWALSource extends BaseSource {
-
 
   /**
    * The name of the metrics
@@ -49,7 +47,6 @@ public interface MetricsWALSource extends BaseSource {
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
-
   String APPEND_TIME = "appendTime";
   String APPEND_TIME_DESC = "Time an append to the log took.";
   String APPEND_COUNT = "appendCount";
@@ -64,16 +61,16 @@ public interface MetricsWALSource extends BaseSource {
   String ROLL_REQUESTED_DESC = "How many times a roll has been requested total";
   String ERROR_ROLL_REQUESTED = "errorRollRequest";
   String ERROR_ROLL_REQUESTED_DESC =
-      "How many times a roll was requested due to I/O or other errors.";
+    "How many times a roll was requested due to I/O or other errors.";
   String LOW_REPLICA_ROLL_REQUESTED = "lowReplicaRollRequest";
   String LOW_REPLICA_ROLL_REQUESTED_DESC =
-      "How many times a roll was requested due to too few datanodes in the write pipeline.";
+    "How many times a roll was requested due to too few datanodes in the write pipeline.";
   String SLOW_SYNC_ROLL_REQUESTED = "slowSyncRollRequest";
   String SLOW_SYNC_ROLL_REQUESTED_DESC =
-      "How many times a roll was requested due to sync too slow on the write pipeline.";
+    "How many times a roll was requested due to sync too slow on the write pipeline.";
   String SIZE_ROLL_REQUESTED = "sizeRollRequest";
   String SIZE_ROLL_REQUESTED_DESC =
-      "How many times a roll was requested due to file size roll threshold.";
+    "How many times a roll was requested due to file size roll threshold.";
   String WRITTEN_BYTES = "writtenBytes";
   String WRITTEN_BYTES_DESC = "Size (in bytes) of the data written to the WAL.";
   String SUCCESSFUL_LOG_ROLLS = "successfulLogRolls";

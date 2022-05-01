@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestCompleteResultScanResultCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompleteResultScanResultCache.class);
+    HBaseClassTestRule.forClass(TestCompleteResultScanResultCache.class);
 
   private static byte[] CF = Bytes.toBytes("cf");
 
@@ -144,7 +144,7 @@ public class TestCompleteResultScanResultCache {
     assertEquals(0, resultCache.addAndGet(new Result[] { result2 }, false).length);
 
     Result[] results =
-        resultCache.addAndGet(new Result[] { nextResult1, nextToNextResult1 }, false);
+      resultCache.addAndGet(new Result[] { nextResult1, nextToNextResult1 }, false);
     assertEquals(2, results.length);
     assertEquals(1, Bytes.toInt(results[0].getRow()));
     assertEquals(2, results[0].rawCells().length);

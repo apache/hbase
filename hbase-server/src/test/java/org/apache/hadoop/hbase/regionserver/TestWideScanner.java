@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestWideScanner extends HBaseTestCase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWideScanner.class);
+    HBaseClassTestRule.forClass(TestWideScanner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWideScanner.class);
 
@@ -62,10 +62,8 @@ public class TestWideScanner extends HBaseTestCase {
   static {
     for (byte[] cfName : new byte[][] { A, B, C }) {
       TESTTABLEDESC.addFamily(new HColumnDescriptor(cfName)
-          // Keep versions to help debugging.
-          .setMaxVersions(100)
-          .setBlocksize(8 * 1024)
-      );
+        // Keep versions to help debugging.
+        .setMaxVersions(100).setBlocksize(8 * 1024));
     }
   }
 
@@ -123,7 +121,7 @@ public class TestWideScanner extends HBaseTestCase {
         if (results.size() > 0) {
           // assert that all results are from the same row
           byte[] row = CellUtil.cloneRow(results.get(0));
-          for (Cell kv: results) {
+          for (Cell kv : results) {
             assertTrue(Bytes.equals(row, CellUtil.cloneRow(kv)));
           }
         }
@@ -132,9 +130,9 @@ public class TestWideScanner extends HBaseTestCase {
 
         // trigger ChangedReadersObservers
         Iterator<KeyValueScanner> scanners =
-          ((HRegion.RegionScannerImpl)s).storeHeap.getHeap().iterator();
+          ((HRegion.RegionScannerImpl) s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
-          StoreScanner ss = (StoreScanner)scanners.next();
+          StoreScanner ss = (StoreScanner) scanners.next();
           ss.updateReaders(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
         }
       } while (more);
@@ -150,4 +148,3 @@ public class TestWideScanner extends HBaseTestCase {
   }
 
 }
-

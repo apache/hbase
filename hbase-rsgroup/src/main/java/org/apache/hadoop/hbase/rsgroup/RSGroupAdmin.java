@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -47,8 +46,8 @@ public interface RSGroupAdmin {
   void moveServers(Set<Address> servers, String targetGroup) throws IOException;
 
   /**
-   * Move given set of tables to the specified target RegionServer group.
-   * This will unassign all of a table's region so it can be reassigned to the correct group.
+   * Move given set of tables to the specified target RegionServer group. This will unassign all of
+   * a table's region so it can be reassigned to the correct group.
    */
   void moveTables(Set<TableName> tables, String targetGroup) throws IOException;
 
@@ -64,7 +63,6 @@ public interface RSGroupAdmin {
 
   /**
    * Balance regions in the given RegionServer group.
-   *
    * @return boolean Whether balance ran or not
    */
   boolean balanceRSGroup(String groupName) throws IOException;
@@ -82,20 +80,19 @@ public interface RSGroupAdmin {
 
   /**
    * Move given set of servers and tables to the specified target RegionServer group.
-   * @param servers set of servers to move
-   * @param tables set of tables to move
+   * @param servers     set of servers to move
+   * @param tables      set of tables to move
    * @param targetGroup the target group name
    * @throws IOException if moving the server and tables fail
    */
-  void moveServersAndTables(Set<Address> servers, Set<TableName> tables,
-                            String targetGroup) throws IOException;
+  void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
+    throws IOException;
 
   /**
-   * Remove decommissioned servers from rsgroup.
-   * 1. Sometimes we may find the server aborted due to some hardware failure and we must offline
-   * the server for repairing. Or we need to move some servers to join other clusters.
-   * So we need to remove these servers from the rsgroup.
-   * 2. Dead/recovering/live servers will be disallowed.
+   * Remove decommissioned servers from rsgroup. 1. Sometimes we may find the server aborted due to
+   * some hardware failure and we must offline the server for repairing. Or we need to move some
+   * servers to join other clusters. So we need to remove these servers from the rsgroup. 2.
+   * Dead/recovering/live servers will be disallowed.
    * @param servers set of servers to remove
    */
   void removeServers(Set<Address> servers) throws IOException;
@@ -109,7 +106,7 @@ public interface RSGroupAdmin {
 
   /**
    * Update RSGroup configuration
-   * @param groupName the group name
+   * @param groupName     the group name
    * @param configuration new configuration of the group name to be set
    * @throws IOException if a remote or network exception occurs
    */

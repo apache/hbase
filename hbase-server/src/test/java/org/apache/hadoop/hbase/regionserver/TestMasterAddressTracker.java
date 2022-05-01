@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,12 +45,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestMasterAddressTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterAddressTracker.class);
+    HBaseClassTestRule.forClass(TestMasterAddressTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterAddressTracker.class);
 
@@ -84,22 +84,21 @@ public class TestMasterAddressTracker {
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertFalse("shouldn't have deleted wrong master server.",
-          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), "some other string."));
+        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), "some other string."));
     } finally {
       assertTrue("Couldn't clean up master",
-          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
     }
   }
 
   /**
    * create an address tracker instance
-   * @param sn if not-null set the active master
+   * @param sn       if not-null set the active master
    * @param infoPort if there is an active master, set its info port.
    */
   private MasterAddressTracker setupMasterTracker(final ServerName sn, final int infoPort)
-      throws Exception {
-    zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
-        name.getMethodName(), null);
+    throws Exception {
+    zk = new ZKWatcher(TEST_UTIL.getConfiguration(), name.getMethodName(), null);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().backupMasterAddressesZNode);
 
@@ -110,14 +109,14 @@ public class TestMasterAddressTracker {
     zk.registerListener(addressTracker);
 
     // Use a listener to capture when the node is actually created
-    NodeCreationListener listener = new NodeCreationListener(zk,
-            zk.getZNodePaths().masterAddressZNode);
+    NodeCreationListener listener =
+      new NodeCreationListener(zk, zk.getZNodePaths().masterAddressZNode);
     zk.registerListener(listener);
 
     if (sn != null) {
       LOG.info("Creating master node");
-      MasterAddressTracker.setMasterAddress(zk, zk.getZNodePaths().masterAddressZNode,
-              sn, infoPort);
+      MasterAddressTracker.setMasterAddress(zk, zk.getZNodePaths().masterAddressZNode, sn,
+        infoPort);
 
       // Wait for the node to be created
       LOG.info("Waiting for master address manager to be notified");
@@ -128,9 +127,8 @@ public class TestMasterAddressTracker {
   }
 
   /**
-   * Unit tests that uses ZooKeeper but does not use the master-side methods
-   * but rather acts directly on ZK.
-   * @throws Exception
+   * Unit tests that uses ZooKeeper but does not use the master-side methods but rather acts
+   * directly on ZK. n
    */
   @Test
   public void testMasterAddressTrackerFromZK() throws Exception {
@@ -145,10 +143,9 @@ public class TestMasterAddressTracker {
       assertEquals(infoPort, addressTracker.getMasterInfoPort());
     } finally {
       assertTrue("Couldn't clean up master",
-          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
     }
   }
-
 
   @Test
   public void testParsingNull() throws Exception {
@@ -161,11 +158,11 @@ public class TestMasterAddressTracker {
     final MasterAddressTracker addressTracker = setupMasterTracker(sn, 1772);
     try {
       assertEquals("Should receive 0 for backup not found.", 0,
-          addressTracker.getBackupMasterInfoPort(
-              ServerName.valueOf("doesnotexist.example.com", 1234, System.currentTimeMillis())));
+        addressTracker.getBackupMasterInfoPort(
+          ServerName.valueOf("doesnotexist.example.com", 1234, System.currentTimeMillis())));
     } finally {
       assertTrue("Couldn't clean up master",
-          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+        MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
     }
   }
 
@@ -189,10 +186,10 @@ public class TestMasterAddressTracker {
     assertEquals(0, backupMasters.size());
     ServerName backupMaster1 = ServerName.valueOf("localhost", 2222, -1);
     ServerName backupMaster2 = ServerName.valueOf("localhost", 3333, -1);
-    String backupZNode1 = ZNodePaths.joinZNode(
-        zk.getZNodePaths().backupMasterAddressesZNode, backupMaster1.toString());
-    String backupZNode2 = ZNodePaths.joinZNode(
-        zk.getZNodePaths().backupMasterAddressesZNode, backupMaster2.toString());
+    String backupZNode1 =
+      ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupMaster1.toString());
+    String backupZNode2 =
+      ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupMaster2.toString());
     // Add a backup master
     MasterAddressTracker.setMasterAddress(zk, backupZNode1, backupMaster1, 2222);
     MasterAddressTracker.setMasterAddress(zk, backupZNode2, backupMaster2, 3333);
@@ -216,7 +213,7 @@ public class TestMasterAddressTracker {
 
     @Override
     public void nodeCreated(String path) {
-      if(path.equals(node)) {
+      if (path.equals(node)) {
         LOG.debug("nodeCreated(" + path + ")");
         lock.release();
       }
@@ -228,4 +225,3 @@ public class TestMasterAddressTracker {
   }
 
 }
-

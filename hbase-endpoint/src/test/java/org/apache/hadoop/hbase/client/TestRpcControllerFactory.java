@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ConcurrentHashMulti
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multiset;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestRpcControllerFactory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRpcControllerFactory.class);
+    HBaseClassTestRule.forClass(TestRpcControllerFactory.class);
 
   public static class StaticRpcControllerFactory extends RpcControllerFactory {
 
@@ -77,7 +77,7 @@ public class TestRpcControllerFactory {
 
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
-        List<CellScannable> cellIterables) {
+      List<CellScannable> cellIterables) {
       return new CountingRpcController(super.newController(regionInfo, cellIterables));
     }
   }

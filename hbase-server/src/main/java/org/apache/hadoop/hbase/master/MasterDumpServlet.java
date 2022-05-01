@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +40,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MasterDumpServlet extends StateDumpServlet {
   private static final long serialVersionUID = 1L;
-  private static final String LINE =
-    "===========================================================";
+  private static final String LINE = "===========================================================";
 
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     assert master != null : "No Master in context!";
 
@@ -54,8 +51,7 @@ public class MasterDumpServlet extends StateDumpServlet {
     OutputStream os = response.getOutputStream();
     try (PrintWriter out = new PrintWriter(os)) {
 
-      out.println("Master status for " + master.getServerName()
-        + " as of " + new Date());
+      out.println("Master status for " + master.getServerName() + " as of " + new Date());
 
       out.println("\n\nVersion Info:");
       out.println(LINE);
@@ -108,7 +104,6 @@ public class MasterDumpServlet extends StateDumpServlet {
       out.flush();
     }
   }
-
 
   private void dumpRIT(HMaster master, PrintWriter out) {
     AssignmentManager am = master.getAssignmentManager();

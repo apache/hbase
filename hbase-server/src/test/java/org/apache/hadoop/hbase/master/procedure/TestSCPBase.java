@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -76,9 +77,9 @@ public class TestSCPBase {
    * needed state.
    */
   protected void testRecoveryAndDoubleExecution(boolean carryingMeta, boolean doubleExecution)
-      throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution-carryingMeta-" +
-      carryingMeta + "-doubleExecution-" + doubleExecution);
+    throws Exception {
+    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution-carryingMeta-"
+      + carryingMeta + "-doubleExecution-" + doubleExecution);
     try (Table t = createTable(tableName)) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtility.COLUMNS[0]);

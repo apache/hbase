@@ -15,29 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.UUID;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterIdProtos;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * The identifier for this cluster.
- * It is serialized to the filesystem and up into zookeeper.  This is a container for the id.
- * Also knows how to serialize and deserialize the cluster id.
+ * The identifier for this cluster. It is serialized to the filesystem and up into zookeeper. This
+ * is a container for the id. Also knows how to serialize and deserialize the cluster id.
  */
 @InterfaceAudience.Private
 public class ClusterId {
   private final String id;
 
   /**
-   * New ClusterID.  Generates a uniqueid.
+   * New ClusterID. Generates a uniqueid.
    */
   public ClusterId() {
     this(UUID.randomUUID().toString());
@@ -50,17 +48,15 @@ public class ClusterId {
   /**
    * @return The clusterid serialized using pb w/ pb magic prefix
    */
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
   }
 
   /**
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
-   * @return An instance of {@link ClusterId} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray()
+   * @return An instance of {@link ClusterId} made from <code>bytes</code> n * @see #toByteArray()
    */
-  public static ClusterId parseFrom(final byte [] bytes) throws DeserializationException {
+  public static ClusterId parseFrom(final byte[] bytes) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
@@ -87,8 +83,7 @@ public class ClusterId {
   }
 
   /**
-   * @param cid
-   * @return A {@link ClusterId} made from the passed in <code>cid</code>
+   * n * @return A {@link ClusterId} made from the passed in <code>cid</code>
    */
   public static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
     return new ClusterId(cid.getClusterId());

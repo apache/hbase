@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +18,11 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -54,15 +54,15 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   private StripeStoreConfig config;
 
-  public StripeCompactionPolicy(
-      Configuration conf, StoreConfigInformation storeConfigInfo, StripeStoreConfig config) {
+  public StripeCompactionPolicy(Configuration conf, StoreConfigInformation storeConfigInfo,
+    StripeStoreConfig config) {
     super(conf, storeConfigInfo);
     this.config = config;
     stripePolicy = new ExploringCompactionPolicy(conf, storeConfigInfo);
   }
 
   public List<HStoreFile> preSelectFilesForCoprocessor(StripeInformationProvider si,
-      List<HStoreFile> filesCompacting) {
+    List<HStoreFile> filesCompacting) {
     // We sincerely hope nobody is messing with us with their coprocessors.
     // If they do, they are very likely to shoot themselves in the foot.
     // We'll just exclude all the filesCompacting from the list.
@@ -71,20 +71,20 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return candidateFiles;
   }
 
-  public StripeCompactionRequest createEmptyRequest(
-      StripeInformationProvider si, CompactionRequestImpl request) {
+  public StripeCompactionRequest createEmptyRequest(StripeInformationProvider si,
+    CompactionRequestImpl request) {
     // Treat as L0-ish compaction with fixed set of files, and hope for the best.
     if (si.getStripeCount() > 0) {
       return new BoundaryStripeCompactionRequest(request, si.getStripeBoundaries());
     }
-    Pair<Long, Integer> targetKvsAndCount = estimateTargetKvs(
-        request.getFiles(), this.config.getInitialCount());
-    return new SplitStripeCompactionRequest(
-        request, OPEN_KEY, OPEN_KEY, targetKvsAndCount.getSecond(), targetKvsAndCount.getFirst());
+    Pair<Long, Integer> targetKvsAndCount =
+      estimateTargetKvs(request.getFiles(), this.config.getInitialCount());
+    return new SplitStripeCompactionRequest(request, OPEN_KEY, OPEN_KEY,
+      targetKvsAndCount.getSecond(), targetKvsAndCount.getFirst());
   }
 
   public StripeStoreFlusher.StripeFlushRequest selectFlush(CellComparator comparator,
-      StripeInformationProvider si, int kvCount) {
+    StripeInformationProvider si, int kvCount) {
     if (this.config.isUsingL0Flush()) {
       // L0 is used, return dumb request.
       return new StripeStoreFlusher.StripeFlushRequest(comparator);
@@ -93,16 +93,16 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       // No stripes - start with the requisite count, derive KVs per stripe.
       int initialCount = this.config.getInitialCount();
       return new StripeStoreFlusher.SizeStripeFlushRequest(comparator, initialCount,
-          kvCount / initialCount);
+        kvCount / initialCount);
     }
     // There are stripes - do according to the boundaries.
     return new StripeStoreFlusher.BoundaryStripeFlushRequest(comparator, si.getStripeBoundaries());
   }
 
   public StripeCompactionRequest selectCompaction(StripeInformationProvider si,
-      List<HStoreFile> filesCompacting, boolean isOffpeak) throws IOException {
+    List<HStoreFile> filesCompacting, boolean isOffpeak) throws IOException {
     // TODO: first cut - no parallel compactions. To have more fine grained control we
-    //       probably need structure more sophisticated than a list.
+    // probably need structure more sophisticated than a list.
     if (!filesCompacting.isEmpty()) {
       LOG.debug("Not selecting compaction: " + filesCompacting.size() + " files compacting");
       return null;
@@ -118,8 +118,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     if (StoreUtils.hasReferences(allFiles)) {
       LOG.debug("There are references in the store; compacting all files");
       long targetKvs = estimateTargetKvs(allFiles, config.getInitialCount()).getFirst();
-      SplitStripeCompactionRequest request = new SplitStripeCompactionRequest(
-          allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
+      SplitStripeCompactionRequest request =
+        new SplitStripeCompactionRequest(allFiles, OPEN_KEY, OPEN_KEY, targetKvs);
       request.setMajorRangeFull();
       request.getRequest().setAfterSplit(true);
       return request;
@@ -130,7 +130,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
     // See if we need to make new stripes.
     boolean shouldCompactL0 =
-        this.config.getLevel0MinFiles() <= l0Files.size() || allL0FilesExpired(si);
+      this.config.getLevel0MinFiles() <= l0Files.size() || allL0FilesExpired(si);
     if (stripeCount == 0) {
       if (!shouldCompactL0) {
         return null; // nothing to do.
@@ -142,8 +142,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     if (shouldCompactL0) {
       if (!canDropDeletesNoL0) {
         // If we need to compact L0, see if we can add something to it, and drop deletes.
-        StripeCompactionRequest result = selectSingleStripeCompaction(
-            si, !shouldSelectL0Files(si), canDropDeletesNoL0, isOffpeak);
+        StripeCompactionRequest result =
+          selectSingleStripeCompaction(si, !shouldSelectL0Files(si), canDropDeletesNoL0, isOffpeak);
         if (result != null) {
           return result;
         }
@@ -165,10 +165,9 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   public boolean needsCompactions(StripeInformationProvider si, List<HStoreFile> filesCompacting) {
     // Approximation on whether we need compaction.
-    return filesCompacting.isEmpty()
-        && (StoreUtils.hasReferences(si.getStorefiles())
-          || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
-          || needsSingleStripeCompaction(si) || hasExpiredStripes(si) || allL0FilesExpired(si));
+    return filesCompacting.isEmpty() && (StoreUtils.hasReferences(si.getStorefiles())
+      || (si.getLevel0Files().size() >= this.config.getLevel0MinFiles())
+      || needsSingleStripeCompaction(si) || hasExpiredStripes(si) || allL0FilesExpired(si));
   }
 
   @Override
@@ -195,7 +194,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   protected StripeCompactionRequest selectSingleStripeCompaction(StripeInformationProvider si,
-      boolean includeL0, boolean canDropDeletesWithoutL0, boolean isOffpeak) throws IOException {
+    boolean includeL0, boolean canDropDeletesWithoutL0, boolean isOffpeak) throws IOException {
     ArrayList<ImmutableList<HStoreFile>> stripes = si.getStripes();
 
     int bqIndex = -1;
@@ -206,14 +205,16 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       // If we want to compact L0 to drop deletes, we only want whole-stripe compactions.
       // So, pass includeL0 as 2nd parameter to indicate that.
       List<HStoreFile> selection = selectSimpleCompaction(stripes.get(i),
-          !canDropDeletesWithoutL0 && includeL0, isOffpeak, false);
+        !canDropDeletesWithoutL0 && includeL0, isOffpeak, false);
       if (selection.isEmpty()) continue;
       long size = 0;
       for (HStoreFile sf : selection) {
         size += sf.getReader().length();
       }
-      if (bqSelection == null || selection.size() > bqSelection.size() ||
-          (selection.size() == bqSelection.size() && size < bqTotalSize)) {
+      if (
+        bqSelection == null || selection.size() > bqSelection.size()
+          || (selection.size() == bqSelection.size() && size < bqTotalSize)
+      ) {
         bqSelection = selection;
         bqIndex = i;
         bqTotalSize = size;
@@ -238,13 +239,12 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       Pair<Long, Integer> kvsAndCount = estimateTargetKvs(filesToCompact, config.getSplitCount());
       targetKvs = kvsAndCount.getFirst();
       targetCount = kvsAndCount.getSecond();
-      splitString = "; the stripe will be split into at most "
-          + targetCount + " stripes with " + targetKvs + " target KVs";
+      splitString = "; the stripe will be split into at most " + targetCount + " stripes with "
+        + targetKvs + " target KVs";
     }
 
-    LOG.debug("Found compaction in a stripe with end key ["
-        + Bytes.toString(si.getEndRow(bqIndex)) + "], with "
-        + filesToCompact.size() + " files of total size " + bqTotalSize + splitString);
+    LOG.debug("Found compaction in a stripe with end key [" + Bytes.toString(si.getEndRow(bqIndex))
+      + "], with " + filesToCompact.size() + " files of total size " + bqTotalSize + splitString);
 
     // See if we can drop deletes.
     StripeCompactionRequest req;
@@ -257,8 +257,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       sfs.addSublist(l0Files);
       req = new BoundaryStripeCompactionRequest(sfs, si.getStripeBoundaries());
     } else {
-      req = new SplitStripeCompactionRequest(
-          filesToCompact, si.getStartRow(bqIndex), si.getEndRow(bqIndex), targetCount, targetKvs);
+      req = new SplitStripeCompactionRequest(filesToCompact, si.getStartRow(bqIndex),
+        si.getEndRow(bqIndex), targetCount, targetKvs);
     }
     if (hasAllFiles && (canDropDeletesWithoutL0 || includeL0)) {
       req.setMajorRange(si.getStartRow(bqIndex), si.getEndRow(bqIndex));
@@ -269,17 +269,17 @@ public class StripeCompactionPolicy extends CompactionPolicy {
 
   /**
    * Selects the compaction of a single stripe using default policy.
-   * @param sfs Files.
+   * @param sfs          Files.
    * @param allFilesOnly Whether a compaction of all-or-none files is needed.
    * @return The resulting selection.
    */
-  private List<HStoreFile> selectSimpleCompaction(
-      List<HStoreFile> sfs, boolean allFilesOnly, boolean isOffpeak, boolean forceCompact) {
-    int minFilesLocal = Math.max(
-        allFilesOnly ? sfs.size() : 0, this.config.getStripeCompactMinFiles());
+  private List<HStoreFile> selectSimpleCompaction(List<HStoreFile> sfs, boolean allFilesOnly,
+    boolean isOffpeak, boolean forceCompact) {
+    int minFilesLocal =
+      Math.max(allFilesOnly ? sfs.size() : 0, this.config.getStripeCompactMinFiles());
     int maxFilesLocal = Math.max(this.config.getStripeCompactMaxFiles(), minFilesLocal);
-    List<HStoreFile> selected = stripePolicy.applyCompactionPolicy(sfs, false,
-        isOffpeak, minFilesLocal, maxFilesLocal);
+    List<HStoreFile> selected =
+      stripePolicy.applyCompactionPolicy(sfs, false, isOffpeak, minFilesLocal, maxFilesLocal);
     if (forceCompact && (selected == null || selected.isEmpty()) && !sfs.isEmpty()) {
       return stripePolicy.selectCompactFiles(sfs, maxFilesLocal, isOffpeak);
     }
@@ -287,8 +287,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   private boolean shouldSelectL0Files(StripeInformationProvider si) {
-    return si.getLevel0Files().size() > this.config.getStripeCompactMaxFiles() ||
-      getTotalFileSize(si.getLevel0Files()) > comConf.getMaxCompactSize();
+    return si.getLevel0Files().size() > this.config.getStripeCompactMaxFiles()
+      || getTotalFileSize(si.getLevel0Files()) > comConf.getMaxCompactSize();
   }
 
   private StripeCompactionRequest selectL0OnlyCompaction(StripeInformationProvider si) {
@@ -317,8 +317,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return request;
   }
 
-  private StripeCompactionRequest selectExpiredMergeCompaction(
-      StripeInformationProvider si, boolean canDropDeletesNoL0) {
+  private StripeCompactionRequest selectExpiredMergeCompaction(StripeInformationProvider si,
+    boolean canDropDeletesNoL0) {
     long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (cfTtl == Long.MAX_VALUE) {
       return null; // minversion might be set, cannot delete old files
@@ -362,7 +362,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     ConcatenatedLists<HStoreFile> sfs = new ConcatenatedLists<>();
     sfs.addAllSublists(stripes.subList(bestStart, endIndex + 1));
     SplitStripeCompactionRequest result = new SplitStripeCompactionRequest(sfs,
-        si.getStartRow(bestStart), si.getEndRow(endIndex), 1, Long.MAX_VALUE);
+      si.getStartRow(bestStart), si.getEndRow(endIndex), 1, Long.MAX_VALUE);
     if (canDropDeletesNoL0) {
       result.setMajorRangeFull();
     }
@@ -395,8 +395,10 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     long timestampCutoff = EnvironmentEdgeManager.currentTime() - cfTtl;
     for (HStoreFile storeFile : storeFiles) {
       // Check store file is not empty and has not expired
-      if (storeFile.getReader().getMaxTimestamp() >= timestampCutoff
-        && storeFile.getReader().getEntries() != 0) {
+      if (
+        storeFile.getReader().getMaxTimestamp() >= timestampCutoff
+          && storeFile.getReader().getEntries() != 0
+      ) {
         return false;
       }
     }
@@ -435,8 +437,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       ratio = newRatio;
       splitCount += 1.0;
     }
-    long kvCount = (long)(getTotalKvCount(files) / splitCount);
-    return new Pair<>(kvCount, (int)Math.ceil(splitCount));
+    long kvCount = (long) (getTotalKvCount(files) / splitCount);
+    return new Pair<>(kvCount, (int) Math.ceil(splitCount));
   }
 
   /** Stripe compaction request wrapper. */
@@ -444,28 +446,29 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     protected CompactionRequestImpl request;
     protected byte[] majorRangeFromRow = null, majorRangeToRow = null;
 
-    public List<Path> execute(StripeCompactor compactor,
-      ThroughputController throughputController) throws IOException {
+    public List<Path> execute(StripeCompactor compactor, ThroughputController throughputController)
+      throws IOException {
       return execute(compactor, throughputController, null);
     }
+
     /**
-     * Executes the request against compactor (essentially, just calls correct overload of
-     * compact method), to simulate more dynamic dispatch.
+     * Executes the request against compactor (essentially, just calls correct overload of compact
+     * method), to simulate more dynamic dispatch.
      * @param compactor Compactor.
      * @return result of compact(...)
      */
     public abstract List<Path> execute(StripeCompactor compactor,
-        ThroughputController throughputController, User user) throws IOException;
+      ThroughputController throughputController, User user) throws IOException;
 
     public StripeCompactionRequest(CompactionRequestImpl request) {
       this.request = request;
     }
 
     /**
-     * Sets compaction "major range". Major range is the key range for which all
-     * the files are included, so they can be treated like major-compacted files.
+     * Sets compaction "major range". Major range is the key range for which all the files are
+     * included, so they can be treated like major-compacted files.
      * @param startRow Left boundary, inclusive.
-     * @param endRow Right boundary, exclusive.
+     * @param endRow   Right boundary, exclusive.
      */
     public void setMajorRange(byte[] startRow, byte[] endRow) {
       this.majorRangeFromRow = startRow;
@@ -484,40 +487,40 @@ public class StripeCompactionPolicy extends CompactionPolicy {
   }
 
   /**
-   * Request for stripe compactor that will cause it to split the source files into several
-   * separate files at the provided boundaries.
+   * Request for stripe compactor that will cause it to split the source files into several separate
+   * files at the provided boundaries.
    */
   private static class BoundaryStripeCompactionRequest extends StripeCompactionRequest {
     private final List<byte[]> targetBoundaries;
 
     /**
-     * @param request Original request.
+     * @param request          Original request.
      * @param targetBoundaries New files should be written with these boundaries.
      */
     public BoundaryStripeCompactionRequest(CompactionRequestImpl request,
-        List<byte[]> targetBoundaries) {
+      List<byte[]> targetBoundaries) {
       super(request);
       this.targetBoundaries = targetBoundaries;
     }
 
     public BoundaryStripeCompactionRequest(Collection<HStoreFile> files,
-        List<byte[]> targetBoundaries) {
+      List<byte[]> targetBoundaries) {
       this(new CompactionRequestImpl(files), targetBoundaries);
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor,
-        ThroughputController throughputController, User user) throws IOException {
+    public List<Path> execute(StripeCompactor compactor, ThroughputController throughputController,
+      User user) throws IOException {
       return compactor.compact(this.request, this.targetBoundaries, this.majorRangeFromRow,
         this.majorRangeToRow, throughputController, user);
     }
   }
 
   /**
-   * Request for stripe compactor that will cause it to split the source files into several
-   * separate files into based on key-value count, as well as file count limit.
-   * Most of the files will be roughly the same size. The last file may be smaller or larger
-   * depending on the interplay of the amount of data and maximum number of files allowed.
+   * Request for stripe compactor that will cause it to split the source files into several separate
+   * files into based on key-value count, as well as file count limit. Most of the files will be
+   * roughly the same size. The last file may be smaller or larger depending on the interplay of the
+   * amount of data and maximum number of files allowed.
    */
   private static class SplitStripeCompactionRequest extends StripeCompactionRequest {
     private final byte[] startRow, endRow;
@@ -525,15 +528,15 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     private final long targetKvs;
 
     /**
-     * @param request Original request.
-     * @param startRow Left boundary of the range to compact, inclusive.
-     * @param endRow Right boundary of the range to compact, exclusive.
+     * @param request     Original request.
+     * @param startRow    Left boundary of the range to compact, inclusive.
+     * @param endRow      Right boundary of the range to compact, exclusive.
      * @param targetCount The maximum number of stripe to compact into.
-     * @param targetKvs The KV count of each segment. If targetKvs*targetCount is less than
-     *                  total number of kvs, all the overflow data goes into the last stripe.
+     * @param targetKvs   The KV count of each segment. If targetKvs*targetCount is less than total
+     *                    number of kvs, all the overflow data goes into the last stripe.
      */
-    public SplitStripeCompactionRequest(CompactionRequestImpl request,
-        byte[] startRow, byte[] endRow, int targetCount, long targetKvs) {
+    public SplitStripeCompactionRequest(CompactionRequestImpl request, byte[] startRow,
+      byte[] endRow, int targetCount, long targetKvs) {
       super(request);
       this.startRow = startRow;
       this.endRow = endRow;
@@ -541,25 +544,27 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       this.targetKvs = targetKvs;
     }
 
-    public SplitStripeCompactionRequest(
-        Collection<HStoreFile> files, byte[] startRow, byte[] endRow, long targetKvs) {
+    public SplitStripeCompactionRequest(Collection<HStoreFile> files, byte[] startRow,
+      byte[] endRow, long targetKvs) {
       this(files, startRow, endRow, Integer.MAX_VALUE, targetKvs);
     }
 
-    public SplitStripeCompactionRequest(Collection<HStoreFile> files,
-        byte[] startRow, byte[] endRow, int targetCount, long targetKvs) {
+    public SplitStripeCompactionRequest(Collection<HStoreFile> files, byte[] startRow,
+      byte[] endRow, int targetCount, long targetKvs) {
       this(new CompactionRequestImpl(files), startRow, endRow, targetCount, targetKvs);
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor,
-        ThroughputController throughputController, User user) throws IOException {
+    public List<Path> execute(StripeCompactor compactor, ThroughputController throughputController,
+      User user) throws IOException {
       return compactor.compact(this.request, this.targetCount, this.targetKvs, this.startRow,
         this.endRow, this.majorRangeFromRow, this.majorRangeToRow, throughputController, user);
     }
 
-    /** Set major range of the compaction to the entire compaction range.
-     * See {@link #setMajorRange(byte[], byte[])}. */
+    /**
+     * Set major range of the compaction to the entire compaction range. See
+     * {@link #setMajorRange(byte[], byte[])}.
+     */
     public void setMajorRangeFull() {
       setMajorRange(this.startRow, this.endRow);
     }
