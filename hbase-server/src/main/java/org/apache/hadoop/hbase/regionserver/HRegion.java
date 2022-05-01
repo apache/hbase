@@ -3372,8 +3372,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * Write mini-batch operations to MemStore
      */
     public abstract WriteEntry writeMiniBatchOperationsToMemStore(
-      final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry)
-      throws IOException;
+        final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
+        long now) throws IOException;
 
     protected void writeMiniBatchOperationsToMemStore(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, final long writeNumber)
@@ -3592,6 +3592,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         walEditsFromCoprocessors, nextIndexToProcess, lastIndexExclusive, readyToWriteCount);
     }
 
+    protected WALEdit createWALEdit(final MiniBatchOperationInProgress<Mutation> miniBatchOp) {
+      return new WALEdit(miniBatchOp.getCellCount(), isInReplay());
+    }
+
     /**
      * Builds separate WALEdit per nonce by applying input mutations. If WALEdits from CP are
      * present, they are merged to result WALEdit.
@@ -3623,7 +3627,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               || curWALEditForNonce.getFirst().getNonce() != nonce
           ) {
             curWALEditForNonce = new Pair<>(new NonceKey(nonceGroup, nonce),
-              new WALEdit(miniBatchOp.getCellCount(), isInReplay()));
+                createWALEdit(miniBatchOp));
             walEdits.add(curWALEditForNonce);
           }
           WALEdit walEdit = curWALEditForNonce.getSecond();
@@ -4142,13 +4146,57 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public WriteEntry writeMiniBatchOperationsToMemStore(
-      final MiniBatchOperationInProgress<Mutation> miniBatchOp, @Nullable WriteEntry writeEntry)
-      throws IOException {
+        final MiniBatchOperationInProgress<Mutation> miniBatchOp, @Nullable WriteEntry writeEntry,
+        long now) throws IOException {
+      boolean newWriteEntry = false;
       if (writeEntry == null) {
         writeEntry = region.mvcc.begin();
+        newWriteEntry = true;
       }
       super.writeMiniBatchOperationsToMemStore(miniBatchOp, writeEntry.getWriteNumber());
+      if (newWriteEntry) {
+        /**
+         * Here is for HBASE-26993,which make the new framework for region replication could work
+         * for SKIP_WAL. If we get a mvcc writeEntry in this method, it means DURABILITY of the
+         * region may be {@link Durability#SKIP_WAL}, and there is no
+         * {@link RegionReplicationSink#add} attached in {@link HRegion#doWALAppend},so here we
+         * create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
+         * {@link RegionReplicationSink#add} to the new mvcc writeEntry.
+         */
+        attachReplicateRegionReplicaToMVCCEntry(miniBatchOp, writeEntry, now);
+      }
       return writeEntry;
+    }
+
+    private WALKeyImpl createWALKey(WALEdit walEdit, long now) {
+      return this.region.createWALKeyForWALAppend(walEdit.isReplay(), this, now, this.nonceGroup,
+        this.nonce);
+    }
+
+    /**
+     * Create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
+     * {@link RegionReplicationSink#add} to the mvccWriteEntry.
+     */
+    private void attachReplicateRegionReplicaToMVCCEntry(
+        final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry,
+        long now) throws IOException {
+      final RegionReplicationSink sink = this.region.getRegionReplicationSink().orElse(null);
+      if (sink == null) {
+        return;
+      }
+
+      assert !mvccWriteEntry.getCompletionAction().isPresent();
+      final WALEdit walEdit = this.createWALEdit(miniBatchOp);
+      final WALKeyImpl walKey = this.createWALKey(walEdit, now);
+      walKey.setWriteEntry(mvccWriteEntry);
+      visitBatchOperations(true, miniBatchOp.getLastIndexExclusive(), (int index) -> {
+        walEdit.add(familyCellMaps[index]);
+        return true;
+      });
+      final ServerCall<?> rpcCall = RpcServer.getCurrentServerCallWithCellScanner().orElse(null);
+      mvccWriteEntry.attachCompletionAction(() -> {
+            sink.add(walKey, walEdit, rpcCall);
+      });
     }
 
     @Override
@@ -4466,8 +4514,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public WriteEntry writeMiniBatchOperationsToMemStore(
-      final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry)
-      throws IOException {
+        final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
+        long now)throws IOException {
       super.writeMiniBatchOperationsToMemStore(miniBatchOp, getOrigLogSeqNum());
       return writeEntry;
     }
@@ -4647,8 +4695,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         NonceKey nonceKey = nonceKeyWALEditPair.getFirst();
 
         if (walEdit != null && !walEdit.isEmpty()) {
-          writeEntry = doWALAppend(walEdit, batchOp.durability, batchOp.getClusterIds(), now,
-            nonceKey.getNonceGroup(), nonceKey.getNonce(), batchOp.getOrigLogSeqNum());
+          writeEntry = doWALAppend(walEdit, batchOp, now, nonceKey);
         }
 
         // Complete mvcc for all but last writeEntry (for replay case)
@@ -4660,7 +4707,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
       // STEP 5. Write back to memStore
       // NOTE: writeEntry can be null here
-      writeEntry = batchOp.writeMiniBatchOperationsToMemStore(miniBatchOp, writeEntry);
+      writeEntry = batchOp.writeMiniBatchOperationsToMemStore(miniBatchOp, writeEntry, now);
 
       // STEP 6. Complete MiniBatchOperations: If required calls postBatchMutate() CP hook and
       // complete mvcc for last writeEntry
@@ -7903,29 +7950,36 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }, () -> createRegionSpan("Region.increment"));
   }
 
+  private WALKeyImpl createWALKeyForWALAppend(boolean isReplay, BatchOperation<?> batchOp, long now,
+      long nonceGroup, long nonce) {
+    WALKeyImpl walKey = isReplay ? new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now,
+        batchOp.getClusterIds(), nonceGroup, nonce, mvcc)
+        : new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now,
+            batchOp.getClusterIds(), nonceGroup, nonce, mvcc, this.getReplicationScope());
+    if (isReplay) {
+      walKey.setOrigLogSeqNum(batchOp.getOrigLogSeqNum());
+    }
+    return walKey;
+  }
+
   /**
    * @return writeEntry associated with this append
    */
-  private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
-    long now, long nonceGroup, long nonce, long origLogSeqNum) throws IOException {
-    Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(), "WALEdit is null or empty!");
-    Preconditions.checkArgument(!walEdit.isReplay() || origLogSeqNum != SequenceId.NO_SEQUENCE_ID,
-      "Invalid replay sequence Id for replay WALEdit!");
-    // Using default cluster id, as this can only happen in the originating cluster.
-    // A slave cluster receives the final value (not the delta) as a Put. We use HLogKey
-    // here instead of WALKeyImpl directly to support legacy coprocessors.
-    WALKeyImpl walKey = walEdit.isReplay()
-      ? new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
-        this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now, clusterIds,
-        nonceGroup, nonce, mvcc)
-      : new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
-        this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now, clusterIds,
-        nonceGroup, nonce, mvcc, this.getReplicationScope());
-    if (walEdit.isReplay()) {
-      walKey.setOrigLogSeqNum(origLogSeqNum);
-    }
-    // don't call the coproc hook for writes to the WAL caused by
-    // system lifecycle events like flushes or compactions
+  private WriteEntry doWALAppend(WALEdit walEdit, BatchOperation<?> batchOp, long now,
+      NonceKey nonceKey) throws IOException {
+    Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
+        "WALEdit is null or empty!");
+    Preconditions.checkArgument(
+      !walEdit.isReplay() || batchOp.getOrigLogSeqNum() != SequenceId.NO_SEQUENCE_ID,
+        "Invalid replay sequence Id for replay WALEdit!");
+
+    WALKeyImpl walKey =
+        createWALKeyForWALAppend(walEdit.isReplay(), batchOp, now, nonceKey.getNonceGroup(),
+          nonceKey.getNonce());
+    //don't call the coproc hook for writes to the WAL caused by
+    //system lifecycle events like flushes or compactions
     if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {
       this.coprocessorHost.preWALAppend(walKey, walEdit);
     }
@@ -7938,7 +7992,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }));
       // Call sync on our edit.
       if (txid != 0) {
-        sync(txid, durability);
+        sync(txid, batchOp.durability);
       }
       return writeEntry;
     } catch (IOException ioe) {

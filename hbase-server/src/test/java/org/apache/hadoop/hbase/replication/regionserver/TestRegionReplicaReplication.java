@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -96,16 +98,21 @@ public class TestRegionReplicaReplication {
     HTU.shutdownMiniCluster();
   }
 
-  private void testRegionReplicaReplication(int regionReplication) throws Exception {
+  private void testRegionReplicaReplication(int regionReplication, boolean skipWAL)
+      throws Exception {
     // test region replica replication. Create a table with single region, write some data
     // ensure that data is replicated to the secondary region
-    TableName tableName =
-      TableName.valueOf("testRegionReplicaReplicationWithReplicas_" + regionReplication);
-    TableDescriptor htd = HTU
-      .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
-        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
-      .setRegionReplication(regionReplication).build();
+    TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
+        + regionReplication + (skipWAL ? "_skipWAL" : ""));
+    TableDescriptorBuilder builder = HTU
+        .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
+          ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+          ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
+        .setRegionReplication(regionReplication);
+    if (skipWAL) {
+      builder.setDurability(Durability.SKIP_WAL);
+    }
+    TableDescriptor htd = builder.build();
     createOrEnableTableWithRetries(htd, true);
     TableName tableNameNoReplicas =
       TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
@@ -171,17 +178,20 @@ public class TestRegionReplicaReplication {
 
   @Test
   public void testRegionReplicaReplicationWith2Replicas() throws Exception {
-    testRegionReplicaReplication(2);
+    testRegionReplicaReplication(2, false);
+    testRegionReplicaReplication(2, true);
   }
 
   @Test
   public void testRegionReplicaReplicationWith3Replicas() throws Exception {
-    testRegionReplicaReplication(3);
+    testRegionReplicaReplication(3, false);
+    testRegionReplicaReplication(3, true);
   }
 
   @Test
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
-    testRegionReplicaReplication(10);
+    testRegionReplicaReplication(10, false);
+    testRegionReplicaReplication(10, true);
   }
 
   @Test
