@@ -45,7 +45,7 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasAttributes(Matcher<Attributes> matcher) {
     return new FeatureMatcher<SpanData, Attributes>(matcher, "SpanData having attributes that ",
-        "attributes") {
+      "attributes") {
       @Override
       protected Attributes featureValueOf(SpanData item) {
         return item.getAttributes();
@@ -55,7 +55,7 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasDuration(Matcher<Duration> matcher) {
     return new FeatureMatcher<SpanData, Duration>(matcher, "SpanData having duration that ",
-        "duration") {
+      "duration") {
       @Override
       protected Duration featureValueOf(SpanData item) {
         return Duration.ofNanos(item.getEndEpochNanos() - item.getStartEpochNanos());
@@ -79,7 +79,7 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasEvents(Matcher<Iterable<? super EventData>> matcher) {
     return new FeatureMatcher<SpanData, Iterable<? super EventData>>(matcher,
-        "SpanData having events that", "events") {
+      "SpanData having events that", "events") {
       @Override
       protected Iterable<? super EventData> featureValueOf(SpanData item) {
         return item.getEvents();
@@ -93,19 +93,19 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasException(Matcher<? super Attributes> matcher) {
     return new FeatureMatcher<SpanData, Attributes>(matcher,
-        "SpanData having Exception with Attributes that", "exception attributes") {
+      "SpanData having Exception with Attributes that", "exception attributes") {
       @Override
       protected Attributes featureValueOf(SpanData actual) {
         return actual.getEvents().stream()
-            .filter(e -> Objects.equals(SemanticAttributes.EXCEPTION_EVENT_NAME, e.getName()))
-            .map(EventData::getAttributes).findFirst().orElse(null);
+          .filter(e -> Objects.equals(SemanticAttributes.EXCEPTION_EVENT_NAME, e.getName()))
+          .map(EventData::getAttributes).findFirst().orElse(null);
       }
     };
   }
 
   public static Matcher<SpanData> hasKind(SpanKind kind) {
     return new FeatureMatcher<SpanData, SpanKind>(equalTo(kind), "SpanData with kind that",
-        "SpanKind") {
+      "SpanKind") {
       @Override
       protected SpanKind featureValueOf(SpanData item) {
         return item.getKind();
@@ -136,7 +136,7 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasParentSpanId(Matcher<String> matcher) {
     return new FeatureMatcher<SpanData, String>(matcher, "SpanKind with a parentSpanId that",
-        "parentSpanId") {
+      "parentSpanId") {
       @Override
       protected String featureValueOf(SpanData item) {
         return item.getParentSpanId();
@@ -151,7 +151,7 @@ public final class SpanDataMatchers {
       protected boolean matchesSafely(SpanData item) {
         final StatusData statusData = item.getStatus();
         return statusData != null && statusData.getStatusCode() != null
-            && matcher.matches(statusData.getStatusCode());
+          && matcher.matches(statusData.getStatusCode());
       }
 
       @Override
@@ -167,7 +167,7 @@ public final class SpanDataMatchers {
 
   public static Matcher<SpanData> hasTraceId(Matcher<String> matcher) {
     return new FeatureMatcher<SpanData, String>(matcher, "SpanData with a traceId that ",
-        "traceId") {
+      "traceId") {
       @Override
       protected String featureValueOf(SpanData item) {
         return item.getTraceId();

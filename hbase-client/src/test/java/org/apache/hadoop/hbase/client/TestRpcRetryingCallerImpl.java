@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestRpcRetryingCallerImpl {
 
   @ClassRule
@@ -61,8 +61,8 @@ public class TestRpcRetryingCallerImpl {
     RpcRetryingCallerImpl<Void> caller =
       new RpcRetryingCallerImpl<>(pauseMillis, specialPauseMillis, 2, 0);
 
-    RetryingCallable<Void> callable = new ThrowingCallable(
-      CallQueueTooBigException.class, specialPauseMillis);
+    RetryingCallable<Void> callable =
+      new ThrowingCallable(CallQueueTooBigException.class, specialPauseMillis);
     try {
       caller.callWithRetries(callable, 5000);
       fail("Expected " + exceptionClass.getSimpleName());

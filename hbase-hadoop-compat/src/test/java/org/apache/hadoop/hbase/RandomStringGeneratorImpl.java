@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
-
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,8 +25,8 @@ public class RandomStringGeneratorImpl implements RandomStringGenerator {
   private final String s;
 
   public RandomStringGeneratorImpl() {
-    s = new UUID(ThreadLocalRandom.current().nextLong(),
-                 ThreadLocalRandom.current().nextLong()).toString();
+    s = new UUID(ThreadLocalRandom.current().nextLong(), ThreadLocalRandom.current().nextLong())
+      .toString();
   }
 
   @Override

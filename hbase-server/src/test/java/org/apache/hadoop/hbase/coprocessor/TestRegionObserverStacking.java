@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,15 +48,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestRegionObserverStacking {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionObserverStacking.class);
+    HBaseClassTestRule.forClass(TestRegionObserverStacking.class);
 
-  private static HBaseTestingUtility TEST_UTIL
-    = new HBaseTestingUtility();
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   public static class ObserverA implements RegionCoprocessor, RegionObserver {
@@ -68,10 +67,8 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Put put, final WALEdit edit,
-        final Durability durability)
-        throws IOException {
+    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+      final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }
@@ -86,10 +83,8 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Put put, final WALEdit edit,
-        final Durability durability)
-        throws IOException {
+    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+      final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }
@@ -104,23 +99,21 @@ public class TestRegionObserverStacking {
     }
 
     @Override
-    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Put put, final WALEdit edit,
-        final Durability durability)
-        throws IOException {
+    public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+      final WALEdit edit, final Durability durability) throws IOException {
       id = EnvironmentEdgeManager.currentTime();
       Threads.sleepWithoutInterrupt(10);
     }
   }
 
-  HRegion initHRegion (byte [] tableName, String callingMethod,
-      Configuration conf, byte [] ... families) throws IOException {
+  HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+    byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte [] family : families) {
+    for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
@@ -128,8 +121,8 @@ public class TestRegionObserverStacking {
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r,
-        Mockito.mock(RegionServerServices.class), conf);
+    RegionCoprocessorHost host =
+      new RegionCoprocessorHost(r, Mockito.mock(RegionServerServices.class), conf);
     r.setCoprocessorHost(host);
     return r;
   }
@@ -139,11 +132,10 @@ public class TestRegionObserverStacking {
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] TABLE = Bytes.toBytes(this.getClass().getSimpleName());
     byte[] A = Bytes.toBytes("A");
-    byte[][] FAMILIES = new byte[][] { A } ;
+    byte[][] FAMILIES = new byte[][] { A };
 
     Configuration conf = TEST_UTIL.getConfiguration();
-    HRegion region = initHRegion(TABLE, getClass().getName(),
-      conf, FAMILIES);
+    HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(ObserverA.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(ObserverB.class, Coprocessor.PRIORITY_USER, conf);
@@ -154,11 +146,11 @@ public class TestRegionObserverStacking {
     region.put(put);
 
     Coprocessor c = h.findCoprocessor(ObserverA.class.getName());
-    long idA = ((ObserverA)c).id;
+    long idA = ((ObserverA) c).id;
     c = h.findCoprocessor(ObserverB.class.getName());
-    long idB = ((ObserverB)c).id;
+    long idB = ((ObserverB) c).id;
     c = h.findCoprocessor(ObserverC.class.getName());
-    long idC = ((ObserverC)c).id;
+    long idC = ((ObserverC) c).id;
 
     assertTrue(idA < idB);
     assertTrue(idB < idC);

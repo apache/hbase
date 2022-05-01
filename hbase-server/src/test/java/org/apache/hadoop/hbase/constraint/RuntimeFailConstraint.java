@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +26,7 @@ public class RuntimeFailConstraint extends BaseConstraint {
 
   @Override
   public void check(Put p) throws ConstraintException {
-    throw new RuntimeException(
-        "RuntimeFailConstraint always throws a runtime exception");
+    throw new RuntimeException("RuntimeFailConstraint always throws a runtime exception");
   }
 
 }

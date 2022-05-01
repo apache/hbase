@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestFSWALEntry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSWALEntry.class);
+    HBaseClassTestRule.forClass(TestFSWALEntry.class);
 
   @Test
   public void testCollectFamilies() {
@@ -65,4 +65,3 @@ public class TestFSWALEntry {
     assertEquals(3, FSWALEntry.collectFamilies(cells).size());
   }
 }
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -35,23 +33,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
- * Class servers two purposes:
- *
- * 1. Broadcast NamespaceDescriptor information via ZK
- * (Done by the Master)
- * 2. Consume broadcasted NamespaceDescriptor changes
- * (Done by the RegionServers)
- *
+ * Class servers two purposes: 1. Broadcast NamespaceDescriptor information via ZK (Done by the
+ * Master) 2. Consume broadcasted NamespaceDescriptor changes (Done by the RegionServers)
  */
 @InterfaceAudience.Private
 public class ZKNamespaceManager extends ZKListener {
   private static final Logger LOG = LoggerFactory.getLogger(ZKNamespaceManager.class);
   private final String nsZNode;
-  private final NavigableMap<String,NamespaceDescriptor> cache;
+  private final NavigableMap<String, NamespaceDescriptor> cache;
 
   public ZKNamespaceManager(ZKWatcher zkw) throws IOException {
     super(zkw);
@@ -64,7 +58,7 @@ public class ZKNamespaceManager extends ZKListener {
     try {
       if (ZKUtil.watchAndCheckExists(watcher, nsZNode)) {
         List<ZKUtil.NodeAndData> existing =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
         if (existing != null) {
           refreshNodes(existing);
         }
@@ -96,8 +90,8 @@ public class ZKNamespaceManager extends ZKListener {
 
   public NavigableSet<NamespaceDescriptor> list() throws IOException {
     NavigableSet<NamespaceDescriptor> ret =
-        Sets.newTreeSet(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR);
-    for(NamespaceDescriptor ns: cache.values()) {
+      Sets.newTreeSet(NamespaceDescriptor.NAMESPACE_DESCRIPTOR_COMPARATOR);
+    for (NamespaceDescriptor ns : cache.values()) {
       ret.add(ns);
     }
     return ret;
@@ -108,7 +102,7 @@ public class ZKNamespaceManager extends ZKListener {
     if (nsZNode.equals(path)) {
       try {
         List<ZKUtil.NodeAndData> nodes =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
         String msg = "Error reading data from zookeeper";
@@ -136,16 +130,15 @@ public class ZKNamespaceManager extends ZKListener {
       try {
         byte[] data = ZKUtil.getDataAndWatch(watcher, path);
         NamespaceDescriptor ns =
-            ProtobufUtil.toNamespaceDescriptor(
-                HBaseProtos.NamespaceDescriptor.parseFrom(data));
+          ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(data));
         cache.put(ns.getName(), ns);
       } catch (KeeperException ke) {
-        String msg = "Error reading data from zookeeper for node "+path;
+        String msg = "Error reading data from zookeeper for node " + path;
         LOG.error(msg, ke);
         // only option is to abort
         watcher.abort(msg, ke);
       } catch (IOException ioe) {
-        String msg = "Error deserializing namespace: "+path;
+        String msg = "Error deserializing namespace: " + path;
         LOG.error(msg, ioe);
         watcher.abort(msg, ioe);
       }
@@ -157,13 +150,13 @@ public class ZKNamespaceManager extends ZKListener {
     if (nsZNode.equals(path)) {
       try {
         List<ZKUtil.NodeAndData> nodes =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
+          ZKUtil.getChildDataAndWatchForNewChildren(watcher, nsZNode);
         refreshNodes(nodes);
       } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper for path "+path, ke);
-        watcher.abort("ZooKeeper error get node children for path "+path, ke);
+        LOG.error("Error reading data from zookeeper for path " + path, ke);
+        watcher.abort("ZooKeeper error get node children for path " + path, ke);
       } catch (IOException e) {
-        LOG.error("Error deserializing namespace child from: "+path, e);
+        LOG.error("Error deserializing namespace child from: " + path, e);
         watcher.abort("Error deserializing namespace child from: " + path, e);
       }
     }
@@ -189,10 +182,10 @@ public class ZKNamespaceManager extends ZKListener {
     try {
       ZKUtil.createWithParents(watcher, zNode);
       ZKUtil.updateExistingNodeData(watcher, zNode,
-          ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray(), -1);
+        ProtobufUtil.toProtoNamespaceDescriptor(ns).toByteArray(), -1);
     } catch (KeeperException e) {
-      LOG.error("Failed updating permissions for namespace "+ns.getName(), e);
-      throw new IOException("Failed updating permissions for namespace "+ns.getName(), e);
+      LOG.error("Failed updating permissions for namespace " + ns.getName(), e);
+      throw new IOException("Failed updating permissions for namespace " + ns.getName(), e);
     }
   }
 
@@ -203,12 +196,11 @@ public class ZKNamespaceManager extends ZKListener {
       String namespace = ZKUtil.getNodeName(path);
       byte[] nodeData = n.getData();
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Updating namespace cache from node " + namespace + " with data: " +
-            Bytes.toStringBinary(nodeData));
+        LOG.trace("Updating namespace cache from node " + namespace + " with data: "
+          + Bytes.toStringBinary(nodeData));
       }
       NamespaceDescriptor ns =
-          ProtobufUtil.toNamespaceDescriptor(
-              HBaseProtos.NamespaceDescriptor.parseFrom(nodeData));
+        ProtobufUtil.toNamespaceDescriptor(HBaseProtos.NamespaceDescriptor.parseFrom(nodeData));
       cache.put(ns.getName(), ns);
     }
   }

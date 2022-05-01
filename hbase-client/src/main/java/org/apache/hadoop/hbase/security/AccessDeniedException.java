@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Exception thrown by access-related methods.
  */
@@ -33,7 +32,7 @@ public class AccessDeniedException extends DoNotRetryIOException {
   }
 
   public AccessDeniedException(Class<?> clazz, String s) {
-    super( "AccessDenied [" + clazz.getName() + "]: " + s);
+    super("AccessDenied [" + clazz.getName() + "]: " + s);
   }
 
   public AccessDeniedException(String s) {

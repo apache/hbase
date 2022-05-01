@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ExpressionExpander {
@@ -47,8 +46,10 @@ public class ExpressionExpander {
       }
       return nlExp;
     }
-    if (src instanceof NonLeafExpressionNode
-        && ((NonLeafExpressionNode) src).getOperator() == Operator.NOT) {
+    if (
+      src instanceof NonLeafExpressionNode
+        && ((NonLeafExpressionNode) src).getOperator() == Operator.NOT
+    ) {
       // Negate the exp
       return negate((NonLeafExpressionNode) src);
     }
@@ -111,12 +112,14 @@ public class ExpressionExpander {
         // (a | b) & (c & d) ...
         if (outerOp == Operator.OR) {
           // (a | b) | (c & d)
-          if (leftChildNLE.getOperator() == Operator.OR
-              && rightChildNLE.getOperator() == Operator.AND) {
+          if (
+            leftChildNLE.getOperator() == Operator.OR && rightChildNLE.getOperator() == Operator.AND
+          ) {
             leftChildNLE.addChildExp(rightChildNLE);
             newNode = leftChildNLE;
-          } else if (leftChildNLE.getOperator() == Operator.AND
-              && rightChildNLE.getOperator() == Operator.OR) {
+          } else if (
+            leftChildNLE.getOperator() == Operator.AND && rightChildNLE.getOperator() == Operator.OR
+          ) {
             // (a & b) | (c | d)
             rightChildNLE.addChildExp(leftChildNLE);
             newNode = rightChildNLE;
@@ -126,16 +129,18 @@ public class ExpressionExpander {
         } else {
           // outer op is &
           // (a | b) & (c & d) => (a & c & d) | (b & c & d)
-          if (leftChildNLE.getOperator() == Operator.OR
-              && rightChildNLE.getOperator() == Operator.AND) {
+          if (
+            leftChildNLE.getOperator() == Operator.OR && rightChildNLE.getOperator() == Operator.AND
+          ) {
             newNode = new NonLeafExpressionNode(Operator.OR);
             for (ExpressionNode exp : leftChildNLE.getChildExps()) {
               NonLeafExpressionNode rightChildNLEClone = rightChildNLE.deepClone();
               rightChildNLEClone.addChildExp(exp);
               newNode.addChildExp(rightChildNLEClone);
             }
-          } else if (leftChildNLE.getOperator() == Operator.AND
-              && rightChildNLE.getOperator() == Operator.OR) {
+          } else if (
+            leftChildNLE.getOperator() == Operator.AND && rightChildNLE.getOperator() == Operator.OR
+          ) {
             // (a & b) & (c | d) => (a & b & c) | (a & b & d)
             newNode = new NonLeafExpressionNode(Operator.OR);
             for (ExpressionNode exp : rightChildNLE.getChildExps()) {
@@ -162,7 +167,7 @@ public class ExpressionExpander {
   }
 
   private NonLeafExpressionNode mergeChildNodes(NonLeafExpressionNode newOuterNode,
-      Operator outerOp, ExpressionNode lChild, NonLeafExpressionNode nlChild) {
+    Operator outerOp, ExpressionNode lChild, NonLeafExpressionNode nlChild) {
     // Merge the single right/left node into the other side
     if (nlChild.getOperator() == outerOp) {
       NonLeafExpressionNode leftChildNLEClone = nlChild.deepClone();

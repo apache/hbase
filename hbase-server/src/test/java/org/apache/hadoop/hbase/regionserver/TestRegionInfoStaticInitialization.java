@@ -35,11 +35,11 @@ import org.junit.experimental.categories.Category;
  * Test for the tangled mess that is static initialization of our our {@link HRegionInfo} and
  * {@link RegionInfoBuilder}, as reported on HBASE-24896. The condition being tested can only be
  * reproduced the first time a JVM loads the classes under test. Thus, this test is marked as a
- * {@link LargeTests} because, under their current configuration, tests in that category are run
- * in their own JVM instances.
+ * {@link LargeTests} because, under their current configuration, tests in that category are run in
+ * their own JVM instances.
  */
 @SuppressWarnings("deprecation")
-@Category({ RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRegionInfoStaticInitialization {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -58,10 +58,9 @@ public class TestRegionInfoStaticInitialization {
     // express this bug, these threads need to access these symbols at roughly the same time, so
     // that the classloader is asked to materialize these symbols concurrently. These Suppliers are
     // run on threads that have already been allocated, managed by the system's ForkJoin pool.
-    final CompletableFuture<?>[] futures = Stream.of(
-      retrieveUNDEFINED, retrieveMetaRegionInfo, retrieveUNDEFINED, retrieveMetaRegionInfo)
-      .map(CompletableFuture::supplyAsync)
-      .toArray(CompletableFuture<?>[]::new);
+    final CompletableFuture<?>[] futures = Stream
+      .of(retrieveUNDEFINED, retrieveMetaRegionInfo, retrieveUNDEFINED, retrieveMetaRegionInfo)
+      .map(CompletableFuture::supplyAsync).toArray(CompletableFuture<?>[]::new);
 
     // Loading classes should be relatively fast. 5 seconds is an arbitrary choice of timeout. It
     // was chosen under the assumption that loading these symbols should complete much faster than

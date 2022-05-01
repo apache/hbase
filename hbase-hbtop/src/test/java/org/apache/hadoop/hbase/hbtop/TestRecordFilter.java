@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestRecordFilter {
 
@@ -49,8 +48,7 @@ public class TestRecordFilter {
     testParseAndBuilder("REGION=region1", false,
       RecordFilter.newBuilder(Field.REGION).equal("region1"));
 
-    testParseAndBuilder("REGION=", false,
-      RecordFilter.newBuilder(Field.REGION).equal(""));
+    testParseAndBuilder("REGION=", false, RecordFilter.newBuilder(Field.REGION).equal(""));
 
     testParseAndBuilder("!REGION=region1", false,
       RecordFilter.newBuilder(Field.REGION).notEqual("region1"));
@@ -132,8 +130,8 @@ public class TestRecordFilter {
   public void testFilters() {
     List<Record> records = createTestRecords();
 
-    testFilter(records, "REGION=region", false,
-      "region1", "region2", "region3", "region4", "region5");
+    testFilter(records, "REGION=region", false, "region1", "region2", "region3", "region4",
+      "region5");
     testFilter(records, "!REGION=region", false);
     testFilter(records, "REGION=Region", false);
 
@@ -148,8 +146,7 @@ public class TestRecordFilter {
     testFilter(records, "LOCALITY<0.5", false, "region5");
     testFilter(records, "%COMP<=50%", false, "region2", "region3", "region4", "region5");
 
-    testFilters(records, Arrays.asList("SF>=100MB", "#REQ/S>100"), false,
-      "region2", "region5");
+    testFilters(records, Arrays.asList("SF>=100MB", "#REQ/S>100"), false, "region2", "region5");
     testFilters(records, Arrays.asList("%COMP<=50%", "!#SF>=10"), false, "region4");
     testFilters(records, Arrays.asList("!REGION==region1", "LOCALITY<0.5", "#REQ/S>100"), false,
       "region5");
@@ -159,10 +156,10 @@ public class TestRecordFilter {
   public void testFiltersIgnoreCase() {
     List<Record> records = createTestRecords();
 
-    testFilter(records, "REGION=Region", true,
-      "region1", "region2", "region3", "region4", "region5");
-    testFilter(records, "REGION=REGION", true,
-      "region1", "region2", "region3", "region4", "region5");
+    testFilter(records, "REGION=Region", true, "region1", "region2", "region3", "region4",
+      "region5");
+    testFilter(records, "REGION=REGION", true, "region1", "region2", "region3", "region4",
+      "region5");
   }
 
   private List<Record> createTestRecords() {
@@ -175,8 +172,8 @@ public class TestRecordFilter {
     return ret;
   }
 
-  private Record createTestRecord(String region, long requestCountPerSecond,
-    Size storeFileSize, int numStoreFiles, float locality, float compactionProgress) {
+  private Record createTestRecord(String region, long requestCountPerSecond, Size storeFileSize,
+    int numStoreFiles, float locality, float compactionProgress) {
     Record.Builder builder = Record.builder();
     builder.put(Field.REGION, region);
     builder.put(Field.REQUEST_COUNT_PER_SECOND, requestCountPerSecond);
@@ -194,12 +191,10 @@ public class TestRecordFilter {
 
   private void testFilters(List<Record> records, List<String> filterStrings, boolean ignoreCase,
     String... expectedRegions) {
-    List<String> actual =
-      records.stream().filter(r -> filterStrings.stream()
-        .map(f -> RecordFilter.parse(f, ignoreCase))
+    List<String> actual = records.stream()
+      .filter(r -> filterStrings.stream().map(f -> RecordFilter.parse(f, ignoreCase))
         .allMatch(f -> f.execute(r)))
-        .map(r -> r.get(Field.REGION).asString())
-        .collect(Collectors.toList());
+      .map(r -> r.get(Field.REGION).asString()).collect(Collectors.toList());
     assertThat(actual, hasItems(expectedRegions));
     assertThat(actual.size(), is(expectedRegions.length));
   }

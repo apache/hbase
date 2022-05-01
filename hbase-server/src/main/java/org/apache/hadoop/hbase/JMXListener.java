@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,11 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pluggable JMX Agent for HBase(to fix the 2 random TCP ports issue
- * of the out-of-the-box JMX Agent):
- * 1)connector port can share with the registry port if SSL is OFF
- * 2)support password authentication
- * 3)support subset of SSL (with default configuration)
+ * Pluggable JMX Agent for HBase(to fix the 2 random TCP ports issue of the out-of-the-box JMX
+ * Agent): 1)connector port can share with the registry port if SSL is OFF 2)support password
+ * authentication 3)support subset of SSL (with default configuration)
  */
 @InterfaceAudience.Private
 public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
@@ -57,16 +54,15 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
   public static final int defRegionserverRMIRegistryPort = 10102;
 
   /**
-   * workaround for HBASE-11146
-   * master and regionserver are in 1 JVM in standalone mode
-   * only 1 JMX instance is allowed, otherwise there is port conflict even if
-   * we only load regionserver coprocessor on master
+   * workaround for HBASE-11146 master and regionserver are in 1 JVM in standalone mode only 1 JMX
+   * instance is allowed, otherwise there is port conflict even if we only load regionserver
+   * coprocessor on master
    */
   private static JMXConnectorServer JMX_CS = null;
   private Registry rmiRegistry = null;
 
-  public static JMXServiceURL buildJMXServiceURL(int rmiRegistryPort,
-      int rmiConnectorPort) throws IOException {
+  public static JMXServiceURL buildJMXServiceURL(int rmiRegistryPort, int rmiConnectorPort)
+    throws IOException {
     // Build jmxURL
     StringBuilder url = new StringBuilder();
     url.append("service:jmx:rmi://localhost:");
@@ -79,8 +75,7 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
 
   }
 
-  public void startConnectorServer(int rmiRegistryPort, int rmiConnectorPort)
-              throws IOException {
+  public void startConnectorServer(int rmiRegistryPort, int rmiConnectorPort) throws IOException {
     boolean rmiSSL = false;
     boolean authenticate = true;
     String passwordFile = null;
@@ -88,19 +83,18 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
 
     System.setProperty("java.rmi.server.randomIDs", "true");
 
-    String rmiSSLValue = System.getProperty("com.sun.management.jmxremote.ssl",
-                                            "false");
+    String rmiSSLValue = System.getProperty("com.sun.management.jmxremote.ssl", "false");
     rmiSSL = Boolean.parseBoolean(rmiSSLValue);
 
     String authenticateValue =
-        System.getProperty("com.sun.management.jmxremote.authenticate", "false");
+      System.getProperty("com.sun.management.jmxremote.authenticate", "false");
     authenticate = Boolean.parseBoolean(authenticateValue);
 
     passwordFile = System.getProperty("com.sun.management.jmxremote.password.file");
     accessFile = System.getProperty("com.sun.management.jmxremote.access.file");
 
-    LOG.info("rmiSSL:" + rmiSSLValue + ",authenticate:" + authenticateValue
-              + ",passwordFile:" + passwordFile + ",accessFile:" + accessFile);
+    LOG.info("rmiSSL:" + rmiSSLValue + ",authenticate:" + authenticateValue + ",passwordFile:"
+      + passwordFile + ",accessFile:" + accessFile);
 
     // Environment map
     HashMap<String, Object> jmxEnv = new HashMap<>();
@@ -110,8 +104,8 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
 
     if (rmiSSL) {
       if (rmiRegistryPort == rmiConnectorPort) {
-        throw new IOException("SSL is enabled. " +
-            "rmiConnectorPort cannot share with the rmiRegistryPort!");
+        throw new IOException(
+          "SSL is enabled. " + "rmiConnectorPort cannot share with the rmiRegistryPort!");
       }
       csf = new SslRMIClientSocketFactorySecure();
       ssf = new SslRMIServerSocketFactorySecure();
@@ -140,7 +134,7 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
 
     try {
       // Start the JMXListener with the connection string
-      synchronized(JMXListener.class) {
+      synchronized (JMXListener.class) {
         if (JMX_CS != null) {
           throw new RuntimeException("Started by another thread?");
         }
@@ -172,7 +166,6 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
     }
   }
 
-
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     int rmiRegistryPort = -1;
@@ -182,30 +175,27 @@ public class JMXListener implements MasterCoprocessor, RegionServerCoprocessor {
     if (env instanceof MasterCoprocessorEnvironment) {
       // running on Master
       rmiRegistryPort =
-          conf.getInt("master" + RMI_REGISTRY_PORT_CONF_KEY, defMasterRMIRegistryPort);
+        conf.getInt("master" + RMI_REGISTRY_PORT_CONF_KEY, defMasterRMIRegistryPort);
       rmiConnectorPort = conf.getInt("master" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
       LOG.info("Master rmiRegistryPort:" + rmiRegistryPort + ",Master rmiConnectorPort:"
-          + rmiConnectorPort);
+        + rmiConnectorPort);
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
       // running on RegionServer
       rmiRegistryPort =
-        conf.getInt("regionserver" + RMI_REGISTRY_PORT_CONF_KEY,
-        defRegionserverRMIRegistryPort);
-      rmiConnectorPort =
-        conf.getInt("regionserver" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
-      LOG.info("RegionServer rmiRegistryPort:" + rmiRegistryPort
-        + ",RegionServer rmiConnectorPort:" + rmiConnectorPort);
+        conf.getInt("regionserver" + RMI_REGISTRY_PORT_CONF_KEY, defRegionserverRMIRegistryPort);
+      rmiConnectorPort = conf.getInt("regionserver" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
+      LOG.info("RegionServer rmiRegistryPort:" + rmiRegistryPort + ",RegionServer rmiConnectorPort:"
+        + rmiConnectorPort);
 
     } else if (env instanceof RegionCoprocessorEnvironment) {
       LOG.error("JMXListener should not be loaded in Region Environment!");
       return;
     }
 
-    synchronized(JMXListener.class) {
+    synchronized (JMXListener.class) {
       if (JMX_CS != null) {
         LOG.info("JMXListener has been started at Registry port " + rmiRegistryPort);
-      }
-      else {
+      } else {
         startConnectorServer(rmiRegistryPort, rmiConnectorPort);
       }
     }

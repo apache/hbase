@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos;
 
 /**
@@ -30,21 +31,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos;
  */
 @InterfaceAudience.Private
 final class RPCTInfoGetter implements TextMapGetter<TracingProtos.RPCTInfo> {
-  RPCTInfoGetter() { }
+  RPCTInfoGetter() {
+  }
 
   @Override
   public Iterable<String> keys(TracingProtos.RPCTInfo carrier) {
-    return Optional.ofNullable(carrier)
-      .map(TracingProtos.RPCTInfo::getHeadersMap)
-      .map(Map::keySet)
+    return Optional.ofNullable(carrier).map(TracingProtos.RPCTInfo::getHeadersMap).map(Map::keySet)
       .orElse(Collections.emptySet());
   }
 
   @Override
   public String get(TracingProtos.RPCTInfo carrier, String key) {
-    return Optional.ofNullable(carrier)
-      .map(TracingProtos.RPCTInfo::getHeadersMap)
-      .map(map -> map.get(key))
-      .orElse(null);
+    return Optional.ofNullable(carrier).map(TracingProtos.RPCTInfo::getHeadersMap)
+      .map(map -> map.get(key)).orElse(null);
   }
 }

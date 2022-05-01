@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Manages singleton instance of {@link VisibilityLabelService}
@@ -34,7 +33,7 @@ public class VisibilityLabelServiceManager {
   private static final Logger LOG = LoggerFactory.getLogger(VisibilityLabelServiceManager.class);
 
   public static final String VISIBILITY_LABEL_SERVICE_CLASS =
-      "hbase.regionserver.visibility.label.service.class";
+    "hbase.regionserver.visibility.label.service.class";
   private static final VisibilityLabelServiceManager INSTANCE = new VisibilityLabelServiceManager();
 
   private volatile VisibilityLabelService visibilityLabelService = null;
@@ -49,14 +48,14 @@ public class VisibilityLabelServiceManager {
   }
 
   /**
-   * @param conf
-   * @return singleton instance of {@link VisibilityLabelService}. The FQCN of the implementation
-   *         class can be specified using "hbase.regionserver.visibility.label.service.class".
+   * n * @return singleton instance of {@link VisibilityLabelService}. The FQCN of the
+   * implementation class can be specified using
+   * "hbase.regionserver.visibility.label.service.class".
    * @throws IOException When VLS implementation, as specified in conf, can not be loaded.
    */
   public VisibilityLabelService getVisibilityLabelService(Configuration conf) throws IOException {
     String vlsClassName = conf.get(VISIBILITY_LABEL_SERVICE_CLASS,
-        DefaultVisibilityLabelServiceImpl.class.getCanonicalName()).trim();
+      DefaultVisibilityLabelServiceImpl.class.getCanonicalName()).trim();
     if (this.visibilityLabelService != null) {
       checkForClusterLevelSingleConf(vlsClassName);
       return this.visibilityLabelService;
@@ -68,8 +67,8 @@ public class VisibilityLabelServiceManager {
       }
       this.vlsClazzName = vlsClassName;
       try {
-        this.visibilityLabelService = (VisibilityLabelService) ReflectionUtils.newInstance(
-            Class.forName(vlsClassName), conf);
+        this.visibilityLabelService =
+          (VisibilityLabelService) ReflectionUtils.newInstance(Class.forName(vlsClassName), conf);
       } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }
@@ -81,8 +80,8 @@ public class VisibilityLabelServiceManager {
     assert this.vlsClazzName != null;
     if (!this.vlsClazzName.equals(vlsClassName)) {
       LOG.warn("Trying to use table specific value for config "
-          + "'hbase.regionserver.visibility.label.service.class' which is not supported."
-          + " Will use the cluster level VisibilityLabelService class " + this.vlsClazzName);
+        + "'hbase.regionserver.visibility.label.service.class' which is not supported."
+        + " Will use the cluster level VisibilityLabelService class " + this.vlsClazzName);
     }
   }
 

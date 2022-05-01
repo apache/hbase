@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,10 +37,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-
 /**
- * This generates {@link KeyPress} objects from the given input stream and offers them to the
- * given queue.
+ * This generates {@link KeyPress} objects from the given input stream and offers them to the given
+ * queue.
  */
 @InterfaceAudience.Private
 public class KeyPressGenerator {
@@ -48,7 +47,10 @@ public class KeyPressGenerator {
   private static final Logger LOGGER = LoggerFactory.getLogger(KeyPressGenerator.class);
 
   private enum ParseState {
-    START, ESCAPE, ESCAPE_SEQUENCE_PARAM1, ESCAPE_SEQUENCE_PARAM2
+    START,
+    ESCAPE,
+    ESCAPE_SEQUENCE_PARAM1,
+    ESCAPE_SEQUENCE_PARAM2
   }
 
   private final Queue<KeyPress> keyPressQueue;
@@ -67,9 +69,9 @@ public class KeyPressGenerator {
     input = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
     this.keyPressQueue = keyPressQueue;
 
-    executorService = Executors.newFixedThreadPool(2, new ThreadFactoryBuilder()
-      .setNameFormat("KeyPressGenerator-%d").setDaemon(true)
-      .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+    executorService = Executors.newFixedThreadPool(2,
+      new ThreadFactoryBuilder().setNameFormat("KeyPressGenerator-%d").setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
 
     initState();
   }
@@ -469,8 +471,10 @@ public class KeyPressGenerator {
 
   private void offer(KeyPress keyPress) {
     // Handle ctrl + c
-    if (keyPress.isCtrl() && keyPress.getType() == KeyPress.Type.Character &&
-      keyPress.getCharacter() == 'c') {
+    if (
+      keyPress.isCtrl() && keyPress.getType() == KeyPress.Type.Character
+        && keyPress.getCharacter() == 'c'
+    ) {
       System.exit(0);
     }
 

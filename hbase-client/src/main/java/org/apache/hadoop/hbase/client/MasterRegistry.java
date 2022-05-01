@@ -135,7 +135,7 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/(.*/MasterRegistry.java|src/test/.*)")
+      allowedOnPath = ".*/(.*/MasterRegistry.java|src/test/.*)")
   CompletableFuture<Set<ServerName>> getMasters() {
     return this
       .<GetMastersResponse> call(

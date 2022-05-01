@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.BalanceRequest;
@@ -52,10 +51,10 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   private RSGroupAdmin wrapped;
 
   public VerifyingRSGroupAdminClient(RSGroupAdmin RSGroupAdmin, Configuration conf)
-      throws IOException {
+    throws IOException {
     wrapped = RSGroupAdmin;
-    table = ConnectionFactory.createConnection(conf)
-        .getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
+    table =
+      ConnectionFactory.createConnection(conf).getTable(RSGroupInfoManager.RSGROUP_TABLE_NAME);
     zkw = new ZKWatcher(conf, this.getClass().getSimpleName(), null);
   }
 
@@ -94,7 +93,8 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     return wrapped.balanceRSGroup(groupName, request);
   }
 
@@ -110,7 +110,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String targetGroup)
-      throws IOException {
+    throws IOException {
     wrapped.moveServersAndTables(servers, tables, targetGroup);
     verify();
   }
@@ -129,7 +129,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
 
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
-      throws IOException {
+    throws IOException {
     wrapped.updateRSGroupConfig(groupName, configuration);
     verify();
   }
@@ -144,28 +144,25 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
     Set<RSGroupInfo> zList = Sets.newHashSet();
 
     for (Result result : table.getScanner(new Scan())) {
-      RSGroupProtos.RSGroupInfo proto =
-          RSGroupProtos.RSGroupInfo.parseFrom(
-              result.getValue(
-                  RSGroupInfoManager.META_FAMILY_BYTES,
-                  RSGroupInfoManager.META_QUALIFIER_BYTES));
+      RSGroupProtos.RSGroupInfo proto = RSGroupProtos.RSGroupInfo.parseFrom(result
+        .getValue(RSGroupInfoManager.META_FAMILY_BYTES, RSGroupInfoManager.META_QUALIFIER_BYTES));
       groupMap.put(proto.getName(), RSGroupProtobufUtil.toGroupInfo(proto));
     }
     Assert.assertEquals(Sets.newHashSet(groupMap.values()),
-        Sets.newHashSet(wrapped.listRSGroups()));
+      Sets.newHashSet(wrapped.listRSGroups()));
     try {
       String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
-      for(String znode: ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
+      for (String znode : ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
         byte[] data = ZKUtil.getData(zkw, ZNodePaths.joinZNode(groupBasePath, znode));
-        if(data.length > 0) {
+        if (data.length > 0) {
           ProtobufUtil.expectPBMagicPrefix(data);
-          ByteArrayInputStream bis = new ByteArrayInputStream(
-              data, ProtobufUtil.lengthOfPBMagic(), data.length);
+          ByteArrayInputStream bis =
+            new ByteArrayInputStream(data, ProtobufUtil.lengthOfPBMagic(), data.length);
           zList.add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
         }
       }
       Assert.assertEquals(zList.size(), groupMap.size());
-      for(RSGroupInfo RSGroupInfo : zList) {
+      for (RSGroupInfo RSGroupInfo : zList) {
         Assert.assertTrue(groupMap.get(RSGroupInfo.getName()).equals(RSGroupInfo));
       }
     } catch (KeeperException e) {

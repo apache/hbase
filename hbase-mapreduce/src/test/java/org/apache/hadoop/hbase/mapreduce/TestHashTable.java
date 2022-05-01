@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 public class TestHashTable {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHashTable.class);
+    HBaseClassTestRule.forClass(TestHashTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHashTable.class);
 
@@ -85,9 +85,9 @@ public class TestHashTable {
     int numRegions = 10;
     int numHashFiles = 3;
 
-    byte[][] splitRows = new byte[numRegions-1][];
+    byte[][] splitRows = new byte[numRegions - 1][];
     for (int i = 1; i < numRegions; i++) {
-      splitRows[i-1] = Bytes.toBytes(numRows * i / numRegions);
+      splitRows[i - 1] = Bytes.toBytes(numRows * i / numRegions);
     }
 
     long timestamp = 1430764183454L;
@@ -107,13 +107,9 @@ public class TestHashTable {
     Path testDir = TEST_UTIL.getDataTestDirOnTestFS(tableName.getNameAsString());
 
     long batchSize = 300;
-    int code = hashTable.run(new String[] {
-      "--batchsize=" + batchSize,
-      "--numhashfiles=" + numHashFiles,
-      "--scanbatch=2",
-      tableName.getNameAsString(),
-      testDir.toString()
-    });
+    int code =
+      hashTable.run(new String[] { "--batchsize=" + batchSize, "--numhashfiles=" + numHashFiles,
+        "--scanbatch=2", tableName.getNameAsString(), testDir.toString() });
     assertEquals("test job failed", 0, code);
 
     FileSystem fs = TEST_UTIL.getTestFileSystem();
@@ -127,29 +123,29 @@ public class TestHashTable {
       LOG.debug("partition: " + Bytes.toInt(bytes.get()));
     }
 
-    ImmutableMap<Integer, ImmutableBytesWritable> expectedHashes
-      = ImmutableMap.<Integer, ImmutableBytesWritable>builder()
-      .put(-1, new ImmutableBytesWritable(Bytes.fromHex("714cb10a9e3b5569852980edd8c6ca2f")))
-      .put(5, new ImmutableBytesWritable(Bytes.fromHex("28d961d9252ce8f8d44a07b38d3e1d96")))
-      .put(10, new ImmutableBytesWritable(Bytes.fromHex("f6bbc4a224d8fd929b783a92599eaffa")))
-      .put(15, new ImmutableBytesWritable(Bytes.fromHex("522deb5d97f73a414ecc11457be46881")))
-      .put(20, new ImmutableBytesWritable(Bytes.fromHex("b026f2611aaa46f7110116d807545352")))
-      .put(25, new ImmutableBytesWritable(Bytes.fromHex("39ffc1a3094aa12a2e90ffd9cef2ce93")))
-      .put(30, new ImmutableBytesWritable(Bytes.fromHex("f6b4d75727ce9a30ac29e4f08f601666")))
-      .put(35, new ImmutableBytesWritable(Bytes.fromHex("422e2d2f1eb79a8f02171a705a42c090")))
-      .put(40, new ImmutableBytesWritable(Bytes.fromHex("559ad61c900fffefea0a15abf8a97bc3")))
-      .put(45, new ImmutableBytesWritable(Bytes.fromHex("23019084513eca41cee436b2a29611cb")))
-      .put(50, new ImmutableBytesWritable(Bytes.fromHex("b40467d222ddb4949b142fe145ee9edc")))
-      .put(55, new ImmutableBytesWritable(Bytes.fromHex("372bf89fcd8ca4b7ab3c1add9d07f7e4")))
-      .put(60, new ImmutableBytesWritable(Bytes.fromHex("69ae0585e6255de27dce974e332b8f8b")))
-      .put(65, new ImmutableBytesWritable(Bytes.fromHex("8029610044297aad0abdbecd485d8e59")))
-      .put(70, new ImmutableBytesWritable(Bytes.fromHex("de5f784f7f78987b6e57ecfd81c8646f")))
-      .put(75, new ImmutableBytesWritable(Bytes.fromHex("1cd757cc4e1715c8c3b1c24447a1ec56")))
-      .put(80, new ImmutableBytesWritable(Bytes.fromHex("f9a53aacfeb6142b08066615e7038095")))
-      .put(85, new ImmutableBytesWritable(Bytes.fromHex("89b872b7e639df32d3276b33928c0c91")))
-      .put(90, new ImmutableBytesWritable(Bytes.fromHex("45eeac0646d46a474ea0484175faed38")))
-      .put(95, new ImmutableBytesWritable(Bytes.fromHex("f57c447e32a08f4bf1abb2892839ac56")))
-      .build();
+    ImmutableMap<Integer, ImmutableBytesWritable> expectedHashes =
+      ImmutableMap.<Integer, ImmutableBytesWritable> builder()
+        .put(-1, new ImmutableBytesWritable(Bytes.fromHex("714cb10a9e3b5569852980edd8c6ca2f")))
+        .put(5, new ImmutableBytesWritable(Bytes.fromHex("28d961d9252ce8f8d44a07b38d3e1d96")))
+        .put(10, new ImmutableBytesWritable(Bytes.fromHex("f6bbc4a224d8fd929b783a92599eaffa")))
+        .put(15, new ImmutableBytesWritable(Bytes.fromHex("522deb5d97f73a414ecc11457be46881")))
+        .put(20, new ImmutableBytesWritable(Bytes.fromHex("b026f2611aaa46f7110116d807545352")))
+        .put(25, new ImmutableBytesWritable(Bytes.fromHex("39ffc1a3094aa12a2e90ffd9cef2ce93")))
+        .put(30, new ImmutableBytesWritable(Bytes.fromHex("f6b4d75727ce9a30ac29e4f08f601666")))
+        .put(35, new ImmutableBytesWritable(Bytes.fromHex("422e2d2f1eb79a8f02171a705a42c090")))
+        .put(40, new ImmutableBytesWritable(Bytes.fromHex("559ad61c900fffefea0a15abf8a97bc3")))
+        .put(45, new ImmutableBytesWritable(Bytes.fromHex("23019084513eca41cee436b2a29611cb")))
+        .put(50, new ImmutableBytesWritable(Bytes.fromHex("b40467d222ddb4949b142fe145ee9edc")))
+        .put(55, new ImmutableBytesWritable(Bytes.fromHex("372bf89fcd8ca4b7ab3c1add9d07f7e4")))
+        .put(60, new ImmutableBytesWritable(Bytes.fromHex("69ae0585e6255de27dce974e332b8f8b")))
+        .put(65, new ImmutableBytesWritable(Bytes.fromHex("8029610044297aad0abdbecd485d8e59")))
+        .put(70, new ImmutableBytesWritable(Bytes.fromHex("de5f784f7f78987b6e57ecfd81c8646f")))
+        .put(75, new ImmutableBytesWritable(Bytes.fromHex("1cd757cc4e1715c8c3b1c24447a1ec56")))
+        .put(80, new ImmutableBytesWritable(Bytes.fromHex("f9a53aacfeb6142b08066615e7038095")))
+        .put(85, new ImmutableBytesWritable(Bytes.fromHex("89b872b7e639df32d3276b33928c0c91")))
+        .put(90, new ImmutableBytesWritable(Bytes.fromHex("45eeac0646d46a474ea0484175faed38")))
+        .put(95, new ImmutableBytesWritable(Bytes.fromHex("f57c447e32a08f4bf1abb2892839ac56")))
+        .build();
 
     Map<Integer, ImmutableBytesWritable> actualHashes = new HashMap<>();
     Path dataDir = new Path(testDir, HashTable.HASH_DATA_DIR);
@@ -162,11 +158,11 @@ public class TestHashTable {
       while (reader.next(key, hash)) {
         String keyString = Bytes.toHex(key.get(), key.getOffset(), key.getLength());
         LOG.debug("Key: " + (keyString.isEmpty() ? "-1" : Integer.parseInt(keyString, 16))
-            + " Hash: " + Bytes.toHex(hash.get(), hash.getOffset(), hash.getLength()));
+          + " Hash: " + Bytes.toHex(hash.get(), hash.getOffset(), hash.getLength()));
 
         int intKey = -1;
         if (key.getLength() > 0) {
-          intKey = Bytes.toInt(key.get(),  key.getOffset(), key.getLength());
+          intKey = Bytes.toInt(key.get(), key.getOffset(), key.getLength());
         }
         if (actualHashes.containsKey(intKey)) {
           Assert.fail("duplicate key in data files: " + intKey);

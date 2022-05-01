@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -54,7 +53,7 @@ import org.slf4j.LoggerFactory;
 public class TestZKMulti {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKMulti.class);
+    HBaseClassTestRule.forClass(TestZKMulti.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKMulti.class);
   private final static HBaseZKTestingUtility TEST_UTIL = new HBaseZKTestingUtility();
@@ -77,8 +76,7 @@ public class TestZKMulti {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
     Abortable abortable = new ZKMultiAbortable();
-    zkw = new ZKWatcher(conf,
-      "TestZKMulti", abortable, true);
+    zkw = new ZKWatcher(conf, "TestZKMulti", abortable, true);
   }
 
   @AfterClass
@@ -103,7 +101,7 @@ public class TestZKMulti {
 
     // single setdata
     LinkedList<ZKUtilOp> singleSetData = new LinkedList<>();
-    byte [] data = Bytes.toBytes("foobar");
+    byte[] data = Bytes.toBytes("foobar");
     singleSetData.add(ZKUtilOp.setData(path, data));
     ZKUtil.multiOrSequential(zkw, singleSetData, false);
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path), data));
@@ -232,7 +230,7 @@ public class TestZKMulti {
     String pathV = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "testMultiFailureV");
     String pathW = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "testMultiFailureW");
     ops = new LinkedList<>();
-    ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX))); // fail  -- already exists
+    ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathX))); // fail -- already exists
     ops.add(ZKUtilOp.setData(pathY, Bytes.toBytes(pathY))); // fail -- doesn't exist
     ops.add(ZKUtilOp.deleteNodeFailSilent(pathZ)); // fail -- doesn't exist
     ops.add(ZKUtilOp.createAndFailSilent(pathX, Bytes.toBytes(pathV))); // pass
@@ -306,8 +304,8 @@ public class TestZKMulti {
   }
 
   /**
-   * Verifies that for the given root node, it should delete all the child nodes
-   * recursively using multi-update api.
+   * Verifies that for the given root node, it should delete all the child nodes recursively using
+   * multi-update api.
    */
   @Test
   public void testdeleteChildrenRecursivelyMulti() throws Exception {
@@ -316,10 +314,8 @@ public class TestZKMulti {
 
     ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode);
 
-    assertTrue("Wrongly deleted parent znode!",
-        ZKUtil.checkExists(zkw, parentZNode) > -1);
-    List<String> children = zkw.getRecoverableZooKeeper().getChildren(
-        parentZNode, false);
+    assertTrue("Wrongly deleted parent znode!", ZKUtil.checkExists(zkw, parentZNode) > -1);
+    List<String> children = zkw.getRecoverableZooKeeper().getChildren(parentZNode, false);
     assertEquals("Failed to delete child znodes!", 0, children.size());
   }
 
@@ -383,8 +379,8 @@ public class TestZKMulti {
     final int batchSize = 50;
     Configuration localConf = new Configuration(TEST_UTIL.getConfiguration());
     localConf.setInt("zookeeper.multi.max.size", batchSize);
-    try (ZKWatcher customZkw = new ZKWatcher(localConf,
-      "TestZKMulti_Custom", new ZKMultiAbortable(), true)) {
+    try (ZKWatcher customZkw =
+      new ZKWatcher(localConf, "TestZKMulti_Custom", new ZKMultiAbortable(), true)) {
 
       // With a parent znode like this, we'll get batches of 2-3 elements
       final String parent1 = "/batchedDeletes1";
@@ -395,8 +391,8 @@ public class TestZKMulti {
       List<Op> ops = new ArrayList<>();
       ops.add(Op.create(parent1, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
       for (int i = 0; i < batchSize * 2; i++) {
-        ops.add(Op.create(
-            parent1 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+        ops.add(
+          Op.create(parent1 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
       }
       customZkw.getRecoverableZooKeeper().multi(ops);
 
@@ -404,8 +400,8 @@ public class TestZKMulti {
       ops.clear();
       ops.add(Op.create(parent2, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
       for (int i = 0; i < batchSize * 4; i++) {
-        ops.add(Op.create(
-            parent2 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+        ops.add(
+          Op.create(parent2 + "/" + i, EMPTY_BYTES, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
       }
       customZkw.getRecoverableZooKeeper().multi(ops);
 
@@ -422,46 +418,42 @@ public class TestZKMulti {
 
     // Simple, single element case
     assertEquals(Collections.singletonList(Collections.singletonList(tenByteOp)),
-        ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 15));
+      ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 15));
 
     // Simple case where we exceed the limit, but must make the list
     assertEquals(Collections.singletonList(Collections.singletonList(tenByteOp)),
-        ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 5));
+      ZKUtil.partitionOps(Collections.singletonList(tenByteOp), 5));
 
     // Each gets its own bucket
     assertEquals(
-        Arrays.asList(Collections.singletonList(tenByteOp), Collections.singletonList(tenByteOp),
-            Collections.singletonList(tenByteOp)),
-        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 15));
+      Arrays.asList(Collections.singletonList(tenByteOp), Collections.singletonList(tenByteOp),
+        Collections.singletonList(tenByteOp)),
+      ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 15));
 
     // Test internal boundary
     assertEquals(
-        Arrays.asList(Arrays.asList(tenByteOp,tenByteOp), Collections.singletonList(tenByteOp)),
-        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 20));
+      Arrays.asList(Arrays.asList(tenByteOp, tenByteOp), Collections.singletonList(tenByteOp)),
+      ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 20));
 
     // Plenty of space for one partition
-    assertEquals(
-        Collections.singletonList(Arrays.asList(tenByteOp, tenByteOp, tenByteOp)),
-        ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 50));
+    assertEquals(Collections.singletonList(Arrays.asList(tenByteOp, tenByteOp, tenByteOp)),
+      ZKUtil.partitionOps(Arrays.asList(tenByteOp, tenByteOp, tenByteOp), 50));
   }
 
-  private void createZNodeTree(String rootZNode) throws KeeperException,
-      InterruptedException {
+  private void createZNodeTree(String rootZNode) throws KeeperException, InterruptedException {
     List<Op> opList = new ArrayList<>();
-    opList.add(Op.create(rootZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT));
+    opList.add(Op.create(rootZNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
     int level = 0;
     String parentZNode = rootZNode;
     while (level < 10) {
       // define parent node
       parentZNode = parentZNode + "/" + level;
-      opList.add(Op.create(parentZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT));
+      opList.add(Op.create(parentZNode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
       int elements = 0;
       // add elements to the parent node
       while (elements < level) {
-        opList.add(Op.create(parentZNode + "/" + elements, new byte[0],
-            Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+        opList.add(Op.create(parentZNode + "/" + elements, new byte[0], Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT));
         elements++;
       }
       level++;

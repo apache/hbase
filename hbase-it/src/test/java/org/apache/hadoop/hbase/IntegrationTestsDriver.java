@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
@@ -34,9 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * This class drives the Integration test suite execution. Executes all
- * tests having @Category(IntegrationTests.class) annotation against an
- * already deployed distributed cluster.
+ * This class drives the Integration test suite execution. Executes all tests
+ * having @Category(IntegrationTests.class) annotation against an already deployed distributed
+ * cluster.
  */
 public class IntegrationTestsDriver extends AbstractHBaseTool {
   private static final String SHORT_REGEX_ARG = "r";
@@ -51,6 +49,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
 
   private class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {
     private Pattern testFilterRe = Pattern.compile(".*\\.IntegrationTest.*");
+
     public IntegrationTestFilter() {
       super(IntegrationTests.class);
     }
@@ -62,19 +61,18 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     @Override
     public boolean isCandidateClass(Class<?> c) {
       return testFilterRe.matcher(c.getName()).find() &&
-        // Our pattern will match the below NON-IntegrationTest. Rather than
-        // do exotic regex, just filter it out here
-        !c.getName().contains("IntegrationTestingUtility") &&
-        super.isCandidateClass(c);
+      // Our pattern will match the below NON-IntegrationTest. Rather than
+      // do exotic regex, just filter it out here
+        !c.getName().contains("IntegrationTestingUtility") && super.isCandidateClass(c);
     }
   }
 
   @Override
   protected void addOptions() {
     addOptWithArg(SHORT_REGEX_ARG, LONG_REGEX_ARG,
-      "Java regex to use selecting tests to run: e.g. .*TestBig.*" +
-      " will select all tests that include TestBig in their name.  Default: " +
-      ".*IntegrationTest.*");
+      "Java regex to use selecting tests to run: e.g. .*TestBig.*"
+        + " will select all tests that include TestBig in their name.  Default: "
+        + ".*IntegrationTest.*");
   }
 
   @Override
@@ -86,8 +84,8 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
   }
 
   /**
-   * Returns test classes annotated with @Category(IntegrationTests.class),
-   * according to the filter specific on the command line (if any).
+   * Returns test classes annotated with @Category(IntegrationTests.class), according to the filter
+   * specific on the command line (if any).
    */
   private Class<?>[] findIntegrationTestClasses()
     throws ClassNotFoundException, LinkageError, IOException {
@@ -97,10 +95,9 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     return classes.toArray(new Class<?>[classes.size()]);
   }
 
-
   @Override
   protected int doWork() throws Exception {
-    //this is called from the command line, so we should set to use the distributed cluster
+    // this is called from the command line, so we should set to use the distributed cluster
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     Class<?>[] classes = findIntegrationTestClasses();
     LOG.info("Found " + classes.length + " integration tests to run:");

@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.TimerTask;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -56,7 +55,7 @@ public class TestRegionServerAbortTimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerAbortTimeout.class);
+    HBaseClassTestRule.forClass(TestRegionServerAbortTimeout.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbortTimeout.class);
 
@@ -83,8 +82,8 @@ public class TestRegionServerAbortTimeout {
     StartMiniClusterOption option = StartMiniClusterOption.builder().numRegionServers(2).build();
     UTIL.startMiniCluster(option);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
+      .setCoprocessor(SleepWhenCloseCoprocessor.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build();
     UTIL.getAdmin().createTable(td, Bytes.toBytes("0"), Bytes.toBytes("9"), REGIONS_NUM);
   }
 
@@ -148,7 +147,7 @@ public class TestRegionServerAbortTimeout {
 
     @Override
     public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested)
-        throws IOException {
+      throws IOException {
       Threads.sleep(SLEEP_TIME_WHEN_CLOSE_REGION);
     }
   }

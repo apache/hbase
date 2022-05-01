@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
@@ -41,63 +40,54 @@ public interface MetricsMasterWrapper {
 
   /**
    * Get Average Load
-   *
    * @return Average Load
    */
   double getAverageLoad();
 
   /**
    * Get the Cluster ID
-   *
    * @return Cluster ID
    */
   String getClusterId();
 
   /**
    * Get the ZooKeeper Quorum Info
-   *
    * @return ZooKeeper Quorum Info
    */
   String getZookeeperQuorum();
 
   /**
    * Get the co-processors
-   *
    * @return Co-processors
    */
   String[] getCoprocessors();
 
   /**
    * Get hbase master start time
-   *
    * @return Start time of master in milliseconds
    */
   long getStartTime();
 
   /**
    * Get the hbase master active time
-   *
    * @return Time in milliseconds when master became active
    */
   long getActiveTime();
 
   /**
    * Whether this master is the active master
-   *
    * @return True if this is the active master
    */
   boolean getIsActiveMaster();
 
   /**
    * Get the live region servers
-   *
    * @return Live region servers
    */
   String getRegionServers();
 
   /**
    * Get the number of live region servers
-   *
    * @return number of Live region servers
    */
 
@@ -105,28 +95,24 @@ public interface MetricsMasterWrapper {
 
   /**
    * Get the dead region servers
-   *
    * @return Dead region Servers
    */
   String getDeadRegionServers();
 
   /**
    * Get the number of dead region servers
-   *
    * @return number of Dead region Servers
    */
   int getNumDeadRegionServers();
 
   /**
    * Get the draining region servers
-   *
    * @return Draining region server
    */
   String getDrainingRegionServers();
 
   /**
    * Get the number of draining region servers
-   *
    * @return number of draining region servers
    */
   int getNumDrainingRegionServers();
@@ -149,12 +135,12 @@ public interface MetricsMasterWrapper {
   /**
    * Gets the space usage and limit for each table.
    */
-  Map<String,Entry<Long,Long>> getTableSpaceUtilization();
+  Map<String, Entry<Long, Long>> getTableSpaceUtilization();
 
   /**
    * Gets the space usage and limit for each namespace.
    */
-  Map<String,Entry<Long,Long>> getNamespaceSpaceUtilization();
+  Map<String, Entry<Long, Long>> getNamespaceSpaceUtilization();
 
   /**
    * Get the time in Millis when the master finished initializing/becoming the active master

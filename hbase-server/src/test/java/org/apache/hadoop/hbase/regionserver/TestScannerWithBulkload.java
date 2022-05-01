@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestScannerWithBulkload {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerWithBulkload.class);
+    HBaseClassTestRule.forClass(TestScannerWithBulkload.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -92,8 +92,8 @@ public class TestScannerWithBulkload {
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
     // use bulkload
-    final Path hfilePath = writeToHFile(l, "/temp/testBulkLoad/", "/temp/testBulkLoad/col/file",
-      false);
+    final Path hfilePath =
+      writeToHFile(l, "/temp/testBulkLoad/", "/temp/testBulkLoad/col/file", false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
@@ -104,8 +104,8 @@ public class TestScannerWithBulkload {
     Result result = scanner.next();
     result = scanAfterBulkLoad(scanner, result, "version2");
     Put put0 = new Put(Bytes.toBytes("row1"));
-    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
-        .toBytes("version3")));
+    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
+      Bytes.toBytes("version3")));
     table.put(put0);
     admin.flush(tableName);
     scanner = table.getScanner(scan);
@@ -113,14 +113,13 @@ public class TestScannerWithBulkload {
     while (result != null) {
       List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
       for (Cell _c : cells) {
-        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength())
-            .equals("row1")) {
+        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()).equals("row1")) {
           System.out
-              .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
+            .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
           System.out.println(Bytes.toString(_c.getQualifierArray(), _c.getQualifierOffset(),
             _c.getQualifierLength()));
-          System.out.println(
-            Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
+          System.out
+            .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
           Assert.assertEquals("version3",
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }
@@ -132,18 +131,17 @@ public class TestScannerWithBulkload {
   }
 
   private Result scanAfterBulkLoad(ResultScanner scanner, Result result, String expctedVal)
-      throws IOException {
+    throws IOException {
     while (result != null) {
       List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
       for (Cell _c : cells) {
-        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength())
-            .equals("row1")) {
+        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()).equals("row1")) {
           System.out
-              .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
+            .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
           System.out.println(Bytes.toString(_c.getQualifierArray(), _c.getQualifierOffset(),
             _c.getQualifierLength()));
-          System.out.println(
-            Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
+          System.out
+            .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
           Assert.assertEquals(expctedVal,
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }
@@ -156,7 +154,7 @@ public class TestScannerWithBulkload {
   // If nativeHFile is true, we will set cell seq id and MAX_SEQ_ID_KEY in the file.
   // Else, we will set BULKLOAD_TIME_KEY.
   private Path writeToHFile(long l, String hFilePath, String pathStr, boolean nativeHFile)
-      throws IOException {
+    throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     final Path hfilePath = new Path(hFilePath);
     fs.mkdirs(hfilePath);
@@ -166,7 +164,7 @@ public class TestScannerWithBulkload {
     HFileContext context = new HFileContextBuilder().build();
     HFile.Writer writer = wf.withPath(fs, path).withFileContext(context).create();
     KeyValue kv = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
-        Bytes.toBytes("version2"));
+      Bytes.toBytes("version2"));
 
     // Set cell seq id to test bulk load native hfiles.
     if (nativeHFile) {
@@ -183,10 +181,8 @@ public class TestScannerWithBulkload {
       // Scan should only look at the seq id appended at the bulk load time, and not skip its
       // kv.
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(new Long(9999999)));
-    }
-    else {
-      writer.appendFileInfo(BULKLOAD_TIME_KEY,
-        Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+    } else {
+      writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
     }
     writer.close();
     return hfilePath;
@@ -196,17 +192,17 @@ public class TestScannerWithBulkload {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
-        Bytes.toBytes("version0")));
+      Bytes.toBytes("version0")));
     table.put(put0);
     admin.flush(tableName);
     Put put1 = new Put(Bytes.toBytes("row2"));
-    put1.add(new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
-        .toBytes("version0")));
+    put1.add(new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
+      Bytes.toBytes("version0")));
     table.put(put1);
     admin.flush(tableName);
     put0 = new Put(Bytes.toBytes("row1"));
-    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
-        .toBytes("version1")));
+    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
+      Bytes.toBytes("version1")));
     table.put(put0);
     admin.flush(tableName);
     admin.compact(tableName);
@@ -233,7 +229,7 @@ public class TestScannerWithBulkload {
     final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadWithParallelScan/",
-        "/temp/testBulkLoadWithParallelScan/col/file", false);
+      "/temp/testBulkLoadWithParallelScan/col/file", false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
@@ -247,7 +243,7 @@ public class TestScannerWithBulkload {
         try {
           Put put1 = new Put(Bytes.toBytes("row5"));
           put1.add(new KeyValue(Bytes.toBytes("row5"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
-              Bytes.toBytes("version0")));
+            Bytes.toBytes("version0")));
           table.put(put1);
           try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
             bulkload.doBulkLoad(hfilePath, admin, table, locator);
@@ -286,11 +282,11 @@ public class TestScannerWithBulkload {
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     // We had 'version0', 'version1' for 'row1,col:q' in the table.
-    // Bulk load added 'version2'  scanner should be able to see 'version2'
+    // Bulk load added 'version2' scanner should be able to see 'version2'
     result = scanAfterBulkLoad(scanner, result, "version2");
     Put put0 = new Put(Bytes.toBytes("row1"));
-    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
-        .toBytes("version3")));
+    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
+      Bytes.toBytes("version3")));
     table.put(put0);
     admin.flush(tableName);
     scanner = table.getScanner(scan);
@@ -298,14 +294,13 @@ public class TestScannerWithBulkload {
     while (result != null) {
       List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
       for (Cell _c : cells) {
-        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength())
-            .equals("row1")) {
+        if (Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()).equals("row1")) {
           System.out
-              .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
+            .println(Bytes.toString(_c.getRowArray(), _c.getRowOffset(), _c.getRowLength()));
           System.out.println(Bytes.toString(_c.getQualifierArray(), _c.getQualifierOffset(),
             _c.getQualifierLength()));
-          System.out.println(
-            Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
+          System.out
+            .println(Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
           Assert.assertEquals("version3",
             Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength()));
         }

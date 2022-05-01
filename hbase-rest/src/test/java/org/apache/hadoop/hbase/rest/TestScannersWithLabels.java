@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,11 +69,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestScannersWithLabels {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannersWithLabels.class);
+    HBaseClassTestRule.forClass(TestScannersWithLabels.class);
 
   private static final TableName TABLE = TableName.valueOf("TestScannersWithLabels");
   private static final String CFA = "a";
@@ -96,7 +96,7 @@ public class TestScannersWithLabels {
   private static Configuration conf;
 
   private static int insertData(TableName tableName, String column, double prob)
-      throws IOException {
+    throws IOException {
     byte[] k = new byte[3];
     byte[][] famAndQf = CellUtil.parseColumn(Bytes.toBytes(column));
 
@@ -105,8 +105,8 @@ public class TestScannersWithLabels {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.setDurability(Durability.SKIP_WAL);
       put.addColumn(famAndQf[0], famAndQf[1], k);
-      put.setCellVisibility(new CellVisibility("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!"
-          + TOPSECRET));
+      put.setCellVisibility(
+        new CellVisibility("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET));
       puts.add(put);
     }
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
@@ -131,11 +131,10 @@ public class TestScannersWithLabels {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    SUPERUSER = User.createUserForTesting(conf, "admin",
-        new String[] { "supergroup" });
+    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     conf = TEST_UTIL.getConfiguration();
-    conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS,
-        SimpleScanLabelGenerator.class, ScanLabelGenerator.class);
+    conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
+      ScanLabelGenerator.class);
     conf.set("hbase.superuser", SUPERUSER.getShortName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     TEST_UTIL.startMiniCluster(1);
@@ -146,7 +145,7 @@ public class TestScannersWithLabels {
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(CellModel.class, CellSetModel.class, RowModel.class,
-        ScannerModel.class);
+      ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
     Admin admin = TEST_UTIL.getAdmin();
@@ -237,8 +236,8 @@ public class TestScannersWithLabels {
     // Respond with 204 as there are no cells to be retrieved
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    CellSetModel cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response
-        .getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertEquals(5, countCellSet(cellSet));
   }
 }

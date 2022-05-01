@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,10 +39,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables. Each put
@@ -67,14 +66,14 @@ public class HTableMultiplexer {
   private static final Logger LOG = LoggerFactory.getLogger(HTableMultiplexer.class.getName());
 
   public static final String TABLE_MULTIPLEXER_FLUSH_PERIOD_MS =
-      "hbase.tablemultiplexer.flush.period.ms";
+    "hbase.tablemultiplexer.flush.period.ms";
   public static final String TABLE_MULTIPLEXER_INIT_THREADS = "hbase.tablemultiplexer.init.threads";
   public static final String TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE =
-      "hbase.client.max.retries.in.queue";
+    "hbase.client.max.retries.in.queue";
 
   /** The map between each region server to its flush worker */
   private final Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap =
-      new ConcurrentHashMap<>();
+    new ConcurrentHashMap<>();
 
   private final Configuration conf;
   private final ClusterConnection conn;
@@ -86,41 +85,40 @@ public class HTableMultiplexer {
   private final long flushPeriod;
 
   /**
-   * @param conf The HBaseConfiguration
+   * @param conf                           The HBaseConfiguration
    * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops for
-   *          each region server before dropping the request.
+   *                                       each region server before dropping the request.
    */
   public HTableMultiplexer(Configuration conf, int perRegionServerBufferQueueSize)
-      throws IOException {
+    throws IOException {
     this(ConnectionFactory.createConnection(conf), conf, perRegionServerBufferQueueSize);
   }
 
   /**
-   * @param conn The HBase connection.
-   * @param conf The HBase configuration
+   * @param conn                           The HBase connection.
+   * @param conf                           The HBase configuration
    * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops for
-   *          each region server before dropping the request.
+   *                                       each region server before dropping the request.
    */
   public HTableMultiplexer(Connection conn, Configuration conf,
-      int perRegionServerBufferQueueSize) {
+    int perRegionServerBufferQueueSize) {
     this.conn = (ClusterConnection) conn;
     this.pool = HTable.getDefaultExecutor(conf);
     // how many times we could try in total, one more than retry number
     this.maxAttempts = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER) + 1;
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
     this.maxKeyValueSize = HTable.getMaxKeyValueSize(conf);
     this.flushPeriod = conf.getLong(TABLE_MULTIPLEXER_FLUSH_PERIOD_MS, 100);
     int initThreads = conf.getInt(TABLE_MULTIPLEXER_INIT_THREADS, 10);
-    this.executor =
-        Executors.newScheduledThreadPool(initThreads,
-          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("HTableFlushWorker-%d").build());
+    this.executor = Executors.newScheduledThreadPool(initThreads,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("HTableFlushWorker-%d").build());
     this.conf = conf;
   }
 
   /**
-   * Closes the internal {@link Connection}. Does nothing if the {@link Connection} has already
-   * been closed.
+   * Closes the internal {@link Connection}. Does nothing if the {@link Connection} has already been
+   * closed.
    * @throws IOException If there is an error closing the connection.
    */
   public synchronized void close() throws IOException {
@@ -131,27 +129,21 @@ public class HTableMultiplexer {
 
   /**
    * The put request will be buffered by its corresponding buffer queue. Return false if the queue
-   * is already full.
-   * @param tableName
-   * @param put
-   * @return true if the request can be accepted by its corresponding buffer queue.
+   * is already full. nn * @return true if the request can be accepted by its corresponding buffer
+   * queue.
    */
   public boolean put(TableName tableName, final Put put) {
     return put(tableName, put, this.maxAttempts);
   }
 
   /**
-   * The puts request will be buffered by their corresponding buffer queue.
-   * Return the list of puts which could not be queued.
-   * @param tableName
-   * @param puts
-   * @return the list of puts which could not be queued
+   * The puts request will be buffered by their corresponding buffer queue. Return the list of puts
+   * which could not be queued. nn * @return the list of puts which could not be queued
    */
   public List<Put> put(TableName tableName, final List<Put> puts) {
-    if (puts == null)
-      return null;
+    if (puts == null) return null;
 
-    List <Put> failedPuts = null;
+    List<Put> failedPuts = null;
     boolean result;
     for (Put put : puts) {
       result = put(tableName, put, this.maxAttempts);
@@ -178,8 +170,7 @@ public class HTableMultiplexer {
 
   /**
    * The put request will be buffered by its corresponding buffer queue. And the put request will be
-   * retried before dropping the request.
-   * Return false if the queue is already full.
+   * retried before dropping the request. Return false if the queue is already full.
    * @return true if the request can be accepted by its corresponding buffer queue.
    */
   public boolean put(final TableName tableName, final Put put, int maxAttempts) {
@@ -240,8 +231,8 @@ public class HTableMultiplexer {
         worker = serverToFlushWorkerMap.get(addr);
         if (worker == null) {
           // Create the flush worker
-          worker = new FlushWorker(conf, this.conn, addr, this,
-              perRegionServerBufferQueueSize, pool, executor);
+          worker = new FlushWorker(conf, this.conn, addr, this, perRegionServerBufferQueueSize,
+            pool, executor);
           this.serverToFlushWorkerMap.put(addr, worker);
           executor.scheduleAtFixedRate(worker, flushPeriod, flushPeriod, TimeUnit.MILLISECONDS);
         }
@@ -274,8 +265,7 @@ public class HTableMultiplexer {
     private Map<String, Long> serverToAverageLatencyMap;
     private Map<String, Long> serverToMaxLatencyMap;
 
-    public HTableMultiplexerStatus(
-        Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap) {
+    public HTableMultiplexerStatus(Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap) {
       this.totalBufferedPutCounter = 0;
       this.totalFailedPutCounter = 0;
       this.maxLatency = 0;
@@ -287,16 +277,14 @@ public class HTableMultiplexer {
       this.initialize(serverToFlushWorkerMap);
     }
 
-    private void initialize(
-        Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap) {
+    private void initialize(Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap) {
       if (serverToFlushWorkerMap == null) {
         return;
       }
 
       long averageCalcSum = 0;
       int averageCalcCount = 0;
-      for (Map.Entry<HRegionLocation, FlushWorker> entry : serverToFlushWorkerMap
-          .entrySet()) {
+      for (Map.Entry<HRegionLocation, FlushWorker> entry : serverToFlushWorkerMap.entrySet()) {
         HRegionLocation addr = entry.getKey();
         FlushWorker worker = entry.getValue();
 
@@ -305,8 +293,7 @@ public class HTableMultiplexer {
         long serverMaxLatency = worker.getMaxLatency();
         AtomicAverageCounter averageCounter = worker.getAverageLatencyCounter();
         // Get sum and count pieces separately to compute overall average
-        SimpleEntry<Long, Integer> averageComponents = averageCounter
-            .getComponents();
+        SimpleEntry<Long, Integer> averageComponents = averageCounter.getComponents();
         long serverAvgLatency = averageCounter.getAndReset();
 
         this.totalBufferedPutCounter += bufferedCounter;
@@ -317,19 +304,12 @@ public class HTableMultiplexer {
         averageCalcSum += averageComponents.getKey();
         averageCalcCount += averageComponents.getValue();
 
-        this.serverToBufferedCounterMap.put(addr.getHostnamePort(),
-            bufferedCounter);
-        this.serverToFailedCounterMap
-            .put(addr.getHostnamePort(),
-            failedCounter);
-        this.serverToAverageLatencyMap.put(addr.getHostnamePort(),
-            serverAvgLatency);
-        this.serverToMaxLatencyMap
-            .put(addr.getHostnamePort(),
-            serverMaxLatency);
+        this.serverToBufferedCounterMap.put(addr.getHostnamePort(), bufferedCounter);
+        this.serverToFailedCounterMap.put(addr.getHostnamePort(), failedCounter);
+        this.serverToAverageLatencyMap.put(addr.getHostnamePort(), serverAvgLatency);
+        this.serverToMaxLatencyMap.put(addr.getHostnamePort(), serverMaxLatency);
       }
-      this.overallAverageLatency = averageCalcCount != 0 ? averageCalcSum
-          / averageCalcCount : 0;
+      this.overallAverageLatency = averageCalcCount != 0 ? averageCalcSum / averageCalcCount : 0;
     }
 
     public long getTotalBufferedCounter() {
@@ -436,19 +416,19 @@ public class HTableMultiplexer {
     private final int writeRpcTimeout; // needed to pass in through AsyncProcess constructor
     private final int operationTimeout;
     private final ExecutorService pool;
+
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
-        HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
-        ExecutorService pool, ScheduledExecutorService executor) {
+      HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize, ExecutorService pool,
+      ScheduledExecutorService executor) {
       this.addr = addr;
       this.multiplexer = htableMultiplexer;
       this.queue = new LinkedBlockingQueue<>(perRegionServerBufferQueueSize);
       RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
       RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-          conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-              HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
       this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-          HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
       // Specify 0 retries in AsyncProcess because we need to reassign puts to different queues
       // if regions are moved.
       this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory, 0);
@@ -526,7 +506,7 @@ public class HTableMultiplexer {
     @InterfaceAudience.Private
     long getNextDelay(int retryCount) {
       return ConnectionUtils.getPauseTime(multiplexer.flushPeriod,
-          multiplexer.maxAttempts - retryCount - 1);
+        multiplexer.maxAttempts - retryCount - 1);
     }
 
     @InterfaceAudience.Private
@@ -585,22 +565,17 @@ public class HTableMultiplexer {
         List<PutStatus> failed = null;
         Object[] results = new Object[actions.size()];
         ServerName server = addr.getServerName();
-        Map<ServerName, MultiAction> actionsByServer =
-            Collections.singletonMap(server, actions);
+        Map<ServerName, MultiAction> actionsByServer = Collections.singletonMap(server, actions);
         try {
-          AsyncProcessTask task = AsyncProcessTask.newBuilder()
-                  .setResults(results)
-                  .setPool(pool)
-                  .setRpcTimeout(writeRpcTimeout)
-                  .setOperationTimeout(operationTimeout)
-                  .build();
+          AsyncProcessTask task = AsyncProcessTask.newBuilder().setResults(results).setPool(pool)
+            .setRpcTimeout(writeRpcTimeout).setOperationTimeout(operationTimeout).build();
           AsyncRequestFuture arf =
-              ap.submitMultiActions(task, retainedActions, 0L, null, null, actionsByServer);
+            ap.submitMultiActions(task, retainedActions, 0L, null, null, actionsByServer);
           arf.waitUntilDone();
           if (arf.hasError()) {
             // We just log and ignore the exception here since failed Puts will be resubmit again.
             LOG.debug("Caught some exceptions when flushing puts to region server "
-                + addr.getHostnamePort(), arf.getErrors());
+              + addr.getHostnamePort(), arf.getErrors());
           }
         } finally {
           for (int i = 0; i < results.length; i++) {
@@ -633,9 +608,9 @@ public class HTableMultiplexer {
 
         // Log some basic info
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Processed " + currentProcessingCount + " put requests for "
-              + addr.getHostnamePort() + " and " + failedCount + " failed"
-              + ", latency for this send: " + elapsed);
+          LOG.debug(
+            "Processed " + currentProcessingCount + " put requests for " + addr.getHostnamePort()
+              + " and " + failedCount + " failed" + ", latency for this send: " + elapsed);
         }
 
         // Reset the current processing put count
@@ -643,17 +618,15 @@ public class HTableMultiplexer {
       } catch (RuntimeException e) {
         // To make findbugs happy
         // Log all the exceptions and move on
-        LOG.debug(
-          "Caught some exceptions " + e + " when flushing puts to region server "
-              + addr.getHostnamePort(), e);
+        LOG.debug("Caught some exceptions " + e + " when flushing puts to region server "
+          + addr.getHostnamePort(), e);
       } catch (Exception e) {
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
         // Log all the exceptions and move on
-        LOG.debug(
-          "Caught some exceptions " + e + " when flushing puts to region server "
-              + addr.getHostnamePort(), e);
+        LOG.debug("Caught some exceptions " + e + " when flushing puts to region server "
+          + addr.getHostnamePort(), e);
       } finally {
         // Update the totalFailedCount
         this.totalFailedPutCount.addAndGet(failedCount);

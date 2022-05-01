@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,15 +41,15 @@ public class HFileContext implements HeapSize, Cloneable {
 
   private static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
 
-  /** Whether checksum is enabled or not**/
+  /** Whether checksum is enabled or not **/
   private boolean usesHBaseChecksum = true;
-  /** Whether mvcc is to be included in the Read/Write**/
+  /** Whether mvcc is to be included in the Read/Write **/
   private boolean includesMvcc = true;
-  /**Whether tags are to be included in the Read/Write**/
+  /** Whether tags are to be included in the Read/Write **/
   private boolean includesTags;
-  /**Compression algorithm used**/
+  /** Compression algorithm used **/
   private Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
-  /** Whether tags to be compressed or not**/
+  /** Whether tags to be compressed or not **/
   private boolean compressTags;
   /** the checksum type **/
   private ChecksumType checksumType = ChecksumType.getDefaultChecksumType();
@@ -66,7 +66,7 @@ public class HFileContext implements HeapSize, Cloneable {
   private byte[] tableName;
   private CellComparator cellComparator;
 
-  //Empty constructor.  Go with setters
+  // Empty constructor. Go with setters
   public HFileContext() {
   }
 
@@ -92,12 +92,12 @@ public class HFileContext implements HeapSize, Cloneable {
   }
 
   HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
-               Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
-               int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
-               Encryption.Context cryptoContext, long fileCreateTime, String hfileName,
-               byte[] columnFamily, byte[] tableName, CellComparator cellComparator) {
+    Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
+    int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
+    Encryption.Context cryptoContext, long fileCreateTime, String hfileName, byte[] columnFamily,
+    byte[] tableName, CellComparator cellComparator) {
     this.usesHBaseChecksum = useHBaseChecksum;
-    this.includesMvcc =  includesMvcc;
+    this.includesMvcc = includesMvcc;
     this.includesTags = includesTags;
     this.compressAlgo = compressAlgo;
     this.compressTags = compressTags;
@@ -114,8 +114,9 @@ public class HFileContext implements HeapSize, Cloneable {
     this.tableName = tableName;
     // If no cellComparator specified, make a guess based off tablename. If hbase:meta, then should
     // be the meta table comparator. Comparators are per table.
-    this.cellComparator = cellComparator != null ? cellComparator : this.tableName != null ?
-      CellComparatorImpl.getCellComparator(this.tableName) : CellComparator.getInstance();
+    this.cellComparator = cellComparator != null ? cellComparator
+      : this.tableName != null ? CellComparatorImpl.getCellComparator(this.tableName)
+      : CellComparator.getInstance();
   }
 
   /**
@@ -123,13 +124,10 @@ public class HFileContext implements HeapSize, Cloneable {
    */
   public boolean isCompressedOrEncrypted() {
     Compression.Algorithm compressAlgo = getCompression();
-    boolean compressed =
-      compressAlgo != null
-        && compressAlgo != Compression.Algorithm.NONE;
+    boolean compressed = compressAlgo != null && compressAlgo != Compression.Algorithm.NONE;
 
     Encryption.Context cryptoContext = getEncryptionContext();
-    boolean encrypted = cryptoContext != null
-      && cryptoContext != Encryption.Context.NONE;
+    boolean encrypted = cryptoContext != null && cryptoContext != Encryption.Context.NONE;
 
     return compressed || encrypted;
   }
@@ -225,10 +223,10 @@ public class HFileContext implements HeapSize, Cloneable {
     if (this.hfileName != null) {
       size += ClassSize.STRING + this.hfileName.length();
     }
-    if (this.columnFamily != null){
+    if (this.columnFamily != null) {
       size += ClassSize.sizeOfByteArray(this.columnFamily.length);
     }
-    if (this.tableName != null){
+    if (this.tableName != null) {
       size += ClassSize.sizeOfByteArray(this.tableName.length);
     }
     return size;
@@ -237,7 +235,7 @@ public class HFileContext implements HeapSize, Cloneable {
   @Override
   public HFileContext clone() {
     try {
-      return (HFileContext)(super.clone());
+      return (HFileContext) (super.clone());
     } catch (CloneNotSupportedException e) {
       throw new AssertionError(); // Won't happen
     }
@@ -247,16 +245,27 @@ public class HFileContext implements HeapSize, Cloneable {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
-    sb.append("usesHBaseChecksum="); sb.append(usesHBaseChecksum);
-    sb.append(", checksumType=");      sb.append(checksumType);
-    sb.append(", bytesPerChecksum=");  sb.append(bytesPerChecksum);
-    sb.append(", blocksize=");         sb.append(blocksize);
-    sb.append(", encoding=");          sb.append(encoding);
-    sb.append(", includesMvcc=");      sb.append(includesMvcc);
-    sb.append(", includesTags=");      sb.append(includesTags);
-    sb.append(", compressAlgo=");      sb.append(compressAlgo);
-    sb.append(", compressTags=");      sb.append(compressTags);
-    sb.append(", cryptoContext=[");   sb.append(cryptoContext);      sb.append("]");
+    sb.append("usesHBaseChecksum=");
+    sb.append(usesHBaseChecksum);
+    sb.append(", checksumType=");
+    sb.append(checksumType);
+    sb.append(", bytesPerChecksum=");
+    sb.append(bytesPerChecksum);
+    sb.append(", blocksize=");
+    sb.append(blocksize);
+    sb.append(", encoding=");
+    sb.append(encoding);
+    sb.append(", includesMvcc=");
+    sb.append(includesMvcc);
+    sb.append(", includesTags=");
+    sb.append(includesTags);
+    sb.append(", compressAlgo=");
+    sb.append(compressAlgo);
+    sb.append(", compressTags=");
+    sb.append(compressTags);
+    sb.append(", cryptoContext=[");
+    sb.append(cryptoContext);
+    sb.append("]");
     if (hfileName != null) {
       sb.append(", name=");
       sb.append(hfileName);

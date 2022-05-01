@@ -107,7 +107,7 @@ public final class WALSplitUtil {
    * that couldn't be successfully parsed to corruptDir (.corrupt) for later investigation
    */
   static void archive(final Path wal, final boolean corrupt, final Path oldWALDir,
-      final FileSystem walFS, final Configuration conf) throws IOException {
+    final FileSystem walFS, final Configuration conf) throws IOException {
     Path dir;
     Path target;
     if (corrupt) {
@@ -131,8 +131,8 @@ public final class WALSplitUtil {
   }
 
   /**
-   * Move WAL. Used to move processed WALs to archive or bad WALs to corrupt WAL dir.
-   * WAL may have already been moved; makes allowance.
+   * Move WAL. Used to move processed WALs to archive or bad WALs to corrupt WAL dir. WAL may have
+   * already been moved; makes allowance.
    */
   public static void moveWAL(FileSystem fs, Path p, Path targetDir) throws IOException {
     if (fs.exists(p)) {
@@ -148,19 +148,19 @@ public final class WALSplitUtil {
    * Path to a file under RECOVERED_EDITS_DIR directory of the region found in <code>logEntry</code>
    * named for the sequenceid in the passed <code>logEntry</code>: e.g.
    * /hbase/some_table/2323432434/recovered.edits/2332. This method also ensures existence of
-   * RECOVERED_EDITS_DIR under the region creating it if necessary.
-   * And also set storage policy for RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
-   * @param tableName the table name
-   * @param encodedRegionName the encoded region name
-   * @param seqId the sequence id which used to generate file name
+   * RECOVERED_EDITS_DIR under the region creating it if necessary. And also set storage policy for
+   * RECOVERED_EDITS_DIR if WAL_STORAGE_POLICY is configured.
+   * @param tableName          the table name
+   * @param encodedRegionName  the encoded region name
+   * @param seqId              the sequence id which used to generate file name
    * @param fileNameBeingSplit the file being split currently. Used to generate tmp file name.
-   * @param tmpDirName of the directory used to sideline old recovered edits file
-   * @param conf configuration
+   * @param tmpDirName         of the directory used to sideline old recovered edits file
+   * @param conf               configuration
    * @return Path to file into which to dump split log edits.
    */
   @SuppressWarnings("deprecation")
   static Path getRegionSplitEditsPath(TableName tableName, byte[] encodedRegionName, long seqId,
-      String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
+    String fileNameBeingSplit, String tmpDirName, Configuration conf) throws IOException {
     FileSystem walFS = CommonFSUtils.getWALFileSystem(conf);
     Path tableDir = CommonFSUtils.getWALTableDir(conf, tableName);
     String encodedRegionNameStr = Bytes.toString(encodedRegionName);
@@ -174,8 +174,7 @@ public final class WALSplitUtil {
       }
       tmp = new Path(tmp, HConstants.RECOVERED_EDITS_DIR + "_" + encodedRegionNameStr);
       LOG.warn("Found existing old file: {}. It could be some "
-          + "leftover of an old installation. It should be a folder instead. "
-          + "So moving it to {}",
+        + "leftover of an old installation. It should be a folder instead. " + "So moving it to {}",
         dir, tmp);
       if (!walFS.rename(dir, tmp)) {
         LOG.warn("Failed to sideline old file {}", dir);
@@ -226,12 +225,12 @@ public final class WALSplitUtil {
 
   /**
    * Check whether there is recovered.edits in the region dir
-   * @param conf conf
+   * @param conf       conf
    * @param regionInfo the region to check
    * @return true if recovered.edits exist in the region dir
    */
   public static boolean hasRecoveredEdits(final Configuration conf, final RegionInfo regionInfo)
-      throws IOException {
+    throws IOException {
     // No recovered.edits for non default replica regions
     if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
       return false;
@@ -287,12 +286,12 @@ public final class WALSplitUtil {
 
   /**
    * Returns sorted set of edit files made by splitter, excluding files with '.temp' suffix.
-   * @param walFS WAL FileSystem used to retrieving split edits files.
+   * @param walFS     WAL FileSystem used to retrieving split edits files.
    * @param regionDir WAL region dir to look for recovered edits files under.
    * @return Files in passed <code>regionDir</code> as a sorted set.
    */
   public static NavigableSet<Path> getSplitEditFilesSorted(final FileSystem walFS,
-      final Path regionDir) throws IOException {
+    final Path regionDir) throws IOException {
     NavigableSet<Path> filesSorted = new TreeSet<>();
     Path editsdir = getRegionDirRecoveredEditsDir(regionDir);
     if (!walFS.exists(editsdir)) {
@@ -332,14 +331,14 @@ public final class WALSplitUtil {
 
   /**
    * Move aside a bad edits file.
-   * @param fs the file system used to rename bad edits file.
+   * @param fs    the file system used to rename bad edits file.
    * @param edits Edits file to move aside.
    * @return The name of the moved aside file.
    */
   public static Path moveAsideBadEditsFile(final FileSystem fs, final Path edits)
-      throws IOException {
+    throws IOException {
     Path moveAsideName =
-        new Path(edits.getParent(), edits.getName() + "." + EnvironmentEdgeManager.currentTime());
+      new Path(edits.getParent(), edits.getName() + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from {} to {}", edits, moveAsideName);
     }
@@ -351,11 +350,11 @@ public final class WALSplitUtil {
    */
   public static boolean isSequenceIdFile(final Path file) {
     return file.getName().endsWith(SEQUENCE_ID_FILE_SUFFIX)
-        || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);
+      || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);
   }
 
   private static FileStatus[] getSequenceIdFiles(FileSystem walFS, Path regionDir)
-      throws IOException {
+    throws IOException {
     // TODO: Why are we using a method in here as part of our normal region open where
     // there is no splitting involved? Fix. St.Ack 01/20/2017.
     Path editsDir = getRegionDirRecoveredEditsDir(regionDir);
@@ -373,7 +372,7 @@ public final class WALSplitUtil {
       String fileName = file.getPath().getName();
       try {
         maxSeqId = Math.max(maxSeqId, Long
-            .parseLong(fileName.substring(0, fileName.length() - SEQUENCE_ID_FILE_SUFFIX_LENGTH)));
+          .parseLong(fileName.substring(0, fileName.length() - SEQUENCE_ID_FILE_SUFFIX_LENGTH)));
       } catch (NumberFormatException ex) {
         LOG.warn("Invalid SeqId File Name={}", fileName);
       }
@@ -392,16 +391,16 @@ public final class WALSplitUtil {
    * Create a file with name as region's max sequence id
    */
   public static void writeRegionSequenceIdFile(FileSystem walFS, Path regionDir, long newMaxSeqId)
-      throws IOException {
+    throws IOException {
     FileStatus[] files = getSequenceIdFiles(walFS, regionDir);
     long maxSeqId = getMaxSequenceId(files);
     if (maxSeqId > newMaxSeqId) {
       throw new IOException("The new max sequence id " + newMaxSeqId
-          + " is less than the old max sequence id " + maxSeqId);
+        + " is less than the old max sequence id " + maxSeqId);
     }
     // write a new seqId file
     Path newSeqIdFile =
-        new Path(getRegionDirRecoveredEditsDir(regionDir), newMaxSeqId + SEQUENCE_ID_FILE_SUFFIX);
+      new Path(getRegionDirRecoveredEditsDir(regionDir), newMaxSeqId + SEQUENCE_ID_FILE_SUFFIX);
     if (newMaxSeqId != maxSeqId) {
       try {
         if (!walFS.createNewFile(newSeqIdFile) && !walFS.exists(newSeqIdFile)) {
@@ -424,7 +423,7 @@ public final class WALSplitUtil {
   /** A struct used by getMutationsFromWALEntry */
   public static class MutationReplay implements Comparable<MutationReplay> {
     public MutationReplay(ClientProtos.MutationProto.MutationType type, Mutation mutation,
-        long nonceGroup, long nonce) {
+      long nonceGroup, long nonce) {
       this.type = type;
       this.mutation = mutation;
       if (this.mutation.getDurability() != Durability.SKIP_WAL) {
@@ -436,9 +435,12 @@ public final class WALSplitUtil {
     }
 
     private final ClientProtos.MutationProto.MutationType type;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final Mutation mutation;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final long nonceGroup;
-    @SuppressWarnings("checkstyle:VisibilityModifier") public final long nonce;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final Mutation mutation;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final long nonceGroup;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public final long nonce;
 
     @Override
     public int compareTo(final MutationReplay d) {
@@ -468,19 +470,19 @@ public final class WALSplitUtil {
    * This function is used to construct mutations from a WALEntry. It also reconstructs WALKey &amp;
    * WALEdit from the passed in WALEntry
    * @param logEntry pair of WALKey and WALEdit instance stores WALKey and WALEdit instances
-   *          extracted from the passed in WALEntry.
+   *                 extracted from the passed in WALEntry.
    * @return list of Pair&lt;MutationType, Mutation&gt; to be replayed
    */
   public static List<MutationReplay> getMutationsFromWALEntry(AdminProtos.WALEntry entry,
-      CellScanner cells, Pair<WALKey, WALEdit> logEntry, Durability durability) throws IOException {
+    CellScanner cells, Pair<WALKey, WALEdit> logEntry, Durability durability) throws IOException {
     if (entry == null) {
       // return an empty array
       return Collections.emptyList();
     }
 
-    long replaySeqId =
-        (entry.getKey().hasOrigSequenceNumber()) ? entry.getKey().getOrigSequenceNumber()
-            : entry.getKey().getLogSequenceNumber();
+    long replaySeqId = (entry.getKey().hasOrigSequenceNumber())
+      ? entry.getKey().getOrigSequenceNumber()
+      : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<>();
     Cell previousCell = null;
@@ -502,20 +504,20 @@ public final class WALSplitUtil {
       }
 
       boolean isNewRowOrType =
-          previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
-              || !CellUtil.matchingRows(previousCell, cell);
+        previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
+          || !CellUtil.matchingRows(previousCell, cell);
       if (isNewRowOrType) {
         // Create new mutation
         if (CellUtil.isDelete(cell)) {
           m = new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
           // Deletes don't have nonces.
           mutations.add(new MutationReplay(ClientProtos.MutationProto.MutationType.DELETE, m,
-              HConstants.NO_NONCE, HConstants.NO_NONCE));
+            HConstants.NO_NONCE, HConstants.NO_NONCE));
         } else {
           m = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
           // Puts might come from increment or append, thus we need nonces.
           long nonceGroup =
-              entry.getKey().hasNonceGroup() ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
+            entry.getKey().hasNonceGroup() ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
           long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
           mutations.add(
             new MutationReplay(ClientProtos.MutationProto.MutationType.PUT, m, nonceGroup, nonce));
@@ -533,15 +535,15 @@ public final class WALSplitUtil {
     // reconstruct WALKey
     if (logEntry != null) {
       org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey walKeyProto =
-          entry.getKey();
+        entry.getKey();
       List<UUID> clusterIds = new ArrayList<>(walKeyProto.getClusterIdsCount());
       for (HBaseProtos.UUID uuid : entry.getKey().getClusterIdsList()) {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
       key = new WALKeyImpl(walKeyProto.getEncodedRegionName().toByteArray(),
-          TableName.valueOf(walKeyProto.getTableName().toByteArray()), replaySeqId,
-          walKeyProto.getWriteTime(), clusterIds, walKeyProto.getNonceGroup(),
-          walKeyProto.getNonce(), null);
+        TableName.valueOf(walKeyProto.getTableName().toByteArray()), replaySeqId,
+        walKeyProto.getWriteTime(), clusterIds, walKeyProto.getNonceGroup(), walKeyProto.getNonce(),
+        null);
       logEntry.setFirst(key);
       logEntry.setSecond(val);
     }
@@ -553,15 +555,15 @@ public final class WALSplitUtil {
    * Return path to recovered.hfiles directory of the region's column family: e.g.
    * /hbase/some_table/2323432434/cf/recovered.hfiles/. This method also ensures existence of
    * recovered.hfiles directory under the region's column family, creating it if necessary.
-   * @param rootFS the root file system
-   * @param conf configuration
-   * @param tableName the table name
+   * @param rootFS            the root file system
+   * @param conf              configuration
+   * @param tableName         the table name
    * @param encodedRegionName the encoded region name
-   * @param familyName the column family name
+   * @param familyName        the column family name
    * @return Path to recovered.hfiles directory of the region's column family.
    */
   static Path tryCreateRecoveredHFilesDir(FileSystem rootFS, Configuration conf,
-      TableName tableName, String encodedRegionName, String familyName) throws IOException {
+    TableName tableName, String encodedRegionName, String familyName) throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     Path regionDir = FSUtils.getRegionDirFromTableDir(CommonFSUtils.getTableDir(rootDir, tableName),
       encodedRegionName);
@@ -582,8 +584,8 @@ public final class WALSplitUtil {
     return new Path(new Path(regionDir, familyName), HConstants.RECOVERED_HFILES_DIR);
   }
 
-  public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS,
-      final Path regionDir, String familyName) throws IOException {
+  public static FileStatus[] getRecoveredHFiles(final FileSystem rootFS, final Path regionDir,
+    String familyName) throws IOException {
     Path dir = getRecoveredHFilesDir(regionDir, familyName);
     return CommonFSUtils.listStatus(rootFS, dir);
   }

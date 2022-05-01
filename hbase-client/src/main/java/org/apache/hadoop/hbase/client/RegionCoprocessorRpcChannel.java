@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,28 +17,26 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import io.opentelemetry.context.Context;
-import io.opentelemetry.context.Scope;
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
-
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import java.io.IOException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
 /**
  * Provides clients with an RPC connection to call Coprocessor Endpoint
- * {@link com.google.protobuf.Service}s
- * against a given table region.  An instance of this class may be obtained
- * by calling {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])},
+ * {@link com.google.protobuf.Service}s against a given table region. An instance of this class may
+ * be obtained by calling {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])},
  * but should normally only be used in creating a new {@link com.google.protobuf.Service} stub to
  * call the endpoint methods.
  * @see org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])
@@ -47,7 +45,7 @@ import com.google.protobuf.RpcController;
 class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private static final Logger LOG = LoggerFactory.getLogger(RegionCoprocessorRpcChannel.class);
   private final TableName table;
-  private final byte [] row;
+  private final byte[] row;
   private final ClusterConnection conn;
   private byte[] lastRegion;
   private final int operationTimeout;
@@ -55,9 +53,9 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
 
   /**
    * Constructor
-   * @param conn connection to use
+   * @param conn  connection to use
    * @param table to connect to
-   * @param row to locate region with
+   * @param row   to locate region with
    */
   RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row) {
     this.table = table;
@@ -69,9 +67,8 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
 
   @Override
   protected Message callExecService(final RpcController controller,
-      final Descriptors.MethodDescriptor method, final Message request,
-      final Message responsePrototype)
-  throws IOException {
+    final Descriptors.MethodDescriptor method, final Message request,
+    final Message responsePrototype) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Call: " + method.getName() + ", " + request.toString());
     }
@@ -82,19 +79,18 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     ClientServiceCallable<CoprocessorServiceResponse> callable =
       new ClientServiceCallable<CoprocessorServiceResponse>(this.conn, this.table, this.row,
         this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
-      @Override
-      protected CoprocessorServiceResponse rpcCall() throws Exception {
-        try (Scope ignored = context.makeCurrent()) {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          CoprocessorServiceRequest csr =
-            CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request, row, regionName);
-          return getStub().execService(getRpcController(), csr);
+        @Override
+        protected CoprocessorServiceResponse rpcCall() throws Exception {
+          try (Scope ignored = context.makeCurrent()) {
+            byte[] regionName = getLocation().getRegionInfo().getRegionName();
+            CoprocessorServiceRequest csr =
+              CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request, row, regionName);
+            return getStub().execService(getRpcController(), csr);
+          }
         }
-      }
-    };
-    CoprocessorServiceResponse result =
-        this.rpcCallerFactory.<CoprocessorServiceResponse> newCaller().callWithRetries(callable,
-            operationTimeout);
+      };
+    CoprocessorServiceResponse result = this.rpcCallerFactory
+      .<CoprocessorServiceResponse> newCaller().callWithRetries(callable, operationTimeout);
     this.lastRegion = result.getRegion().getValue().toByteArray();
     return CoprocessorRpcUtils.getResponse(result, responsePrototype);
   }

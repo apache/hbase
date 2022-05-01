@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Map;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
-  * Encapsulates per-user load metrics.
-  */
+ * Encapsulates per-user load metrics.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface UserMetrics {
@@ -60,8 +56,8 @@ public interface UserMetrics {
   long getWriteRequestCount();
 
   /**
-   * @return the number of write requests and read requests and coprocessor
-   *         service requests made by the user
+   * @return the number of write requests and read requests and coprocessor service requests made by
+   *         the user
    */
   default long getRequestCount() {
     return getReadRequestCount() + getWriteRequestCount();

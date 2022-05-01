@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,8 +21,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when the lease was expected to be recovered,
- * but the file can't be opened.
+ * Thrown when the lease was expected to be recovered, but the file can't be opened.
  */
 @InterfaceAudience.Public
 public class LeaseNotRecoveredException extends HBaseIOException {
@@ -36,10 +34,10 @@ public class LeaseNotRecoveredException extends HBaseIOException {
   }
 
   public LeaseNotRecoveredException(String message, Throwable cause) {
-      super(message, cause);
+    super(message, cause);
   }
 
   public LeaseNotRecoveredException(Throwable cause) {
-      super(cause);
+    super(cause);
   }
 }

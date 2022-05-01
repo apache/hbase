@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +18,32 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Implementing classes of this interface will be used for the tracking
- * and enforcement of columns and numbers of versions and timeToLive during
- * the course of a Get or Scan operation.
+ * Implementing classes of this interface will be used for the tracking and enforcement of columns
+ * and numbers of versions and timeToLive during the course of a Get or Scan operation.
  * <p>
  * Currently there are two different types of Store/Family-level queries.
- * <ul><li>{@link ExplicitColumnTracker} is used when the query specifies
- * one or more column qualifiers to return in the family.</li>
- * <li>{@link ScanWildcardColumnTracker} is used when no columns are
- * explicitly specified.</li>
+ * <ul>
+ * <li>{@link ExplicitColumnTracker} is used when the query specifies one or more column qualifiers
+ * to return in the family.</li>
+ * <li>{@link ScanWildcardColumnTracker} is used when no columns are explicitly specified.</li>
  * </ul>
  * <p>
  * This class is utilized by {@link ScanQueryMatcher} mainly through two methods:
- * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.</li>
- * <li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
- * believes that the current column should be skipped (by timestamp, filter etc.)</li>
+ * <ul>
+ * <li>{@link #checkColumn} is called when a Put satisfies all other conditions of the query.</li>
+ * <li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher believes that the current
+ * column should be skipped (by timestamp, filter etc.)</li>
  * </ul>
  * <p>
  * These two methods returns a
- * {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode}
- * to define what action should be taken.
+ * {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode} to define
+ * what action should be taken.
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
  */
@@ -56,82 +53,73 @@ public interface ColumnTracker extends ShipperListener {
   /**
    * Checks if the column is present in the list of requested columns by returning the match code
    * instance. It does not check against the number of versions for the columns asked for. To do the
-   * version check, one has to call {@link #checkVersions(Cell, long, byte, boolean)}
-   * method based on the return type (INCLUDE) of this method. The values that can be returned by
-   * this method are {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and
-   * {@link MatchCode#SEEK_NEXT_ROW}.
+   * version check, one has to call {@link #checkVersions(Cell, long, byte, boolean)} method based
+   * on the return type (INCLUDE) of this method. The values that can be returned by this method are
+   * {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and {@link MatchCode#SEEK_NEXT_ROW}.
    * @param cell a cell with the column to match against
    * @param type The type of the Cell
    * @return The match code instance.
    * @throws IOException in case there is an internal consistency problem caused by a data
-   *           corruption.
+   *                     corruption.
    */
   ScanQueryMatcher.MatchCode checkColumn(Cell cell, byte type) throws IOException;
 
   /**
    * Keeps track of the number of versions for the columns asked for. It assumes that the user has
    * already checked if the cell needs to be included by calling the
-   * {@link #checkColumn(Cell, byte)} method. The enum values returned by this method
-   * are {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE},
-   * {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL} and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}.
-   * Implementations which include all the columns could just return {@link MatchCode#INCLUDE} in
-   * the {@link #checkColumn(Cell, byte)} method and perform all the operations in this
-   * checkVersions method.
-   * @param cell a cell with the column to match against
-   * @param timestamp The timestamp of the cell.
-   * @param type the type of the key value (Put/Delete)
+   * {@link #checkColumn(Cell, byte)} method. The enum values returned by this method are
+   * {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE}, {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL}
+   * and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}. Implementations which include all the columns
+   * could just return {@link MatchCode#INCLUDE} in the {@link #checkColumn(Cell, byte)} method and
+   * perform all the operations in this checkVersions method.
+   * @param cell        a cell with the column to match against
+   * @param timestamp   The timestamp of the cell.
+   * @param type        the type of the key value (Put/Delete)
    * @param ignoreCount indicates if the KV needs to be excluded while counting (used during
-   *          compactions. We only count KV's that are older than all the scanners' read points.)
+   *                    compactions. We only count KV's that are older than all the scanners' read
+   *                    points.)
    * @return the scan query matcher match code instance
    * @throws IOException in case there is an internal consistency problem caused by a data
-   *           corruption.
+   *                     corruption.
    */
   ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
-      boolean ignoreCount) throws IOException;
+    boolean ignoreCount) throws IOException;
+
   /**
    * Resets the Matcher
    */
   void reset();
 
   /**
-   *
    * @return <code>true</code> when done.
    */
   boolean done();
 
   /**
-   * Used by matcher and scan/get to get a hint of the next column
-   * to seek to after checkColumn() returns SKIP.  Returns the next interesting
-   * column we want, or NULL there is none (wildcard scanner).
-   *
-   * Implementations aren't required to return anything useful unless the most recent
-   * call was to checkColumn() and the return code was SKIP.  This is pretty implementation
-   * detail-y, but optimizations are like that.
-   *
+   * Used by matcher and scan/get to get a hint of the next column to seek to after checkColumn()
+   * returns SKIP. Returns the next interesting column we want, or NULL there is none (wildcard
+   * scanner). Implementations aren't required to return anything useful unless the most recent call
+   * was to checkColumn() and the return code was SKIP. This is pretty implementation detail-y, but
+   * optimizations are like that.
    * @return null, or a ColumnCount that we should seek to
    */
   ColumnCount getColumnHint();
 
   /**
-   * Retrieve the MatchCode for the next row or column
-   * @param cell
+   * Retrieve the MatchCode for the next row or column n
    */
   MatchCode getNextRowOrNextColumn(Cell cell);
 
   /**
-   * Give the tracker a chance to declare it's done based on only the timestamp
-   * to allow an early out.
-   *
-   * @param timestamp
-   * @return <code>true</code> to early out based on timestamp.
+   * Give the tracker a chance to declare it's done based on only the timestamp to allow an early
+   * out. n * @return <code>true</code> to early out based on timestamp.
    */
   boolean isDone(long timestamp);
 
   /**
    * This method is used to inform the column tracker that we are done with this column. We may get
    * this information from external filters or timestamp range and we then need to indicate this
-   * information to tracker. It is currently implemented for ExplicitColumnTracker.
-   * @param cell
+   * information to tracker. It is currently implemented for ExplicitColumnTracker. n
    */
   default void doneWithColumn(Cell cell) {
   }

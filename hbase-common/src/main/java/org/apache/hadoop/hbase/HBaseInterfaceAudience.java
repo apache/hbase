@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,8 @@ public final class HBaseInterfaceAudience {
   /**
    * Can't create this class.
    */
-  private HBaseInterfaceAudience(){}
+  private HBaseInterfaceAudience() {
+  }
 
   public static final String COPROC = "Coprocesssor";
   public static final String REPLICATION = "Replication";
@@ -44,8 +45,8 @@ public final class HBaseInterfaceAudience {
   public static final String CONFIG = "Configuration";
 
   /**
-   * Denotes classes used as tools (Used from cmd line). Usually, the compatibility is required
-   * for class name, and arguments.
+   * Denotes classes used as tools (Used from cmd line). Usually, the compatibility is required for
+   * class name, and arguments.
    */
   public static final String TOOLS = "Tools";
 

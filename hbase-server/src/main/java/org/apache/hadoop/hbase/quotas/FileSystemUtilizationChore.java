@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +21,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,16 +41,20 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class FileSystemUtilizationChore extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(FileSystemUtilizationChore.class);
-  static final String FS_UTILIZATION_CHORE_PERIOD_KEY = "hbase.regionserver.quotas.fs.utilization.chore.period";
+  static final String FS_UTILIZATION_CHORE_PERIOD_KEY =
+    "hbase.regionserver.quotas.fs.utilization.chore.period";
   static final int FS_UTILIZATION_CHORE_PERIOD_DEFAULT = 1000 * 60 * 5; // 5 minutes in millis
 
-  static final String FS_UTILIZATION_CHORE_DELAY_KEY = "hbase.regionserver.quotas.fs.utilization.chore.delay";
+  static final String FS_UTILIZATION_CHORE_DELAY_KEY =
+    "hbase.regionserver.quotas.fs.utilization.chore.delay";
   static final long FS_UTILIZATION_CHORE_DELAY_DEFAULT = 1000L * 60L; // 1 minute
 
-  static final String FS_UTILIZATION_CHORE_TIMEUNIT_KEY = "hbase.regionserver.quotas.fs.utilization.chore.timeunit";
+  static final String FS_UTILIZATION_CHORE_TIMEUNIT_KEY =
+    "hbase.regionserver.quotas.fs.utilization.chore.timeunit";
   static final String FS_UTILIZATION_CHORE_TIMEUNIT_DEFAULT = TimeUnit.MILLISECONDS.name();
 
-  static final String FS_UTILIZATION_MAX_ITERATION_DURATION_KEY = "hbase.regionserver.quotas.fs.utilization.chore.max.iteration.millis";
+  static final String FS_UTILIZATION_MAX_ITERATION_DURATION_KEY =
+    "hbase.regionserver.quotas.fs.utilization.chore.max.iteration.millis";
   static final long FS_UTILIZATION_MAX_ITERATION_DURATION_DEFAULT = 5000L;
 
   private final HRegionServer rs;
@@ -59,10 +63,10 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   public FileSystemUtilizationChore(HRegionServer rs) {
     super(FileSystemUtilizationChore.class.getSimpleName(), rs, getPeriod(rs.getConfiguration()),
-        getInitialDelay(rs.getConfiguration()), getTimeUnit(rs.getConfiguration()));
+      getInitialDelay(rs.getConfiguration()), getTimeUnit(rs.getConfiguration()));
     this.rs = rs;
     this.maxIterationMillis = rs.getConfiguration().getLong(
-        FS_UTILIZATION_MAX_ITERATION_DURATION_KEY, FS_UTILIZATION_MAX_ITERATION_DURATION_DEFAULT);
+      FS_UTILIZATION_MAX_ITERATION_DURATION_KEY, FS_UTILIZATION_MAX_ITERATION_DURATION_DEFAULT);
   }
 
   @Override
@@ -93,8 +97,8 @@ public class FileSystemUtilizationChore extends ScheduledChore {
       long timeRunning = EnvironmentEdgeManager.currentTime() - start;
       if (timeRunning > maxIterationMillis) {
         LOG.debug("Preempting execution of FileSystemUtilizationChore because it exceeds the"
-            + " maximum iteration configuration value. Will process remaining Regions"
-            + " on a subsequent invocation.");
+          + " maximum iteration configuration value. Will process remaining Regions"
+          + " on a subsequent invocation.");
         setLeftoverRegions(iterator);
         break;
       }
@@ -122,15 +126,14 @@ public class FileSystemUtilizationChore extends ScheduledChore {
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Computed the size of " + regionSizesCalculated + " Regions. Skipped computation"
-          + " of " + offlineRegionsSkipped + " regions due to not being online on this RS, "
-          + skippedSplitParents + " regions due to being the parent of a split, and"
-          + skippedRegionReplicas + " regions due to being region replicas.");
+        + " of " + offlineRegionsSkipped + " regions due to not being online on this RS, "
+        + skippedSplitParents + " regions due to being the parent of a split, and"
+        + skippedRegionReplicas + " regions due to being region replicas.");
     }
   }
 
   /**
    * Returns an {@link Iterator} over the Regions which were skipped last invocation of the chore.
-   *
    * @return Regions from the previous invocation to process, or null.
    */
   Iterator<Region> getLeftoverRegions() {
@@ -146,7 +149,6 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   /**
    * Computes total FileSystem size for the given {@link Region}.
-   *
    * @param r The region
    * @return The size, in bytes, of the Region.
    */
@@ -168,7 +170,6 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   /**
    * Extracts the period for the chore from the configuration.
-   *
    * @param conf The configuration object.
    * @return The configured chore period or the default value.
    */
@@ -178,7 +179,6 @@ public class FileSystemUtilizationChore extends ScheduledChore {
 
   /**
    * Extracts the initial delay for the chore from the configuration.
-   *
    * @param conf The configuration object.
    * @return The configured chore initial delay or the default value.
    */
@@ -190,12 +190,11 @@ public class FileSystemUtilizationChore extends ScheduledChore {
    * Extracts the time unit for the chore period and initial delay from the configuration. The
    * configuration value for {@link #FS_UTILIZATION_CHORE_TIMEUNIT_KEY} must correspond to a
    * {@link TimeUnit} value.
-   *
    * @param conf The configuration object.
    * @return The configured time unit for the chore period and initial delay or the default value.
    */
   static TimeUnit getTimeUnit(Configuration conf) {
-    return TimeUnit.valueOf(conf.get(FS_UTILIZATION_CHORE_TIMEUNIT_KEY,
-        FS_UTILIZATION_CHORE_TIMEUNIT_DEFAULT));
+    return TimeUnit
+      .valueOf(conf.get(FS_UTILIZATION_CHORE_TIMEUNIT_KEY, FS_UTILIZATION_CHORE_TIMEUNIT_DEFAULT));
   }
 }

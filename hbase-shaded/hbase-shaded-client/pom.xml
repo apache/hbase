@@ -1,7 +1,6 @@
-<project xmlns="https://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
       /**
        * Licensed to the Apache Software Foundation (ASF) under one
        * or more contributor license agreements.  See the NOTICE file
@@ -22,13 +21,19 @@
       -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-shaded</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-shaded</artifactId>
     <version>2.5.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-shaded-client</artifactId>
   <name>Apache HBase - Shaded - Client (with Hadoop bundled)</name>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+    </dependency>
+  </dependencies>
   <build>
     <plugins>
       <plugin>
@@ -39,7 +44,7 @@
         </configuration>
       </plugin>
       <plugin>
-                <!--Make it so assembly:single does nothing in here-->
+        <!--Make it so assembly:single does nothing in here-->
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <skipAssembly>true</skipAssembly>
@@ -59,7 +64,8 @@
                        need not be included -->
                   <exclude>javax.annotation:javax.annotation-api</exclude>
                   <exclude>javax.activation:javax.activation-api</exclude>
-                  <exclude>jakarta.activation:jakarta.activation-api</exclude> <!-- Hadoop 3.3.1 -->
+                  <exclude>jakarta.activation:jakarta.activation-api</exclude>
+                  <!-- Hadoop 3.3.1 -->
                   <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
                   <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
                   <exclude>jakarta.validation:jakarta.validation-api</exclude>
@@ -88,10 +94,4 @@
       </plugin>
     </plugins>
   </build>
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-client</artifactId>
-    </dependency>
-  </dependencies>
 </project>

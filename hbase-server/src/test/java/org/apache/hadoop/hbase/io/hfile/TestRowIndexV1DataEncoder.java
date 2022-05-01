@@ -69,9 +69,8 @@ public class TestRowIndexV1DataEncoder {
       new HFileContextBuilder().withBlockSize(1024).withDataBlockEncoding(dataBlockEncoding)
         .withCellComparator(CellComparatorImpl.COMPARATOR).build();
     CacheConfig cacheConfig = new CacheConfig(conf);
-    HFile.Writer writer =
-      new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath).withFileContext(context)
-        .create();
+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)
+      .withFileContext(context).create();
 
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
 

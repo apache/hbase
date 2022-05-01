@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,12 @@ import org.slf4j.LoggerFactory;
  * Test if the FilterWrapper retains the same semantics defined in the
  * {@link org.apache.hadoop.hbase.filter.Filter}
  */
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestFilterWrapper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFilterWrapper.class);
+    HBaseClassTestRule.forClass(TestFilterWrapper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterWrapper.class);
 
@@ -81,9 +81,8 @@ public class TestFilterWrapper {
       Scan scan = new Scan();
       List<Filter> fs = new ArrayList<>();
 
-      DependentColumnFilter f1 = new DependentColumnFilter(Bytes.toBytes("f1"),
-          Bytes.toBytes("c5"), true, CompareOperator.EQUAL,
-          new SubstringComparator("c5"));
+      DependentColumnFilter f1 = new DependentColumnFilter(Bytes.toBytes("f1"), Bytes.toBytes("c5"),
+        true, CompareOperator.EQUAL, new SubstringComparator("c5"));
       PageFilter f2 = new PageFilter(2);
       fs.add(f1);
       fs.add(f2);
@@ -100,7 +99,7 @@ public class TestFilterWrapper {
           LOG.debug(kv_number + ". kv: " + kv);
           kv_number++;
           assertEquals("Returned row is not correct", new String(CellUtil.cloneRow(kv)),
-              "row" + ( row_number + 1 ));
+            "row" + (row_number + 1));
         }
       }
 
@@ -131,10 +130,9 @@ public class TestFilterWrapper {
         Put put = new Put(Bytes.toBytes("row" + i));
         for (int j = 1; j < 6; j++) {
           long timestamp = j;
-          if (i != 1)
-            timestamp = i;
+          if (i != 1) timestamp = i;
           put.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("c" + j), timestamp,
-                  Bytes.toBytes(i + "_c" + j));
+            Bytes.toBytes(i + "_c" + j));
         }
         puts.add(put);
       }

@@ -81,4 +81,3 @@ public class Version {
   public static final String srcChecksum = "$srcChecksum";
 }
 EOF
-

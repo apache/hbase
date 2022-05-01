@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +27,15 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Normalization plan to merge adjacent regions. As with any call to
- * {@link MasterServices#mergeRegions(RegionInfo[], boolean, long, long)}
- * with {@code forcible=false}, Region order and adjacency are important. It's the caller's
- * responsibility to ensure the provided parameters are ordered according to the
- * {code mergeRegions} method requirements.
+ * {@link MasterServices#mergeRegions(RegionInfo[], boolean, long, long)} with
+ * {@code forcible=false}, Region order and adjacency are important. It's the caller's
+ * responsibility to ensure the provided parameters are ordered according to the {code mergeRegions}
+ * method requirements.
  */
 @InterfaceAudience.Private
 final class MergeNormalizationPlan implements NormalizationPlan {
@@ -61,8 +61,7 @@ final class MergeNormalizationPlan implements NormalizationPlan {
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("normalizationTargets", normalizationTargets)
-      .toString();
+      .append("normalizationTargets", normalizationTargets).toString();
   }
 
   @Override
@@ -77,16 +76,12 @@ final class MergeNormalizationPlan implements NormalizationPlan {
 
     MergeNormalizationPlan that = (MergeNormalizationPlan) o;
 
-    return new EqualsBuilder()
-      .append(normalizationTargets, that.normalizationTargets)
-      .isEquals();
+    return new EqualsBuilder().append(normalizationTargets, that.normalizationTargets).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(normalizationTargets)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(normalizationTargets).toHashCode();
   }
 
   /**

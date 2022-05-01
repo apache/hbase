@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,7 +87,7 @@ public class MaintenanceLoadBalancer implements LoadBalancer {
 
   @Override
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-    List<ServerName> servers)  {
+    List<ServerName> servers) {
     return assign(regions.keySet(), servers);
   }
 

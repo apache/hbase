@@ -30,7 +30,7 @@ public class TestAsyncResultScannerCursor extends AbstractTestResultScannerCurso
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncResultScannerCursor.class);
+    HBaseClassTestRule.forClass(TestAsyncResultScannerCursor.class);
 
   private static AsyncConnection CONN;
 

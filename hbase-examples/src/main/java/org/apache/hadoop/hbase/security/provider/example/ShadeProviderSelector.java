@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.provider.example;
 
 import java.util.Collection;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.BuiltInProviderSelector;
@@ -37,26 +36,23 @@ public class ShadeProviderSelector extends BuiltInProviderSelector {
   private ShadeSaslClientAuthenticationProvider shade;
 
   @Override
-  public void configure(
-      Configuration conf, Collection<SaslClientAuthenticationProvider> providers) {
+  public void configure(Configuration conf,
+    Collection<SaslClientAuthenticationProvider> providers) {
     super.configure(conf, providers);
 
     this.shade = (ShadeSaslClientAuthenticationProvider) providers.stream()
-        .filter((p) -> p instanceof ShadeSaslClientAuthenticationProvider)
-        .findFirst()
-        .orElseThrow(() -> new RuntimeException(
-            "ShadeSaslClientAuthenticationProvider not loaded"));
+      .filter((p) -> p instanceof ShadeSaslClientAuthenticationProvider).findFirst()
+      .orElseThrow(() -> new RuntimeException("ShadeSaslClientAuthenticationProvider not loaded"));
   }
 
   @Override
-  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User user) {
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User user) {
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
-        super.selectProvider(clusterId, user);
+      super.selectProvider(clusterId, user);
 
     Optional<Token<?>> optional = user.getTokens().stream()
-        .filter((t) -> SHADE_TOKEN_KIND_TEXT.equals(t.getKind()))
-        .findFirst();
+      .filter((t) -> SHADE_TOKEN_KIND_TEXT.equals(t.getKind())).findFirst();
     if (optional.isPresent()) {
       return new Pair<>(shade, optional.get());
     }

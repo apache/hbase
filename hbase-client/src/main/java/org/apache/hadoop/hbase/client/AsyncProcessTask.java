@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,39 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
 
 /**
- * Contains the attributes of a task which will be executed
- * by {@link org.apache.hadoop.hbase.client.AsyncProcess}.
- * The attributes will be validated by AsyncProcess.
- * It's intended for advanced client applications.
+ * Contains the attributes of a task which will be executed by
+ * {@link org.apache.hadoop.hbase.client.AsyncProcess}. The attributes will be validated by
+ * AsyncProcess. It's intended for advanced client applications.
  * @param <T> The type of response from server-side
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class AsyncProcessTask<T> {
   /**
-   * The number of processed rows.
-   * The AsyncProcess has traffic control which may reject some rows.
+   * The number of processed rows. The AsyncProcess has traffic control which may reject some rows.
    */
   public enum SubmittedRows {
     ALL,
     AT_LEAST_ONE,
     NORMAL
   }
+
   public static <T> Builder<T> newBuilder(final Batch.Callback<T> callback) {
     return new Builder<>(callback);
   }
+
   public static Builder newBuilder() {
     return new Builder();
   }
@@ -127,10 +125,11 @@ public class AsyncProcessTask<T> {
     }
 
     public AsyncProcessTask<T> build() {
-      return new AsyncProcessTask<>(pool, tableName, rows, submittedRows,
-              callback, callable, needResults, rpcTimeout, operationTimeout, results);
+      return new AsyncProcessTask<>(pool, tableName, rows, submittedRows, callback, callable,
+        needResults, rpcTimeout, operationTimeout, results);
     }
   }
+
   private final ExecutorService pool;
   private final TableName tableName;
   private final RowAccess<? extends Row> rows;
@@ -141,16 +140,16 @@ public class AsyncProcessTask<T> {
   private final int rpcTimeout;
   private final int operationTimeout;
   private final Object[] results;
+
   AsyncProcessTask(AsyncProcessTask<T> task) {
-    this(task.getPool(), task.getTableName(), task.getRowAccess(),
-        task.getSubmittedRows(), task.getCallback(), task.getCallable(),
-        task.getNeedResults(), task.getRpcTimeout(), task.getOperationTimeout(),
-        task.getResults());
+    this(task.getPool(), task.getTableName(), task.getRowAccess(), task.getSubmittedRows(),
+      task.getCallback(), task.getCallable(), task.getNeedResults(), task.getRpcTimeout(),
+      task.getOperationTimeout(), task.getResults());
   }
-  AsyncProcessTask(ExecutorService pool, TableName tableName,
-          RowAccess<? extends Row> rows, SubmittedRows size, Batch.Callback<T> callback,
-          CancellableRegionServerCallable callable, boolean needResults,
-          int rpcTimeout, int operationTimeout, Object[] results) {
+
+  AsyncProcessTask(ExecutorService pool, TableName tableName, RowAccess<? extends Row> rows,
+    SubmittedRows size, Batch.Callback<T> callback, CancellableRegionServerCallable callable,
+    boolean needResults, int rpcTimeout, int operationTimeout, Object[] results) {
     this.pool = pool;
     this.tableName = tableName;
     this.rows = rows;

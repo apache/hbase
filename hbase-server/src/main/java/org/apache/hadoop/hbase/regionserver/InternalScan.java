@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,22 +18,20 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Special scanner, currently used for increment operations to
- * allow additional server-side arguments for Scan operations.
+ * Special scanner, currently used for increment operations to allow additional server-side
+ * arguments for Scan operations.
  * <p>
- * Rather than adding new options/parameters to the public Scan API, this new
- * class has been created.
+ * Rather than adding new options/parameters to the public Scan API, this new class has been
+ * created.
  * <p>
- * Supports adding an option to only read from the MemStore with
- * {@link #checkOnlyMemStore()} or to only read from StoreFiles with
- * {@link #checkOnlyStoreFiles()}.
+ * Supports adding an option to only read from the MemStore with {@link #checkOnlyMemStore()} or to
+ * only read from StoreFiles with {@link #checkOnlyStoreFiles()}.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public class InternalScan extends Scan {
@@ -49,15 +46,12 @@ public class InternalScan extends Scan {
   }
 
   /**
-   * @param scan - original scan object
-   * @throws IOException 
+   * @param scan - original scan object n
    */
-  public InternalScan(Scan scan) 
-      throws IOException 
-  {
+  public InternalScan(Scan scan) throws IOException {
     super(scan);
   }
-  
+
   /**
    * StoreFiles will not be scanned. Only MemStore will be scanned.
    */
@@ -75,7 +69,7 @@ public class InternalScan extends Scan {
   }
 
   /**
-   * Returns true if only the MemStore should be checked.  False if not.
+   * Returns true if only the MemStore should be checked. False if not.
    * @return true to only check MemStore
    */
   public boolean isCheckOnlyMemStore() {
@@ -83,7 +77,7 @@ public class InternalScan extends Scan {
   }
 
   /**
-   * Returns true if only StoreFiles should be checked.  False if not.
+   * Returns true if only StoreFiles should be checked. False if not.
    * @return true if only check StoreFiles
    */
   public boolean isCheckOnlyStoreFiles() {

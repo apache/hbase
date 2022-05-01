@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
@@ -70,19 +71,16 @@ public class TestTracingBase {
     TableName tableName) {
     String expectedSpanName = String.format("%s.%s", className, methodName);
     Waiter.waitFor(conf, 1000,
-      () -> TRACE_RULE.getSpans().stream()
-        .anyMatch(span -> span.getName().equals(expectedSpanName) &&
-          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
-    SpanData data = TRACE_RULE.getSpans().stream()
-      .filter(s -> s.getName().equals(expectedSpanName)).findFirst().get();
+      () -> TRACE_RULE.getSpans().stream().anyMatch(span -> span.getName().equals(expectedSpanName)
+        && span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
+    SpanData data = TRACE_RULE.getSpans().stream().filter(s -> s.getName().equals(expectedSpanName))
+      .findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
 
     if (serverName != null) {
       Optional<SpanData> foundServerName =
-        TRACE_RULE.getSpans().stream()
-          .filter(s -> s.getName().equals(expectedSpanName))
-          .filter(s -> Objects.equals(
-            serverName.getServerName(),
+        TRACE_RULE.getSpans().stream().filter(s -> s.getName().equals(expectedSpanName))
+          .filter(s -> Objects.equals(serverName.getServerName(),
             s.getAttributes().get(HBaseSemanticAttributes.SERVER_NAME_KEY)))
           .findAny();
       assertTrue(foundServerName.isPresent());
@@ -103,18 +101,14 @@ public class TestTracingBase {
   protected SpanData waitSpan(Matcher<SpanData> matcher) {
     Matcher<SpanData> spanLocator = allOf(matcher, hasEnded());
     try {
-      Waiter.waitFor(conf, 1000, new MatcherPredicate<>(
-        "waiting for span",
+      Waiter.waitFor(conf, 1000, new MatcherPredicate<>("waiting for span",
         () -> TRACE_RULE.getSpans(), hasItem(spanLocator)));
     } catch (AssertionError e) {
       LOG.error("AssertionError while waiting for matching span. Span reservoir contains: {}",
         TRACE_RULE.getSpans());
       throw e;
     }
-    return TRACE_RULE.getSpans()
-      .stream()
-      .filter(spanLocator::matches)
-      .findFirst()
+    return TRACE_RULE.getSpans().stream().filter(spanLocator::matches).findFirst()
       .orElseThrow(AssertionError::new);
   }
 
@@ -138,11 +132,13 @@ public class TestTracingBase {
       return CompletableFuture.completedFuture(MASTER_HOST);
     }
 
-    @Override public String getConnectionString() {
+    @Override
+    public String getConnectionString() {
       return "nothing";
     }
 
-    @Override public void close() {
+    @Override
+    public void close() {
 
     }
   }

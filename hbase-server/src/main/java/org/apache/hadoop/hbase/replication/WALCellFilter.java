@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A filter for WAL entry cells before being sent over to replication.
@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 public interface WALCellFilter {
 
   /**
-   * Applies the filter, possibly returning a different Cell instance.
-   * If null is returned, the cell will be skipped.
+   * Applies the filter, possibly returning a different Cell instance. If null is returned, the cell
+   * will be skipped.
    * @param entry Entry which contains the cell
-   * @param cell Cell to filter
-   * @return a (possibly modified) Cell to use.  Returning null will cause the cell
-   * to be skipped for replication.
+   * @param cell  Cell to filter
+   * @return a (possibly modified) Cell to use. Returning null will cause the cell to be skipped for
+   *         replication.
    */
   public Cell filterCell(Entry entry, Cell cell);
 

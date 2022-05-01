@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -158,10 +158,10 @@ public final class TestingHBaseClusterOption {
 
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers=" +
-      numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes=" +
-      numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" +
-      numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers="
+      + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes="
+      + numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers="
+      + numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**

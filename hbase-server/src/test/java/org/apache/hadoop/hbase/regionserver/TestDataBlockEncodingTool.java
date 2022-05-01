@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,18 +40,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- *  Test DataBlockEncodingTool.
+ * Test DataBlockEncodingTool.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestDataBlockEncodingTool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDataBlockEncodingTool.class);
+    HBaseClassTestRule.forClass(TestDataBlockEncodingTool.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String ROOT_DIR =
-      TEST_UTIL.getDataTestDir("TestDataBlockEncodingTool").toString();
+    TEST_UTIL.getDataTestDir("TestDataBlockEncodingTool").toString();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static FileSystem fs;
   private static StoreFileWriter sfw;
@@ -75,13 +74,9 @@ public class TestDataBlockEncodingTool {
   }
 
   private void createHFileWithTags(Path path, boolean useTags, boolean allTags) throws IOException {
-    HFileContext meta = new HFileContextBuilder()
-        .withBlockSize(64 * 1024)
-        .withIncludesTags(useTags).build();
-    sfw =
-        new StoreFileWriter.Builder(conf, fs)
-            .withFilePath(path)
-            .withFileContext(meta).build();
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(64 * 1024).withIncludesTags(useTags).build();
+    sfw = new StoreFileWriter.Builder(conf, fs).withFilePath(path).withFileContext(meta).build();
     long now = EnvironmentEdgeManager.currentTime();
     byte[] FAMILY = Bytes.toBytes("cf");
     byte[] QUALIFIER = Bytes.toBytes("q");
@@ -93,18 +88,16 @@ public class TestDataBlockEncodingTool {
           if (useTags) {
             if (allTags) {
               // Write cells with tags to HFile.
-              Tag[] tags = new Tag[]{
-                new ArrayBackedTag((byte) 0, Bytes.toString(b)),
-                new ArrayBackedTag((byte) 0, Bytes.toString(b))};
+              Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
               kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
             } else {
               // Write half cells with tags and half without tags to HFile.
               if ((e - 'a') % 2 == 0) {
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b);
               } else {
-                Tag[] tags = new Tag[]{
-                  new ArrayBackedTag((byte) 0, Bytes.toString(b)),
-                  new ArrayBackedTag((byte) 0, Bytes.toString(b))};
+                Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                  new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
               }
             }
@@ -127,8 +120,8 @@ public class TestDataBlockEncodingTool {
     boolean doVerify = true;
     boolean doBenchmark = true;
     String testHFilePath = path.toString();
-    DataBlockEncodingTool.testCodecs(conf, maxKV, testHFilePath,
-        Compression.Algorithm.GZ.getName(), doBenchmark, doVerify);
+    DataBlockEncodingTool.testCodecs(conf, maxKV, testHFilePath, Compression.Algorithm.GZ.getName(),
+      doBenchmark, doVerify);
   }
 
   @Test

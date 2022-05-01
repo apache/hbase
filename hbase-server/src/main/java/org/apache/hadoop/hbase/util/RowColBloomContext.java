@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.LAST_BLOOM_KEY;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -29,8 +28,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Handles ROWCOL bloom related context. It can work with both BytebufferdCells
- * and byte[] backed cells
+ * Handles ROWCOL bloom related context. It can work with both BytebufferdCells and byte[] backed
+ * cells
  */
 @InterfaceAudience.Private
 public class RowColBloomContext extends BloomContext {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -33,9 +32,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Basic Cell codec that just writes out all the individual elements of a Cell.  Uses ints
- * delimiting all lengths. Profligate. Needs tune up.
- * Note: This will not write tags of a Cell.
+ * Basic Cell codec that just writes out all the individual elements of a Cell. Uses ints delimiting
+ * all lengths. Profligate. Needs tune up. Note: This will not write tags of a Cell.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class CellCodec implements Codec {
@@ -64,14 +62,9 @@ public class CellCodec implements Codec {
     }
 
     /**
-     * Write int length followed by array bytes.
-     * @param bytes
-     * @param offset
-     * @param length
-     * @throws IOException
+     * Write int length followed by array bytes. nnnn
      */
-    private void write(final byte [] bytes, final int offset, final int length)
-    throws IOException {
+    private void write(final byte[] bytes, final int offset, final int length) throws IOException {
       // TODO add BB backed os check and do for write. Pass Cell
       this.out.write(Bytes.toBytes(length));
       this.out.write(bytes, offset, length);
@@ -79,17 +72,19 @@ public class CellCodec implements Codec {
   }
 
   static class CellDecoder extends BaseDecoder {
-    private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    private final ExtendedCellBuilder cellBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+
     public CellDecoder(final InputStream in) {
       super(in);
     }
 
     @Override
     protected Cell parseCell() throws IOException {
-      byte [] row = readByteArray(this.in);
-      byte [] family = readByteArray(in);
-      byte [] qualifier = readByteArray(in);
-      byte [] longArray = new byte[Bytes.SIZEOF_LONG];
+      byte[] row = readByteArray(this.in);
+      byte[] family = readByteArray(in);
+      byte[] qualifier = readByteArray(in);
+      byte[] longArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, longArray);
       long timestamp = Bytes.toLong(longArray);
       byte type = (byte) this.in.read();
@@ -98,26 +93,18 @@ public class CellCodec implements Codec {
       byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
       IOUtils.readFully(this.in, memstoreTSArray);
       long memstoreTS = Bytes.toLong(memstoreTSArray);
-      return cellBuilder.clear()
-              .setRow(row)
-              .setFamily(family)
-              .setQualifier(qualifier)
-              .setTimestamp(timestamp)
-              .setType(type)
-              .setValue(value)
-              .setSequenceId(memstoreTS)
-              .build();
+      return cellBuilder.clear().setRow(row).setFamily(family).setQualifier(qualifier)
+        .setTimestamp(timestamp).setType(type).setValue(value).setSequenceId(memstoreTS).build();
     }
 
     /**
-     * @return Byte array read from the stream.
-     * @throws IOException
+     * @return Byte array read from the stream. n
      */
-    private byte [] readByteArray(final InputStream in) throws IOException {
-      byte [] intArray = new byte[Bytes.SIZEOF_INT];
+    private byte[] readByteArray(final InputStream in) throws IOException {
+      byte[] intArray = new byte[Bytes.SIZEOF_INT];
       IOUtils.readFully(in, intArray);
       int length = Bytes.toInt(intArray);
-      byte [] bytes = new byte [length];
+      byte[] bytes = new byte[length];
       IOUtils.readFully(in, bytes);
       return bytes;
     }

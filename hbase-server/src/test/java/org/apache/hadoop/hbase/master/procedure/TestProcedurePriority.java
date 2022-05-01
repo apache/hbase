@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,7 +88,7 @@ public class TestProcedurePriority {
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> c, Get get,
-        List<Cell> result) throws IOException {
+      List<Cell> result) throws IOException {
       if (FAIL && c.getEnvironment().getRegionInfo().isMetaRegion()) {
         throw new IOException("Inject error");
       }
@@ -96,7 +96,7 @@ public class TestProcedurePriority {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> c, Put put, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       if (FAIL && c.getEnvironment().getRegionInfo().isMetaRegion()) {
         throw new IOException("Inject error");
       }

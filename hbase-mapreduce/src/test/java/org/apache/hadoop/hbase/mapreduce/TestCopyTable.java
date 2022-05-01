@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,12 +59,12 @@ import org.junit.rules.TestName;
 /**
  * Basic test for the CopyTable M/R tool
  */
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestCopyTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCopyTable.class);
+    HBaseClassTestRule.forClass(TestCopyTable.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytes("row1");
@@ -95,20 +95,19 @@ public class TestCopyTable {
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
     try (Table t1 = TEST_UTIL.createTable(tableName1, FAMILY);
-         Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);) {
+      Table t2 = TEST_UTIL.createTable(tableName2, FAMILY);) {
       // put rows into the first table
       loadData(t1, FAMILY, COLUMN1);
 
       CopyTable copy = new CopyTable();
       int code;
       if (bulkload) {
-        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
-            "--bulkload", tableName1.getNameAsString() });
-      } else {
-        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy,
+          new String[] { "--new.name=" + tableName2.getNameAsString(), "--bulkload",
             tableName1.getNameAsString() });
+      } else {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy, new String[] {
+          "--new.name=" + tableName2.getNameAsString(), tableName1.getNameAsString() });
       }
       assertEquals("copy job failed", 0, code);
 
@@ -130,15 +129,13 @@ public class TestCopyTable {
 
     cfd.setMobEnabled(true);
     cfd.setMobThreshold(5);
-    TableDescriptor desc1 = TableDescriptorBuilder.newBuilder(tableName1)
-            .setColumnFamily(cfd.build())
-            .build();
-    TableDescriptor desc2 = TableDescriptorBuilder.newBuilder(tableName2)
-            .setColumnFamily(cfd.build())
-            .build();
+    TableDescriptor desc1 =
+      TableDescriptorBuilder.newBuilder(tableName1).setColumnFamily(cfd.build()).build();
+    TableDescriptor desc2 =
+      TableDescriptorBuilder.newBuilder(tableName2).setColumnFamily(cfd.build()).build();
 
     try (Table t1 = TEST_UTIL.createTable(desc1, null);
-         Table t2 = TEST_UTIL.createTable(desc2, null);) {
+      Table t2 = TEST_UTIL.createTable(desc2, null);) {
 
       // put rows into the first table
       for (int i = 0; i < 10; i++) {
@@ -151,13 +148,12 @@ public class TestCopyTable {
 
       int code;
       if (bulkload) {
-        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
-              "--bulkload", tableName1.getNameAsString() });
-      } else {
-        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-            copy, new String[] { "--new.name=" + tableName2.getNameAsString(),
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy,
+          new String[] { "--new.name=" + tableName2.getNameAsString(), "--bulkload",
             tableName1.getNameAsString() });
+      } else {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy, new String[] {
+          "--new.name=" + tableName2.getNameAsString(), tableName1.getNameAsString() });
       }
       assertEquals("copy job failed", 0, code);
 
@@ -168,17 +164,15 @@ public class TestCopyTable {
         assertEquals(1, r.size());
         assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
         assertEquals("compare row values between two tables",
-              t1.getDescriptor().getValue("row" + i),
-              t2.getDescriptor().getValue("row" + i));
+          t1.getDescriptor().getValue("row" + i), t2.getDescriptor().getValue("row" + i));
       }
 
-      assertEquals("compare count of mob rows after table copy", MobTestUtil.countMobRows(TEST_UTIL, t1),
-              MobTestUtil.countMobRows(TEST_UTIL, t2));
+      assertEquals("compare count of mob rows after table copy",
+        MobTestUtil.countMobRows(TEST_UTIL, t1), MobTestUtil.countMobRows(TEST_UTIL, t2));
       assertEquals("compare count of mob row values between two tables",
-              t1.getDescriptor().getValues().size(),
-              t2.getDescriptor().getValues().size());
+        t1.getDescriptor().getValues().size(), t2.getDescriptor().getValues().size());
       assertTrue("The mob row count is 0 but should be > 0",
-            MobTestUtil.countMobRows(TEST_UTIL, t2) > 0);
+        MobTestUtil.countMobRows(TEST_UTIL, t2) > 0);
     } finally {
       TEST_UTIL.deleteTable(tableName1);
       TEST_UTIL.deleteTable(tableName2);
@@ -186,8 +180,7 @@ public class TestCopyTable {
   }
 
   /**
-   * Simple end-to-end test
-   * @throws Exception
+   * Simple end-to-end test n
    */
   @Test
   public void testCopyTable() throws Exception {
@@ -243,11 +236,10 @@ public class TestCopyTable {
     t1.put(p);
 
     CopyTable copy = new CopyTable();
-    assertEquals(
-      0,
-      ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
-        copy, new String[] { "--new.name=" + tableName2, "--startrow=\\x01row1",
-            "--stoprow=\\x01row2", tableName1.getNameAsString() }));
+    assertEquals(0,
+      ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), copy,
+        new String[] { "--new.name=" + tableName2, "--startrow=\\x01row1", "--stoprow=\\x01row2",
+          tableName1.getNameAsString() }));
 
     // verify the data was copied into table 2
     // row1 exist, row0, row2 do not exist
@@ -295,8 +287,8 @@ public class TestCopyTable {
 
     long currentTime = EnvironmentEdgeManager.currentTime();
     String[] args = new String[] { "--new.name=" + targetTable, "--families=a:b", "--all.cells",
-        "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
-        "--versions=1", sourceTable.getNameAsString() };
+      "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
+      "--versions=1", sourceTable.getNameAsString() };
     assertNull(t2.get(new Get(ROW1)).getRow());
 
     assertTrue(runCopy(args));
@@ -324,7 +316,7 @@ public class TestCopyTable {
     PrintStream writer = new PrintStream(data);
     System.setErr(writer);
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     try {
       CopyTable.main(emptyArgs);
@@ -341,8 +333,8 @@ public class TestCopyTable {
   }
 
   private boolean runCopy(String[] args) throws Exception {
-    int status = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), new CopyTable(),
-        args);
+    int status =
+      ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), new CopyTable(), args);
     return status == 0;
   }
 
@@ -372,9 +364,9 @@ public class TestCopyTable {
   private Table createTable(TableName tableName, byte[] family, boolean isMob) throws IOException {
     if (isMob) {
       ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
-          .setMobEnabled(true).setMobThreshold(1).build();
+        .setMobEnabled(true).setMobThreshold(1).build();
       TableDescriptor desc =
-          TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfd).build();
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(cfd).build();
       return TEST_UTIL.createTable(desc, null);
     } else {
       return TEST_UTIL.createTable(tableName, family);
@@ -382,7 +374,7 @@ public class TestCopyTable {
   }
 
   private void testCopyTableBySnapshot(String tablePrefix, boolean bulkLoad, boolean isMob)
-      throws Exception {
+    throws Exception {
     TableName table1 = TableName.valueOf(tablePrefix + 1);
     TableName table2 = TableName.valueOf(tablePrefix + 2);
     Table t1 = createTable(table1, FAMILY_A, isMob);
@@ -393,7 +385,7 @@ public class TestCopyTable {
     boolean success;
     if (bulkLoad) {
       success =
-          runCopy(new String[] { "--snapshot", "--new.name=" + table2, "--bulkload", snapshot });
+        runCopy(new String[] { "--snapshot", "--new.name=" + table2, "--bulkload", snapshot });
     } else {
       success = runCopy(new String[] { "--snapshot", "--new.name=" + table2, snapshot });
     }

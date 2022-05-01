@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,26 +18,21 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Arrays;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A custom RegionSplitPolicy implementing a SplitPolicy that groups
- * rows by a prefix of the row-key
- *
- * This ensures that a region is not split "inside" a prefix of a row key.
- * I.e. rows can be co-located in a region by their prefix.
- *
+ * A custom RegionSplitPolicy implementing a SplitPolicy that groups rows by a prefix of the row-key
+ * This ensures that a region is not split "inside" a prefix of a row key. I.e. rows can be
+ * co-located in a region by their prefix.
  * @deprecated since 2.5.0 and will be removed in 4.0.0. Use {@link RegionSplitRestriction},
- *   instead.
+ *             instead.
  */
 @Deprecated
 @InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(KeyPrefixRegionSplitPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KeyPrefixRegionSplitPolicy.class);
   @Deprecated
   public static final String PREFIX_LENGTH_KEY_DEPRECATED = "prefix_split_key_policy.prefix_length";
   public static final String PREFIX_LENGTH_KEY = "KeyPrefixRegionSplitPolicy.prefix_length";
@@ -46,8 +41,8 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
 
   @Override
   public String toString() {
-    return "KeyPrefixRegionSplitPolicy{" + "prefixLength=" + prefixLength + ", " +
-      super.toString() + '}';
+    return "KeyPrefixRegionSplitPolicy{" + "prefixLength=" + prefixLength + ", " + super.toString()
+      + '}';
   }
 
   @Override
@@ -56,15 +51,13 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     prefixLength = 0;
 
     // read the prefix length from the table descriptor
-    String prefixLengthString = region.getTableDescriptor().getValue(
-        PREFIX_LENGTH_KEY);
+    String prefixLengthString = region.getTableDescriptor().getValue(PREFIX_LENGTH_KEY);
     if (prefixLengthString == null) {
-      //read the deprecated value
+      // read the deprecated value
       prefixLengthString = region.getTableDescriptor().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
       if (prefixLengthString == null) {
         LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-            + region.getTableDescriptor().getTableName()
-            + ". Using default RegionSplitPolicy");
+          + region.getTableDescriptor().getTableName() + ". Using default RegionSplitPolicy");
         return;
       }
     }
@@ -73,14 +66,13 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     } catch (NumberFormatException nfe) {
       /* Differentiate NumberFormatException from an invalid value range reported below. */
       LOG.error("Number format exception when parsing " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDescriptor().getTableName() + ":"
-          + prefixLengthString + ". " + nfe);
+        + region.getTableDescriptor().getTableName() + ":" + prefixLengthString + ". " + nfe);
       return;
     }
     if (prefixLength <= 0) {
       LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDescriptor().getTableName() + ":"
-          + prefixLengthString + ". Using default RegionSplitPolicy");
+        + region.getTableDescriptor().getTableName() + ":" + prefixLengthString
+        + ". Using default RegionSplitPolicy");
     }
   }
 
@@ -89,8 +81,7 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
     byte[] splitPoint = super.getSplitPoint();
     if (prefixLength > 0 && splitPoint != null && splitPoint.length > 0) {
       // group split keys by a prefix
-      return Arrays.copyOf(splitPoint,
-          Math.min(prefixLength, splitPoint.length));
+      return Arrays.copyOf(splitPoint, Math.min(prefixLength, splitPoint.length));
     } else {
       return splitPoint;
     }

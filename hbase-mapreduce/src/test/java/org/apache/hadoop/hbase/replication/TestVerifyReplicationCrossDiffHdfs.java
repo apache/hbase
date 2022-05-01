@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
@@ -64,10 +63,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 public class TestVerifyReplicationCrossDiffHdfs {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVerifyReplicationCrossDiffHdfs.class);
+    HBaseClassTestRule.forClass(TestVerifyReplicationCrossDiffHdfs.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestVerifyReplicationCrossDiffHdfs.class);
+    LoggerFactory.getLogger(TestVerifyReplicationCrossDiffHdfs.class);
 
   private static HBaseTestingUtility util1;
   private static HBaseTestingUtility util2;
@@ -111,16 +110,16 @@ public class TestVerifyReplicationCrossDiffHdfs {
 
   private static void createTestingTable(Admin admin) throws IOException {
     TableDescriptor table = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(100)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setMaxVersions(100)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .build();
     admin.createTable(table);
   }
 
   private static void addTestingPeer() throws IOException {
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(util2.getClusterKey()).setReplicateAllUserTables(false)
-        .setTableCFsMap(ImmutableMap.of(TABLE_NAME, ImmutableList.of())).build();
+      .setClusterKey(util2.getClusterKey()).setReplicateAllUserTables(false)
+      .setTableCFsMap(ImmutableMap.of(TABLE_NAME, ImmutableList.of())).build();
     util1.getAdmin().addReplicationPeer(PEER_ID, rpc);
   }
 
@@ -139,7 +138,7 @@ public class TestVerifyReplicationCrossDiffHdfs {
           results = rs.next(numOfRows);
           if (results == null || results.length < numOfRows) {
             LOG.info("Retrying, wait until the peer received all the rows, currentRows:"
-                + (results == null ? 0 : results.length));
+              + (results == null ? 0 : results.length));
             Thread.sleep(100);
           }
         }

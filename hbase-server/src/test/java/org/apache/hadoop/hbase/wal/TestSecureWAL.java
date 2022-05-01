@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ public class TestSecureWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureWAL.class);
+    HBaseClassTestRule.forClass(TestSecureWAL.class);
 
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -120,7 +120,7 @@ public class TestSecureWAL {
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     final WALFactory wals =
-        new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
+      new WALFactory(TEST_UTIL.getConfiguration(), tableName.getNameAsString());
 
     // Write the WAL
     final WAL wal = wals.getWAL(regionInfo);
@@ -140,7 +140,7 @@ public class TestSecureWAL {
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
     FSDataInputStream in = fs.open(walPath);
-    byte[] fileData = new byte[(int)length];
+    byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
     assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
@@ -153,7 +153,7 @@ public class TestSecureWAL {
       count++;
       List<Cell> cells = entry.getEdit().getCells();
       assertTrue("Should be one KV per WALEdit", cells.size() == 1);
-      for (Cell cell: cells) {
+      for (Cell cell : cells) {
         assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength(), row, 0, row.length));
         assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),

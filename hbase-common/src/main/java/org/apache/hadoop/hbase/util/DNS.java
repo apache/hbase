@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.lang.reflect.Method;
 import java.net.UnknownHostException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,8 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Wrapper around Hadoop's DNS class to hide reflection.
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-  justification="If exception, presume HAS_NEW_DNS_GET_DEFAULT_HOST_API false")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
+    justification = "If exception, presume HAS_NEW_DNS_GET_DEFAULT_HOST_API false")
 public final class DNS {
   // key to the config parameter of server hostname
   // the specification of server hostname is optional. The hostname should be resolvable from
@@ -43,8 +43,8 @@ public final class DNS {
   private static Method GET_DEFAULT_HOST_METHOD;
 
   /**
-   * @deprecated since 2.4.0 and will be removed in 4.0.0.
-   * Use {@link DNS#UNSAFE_RS_HOSTNAME_KEY} instead.
+   * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link DNS#UNSAFE_RS_HOSTNAME_KEY}
+   *             instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24667">HBASE-24667</a>
    */
   @Deprecated
@@ -53,8 +53,8 @@ public final class DNS {
 
   static {
     try {
-      GET_DEFAULT_HOST_METHOD = org.apache.hadoop.net.DNS.class
-          .getMethod("getDefaultHost", String.class, String.class, boolean.class);
+      GET_DEFAULT_HOST_METHOD = org.apache.hadoop.net.DNS.class.getMethod("getDefaultHost",
+        String.class, String.class, boolean.class);
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = true;
     } catch (Exception e) {
       HAS_NEW_DNS_GET_DEFAULT_HOST_API = false; // FindBugs: Causes REC_CATCH_EXCEPTION. Suppressed
@@ -66,6 +66,7 @@ public final class DNS {
     REGIONSERVER("regionserver");
 
     private String name;
+
     ServerType(String name) {
       this.name = name;
     }
@@ -75,18 +76,18 @@ public final class DNS {
     }
   }
 
-  private DNS() {}
+  private DNS() {
+  }
 
   /**
-   * Wrapper around DNS.getDefaultHost(String, String), calling
-   * DNS.getDefaultHost(String, String, boolean) when available.
-   *
+   * Wrapper around DNS.getDefaultHost(String, String), calling DNS.getDefaultHost(String, String,
+   * boolean) when available.
    * @param strInterface The network interface to query.
-   * @param nameserver The DNS host name.
+   * @param nameserver   The DNS host name.
    * @return The default host names associated with IPs bound to the network interface.
    */
   public static String getDefaultHost(String strInterface, String nameserver)
-      throws UnknownHostException {
+    throws UnknownHostException {
     if (HAS_NEW_DNS_GET_DEFAULT_HOST_API) {
       try {
         // Hadoop-2.8 includes a String, String, boolean variant of getDefaultHost
@@ -104,11 +105,11 @@ public final class DNS {
   /**
    * Get the configured hostname for a given ServerType. Gets the default hostname if not specified
    * in the configuration.
-   * @param conf Configuration to look up.
+   * @param conf       Configuration to look up.
    * @param serverType ServerType to look up in the configuration for overrides.
    */
   public static String getHostname(@NonNull Configuration conf, @NonNull ServerType serverType)
-      throws UnknownHostException {
+    throws UnknownHostException {
     String hostname;
     switch (serverType) {
       case MASTER:
@@ -121,8 +122,8 @@ public final class DNS {
         hostname = null;
     }
     if (hostname == null || hostname.isEmpty()) {
-      return Strings.domainNamePointerToHostName(getDefaultHost(
-          conf.get("hbase." + serverType.getName() + ".dns.interface", "default"),
+      return Strings.domainNamePointerToHostName(
+        getDefaultHost(conf.get("hbase." + serverType.getName() + ".dns.interface", "default"),
           conf.get("hbase." + serverType.getName() + ".dns.nameserver", "default")));
     } else {
       return hostname;

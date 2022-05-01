@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A simple example on how to use {@link org.apache.hadoop.hbase.coprocessor.Export}.
- *
  * <p>
  * For the protocol buffer definition of the ExportService, see the source file located under
  * hbase-endpoint/src/main/protobuf/Export.proto.
@@ -53,13 +52,11 @@ public final class ExportEndpointExample {
     byte[] family = Bytes.toBytes("family");
     Configuration conf = HBaseConfiguration.create();
     TableName tableName = TableName.valueOf("ExportEndpointExample");
-    try (Connection con = ConnectionFactory.createConnection(conf);
-         Admin admin = con.getAdmin()) {
+    try (Connection con = ConnectionFactory.createConnection(conf); Admin admin = con.getAdmin()) {
       TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-              // MUST mount the export endpoint
-              .setCoprocessor(Export.class.getName())
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family))
-              .build();
+        // MUST mount the export endpoint
+        .setCoprocessor(Export.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
       admin.createTable(desc);
 
       List<Put> puts = new ArrayList<>(rowCount);
@@ -85,5 +82,6 @@ public final class ExportEndpointExample {
     }
   }
 
-  private ExportEndpointExample(){}
+  private ExportEndpointExample() {
+  }
 }

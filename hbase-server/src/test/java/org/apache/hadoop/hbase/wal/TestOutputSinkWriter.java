@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,8 +34,7 @@ public class TestOutputSinkWriter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(
-          TestOutputSinkWriter.class);
+    HBaseClassTestRule.forClass(TestOutputSinkWriter.class);
 
   @Test
   public void testExeptionHandling() throws IOException, InterruptedException {
@@ -43,69 +42,72 @@ public class TestOutputSinkWriter {
     BrokenEntryBuffers entryBuffers = new BrokenEntryBuffers(controller, 2000);
     OutputSink sink = new OutputSink(controller, entryBuffers, 1) {
 
-      @Override protected int getNumOpenWriters() {
+      @Override
+      protected int getNumOpenWriters() {
         return 0;
       }
 
-      @Override protected void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
+      @Override
+      protected void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
 
       }
 
-      @Override protected List<Path> close() throws IOException {
+      @Override
+      protected List<Path> close() throws IOException {
         return null;
       }
 
-      @Override public Map<String,Long> getOutputCounts() {
+      @Override
+      public Map<String, Long> getOutputCounts() {
         return null;
       }
 
-      @Override public int getNumberOfRecoveredRegions() {
+      @Override
+      public int getNumberOfRecoveredRegions() {
         return 0;
       }
 
-      @Override public boolean keepRegionEvent(WAL.Entry entry) {
+      @Override
+      public boolean keepRegionEvent(WAL.Entry entry) {
         return false;
       }
     };
 
-    //start the Writer thread and give it time trow the exception
+    // start the Writer thread and give it time trow the exception
     sink.startWriterThreads();
     Thread.sleep(1000L);
 
-    //make sure the exception is stored
+    // make sure the exception is stored
     try {
       controller.checkForErrors();
       Assert.fail();
-    }
-    catch (RuntimeException re){
+    } catch (RuntimeException re) {
       Assert.assertTrue(true);
     }
 
     sink.restartWriterThreadsIfNeeded();
 
-    //after the check the stored exception should be gone
+    // after the check the stored exception should be gone
     try {
       controller.checkForErrors();
-    }
-    catch (RuntimeException re){
+    } catch (RuntimeException re) {
       Assert.fail();
     }
 
-    //prep another exception and wait for it to be thrown
+    // prep another exception and wait for it to be thrown
     entryBuffers.setThrowError(true);
     Thread.sleep(1000L);
 
-    //make sure the exception is stored
+    // make sure the exception is stored
     try {
       controller.checkForErrors();
       Assert.fail();
-    }
-    catch (RuntimeException re){
+    } catch (RuntimeException re) {
       Assert.assertTrue(true);
     }
   }
 
-  static class BrokenEntryBuffers extends EntryBuffers{
+  static class BrokenEntryBuffers extends EntryBuffers {
     boolean throwError = true;
 
     public BrokenEntryBuffers(WALSplitter.PipelineController controller, long maxHeapUsage) {
@@ -114,15 +116,15 @@ public class TestOutputSinkWriter {
 
     @Override
     synchronized EntryBuffers.RegionEntryBuffer getChunkToWrite() {
-      //This just emulates something going wrong with in the Writer
-      if(throwError){
+      // This just emulates something going wrong with in the Writer
+      if (throwError) {
         throwError = false;
         throw new RuntimeException("testing");
       }
       return null;
     }
 
-    public void setThrowError(boolean newValue){
+    public void setThrowError(boolean newValue) {
       throwError = newValue;
     }
   };

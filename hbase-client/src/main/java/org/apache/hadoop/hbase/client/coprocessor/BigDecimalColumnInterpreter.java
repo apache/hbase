@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,32 +20,29 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * ColumnInterpreter for doing Aggregation's with BigDecimal columns. This class
- * is required at the RegionServer also.
- *
+ * ColumnInterpreter for doing Aggregation's with BigDecimal columns. This class is required at the
+ * RegionServer also.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, BigDecimal,
-  EmptyMsg, BigDecimalMsg, BigDecimalMsg> {
+public class BigDecimalColumnInterpreter
+  extends ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> {
 
   @Override
-  public BigDecimal getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
-      throws IOException {
+  public BigDecimal getValue(byte[] colFamily, byte[] colQualifier, Cell kv) throws IOException {
     if (kv == null || CellUtil.cloneValue(kv) == null) {
       return null;
     }
@@ -87,8 +83,9 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
 
   @Override
   public BigDecimal multiply(BigDecimal bd1, BigDecimal bd2) {
-    return (bd1 == null || bd2 == null) ? null : bd1.multiply(bd2)
-        .setScale(2,RoundingMode.HALF_EVEN);
+    return (bd1 == null || bd2 == null)
+      ? null
+      : bd1.multiply(bd2).setScale(2, RoundingMode.HALF_EVEN);
   }
 
   @Override
@@ -98,8 +95,7 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
 
   @Override
   public double divideForAvg(BigDecimal bd1, Long l2) {
-    return (l2 == null || bd1 == null) ? Double.NaN : (bd1.doubleValue() / l2
-        .doubleValue());
+    return (l2 == null || bd1 == null) ? Double.NaN : (bd1.doubleValue() / l2.doubleValue());
   }
 
   @Override
@@ -119,7 +115,7 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
 
   @Override
   public void initialize(EmptyMsg msg) {
-    //nothing
+    // nothing
   }
 
   private BigDecimalMsg getProtoForType(BigDecimal t) {

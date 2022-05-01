@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -60,12 +61,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellACLWithMultipleVersions.class);
+    HBaseClassTestRule.forClass(TestCellACLWithMultipleVersions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCellACLWithMultipleVersions.class);
 
@@ -104,13 +105,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     conf.setBoolean(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, false);
 
     TEST_UTIL.startMiniCluster();
-    MasterCoprocessorHost cpHost = TEST_UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterCoprocessorHost();
+    MasterCoprocessorHost cpHost =
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
     AccessController ac = cpHost.findCoprocessor(AccessController.class);
     cpHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
-    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-        .getRegionServerCoprocessorHost();
+    RegionServerCoprocessorHost rsHost =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
     rsHost.createEnvironment(ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
@@ -161,8 +162,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(testTable.getTableName())) {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           // with ro ACL
           long now = EnvironmentEdgeManager.currentTime();
@@ -194,8 +195,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(testTable.getTableName())) {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable.getTableName())) {
           return t.get(get).listCells();
         }
       }
@@ -206,8 +207,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(testTable.getTableName())) {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable.getTableName())) {
           return t.get(get).listCells();
         }
       }
@@ -222,8 +223,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        try(Connection connection = ConnectionFactory.createConnection(conf);
-            Table t = connection.getTable(testTable.getTableName())) {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(testTable.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
@@ -274,15 +275,15 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
-            p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-                Permission.Action.WRITE));
+            p.setACL(user1.getShortName(),
+              new Permission(Permission.Action.READ, Permission.Action.WRITE));
             t.put(p);
             // with rw ACL for "user1"
             p = new Put(TEST_ROW2);
             p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
-            p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-                Permission.Action.WRITE));
+            p.setACL(user1.getShortName(),
+              new Permission(Permission.Action.READ, Permission.Action.WRITE));
             t.put(p);
           }
         }
@@ -300,8 +301,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             Map<String, Permission> perms =
-                prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
-                    AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
+              prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
+                AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
             p.setACL(perms);
             t.put(p);
             // with rw ACL for "user1", "user2" and "@group"
@@ -357,7 +358,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserDeniedForDeleteMultipleVersions(final User user, final byte[] row,
-      final byte[] q1, final byte[] q2) throws IOException, InterruptedException {
+    final byte[] q1, final byte[] q2) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -377,7 +378,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     });
   }
 
-
   @Test
   public void testDeleteWithFutureTimestamp() throws Exception {
     // Store two values, one in the future
@@ -390,7 +390,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             // Store a read write ACL without a timestamp, server will use current time
             Put p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2, ONE);
             Map<String, Permission> readAndWritePerms =
-                prepareCellPermissions(usersAndGroups, Action.READ, Action.WRITE);
+              prepareCellPermissions(usersAndGroups, Action.READ, Action.WRITE);
             p.setACL(readAndWritePerms);
             t.put(p);
             p = new Put(TEST_ROW).addColumn(TEST_FAMILY2, TEST_Q2, ONE);
@@ -399,9 +399,10 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             LOG.info("Stored at current time");
             // Store read only ACL at a future time
             p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1,
-                EnvironmentEdgeManager.currentTime() + 1000000, ZERO);
-            p.setACL(prepareCellPermissions(new String[]{ USER_OTHER.getShortName(),
-                AuthUtil.toGroupEntry(GROUP)}, Action.READ));
+              EnvironmentEdgeManager.currentTime() + 1000000, ZERO);
+            p.setACL(prepareCellPermissions(
+              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
+              Action.READ));
             t.put(p);
           }
         }
@@ -438,7 +439,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(getQ1, USER_OWNER, USER_OTHER, GROUP_USER);
     verifyAllowed(getQ2, USER_OWNER, USER_OTHER, GROUP_USER);
 
-
     // Issue a DELETE for the family, should succeed because the future ACL is
     // not considered
     AccessTestAction deleteFamily1 = getDeleteFamilyAction(TEST_FAMILY1);
@@ -449,7 +449,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
     // The future put should still exist
 
-    verifyAllowed(getQ1, USER_OWNER, USER_OTHER,GROUP_USER);
+    verifyAllowed(getQ1, USER_OWNER, USER_OTHER, GROUP_USER);
 
     // The other put should be covered by the tombstone
 
@@ -483,9 +483,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Put p = new Put(TEST_ROW);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
-            p.setACL(prepareCellPermissions(
-              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP),
-                  USER_OTHER2.getShortName() }, Permission.Action.READ, Permission.Action.WRITE));
+            p.setACL(prepareCellPermissions(new String[] { USER_OTHER.getShortName(),
+              AuthUtil.toGroupEntry(GROUP), USER_OTHER2.getShortName() }, Permission.Action.READ,
+              Permission.Action.WRITE));
             t.put(p);
 
             // This version (TS = 125) with rw ACL for USER_OTHER
@@ -493,8 +493,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             p.addColumn(TEST_FAMILY1, TEST_Q1, 125L, ONE);
             p.addColumn(TEST_FAMILY1, TEST_Q2, 125L, ONE);
             p.setACL(prepareCellPermissions(
-              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
-              Action.READ, Action.WRITE));
+              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) }, Action.READ,
+              Action.WRITE));
             t.put(p);
 
             // This version (TS = 127) with rw ACL for USER_OTHER
@@ -502,8 +502,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             p.addColumn(TEST_FAMILY1, TEST_Q1, 127L, TWO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, 127L, TWO);
             p.setACL(prepareCellPermissions(
-              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
-              Action.READ, Action.WRITE));
+              new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) }, Action.READ,
+              Action.WRITE));
             t.put(p);
 
             return null;
@@ -558,14 +558,14 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(testTable.getTableName())) {
-            Map<String, Permission> permsU1andOwner =
-                prepareCellPermissions(
-                  new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
-                  Action.WRITE);
-            Map<String, Permission> permsU2andGUandOwner =
-                prepareCellPermissions(
-                  new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
-                      USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
+            Map<String,
+              Permission> permsU1andOwner = prepareCellPermissions(
+                new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
+                Action.WRITE);
+            Map<String,
+              Permission> permsU2andGUandOwner = prepareCellPermissions(new String[] {
+                user2.getShortName(), AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() },
+                Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
@@ -628,7 +628,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserDeniedForDeleteExactVersion(final User user, final byte[] row,
-      final byte[] q1, final byte[] q2) throws IOException, InterruptedException {
+    final byte[] q1, final byte[] q2) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -664,14 +664,14 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(testTable.getTableName())) {
-            Map<String, Permission> permsU1andOwner =
-                prepareCellPermissions(
-                  new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
-                  Action.WRITE);
-            Map<String, Permission> permsU2andGUandOwner =
-                prepareCellPermissions(
-                  new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
-                      USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
+            Map<String,
+              Permission> permsU1andOwner = prepareCellPermissions(
+                new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
+                Action.WRITE);
+            Map<String,
+              Permission> permsU2andGUandOwner = prepareCellPermissions(new String[] {
+                user2.getShortName(), AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() },
+                Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
@@ -717,7 +717,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserDeniedForIncrementMultipleVersions(final User user, final byte[] row,
-      final byte[] q1) throws IOException, InterruptedException {
+    final byte[] q1) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -752,18 +752,18 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(testTable.getTableName())) {
-            Map<String, Permission> permsU1andOwner =
-                prepareCellPermissions(
-                  new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
-                  Action.WRITE);
-            Map<String, Permission> permsU2andGUandOwner =
-                prepareCellPermissions(
-                  new String[] { user1.getShortName(), AuthUtil.toGroupEntry(GROUP),
-                      USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
-            permsU2andGUandOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
-                Permission.Action.WRITE));
-            permsU2andGUandOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-                Permission.Action.WRITE));
+            Map<String,
+              Permission> permsU1andOwner = prepareCellPermissions(
+                new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
+                Action.WRITE);
+            Map<String,
+              Permission> permsU2andGUandOwner = prepareCellPermissions(new String[] {
+                user1.getShortName(), AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() },
+                Action.READ, Action.WRITE);
+            permsU2andGUandOwner.put(user2.getShortName(),
+              new Permission(Permission.Action.READ, Permission.Action.WRITE));
+            permsU2andGUandOwner.put(USER_OWNER.getShortName(),
+              new Permission(Permission.Action.READ, Permission.Action.WRITE));
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 123, ZERO);
             p.setACL(permsU1andOwner);
@@ -798,8 +798,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 125, ZERO);
             p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
-            p.setACL(user2.getShortName(), new Permission(Permission.Action.READ,
-                Permission.Action.WRITE));
+            p.setACL(user2.getShortName(),
+              new Permission(Permission.Action.READ, Permission.Action.WRITE));
             t.put(p);
           }
         }
@@ -812,8 +812,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserDeniedForPutMultipleVersions(final User user, final byte[] row,
-      final byte[] q1, final byte[] q2, final byte[] value) throws IOException,
-      InterruptedException {
+    final byte[] q1, final byte[] q2, final byte[] value) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -848,17 +847,18 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(testTable.getTableName())) {
-            Map<String, Permission> permsU1andOwner =
-                prepareCellPermissions(
-                  new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
-                  Action.WRITE);
-            Map<String, Permission> permsU1andU2andGUandOwner =
-                prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
-                    AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() }, Action.READ,
-                  Action.WRITE);
+            Map<String,
+              Permission> permsU1andOwner = prepareCellPermissions(
+                new String[] { user1.getShortName(), USER_OWNER.getShortName() }, Action.READ,
+                Action.WRITE);
+            Map<String,
+              Permission> permsU1andU2andGUandOwner = prepareCellPermissions(
+                new String[] { user1.getShortName(), user2.getShortName(),
+                  AuthUtil.toGroupEntry(GROUP), USER_OWNER.getShortName() },
+                Action.READ, Action.WRITE);
             Map<String, Permission> permsU1_U2andGU =
-                prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
-                    AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
+              prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
+                AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
 
             Put p = new Put(TEST_ROW1);
             p.addColumn(TEST_FAMILY1, TEST_Q1, 120, ZERO);
@@ -903,8 +903,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(testTable.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
             d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
-            t.checkAndMutate(TEST_ROW1, TEST_FAMILY1).qualifier(TEST_Q1)
-                .ifEquals(ZERO).thenDelete(d);
+            t.checkAndMutate(TEST_ROW1, TEST_FAMILY1).qualifier(TEST_Q1).ifEquals(ZERO)
+              .thenDelete(d);
           }
         }
         return null;
@@ -932,7 +932,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserAllowedforCheckAndDelete(final User user, final byte[] row,
-      final byte[] q1, final byte[] value) throws IOException, InterruptedException {
+    final byte[] q1, final byte[] value) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -949,7 +949,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   }
 
   private void verifyUserDeniedForCheckAndDelete(final User user, final byte[] row,
-      final byte[] value) throws IOException, InterruptedException {
+    final byte[] value) throws IOException, InterruptedException {
     user.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {

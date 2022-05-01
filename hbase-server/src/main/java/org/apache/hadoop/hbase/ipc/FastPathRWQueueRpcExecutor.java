@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceStability;
  * RPC Executor that extends {@link RWQueueRpcExecutor} with fast-path feature, used in
  * {@link FastPathBalancedQueueRpcExecutor}.
  */
-@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
 
@@ -49,8 +49,9 @@ public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
     final int handlerCount, final BlockingQueue<CallRunner> q,
     final AtomicInteger activeHandlerCount, final AtomicInteger failedHandlerCount,
     final Abortable abortable) {
-    Deque<FastPathRpcHandler> handlerStack = name.contains("read") ? readHandlerStack :
-      name.contains("write") ? writeHandlerStack : scanHandlerStack;
+    Deque<FastPathRpcHandler> handlerStack = name.contains("read") ? readHandlerStack
+      : name.contains("write") ? writeHandlerStack
+      : scanHandlerStack;
     return new FastPathRpcHandler(name, handlerFailureThreshhold, handlerCount, q,
       activeHandlerCount, failedHandlerCount, abortable, handlerStack);
   }
@@ -60,9 +61,11 @@ public class FastPathRWQueueRpcExecutor extends RWQueueRpcExecutor {
     RpcCall call = callTask.getRpcCall();
     boolean shouldDispatchToWriteQueue = isWriteRequest(call.getHeader(), call.getParam());
     boolean shouldDispatchToScanQueue = shouldDispatchToScanQueue(callTask);
-    FastPathRpcHandler handler = shouldDispatchToWriteQueue ? writeHandlerStack.poll() :
-      shouldDispatchToScanQueue ? scanHandlerStack.poll() : readHandlerStack.poll();
-    return handler != null ? handler.loadCallRunner(callTask) :
-      dispatchTo(shouldDispatchToWriteQueue, shouldDispatchToScanQueue, callTask);
+    FastPathRpcHandler handler = shouldDispatchToWriteQueue ? writeHandlerStack.poll()
+      : shouldDispatchToScanQueue ? scanHandlerStack.poll()
+      : readHandlerStack.poll();
+    return handler != null
+      ? handler.loadCallRunner(callTask)
+      : dispatchTo(shouldDispatchToWriteQueue, shouldDispatchToScanQueue, callTask);
   }
 }

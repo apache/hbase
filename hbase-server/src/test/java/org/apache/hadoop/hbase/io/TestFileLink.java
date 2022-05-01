@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,15 +45,15 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test that FileLink switches between alternate locations
- * when the current location moves or gets deleted.
+ * Test that FileLink switches between alternate locations when the current location moves or gets
+ * deleted.
  */
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestFileLink {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFileLink.class);
+    HBaseClassTestRule.forClass(TestFileLink.class);
 
   @Test
   public void testEquals() {
@@ -90,8 +90,8 @@ public class TestFileLink {
   }
 
   /**
-   * Test that the returned link from {@link FileLink#open(FileSystem)} can be unwrapped
-   * to a {@link HdfsDataInputStream} by
+   * Test that the returned link from {@link FileLink#open(FileSystem)} can be unwrapped to a
+   * {@link HdfsDataInputStream} by
    * {@link FileLink#getUnderlyingFileLinkInputStream(FSDataInputStream)}
    */
   @Test
@@ -124,8 +124,7 @@ public class TestFileLink {
   }
 
   /**
-   * Test, on HDFS, that the FileLink is still readable
-   * even when the current file gets renamed.
+   * Test, on HDFS, that the FileLink is still readable even when the current file gets renamed.
    */
   @Test
   public void testHDFSLinkReadDuringRename() throws Exception {
@@ -149,16 +148,18 @@ public class TestFileLink {
   private static class MyDistributedFileSystem extends DistributedFileSystem {
     MyDistributedFileSystem() {
     }
+
     @Override
-    public FSDataInputStream open(Path f, final int bufferSize)
-        throws IOException {
+    public FSDataInputStream open(Path f, final int bufferSize) throws IOException {
       throw new RemoteException(FileNotFoundException.class.getName(), "");
     }
+
     @Override
     public Configuration getConf() {
       return new Configuration();
     }
   }
+
   @Test(expected = FileNotFoundException.class)
   public void testLinkReadWithMissingFile() throws Exception {
     HBaseTestingUtility testUtil = new HBaseTestingUtility();
@@ -176,8 +177,8 @@ public class TestFileLink {
   }
 
   /**
-   * Test, on a local filesystem, that the FileLink is still readable
-   * even when the current file gets renamed.
+   * Test, on a local filesystem, that the FileLink is still readable even when the current file
+   * gets renamed.
    */
   @Test
   public void testLocalLinkReadDuringRename() throws IOException {
@@ -194,7 +195,7 @@ public class TestFileLink {
     Path originalPath = new Path(rootDir, "test.file");
     Path archivedPath = new Path(rootDir, "archived.file");
 
-    writeSomeData(fs, originalPath, 256 << 20, (byte)2);
+    writeSomeData(fs, originalPath, 256 << 20, (byte) 2);
 
     List<Path> files = new ArrayList<>();
     files.add(originalPath);
@@ -208,7 +209,7 @@ public class TestFileLink {
 
       // Read from origin
       int n = in.read(data);
-      dataVerify(data, n, (byte)2);
+      dataVerify(data, n, (byte) 2);
       size += n;
 
       if (FSUtils.WINDOWS) {
@@ -228,7 +229,7 @@ public class TestFileLink {
 
       // Try to read to the end
       while ((n = in.read(data)) > 0) {
-        dataVerify(data, n, (byte)2);
+        dataVerify(data, n, (byte) 2);
         size += n;
       }
 
@@ -241,15 +242,12 @@ public class TestFileLink {
   }
 
   /**
-   * Test that link is still readable even when the current file gets deleted.
-   *
-   * NOTE: This test is valid only on HDFS.
-   * When a file is deleted from a local file-system, it is simply 'unlinked'.
-   * The inode, which contains the file's data, is not deleted until all
-   * processes have finished with it.
-   * In HDFS when the request exceed the cached block locations,
-   * a query to the namenode is performed, using the filename,
-   * and the deleted file doesn't exists anymore (FileNotFoundException).
+   * Test that link is still readable even when the current file gets deleted. NOTE: This test is
+   * valid only on HDFS. When a file is deleted from a local file-system, it is simply 'unlinked'.
+   * The inode, which contains the file's data, is not deleted until all processes have finished
+   * with it. In HDFS when the request exceed the cached block locations, a query to the namenode is
+   * performed, using the filename, and the deleted file doesn't exists anymore
+   * (FileNotFoundException).
    */
   @Test
   public void testHDFSLinkReadDuringDelete() throws Exception {
@@ -267,7 +265,7 @@ public class TestFileLink {
       List<Path> files = new ArrayList<>();
       for (int i = 0; i < 3; i++) {
         Path path = new Path(String.format("test-data-%d", i));
-        writeSomeData(fs, path, 1 << 20, (byte)i);
+        writeSomeData(fs, path, 1 << 20, (byte) i);
         files.add(path);
       }
 
@@ -279,26 +277,26 @@ public class TestFileLink {
 
         // Switch to file 1
         n = in.read(data);
-        dataVerify(data, n, (byte)0);
+        dataVerify(data, n, (byte) 0);
         fs.delete(files.get(0), true);
-        skipBuffer(in, (byte)0);
+        skipBuffer(in, (byte) 0);
 
         // Switch to file 2
         n = in.read(data);
-        dataVerify(data, n, (byte)1);
+        dataVerify(data, n, (byte) 1);
         fs.delete(files.get(1), true);
-        skipBuffer(in, (byte)1);
+        skipBuffer(in, (byte) 1);
 
         // Switch to file 3
         n = in.read(data);
-        dataVerify(data, n, (byte)2);
+        dataVerify(data, n, (byte) 2);
         fs.delete(files.get(2), true);
-        skipBuffer(in, (byte)2);
+        skipBuffer(in, (byte) 2);
 
         // No more files available
         try {
           n = in.read(data);
-          assert(n <= 0);
+          assert (n <= 0);
         } catch (FileNotFoundException e) {
           assertTrue(true);
         }
@@ -313,7 +311,7 @@ public class TestFileLink {
   /**
    * Write up to 'size' bytes with value 'v' into a new file called 'path'.
    */
-  private void writeSomeData (FileSystem fs, Path path, long size, byte v) throws IOException {
+  private void writeSomeData(FileSystem fs, Path path, long size, byte v) throws IOException {
     byte[] data = new byte[4096];
     for (int i = 0; i < data.length; i++) {
       data[i] = v;
@@ -346,8 +344,7 @@ public class TestFileLink {
       int n;
       while ((n = in.read(data)) == data.length) {
         for (int i = 0; i < data.length; ++i) {
-          if (data[i] != v)
-            throw new Exception("File changed");
+          if (data[i] != v) throw new Exception("File changed");
         }
       }
     } catch (Exception e) {

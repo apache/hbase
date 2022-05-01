@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,7 @@ import org.apache.hbase.thirdparty.com.google.common.math.LongMath;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ExponentialCompactionWindowFactory extends CompactionWindowFactory {
   private static final Logger LOG =
-      LoggerFactory.getLogger(ExponentialCompactionWindowFactory.class);
+    LoggerFactory.getLogger(ExponentialCompactionWindowFactory.class);
 
   public static final String BASE_WINDOW_MILLIS_KEY =
     "hbase.hstore.compaction.date.tiered.base.window.millis";
@@ -80,12 +80,14 @@ public class ExponentialCompactionWindowFactory extends CompactionWindowFactory 
     public Window nextEarlierWindow() {
       // Don't promote to the next tier if there is not even 1 window at current tier
       // or if the next window crosses the max age.
-      if (divPosition % windowsPerTier > 0
-          || startMillis() - windowMillis * windowsPerTier < maxTierAgeCutoff) {
+      if (
+        divPosition % windowsPerTier > 0
+          || startMillis() - windowMillis * windowsPerTier < maxTierAgeCutoff
+      ) {
         return new Window(windowMillis, divPosition - 1, maxTierAgeCutoff);
       } else {
         return new Window(windowMillis * windowsPerTier, divPosition / windowsPerTier - 1,
-            maxTierAgeCutoff);
+          maxTierAgeCutoff);
       }
     }
 
@@ -126,8 +128,8 @@ public class ExponentialCompactionWindowFactory extends CompactionWindowFactory 
     Configuration conf = comConf.conf;
     baseWindowMillis = conf.getLong(BASE_WINDOW_MILLIS_KEY, 3600000 * 6);
     windowsPerTier = conf.getInt(WINDOWS_PER_TIER_KEY, 4);
-    maxTierAgeMillis = conf.getLong(MAX_TIER_AGE_MILLIS_KEY,
-      comConf.getDateTieredMaxStoreFileAgeMillis());
+    maxTierAgeMillis =
+      conf.getLong(MAX_TIER_AGE_MILLIS_KEY, comConf.getDateTieredMaxStoreFileAgeMillis());
     LOG.info(toString());
   }
 

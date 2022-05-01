@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,34 +18,30 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Adaptive is a heuristic that chooses whether to apply data compaction or not based on the
- * level of redundancy in the data. Adaptive triggers redundancy elimination only for those
- * stores where positive impact is expected.
- *
- * Adaptive uses two parameters to determine whether to perform redundancy elimination.
- * The first parameter, u, estimates the ratio of unique keys in the memory store based on the
- * fraction of unique keys encountered during the previous merge of segment indices.
- * The second is the perceived probability (compactionProbability) that the store can benefit from
- * redundancy elimination. Initially, compactionProbability=0.5; it then grows exponentially by
- * 2% whenever a compaction is successful and decreased by 2% whenever a compaction did not meet
- * the expectation. It is reset back to the default value (namely 0.5) upon disk flush.
- *
- * Adaptive triggers redundancy elimination with probability compactionProbability if the
- * fraction of redundant keys 1-u exceeds a parameter threshold compactionThreshold.
+ * Adaptive is a heuristic that chooses whether to apply data compaction or not based on the level
+ * of redundancy in the data. Adaptive triggers redundancy elimination only for those stores where
+ * positive impact is expected. Adaptive uses two parameters to determine whether to perform
+ * redundancy elimination. The first parameter, u, estimates the ratio of unique keys in the memory
+ * store based on the fraction of unique keys encountered during the previous merge of segment
+ * indices. The second is the perceived probability (compactionProbability) that the store can
+ * benefit from redundancy elimination. Initially, compactionProbability=0.5; it then grows
+ * exponentially by 2% whenever a compaction is successful and decreased by 2% whenever a compaction
+ * did not meet the expectation. It is reset back to the default value (namely 0.5) upon disk flush.
+ * Adaptive triggers redundancy elimination with probability compactionProbability if the fraction
+ * of redundant keys 1-u exceeds a parameter threshold compactionThreshold.
  */
 @InterfaceAudience.Private
-public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrategy{
+public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrategy {
   private static final String NAME = "ADAPTIVE";
   public static final String ADAPTIVE_COMPACTION_THRESHOLD_KEY =
-      "hbase.hregion.compacting.memstore.adaptive.compaction.threshold";
+    "hbase.hregion.compacting.memstore.adaptive.compaction.threshold";
   private static final double ADAPTIVE_COMPACTION_THRESHOLD_DEFAULT = 0.5;
   public static final String ADAPTIVE_INITIAL_COMPACTION_PROBABILITY_KEY =
-      "hbase.hregion.compacting.memstore.adaptive.compaction.probability";
+    "hbase.hregion.compacting.memstore.adaptive.compaction.probability";
   private static final double ADAPTIVE_INITIAL_COMPACTION_PROBABILITY_DEFAULT = 0.5;
   private static final double ADAPTIVE_PROBABILITY_FACTOR = 1.02;
 
@@ -58,10 +53,10 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
 
   public AdaptiveMemStoreCompactionStrategy(Configuration conf, String cfName) {
     super(conf, cfName);
-    compactionThreshold = conf.getDouble(ADAPTIVE_COMPACTION_THRESHOLD_KEY,
-        ADAPTIVE_COMPACTION_THRESHOLD_DEFAULT);
+    compactionThreshold =
+      conf.getDouble(ADAPTIVE_COMPACTION_THRESHOLD_KEY, ADAPTIVE_COMPACTION_THRESHOLD_DEFAULT);
     initialCompactionProbability = conf.getDouble(ADAPTIVE_INITIAL_COMPACTION_PROBABILITY_KEY,
-        ADAPTIVE_INITIAL_COMPACTION_PROBABILITY_DEFAULT);
+      ADAPTIVE_INITIAL_COMPACTION_PROBABILITY_DEFAULT);
     resetStats();
   }
 
@@ -69,25 +64,25 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
   public Action getAction(VersionedSegmentsList versionedList) {
     if (versionedList.getEstimatedUniquesFrac() < 1.0 - compactionThreshold) {
       double r = ThreadLocalRandom.current().nextDouble();
-      if(r < compactionProbability) {
+      if (r < compactionProbability) {
         numCellsInVersionedList = versionedList.getNumOfCells();
         compacted = true;
         return compact(versionedList,
-            getName() + " (compaction probability=" + compactionProbability + ")");
+          getName() + " (compaction probability=" + compactionProbability + ")");
       }
     }
     compacted = false;
     return simpleMergeOrFlatten(versionedList,
-        getName() + " (compaction probability=" + compactionProbability + ")");
+      getName() + " (compaction probability=" + compactionProbability + ")");
   }
 
   @Override
   public void updateStats(Segment replacement) {
-    if(compacted) {
+    if (compacted) {
       if (replacement.getCellsCount() / numCellsInVersionedList < 1.0 - compactionThreshold) {
         // compaction was a good decision - increase probability
         compactionProbability *= ADAPTIVE_PROBABILITY_FACTOR;
-        if(compactionProbability > 1.0) {
+        if (compactionProbability > 1.0) {
           compactionProbability = 1.0;
         }
       } else {
@@ -113,7 +108,7 @@ public class AdaptiveMemStoreCompactionStrategy extends MemStoreCompactionStrate
   }
 
   @Override
-  protected  String getName() {
+  protected String getName() {
     return NAME;
   }
 }

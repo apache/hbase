@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-
-import org.apache.hadoop.hbase.rest.MetricsRESTSource;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsREST {
@@ -34,23 +30,23 @@ public class MetricsREST {
   private MetricsRESTSource source;
 
   public MetricsREST() {
-     source = CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class);
+    source = CompatibilitySingletonFactory.getInstance(MetricsRESTSource.class);
   }
-  
+
   /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {
     source.incrementRequests(inc);
   }
-  
+
   /**
    * @param inc How much to add to sucessfulGetCount.
    */
   public void incrementSucessfulGetRequests(final int inc) {
     source.incrementSucessfulGetRequests(inc);
   }
-  
+
   /**
    * @param inc How much to add to sucessfulPutCount.
    */
@@ -64,7 +60,7 @@ public class MetricsREST {
   public void incrementFailedPutRequests(final int inc) {
     source.incrementFailedPutRequests(inc);
   }
-  
+
   /**
    * @param inc How much to add to failedGetCount.
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,8 +46,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test failure in ScanDeleteTracker.isDeleted when ROWCOL bloom filter
- * is used during a scan with a filter.
+ * Test failure in ScanDeleteTracker.isDeleted when ROWCOL bloom filter is used during a scan with a
+ * filter.
  */
 @Category({ RegionServerTests.class, FilterTests.class, MediumTests.class })
 public class TestIsDeleteFailure {
@@ -53,9 +55,10 @@ public class TestIsDeleteFailure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIsDeleteFailure.class);
+    HBaseClassTestRule.forClass(TestIsDeleteFailure.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -94,9 +97,8 @@ public class TestIsDeleteFailure {
     final byte[] val = Bytes.toBytes("foo");
     List<byte[]> fams = new ArrayList<>(1);
     fams.add(family);
-    Table ht = TEST_UTIL
-        .createTable(table, fams.toArray(new byte[0][]), null, BloomType.ROWCOL, 10000,
-            new Configuration(TEST_UTIL.getConfiguration()));
+    Table ht = TEST_UTIL.createTable(table, fams.toArray(new byte[0][]), null, BloomType.ROWCOL,
+      10000, new Configuration(TEST_UTIL.getConfiguration()));
     List<Mutation> pending = new ArrayList<Mutation>();
     for (int i = 0; i < 1000; i++) {
       byte[] row = Bytes.toBytes("key" + Integer.toString(i));
@@ -147,11 +149,10 @@ public class TestIsDeleteFailure {
     Scan scan = new Scan();
     scan.addColumn(family, c9);
     scan.addColumn(family, c15);
-    SingleColumnValueFilter filter =
-        new SingleColumnValueFilter(family, c15, CompareFilter.CompareOp.EQUAL,
-            new BinaryComparator(c15));
+    SingleColumnValueFilter filter = new SingleColumnValueFilter(family, c15,
+      CompareFilter.CompareOp.EQUAL, new BinaryComparator(c15));
     scan.setFilter(filter);
-    //Trigger the scan for not existing row, so it will scan over all rows
+    // Trigger the scan for not existing row, so it will scan over all rows
     for (Result result : ht.getScanner(scan)) {
       result.advance();
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestSplitOrMergeAtTableLevel {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitOrMergeAtTableLevel.class);
+    HBaseClassTestRule.forClass(TestSplitOrMergeAtTableLevel.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -70,8 +70,7 @@ public class TestSplitOrMergeAtTableLevel {
   public void testTableSplitSwitch() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setSplitEnabled(false).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setSplitEnabled(false).build();
 
     // create a table with split disabled
     Table t = TEST_UTIL.createTable(tableDesc, null);
@@ -95,9 +94,7 @@ public class TestSplitOrMergeAtTableLevel {
 
     // create a table with split disabled
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setSplitEnabled(false)
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setSplitEnabled(false).build();
     Table t = TEST_UTIL.createTable(tableDesc, new byte[][] { Bytes.toBytes(10) });
     TEST_UTIL.waitTableAvailable(tableName);
 
@@ -118,9 +115,7 @@ public class TestSplitOrMergeAtTableLevel {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setMergeEnabled(false)
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setMergeEnabled(false).build();
 
     Table t = TEST_UTIL.createTable(tableDesc, null);
     TEST_UTIL.waitTableAvailable(tableName);
@@ -143,9 +138,7 @@ public class TestSplitOrMergeAtTableLevel {
     final TableName tableName = TableName.valueOf(name.getMethodName());
 
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .setMergeEnabled(false)
-        .build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setMergeEnabled(false).build();
 
     Table t = TEST_UTIL.createTable(tableDesc, new byte[][] { Bytes.toBytes(10) });
     TEST_UTIL.waitTableAvailable(tableName);
@@ -183,9 +176,8 @@ public class TestSplitOrMergeAtTableLevel {
   private void enableTableSplit(final TableName tableName) throws Exception {
     // Get the original table descriptor
     TableDescriptor originalTableDesc = admin.getDescriptor(tableName);
-    TableDescriptor modifiedTableDesc = TableDescriptorBuilder.newBuilder(originalTableDesc)
-        .setSplitEnabled(true)
-        .build();
+    TableDescriptor modifiedTableDesc =
+      TableDescriptorBuilder.newBuilder(originalTableDesc).setSplitEnabled(true).build();
 
     // Now modify the table descriptor and enable split for it
     admin.modifyTable(modifiedTableDesc);
@@ -194,8 +186,7 @@ public class TestSplitOrMergeAtTableLevel {
     assertTrue(admin.getDescriptor(tableName).isSplitEnabled());
   }
 
-  private void trySplitAndEnsureItIsSuccess(final TableName tableName)
-      throws Exception {
+  private void trySplitAndEnsureItIsSuccess(final TableName tableName) throws Exception {
     // get the original table region count
     List<RegionInfo> regions = admin.getRegions(tableName);
     int originalCount = regions.size();
@@ -237,7 +228,6 @@ public class TestSplitOrMergeAtTableLevel {
     }
   }
 
-
   /**
    * Method to enable merge for the passed table and validate this modification.
    * @param tableName name of the table
@@ -245,9 +235,8 @@ public class TestSplitOrMergeAtTableLevel {
   private void enableTableMerge(final TableName tableName) throws Exception {
     // Get the original table descriptor
     TableDescriptor originalTableDesc = admin.getDescriptor(tableName);
-    TableDescriptor modifiedTableDesc = TableDescriptorBuilder.newBuilder(originalTableDesc)
-        .setMergeEnabled(true)
-        .build();
+    TableDescriptor modifiedTableDesc =
+      TableDescriptorBuilder.newBuilder(originalTableDesc).setMergeEnabled(true).build();
 
     // Now modify the table descriptor and enable merge for it
     admin.modifyTable(modifiedTableDesc);

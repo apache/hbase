@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,8 +22,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * @deprecated Since 2.0.0. Will be removed in 3.0.0. We've deprecated this tool in hbase-2+
- *             because it destroyed the hbase2 meta table.
+ * @deprecated Since 2.0.0. Will be removed in 3.0.0. We've deprecated this tool in hbase-2+ because
+ *             it destroyed the hbase2 meta table.
  */
 @Deprecated
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
@@ -31,7 +31,8 @@ import org.apache.yetus.audience.InterfaceStability;
 public final class OfflineMetaRepair {
 
   // Private constructor included here to avoid checkstyle warnings
-  private OfflineMetaRepair() {}
+  private OfflineMetaRepair() {
+  }
 
   public static void main(String[] args) throws Exception {
     System.err.println("This tool is no longer supported in HBase-2+."

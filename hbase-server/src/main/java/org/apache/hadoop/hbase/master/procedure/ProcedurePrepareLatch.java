@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Latch used by the Master to have the prepare() sync behaviour for old
- * clients, that can only get exceptions in a synchronous way.
+ * Latch used by the Master to have the prepare() sync behaviour for old clients, that can only get
+ * exceptions in a synchronous way.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -37,8 +35,8 @@ public abstract class ProcedurePrepareLatch {
   private static final NoopLatch noopLatch = new NoopLatch();
 
   /**
-   * Create a latch if the client does not have async proc support.
-   * This uses the default 1.1 version.
+   * Create a latch if the client does not have async proc support. This uses the default 1.1
+   * version.
    * @return a CompatibilityLatch or a NoopLatch if the client has async proc support
    */
   public static ProcedurePrepareLatch createLatch() {
@@ -76,6 +74,7 @@ public abstract class ProcedurePrepareLatch {
   }
 
   protected abstract void countDown(final Procedure proc);
+
   public abstract void await() throws IOException;
 
   public static void releaseLatch(final ProcedurePrepareLatch latch, final Procedure proc) {
@@ -86,9 +85,12 @@ public abstract class ProcedurePrepareLatch {
 
   private static class NoopLatch extends ProcedurePrepareLatch {
     @Override
-    protected void countDown(final Procedure proc) {}
+    protected void countDown(final Procedure proc) {
+    }
+
     @Override
-    public void await() throws IOException {}
+    public void await() throws IOException {
+    }
   }
 
   protected static class CompatibilityLatch extends ProcedurePrepareLatch {
@@ -109,7 +111,7 @@ public abstract class ProcedurePrepareLatch {
       try {
         latch.await();
       } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+        throw (InterruptedIOException) new InterruptedIOException().initCause(e);
       }
 
       if (exception != null) {

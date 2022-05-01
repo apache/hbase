@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
@@ -23,11 +22,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,8 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@link BaseReplicationEndpoint} for replication endpoints whose
- * target cluster is an HBase cluster.
+ * A {@link BaseReplicationEndpoint} for replication endpoints whose target cluster is an HBase
+ * cluster.
  */
 @InterfaceAudience.Private
 public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
@@ -60,12 +59,13 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * A private method used to re-establish a zookeeper session with a peer cluster.
-   * @param ke
+   * A private method used to re-establish a zookeeper session with a peer cluster. n
    */
   protected void reconnect(KeeperException ke) {
-    if (ke instanceof ConnectionLossException || ke instanceof SessionExpiredException
-        || ke instanceof AuthFailedException) {
+    if (
+      ke instanceof ConnectionLossException || ke instanceof SessionExpiredException
+        || ke instanceof AuthFailedException
+    ) {
       String clusterKey = ctx.getPeerConfig().getClusterKey();
       LOG.warn("Lost the ZooKeeper connection for peer " + clusterKey, ke);
       try {
@@ -131,15 +131,14 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    */
   synchronized void reloadZkWatcher() throws IOException {
     if (zkw != null) zkw.close();
-    zkw = new ZKWatcher(ctx.getConfiguration(),
-        "connection to cluster: " + ctx.getPeerId(), this);
+    zkw = new ZKWatcher(ctx.getConfiguration(), "connection to cluster: " + ctx.getPeerId(), this);
     getZkw().registerListener(new PeerRegionServerListener(this));
   }
 
   @Override
   public void abort(String why, Throwable e) {
     LOG.error("The HBaseReplicationEndpoint corresponding to peer " + ctx.getPeerId()
-        + " was aborted for the following reason(s):" + why, e);
+      + " was aborted for the following reason(s):" + why, e);
   }
 
   @Override
@@ -153,10 +152,9 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * @param zkw zk connection to use
    * @return list of region server addresses or an empty list if the slave is unavailable
    */
-  protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw)
-      throws KeeperException {
-    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
-            zkw.getZNodePaths().rsZNode);
+  protected static List<ServerName> fetchSlavesAddresses(ZKWatcher zkw) throws KeeperException {
+    List<String> children =
+      ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.getZNodePaths().rsZNode);
     if (children == null) {
       return Collections.emptyList();
     }
@@ -168,8 +166,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * Get a list of all the addresses of all the available region servers
-   * for this peer cluster, or an empty list if no region servers available at peer cluster.
+   * Get a list of all the addresses of all the available region servers for this peer cluster, or
+   * an empty list if no region servers available at peer cluster.
    * @return list of addresses
    */
   // Synchronize peer cluster connection attempts to avoid races and rate

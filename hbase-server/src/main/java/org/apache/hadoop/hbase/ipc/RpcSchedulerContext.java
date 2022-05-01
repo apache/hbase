@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -26,7 +25,7 @@ class RpcSchedulerContext extends RpcScheduler.Context {
   private final RpcServer rpcServer;
 
   /**
-   * @param rpcServer
+   * n
    */
   RpcSchedulerContext(final RpcServer rpcServer) {
     this.rpcServer = rpcServer;

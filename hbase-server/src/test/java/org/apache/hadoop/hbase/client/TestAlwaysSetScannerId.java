@@ -48,7 +48,7 @@ public class TestAlwaysSetScannerId {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAlwaysSetScannerId.class);
+    HBaseClassTestRule.forClass(TestAlwaysSetScannerId.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -74,7 +74,7 @@ public class TestAlwaysSetScannerId {
       HRI = table.getRegionLocator().getAllRegionLocations().get(0).getRegion();
     }
     STUB = ((ConnectionImplementation) UTIL.getConnection())
-        .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
+      .getClient(UTIL.getHBaseCluster().getRegionServer(0).getServerName());
   }
 
   @AfterClass

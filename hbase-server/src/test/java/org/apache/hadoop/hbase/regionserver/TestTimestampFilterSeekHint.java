@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestTimestampFilterSeekHint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
+    HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
 
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private final static String RK = "myRK";
@@ -71,10 +71,9 @@ public class TestTimestampFilterSeekHint {
     final long finalSeekCount = StoreFileScanner.getSeekCount();
 
     /*
-      Make sure there's more than one.
-      Aka one seek to get to the row, and one to get to the time.
-    */
-    assertTrue(finalSeekCount >= initialSeekCount + 3 );
+     * Make sure there's more than one. Aka one seek to get to the row, and one to get to the time.
+     */
+    assertTrue(finalSeekCount >= initialSeekCount + 3);
   }
 
   @Test
@@ -88,20 +87,16 @@ public class TestTimestampFilterSeekHint {
     region.get(g);
     final long finalSeekCount = StoreFileScanner.getSeekCount();
 
-    assertTrue(finalSeekCount >= initialSeekCount );
+    assertTrue(finalSeekCount >= initialSeekCount);
     assertTrue(finalSeekCount < initialSeekCount + 3);
   }
 
   @Before
   public void prepareRegion() throws IOException {
-    region =
-        TEST_UTIL.createTestRegion("TestTimestampFilterSeekHint" + regionCount++,
-            new HColumnDescriptor(FAMILY)
-                .setBlocksize(1024)
-                .setMaxVersions(MAX_VERSIONS)
-        );
+    region = TEST_UTIL.createTestRegion("TestTimestampFilterSeekHint" + regionCount++,
+      new HColumnDescriptor(FAMILY).setBlocksize(1024).setMaxVersions(MAX_VERSIONS));
 
-    for (long i = 0; i <MAX_VERSIONS - 2; i++) {
+    for (long i = 0; i < MAX_VERSIONS - 2; i++) {
       Put p = new Put(RK_BYTES, i);
       p.addColumn(FAMILY_BYTES, QUAL_BYTES, Bytes.toBytes(RandomStringUtils.randomAlphabetic(255)));
       region.put(p);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestWALRootDir {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALRootDir.class);
+    HBaseClassTestRule.forClass(TestWALRootDir.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALRootDir.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -61,8 +61,8 @@ public class TestWALRootDir {
   private static FileSystem fs;
   private static FileSystem walFs;
   private static final TableName tableName = TableName.valueOf("TestWALWALDir");
-  private static final byte [] rowName = Bytes.toBytes("row");
-  private static final byte [] family = Bytes.toBytes("column");
+  private static final byte[] rowName = Bytes.toBytes("row");
+  private static final byte[] family = Bytes.toBytes("column");
   private static Path walRootDir;
   private static Path rootDir;
   private static WALFactory wals;
@@ -95,38 +95,36 @@ public class TestWALRootDir {
     WAL log = wals.getWAL(regionInfo);
 
     assertEquals(1, getWALFiles(walFs, walRootDir).size());
-    byte [] value = Bytes.toBytes("value");
+    byte[] value = Bytes.toBytes("value");
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-      EnvironmentEdgeManager.currentTime(), value));
-    long txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
-      regionInfo, 0), edit);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), EnvironmentEdgeManager.currentTime(),
+      value));
+    long txid = log.appendData(regionInfo,
+      getWalKey(EnvironmentEdgeManager.currentTime(), regionInfo, 0), edit);
     log.sync(txid);
-    assertEquals("Expect 1 log have been created", 1,
-        getWALFiles(walFs, walRootDir).size());
+    assertEquals("Expect 1 log have been created", 1, getWALFiles(walFs, walRootDir).size());
     log.rollWriter();
-    //Create 1 more WAL
-    assertEquals(2, getWALFiles(walFs, new Path(walRootDir,
-        HConstants.HREGION_LOGDIR_NAME)).size());
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-      EnvironmentEdgeManager.currentTime(), value));
-    txid = log.appendData(regionInfo, getWalKey(EnvironmentEdgeManager.currentTime(),
-      regionInfo, 1), edit);
+    // Create 1 more WAL
+    assertEquals(2,
+      getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), EnvironmentEdgeManager.currentTime(),
+      value));
+    txid = log.appendData(regionInfo,
+      getWalKey(EnvironmentEdgeManager.currentTime(), regionInfo, 1), edit);
     log.sync(txid);
     log.rollWriter();
     log.shutdown();
 
-    assertEquals("Expect 3 logs in WALs dir", 3, getWALFiles(walFs,
-        new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
+    assertEquals("Expect 3 logs in WALs dir", 3,
+      getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
   }
 
   private WALKeyImpl getWalKey(final long time, RegionInfo hri, final long startPoint) {
     return new WALKeyImpl(hri.getEncodedNameAsBytes(), tableName, time,
-        new MultiVersionConcurrencyControl(startPoint));
+      new MultiVersionConcurrencyControl(startPoint));
   }
 
-  private List<FileStatus> getWALFiles(FileSystem fs, Path dir)
-      throws IOException {
+  private List<FileStatus> getWALFiles(FileSystem fs, Path dir) throws IOException {
     List<FileStatus> result = new ArrayList<FileStatus>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");
 
@@ -146,10 +144,9 @@ public class TestWALRootDir {
     return result;
   }
 
-  private static void cleanup() throws Exception{
+  private static void cleanup() throws Exception {
     walFs.delete(walRootDir, true);
     fs.delete(rootDir, true);
   }
 
 }
-

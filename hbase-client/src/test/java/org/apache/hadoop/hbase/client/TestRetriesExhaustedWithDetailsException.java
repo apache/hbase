@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,14 +31,15 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestRetriesExhaustedWithDetailsException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRetriesExhaustedWithDetailsException.class);
+    HBaseClassTestRule.forClass(TestRetriesExhaustedWithDetailsException.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Assert that a RetriesExhaustedException that has RegionTooBusyException outputs region name.
@@ -53,7 +54,7 @@ public class TestRetriesExhaustedWithDetailsException {
     List<String> hostAndPorts = new ArrayList<>(1);
     hostAndPorts.add("example.com:1234");
     RetriesExhaustedException ree =
-        new RetriesExhaustedWithDetailsException(ts, rows, hostAndPorts);
+      new RetriesExhaustedWithDetailsException(ts, rows, hostAndPorts);
     assertTrue(ree.toString().contains(regionName));
   }
 }

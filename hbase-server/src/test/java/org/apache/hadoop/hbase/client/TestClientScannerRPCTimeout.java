@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  * Test the scenario where a HRegionServer#scan() call, while scanning, timeout at client side and
  * getting retried. This scenario should not result in some data being skipped at RS side.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestClientScannerRPCTimeout {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientScannerRPCTimeout.class);
+    HBaseClassTestRule.forClass(TestClientScannerRPCTimeout.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerRPCTimeout.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -129,9 +129,10 @@ public class TestClientScannerRPCTimeout {
       // catch the exception after max retry number
       LOG.info("Failed after maximal attempts=" + CLIENT_RETRIES_NUMBER, ioe);
     }
-    assertTrue("Expected maximal try number=" + CLIENT_RETRIES_NUMBER
-        + ", actual =" + RSRpcServicesWithScanTimeout.tryNumber,
-        RSRpcServicesWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
+    assertTrue(
+      "Expected maximal try number=" + CLIENT_RETRIES_NUMBER + ", actual ="
+        + RSRpcServicesWithScanTimeout.tryNumber,
+      RSRpcServicesWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
   }
 
   private void putToTable(Table ht, byte[] rowkey) throws IOException {
@@ -142,7 +143,7 @@ public class TestClientScannerRPCTimeout {
 
   private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
     public RegionServerWithScanTimeout(Configuration conf)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       super(conf);
     }
 
@@ -159,18 +160,19 @@ public class TestClientScannerRPCTimeout {
     private static boolean sleepAlways = false;
     private static int tryNumber = 0;
 
-    public RSRpcServicesWithScanTimeout(HRegionServer rs)
-        throws IOException {
+    public RSRpcServicesWithScanTimeout(HRegionServer rs) throws IOException {
       super(rs);
     }
 
     @Override
     public ScanResponse scan(final RpcController controller, final ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
       if (request.hasScannerId()) {
         ScanResponse scanResponse = super.scan(controller, request);
-        if (this.tableScannerId == request.getScannerId() &&
-            (sleepAlways || (!slept && seqNoToSleepOn == request.getNextCallSeq()))) {
+        if (
+          this.tableScannerId == request.getScannerId()
+            && (sleepAlways || (!slept && seqNoToSleepOn == request.getNextCallSeq()))
+        ) {
           try {
             LOG.info("SLEEPING " + (rpcTimeout + 500));
             Thread.sleep(rpcTimeout + 500);

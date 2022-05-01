@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -48,7 +47,7 @@ import org.junit.rules.TestName;
 public class TestCompactionWithByteBuff {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionWithByteBuff.class);
+    HBaseClassTestRule.forClass(TestCompactionWithByteBuff.class);
   @Rule
   public TestName name = new TestName();
 
@@ -91,7 +90,7 @@ public class TestCompactionWithByteBuff {
       admin.compactionSwitch(true, new ArrayList<>(0));
       admin.majorCompact(table);
       List<JVMClusterUtil.RegionServerThread> regionServerThreads =
-          TEST_UTIL.getHBaseCluster().getRegionServerThreads();
+        TEST_UTIL.getHBaseCluster().getRegionServerThreads();
       TEST_UTIL.waitFor(2 * 60 * 1000L, () -> {
         boolean result = true;
         for (JVMClusterUtil.RegionServerThread regionServerThread : regionServerThreads) {
@@ -109,13 +108,9 @@ public class TestCompactionWithByteBuff {
     }
   }
 
-  private Table createTable(HBaseTestingUtility util, TableName tableName)
-      throws IOException {
-    TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(tableName)
-            .setColumnFamily(
-              ColumnFamilyDescriptorBuilder.newBuilder(COLUMN).setBlocksize(1024 * 4).build())
-            .build();
+  private Table createTable(HBaseTestingUtility util, TableName tableName) throws IOException {
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(
+      ColumnFamilyDescriptorBuilder.newBuilder(COLUMN).setBlocksize(1024 * 4).build()).build();
     byte[][] splits = new byte[REGION_COUNT - 1][];
     for (int i = 1; i < REGION_COUNT; i++) {
       splits[i - 1] = Bytes.toBytes(buildRow((int) (ROW_COUNT / REGION_COUNT * i)));

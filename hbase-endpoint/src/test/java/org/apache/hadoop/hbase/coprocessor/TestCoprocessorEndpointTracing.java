@@ -33,6 +33,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -90,12 +91,13 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
  * Test cases to verify tracing coprocessor Endpoint execution
  */
-@Category({ CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestCoprocessorEndpointTracing {
   private static final Logger logger =
     LoggerFactory.getLogger(TestCoprocessorEndpointTracing.class);
@@ -105,8 +107,8 @@ public class TestCoprocessorEndpointTracing {
     HBaseClassTestRule.forClass(TestCoprocessorEndpointTracing.class);
 
   private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
-  private static final MiniClusterRule miniclusterRule = MiniClusterRule.newBuilder()
-    .setConfiguration(() -> {
+  private static final MiniClusterRule miniclusterRule =
+    MiniClusterRule.newBuilder().setConfiguration(() -> {
       final Configuration conf = HBaseConfiguration.create();
       conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 5000);
       conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -114,8 +116,7 @@ public class TestCoprocessorEndpointTracing {
       conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
       return conf;
-    })
-    .build();
+    }).build();
   private static final ConnectionRule connectionRule = ConnectionRule.createConnectionRule(
     miniclusterRule::createConnection, miniclusterRule::createAsyncConnection);
 
@@ -133,10 +134,8 @@ public class TestCoprocessorEndpointTracing {
   }
 
   @ClassRule
-  public static final TestRule testRule = RuleChain.outerRule(otelClassRule)
-    .around(miniclusterRule)
-    .around(connectionRule)
-    .around(new Setup());
+  public static final TestRule testRule = RuleChain.outerRule(otelClassRule).around(miniclusterRule)
+    .around(connectionRule).around(new Setup());
 
   private static final TableName TEST_TABLE =
     TableName.valueOf(TestCoprocessorEndpointTracing.class.getSimpleName());
@@ -189,8 +188,7 @@ public class TestCoprocessorEndpointTracing {
 
     final Map<byte[], String> results = TraceUtil.trace(() -> {
       table.coprocessorService(TestProtobufRpcProto::newStub,
-        (stub, controller, cb) -> stub.echo(controller, request, cb), callback)
-        .execute();
+        (stub, controller, cb) -> stub.echo(controller, request, cb), callback).execute();
       try {
         return future.get();
       } catch (InterruptedException | ExecutionException e) {
@@ -199,31 +197,21 @@ public class TestCoprocessorEndpointTracing {
     }, testName.getMethodName());
     assertNotNull(results);
     assertTrue("coprocessor call returned no results.", MapUtils.isNotEmpty(results));
-    assertThat(results.values(), everyItem(allOf(
-      notNullValue(),
-      equalTo("hello"))));
+    assertThat(results.values(), everyItem(allOf(notNullValue(), equalTo("hello"))));
 
     final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher = allOf(hasName(containsString("COPROC_EXEC")),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(tableOpMatcher));
-    final SpanData tableOpSpan = spans.stream()
-      .filter(tableOpMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.ClientService/ExecService"),
-      hasParentSpanId(tableOpSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData tableOpSpan =
+      spans.stream().filter(tableOpMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.ClientService/ExecService"),
+      hasParentSpanId(tableOpSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -237,45 +225,33 @@ public class TestCoprocessorEndpointTracing {
         new CoprocessorRpcUtils.BlockingRpcCallback<>();
       final Map<byte[], EchoResponseProto> results = TraceUtil.trace(() -> {
         try {
-          return table.coprocessorService(TestProtobufRpcProto.class, null, null,
-            t -> {
-              t.echo(controller, request, callback);
-              return callback.get();
-            });
+          return table.coprocessorService(TestProtobufRpcProto.class, null, null, t -> {
+            t.echo(controller, request, callback);
+            return callback.get();
+          });
         } catch (Throwable t) {
           throw new RuntimeException(t);
         }
       }, testName.getMethodName());
       assertNotNull(results);
       assertTrue("coprocessor call returned no results.", MapUtils.isNotEmpty(results));
-      assertThat(results.values(), everyItem(allOf(
-        notNullValue(),
-        hasProperty("message", equalTo("hello")))));
+      assertThat(results.values(),
+        everyItem(allOf(notNullValue(), hasProperty("message", equalTo("hello")))));
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher = allOf(hasName(containsString("COPROC_EXEC")),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(tableOpMatcher));
-    final SpanData tableOpSpan = spans.stream()
-      .filter(tableOpMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.ClientService/ExecService"),
-      hasParentSpanId(tableOpSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData tableOpSpan =
+      spans.stream().filter(tableOpMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.ClientService/ExecService"),
+      hasParentSpanId(tableOpSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -300,34 +276,23 @@ public class TestCoprocessorEndpointTracing {
       }, testName.getMethodName());
       assertNotNull(results);
       assertTrue("coprocessor call returned no results.", MapUtils.isNotEmpty(results));
-      assertThat(results.values(), everyItem(allOf(
-        notNullValue(),
-        hasProperty("message", equalTo("hello")))));
+      assertThat(results.values(),
+        everyItem(allOf(notNullValue(), hasProperty("message", equalTo("hello")))));
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher = allOf(hasName(containsString("COPROC_EXEC")),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(tableOpMatcher));
-    final SpanData tableOpSpan = spans.stream()
-      .filter(tableOpMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.ClientService/ExecService"),
-      hasParentSpanId(tableOpSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData tableOpSpan =
+      spans.stream().filter(tableOpMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.ClientService/ExecService"),
+      hasParentSpanId(tableOpSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -350,9 +315,7 @@ public class TestCoprocessorEndpointTracing {
       assertEquals("hello", response.getMessage());
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
@@ -361,13 +324,10 @@ public class TestCoprocessorEndpointTracing {
      * The Table instance isn't issuing a command here, it's not a table operation, so don't expect
      * there to be a span like `COPROC_EXEC table`.
      */
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher =
+      allOf(hasName(containsString("COPROC_EXEC")), hasParentSpanId(testSpan));
     assertThat(spans, not(hasItem(tableOpMatcher)));
   }
 
@@ -380,41 +340,30 @@ public class TestCoprocessorEndpointTracing {
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
       final Map<byte[], EchoResponseProto> response = TraceUtil.trace(() -> {
         try {
-          return table.batchCoprocessorService(
-            descriptor, request, null, null, EchoResponseProto.getDefaultInstance());
+          return table.batchCoprocessorService(descriptor, request, null, null,
+            EchoResponseProto.getDefaultInstance());
         } catch (Throwable t) {
           throw new RuntimeException(t);
         }
       }, testName.getMethodName());
       assertNotNull(response);
-      assertThat(response.values(), everyItem(allOf(
-        notNullValue(),
-        hasProperty("message", equalTo("hello")))));
+      assertThat(response.values(),
+        everyItem(allOf(notNullValue(), hasProperty("message", equalTo("hello")))));
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher = allOf(hasName(containsString("COPROC_EXEC")),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(tableOpMatcher));
-    final SpanData tableOpSpan = spans.stream()
-      .filter(tableOpMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.ClientService/Multi"),
-      hasParentSpanId(tableOpSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData tableOpSpan =
+      spans.stream().filter(tableOpMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.ClientService/Multi"),
+      hasParentSpanId(tableOpSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -436,34 +385,23 @@ public class TestCoprocessorEndpointTracing {
       }, testName.getMethodName());
       assertNotNull(results);
       assertTrue("coprocessor call returned no results.", MapUtils.isNotEmpty(results));
-      assertThat(results.values(), everyItem(allOf(
-        notNullValue(),
-        hasProperty("message", equalTo("hello")))));
+      assertThat(results.values(),
+        everyItem(allOf(notNullValue(), hasProperty("message", equalTo("hello")))));
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> tableOpMatcher = allOf(
-      hasName(containsString("COPROC_EXEC")),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> tableOpMatcher = allOf(hasName(containsString("COPROC_EXEC")),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(tableOpMatcher));
-    final SpanData tableOpSpan = spans.stream()
-      .filter(tableOpMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.ClientService/Multi"),
-      hasParentSpanId(tableOpSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData tableOpSpan =
+      spans.stream().filter(tableOpMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.ClientService/Multi"),
+      hasParentSpanId(tableOpSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -475,27 +413,20 @@ public class TestCoprocessorEndpointTracing {
     final ServiceCaller<TestProtobufRpcProto, EchoResponseProto> callback =
       (stub, controller, cb) -> stub.echo(controller, request, cb);
 
-    final String response = TraceUtil.tracedFuture(
-      () -> admin.coprocessorService(TestProtobufRpcProto::newStub, callback),
-      testName.getMethodName())
-      .get()
-      .getMessage();
+    final String response = TraceUtil
+      .tracedFuture(() -> admin.coprocessorService(TestProtobufRpcProto::newStub, callback),
+        testName.getMethodName())
+      .get().getMessage();
     assertEquals("hello", response);
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.MasterService/ExecMasterService"),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.MasterService/ExecMasterService"),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
@@ -516,27 +447,21 @@ public class TestCoprocessorEndpointTracing {
       assertEquals("hello", response);
     }
 
-    final Matcher<SpanData> parentMatcher = allOf(
-      hasName(testName.getMethodName()),
-      hasEnded());
+    final Matcher<SpanData> parentMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
     waitForAndLog(parentMatcher);
     final List<SpanData> spans = otelClassRule.getSpans();
 
-    final SpanData testSpan = spans.stream()
-      .filter(parentMatcher::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    final Matcher<SpanData> rpcMatcher = allOf(
-      hasName("hbase.pb.MasterService/ExecMasterService"),
-      hasParentSpanId(testSpan),
-      hasStatusWithCode(StatusCode.OK));
+    final SpanData testSpan =
+      spans.stream().filter(parentMatcher::matches).findFirst().orElseThrow(AssertionError::new);
+    final Matcher<SpanData> rpcMatcher = allOf(hasName("hbase.pb.MasterService/ExecMasterService"),
+      hasParentSpanId(testSpan), hasStatusWithCode(StatusCode.OK));
     assertThat(spans, hasItem(rpcMatcher));
   }
 
   private void waitForAndLog(Matcher<SpanData> spanMatcher) {
     final Configuration conf = connectionRule.getAsyncConnection().getConfiguration();
-    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      otelClassRule::getSpans, hasItem(spanMatcher)));
+    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5),
+      new MatcherPredicate<>(otelClassRule::getSpans, hasItem(spanMatcher)));
     final List<SpanData> spans = otelClassRule.getSpans();
     if (logger.isDebugEnabled()) {
       StringTraceRenderer renderer = new StringTraceRenderer(spans);

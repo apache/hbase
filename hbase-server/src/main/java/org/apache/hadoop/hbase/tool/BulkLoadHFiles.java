@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public interface BulkLoadHFiles {
 
   static final String RETRY_ON_IO_EXCEPTION = "hbase.bulkload.retries.retryOnIOException";
   static final String MAX_FILES_PER_REGION_PER_FAMILY =
-      "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
+    "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
   static final String CREATE_TABLE_CONF_KEY = "create.table";
   static final String IGNORE_UNMATCHED_CF_CONF_KEY = "ignore.unmatched.families";
@@ -82,22 +82,22 @@ public interface BulkLoadHFiles {
 
   /**
    * Perform a bulk load of the given directory into the given pre-existing table.
-   * @param tableName the table to load into
+   * @param tableName    the table to load into
    * @param family2Files map of family to List of hfiles
    * @throws TableNotFoundException if table does not yet exist
    */
   Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Map<byte[], List<Path>> family2Files)
-      throws TableNotFoundException, IOException;
+    throws TableNotFoundException, IOException;
 
   /**
    * Perform a bulk load of the given directory into the given pre-existing table.
    * @param tableName the table to load into
-   * @param dir the directory that was provided as the output path of a job using
-   *          {@code HFileOutputFormat}
+   * @param dir       the directory that was provided as the output path of a job using
+   *                  {@code HFileOutputFormat}
    * @throws TableNotFoundException if table does not yet exist
    */
   Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Path dir)
-      throws TableNotFoundException, IOException;
+    throws TableNotFoundException, IOException;
 
   static BulkLoadHFiles create(Configuration conf) {
     return new BulkLoadHFilesTool(conf);

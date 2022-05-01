@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -25,10 +24,8 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.jruby.embed.PathType;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
@@ -44,8 +41,8 @@ public class TestRSGroupShell extends AbstractTestShell {
 
     // enable rs group
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      TEST_UTIL.getConfiguration().get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
-        RSGroupAdminEndpoint.class.getName());
+      TEST_UTIL.getConfiguration().get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
+        + RSGroupAdminEndpoint.class.getName());
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       RSGroupBasedLoadBalancer.class.getName());
 

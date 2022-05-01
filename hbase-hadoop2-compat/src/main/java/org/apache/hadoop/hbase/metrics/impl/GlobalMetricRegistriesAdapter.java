@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,13 +40,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class acts as an adapter to export the MetricRegistry's in the global registry. Each
- * MetricRegistry will be registered or unregistered from the metric2 system. The collection will
- * be performed via the MetricsSourceAdapter and the MetricRegistry will collected like a
- * BaseSource instance for a group of metrics  (like WAL, RPC, etc) with the MetricRegistryInfo's
- * JMX context.
- *
- * <p>Developer note:
- * Unlike the current metrics2 based approach, the new metrics approach
+ * MetricRegistry will be registered or unregistered from the metric2 system. The collection will be
+ * performed via the MetricsSourceAdapter and the MetricRegistry will collected like a BaseSource
+ * instance for a group of metrics (like WAL, RPC, etc) with the MetricRegistryInfo's JMX context.
+ * <p>
+ * Developer note: Unlike the current metrics2 based approach, the new metrics approach
  * (hbase-metrics-api and hbase-metrics modules) work by having different MetricRegistries that are
  * initialized and used from the code that lives in their respective modules (hbase-server, etc).
  * There is no need to define BaseSource classes and do a lot of indirection. The MetricRegistry'es
@@ -54,7 +52,6 @@ import org.slf4j.LoggerFactory;
  * MetricRegistries.global() and register adapters to the metrics2 subsystem. These adapters then
  * report the actual values by delegating to
  * {@link HBaseMetrics2HadoopMetricsAdapter#snapshotAllMetrics(MetricRegistry, MetricsCollector)}.
- *
  * We do not initialize the Hadoop Metrics2 system assuming that other BaseSources already do so
  * (see BaseSourceImpl). Once the last BaseSource is moved to the new system, the metric2
  * initialization should be moved here.
@@ -67,6 +64,7 @@ public final class GlobalMetricRegistriesAdapter {
 
   private class MetricsSourceAdapter implements MetricsSource {
     private final MetricRegistry registry;
+
     MetricsSourceAdapter(MetricRegistry registry) {
       this.registry = registry;
     }
@@ -135,7 +133,7 @@ public final class GlobalMetricRegistriesAdapter {
         MetricsSourceAdapter adapter = new MetricsSourceAdapter(registry);
         LOG.info("Registering " + info.getMetricsJmxContext() + " " + info.getMetricsDescription());
         DefaultMetricsSystem.instance().register(info.getMetricsJmxContext(),
-            info.getMetricsDescription(), adapter);
+          info.getMetricsDescription(), adapter);
         registeredSources.put(info, adapter);
         // next collection will collect the newly registered MetricSource. Doing this here leads to
         // ConcurrentModificationException.
@@ -145,7 +143,7 @@ public final class GlobalMetricRegistriesAdapter {
     boolean removed = false;
     // Remove registered sources if it is removed from the global registry
     for (Iterator<Entry<MetricRegistryInfo, MetricsSourceAdapter>> it =
-         registeredSources.entrySet().iterator(); it.hasNext();) {
+      registeredSources.entrySet().iterator(); it.hasNext();) {
       Entry<MetricRegistryInfo, MetricsSourceAdapter> entry = it.next();
       MetricRegistryInfo info = entry.getKey();
       Optional<MetricRegistry> found = MetricRegistries.global().get(info);
@@ -153,7 +151,7 @@ public final class GlobalMetricRegistriesAdapter {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Removing adapter for the MetricRegistry: " + info.getMetricsJmxContext());
         }
-        synchronized(DefaultMetricsSystem.instance()) {
+        synchronized (DefaultMetricsSystem.instance()) {
           DefaultMetricsSystem.instance().unregisterSource(info.getMetricsJmxContext());
           helper.removeSourceName(info.getMetricsJmxContext());
           helper.removeObjectName(info.getMetricsJmxContext());

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,24 +24,20 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * A completion service for the RpcRetryingCallerFactory.
- * Keeps the list of the futures, and allows to cancel them all.
- * This means as well that it can be used for a small set of tasks only.
- * <br>Implementation is not Thread safe.
- *
- * CompletedTasks is implemented as a queue, the entry is added based on the time order. I.e,
- * when the first task completes (whether it is a success or failure), it is added as a first
- * entry in the queue, the next completed task is added as a second entry in the queue, ...
- * When iterating through the queue, we know it is based on time order. If the first
- * completed task succeeds, it is returned. If it is failure, the iteration goes on until it
- * finds a success.
+ * A completion service for the RpcRetryingCallerFactory. Keeps the list of the futures, and allows
+ * to cancel them all. This means as well that it can be used for a small set of tasks only. <br>
+ * Implementation is not Thread safe. CompletedTasks is implemented as a queue, the entry is added
+ * based on the time order. I.e, when the first task completes (whether it is a success or failure),
+ * it is added as a first entry in the queue, the next completed task is added as a second entry in
+ * the queue, ... When iterating through the queue, we know it is based on time order. If the first
+ * completed task succeeds, it is returned. If it is failure, the iteration goes on until it finds a
+ * success.
  */
 @InterfaceAudience.Private
 public class ResultBoundedCompletionService<V> {
@@ -52,7 +47,7 @@ public class ResultBoundedCompletionService<V> {
   private final QueueingFuture<V>[] tasks; // all the tasks
   private final ArrayList<QueueingFuture> completedTasks; // completed tasks
   private volatile boolean cancelled = false;
-  
+
   class QueueingFuture<T> implements RunnableFuture<T> {
     private final RetryingCallable<T> future;
     private T result = null;
@@ -61,13 +56,12 @@ public class ResultBoundedCompletionService<V> {
     private final int callTimeout;
     private final RpcRetryingCaller<T> retryingCaller;
     private boolean resultObtained = false;
-    private final int replicaId;  // replica id
-
+    private final int replicaId; // replica id
 
     public QueueingFuture(RetryingCallable<T> future, int callTimeout, int id) {
       this.future = future;
       this.callTimeout = callTimeout;
-      this.retryingCaller = retryingCallerFactory.<T>newCaller();
+      this.retryingCaller = retryingCallerFactory.<T> newCaller();
       this.replicaId = id;
     }
 
@@ -99,7 +93,7 @@ public class ResultBoundedCompletionService<V> {
     public boolean cancel(boolean mayInterruptIfRunning) {
       if (resultObtained || exeEx != null) return false;
       retryingCaller.cancel();
-      if (future instanceof Cancellable) ((Cancellable)future).cancel();
+      if (future instanceof Cancellable) ((Cancellable) future).cancel();
       cancelled = true;
       return true;
     }
@@ -125,7 +119,7 @@ public class ResultBoundedCompletionService<V> {
 
     @Override
     public T get(long timeout, TimeUnit unit)
-        throws InterruptedException, ExecutionException, TimeoutException {
+      throws InterruptedException, ExecutionException, TimeoutException {
       synchronized (tasks) {
         if (resultObtained) {
           return result;
@@ -155,15 +149,13 @@ public class ResultBoundedCompletionService<V> {
   }
 
   @SuppressWarnings("unchecked")
-  public ResultBoundedCompletionService(
-      RpcRetryingCallerFactory retryingCallerFactory, Executor executor,
-      int maxTasks) {
+  public ResultBoundedCompletionService(RpcRetryingCallerFactory retryingCallerFactory,
+    Executor executor, int maxTasks) {
     this.retryingCallerFactory = retryingCallerFactory;
     this.executor = executor;
     this.tasks = new QueueingFuture[maxTasks];
     this.completedTasks = new ArrayList<>(maxTasks);
   }
-
 
   public void submit(RetryingCallable<V> task, int callTimeout, int id) {
     QueueingFuture<V> newFuture = new QueueingFuture<>(task, callTimeout, id);
@@ -174,16 +166,16 @@ public class ResultBoundedCompletionService<V> {
 
   public QueueingFuture<V> take() throws InterruptedException {
     synchronized (tasks) {
-      while (!cancelled && (completedTasks.size() < 1)) tasks.wait();
+      while (!cancelled && (completedTasks.size() < 1))
+        tasks.wait();
     }
     return completedTasks.get(0);
   }
 
   /**
    * Poll for the first completed task whether it is a success or execution exception.
-   *
-   * @param timeout  - time to wait before it times out
-   * @param unit  - time unit for timeout
+   * @param timeout - time to wait before it times out
+   * @param unit    - time unit for timeout
    */
   public QueueingFuture<V> poll(long timeout, TimeUnit unit) throws InterruptedException {
     return pollForSpecificCompletedTask(timeout, unit, 0);
@@ -192,23 +184,21 @@ public class ResultBoundedCompletionService<V> {
   /**
    * Poll for the first successfully completed task whose completed order is in startIndex,
    * endIndex(exclusive) range
-   *
-   * @param timeout  - time to wait before it times out
-   * @param unit  - time unit for timeout
+   * @param timeout    - time to wait before it times out
+   * @param unit       - time unit for timeout
    * @param startIndex - start index, starting from 0, inclusive
-   * @param endIndex - end index, exclusive
-   *
+   * @param endIndex   - end index, exclusive
    * @return If within timeout time, there is no successfully completed task, return null; If all
    *         tasks get execution exception, it will throw out the last execution exception,
    *         otherwise return the first successfully completed task's result.
    */
   public QueueingFuture<V> pollForFirstSuccessfullyCompletedTask(long timeout, TimeUnit unit,
-      int startIndex, int endIndex)
-      throws InterruptedException, CancellationException, ExecutionException {
+    int startIndex, int endIndex)
+    throws InterruptedException, CancellationException, ExecutionException {
 
-    QueueingFuture<V>  f;
+    QueueingFuture<V> f;
     long start, duration;
-    for (int i = startIndex; i < endIndex; i ++) {
+    for (int i = startIndex; i < endIndex; i++) {
 
       start = EnvironmentEdgeManager.currentTime();
       f = pollForSpecificCompletedTask(timeout, unit, i);
@@ -223,8 +213,8 @@ public class ResultBoundedCompletionService<V> {
       } else if (f.getExeEx() != null) {
         // we continue here as we need to loop through all the results.
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Replica " + ((f == null) ? 0 : f.getReplicaId()) + " returns " +
-              f.getExeEx().getCause());
+          LOG.debug("Replica " + ((f == null) ? 0 : f.getReplicaId()) + " returns "
+            + f.getExeEx().getCause());
         }
 
         if (i == (endIndex - 1)) {
@@ -242,13 +232,12 @@ public class ResultBoundedCompletionService<V> {
 
   /**
    * Poll for the Nth completed task (index starts from 0 (the 1st), 1 (the second)...)
-   *
-   * @param timeout  - time to wait before it times out
-   * @param unit  - time unit for timeout
-   * @param index - the index(th) completed task, index starting from 0
+   * @param timeout - time to wait before it times out
+   * @param unit    - time unit for timeout
+   * @param index   - the index(th) completed task, index starting from 0
    */
   private QueueingFuture<V> pollForSpecificCompletedTask(long timeout, TimeUnit unit, int index)
-      throws InterruptedException {
+    throws InterruptedException {
     if (index < 0) {
       return null;
     }

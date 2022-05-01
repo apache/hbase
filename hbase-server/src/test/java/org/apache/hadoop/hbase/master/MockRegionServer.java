@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Abortable;
@@ -143,31 +142,29 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaSnapshotsResponse;
 
 /**
- * A mock RegionServer implementation.
- * Use this when you can't bend Mockito to your liking (e.g. return null result
- * when 'scanning' until master timesout and then return a coherent meta row
- * result thereafter.  Have some facility for faking gets and scans.  See
- * setGetResult(byte[], byte[], Result) for how to fill the backing data
- * store that the get pulls from.
+ * A mock RegionServer implementation. Use this when you can't bend Mockito to your liking (e.g.
+ * return null result when 'scanning' until master timesout and then return a coherent meta row
+ * result thereafter. Have some facility for faking gets and scans. See setGetResult(byte[], byte[],
+ * Result) for how to fill the backing data store that the get pulls from.
  */
 class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
-    ClientProtos.ClientService.BlockingInterface, RegionServerServices {
+  ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final ServerName sn;
   private final ZKWatcher zkw;
   private final Configuration conf;
 
   /**
    * Map of regions to map of rows and {@link Result}. Used as data source when
-   * {@link #get(RpcController, ClientProtos.GetRequest)} is called. Because we have a byte
-   * key, need to use TreeMap and provide a Comparator.  Use
-   * {@link #setGetResult(byte[], byte[], Result)} filling this map.
+   * {@link #get(RpcController, ClientProtos.GetRequest)} is called. Because we have a byte key,
+   * need to use TreeMap and provide a Comparator. Use {@link #setGetResult(byte[], byte[], Result)}
+   * filling this map.
    */
-  private final Map<byte [], Map<byte [], Result>> gets = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte[], Map<byte[], Result>> gets = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Map of regions to results to return when scanning.
    */
-  private final Map<byte [], Result []> nexts = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private final Map<byte[], Result[]> nexts = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Data structure that holds regionname and index used scanning.
@@ -197,12 +194,11 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   private final Map<Long, RegionNameAndIndex> scannersAndOffsets = new HashMap<>();
 
   /**
-   * @param sn Name of this mock regionserver
-   * @throws IOException
-   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
+   * @param sn Name of this mock regionserver n * @throws
+   *           org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
-  throws ZooKeeperConnectionException, IOException {
+    throws ZooKeeperConnectionException, IOException {
     this.sn = sn;
     this.conf = conf;
     this.zkw = new ZKWatcher(conf, sn.toString(), this, true);
@@ -212,14 +208,14 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
    * Use this method filling the backing data source used by
    * {@link #get(RpcController, ClientProtos.GetRequest)}
    * @param regionName the region name to assign
-   * @param row the row key
-   * @param r the single row result
+   * @param row        the row key
+   * @param r          the single row result
    */
-  void setGetResult(final byte [] regionName, final byte [] row, final Result r) {
-    Map<byte [], Result> value = this.gets.get(regionName);
+  void setGetResult(final byte[] regionName, final byte[] row, final Result r) {
+    Map<byte[], Result> value = this.gets.get(regionName);
     if (value == null) {
-      // If no value already, create one.  Needs to be treemap because we are
-      // using byte array as key.   Not thread safe.
+      // If no value already, create one. Needs to be treemap because we are
+      // using byte array as key. Not thread safe.
       value = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       this.gets.put(regionName, value);
     }
@@ -227,11 +223,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   /**
-   * Use this method to set what a scanner will reply as we next through
-   * @param regionName
-   * @param rs
+   * Use this method to set what a scanner will reply as we next through nn
    */
-  void setNextResults(final byte [] regionName, final Result [] rs) {
+  void setNextResults(final byte[] regionName, final Result[] rs) {
     this.nexts.put(regionName, rs);
   }
 
@@ -259,15 +253,15 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   public Result next(long scannerId) throws IOException {
     RegionNameAndIndex rnai = this.scannersAndOffsets.get(scannerId);
     int index = rnai.getThenIncrement();
-    Result [] results = this.nexts.get(rnai.getRegionName());
+    Result[] results = this.nexts.get(rnai.getRegionName());
     if (results == null) return null;
-    return index < results.length? results[index]: null;
+    return index < results.length ? results[index] : null;
   }
 
-  public Result [] next(long scannerId, int numberOfRows) throws IOException {
+  public Result[] next(long scannerId, int numberOfRows) throws IOException {
     // Just return one result whatever they ask for.
     Result r = next(scannerId);
-    return r == null? null: new Result [] {r};
+    return r == null ? null : new Result[] { r };
   }
 
   public void close(final long scannerId) throws IOException {
@@ -327,10 +321,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   public FlushRequester getFlushRequester() {
     return null;
   }
+
   @Override
   public CompactionRequester getCompactionRequestor() {
     return null;
   }
+
   @Override
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
@@ -361,10 +357,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public GetResponse get(RpcController controller, GetRequest request)
-  throws ServiceException {
+  public GetResponse get(RpcController controller, GetRequest request) throws ServiceException {
     byte[] regionName = request.getRegion().getValue().toByteArray();
-    Map<byte [], Result> m = this.gets.get(regionName);
+    Map<byte[], Result> m = this.gets.get(regionName);
     GetResponse.Builder builder = GetResponse.newBuilder();
     if (m != null) {
       byte[] row = request.getGet().getRow().toByteArray();
@@ -375,32 +370,28 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public MutateResponse mutate(RpcController controller, MutateRequest request)
-      throws ServiceException {
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public ScanResponse scan(RpcController controller, ScanRequest request)
-      throws ServiceException {
+  public ScanResponse scan(RpcController controller, ScanRequest request) throws ServiceException {
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     try {
       if (request.hasScan()) {
         byte[] regionName = request.getRegion().getValue().toByteArray();
         builder.setScannerId(openScanner(regionName, null));
         builder.setMoreResults(true);
-      }
-      else {
+      } else {
         long scannerId = request.getScannerId();
         Result result = next(scannerId);
         if (result != null) {
           builder.addCellsPerResult(result.size());
           List<CellScannable> results = new ArrayList<>(1);
           results.add(result);
-          ((HBaseRpcController) controller).setCellScanner(CellUtil
-              .createCellScanner(results));
+          ((HBaseRpcController) controller).setCellScanner(CellUtil.createCellScanner(results));
           builder.setMoreResults(true);
-        }
-        else {
+        } else {
           builder.setMoreResults(false);
           close(scannerId);
         }
@@ -412,34 +403,34 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
-      BulkLoadHFileRequest request) throws ServiceException {
+  public BulkLoadHFileResponse bulkLoadHFile(RpcController controller, BulkLoadHFileRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
   public ClientProtos.CoprocessorServiceResponse execService(RpcController controller,
-      ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
+    ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
     return null;
   }
 
   @Override
-  public ClientProtos.MultiResponse multi(
-      RpcController controller, MultiRequest request) throws ServiceException {
+  public ClientProtos.MultiResponse multi(RpcController controller, MultiRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public GetRegionInfoResponse getRegionInfo(RpcController controller,
-      GetRegionInfoRequest request) throws ServiceException {
+  public GetRegionInfoResponse getRegionInfo(RpcController controller, GetRegionInfoRequest request)
+    throws ServiceException {
     GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
     builder.setRegionInfo(ProtobufUtil.toRegionInfo(RegionInfoBuilder.FIRST_META_REGIONINFO));
     return builder.build();
   }
 
   @Override
-  public GetRegionLoadResponse getRegionLoad(RpcController controller,
-      GetRegionLoadRequest request) throws ServiceException {
+  public GetRegionLoadResponse getRegionLoad(RpcController controller, GetRegionLoadRequest request)
+    throws ServiceException {
     GetRegionLoadResponse.Builder builder = GetRegionLoadResponse.newBuilder();
     return builder.build();
   }
@@ -451,14 +442,14 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public GetStoreFileResponse getStoreFile(RpcController controller,
-      GetStoreFileRequest request) throws ServiceException {
+  public GetStoreFileResponse getStoreFile(RpcController controller, GetStoreFileRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
   public GetOnlineRegionResponse getOnlineRegion(RpcController controller,
-      GetOnlineRegionRequest request) throws ServiceException {
+    GetOnlineRegionRequest request) throws ServiceException {
     return null;
   }
 
@@ -468,61 +459,62 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public OpenRegionResponse openRegion(RpcController controller,
-      OpenRegionRequest request) throws ServiceException {
+  public OpenRegionResponse openRegion(RpcController controller, OpenRegionRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public WarmupRegionResponse warmupRegion(RpcController controller,
-      WarmupRegionRequest request) throws ServiceException {
-    return null;
-  }
-  @Override
-  public CloseRegionResponse closeRegion(RpcController controller,
-      CloseRegionRequest request) throws ServiceException {
+  public WarmupRegionResponse warmupRegion(RpcController controller, WarmupRegionRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public FlushRegionResponse flushRegion(RpcController controller,
-      FlushRegionRequest request) throws ServiceException {
+  public CloseRegionResponse closeRegion(RpcController controller, CloseRegionRequest request)
+    throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public FlushRegionResponse flushRegion(RpcController controller, FlushRegionRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
   public CompactionSwitchResponse compactionSwitch(RpcController controller,
-      CompactionSwitchRequest request) throws ServiceException {
+    CompactionSwitchRequest request) throws ServiceException {
     return null;
   }
 
   @Override
-  public CompactRegionResponse compactRegion(RpcController controller,
-      CompactRegionRequest request) throws ServiceException {
+  public CompactRegionResponse compactRegion(RpcController controller, CompactRegionRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
   public ReplicateWALEntryResponse replicateWALEntry(RpcController controller,
-      ReplicateWALEntryRequest request) throws ServiceException {
+    ReplicateWALEntryRequest request) throws ServiceException {
     return null;
   }
 
   @Override
-  public RollWALWriterResponse rollWALWriter(RpcController controller,
-      RollWALWriterRequest request) throws ServiceException {
+  public RollWALWriterResponse rollWALWriter(RpcController controller, RollWALWriterRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public GetServerInfoResponse getServerInfo(RpcController controller,
-      GetServerInfoRequest request) throws ServiceException {
+  public GetServerInfoResponse getServerInfo(RpcController controller, GetServerInfoRequest request)
+    throws ServiceException {
     return null;
   }
 
   @Override
-  public StopServerResponse stopServer(RpcController controller,
-      StopServerRequest request) throws ServiceException {
+  public StopServerResponse stopServer(RpcController controller, StopServerRequest request)
+    throws ServiceException {
     return null;
   }
 
@@ -558,7 +550,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public void updateRegionFavoredNodesMapping(String encodedRegionName,
-      List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
+    List<org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
   }
 
   @Override
@@ -567,15 +559,14 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public ReplicateWALEntryResponse
-      replay(RpcController controller, ReplicateWALEntryRequest request)
-      throws ServiceException {
+  public ReplicateWALEntryResponse replay(RpcController controller,
+    ReplicateWALEntryRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
-      UpdateFavoredNodesRequest request) throws ServiceException {
+    UpdateFavoredNodesRequest request) throws ServiceException {
     return null;
   }
 
@@ -596,21 +587,19 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
-      CoprocessorServiceRequest request) throws ServiceException {
+    CoprocessorServiceRequest request) throws ServiceException {
     return null;
   }
 
   @Override
-  public UpdateConfigurationResponse updateConfiguration(
-      RpcController controller, UpdateConfigurationRequest request)
-      throws ServiceException {
+  public UpdateConfigurationResponse updateConfiguration(RpcController controller,
+    UpdateConfigurationRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
-                                                             ClearRegionBlockCacheRequest request)
-    throws ServiceException {
+    ClearRegionBlockCacheRequest request) throws ServiceException {
     return null;
   }
 
@@ -646,19 +635,19 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public EntityLock regionLock(List<RegionInfo> regionInfos, String description, Abortable abort)
-      throws IOException {
+    throws IOException {
     return null;
   }
 
   @Override
   public PrepareBulkLoadResponse prepareBulkLoad(RpcController controller,
-      PrepareBulkLoadRequest request) throws ServiceException {
+    PrepareBulkLoadRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public CleanupBulkLoadResponse cleanupBulkLoad(RpcController controller,
-      CleanupBulkLoadRequest request) throws ServiceException {
+    CleanupBulkLoadRequest request) throws ServiceException {
     return null;
   }
 
@@ -678,38 +667,37 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public ExecuteProceduresResponse executeProcedures(RpcController controller,
-      ExecuteProceduresRequest request) throws ServiceException {
+    ExecuteProceduresRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public SlowLogResponses getSlowLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
+    SlowLogResponseRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public SlowLogResponses getLargeLogResponses(RpcController controller,
-      SlowLogResponseRequest request) throws ServiceException {
+    SlowLogResponseRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public ClearSlowLogResponses clearSlowLogsResponses(RpcController controller,
-      ClearSlowLogResponseRequest request) throws ServiceException {
+    ClearSlowLogResponseRequest request) throws ServiceException {
     return null;
   }
 
   @Override
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-      HBaseProtos.LogRequest request) throws ServiceException {
+    HBaseProtos.LogRequest request) throws ServiceException {
     return null;
   }
 
   @Override
-  public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(
-      RpcController controller, GetSpaceQuotaSnapshotsRequest request)
-      throws ServiceException {
+  public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(RpcController controller,
+    GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
     return null;
   }
 
@@ -754,8 +742,8 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public boolean reportFileArchivalForQuotas(
-      TableName tableName, Collection<Entry<String, Long>> archivedFiles) {
+  public boolean reportFileArchivalForQuotas(TableName tableName,
+    Collection<Entry<String, Long>> archivedFiles) {
     return false;
   }
 }

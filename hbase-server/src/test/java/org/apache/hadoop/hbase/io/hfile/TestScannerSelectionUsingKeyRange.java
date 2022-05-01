@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,12 +54,12 @@ import org.junit.runners.Parameterized.Parameters;
  * Test the optimization that does not scan files where all key ranges are excluded.
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestScannerSelectionUsingKeyRange {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerSelectionUsingKeyRange.class);
+    HBaseClassTestRule.forClass(TestScannerSelectionUsingKeyRange.class);
 
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");
@@ -88,7 +88,7 @@ public class TestScannerSelectionUsingKeyRange {
   }
 
   public TestScannerSelectionUsingKeyRange(Object type, Object count) {
-    bloomType = (BloomType)type;
+    bloomType = (BloomType) type;
     expectedCount = (Integer) count;
   }
 
@@ -101,20 +101,20 @@ public class TestScannerSelectionUsingKeyRange {
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.hstore.compactionThreshold", 10000);
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY_BYTES).setBlockCacheEnabled(true)
-        .setBloomFilterType(bloomType);
+    HColumnDescriptor hcd =
+      new HColumnDescriptor(FAMILY_BYTES).setBlockCacheEnabled(true).setBloomFilterType(bloomType);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
-        htd);
+    HRegion region =
+      HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf, htd);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
         Put put = new Put(Bytes.toBytes("row" + iRow));
         for (int iCol = 0; iCol < NUM_COLS_PER_ROW; ++iCol) {
           put.addColumn(FAMILY_BYTES, Bytes.toBytes("col" + iCol),
-                  Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
+            Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
         }
         region.put(put);
       }
@@ -130,7 +130,7 @@ public class TestScannerSelectionUsingKeyRange {
     scanner.close();
     assertEquals(0, results.size());
     if (cache instanceof LruBlockCache) {
-      Set<String> accessedFiles = ((LruBlockCache)cache).getCachedFileNamesForTest();
+      Set<String> accessedFiles = ((LruBlockCache) cache).getCachedFileNamesForTest();
       assertEquals(expectedCount, accessedFiles.size());
     }
     HBaseTestingUtility.closeRegionAndWAL(region);

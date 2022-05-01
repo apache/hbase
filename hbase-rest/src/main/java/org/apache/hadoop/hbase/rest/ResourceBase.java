@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -33,7 +31,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
 public class ResourceBase implements Constants {
 
   RESTServlet servlet;
-  Class<?>  accessDeniedClazz;
+  Class<?> accessDeniedClazz;
 
   public ResourceBase() throws IOException {
     servlet = RESTServlet.getInstance();
@@ -42,54 +40,43 @@ public class ResourceBase implements Constants {
     } catch (ClassNotFoundException e) {
     }
   }
-  
+
   protected Response processException(Throwable exp) {
     Throwable curr = exp;
-    if(accessDeniedClazz != null) {
-      //some access denied exceptions are buried
+    if (accessDeniedClazz != null) {
+      // some access denied exceptions are buried
       while (curr != null) {
-        if(accessDeniedClazz.isAssignableFrom(curr.getClass())) {
+        if (accessDeniedClazz.isAssignableFrom(curr.getClass())) {
           throw new WebApplicationException(
-              Response.status(Response.Status.FORBIDDEN)
-                .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF +
-                   StringUtils.stringifyException(exp) + CRLF)
-                .build());
+            Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+              .entity("Forbidden" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());
         }
         curr = curr.getCause();
       }
     }
-    //TableNotFound may also be buried one level deep
-    if (exp instanceof TableNotFoundException ||
-        exp.getCause() instanceof TableNotFoundException) {
+    // TableNotFound may also be buried one level deep
+    if (exp instanceof TableNotFoundException || exp.getCause() instanceof TableNotFoundException) {
       throw new WebApplicationException(
-        Response.status(Response.Status.NOT_FOUND)
-          .type(MIMETYPE_TEXT).entity("Not found" + CRLF +
-             StringUtils.stringifyException(exp) + CRLF)
-          .build());
+        Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+          .entity("Not found" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());
     }
-    if (exp instanceof NoSuchColumnFamilyException){
+    if (exp instanceof NoSuchColumnFamilyException) {
       throw new WebApplicationException(
-        Response.status(Response.Status.NOT_FOUND)
-          .type(MIMETYPE_TEXT).entity("Not found" + CRLF +
-             StringUtils.stringifyException(exp) + CRLF)
-          .build());
+        Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+          .entity("Not found" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());
     }
     if (exp instanceof RuntimeException) {
       throw new WebApplicationException(
-          Response.status(Response.Status.BAD_REQUEST)
-            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF +
-              StringUtils.stringifyException(exp) + CRLF)
-            .build());
+        Response.status(Response.Status.BAD_REQUEST).type(MIMETYPE_TEXT)
+          .entity("Bad request" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());
     }
     if (exp instanceof RetriesExhaustedWithDetailsException) {
       RetriesExhaustedWithDetailsException retryException =
-          (RetriesExhaustedWithDetailsException) exp;
+        (RetriesExhaustedWithDetailsException) exp;
       processException(retryException.getCause(0));
     }
     throw new WebApplicationException(
-      Response.status(Response.Status.SERVICE_UNAVAILABLE)
-        .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF +
-          StringUtils.stringifyException(exp) + CRLF)
-        .build());
+      Response.status(Response.Status.SERVICE_UNAVAILABLE).type(MIMETYPE_TEXT)
+        .entity("Unavailable" + CRLF + StringUtils.stringifyException(exp) + CRLF).build());
   }
 }

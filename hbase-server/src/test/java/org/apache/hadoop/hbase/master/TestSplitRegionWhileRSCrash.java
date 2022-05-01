@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSplitRegionWhileRSCrash {
 
   @ClassRule
@@ -59,7 +59,6 @@ public class TestSplitRegionWhileRSCrash {
   private static Admin ADMIN;
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
-
 
   @BeforeClass
   public static void setupCluster() throws Exception {

@@ -97,17 +97,15 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * case need synchronized is {@link #cleanOldLogs(NavigableSet, String, boolean, String)} and
  * {@link #preLogRoll(Path)}.</li>
  * <li>No need synchronized on {@link #walsByIdRecoveredQueues}. There are three methods which
- * modify it, {@link #removePeer(String)} ,
-<<<<<<< HEAD
+ * modify it, {@link #removePeer(String)} , <<<<<<< HEAD
  * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} and
  * {@link ReplicationSourceManager.NodeFailoverWorker#run()}.
- * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} is called by
-=======
+ * {@link #cleanOldLogs(NavigableSet, String, boolean, String)} is called by =======
  * {@link #cleanOldLogs(String, boolean, ReplicationSourceInterface)} and
  * {@link ReplicationSourceManager#claimQueue(ServerName, String)}.
- * {@link #cleanOldLogs(String, boolean, ReplicationSourceInterface)} is called by
->>>>>>> 51893b9ba3... HBASE-26029 It is not reliable to use nodeDeleted event to track region server's death (#3430)
- * {@link ReplicationSourceInterface}. {@link #removePeer(String)} will terminate the
+ * {@link #cleanOldLogs(String, boolean, ReplicationSourceInterface)} is called by >>>>>>>
+ * 51893b9ba3... HBASE-26029 It is not reliable to use nodeDeleted event to track region server's
+ * death (#3430) {@link ReplicationSourceInterface}. {@link #removePeer(String)} will terminate the
  * {@link ReplicationSourceInterface} firstly, then remove the wals from
  * {@link #walsByIdRecoveredQueues}. And
  * {@link ReplicationSourceManager#claimQueue(ServerName, String)} will add the wals to
@@ -129,10 +127,9 @@ public class ReplicationSourceManager {
   private final List<ReplicationSourceInterface> oldsources;
 
   /**
-   * Storage for queues that need persistance; e.g. Replication state so can be recovered
-   * after a crash. queueStorage upkeep is spread about this class and passed
-   * to ReplicationSource instances for these to do updates themselves. Not all ReplicationSource
-   * instances keep state.
+   * Storage for queues that need persistance; e.g. Replication state so can be recovered after a
+   * crash. queueStorage upkeep is spread about this class and passed to ReplicationSource instances
+   * for these to do updates themselves. Not all ReplicationSource instances keep state.
    */
   private final ReplicationQueueStorage queueStorage;
 
@@ -167,36 +164,34 @@ public class ReplicationSourceManager {
 
   private final boolean replicationForBulkLoadDataEnabled;
 
-
   private AtomicLong totalBufferUsed = new AtomicLong();
   // Total buffer size on this RegionServer for holding batched edits to be shipped.
   private final long totalBufferLimit;
   private final MetricsReplicationGlobalSourceSource globalMetrics;
 
   /**
-   * A special ReplicationSource for hbase:meta Region Read Replicas.
-   * Usually this reference remains empty. If an hbase:meta Region is opened on this server, we
-   * will create an instance of a hbase:meta CatalogReplicationSource and it will live the life of
-   * the Server thereafter; i.e. we will not shut it down even if the hbase:meta moves away from
-   * this server (in case it later gets moved back). We synchronize on this instance testing for
-   * presence and if absent, while creating so only created and started once.
+   * A special ReplicationSource for hbase:meta Region Read Replicas. Usually this reference remains
+   * empty. If an hbase:meta Region is opened on this server, we will create an instance of a
+   * hbase:meta CatalogReplicationSource and it will live the life of the Server thereafter; i.e. we
+   * will not shut it down even if the hbase:meta moves away from this server (in case it later gets
+   * moved back). We synchronize on this instance testing for presence and if absent, while creating
+   * so only created and started once.
    */
   AtomicReference<ReplicationSourceInterface> catalogReplicationSource = new AtomicReference<>();
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param queueStorage the interface for manipulating replication queues
-   * @param conf the configuration to use
-   * @param server the server for this region server
-   * @param fs the file system to use
-   * @param logDir the directory that contains all wal directories of live RSs
-   * @param oldLogDir the directory where old logs are archived
+   * @param conf         the configuration to use
+   * @param server       the server for this region server
+   * @param fs           the file system to use
+   * @param logDir       the directory that contains all wal directories of live RSs
+   * @param oldLogDir    the directory where old logs are archived
    */
   public ReplicationSourceManager(ReplicationQueueStorage queueStorage,
-      ReplicationPeers replicationPeers, Configuration conf,
-      Server server, FileSystem fs, Path logDir, Path oldLogDir, UUID clusterId,
-      WALFactory walFactory,
-      MetricsReplicationGlobalSourceSource globalMetrics) throws IOException {
+    ReplicationPeers replicationPeers, Configuration conf, Server server, FileSystem fs,
+    Path logDir, Path oldLogDir, UUID clusterId, WALFactory walFactory,
+    MetricsReplicationGlobalSourceSource globalMetrics) throws IOException {
     // CopyOnWriteArrayList is thread-safe.
     // Generally, reading is more than modifying.
     this.sources = new ConcurrentHashMap<>();
@@ -219,8 +214,8 @@ public class ReplicationSourceManager {
     int nbWorkers = conf.getInt("replication.executor.workers", 1);
     // use a short 100ms sleep since this could be done inline with a RS startup
     // even if we fail, other region servers can take care of it
-    this.executor = new ThreadPoolExecutor(nbWorkers, nbWorkers, 100,
-        TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+    this.executor = new ThreadPoolExecutor(nbWorkers, nbWorkers, 100, TimeUnit.MILLISECONDS,
+      new LinkedBlockingQueue<>());
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationExecutor-%d");
     tfb.setDaemon(true);
@@ -229,7 +224,7 @@ public class ReplicationSourceManager {
     replicationForBulkLoadDataEnabled = conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
       HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     this.totalBufferLimit = conf.getLong(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY,
-        HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+      HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
     this.globalMetrics = globalMetrics;
   }
 
@@ -291,8 +286,8 @@ public class ReplicationSourceManager {
         removeRecoveredSource(src);
       }
     }
-    LOG.info(
-      "Number of deleted recovered sources for " + peerId + ": " + oldSourcesToDelete.size());
+    LOG
+      .info("Number of deleted recovered sources for " + peerId + ": " + oldSourcesToDelete.size());
     // Now close the normal source for this peer
     ReplicationSourceInterface srcToRemove = this.sources.get(peerId);
     if (srcToRemove != null) {
@@ -316,14 +311,14 @@ public class ReplicationSourceManager {
    * @see #createCatalogReplicationSource(RegionInfo) for creating a ReplicationSource for meta.
    */
   private ReplicationSourceInterface createSource(String queueId, ReplicationPeer replicationPeer)
-      throws IOException {
+    throws IOException {
     ReplicationSourceInterface src = ReplicationSourceFactory.create(conf, queueId);
     // Init the just created replication source. Pass the default walProvider's wal file length
     // provider. Presumption is we replicate user-space Tables only. For hbase:meta region replica
     // replication, see #createCatalogReplicationSource().
-    WALFileLengthProvider walFileLengthProvider =
-      this.walFactory.getWALProvider() != null?
-        this.walFactory.getWALProvider().getWALFileLengthProvider() : p -> OptionalLong.empty();
+    WALFileLengthProvider walFileLengthProvider = this.walFactory.getWALProvider() != null
+      ? this.walFactory.getWALProvider().getWALFileLengthProvider()
+      : p -> OptionalLong.empty();
     src.init(conf, fs, this, queueStorage, replicationPeer, server, queueId, clusterId,
       walFileLengthProvider, new MetricsSource(queueId));
     return src;
@@ -367,12 +362,11 @@ public class ReplicationSourceManager {
    * Close the previous replication sources of this peer id and open new sources to trigger the new
    * replication state changes or new replication config changes. Here we don't need to change
    * replication queue storage and only to enqueue all logs to the new replication source
-   * @param peerId the id of the replication peer
-   * @throws IOException
+   * @param peerId the id of the replication peer n
    */
   public void refreshSources(String peerId) throws IOException {
-    String terminateMessage = "Peer " + peerId +
-      " state or config changed. Will close the previous replication source and open a new one";
+    String terminateMessage = "Peer " + peerId
+      + " state or config changed. Will close the previous replication source and open a new one";
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     ReplicationSourceInterface src = createSource(peerId, peer);
     // synchronized on latestPaths to avoid missing the new log
@@ -387,8 +381,7 @@ public class ReplicationSourceManager {
         walsByGroup.forEach(wal -> {
           Path walPath = new Path(this.logDir, wal);
           src.enqueueLog(walPath);
-          LOG.trace("Enqueued {} to source {} during source creation.",
-            walPath, src.getQueueId());
+          LOG.trace("Enqueued {} to source {} during source creation.", walPath, src.getQueueId());
         });
 
       }
@@ -401,7 +394,7 @@ public class ReplicationSourceManager {
     synchronized (this.oldsources) {
       List<String> previousQueueIds = new ArrayList<>();
       for (Iterator<ReplicationSourceInterface> iter = this.oldsources.iterator(); iter
-          .hasNext();) {
+        .hasNext();) {
         ReplicationSourceInterface oldSource = iter.next();
         if (oldSource.getPeerId().equals(peerId)) {
           previousQueueIds.add(oldSource.getQueueId());
@@ -468,9 +461,11 @@ public class ReplicationSourceManager {
     try {
       op.exec();
     } catch (ReplicationException e) {
-      if (e.getCause() != null && e.getCause() instanceof KeeperException.SystemErrorException
-          && e.getCause().getCause() != null && e.getCause()
-          .getCause() instanceof InterruptedException) {
+      if (
+        e.getCause() != null && e.getCause() instanceof KeeperException.SystemErrorException
+          && e.getCause().getCause() != null
+          && e.getCause().getCause() instanceof InterruptedException
+      ) {
         // ReplicationRuntimeException(a RuntimeException) is thrown out here. The reason is
         // that thread is interrupted deep down in the stack, it should pass the following
         // processing logic and propagate to the most top layer which can handle this exception
@@ -514,21 +509,20 @@ public class ReplicationSourceManager {
    * @param entryBatch the wal entry batch we just shipped
    */
   public void logPositionAndCleanOldLogs(ReplicationSourceInterface source,
-      WALEntryBatch entryBatch) {
+    WALEntryBatch entryBatch) {
     String fileName = entryBatch.getLastWalPath().getName();
     String queueId = source.getQueueId();
-    interruptOrAbortWhenFail(() -> this.queueStorage
-        .setWALPosition(server.getServerName(), queueId, fileName, entryBatch.getLastWalPosition(),
-            entryBatch.getLastSeqIds()));
+    interruptOrAbortWhenFail(() -> this.queueStorage.setWALPosition(server.getServerName(), queueId,
+      fileName, entryBatch.getLastWalPosition(), entryBatch.getLastSeqIds()));
     cleanOldLogs(fileName, entryBatch.isEndOfFile(), queueId, source.isRecovered());
   }
 
   /**
    * Cleans a log file and all older logs from replication queue. Called when we are sure that a log
    * file is closed and has no more entries.
-   * @param log Path to the log
-   * @param inclusive whether we should also remove the given log file
-   * @param queueId id of the replication queue
+   * @param log            Path to the log
+   * @param inclusive      whether we should also remove the given log file
+   * @param queueId        id of the replication queue
    * @param queueRecovered Whether this is a recovered queue
    */
   void cleanOldLogs(String log, boolean inclusive, String queueId, boolean queueRecovered) {
@@ -615,8 +609,8 @@ public class ReplicationSourceManager {
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources.values()) {
       source.enqueueLog(newLog);
-      LOG.trace("Enqueued {} to source {} while performing postLogRoll operation.",
-          newLog, source.getQueueId());
+      LOG.trace("Enqueued {} to source {} while performing postLogRoll operation.", newLog,
+        source.getQueueId());
     }
   }
 
@@ -624,8 +618,8 @@ public class ReplicationSourceManager {
     // Wait a bit before transferring the queues, we may be shutting down.
     // This sleep may not be enough in some cases.
     try {
-      Thread.sleep(sleepBeforeFailover +
-        (long) (ThreadLocalRandom.current().nextFloat() * sleepBeforeFailover));
+      Thread.sleep(sleepBeforeFailover
+        + (long) (ThreadLocalRandom.current().nextFloat() * sleepBeforeFailover));
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while waiting before transferring a queue.");
       Thread.currentThread().interrupt();
@@ -653,10 +647,9 @@ public class ReplicationSourceManager {
       claimedQueue = queueStorage.claimQueue(deadRS, queue, server.getServerName());
     } catch (ReplicationException e) {
       LOG.error(
-        "ReplicationException: cannot claim dead region ({})'s " +
-          "replication queue. Znode : ({})" +
-          " Possible solution: check if znode size exceeds jute.maxBuffer value. " +
-          " If so, increase it for both client and server side.",
+        "ReplicationException: cannot claim dead region ({})'s " + "replication queue. Znode : ({})"
+          + " Possible solution: check if znode size exceeds jute.maxBuffer value. "
+          + " If so, increase it for both client and server side.",
         deadRS, queueStorage.getRsNode(deadRS), e);
       server.abort("Failed to claim queue from dead regionserver.", e);
       return;
@@ -672,8 +665,10 @@ public class ReplicationSourceManager {
       abortWhenFail(() -> queueStorage.removeQueue(server.getServerName(), queueId));
       return;
     }
-    if (server instanceof ReplicationSyncUp.DummyServer &&
-      peer.getPeerState().equals(PeerState.DISABLED)) {
+    if (
+      server instanceof ReplicationSyncUp.DummyServer
+        && peer.getPeerState().equals(PeerState.DISABLED)
+    ) {
       LOG.warn(
         "Peer {} is disabled. ReplicationSyncUp tool will skip " + "replicating data to this peer.",
         peerId);
@@ -798,8 +793,8 @@ public class ReplicationSourceManager {
   }
 
   /**
-   * Returns the maximum size in bytes of edits held in memory which are pending replication
-   * across all sources inside this RegionServer.
+   * Returns the maximum size in bytes of edits held in memory which are pending replication across
+   * all sources inside this RegionServer.
    */
   public long getTotalBufferLimit() {
     return totalBufferLimit;
@@ -845,7 +840,7 @@ public class ReplicationSourceManager {
     // Print stats that apply across all Replication Sources
     stats.append("Global stats: ");
     stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed().get()).append("B, Limit=")
-        .append(getTotalBufferLimit()).append("B\n");
+      .append(getTotalBufferLimit()).append("B\n");
     for (ReplicationSourceInterface source : this.sources.values()) {
       stats.append("Normal source for cluster " + source.getPeerId() + ": ");
       stats.append(source.getStats() + "\n");
@@ -858,7 +853,7 @@ public class ReplicationSourceManager {
   }
 
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-      throws IOException {
+    throws IOException {
     for (ReplicationSourceInterface source : this.sources.values()) {
       throwIOExceptionWhenFail(() -> source.addHFileRefs(tableName, family, pairs));
     }
@@ -877,24 +872,24 @@ public class ReplicationSourceManager {
   }
 
   /**
-   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region.
-   * Create it once only. If exists already, use the existing one.
+   * Add an hbase:meta Catalog replication source. Called on open of an hbase:meta Region. Create it
+   * once only. If exists already, use the existing one.
    * @see #removeCatalogReplicationSource(RegionInfo)
    * @see #addSource(String) This is specialization on the addSource method.
    */
   public ReplicationSourceInterface addCatalogReplicationSource(RegionInfo regionInfo)
-      throws IOException {
+    throws IOException {
     // Poor-man's putIfAbsent
     synchronized (this.catalogReplicationSource) {
       ReplicationSourceInterface rs = this.catalogReplicationSource.get();
-      return rs != null ? rs :
-        this.catalogReplicationSource.getAndSet(createCatalogReplicationSource(regionInfo));
+      return rs != null
+        ? rs
+        : this.catalogReplicationSource.getAndSet(createCatalogReplicationSource(regionInfo));
     }
   }
 
   /**
-   * Remove the hbase:meta Catalog replication source.
-   * Called when we close hbase:meta.
+   * Remove the hbase:meta Catalog replication source. Called when we close hbase:meta.
    * @see #addCatalogReplicationSource(RegionInfo regionInfo)
    */
   public void removeCatalogReplicationSource(RegionInfo regionInfo) {
@@ -903,15 +898,15 @@ public class ReplicationSourceManager {
   }
 
   /**
-   * Create, initialize, and start the Catalog ReplicationSource.
-   * Presumes called one-time only (caller must ensure one-time only call).
-   * This ReplicationSource is NOT created via {@link ReplicationSourceFactory}.
+   * Create, initialize, and start the Catalog ReplicationSource. Presumes called one-time only
+   * (caller must ensure one-time only call). This ReplicationSource is NOT created via
+   * {@link ReplicationSourceFactory}.
    * @see #addSource(String) This is a specialization of the addSource call.
    * @see #catalogReplicationSource for a note on this ReplicationSource's lifecycle (and more on
-   *    why the special handling).
+   *      why the special handling).
    */
   private ReplicationSourceInterface createCatalogReplicationSource(RegionInfo regionInfo)
-      throws IOException {
+    throws IOException {
     // Instantiate meta walProvider. Instantiated here or over in the #warmupRegion call made by the
     // Master on a 'move' operation. Need to do extra work if we did NOT instantiate the provider.
     WALProvider walProvider = this.walFactory.getMetaWALProvider();
@@ -924,14 +919,15 @@ public class ReplicationSourceManager {
     // read replicas feature that makes use of the source does a reset on a crash of the WAL
     // source process. See "4.1 Skip maintaining zookeeper replication queue (offsets/WALs)" in the
     // design doc attached to HBASE-18070 'Enable memstore replication for meta replica' for detail.
-    CatalogReplicationSourcePeer peer = new CatalogReplicationSourcePeer(this.conf,
-      this.clusterId.toString());
+    CatalogReplicationSourcePeer peer =
+      new CatalogReplicationSourcePeer(this.conf, this.clusterId.toString());
     final ReplicationSourceInterface crs = new CatalogReplicationSource();
     crs.init(conf, fs, this, new NoopReplicationQueueStorage(), peer, server, peer.getId(),
       clusterId, walProvider.getWALFileLengthProvider(), new MetricsSource(peer.getId()));
     // Add listener on the provider so we can pick up the WAL to replicate on roll.
     WALActionsListener listener = new WALActionsListener() {
-      @Override public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+      @Override
+      public void postLogRoll(Path oldPath, Path newPath) throws IOException {
         crs.enqueueLog(newPath);
       }
     };
@@ -943,7 +939,7 @@ public class ReplicationSourceManager {
       // Replication Source so it can start replicating it.
       WAL wal = walProvider.getWAL(regionInfo);
       wal.registerWALActionsListener(listener);
-      crs.enqueueLog(((AbstractFSWAL)wal).getCurrentFileName());
+      crs.enqueueLog(((AbstractFSWAL) wal).getCurrentFileName());
     }
     return crs.startup();
   }

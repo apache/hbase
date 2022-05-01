@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +29,6 @@ public class UnknownRegionException extends DoNotRetryRegionException {
 
   /**
    * Constructs a new UnknownRegionException with the specified detail message.
-   *
    * @param message the detail message
    */
   public UnknownRegionException(String message) {
@@ -39,9 +37,8 @@ public class UnknownRegionException extends DoNotRetryRegionException {
 
   /**
    * Constructs a new UnknownRegionException with the specified detail message and cause.
-   *
    * @param message the detail message
-   * @param cause the cause of the exception
+   * @param cause   the cause of the exception
    */
   public UnknownRegionException(String message, Throwable cause) {
     super(message, cause);

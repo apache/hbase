@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
+
 /**
  * Test RSGroupBasedLoadBalancer with SimpleLoadBalancer as internal balancer
  */
@@ -57,7 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupBasedLoadBalancer.class);
+    HBaseClassTestRule.forClass(TestRSGroupBasedLoadBalancer.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupBasedLoadBalancer.class);
   private static RSGroupBasedLoadBalancer loadBalancer;
 
@@ -76,10 +77,8 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
   }
 
   /**
-   * Test the load balancing algorithm.
-   *
-   * Invariant is that all servers of the group should be hosting either floor(average) or
-   * ceiling(average)
+   * Test the load balancing algorithm. Invariant is that all servers of the group should be hosting
+   * either floor(average) or ceiling(average)
    */
   @Test
   public void testBalanceCluster() throws Exception {
@@ -92,7 +91,7 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
       ArrayListMultimap<String, ServerAndLoad> list = convertToGroupBasedMap(servers);
       LOG.info("Mock Cluster :  " + printStats(list));
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-          (Map) mockClusterServersWithTables(servers);
+        (Map) mockClusterServersWithTables(servers);
       List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
       ArrayListMultimap<String, ServerAndLoad> balancedCluster = reconcile(list, plans);
       LOG.info("Mock Balance : " + printStats(balancedCluster));
@@ -101,34 +100,29 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
   }
 
   /**
-   * Tests the bulk assignment used during cluster startup.
-   *
-   * Round-robin. Should yield a balanced cluster so same invariant as the
-   * load balancer holds, all servers holding either floor(avg) or
+   * Tests the bulk assignment used during cluster startup. Round-robin. Should yield a balanced
+   * cluster so same invariant as the load balancer holds, all servers holding either floor(avg) or
    * ceiling(avg).
    */
   @Test
   public void testBulkAssignment() throws Exception {
     List<RegionInfo> regions = randomRegions(25);
-    Map<ServerName, List<RegionInfo>> assignments = loadBalancer
-        .roundRobinAssignment(regions, servers);
-    //test empty region/servers scenario
-    //this should not throw an NPE
+    Map<ServerName, List<RegionInfo>> assignments =
+      loadBalancer.roundRobinAssignment(regions, servers);
+    // test empty region/servers scenario
+    // this should not throw an NPE
     loadBalancer.roundRobinAssignment(regions, Collections.emptyList());
-    //test regular scenario
+    // test regular scenario
     assertTrue(assignments.keySet().size() == servers.size());
     for (ServerName sn : assignments.keySet()) {
       List<RegionInfo> regionAssigned = assignments.get(sn);
       for (RegionInfo region : regionAssigned) {
         TableName tableName = region.getTable();
-        String groupName =
-            getMockedGroupInfoManager().getRSGroupOfTable(tableName);
+        String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
         assertTrue(StringUtils.isNotEmpty(groupName));
-        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(
-            groupName);
-        assertTrue(
-            "Region is not correctly assigned to group servers.",
-            gInfo.containsServer(sn.getAddress()));
+        RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
+        assertTrue("Region is not correctly assigned to group servers.",
+          gInfo.containsServer(sn.getAddress()));
       }
     }
     ArrayListMultimap<String, ServerAndLoad> loadMap = convertToGroupBasedMap(assignments);
@@ -148,10 +142,10 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         inputForTest.put(region, sn);
       }
     }
-    //verify region->null server assignment is handled
+    // verify region->null server assignment is handled
     inputForTest.put(randomRegions(1).get(0), null);
-    Map<ServerName, List<RegionInfo>> newAssignment = loadBalancer
-        .retainAssignment(inputForTest, servers);
+    Map<ServerName, List<RegionInfo>> newAssignment =
+      loadBalancer.retainAssignment(inputForTest, servers);
     assertRetainedAssignment(inputForTest, servers, newAssignment);
   }
 
@@ -164,24 +158,24 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
     onlineServers.addAll(servers);
     List<RegionInfo> regions = randomRegions(25);
     int bogusRegion = 0;
-    for(RegionInfo region : regions){
+    for (RegionInfo region : regions) {
       String group = tableMap.get(region.getTable());
-      if("dg3".equals(group) || "dg4".equals(group)){
+      if ("dg3".equals(group) || "dg4".equals(group)) {
         bogusRegion++;
       }
     }
     Set<Address> offlineServers = new HashSet<Address>();
     offlineServers.addAll(groupMap.get("dg3").getServers());
     offlineServers.addAll(groupMap.get("dg4").getServers());
-    for(Iterator<ServerName> it =  onlineServers.iterator(); it.hasNext();){
+    for (Iterator<ServerName> it = onlineServers.iterator(); it.hasNext();) {
       ServerName server = it.next();
       Address address = server.getAddress();
-      if(offlineServers.contains(address)){
+      if (offlineServers.contains(address)) {
         it.remove();
       }
     }
-    Map<ServerName, List<RegionInfo>> assignments = loadBalancer
-        .roundRobinAssignment(regions, onlineServers);
+    Map<ServerName, List<RegionInfo>> assignments =
+      loadBalancer.roundRobinAssignment(regions, onlineServers);
     assertEquals(bogusRegion, assignments.get(LoadBalancer.BOGUS_SERVER_NAME).size());
   }
 

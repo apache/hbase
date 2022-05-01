@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.wal;
 
 import static com.codahale.metrics.MetricRegistry.name;
@@ -76,25 +75,23 @@ import org.slf4j.LoggerFactory;
 // imports for things that haven't moved from regionserver.wal yet.
 
 /**
- * This class runs performance benchmarks for {@link WAL}.
- * See usage for this tool by running:
+ * This class runs performance benchmarks for {@link WAL}. See usage for this tool by running:
  * <code>$ hbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation -h</code>
  */
 @InterfaceAudience.Private
 public final class WALPerformanceEvaluation extends Configured implements Tool {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(WALPerformanceEvaluation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WALPerformanceEvaluation.class);
 
   private final MetricRegistry metrics = new MetricRegistry();
   private final Meter syncMeter =
     metrics.meter(name(WALPerformanceEvaluation.class, "syncMeter", "syncs"));
 
-  private final Histogram syncHistogram = metrics.histogram(
-    name(WALPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs"));
-  private final Histogram syncCountHistogram = metrics.histogram(
-    name(WALPerformanceEvaluation.class, "syncCountHistogram", "countPerSync"));
-  private final Meter appendMeter = metrics.meter(
-    name(WALPerformanceEvaluation.class, "appendMeter", "bytes"));
+  private final Histogram syncHistogram =
+    metrics.histogram(name(WALPerformanceEvaluation.class, "syncHistogram", "nanos-between-syncs"));
+  private final Histogram syncCountHistogram =
+    metrics.histogram(name(WALPerformanceEvaluation.class, "syncCountHistogram", "countPerSync"));
+  private final Meter appendMeter =
+    metrics.meter(name(WALPerformanceEvaluation.class, "appendMeter", "bytes"));
   private final Histogram latencyHistogram =
     metrics.histogram(name(WALPerformanceEvaluation.class, "latencyHistogram", "nanos"));
 
@@ -116,9 +113,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   }
 
   /**
-   * Perform WAL.append() of Put object, for the number of iterations requested.
-   * Keys and Vaues are generated randomly, the number of column families,
-   * qualifiers and key/value size is tunable by the user.
+   * Perform WAL.append() of Put object, for the number of iterations requested. Keys and Vaues are
+   * generated randomly, the number of column families, qualifiers and key/value size is tunable by
+   * the user.
    */
   class WALPutBenchmark implements Runnable {
     private final long numIterations;
@@ -128,15 +125,15 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     private final int syncInterval;
     private final NavigableMap<byte[], Integer> scopes;
 
-    WALPutBenchmark(final HRegion region, final TableDescriptor htd,
-        final long numIterations, final boolean noSync, final int syncInterval) {
+    WALPutBenchmark(final HRegion region, final TableDescriptor htd, final long numIterations,
+      final boolean noSync, final int syncInterval) {
       this.numIterations = numIterations;
       this.noSync = noSync;
       this.syncInterval = syncInterval;
       this.numFamilies = htd.getColumnFamilyCount();
       this.region = region;
       scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(byte[] fam : htd.getColumnFamilyNames()) {
+      for (byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
       }
     }
@@ -160,7 +157,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             walEdit.add(put.getFamilyCellMap());
             RegionInfo hri = region.getRegionInfo();
             final WALKeyImpl logkey =
-                new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
+              new WALKeyImpl(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc, scopes);
             wal.appendData(hri, logkey, walEdit);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
@@ -282,12 +279,12 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       rootRegionDir = TEST_UTIL.getDataTestDirOnTestFS("WALPerformanceEvaluation");
     }
     // Run WAL Performance Evaluation
-    // First set the fs from configs.  In case we are on hadoop1
+    // First set the fs from configs. In case we are on hadoop1
     CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
     FileSystem fs = FileSystem.get(getConf());
     LOG.info("FileSystem={}, rootDir={}", fs, rootRegionDir);
     Span span = TraceUtil.getGlobalTracer().spanBuilder("WALPerfEval").startSpan();
-    try (Scope scope = span.makeCurrent()){
+    try (Scope scope = span.makeCurrent()) {
       rootRegionDir = rootRegionDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
       cleanRegionRootDir(fs, rootRegionDir);
       CommonFSUtils.setRootDir(getConf(), rootRegionDir);
@@ -299,21 +296,20 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       Threads.setDaemonThreadRunning(roller, "WALPerfEval.logRoller");
 
       try {
-        for(int i = 0; i < numRegions; i++) {
+        for (int i = 0; i < numRegions; i++) {
           // Initialize Table Descriptor
           // a table per desired region means we can avoid carving up the key space
           final TableDescriptor htd = createHTableDescriptor(i, numFamilies);
           regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll, roller);
-          benchmarks[i] =
-            new WALPutBenchmark(regions[i], htd, numIterations, noSync, syncInterval);
+          benchmarks[i] = new WALPutBenchmark(regions[i], htd, numIterations, noSync, syncInterval);
         }
-        ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).
-          outputTo(System.out).convertRatesTo(TimeUnit.SECONDS).filter(MetricFilter.ALL).build();
+        ConsoleReporter reporter = ConsoleReporter.forRegistry(metrics).outputTo(System.out)
+          .convertRatesTo(TimeUnit.SECONDS).filter(MetricFilter.ALL).build();
         reporter.start(30, TimeUnit.SECONDS);
 
         long putTime = runBenchmark(benchmarks, numThreads);
-        logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
-          ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
+        logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations
+          + ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
 
         for (int i = 0; i < numRegions; i++) {
           if (regions[i] != null) {
@@ -326,9 +322,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           Path dir = new Path(CommonFSUtils.getRootDir(getConf()),
             AbstractFSWALProvider.getWALDirectoryName("wals"));
           long editCount = 0;
-          FileStatus [] fsss = fs.listStatus(dir);
+          FileStatus[] fsss = fs.listStatus(dir);
           if (fsss.length == 0) throw new IllegalStateException("No WAL found");
-          for (FileStatus fss: fsss) {
+          for (FileStatus fss : fsss) {
             Path p = fss.getPath();
             if (!fs.exists(p)) throw new IllegalStateException(p.toString());
             editCount += verify(wals, p, verbose);
@@ -365,25 +361,21 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   }
 
   private static TableDescriptor createHTableDescriptor(final int regionNum,
-      final int numFamilies) {
+    final int numFamilies) {
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME + ":" + regionNum));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(TABLE_NAME + ":" + regionNum));
     IntStream.range(0, numFamilies)
-        .mapToObj(i -> ColumnFamilyDescriptorBuilder.of(FAMILY_PREFIX + i))
-        .forEachOrdered(builder::setColumnFamily);
+      .mapToObj(i -> ColumnFamilyDescriptorBuilder.of(FAMILY_PREFIX + i))
+      .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
   /**
-   * Verify the content of the WAL file.
-   * Verify that the file has expected number of edits.
-   * @param wals may not be null
-   * @param wal
-   * @return Count of edits.
-   * @throws IOException
+   * Verify the content of the WAL file. Verify that the file has expected number of edits.
+   * @param wals may not be null n * @return Count of edits. n
    */
   private long verify(final WALFactory wals, final Path wal, final boolean verbose)
-      throws IOException {
+    throws IOException {
     WAL.Reader reader = wals.createReader(wal.getFileSystem(getConf()), wal);
     long count = 0;
     Map<String, Long> sequenceIds = new HashMap<>();
@@ -400,8 +392,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           // sequenceIds should be increasing for every regions
           if (sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName())) >= seqid) {
             throw new IllegalStateException("wal = " + wal.getName() + ", " + "previous seqid = "
-                + sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName()))
-                + ", current seqid = " + seqid);
+              + sequenceIds.get(Bytes.toString(e.getKey().getEncodedRegionName()))
+              + ", current seqid = " + seqid);
           }
         }
         // update the sequence Id.
@@ -435,31 +427,30 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.err.println("  -nocleanup       Do NOT remove test data when done.");
     System.err.println("  -noclosefs       Do NOT close the filesystem when done.");
     System.err.println("  -nosync          Append without syncing");
-    System.err.println("  -syncInterval <N> Append N edits and then sync. " +
-      "Default=0, i.e. sync every edit.");
+    System.err.println(
+      "  -syncInterval <N> Append N edits and then sync. " + "Default=0, i.e. sync every edit.");
     System.err.println("  -verify          Verify edits written in sequence");
-    System.err.println("  -verbose         Output extra info; " +
-      "e.g. all edit seq ids when verifying");
+    System.err
+      .println("  -verbose         Output extra info; " + "e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
     System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
-    System.err.println("  -traceFreq <N>   Rate of trace sampling. Default: 1.0, " +
-      "only respected when tracing is enabled, ie -Dhbase.trace.spanreceiver.classes=...");
+    System.err.println("  -traceFreq <N>   Rate of trace sampling. Default: 1.0, "
+      + "only respected when tracing is enabled, ie -Dhbase.trace.spanreceiver.classes=...");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");
-    System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and " +
-      "verification afterward do:");
-    System.err.println(" $ hbase org.apache.hadoop.hbase.wal." +
-      "WALPerformanceEvaluation \\");
-    System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp " +
-      "-threads 100 -roll 10000 -verify");
+    System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and "
+      + "verification afterward do:");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.wal." + "WALPerformanceEvaluation \\");
+    System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp "
+      + "-threads 100 -roll 10000 -verify");
     System.exit(1);
   }
 
   private final Set<WAL> walsListenedTo = new HashSet<>();
 
   private HRegion openRegion(final FileSystem fs, final Path dir, final TableDescriptor htd,
-      final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
+    final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
     // Initialize HRegion
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     // Initialize WAL
@@ -491,7 +482,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
         @Override
         public void postAppend(final long size, final long elapsedTime, final WALKey logkey,
-            final WALEdit logEdit) {
+          final WALEdit logEdit) {
           appendMeter.mark(size);
         }
       });
@@ -522,8 +513,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     for (int cf = 0; cf < numFamilies; ++cf) {
       for (int q = 0; q < numQualifiers; ++q) {
         rand.nextBytes(value);
-        put.addColumn(Bytes.toBytes(FAMILY_PREFIX + cf),
-            Bytes.toBytes(QUALIFIER_PREFIX + q), value);
+        put.addColumn(Bytes.toBytes(FAMILY_PREFIX + cf), Bytes.toBytes(QUALIFIER_PREFIX + q),
+          value);
       }
     }
     return put;
@@ -533,26 +524,25 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     Thread[] threads = new Thread[numThreads];
     long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < numThreads; ++i) {
-      threads[i] = new Thread(runnable[i%runnable.length], "t" + i + ",r" + (i%runnable.length));
+      threads[i] =
+        new Thread(runnable[i % runnable.length], "t" + i + ",r" + (i % runnable.length));
       threads[i].start();
     }
-    for (Thread t : threads) t.join();
+    for (Thread t : threads)
+      t.join();
     long endTime = EnvironmentEdgeManager.currentTime();
-    return(endTime - startTime);
+    return (endTime - startTime);
   }
 
   /**
-   * The guts of the {@link #main} method.
-   * Call this method to avoid the {@link #main(String[])} System.exit.
-   * @param args
-   * @return errCode
-   * @throws Exception
+   * The guts of the {@link #main} method. Call this method to avoid the {@link #main(String[])}
+   * System.exit. nnn
    */
-  static int innerMain(final Configuration c, final String [] args) throws Exception {
+  static int innerMain(final Configuration c, final String[] args) throws Exception {
     return ToolRunner.run(c, new WALPerformanceEvaluation(), args);
   }
 
   public static void main(String[] args) throws Exception {
-     System.exit(innerMain(HBaseConfiguration.create(), args));
+    System.exit(innerMain(HBaseConfiguration.create(), args));
   }
 }

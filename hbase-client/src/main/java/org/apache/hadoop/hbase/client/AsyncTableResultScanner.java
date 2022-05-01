@@ -77,7 +77,7 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "{} stop prefetching when scanning {} as the cache size {}"
-            + " is greater than the maxCacheSize {}",
+          + " is greater than the maxCacheSize {}",
         String.format("0x%x", System.identityHashCode(this)), tableName, cacheSize, maxCacheSize);
     }
     resumer = controller.suspend();

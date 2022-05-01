@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,12 +40,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestTableOperationException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableOperationException.class);
+    HBaseClassTestRule.forClass(TestTableOperationException.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -66,10 +65,12 @@ public class TestTableOperationException {
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_DONOT_RETRY)
+    UTIL.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(TABLE_DONOT_RETRY)
         .setCoprocessor(ThrowDoNotRetryIOExceptionCoprocessor.class.getName())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_RETRY)
+    UTIL.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(TABLE_RETRY)
         .setCoprocessor(ThrowIOExceptionCoprocessor.class.getName())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
     tableDoNotRetry = UTIL.getConnection().getTable(TABLE_DONOT_RETRY);
@@ -103,7 +104,7 @@ public class TestTableOperationException {
   @Test(expected = DoNotRetryIOException.class)
   public void testAppendWithDoNotRetryIOException() throws Exception {
     tableDoNotRetry
-        .append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
+      .append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
   }
 
   @Test(expected = DoNotRetryIOException.class)
@@ -137,7 +138,7 @@ public class TestTableOperationException {
   }
 
   public static class ThrowDoNotRetryIOExceptionCoprocessor
-      implements RegionCoprocessor, RegionObserver {
+    implements RegionCoprocessor, RegionObserver {
 
     public ThrowDoNotRetryIOExceptionCoprocessor() {
     }
@@ -149,37 +150,36 @@ public class TestTableOperationException {
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-        final List<Cell> results) throws IOException {
+      final List<Cell> results) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-        final WALEdit edit, final Durability durability) throws IOException {
+      final WALEdit edit, final Durability durability) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
     public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
+      final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Increment increment) throws IOException {
+      final Increment increment) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
 
     @Override
     public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Append append) throws IOException {
+      final Append append) throws IOException {
       throw new DoNotRetryIOException("Call failed and don't retry");
     }
   }
 
-  public static class ThrowIOExceptionCoprocessor
-      implements RegionCoprocessor, RegionObserver {
+  public static class ThrowIOExceptionCoprocessor implements RegionCoprocessor, RegionObserver {
 
     public ThrowIOExceptionCoprocessor() {
     }
@@ -191,31 +191,31 @@ public class TestTableOperationException {
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
-        final List<Cell> results) throws IOException {
+      final List<Cell> results) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-        final WALEdit edit, final Durability durability) throws IOException {
+      final WALEdit edit, final Durability durability) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
     public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
+      final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Increment increment) throws IOException {
+      final Increment increment) throws IOException {
       throw new IOException("Call failed and retry");
     }
 
     @Override
     public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Append append) throws IOException {
+      final Append append) throws IOException {
       throw new IOException("Call failed and retry");
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,17 +55,16 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 /**
  * test the performance for seek.
  * <p>
- * Copied from
- * <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
- * Remove after tfile is committed and use the tfile version of this class
- * instead.</p>
+ * Copied from <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
+ * Remove after tfile is committed and use the tfile version of this class instead.
+ * </p>
  */
 @Category({ IOTests.class, SmallTests.class })
 public class TestHFileSeek {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileSeek.class);
+    HBaseClassTestRule.forClass(TestHFileSeek.class);
 
   private static final byte[] CF = "f1".getBytes();
   private static final byte[] QUAL = "q1".getBytes();
@@ -99,32 +98,25 @@ public class TestHFileSeek {
     fs = path.getFileSystem(conf);
     timer = new NanoTimer(false);
     rng = new Random(options.seed);
-    keyLenGen =
-        new RandomDistribution.Zipf(new Random(rng.nextLong()),
-            options.minKeyLen, options.maxKeyLen, 1.2);
-    RandomDistribution.DiscreteRNG valLenGen =
-        new RandomDistribution.Flat(new Random(rng.nextLong()),
-            options.minValLength, options.maxValLength);
-    RandomDistribution.DiscreteRNG wordLenGen =
-        new RandomDistribution.Flat(new Random(rng.nextLong()),
-            options.minWordLen, options.maxWordLen);
-    kvGen =
-        new KVGenerator(rng, true, keyLenGen, valLenGen, wordLenGen,
-            options.dictSize);
+    keyLenGen = new RandomDistribution.Zipf(new Random(rng.nextLong()), options.minKeyLen,
+      options.maxKeyLen, 1.2);
+    RandomDistribution.DiscreteRNG valLenGen = new RandomDistribution.Flat(
+      new Random(rng.nextLong()), options.minValLength, options.maxValLength);
+    RandomDistribution.DiscreteRNG wordLenGen = new RandomDistribution.Flat(
+      new Random(rng.nextLong()), options.minWordLen, options.maxWordLen);
+    kvGen = new KVGenerator(rng, true, keyLenGen, valLenGen, wordLenGen, options.dictSize);
   }
 
   @After
   public void tearDown() {
     try {
       fs.close();
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       // Nothing
     }
   }
 
-  private static FSDataOutputStream createFSOutput(Path name, FileSystem fs)
-    throws IOException {
+  private static FSDataOutputStream createFSOutput(Path name, FileSystem fs) throws IOException {
     if (fs.exists(name)) {
       fs.delete(name, true);
     }
@@ -136,14 +128,10 @@ public class TestHFileSeek {
     long totalBytes = 0;
     FSDataOutputStream fout = createFSOutput(path, fs);
     try {
-      HFileContext context = new HFileContextBuilder()
-                            .withBlockSize(options.minBlockSize)
-                            .withCompression(HFileWriterImpl.compressionByName(options.compress))
-                            .build();
-      Writer writer = HFile.getWriterFactoryNoCache(conf)
-          .withOutputStream(fout)
-          .withFileContext(context)
-          .create();
+      HFileContext context = new HFileContextBuilder().withBlockSize(options.minBlockSize)
+        .withCompression(HFileWriterImpl.compressionByName(options.compress)).build();
+      Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
+        .withFileContext(context).create();
       try {
         BytesWritable key = new BytesWritable();
         BytesWritable val = new BytesWritable();
@@ -155,9 +143,9 @@ public class TestHFileSeek {
             }
           }
           kvGen.next(key, val, false);
-          byte [] k = new byte [key.getLength()];
+          byte[] k = new byte[key.getLength()];
           System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
-          byte [] v = new byte [val.getLength()];
+          byte[] v = new byte[val.getLength()];
           System.arraycopy(val.getBytes(), 0, v, 0, key.getLength());
           KeyValue kv = new KeyValue(k, CF, QUAL, v);
           writer.append(kv);
@@ -165,23 +153,19 @@ public class TestHFileSeek {
           totalBytes += kv.getValueLength();
         }
         timer.stop();
-      }
-      finally {
+      } finally {
         writer.close();
       }
-    }
-    finally {
+    } finally {
       fout.close();
     }
-    double duration = (double)timer.read()/1000; // in us.
+    double duration = (double) timer.read() / 1000; // in us.
     long fsize = fs.getFileStatus(path).getLen();
 
-    System.out.printf(
-        "time: %s...uncompressed: %.2fMB...raw thrpt: %.2fMB/s\n",
-        timer.toString(), (double) totalBytes / 1024 / 1024, totalBytes
-            / duration);
-    System.out.printf("time: %s...file size: %.2fMB...disk thrpt: %.2fMB/s\n",
-        timer.toString(), (double) fsize / 1024 / 1024, fsize / duration);
+    System.out.printf("time: %s...uncompressed: %.2fMB...raw thrpt: %.2fMB/s\n", timer.toString(),
+      (double) totalBytes / 1024 / 1024, totalBytes / duration);
+    System.out.printf("time: %s...file size: %.2fMB...disk thrpt: %.2fMB/s\n", timer.toString(),
+      (double) fsize / 1024 / 1024, fsize / duration);
   }
 
   public void seekTFile() throws IOException {
@@ -190,7 +174,7 @@ public class TestHFileSeek {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, path).build();
     Reader reader = TestHFile.createReaderFromStream(context, new CacheConfig(conf), conf);
     KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey().get()).getKey(),
-        ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
+      ((KeyValue) reader.getLastKey().get()).getKey(), keyLenGen);
     HFileScanner scanner = reader.getScanner(conf, false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
@@ -210,11 +194,9 @@ public class TestHFileSeek {
       }
     }
     timer.stop();
-    System.out.printf(
-        "time: %s...avg seek: %s...%d hit...%d miss...avg I/O size: %.2fKB\n",
-        timer.toString(), NanoTimer.nanoTimeToString(timer.read()
-            / options.seekCount), options.seekCount - miss, miss,
-        (double) totalBytes / 1024 / (options.seekCount - miss));
+    System.out.printf("time: %s...avg seek: %s...%d hit...%d miss...avg I/O size: %.2fKB\n",
+      timer.toString(), NanoTimer.nanoTimeToString(timer.read() / options.seekCount),
+      options.seekCount - miss, miss, (double) totalBytes / 1024 / (options.seekCount - miss));
 
   }
 
@@ -267,8 +249,7 @@ public class TestHFileSeek {
     int maxWordLen = 20;
 
     private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-    String rootDir =
-      TEST_UTIL.getDataTestDir("TestTFileSeek").toString();
+    String rootDir = TEST_UTIL.getDataTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";
     // String compress = "lzo"; DISABLED
     String compress = "none";
@@ -301,8 +282,7 @@ public class TestHFileSeek {
         CommandLine line = parser.parse(opts, args, true);
         processOptions(line, opts);
         validateOptions();
-      }
-      catch (ParseException e) {
+      } catch (ParseException e) {
         System.out.println(e.getMessage());
         System.out.println("Try \"--help\" option for details.");
         setStopProceed();
@@ -314,112 +294,64 @@ public class TestHFileSeek {
     }
 
     private Options buildOptions() {
-      Option compress =
-          OptionBuilder.withLongOpt("compress").withArgName("[none|lzo|gz|snappy]")
-              .hasArg().withDescription("compression scheme").create('c');
+      Option compress = OptionBuilder.withLongOpt("compress").withArgName("[none|lzo|gz|snappy]")
+        .hasArg().withDescription("compression scheme").create('c');
 
-      Option fileSize =
-          OptionBuilder.withLongOpt("file-size").withArgName("size-in-MB")
-              .hasArg().withDescription("target size of the file (in MB).")
-              .create('s');
+      Option fileSize = OptionBuilder.withLongOpt("file-size").withArgName("size-in-MB").hasArg()
+        .withDescription("target size of the file (in MB).").create('s');
 
-      Option fsInputBufferSz =
-          OptionBuilder.withLongOpt("fs-input-buffer").withArgName("size")
-              .hasArg().withDescription(
-                  "size of the file system input buffer (in bytes).").create(
-                  'i');
+      Option fsInputBufferSz = OptionBuilder.withLongOpt("fs-input-buffer").withArgName("size")
+        .hasArg().withDescription("size of the file system input buffer (in bytes).").create('i');
 
-      Option fsOutputBufferSize =
-          OptionBuilder.withLongOpt("fs-output-buffer").withArgName("size")
-              .hasArg().withDescription(
-                  "size of the file system output buffer (in bytes).").create(
-                  'o');
+      Option fsOutputBufferSize = OptionBuilder.withLongOpt("fs-output-buffer").withArgName("size")
+        .hasArg().withDescription("size of the file system output buffer (in bytes).").create('o');
 
-      Option keyLen =
-          OptionBuilder
-              .withLongOpt("key-length")
-              .withArgName("min,max")
-              .hasArg()
-              .withDescription(
-                  "the length range of the key (in bytes)")
-              .create('k');
+      Option keyLen = OptionBuilder.withLongOpt("key-length").withArgName("min,max").hasArg()
+        .withDescription("the length range of the key (in bytes)").create('k');
 
-      Option valueLen =
-          OptionBuilder
-              .withLongOpt("value-length")
-              .withArgName("min,max")
-              .hasArg()
-              .withDescription(
-                  "the length range of the value (in bytes)")
-              .create('v');
+      Option valueLen = OptionBuilder.withLongOpt("value-length").withArgName("min,max").hasArg()
+        .withDescription("the length range of the value (in bytes)").create('v');
 
-      Option blockSz =
-          OptionBuilder.withLongOpt("block").withArgName("size-in-KB").hasArg()
-              .withDescription("minimum block size (in KB)").create('b');
+      Option blockSz = OptionBuilder.withLongOpt("block").withArgName("size-in-KB").hasArg()
+        .withDescription("minimum block size (in KB)").create('b');
 
-      Option operation =
-          OptionBuilder.withLongOpt("operation").withArgName("r|w|rw").hasArg()
-              .withDescription(
-                  "action: seek-only, create-only, seek-after-create").create(
-                  'x');
+      Option operation = OptionBuilder.withLongOpt("operation").withArgName("r|w|rw").hasArg()
+        .withDescription("action: seek-only, create-only, seek-after-create").create('x');
 
-      Option rootDir =
-          OptionBuilder.withLongOpt("root-dir").withArgName("path").hasArg()
-              .withDescription(
-                  "specify root directory where files will be created.")
-              .create('r');
+      Option rootDir = OptionBuilder.withLongOpt("root-dir").withArgName("path").hasArg()
+        .withDescription("specify root directory where files will be created.").create('r');
 
-      Option file =
-          OptionBuilder.withLongOpt("file").withArgName("name").hasArg()
-              .withDescription("specify the file name to be created or read.")
-              .create('f');
+      Option file = OptionBuilder.withLongOpt("file").withArgName("name").hasArg()
+        .withDescription("specify the file name to be created or read.").create('f');
 
-      Option seekCount =
-          OptionBuilder
-              .withLongOpt("seek")
-              .withArgName("count")
-              .hasArg()
-              .withDescription(
-                  "specify how many seek operations we perform (requires -x r or -x rw.")
-              .create('n');
+      Option seekCount = OptionBuilder.withLongOpt("seek").withArgName("count").hasArg()
+        .withDescription("specify how many seek operations we perform (requires -x r or -x rw.")
+        .create('n');
 
-      Option trialCount =
-          OptionBuilder
-              .withLongOpt("trials")
-              .withArgName("n")
-              .hasArg()
-              .withDescription(
-                  "specify how many times to run the whole benchmark")
-              .create('t');
+      Option trialCount = OptionBuilder.withLongOpt("trials").withArgName("n").hasArg()
+        .withDescription("specify how many times to run the whole benchmark").create('t');
 
-      Option useRawFs =
-          OptionBuilder
-            .withLongOpt("rawfs")
-            .withDescription("use raw instead of checksummed file system")
-            .create();
+      Option useRawFs = OptionBuilder.withLongOpt("rawfs")
+        .withDescription("use raw instead of checksummed file system").create();
 
-      Option help =
-          OptionBuilder.withLongOpt("help").hasArg(false).withDescription(
-              "show this screen").create("h");
+      Option help = OptionBuilder.withLongOpt("help").hasArg(false)
+        .withDescription("show this screen").create("h");
 
-      return new Options().addOption(compress).addOption(fileSize).addOption(
-          fsInputBufferSz).addOption(fsOutputBufferSize).addOption(keyLen)
-          .addOption(blockSz).addOption(rootDir).addOption(valueLen)
-          .addOption(operation).addOption(seekCount).addOption(file)
-          .addOption(trialCount).addOption(useRawFs).addOption(help);
+      return new Options().addOption(compress).addOption(fileSize).addOption(fsInputBufferSz)
+        .addOption(fsOutputBufferSize).addOption(keyLen).addOption(blockSz).addOption(rootDir)
+        .addOption(valueLen).addOption(operation).addOption(seekCount).addOption(file)
+        .addOption(trialCount).addOption(useRawFs).addOption(help);
 
     }
 
-    private void processOptions(CommandLine line, Options opts)
-        throws ParseException {
+    private void processOptions(CommandLine line, Options opts) throws ParseException {
       // --help -h and --version -V must be processed first.
       if (line.hasOption('h')) {
         HelpFormatter formatter = new HelpFormatter();
         System.out.println("TFile and SeqFile benchmark.");
         System.out.println();
-        formatter.printHelp(100,
-            "java ... TestTFileSeqFileComparison [options]",
-            "\nSupported options:", opts, "");
+        formatter.printHelp(100, "java ... TestTFileSeqFileComparison [options]",
+          "\nSupported options:", opts, "");
         return;
       }
 
@@ -483,14 +415,11 @@ public class TestHFileSeek {
         String strOp = line.getOptionValue('x');
         if (strOp.equals("r")) {
           op = OP_READ;
-        }
-        else if (strOp.equals("w")) {
+        } else if (strOp.equals("w")) {
           op = OP_CREATE;
-        }
-        else if (strOp.equals("rw")) {
+        } else if (strOp.equals("rw")) {
           op = OP_CREATE | OP_READ;
-        }
-        else {
+        } else {
           throw new ParseException("Unknown action specifier: " + strOp);
         }
       }
@@ -501,24 +430,23 @@ public class TestHFileSeek {
     }
 
     private void validateOptions() throws ParseException {
-      if (!compress.equals("none") && !compress.equals("lzo")
-          && !compress.equals("gz") && !compress.equals("snappy")) {
+      if (
+        !compress.equals("none") && !compress.equals("lzo") && !compress.equals("gz")
+          && !compress.equals("snappy")
+      ) {
         throw new ParseException("Unknown compression scheme: " + compress);
       }
 
       if (minKeyLen >= maxKeyLen) {
-        throw new ParseException(
-            "Max key length must be greater than min key length.");
+        throw new ParseException("Max key length must be greater than min key length.");
       }
 
       if (minValLength >= maxValLength) {
-        throw new ParseException(
-            "Max value length must be greater than min value length.");
+        throw new ParseException("Max value length must be greater than min value length.");
       }
 
       if (minWordLen >= maxWordLen) {
-        throw new ParseException(
-            "Max word length must be greater than min word length.");
+        throw new ParseException("Max word length must be greater than min word length.");
       }
       return;
     }
@@ -546,7 +474,7 @@ public class TestHFileSeek {
 
     testCase.options = options;
     for (int i = 0; i < options.trialCount; i++) {
-      LOG.info("Beginning trial " + (i+1));
+      LOG.info("Beginning trial " + (i + 1));
       testCase.setUp();
       testCase.testSeeks();
       testCase.tearDown();
@@ -554,4 +482,3 @@ public class TestHFileSeek {
   }
 
 }
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,7 +76,7 @@ public class TestSpaceQuotas {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotas.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotas.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -119,16 +119,16 @@ public class TestSpaceQuotas {
   @Test
   public void testNoInsertsWithPut() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_INSERTS, p);
   }
 
   @Test
   public void testNoInsertsWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
-    a.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    a.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_INSERTS, a);
   }
 
@@ -155,16 +155,16 @@ public class TestSpaceQuotas {
   @Test
   public void testNoWritesWithPut() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
   }
 
   @Test
   public void testNoWritesWithAppend() throws Exception {
     Append a = new Append(Bytes.toBytes("to_reject"));
-    a.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    a.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, a);
   }
 
@@ -184,10 +184,10 @@ public class TestSpaceQuotas {
   @Test
   public void testNoCompactions() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
-    final TableName tn = writeUntilViolationAndVerifyViolation(
-        SpaceViolationPolicy.NO_WRITES_COMPACTIONS, p);
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
+    final TableName tn =
+      writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES_COMPACTIONS, p);
     // We know the policy is active at this point
 
     // Major compactions should be rejected
@@ -209,8 +209,8 @@ public class TestSpaceQuotas {
   @Test
   public void testNoEnableAfterDisablePolicy() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     final TableName tn = writeUntilViolation(SpaceViolationPolicy.DISABLE);
     final Admin admin = TEST_UTIL.getAdmin();
     // Disabling a table relies on some external action (over the other policies), so wait a bit
@@ -227,16 +227,17 @@ public class TestSpaceQuotas {
     } catch (AccessDeniedException e) {
       String exceptionContents = StringUtils.stringifyException(e);
       final String expectedText = "violated space quota";
-      assertTrue("Expected the exception to contain " + expectedText + ", but was: "
-          + exceptionContents, exceptionContents.contains(expectedText));
+      assertTrue(
+        "Expected the exception to contain " + expectedText + ", but was: " + exceptionContents,
+        exceptionContents.contains(expectedText));
     }
   }
 
   @Test
   public void testNoBulkLoadsWithNoWrites() throws Exception {
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     TableName tableName = writeUntilViolationAndVerifyViolation(SpaceViolationPolicy.NO_WRITES, p);
 
     // The table is now in violation. Try to do a bulk load
@@ -258,22 +259,21 @@ public class TestSpaceQuotas {
     TableName tn = helper.createTableWithRegions(10);
 
     final long sizeLimit = 50L * SpaceQuotaHelperForTests.ONE_KILOBYTE;
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(settings);
 
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     RegionServerSpaceQuotaManager spaceQuotaManager = rs.getRegionServerSpaceQuotaManager();
-    Map<TableName,SpaceQuotaSnapshot> snapshots = spaceQuotaManager.copyQuotaSnapshots();
-    Map<RegionInfo,Long> regionSizes = getReportedSizesForTable(tn);
+    Map<TableName, SpaceQuotaSnapshot> snapshots = spaceQuotaManager.copyQuotaSnapshots();
+    Map<RegionInfo, Long> regionSizes = getReportedSizesForTable(tn);
     while (true) {
       SpaceQuotaSnapshot snapshot = snapshots.get(tn);
       if (snapshot != null && snapshot.getLimit() > 0) {
         break;
       }
-      LOG.debug(
-          "Snapshot does not yet realize quota limit: " + snapshots + ", regionsizes: " +
-          regionSizes);
+      LOG.debug("Snapshot does not yet realize quota limit: " + snapshots + ", regionsizes: "
+        + regionSizes);
       Thread.sleep(3000);
       snapshots = spaceQuotaManager.copyQuotaSnapshots();
       regionSizes = getReportedSizesForTable(tn);
@@ -286,21 +286,19 @@ public class TestSpaceQuotas {
     // We would also not have a "real" policy in violation
     ActivePolicyEnforcement activePolicies = spaceQuotaManager.getActiveEnforcements();
     SpaceViolationPolicyEnforcement enforcement = activePolicies.getPolicyEnforcement(tn);
-    assertTrue(
-        "Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
-        enforcement instanceof DefaultViolationPolicyEnforcement);
+    assertTrue("Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
+      enforcement instanceof DefaultViolationPolicyEnforcement);
 
     // Should generate two files, each of which is over 25KB each
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 2, 525);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    FileStatus[] files = fs.listStatus(
-        new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
+    FileStatus[] files =
+      fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
     for (FileStatus file : files) {
-      assertTrue(
-          "Expected the file, " + file.getPath() + ",  length to be larger than 25KB, but was "
-              + file.getLen(),
-          file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
-      LOG.debug(file.getPath() + " -> " + file.getLen() +"B");
+      assertTrue("Expected the file, " + file.getPath()
+        + ",  length to be larger than 25KB, but was " + file.getLen(),
+        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      LOG.debug(file.getPath() + " -> " + file.getLen() + "B");
     }
 
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
@@ -318,7 +316,7 @@ public class TestSpaceQuotas {
     ResultScanner scanner = table.getScanner(new Scan());
     try {
       assertNull("Expected no results", scanner.next());
-    } finally{
+    } finally {
       scanner.close();
     }
   }
@@ -332,8 +330,8 @@ public class TestSpaceQuotas {
     final long tableLimit = 2L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     final long namespaceLimit = 1024L * SpaceQuotaHelperForTests.ONE_MEGABYTE;
     TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.limitTableSpace(tn, tableLimit, policy));
-    TEST_UTIL.getAdmin().setQuota(QuotaSettingsFactory.limitNamespaceSpace(
-        tn.getNamespaceAsString(), namespaceLimit, policy));
+    TEST_UTIL.getAdmin().setQuota(
+      QuotaSettingsFactory.limitNamespaceSpace(tn.getNamespaceAsString(), namespaceLimit, policy));
 
     // Write more data than should be allowed and flush it to disk
     helper.writeData(tn, 3L * SpaceQuotaHelperForTests.ONE_MEGABYTE);
@@ -343,16 +341,16 @@ public class TestSpaceQuotas {
 
     // The write should be rejected because the table quota takes priority over the namespace
     Put p = new Put(Bytes.toBytes("to_reject"));
-    p.addColumn(
-        Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"), Bytes.toBytes("reject"));
+    p.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
+      Bytes.toBytes("reject"));
     verifyViolation(policy, tn, p);
   }
 
-  private Map<RegionInfo,Long> getReportedSizesForTable(TableName tn) {
+  private Map<RegionInfo, Long> getReportedSizesForTable(TableName tn) {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     MasterQuotaManager quotaManager = master.getMasterQuotaManager();
-    Map<RegionInfo,Long> filteredRegionSizes = new HashMap<>();
-    for (Entry<RegionInfo,Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
+    Map<RegionInfo, Long> filteredRegionSizes = new HashMap<>();
+    for (Entry<RegionInfo, Long> entry : quotaManager.snapshotRegionSizes().entrySet()) {
       if (entry.getKey().getTable().equals(tn)) {
         filteredRegionSizes.put(entry.getKey(), entry.getValue());
       }
@@ -376,15 +374,15 @@ public class TestSpaceQuotas {
     return tn;
   }
 
-  private TableName writeUntilViolationAndVerifyViolation(
-      SpaceViolationPolicy policyToViolate, Mutation m) throws Exception {
+  private TableName writeUntilViolationAndVerifyViolation(SpaceViolationPolicy policyToViolate,
+    Mutation m) throws Exception {
     final TableName tn = writeUntilViolation(policyToViolate);
     verifyViolation(policyToViolate, tn, m);
     return tn;
   }
 
-  private void verifyViolation(
-      SpaceViolationPolicy policyToViolate, TableName tn, Mutation m) throws Exception {
+  private void verifyViolation(SpaceViolationPolicy policyToViolate, TableName tn, Mutation m)
+    throws Exception {
     // But let's try a few times to get the exception before failing
     boolean sawError = false;
     for (int i = 0; i < NUM_RETRIES && !sawError; i++) {
@@ -399,15 +397,14 @@ public class TestSpaceQuotas {
           table.increment((Increment) m);
         } else {
           fail(
-              "Failed to apply " + m.getClass().getSimpleName() +
-              " to the table. Programming error");
+            "Failed to apply " + m.getClass().getSimpleName() + " to the table. Programming error");
         }
         LOG.info("Did not reject the " + m.getClass().getSimpleName() + ", will sleep and retry");
         Thread.sleep(2000);
       } catch (Exception e) {
         String msg = StringUtils.stringifyException(e);
-        assertTrue("Expected exception message to contain the word '" + policyToViolate.name() +
-            "', but was " + msg, msg.contains(policyToViolate.name()));
+        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
+          + "', but was " + msg, msg.contains(policyToViolate.name()));
         sawError = true;
       }
     }
@@ -422,7 +419,7 @@ public class TestSpaceQuotas {
         scanner.close();
       }
     }
-    assertTrue(
-        "Expected to see an exception writing data to a table exceeding its quota", sawError);
+    assertTrue("Expected to see an exception writing data to a table exceeding its quota",
+      sawError);
   }
 }

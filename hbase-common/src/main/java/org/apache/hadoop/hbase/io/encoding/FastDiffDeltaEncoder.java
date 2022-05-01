@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -32,29 +33,16 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Encoder similar to {@link DiffKeyDeltaEncoder} but supposedly faster.
- *
- * Compress using:
- * - store size of common prefix
- * - save column family once in the first KeyValue
- * - use integer compression for key, value and prefix (7-bit encoding)
- * - use bits to avoid duplication key length, value length
- *   and type if it same as previous
- * - store in 3 bits length of prefix timestamp
- *    with previous KeyValue's timestamp
- * - one bit which allow to omit value if it is the same
- *
- * Format:
- * - 1 byte:    flag
- * - 1-5 bytes: key length (only if FLAG_SAME_KEY_LENGTH is not set in flag)
- * - 1-5 bytes: value length (only if FLAG_SAME_VALUE_LENGTH is not set in flag)
- * - 1-5 bytes: prefix length
- * - ... bytes: rest of the row (if prefix length is small enough)
- * - ... bytes: qualifier (or suffix depending on prefix length)
- * - 1-8 bytes: timestamp suffix
- * - 1 byte:    type (only if FLAG_SAME_TYPE is not set in the flag)
- * - ... bytes: value (only if FLAG_SAME_VALUE is not set in the flag)
- *
+ * Encoder similar to {@link DiffKeyDeltaEncoder} but supposedly faster. Compress using: - store
+ * size of common prefix - save column family once in the first KeyValue - use integer compression
+ * for key, value and prefix (7-bit encoding) - use bits to avoid duplication key length, value
+ * length and type if it same as previous - store in 3 bits length of prefix timestamp with previous
+ * KeyValue's timestamp - one bit which allow to omit value if it is the same Format: - 1 byte: flag
+ * - 1-5 bytes: key length (only if FLAG_SAME_KEY_LENGTH is not set in flag) - 1-5 bytes: value
+ * length (only if FLAG_SAME_VALUE_LENGTH is not set in flag) - 1-5 bytes: prefix length - ...
+ * bytes: rest of the row (if prefix length is small enough) - ... bytes: qualifier (or suffix
+ * depending on prefix length) - 1-8 bytes: timestamp suffix - 1 byte: type (only if FLAG_SAME_TYPE
+ * is not set in the flag) - ... bytes: value (only if FLAG_SAME_VALUE is not set in the flag)
  */
 @InterfaceAudience.Private
 public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
@@ -78,28 +66,24 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     void copyFrom(CompressionState state) {
       super.copyFrom(state);
       FastDiffCompressionState state2 = (FastDiffCompressionState) state;
-      System.arraycopy(state2.timestamp, 0, timestamp, 0,
-          KeyValue.TIMESTAMP_SIZE);
+      System.arraycopy(state2.timestamp, 0, timestamp, 0, KeyValue.TIMESTAMP_SIZE);
       prevTimestampOffset = state2.prevTimestampOffset;
     }
 
     /**
-     * Copies the first key/value from the given stream, and initializes
-     * decompression state based on it. Assumes that we have already read key
-     * and value lengths. Does not set {@link #qualifierLength} (not used by
-     * decompression) or {@link #prevOffset} (set by the calle afterwards).
+     * Copies the first key/value from the given stream, and initializes decompression state based
+     * on it. Assumes that we have already read key and value lengths. Does not set
+     * {@link #qualifierLength} (not used by decompression) or {@link #prevOffset} (set by the calle
+     * afterwards).
      */
-    private void decompressFirstKV(ByteBuffer out, DataInputStream in)
-        throws IOException {
+    private void decompressFirstKV(ByteBuffer out, DataInputStream in) throws IOException {
       int kvPos = out.position();
       out.putInt(keyLength);
       out.putInt(valueLength);
-      prevTimestampOffset = out.position() + keyLength -
-          KeyValue.TIMESTAMP_TYPE_SIZE;
+      prevTimestampOffset = out.position() + keyLength - KeyValue.TIMESTAMP_TYPE_SIZE;
       ByteBufferUtils.copyFromStreamToBuffer(out, in, keyLength + valueLength);
       rowLength = out.getShort(kvPos + KeyValue.ROW_OFFSET);
-      familyLength = out.get(kvPos + KeyValue.ROW_OFFSET +
-          KeyValue.ROW_LENGTH_SIZE + rowLength);
+      familyLength = out.get(kvPos + KeyValue.ROW_OFFSET + KeyValue.ROW_LENGTH_SIZE + rowLength);
       type = out.get(prevTimestampOffset + KeyValue.TIMESTAMP_SIZE);
     }
 
@@ -107,16 +91,17 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   private int findCommonTimestampPrefix(byte[] curTsBuf, byte[] prevTsBuf) {
     int commonPrefix = 0;
-    while (commonPrefix < (KeyValue.TIMESTAMP_SIZE - 1)
-        && curTsBuf[commonPrefix] == prevTsBuf[commonPrefix]) {
+    while (
+      commonPrefix < (KeyValue.TIMESTAMP_SIZE - 1)
+        && curTsBuf[commonPrefix] == prevTsBuf[commonPrefix]
+    ) {
       commonPrefix++;
     }
     return commonPrefix; // has to be at most 7 bytes
   }
 
-  private void uncompressSingleKeyValue(DataInputStream source,
-      ByteBuffer out, FastDiffCompressionState state)
-          throws IOException, EncoderBufferTooSmallException {
+  private void uncompressSingleKeyValue(DataInputStream source, ByteBuffer out,
+    FastDiffCompressionState state) throws IOException, EncoderBufferTooSmallException {
     byte flag = source.readByte();
     int prevKeyLength = state.keyLength;
 
@@ -166,15 +151,14 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         if (commonLength < KeyValue.ROW_LENGTH_SIZE) {
           // not yet copied, do it now
           ByteBufferUtils.copyFromStreamToBuffer(out, source,
-              KeyValue.ROW_LENGTH_SIZE - commonLength);
+            KeyValue.ROW_LENGTH_SIZE - commonLength);
 
-          rowWithSizeLength = out.getShort(out.position() -
-              KeyValue.ROW_LENGTH_SIZE) + KeyValue.ROW_LENGTH_SIZE;
+          rowWithSizeLength =
+            out.getShort(out.position() - KeyValue.ROW_LENGTH_SIZE) + KeyValue.ROW_LENGTH_SIZE;
           rowRestLength = rowWithSizeLength - KeyValue.ROW_LENGTH_SIZE;
         } else {
           // already in kvBuffer, just read it
-          rowWithSizeLength = out.getShort(kvPos + KeyValue.ROW_OFFSET) +
-              KeyValue.ROW_LENGTH_SIZE;
+          rowWithSizeLength = out.getShort(kvPos + KeyValue.ROW_OFFSET) + KeyValue.ROW_LENGTH_SIZE;
           rowRestLength = rowWithSizeLength - commonLength;
         }
 
@@ -183,54 +167,45 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
         // copy the column family
         ByteBufferUtils.copyFromBufferToBuffer(out, out,
-            state.prevOffset + KeyValue.ROW_OFFSET + KeyValue.ROW_LENGTH_SIZE
-                + state.rowLength, state.familyLength
-                + KeyValue.FAMILY_LENGTH_SIZE);
-        state.rowLength = (short) (rowWithSizeLength -
-            KeyValue.ROW_LENGTH_SIZE);
+          state.prevOffset + KeyValue.ROW_OFFSET + KeyValue.ROW_LENGTH_SIZE + state.rowLength,
+          state.familyLength + KeyValue.FAMILY_LENGTH_SIZE);
+        state.rowLength = (short) (rowWithSizeLength - KeyValue.ROW_LENGTH_SIZE);
 
-        keyRestLength = state.keyLength - rowWithSizeLength -
-            state.familyLength -
-            (KeyValue.FAMILY_LENGTH_SIZE + KeyValue.TIMESTAMP_TYPE_SIZE);
+        keyRestLength = state.keyLength - rowWithSizeLength - state.familyLength
+          - (KeyValue.FAMILY_LENGTH_SIZE + KeyValue.TIMESTAMP_TYPE_SIZE);
       } else {
         // prevRowWithSizeLength is the same as on previous row
-        keyRestLength = state.keyLength - commonLength -
-            KeyValue.TIMESTAMP_TYPE_SIZE;
+        keyRestLength = state.keyLength - commonLength - KeyValue.TIMESTAMP_TYPE_SIZE;
       }
       // copy the rest of the key, after column family == column qualifier
       ByteBufferUtils.copyFromStreamToBuffer(out, source, keyRestLength);
 
       // copy timestamp
-      int prefixTimestamp =
-          (flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH;
-      ByteBufferUtils.copyFromBufferToBuffer(out, out,
-          state.prevTimestampOffset, prefixTimestamp);
+      int prefixTimestamp = (flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH;
+      ByteBufferUtils.copyFromBufferToBuffer(out, out, state.prevTimestampOffset, prefixTimestamp);
       state.prevTimestampOffset = out.position() - prefixTimestamp;
       ByteBufferUtils.copyFromStreamToBuffer(out, source,
-          KeyValue.TIMESTAMP_SIZE - prefixTimestamp);
+        KeyValue.TIMESTAMP_SIZE - prefixTimestamp);
 
       // copy the type and value
       if ((flag & FLAG_SAME_TYPE) != 0) {
         out.put(state.type);
         if ((flag & FLAG_SAME_VALUE) != 0) {
-          ByteBufferUtils.copyFromBufferToBuffer(out, out, state.prevOffset +
-              KeyValue.ROW_OFFSET + prevKeyLength, state.valueLength);
+          ByteBufferUtils.copyFromBufferToBuffer(out, out,
+            state.prevOffset + KeyValue.ROW_OFFSET + prevKeyLength, state.valueLength);
         } else {
-          ByteBufferUtils.copyFromStreamToBuffer(out, source,
-              state.valueLength);
+          ByteBufferUtils.copyFromStreamToBuffer(out, source, state.valueLength);
         }
       } else {
         if ((flag & FLAG_SAME_VALUE) != 0) {
-          ByteBufferUtils.copyFromStreamToBuffer(out, source,
-              KeyValue.TYPE_SIZE);
-          ByteBufferUtils.copyFromBufferToBuffer(out, out, state.prevOffset +
-              KeyValue.ROW_OFFSET + prevKeyLength, state.valueLength);
+          ByteBufferUtils.copyFromStreamToBuffer(out, source, KeyValue.TYPE_SIZE);
+          ByteBufferUtils.copyFromBufferToBuffer(out, out,
+            state.prevOffset + KeyValue.ROW_OFFSET + prevKeyLength, state.valueLength);
         } else {
           ByteBufferUtils.copyFromStreamToBuffer(out, source,
-              state.valueLength + KeyValue.TYPE_SIZE);
+            state.valueLength + KeyValue.TYPE_SIZE);
         }
-        state.type = out.get(state.prevTimestampOffset +
-            KeyValue.TIMESTAMP_SIZE);
+        state.type = out.get(state.prevTimestampOffset + KeyValue.TIMESTAMP_SIZE);
       }
     } else { // this is the first element
       state.decompressFirstKV(out, source);
@@ -241,7 +216,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
-      DataOutputStream out) throws IOException {
+    DataOutputStream out) throws IOException {
     EncodingState state = encodingContext.getEncodingState();
     int size = compressSingleKeyValue(out, cell, state.prevCell);
     size += afterEncodingKeyValue(cell, out, encodingContext);
@@ -250,7 +225,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
-      throws IOException {
+    throws IOException {
     int flag = 0; // Do not use more bits than will fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
@@ -261,7 +236,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, kLength);
       ByteBufferUtils.putCompressedInt(out, vLength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      PrivateCellUtil.writeFlatKey(cell, (DataOutput)out);
+      PrivateCellUtil.writeFlatKey(cell, (DataOutput) out);
       // Write the value part
       PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
     } else {
@@ -281,15 +256,17 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       }
 
       byte[] curTsBuf = Bytes.toBytes(cell.getTimestamp());
-      int commonTimestampPrefix = findCommonTimestampPrefix(curTsBuf,
-          Bytes.toBytes(prevCell.getTimestamp()));
+      int commonTimestampPrefix =
+        findCommonTimestampPrefix(curTsBuf, Bytes.toBytes(prevCell.getTimestamp()));
 
       flag |= commonTimestampPrefix << SHIFT_TIMESTAMP_LENGTH;
 
       // Check if current and previous values are the same. Compare value
       // length first as an optimization.
-      if (vLength == preValLength
-          && PrivateCellUtil.matchingValue(cell, prevCell, vLength, preValLength)) {
+      if (
+        vLength == preValLength
+          && PrivateCellUtil.matchingValue(cell, prevCell, vLength, preValLength)
+      ) {
         flag |= FLAG_SAME_VALUE;
       }
 
@@ -313,7 +290,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         // common prefix, so we need not special-case it here.
         // What we write here is the non common part of the qualifier
         int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
-            - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+          - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
         PrivateCellUtil.writeQualifierSkippingBytes(out, cell, cell.getQualifierLength(),
           commonQualPrefix);
       }
@@ -335,10 +312,9 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   protected ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
-      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocateHeaderLength);
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize + allocateHeaderLength);
     buffer.position(allocateHeaderLength);
     FastDiffCompressionState state = new FastDiffCompressionState();
     while (source.available() > skipLastBytes) {
@@ -372,13 +348,11 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   protected static class FastDiffSeekerState extends SeekerState {
-    private byte[] prevTimestampAndType =
-        new byte[KeyValue.TIMESTAMP_TYPE_SIZE];
+    private byte[] prevTimestampAndType = new byte[KeyValue.TIMESTAMP_TYPE_SIZE];
     private int rowLengthWithSize;
     private int familyLengthWithSize;
 
-    public FastDiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair,
-        boolean includeTags) {
+    public FastDiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       super(tmpPair, includeTags);
     }
 
@@ -386,9 +360,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     protected void copyFromNext(SeekerState that) {
       super.copyFromNext(that);
       FastDiffSeekerState other = (FastDiffSeekerState) that;
-      System.arraycopy(other.prevTimestampAndType, 0,
-          prevTimestampAndType, 0,
-          KeyValue.TIMESTAMP_TYPE_SIZE);
+      System.arraycopy(other.prevTimestampAndType, 0, prevTimestampAndType, 0,
+        KeyValue.TIMESTAMP_TYPE_SIZE);
       rowLengthWithSize = other.rowLengthWithSize;
       familyLengthWithSize = other.familyLengthWithSize;
     }
@@ -400,7 +373,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   private static class FastDiffSeekerStateBufferedEncodedSeeker
-      extends BufferedEncodedSeeker<FastDiffSeekerState> {
+    extends BufferedEncodedSeeker<FastDiffSeekerState> {
 
     private FastDiffSeekerStateBufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
       super(decodingCtx);
@@ -411,9 +384,8 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
         if (!isFirst) {
           System.arraycopy(current.keyBuffer,
-              current.keyLength - current.prevTimestampAndType.length,
-              current.prevTimestampAndType, 0,
-              current.prevTimestampAndType.length);
+            current.keyLength - current.prevTimestampAndType.length, current.prevTimestampAndType,
+            0, current.prevTimestampAndType.length);
         }
         current.keyLength = ByteBuff.readCompressedInt(currentBuffer);
       }
@@ -427,34 +399,31 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       if (isFirst) {
         // copy everything
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.keyLength - current.prevTimestampAndType.length);
-        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
-            Bytes.SIZEOF_SHORT;
+          current.keyLength - current.prevTimestampAndType.length);
+        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) + Bytes.SIZEOF_SHORT;
         current.familyLengthWithSize =
-            current.keyBuffer[current.rowLengthWithSize] + Bytes.SIZEOF_BYTE;
+          current.keyBuffer[current.rowLengthWithSize] + Bytes.SIZEOF_BYTE;
       } else if (current.lastCommonPrefix < Bytes.SIZEOF_SHORT) {
         // length of row is different, copy everything except family
 
         // copy the row size
         int oldRowLengthWithSize = current.rowLengthWithSize;
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
-        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) +
-            Bytes.SIZEOF_SHORT;
+          Bytes.SIZEOF_SHORT - current.lastCommonPrefix);
+        current.rowLengthWithSize = Bytes.toShort(current.keyBuffer, 0) + Bytes.SIZEOF_SHORT;
 
         // move the column family
-        System.arraycopy(current.keyBuffer, oldRowLengthWithSize,
-            current.keyBuffer, current.rowLengthWithSize,
-            current.familyLengthWithSize);
+        System.arraycopy(current.keyBuffer, oldRowLengthWithSize, current.keyBuffer,
+          current.rowLengthWithSize, current.familyLengthWithSize);
 
         // copy the rest of row
         currentBuffer.get(current.keyBuffer, Bytes.SIZEOF_SHORT,
-            current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
+          current.rowLengthWithSize - Bytes.SIZEOF_SHORT);
 
         // copy the qualifier
-        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
-            + current.familyLengthWithSize, current.keyLength
-            - current.rowLengthWithSize - current.familyLengthWithSize
+        currentBuffer.get(current.keyBuffer,
+          current.rowLengthWithSize + current.familyLengthWithSize,
+          current.keyLength - current.rowLengthWithSize - current.familyLengthWithSize
             - current.prevTimestampAndType.length);
       } else if (current.lastCommonPrefix < current.rowLengthWithSize) {
         // We have to copy part of row and qualifier, but the column family
@@ -462,39 +431,35 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
         // before column family (rest of row)
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.rowLengthWithSize - current.lastCommonPrefix);
+          current.rowLengthWithSize - current.lastCommonPrefix);
 
         // after column family (qualifier)
-        currentBuffer.get(current.keyBuffer, current.rowLengthWithSize
-            + current.familyLengthWithSize, current.keyLength
-            - current.rowLengthWithSize - current.familyLengthWithSize
+        currentBuffer.get(current.keyBuffer,
+          current.rowLengthWithSize + current.familyLengthWithSize,
+          current.keyLength - current.rowLengthWithSize - current.familyLengthWithSize
             - current.prevTimestampAndType.length);
       } else {
         // copy just the ending
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-            current.keyLength - current.prevTimestampAndType.length
-                - current.lastCommonPrefix);
+          current.keyLength - current.prevTimestampAndType.length - current.lastCommonPrefix);
       }
 
       // timestamp
       int pos = current.keyLength - current.prevTimestampAndType.length;
-      int commonTimestampPrefix = (flag & MASK_TIMESTAMP_LENGTH) >>>
-        SHIFT_TIMESTAMP_LENGTH;
+      int commonTimestampPrefix = (flag & MASK_TIMESTAMP_LENGTH) >>> SHIFT_TIMESTAMP_LENGTH;
       if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-        System.arraycopy(current.prevTimestampAndType, 0, current.keyBuffer,
-            pos, commonTimestampPrefix);
+        System.arraycopy(current.prevTimestampAndType, 0, current.keyBuffer, pos,
+          commonTimestampPrefix);
       }
       pos += commonTimestampPrefix;
-      currentBuffer.get(current.keyBuffer, pos,
-          Bytes.SIZEOF_LONG - commonTimestampPrefix);
+      currentBuffer.get(current.keyBuffer, pos, Bytes.SIZEOF_LONG - commonTimestampPrefix);
       pos += Bytes.SIZEOF_LONG - commonTimestampPrefix;
 
       // type
       if ((flag & FLAG_SAME_TYPE) == 0) {
         currentBuffer.get(current.keyBuffer, pos, Bytes.SIZEOF_BYTE);
       } else if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-        current.keyBuffer[pos] =
-            current.prevTimestampAndType[Bytes.SIZEOF_LONG];
+        current.keyBuffer[pos] = current.prevTimestampAndType[Bytes.SIZEOF_LONG];
       }
 
       // handle value

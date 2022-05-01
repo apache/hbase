@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -263,23 +263,20 @@ public class TestLogLevel {
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
     final boolean isSpnego) throws Exception {
-    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
-      logName,
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName,
       org.apache.logging.log4j.Level.DEBUG.toString());
   }
 
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
     final boolean isSpnego, final String newLevel) throws Exception {
-    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego,
-      logName,
-      newLevel);
+    testDynamicLogLevel(bindProtocol, connectProtocol, isSpnego, logName, newLevel);
   }
 
   /**
    * Run both client and server using the given protocol.
-   * @param bindProtocol specify either http or https for server
+   * @param bindProtocol    specify either http or https for server
    * @param connectProtocol specify either http or https for client
-   * @param isSpnego true if SPNEGO is enabled
+   * @param isSpnego        true if SPNEGO is enabled
    * @throws Exception if client can't accesss server.
    */
   private void testDynamicLogLevel(final String bindProtocol, final String connectProtocol,
@@ -334,7 +331,7 @@ public class TestLogLevel {
 
   /**
    * Run LogLevel command line to start a client to get log level of this test class.
-   * @param protocol specify either http or https
+   * @param protocol  specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to connect
    */
@@ -346,7 +343,7 @@ public class TestLogLevel {
 
   /**
    * Run LogLevel command line to start a client to set log level of this test class to debug.
-   * @param protocol specify either http or https
+   * @param protocol  specify either http or https
    * @param authority daemon's web UI address
    * @throws Exception if unable to run or log level does not change as expected
    */
@@ -370,7 +367,8 @@ public class TestLogLevel {
       fail("Expected IO exception due to protected logger");
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("" + HttpServletResponse.SC_PRECONDITION_FAILED));
-      assertTrue(e.getMessage().contains("Modification of logger " + protectedLogName + " is disallowed in configuration."));
+      assertTrue(e.getMessage().contains(
+        "Modification of logger " + protectedLogName + " is disallowed in configuration."));
     }
   }
 
@@ -395,7 +393,7 @@ public class TestLogLevel {
   /**
    * Server runs HTTP, no SPNEGO.
    * @throws Exception if http client can't access http server, or http client can access https
-   *           server.
+   *                   server.
    */
   @Test
   public void testLogLevelByHttp() throws Exception {
@@ -411,7 +409,7 @@ public class TestLogLevel {
   /**
    * Server runs HTTP + SPNEGO.
    * @throws Exception if http client can't access http server, or http client can access https
-   *           server.
+   *                   server.
    */
   @Test
   public void testLogLevelByHttpWithSpnego() throws Exception {
@@ -427,7 +425,7 @@ public class TestLogLevel {
   /**
    * Server runs HTTPS, no SPNEGO.
    * @throws Exception if https client can't access https server, or https client can access http
-   *           server.
+   *                   server.
    */
   @Test
   public void testLogLevelByHttps() throws Exception {
@@ -443,7 +441,7 @@ public class TestLogLevel {
   /**
    * Server runs HTTPS + SPNEGO.
    * @throws Exception if https client can't access https server, or https client can access http
-   *           server.
+   *                   server.
    */
   @Test
   public void testLogLevelByHttpsWithSpnego() throws Exception {
@@ -473,7 +471,7 @@ public class TestLogLevel {
       }
       t = t.getCause();
     }
-    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:" +
-      StringUtils.stringifyException(throwable), throwable);
+    throw new AssertionError("Expected to find '" + substr + "' but got unexpected exception:"
+      + StringUtils.stringifyException(throwable), throwable);
   }
 }

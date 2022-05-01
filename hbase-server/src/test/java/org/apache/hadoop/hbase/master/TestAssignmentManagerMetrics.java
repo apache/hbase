@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,11 +55,11 @@ public class TestAssignmentManagerMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAssignmentManagerMetrics.class);
+    HBaseClassTestRule.forClass(TestAssignmentManagerMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManagerMetrics.class);
-  private static final MetricsAssertHelper METRICS_HELPER = CompatibilityFactory
-      .getInstance(MetricsAssertHelper.class);
+  private static final MetricsAssertHelper METRICS_HELPER =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   private static MiniHBaseCluster CLUSTER;
   private static HMaster MASTER;
@@ -112,7 +112,7 @@ public class TestAssignmentManagerMetrics {
   public void testRITAssignmentManagerMetrics() throws Exception {
     final TableName TABLENAME = TableName.valueOf(name.getMethodName());
     final byte[] FAMILY = Bytes.toBytes("family");
-    try (Table table = TEST_UTIL.createTable(TABLENAME, FAMILY)){
+    try (Table table = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
       final byte[] row = Bytes.toBytes("row");
       final byte[] qualifier = Bytes.toBytes("qualifier");
       final byte[] value = Bytes.toBytes("value");
@@ -126,22 +126,19 @@ public class TestAssignmentManagerMetrics {
 
       // check the RIT is 0
       MetricsAssignmentManagerSource amSource =
-          MASTER.getAssignmentManager().getAssignmentManagerMetrics().getMetricsProcSource();
+        MASTER.getAssignmentManager().getAssignmentManagerMetrics().getMetricsProcSource();
 
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 0, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 0,
-          amSource);
+        amSource);
 
       // alter table with a non-existing coprocessor
 
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(TABLENAME)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
         .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder("com.foo.FooRegionObserver")
-          .setJarPath("hdfs:///foo.jar")
-          .setPriority(1001)
-          .setProperty("arg1", "1")
-          .setProperty("arg2", "2")
-          .build())
+          .setJarPath("hdfs:///foo.jar").setPriority(1001).setProperty("arg1", "1")
+          .setProperty("arg2", "2").build())
         .build();
       try {
         TEST_UTIL.getAdmin().modifyTable(htd);
@@ -161,8 +158,8 @@ public class TestAssignmentManagerMetrics {
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_NAME, 1, amSource);
       METRICS_HELPER.assertGauge(MetricsAssignmentManagerSource.RIT_COUNT_OVER_THRESHOLD_NAME, 1,
         amSource);
-      METRICS_HELPER.assertCounter(MetricsAssignmentManagerSource.ASSIGN_METRIC_PREFIX
-        + "SubmittedCount", 3, amSource);
+      METRICS_HELPER.assertCounter(
+        MetricsAssignmentManagerSource.ASSIGN_METRIC_PREFIX + "SubmittedCount", 3, amSource);
     }
   }
 }

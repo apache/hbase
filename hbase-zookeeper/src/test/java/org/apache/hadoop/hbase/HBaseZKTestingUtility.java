@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -98,7 +97,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
    * @return zk cluster started.
    */
   public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum, int... clientPortList)
-      throws Exception {
+    throws Exception {
     setupClusterTestDir();
     return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
   }
@@ -108,7 +107,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
    * port mentioned is used as the default port for ZooKeeper.
    */
   private MiniZooKeeperCluster startMiniZKCluster(File dir, int zooKeeperServerNum,
-      int[] clientPortList) throws Exception {
+    int[] clientPortList) throws Exception {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,36 +43,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
- * on our tables is simple - take every row in the table, reverse the value of
- * a particular cell, and write it back to the table.
+ * Test Map/Reduce job over HBase tables. The map/reduce process we're testing on our tables is
+ * simple - take every row in the table, reverse the value of a particular cell, and write it back
+ * to the table.
  */
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 @SuppressWarnings("deprecation")
 public class TestTableMapReduce extends TestTableMapReduceBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableMapReduce.class);
+    HBaseClassTestRule.forClass(TestTableMapReduce.class);
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestTableMapReduce.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestTableMapReduce.class.getName());
 
-  protected Logger getLog() { return LOG; }
+  protected Logger getLog() {
+    return LOG;
+  }
 
   /**
    * Pass the given key and processed record reduce
    */
-  static class ProcessContentsMapper extends MapReduceBase implements
-      TableMap<ImmutableBytesWritable, Put> {
+  static class ProcessContentsMapper extends MapReduceBase
+    implements TableMap<ImmutableBytesWritable, Put> {
 
     /**
      * Pass the key, and reversed value to reduce
      */
     public void map(ImmutableBytesWritable key, Result value,
-      OutputCollector<ImmutableBytesWritable, Put> output,
-      Reporter reporter)
-    throws IOException {
+      OutputCollector<ImmutableBytesWritable, Put> output, Reporter reporter) throws IOException {
       output.collect(key, TestTableMapReduceBase.map(key, value));
     }
   }
@@ -86,8 +85,8 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       jobConf.setJobName("process column contents");
       jobConf.setNumReduceTasks(1);
       TableMapReduceUtil.initTableMapJob(table.getName().getNameAsString(),
-        Bytes.toString(INPUT_FAMILY), ProcessContentsMapper.class,
-        ImmutableBytesWritable.class, Put.class, jobConf);
+        Bytes.toString(INPUT_FAMILY), ProcessContentsMapper.class, ImmutableBytesWritable.class,
+        Put.class, jobConf);
       TableMapReduceUtil.initTableReduceJob(table.getName().getNameAsString(),
         IdentityTableReduce.class, jobConf);
 
@@ -105,4 +104,3 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
     }
   }
 }
-

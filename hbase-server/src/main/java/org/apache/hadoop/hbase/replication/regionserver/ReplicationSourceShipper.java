@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.LongAccumulator;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -50,7 +51,7 @@ public class ReplicationSourceShipper extends Thread {
   public enum WorkerState {
     RUNNING,
     STOPPED,
-    FINISHED,  // The worker is done processing a recovered queue
+    FINISHED, // The worker is done processing a recovered queue
   }
 
   private final Configuration conf;
@@ -76,7 +77,7 @@ public class ReplicationSourceShipper extends Thread {
   private final int shipEditsTimeout;
 
   public ReplicationSourceShipper(Configuration conf, String walGroupId,
-      ReplicationSourceLogQueue logQueue, ReplicationSource source) {
+    ReplicationSourceLogQueue logQueue, ReplicationSource source) {
     this.conf = conf;
     this.walGroupId = walGroupId;
     this.logQueue = logQueue;
@@ -107,8 +108,8 @@ public class ReplicationSourceShipper extends Thread {
       }
       try {
         WALEntryBatch entryBatch = entryReader.poll(getEntriesTimeout);
-        LOG.debug("Shipper from source {} got entry batch from reader: {}",
-            source.getQueueId(), entryBatch);
+        LOG.debug("Shipper from source {} got entry batch from reader: {}", source.getQueueId(),
+          entryBatch);
         if (entryBatch == null) {
           continue;
         }
@@ -142,15 +143,15 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * get batchEntry size excludes bulk load file sizes.
-   * Uses ReplicationSourceWALReader's static method.
+   * get batchEntry size excludes bulk load file sizes. Uses ReplicationSourceWALReader's static
+   * method.
    */
   private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
     int totalSize = 0;
-    for(Entry entry : entryBatch.getWalEntries()) {
+    for (Entry entry : entryBatch.getWalEntries()) {
       totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
     }
-    return  totalSize;
+    return totalSize;
   }
 
   /**
@@ -165,8 +166,8 @@ public class ReplicationSourceShipper extends Thread {
     }
     int currentSize = (int) entryBatch.getHeapSize();
     int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
-    source.getSourceMetrics().setTimeStampNextToReplicate(entries.get(entries.size() - 1)
-        .getKey().getWriteTime());
+    source.getSourceMetrics()
+      .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
     while (isActive()) {
       try {
         try {
@@ -181,7 +182,7 @@ public class ReplicationSourceShipper extends Thread {
         // create replicateContext here, so the entries can be GC'd upon return from this call
         // stack
         ReplicationEndpoint.ReplicateContext replicateContext =
-            new ReplicationEndpoint.ReplicateContext();
+          new ReplicationEndpoint.ReplicateContext();
         replicateContext.setEntries(entries).setSize(currentSize);
         replicateContext.setWalGroupId(walGroupId);
         replicateContext.setTimeout(getAdaptiveTimeout(this.shipEditsTimeout, sleepMultiplier));
@@ -204,10 +205,10 @@ public class ReplicationSourceShipper extends Thread {
         // Log and clean up WAL logs
         updateLogPosition(entryBatch);
 
-        //offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
-        //this sizeExcludeBulkLoad has to use same calculation that when calling
-        //acquireBufferQuota() in ReplicationSourceWALReader because they maintain
-        //same variable: totalBufferUsed
+        // offsets totalBufferUsed by deducting shipped batchSize (excludes bulk load size)
+        // this sizeExcludeBulkLoad has to use same calculation that when calling
+        // acquireBufferQuota() in ReplicationSourceWALReader because they maintain
+        // same variable: totalBufferUsed
         source.postShipEdits(entries, sizeExcludeBulkLoad);
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
@@ -217,8 +218,8 @@ public class ReplicationSourceShipper extends Thread {
         source.getSourceMetrics().updateTableLevelMetrics(entryBatch.getWalEntriesWithSize());
 
         if (LOG.isTraceEnabled()) {
-          LOG.debug("Replicated {} entries or {} operations in {} ms",
-              entries.size(), entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
+          LOG.debug("Replicated {} entries or {} operations in {} ms", entries.size(),
+            entryBatch.getNbOperations(), (endTimeNs - startTimeNs) / 1000000);
         }
         break;
       } catch (Exception ex) {
@@ -262,8 +263,10 @@ public class ReplicationSourceShipper extends Thread {
     // record on zk, so let's call it. The last wal position maybe zero if end of file is true and
     // there is no entry in the batch. It is OK because that the queue storage will ignore the zero
     // position and the file will be removed soon in cleanOldLogs.
-    if (batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath) ||
-      batch.getLastWalPosition() != currentPosition) {
+    if (
+      batch.isEndOfFile() || !batch.getLastWalPath().equals(currentPath)
+        || batch.getLastWalPosition() != currentPosition
+    ) {
       source.logPositionAndCleanOldLogs(batch);
       updated = true;
     }
@@ -321,7 +324,7 @@ public class ReplicationSourceShipper extends Thread {
 
   /**
    * Do the sleeping logic
-   * @param msg Why we sleep
+   * @param msg             Why we sleep
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
@@ -337,28 +340,26 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * Attempts to properly update <code>ReplicationSourceManager.totalBufferUser</code>,
-   * in case there were unprocessed entries batched by the reader to the shipper,
-   * but the shipper didn't manage to ship those because the replication source is being terminated.
-   * In that case, it iterates through the batched entries and decrease the pending
-   * entries size from <code>ReplicationSourceManager.totalBufferUser</code>
+   * Attempts to properly update <code>ReplicationSourceManager.totalBufferUser</code>, in case
+   * there were unprocessed entries batched by the reader to the shipper, but the shipper didn't
+   * manage to ship those because the replication source is being terminated. In that case, it
+   * iterates through the batched entries and decrease the pending entries size from
+   * <code>ReplicationSourceManager.totalBufferUser</code>
    * <p/>
-   * <b>NOTES</b>
-   * 1) This method should only be called upon replication source termination.
-   * It blocks waiting for both shipper and reader threads termination,
-   * to make sure no race conditions
-   * when updating <code>ReplicationSourceManager.totalBufferUser</code>.
-   *
-   * 2) It <b>does not</b> attempt to terminate reader and shipper threads. Those <b>must</b>
-   * have been triggered interruption/termination prior to calling this method.
+   * <b>NOTES</b> 1) This method should only be called upon replication source termination. It
+   * blocks waiting for both shipper and reader threads termination, to make sure no race conditions
+   * when updating <code>ReplicationSourceManager.totalBufferUser</code>. 2) It <b>does not</b>
+   * attempt to terminate reader and shipper threads. Those <b>must</b> have been triggered
+   * interruption/termination prior to calling this method.
    */
   void clearWALEntryBatch() {
     long timeout = EnvironmentEdgeManager.currentTime() + this.shipEditsTimeout;
-    while(this.isAlive() || this.entryReader.isAlive()){
+    while (this.isAlive() || this.entryReader.isAlive()) {
       try {
         if (EnvironmentEdgeManager.currentTime() >= timeout) {
-          LOG.warn("Shipper clearWALEntryBatch method timed out whilst waiting reader/shipper "
-            + "thread to stop. Not cleaning buffer usage. Shipper alive: {}; Reader alive: {}",
+          LOG.warn(
+            "Shipper clearWALEntryBatch method timed out whilst waiting reader/shipper "
+              + "thread to stop. Not cleaning buffer usage. Shipper alive: {}; Reader alive: {}",
             this.source.getPeerId(), this.isAlive(), this.entryReader.isAlive());
           return;
         } else {
@@ -367,11 +368,11 @@ public class ReplicationSourceShipper extends Thread {
         }
       } catch (InterruptedException e) {
         LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "
-            + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
+          + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
         return;
       }
     }
-    LongAccumulator totalToDecrement = new LongAccumulator((a,b) -> a + b, 0);
+    LongAccumulator totalToDecrement = new LongAccumulator((a, b) -> a + b, 0);
     entryReader.entryBatchQueue.forEach(w -> {
       entryReader.entryBatchQueue.remove(w);
       w.getWalEntries().forEach(e -> {
@@ -379,12 +380,12 @@ public class ReplicationSourceShipper extends Thread {
         totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
       });
     });
-    if( LOG.isTraceEnabled()) {
+    if (LOG.isTraceEnabled()) {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
         totalToDecrement.longValue());
     }
-    long newBufferUsed = source.getSourceManager().getTotalBufferUsed()
-      .addAndGet(-totalToDecrement.longValue());
+    long newBufferUsed =
+      source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
     source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 }

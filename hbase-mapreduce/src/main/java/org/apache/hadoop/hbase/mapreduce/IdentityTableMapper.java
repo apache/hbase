@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,48 +18,43 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Pass the given key and record as-is to the reduce phase.
  */
 @InterfaceAudience.Public
-public class IdentityTableMapper
-extends TableMapper<ImmutableBytesWritable, Result> {
+public class IdentityTableMapper extends TableMapper<ImmutableBytesWritable, Result> {
 
   /**
-   * Use this before submitting a TableMap job. It will appropriately set up
-   * the job.
-   *
+   * Use this before submitting a TableMap job. It will appropriately set up the job.
    * @param table  The table name.
-   * @param scan  The scan with the columns to scan.
-   * @param mapper  The mapper class.
-   * @param job  The job configuration.
+   * @param scan   The scan with the columns to scan.
+   * @param mapper The mapper class.
+   * @param job    The job configuration.
    * @throws IOException When setting up the job fails.
    */
   @SuppressWarnings("rawtypes")
-  public static void initJob(String table, Scan scan,
-    Class<? extends TableMapper> mapper, Job job) throws IOException {
-    TableMapReduceUtil.initTableMapperJob(table, scan, mapper,
-      ImmutableBytesWritable.class, Result.class, job);
+  public static void initJob(String table, Scan scan, Class<? extends TableMapper> mapper, Job job)
+    throws IOException {
+    TableMapReduceUtil.initTableMapperJob(table, scan, mapper, ImmutableBytesWritable.class,
+      Result.class, job);
   }
 
   /**
    * Pass the key, value to reduce.
-   *
-   * @param key  The current key.
-   * @param value  The current value.
-   * @param context  The current context.
-   * @throws IOException When writing the record fails.
+   * @param key     The current key.
+   * @param value   The current value.
+   * @param context The current context.
+   * @throws IOException          When writing the record fails.
    * @throws InterruptedException When the job is aborted.
    */
   public void map(ImmutableBytesWritable key, Result value, Context context)
-  throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     context.write(key, value);
   }
 

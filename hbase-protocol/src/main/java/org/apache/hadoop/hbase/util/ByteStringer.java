@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * Hack to workaround HBASE-10304 issue that keeps bubbling up when a mapreduce context.
@@ -41,7 +40,7 @@ public class ByteStringer {
   // because it makes a copy of the passed in array.
   static {
     try {
-      HBaseZeroCopyByteString.wrap(new byte [0]);
+      HBaseZeroCopyByteString.wrap(new byte[0]);
     } catch (IllegalAccessError iae) {
       USE_ZEROCOPYBYTESTRING = false;
       LOG.debug("Failed to classload HBaseZeroCopyByteString: " + iae.toString());
@@ -56,14 +55,17 @@ public class ByteStringer {
    * Wraps a byte array in a {@link ByteString} without copying it.
    */
   public static ByteString wrap(final byte[] array) {
-    return USE_ZEROCOPYBYTESTRING? HBaseZeroCopyByteString.wrap(array): ByteString.copyFrom(array);
+    return USE_ZEROCOPYBYTESTRING
+      ? HBaseZeroCopyByteString.wrap(array)
+      : ByteString.copyFrom(array);
   }
 
   /**
    * Wraps a subset of a byte array in a {@link ByteString} without copying it.
    */
   public static ByteString wrap(final byte[] array, int offset, int length) {
-    return USE_ZEROCOPYBYTESTRING? HBaseZeroCopyByteString.wrap(array, offset, length):
-      ByteString.copyFrom(array, offset, length);
+    return USE_ZEROCOPYBYTESTRING
+      ? HBaseZeroCopyByteString.wrap(array, offset, length)
+      : ByteString.copyFrom(array, offset, length);
   }
 }

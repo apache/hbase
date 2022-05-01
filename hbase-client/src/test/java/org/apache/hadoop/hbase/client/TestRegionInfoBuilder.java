@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -141,7 +141,7 @@ public class TestRegionInfoBuilder {
   @Test
   public void testContainsRangeForMetaTable() {
     TableDescriptor tableDesc =
-        TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
+      TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDesc.getTableName()).build();
     byte[] startRow = HConstants.EMPTY_START_ROW;
     byte[] row1 = Bytes.toBytes("a,a,0");

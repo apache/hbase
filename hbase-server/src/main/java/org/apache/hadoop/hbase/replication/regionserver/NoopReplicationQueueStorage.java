@@ -34,22 +34,27 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 class NoopReplicationQueueStorage implements ReplicationQueueStorage {
-  NoopReplicationQueueStorage() {}
+  NoopReplicationQueueStorage() {
+  }
 
   @Override
-  public void removeQueue(ServerName serverName, String queueId) throws ReplicationException {}
+  public void removeQueue(ServerName serverName, String queueId) throws ReplicationException {
+  }
 
   @Override
   public void addWAL(ServerName serverName, String queueId, String fileName)
-    throws ReplicationException {}
+    throws ReplicationException {
+  }
 
   @Override
   public void removeWAL(ServerName serverName, String queueId, String fileName)
-    throws ReplicationException { }
+    throws ReplicationException {
+  }
 
   @Override
   public void setWALPosition(ServerName serverName, String queueId, String fileName, long position,
-    Map<String, Long> lastSeqIds) throws ReplicationException {}
+    Map<String, Long> lastSeqIds) throws ReplicationException {
+  }
 
   @Override
   public long getLastSequenceId(String encodedRegionName, String peerId)
@@ -59,14 +64,17 @@ class NoopReplicationQueueStorage implements ReplicationQueueStorage {
 
   @Override
   public void setLastSequenceIds(String peerId, Map<String, Long> lastSeqIds)
-    throws ReplicationException {}
+    throws ReplicationException {
+  }
 
   @Override
-  public void removeLastSequenceIds(String peerId) throws ReplicationException {}
+  public void removeLastSequenceIds(String peerId) throws ReplicationException {
+  }
 
   @Override
   public void removeLastSequenceIds(String peerId, List<String> encodedRegionNames)
-    throws ReplicationException {}
+    throws ReplicationException {
+  }
 
   @Override
   public long getWALPosition(ServerName serverName, String queueId, String fileName)
@@ -76,7 +84,7 @@ class NoopReplicationQueueStorage implements ReplicationQueueStorage {
 
   @Override
   public List<String> getWALsInQueue(ServerName serverName, String queueId)
-      throws ReplicationException {
+    throws ReplicationException {
     return Collections.EMPTY_LIST;
   }
 
@@ -92,8 +100,8 @@ class NoopReplicationQueueStorage implements ReplicationQueueStorage {
   }
 
   @Override
-  public void removeReplicatorIfQueueIsEmpty(ServerName serverName)
-    throws ReplicationException {}
+  public void removeReplicatorIfQueueIsEmpty(ServerName serverName) throws ReplicationException {
+  }
 
   @Override
   public List<ServerName> getListOfReplicators() throws ReplicationException {
@@ -106,17 +114,21 @@ class NoopReplicationQueueStorage implements ReplicationQueueStorage {
   }
 
   @Override
-  public void addPeerToHFileRefs(String peerId) throws ReplicationException {}
+  public void addPeerToHFileRefs(String peerId) throws ReplicationException {
+  }
 
   @Override
-  public void removePeerFromHFileRefs(String peerId) throws ReplicationException {}
+  public void removePeerFromHFileRefs(String peerId) throws ReplicationException {
+  }
 
   @Override
   public void addHFileRefs(String peerId, List<Pair<Path, Path>> pairs)
-    throws ReplicationException {}
+    throws ReplicationException {
+  }
 
   @Override
-  public void removeHFileRefs(String peerId, List<String> files) throws ReplicationException {}
+  public void removeHFileRefs(String peerId, List<String> files) throws ReplicationException {
+  }
 
   @Override
   public List<String> getAllPeersFromHFileRefsQueue() throws ReplicationException {

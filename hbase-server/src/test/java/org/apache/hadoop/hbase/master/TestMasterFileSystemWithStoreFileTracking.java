@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.Trackers.FILE;
 import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -35,15 +36,15 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test the master filesystem in a local cluster with
- * Store File Tracking explicitly set in global config
+ * Test the master filesystem in a local cluster with Store File Tracking explicitly set in global
+ * config
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterFileSystemWithStoreFileTracking {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterFileSystemWithStoreFileTracking.class);
+    HBaseClassTestRule.forClass(TestMasterFileSystemWithStoreFileTracking.class);
 
   @Rule
   public TestName name = new TestName();

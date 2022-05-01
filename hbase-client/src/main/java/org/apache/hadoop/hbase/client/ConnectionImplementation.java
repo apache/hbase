@@ -256,7 +256,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    * Constructor, for creating cluster connection with provided ConnectionRegistry.
    */
   ConnectionImplementation(Configuration conf, ExecutorService pool, User user,
-      ConnectionRegistry registry) throws IOException {
+    ConnectionRegistry registry) throws IOException {
     this.conf = conf;
     this.user = user;
     if (user != null && user.isLoginFromKeytab()) {
@@ -266,12 +266,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     this.connectionConfig = new ConnectionConfiguration(conf);
     this.closed = false;
     this.metaReplicaCallTimeoutScanInMicroSecond =
-        connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
+      connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
 
     // how many times to try, one more than max *retry* time
     this.numTries = retries2Attempts(connectionConfig.getRetriesNumber());
     this.rpcTimeout =
-        conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     if (conf.getBoolean(NonceGenerator.CLIENT_NONCES_ENABLED_KEY, true)) {
       synchronized (nonceGeneratorCreateLock) {
         if (nonceGenerator == null) {
@@ -290,10 +290,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
 
     boolean shouldListen =
-        conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
-    Class<? extends ClusterStatusListener.Listener> listenerClass = conf.getClass(
-      ClusterStatusListener.STATUS_LISTENER_CLASS,
-      ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS, ClusterStatusListener.Listener.class);
+      conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
+    Class<? extends ClusterStatusListener.Listener> listenerClass =
+      conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+        ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS, ClusterStatusListener.Listener.class);
 
     // Is there an alternate BufferedMutator to use?
     this.alternateBufferedMutatorClassName = this.conf.get(BufferedMutator.CLASSNAME_KEY);
@@ -308,8 +308,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
       if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
         String scope = MetricsConnection.getScope(conf, clusterId, this);
-        this.metrics =
-          new MetricsConnection(scope, this::getBatchPool, this::getMetaLookupPool);
+        this.metrics = new MetricsConnection(scope, this::getBatchPool, this::getMetaLookupPool);
       } else {
         this.metrics = null;
       }
@@ -321,16 +320,16 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       if (shouldListen) {
         if (listenerClass == null) {
           LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but "
-              + ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
+            + ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
         } else {
           clusterStatusListener =
-              new ClusterStatusListener(new ClusterStatusListener.DeadServerHandler() {
-                @Override
-                public void newDead(ServerName sn) {
-                  clearCaches(sn);
-                  rpcClient.cancelConnections(sn);
-                }
-              }, conf, listenerClass);
+            new ClusterStatusListener(new ClusterStatusListener.DeadServerHandler() {
+              @Override
+              public void newDead(ServerName sn) {
+                clearCaches(sn);
+                rpcClient.cancelConnections(sn);
+              }
+            }, conf, listenerClass);
         }
       }
     } catch (Throwable e) {
@@ -342,26 +341,26 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
     // Get the region locator's meta replica mode.
     this.metaReplicaMode = CatalogReplicaMode
-        .fromString(conf.get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+      .fromString(conf.get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
 
     switch (this.metaReplicaMode) {
       case LOAD_BALANCE:
         String replicaSelectorClass =
-            conf.get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
-              CatalogReplicaLoadBalanceSimpleSelector.class.getName());
+          conf.get(RegionLocator.LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR,
+            CatalogReplicaLoadBalanceSimpleSelector.class.getName());
 
         this.metaReplicaSelector = CatalogReplicaLoadBalanceSelectorFactory
-            .createSelector(replicaSelectorClass, META_TABLE_NAME, getChoreService(), () -> {
-              int numOfReplicas = 1;
-              try {
-                RegionLocations metaLocations = this.registry.getMetaRegionLocations()
-                    .get(connectionConfig.getReadRpcTimeout(), TimeUnit.MILLISECONDS);
-                numOfReplicas = metaLocations.size();
-              } catch (Exception e) {
-                LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
-              }
-              return numOfReplicas;
-            });
+          .createSelector(replicaSelectorClass, META_TABLE_NAME, getChoreService(), () -> {
+            int numOfReplicas = 1;
+            try {
+              RegionLocations metaLocations = this.registry.getMetaRegionLocations()
+                .get(connectionConfig.getReadRpcTimeout(), TimeUnit.MILLISECONDS);
+              numOfReplicas = metaLocations.size();
+            } catch (Exception e) {
+              LOG.error("Failed to get table {}'s region replication, ", META_TABLE_NAME, e);
+            }
+            return numOfReplicas;
+          });
         break;
       case NONE:
         // If user does not configure LOCATOR_META_REPLICAS_MODE, let's check the legacy config.
@@ -383,7 +382,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   /**
    * @param conn The connection for which to replace the generator.
-   * @param cnm Replaces the nonce generator used, for testing.
+   * @param cnm  Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
   static NonceGenerator injectNonceGeneratorForTesting(ClusterConnection conn, NonceGenerator cnm) {
@@ -406,7 +405,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       @Override
       public Table build() {
         return new HTable(ConnectionImplementation.this, this, rpcCallerFactory,
-            rpcControllerFactory, pool);
+          rpcControllerFactory, pool);
       }
     };
   }
@@ -476,16 +475,16 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         throw new RegionServerStoppedException(masterServer + " is dead.");
       }
       String key =
-          getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(), masterServer);
+        getStubKey(MasterProtos.HbckService.BlockingInterface.class.getName(), masterServer);
 
       return new HBaseHbck(
-          (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
-            BlockingRpcChannel channel =
-                this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
-            return MasterProtos.HbckService.newBlockingStub(channel);
-          }), rpcControllerFactory);
+        (MasterProtos.HbckService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+          BlockingRpcChannel channel =
+            this.rpcClient.createBlockingRpcChannel(masterServer, user, rpcTimeout);
+          return MasterProtos.HbckService.newBlockingStub(channel);
+        }), rpcControllerFactory);
     }, () -> TraceUtil.createSpan(this.getClass().getSimpleName() + ".getHbck")
-        .setAttribute(HBaseSemanticAttributes.SERVER_NAME_KEY, masterServer.getServerName()));
+      .setAttribute(HBaseSemanticAttributes.SERVER_NAME_KEY, masterServer.getServerName()));
   }
 
   @Override
@@ -517,7 +516,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private ThreadPoolExecutor getThreadPool(int maxThreads, int coreThreads, String nameHint,
-      BlockingQueue<Runnable> passedWorkQueue) {
+    BlockingQueue<Runnable> passedWorkQueue) {
     // shared HTable thread executor not yet initialized
     if (maxThreads == 0) {
       maxThreads = Runtime.getRuntime().availableProcessors() * 8;
@@ -528,14 +527,15 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
     BlockingQueue<Runnable> workQueue = passedWorkQueue;
     if (workQueue == null) {
-      workQueue = new LinkedBlockingQueue<>(maxThreads * conf.getInt(
-        HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS, HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+      workQueue =
+        new LinkedBlockingQueue<>(maxThreads * conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+          HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
       coreThreads = maxThreads;
     }
     ThreadPoolExecutor tpe =
-        new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-            new ThreadFactoryBuilder().setNameFormat(toString() + nameHint + "-pool-%d")
-                .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
+        new ThreadFactoryBuilder().setNameFormat(toString() + nameHint + "-pool-%d")
+          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }
@@ -550,7 +550,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
           // the queue is full, a new thread will be started
           int threads = conf.getInt("hbase.hconnection.meta.lookup.threads.max", 128);
           this.metaLookupPool =
-              getThreadPool(threads, threads, "-metaLookup-shared-", new LinkedBlockingQueue<>());
+            getThreadPool(threads, threads, "-metaLookup-shared-", new LinkedBlockingQueue<>());
         }
       }
     }
@@ -618,8 +618,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   /**
-   * If choreService has not been created yet, create the ChoreService.
-   * @return ChoreService
+   * If choreService has not been created yet, create the ChoreService. n
    */
   synchronized ChoreService getChoreService() {
     if (choreService == null) {
@@ -673,7 +672,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public HRegionLocation getRegionLocation(final TableName tableName, final byte[] row,
-      boolean reload) throws IOException {
+    boolean reload) throws IOException {
     return reload ? relocateRegion(tableName, row) : locateRegion(tableName, row);
   }
 
@@ -689,7 +688,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
-      throws IOException {
+    throws IOException {
     checkClosed();
     try {
       if (!isTableEnabled(tableName)) {
@@ -701,7 +700,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         return true;
       }
       List<Pair<RegionInfo, ServerName>> locations =
-          MetaTableAccessor.getTableRegionsAndLocations(this, tableName, true);
+        MetaTableAccessor.getTableRegionsAndLocations(this, tableName, true);
 
       int notDeployed = 0;
       int regionCount = 0;
@@ -768,7 +767,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public List<HRegionLocation> locateRegions(TableName tableName, boolean useCache,
-      boolean offlined) throws IOException {
+    boolean offlined) throws IOException {
     List<RegionInfo> regions;
     if (TableName.isMetaTableName(tableName)) {
       regions = Collections.singletonList(RegionInfoBuilder.FIRST_META_REGIONINFO);
@@ -794,23 +793,24 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public HRegionLocation locateRegion(final TableName tableName, final byte[] row)
-      throws IOException {
+    throws IOException {
     RegionLocations locations = locateRegion(tableName, row, true, true);
     return locations == null ? null : locations.getRegionLocation();
   }
 
   @Override
   public HRegionLocation relocateRegion(final TableName tableName, final byte[] row)
-      throws IOException {
+    throws IOException {
     RegionLocations locations =
-        relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
-    return locations == null ? null
-        : locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    return locations == null
+      ? null
+      : locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
   @Override
   public RegionLocations relocateRegion(final TableName tableName, final byte[] row, int replicaId)
-      throws IOException {
+    throws IOException {
     // Since this is an explicit request not to use any caching, finding
     // disabled tables should not be desirable. This will ensure that an exception is thrown when
     // the first time a disabled table is interacted with.
@@ -823,13 +823,13 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
-      boolean retry) throws IOException {
+    boolean retry) throws IOException {
     return locateRegion(tableName, row, useCache, retry, RegionReplicaUtil.DEFAULT_REPLICA_ID);
   }
 
   @Override
   public RegionLocations locateRegion(final TableName tableName, final byte[] row, boolean useCache,
-      boolean retry, int replicaId) throws IOException {
+    boolean retry, int replicaId) throws IOException {
     checkClosed();
     if (tableName == null || tableName.getName().length == 0) {
       throw new IllegalArgumentException("table name cannot be null or zero length");
@@ -843,7 +843,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private RegionLocations locateMeta(final TableName tableName, boolean useCache, int replicaId)
-      throws IOException {
+    throws IOException {
     // HBASE-10785: We cache the location of the META itself, so that we are not overloading
     // zookeeper with one request for every region lookup. We cache the META with empty row
     // key in MetaCache.
@@ -881,7 +881,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    * seeking.
    */
   private RegionLocations locateRegionInMeta(TableName tableName, byte[] row, boolean useCache,
-      boolean retry, int replicaId) throws IOException {
+    boolean retry, int replicaId) throws IOException {
     // If we are supposed to be using the cache, look in the cache to see if we already have the
     // region.
     if (useCache) {
@@ -895,15 +895,15 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     // without knowing the precise region names.
     byte[] metaStartKey = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
     byte[] metaStopKey =
-        RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
+      RegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW, "", false);
     Scan s = new Scan().withStartRow(metaStartKey).withStopRow(metaStopKey, true)
-        .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(1)
-        .setReadType(ReadType.PREAD);
+      .addFamily(HConstants.CATALOG_FAMILY).setReversed(true).setCaching(1)
+      .setReadType(ReadType.PREAD);
 
     switch (this.metaReplicaMode) {
       case LOAD_BALANCE:
         int metaReplicaId =
-            this.metaReplicaSelector.select(tableName, row, RegionLocateType.CURRENT);
+          this.metaReplicaSelector.select(tableName, row, RegionLocateType.CURRENT);
         if (metaReplicaId != RegionInfo.DEFAULT_REPLICA_ID) {
           // If the selector gives a non-primary meta replica region, then go with it.
           // Otherwise, just go to primary in non-hedgedRead mode.
@@ -922,7 +922,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     for (int tries = 0;; tries++) {
       if (tries >= maxAttempts) {
         throw new NoServerForRegionException("Unable to find region for "
-            + Bytes.toStringBinary(row) + " in " + tableName + " after " + tries + " tries.");
+          + Bytes.toStringBinary(row) + " in " + tableName + " after " + tries + " tries.");
       }
       if (useCache) {
         RegionLocations locations = getCachedLocation(tableName, row);
@@ -953,11 +953,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         }
         s.resetMvccReadPoint();
         final Span span = new TableOperationSpanBuilder(this)
-            .setTableName(TableName.META_TABLE_NAME).setOperation(s).build();
+          .setTableName(TableName.META_TABLE_NAME).setOperation(s).build();
         try (Scope ignored = span.makeCurrent();
-            ReversedClientScanner rcs = new ReversedClientScanner(conf, s,
-                TableName.META_TABLE_NAME, this, rpcCallerFactory, rpcControllerFactory,
-                getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
+          ReversedClientScanner rcs =
+            new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
+              rpcControllerFactory, getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
           boolean tableNotFound = true;
           for (;;) {
             Result regionInfoRow = rcs.next();
@@ -966,7 +966,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
                 throw new TableNotFoundException(tableName);
               } else {
                 throw new IOException(
-                    "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
+                  "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
               }
             }
             tableNotFound = false;
@@ -978,7 +978,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             RegionInfo regionInfo = locations.getRegionLocation(replicaId).getRegion();
             if (regionInfo == null) {
               throw new IOException("RegionInfo null or empty in " + TableName.META_TABLE_NAME
-                  + ", row=" + regionInfoRow);
+                + ", row=" + regionInfoRow);
             }
             // See HBASE-20182. It is possible that we locate to a split parent even after the
             // children are online, so here we need to skip this region and go to the next one.
@@ -987,25 +987,25 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             }
             if (regionInfo.isOffline()) {
               throw new RegionOfflineException(
-                  "Region offline; disable table call? " + regionInfo.getRegionNameAsString());
+                "Region offline; disable table call? " + regionInfo.getRegionNameAsString());
             }
             // It is possible that the split children have not been online yet and we have skipped
             // the parent in the above condition, so we may have already reached a region which does
             // not contains us.
             if (!regionInfo.containsRow(row)) {
               throw new IOException(
-                  "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
+                "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
             }
             ServerName serverName = locations.getRegionLocation(replicaId).getServerName();
             if (serverName == null) {
               throw new NoServerForRegionException("No server address listed in "
-                  + TableName.META_TABLE_NAME + " for region " + regionInfo.getRegionNameAsString()
-                  + " containing row " + Bytes.toStringBinary(row));
+                + TableName.META_TABLE_NAME + " for region " + regionInfo.getRegionNameAsString()
+                + " containing row " + Bytes.toStringBinary(row));
             }
             if (isDeadServer(serverName)) {
               throw new RegionServerStoppedException(
-                  "hbase:meta says the region " + regionInfo.getRegionNameAsString()
-                      + " is managed by the server " + serverName + ", but it is dead.");
+                "hbase:meta says the region " + regionInfo.getRegionNameAsString()
+                  + " is managed by the server " + serverName + ", but it is dead.");
             }
             // Instantiate the location
             cacheLocation(tableName, locations);
@@ -1032,16 +1032,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
           pauseBase = connectionConfig.getPauseMillisForServerOverloaded();
         }
         if (tries < maxAttempts - 1) {
-          LOG.debug(
-            "locateRegionInMeta parentTable='{}', attempt={} of {} failed; retrying "
-                + "after sleep of {}",
-            TableName.META_TABLE_NAME, tries, maxAttempts, maxAttempts, e);
+          LOG.debug("locateRegionInMeta parentTable='{}', attempt={} of {} failed; retrying "
+            + "after sleep of {}", TableName.META_TABLE_NAME, tries, maxAttempts, maxAttempts, e);
         } else {
           throw e;
         }
         // Only relocate the parent region if necessary
         relocateMeta =
-            !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
+          !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
       } finally {
         userRegionLock.unlock();
       }
@@ -1049,7 +1047,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
       } catch (InterruptedException e) {
         throw new InterruptedIOException(
-            "Giving up trying to location region in " + "meta: thread is interrupted.");
+          "Giving up trying to location region in " + "meta: thread is interrupted.");
       }
     }
   }
@@ -1059,7 +1057,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       long waitTime = connectionConfig.getMetaOperationTimeout();
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         throw new LockTimeoutException("Failed to get user region lock in" + waitTime + " ms. "
-            + " for accessing meta region server.");
+          + " for accessing meta region server.");
       }
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);
@@ -1070,7 +1068,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   /**
    * Put a newly discovered HRegionLocation into the cache.
    * @param tableName The table name.
-   * @param location the new location
+   * @param location  the new location
    */
   @Override
   public void cacheLocation(final TableName tableName, final RegionLocations location) {
@@ -1111,11 +1109,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   /**
    * Put a newly discovered HRegionLocation into the cache.
    * @param tableName The table name.
-   * @param source the source of the new location, if it's not coming from meta
-   * @param location the new location
+   * @param source    the source of the new location, if it's not coming from meta
+   * @param location  the new location
    */
   private void cacheLocation(final TableName tableName, final ServerName source,
-      final HRegionLocation location) {
+    final HRegionLocation location) {
     metaCache.cacheLocation(tableName, source, location);
   }
 
@@ -1166,14 +1164,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   static class ServerErrorTracker {
     // We need a concurrent map here, as we could have multiple threads updating it in parallel.
     private final ConcurrentMap<ServerName, ServerErrors> errorsByServer =
-        new ConcurrentHashMap<>();
+      new ConcurrentHashMap<>();
     private final long canRetryUntil;
     private final int maxTries;// max number to try
     private final long startTrackingTime;
 
     /**
      * Constructor
-     * @param timeout how long to wait before timeout, in unit of millisecond
+     * @param timeout  how long to wait before timeout, in unit of millisecond
      * @param maxTries how many times to try
      */
     public ServerErrorTracker(long timeout, int maxTries) {
@@ -1189,12 +1187,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     boolean canTryMore(int numAttempt) {
       // If there is a single try we must not take into account the time.
       return numAttempt < maxTries
-          || (maxTries > 1 && EnvironmentEdgeManager.currentTime() < this.canRetryUntil);
+        || (maxTries > 1 && EnvironmentEdgeManager.currentTime() < this.canRetryUntil);
     }
 
     /**
      * Calculates the back-off time for a retrying request to a particular server.
-     * @param server The server in question.
+     * @param server    The server in question.
      * @param basePause The default hci pause.
      * @return The time to wait before sending next request.
      */
@@ -1243,7 +1241,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   private final class MasterServiceStubMaker {
 
     private void isMasterRunning(MasterProtos.MasterService.BlockingInterface stub)
-        throws IOException {
+      throws IOException {
       try {
         stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
       } catch (ServiceException e) {
@@ -1257,7 +1255,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
      * @return A stub for master services.
      */
     private MasterProtos.MasterService.BlockingInterface makeStubNoRetries()
-        throws IOException, KeeperException {
+      throws IOException, KeeperException {
       ServerName sn = get(registry.getActiveMaster());
       if (sn == null) {
         String msg = "ZooKeeper available but no active master location found";
@@ -1270,10 +1268,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       // Use the security info interface name as our stub key
       String key = getStubKey(MasterProtos.MasterService.getDescriptor().getName(), sn);
       MasterProtos.MasterService.BlockingInterface stub =
-          (MasterProtos.MasterService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
-            BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
-            return MasterProtos.MasterService.newBlockingStub(channel);
-          });
+        (MasterProtos.MasterService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
+          BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn, user, rpcTimeout);
+          return MasterProtos.MasterService.newBlockingStub(channel);
+        });
       isMasterRunning(stub);
       return stub;
     }
@@ -1311,7 +1309,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public AdminProtos.AdminService.BlockingInterface getAdmin(ServerName serverName)
-      throws IOException {
+    throws IOException {
     checkClosed();
     if (isDeadServer(serverName)) {
       throw new RegionServerStoppedException(serverName + " is dead.");
@@ -1319,7 +1317,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(), serverName);
     return (AdminProtos.AdminService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
-          this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
+        this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
       return AdminProtos.AdminService.newBlockingStub(channel);
     });
   }
@@ -1331,10 +1329,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
     String key =
-        getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), serverName);
+      getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), serverName);
     return (ClientProtos.ClientService.BlockingInterface) computeIfAbsentEx(stubs, key, () -> {
       BlockingRpcChannel channel =
-          this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
+        this.rpcClient.createBlockingRpcChannel(serverName, user, rpcTimeout);
       return ClientProtos.ClientService.newBlockingStub(channel);
     });
   }
@@ -1365,330 +1363,330 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
       @Override
       public MasterProtos.AbortProcedureResponse abortProcedure(RpcController controller,
-          MasterProtos.AbortProcedureRequest request) throws ServiceException {
+        MasterProtos.AbortProcedureRequest request) throws ServiceException {
         return stub.abortProcedure(controller, request);
       }
 
       @Override
       public MasterProtos.GetProceduresResponse getProcedures(RpcController controller,
-          MasterProtos.GetProceduresRequest request) throws ServiceException {
+        MasterProtos.GetProceduresRequest request) throws ServiceException {
         return stub.getProcedures(controller, request);
       }
 
       @Override
       public MasterProtos.GetLocksResponse getLocks(RpcController controller,
-          MasterProtos.GetLocksRequest request) throws ServiceException {
+        MasterProtos.GetLocksRequest request) throws ServiceException {
         return stub.getLocks(controller, request);
       }
 
       @Override
       public MasterProtos.AddColumnResponse addColumn(RpcController controller,
-          MasterProtos.AddColumnRequest request) throws ServiceException {
+        MasterProtos.AddColumnRequest request) throws ServiceException {
         return stub.addColumn(controller, request);
       }
 
       @Override
       public MasterProtos.DeleteColumnResponse deleteColumn(RpcController controller,
-          MasterProtos.DeleteColumnRequest request) throws ServiceException {
+        MasterProtos.DeleteColumnRequest request) throws ServiceException {
         return stub.deleteColumn(controller, request);
       }
 
       @Override
       public MasterProtos.ModifyColumnResponse modifyColumn(RpcController controller,
-          MasterProtos.ModifyColumnRequest request) throws ServiceException {
+        MasterProtos.ModifyColumnRequest request) throws ServiceException {
         return stub.modifyColumn(controller, request);
       }
 
       @Override
       public MasterProtos.MoveRegionResponse moveRegion(RpcController controller,
-          MasterProtos.MoveRegionRequest request) throws ServiceException {
+        MasterProtos.MoveRegionRequest request) throws ServiceException {
         return stub.moveRegion(controller, request);
       }
 
       @Override
       public MasterProtos.MergeTableRegionsResponse mergeTableRegions(RpcController controller,
-          MasterProtos.MergeTableRegionsRequest request) throws ServiceException {
+        MasterProtos.MergeTableRegionsRequest request) throws ServiceException {
         return stub.mergeTableRegions(controller, request);
       }
 
       @Override
       public MasterProtos.AssignRegionResponse assignRegion(RpcController controller,
-          MasterProtos.AssignRegionRequest request) throws ServiceException {
+        MasterProtos.AssignRegionRequest request) throws ServiceException {
         return stub.assignRegion(controller, request);
       }
 
       @Override
       public MasterProtos.UnassignRegionResponse unassignRegion(RpcController controller,
-          MasterProtos.UnassignRegionRequest request) throws ServiceException {
+        MasterProtos.UnassignRegionRequest request) throws ServiceException {
         return stub.unassignRegion(controller, request);
       }
 
       @Override
       public MasterProtos.OfflineRegionResponse offlineRegion(RpcController controller,
-          MasterProtos.OfflineRegionRequest request) throws ServiceException {
+        MasterProtos.OfflineRegionRequest request) throws ServiceException {
         return stub.offlineRegion(controller, request);
       }
 
       @Override
       public MasterProtos.SplitTableRegionResponse splitRegion(RpcController controller,
-          MasterProtos.SplitTableRegionRequest request) throws ServiceException {
+        MasterProtos.SplitTableRegionRequest request) throws ServiceException {
         return stub.splitRegion(controller, request);
       }
 
       @Override
       public MasterProtos.DeleteTableResponse deleteTable(RpcController controller,
-          MasterProtos.DeleteTableRequest request) throws ServiceException {
+        MasterProtos.DeleteTableRequest request) throws ServiceException {
         return stub.deleteTable(controller, request);
       }
 
       @Override
       public MasterProtos.TruncateTableResponse truncateTable(RpcController controller,
-          MasterProtos.TruncateTableRequest request) throws ServiceException {
+        MasterProtos.TruncateTableRequest request) throws ServiceException {
         return stub.truncateTable(controller, request);
       }
 
       @Override
       public MasterProtos.EnableTableResponse enableTable(RpcController controller,
-          MasterProtos.EnableTableRequest request) throws ServiceException {
+        MasterProtos.EnableTableRequest request) throws ServiceException {
         return stub.enableTable(controller, request);
       }
 
       @Override
       public MasterProtos.DisableTableResponse disableTable(RpcController controller,
-          MasterProtos.DisableTableRequest request) throws ServiceException {
+        MasterProtos.DisableTableRequest request) throws ServiceException {
         return stub.disableTable(controller, request);
       }
 
       @Override
       public MasterProtos.ModifyTableResponse modifyTable(RpcController controller,
-          MasterProtos.ModifyTableRequest request) throws ServiceException {
+        MasterProtos.ModifyTableRequest request) throws ServiceException {
         return stub.modifyTable(controller, request);
       }
 
       @Override
       public MasterProtos.CreateTableResponse createTable(RpcController controller,
-          MasterProtos.CreateTableRequest request) throws ServiceException {
+        MasterProtos.CreateTableRequest request) throws ServiceException {
         return stub.createTable(controller, request);
       }
 
       @Override
       public MasterProtos.ShutdownResponse shutdown(RpcController controller,
-          MasterProtos.ShutdownRequest request) throws ServiceException {
+        MasterProtos.ShutdownRequest request) throws ServiceException {
         return stub.shutdown(controller, request);
       }
 
       @Override
       public MasterProtos.StopMasterResponse stopMaster(RpcController controller,
-          MasterProtos.StopMasterRequest request) throws ServiceException {
+        MasterProtos.StopMasterRequest request) throws ServiceException {
         return stub.stopMaster(controller, request);
       }
 
       @Override
       public MasterProtos.IsInMaintenanceModeResponse isMasterInMaintenanceMode(
-          final RpcController controller, final MasterProtos.IsInMaintenanceModeRequest request)
-          throws ServiceException {
+        final RpcController controller, final MasterProtos.IsInMaintenanceModeRequest request)
+        throws ServiceException {
         return stub.isMasterInMaintenanceMode(controller, request);
       }
 
       @Override
       public MasterProtos.BalanceResponse balance(RpcController controller,
-          MasterProtos.BalanceRequest request) throws ServiceException {
+        MasterProtos.BalanceRequest request) throws ServiceException {
         return stub.balance(controller, request);
       }
 
       @Override
       public MasterProtos.SetBalancerRunningResponse setBalancerRunning(RpcController controller,
-          MasterProtos.SetBalancerRunningRequest request) throws ServiceException {
+        MasterProtos.SetBalancerRunningRequest request) throws ServiceException {
         return stub.setBalancerRunning(controller, request);
       }
 
       @Override
       public NormalizeResponse normalize(RpcController controller, NormalizeRequest request)
-          throws ServiceException {
+        throws ServiceException {
         return stub.normalize(controller, request);
       }
 
       @Override
       public SetNormalizerRunningResponse setNormalizerRunning(RpcController controller,
-          SetNormalizerRunningRequest request) throws ServiceException {
+        SetNormalizerRunningRequest request) throws ServiceException {
         return stub.setNormalizerRunning(controller, request);
       }
 
       @Override
       public MasterProtos.RunCatalogScanResponse runCatalogScan(RpcController controller,
-          MasterProtos.RunCatalogScanRequest request) throws ServiceException {
+        MasterProtos.RunCatalogScanRequest request) throws ServiceException {
         return stub.runCatalogScan(controller, request);
       }
 
       @Override
       public MasterProtos.EnableCatalogJanitorResponse enableCatalogJanitor(
-          RpcController controller, MasterProtos.EnableCatalogJanitorRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.EnableCatalogJanitorRequest request)
+        throws ServiceException {
         return stub.enableCatalogJanitor(controller, request);
       }
 
       @Override
       public MasterProtos.IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(
-          RpcController controller, MasterProtos.IsCatalogJanitorEnabledRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.IsCatalogJanitorEnabledRequest request)
+        throws ServiceException {
         return stub.isCatalogJanitorEnabled(controller, request);
       }
 
       @Override
       public MasterProtos.RunCleanerChoreResponse runCleanerChore(RpcController controller,
-          MasterProtos.RunCleanerChoreRequest request) throws ServiceException {
+        MasterProtos.RunCleanerChoreRequest request) throws ServiceException {
         return stub.runCleanerChore(controller, request);
       }
 
       @Override
       public MasterProtos.SetCleanerChoreRunningResponse setCleanerChoreRunning(
-          RpcController controller, MasterProtos.SetCleanerChoreRunningRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.SetCleanerChoreRunningRequest request)
+        throws ServiceException {
         return stub.setCleanerChoreRunning(controller, request);
       }
 
       @Override
       public MasterProtos.IsCleanerChoreEnabledResponse isCleanerChoreEnabled(
-          RpcController controller, MasterProtos.IsCleanerChoreEnabledRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.IsCleanerChoreEnabledRequest request)
+        throws ServiceException {
         return stub.isCleanerChoreEnabled(controller, request);
       }
 
       @Override
       public ClientProtos.CoprocessorServiceResponse execMasterService(RpcController controller,
-          ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
+        ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
         return stub.execMasterService(controller, request);
       }
 
       @Override
       public MasterProtos.SnapshotResponse snapshot(RpcController controller,
-          MasterProtos.SnapshotRequest request) throws ServiceException {
+        MasterProtos.SnapshotRequest request) throws ServiceException {
         return stub.snapshot(controller, request);
       }
 
       @Override
       public MasterProtos.GetCompletedSnapshotsResponse getCompletedSnapshots(
-          RpcController controller, MasterProtos.GetCompletedSnapshotsRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.GetCompletedSnapshotsRequest request)
+        throws ServiceException {
         return stub.getCompletedSnapshots(controller, request);
       }
 
       @Override
       public MasterProtos.DeleteSnapshotResponse deleteSnapshot(RpcController controller,
-          MasterProtos.DeleteSnapshotRequest request) throws ServiceException {
+        MasterProtos.DeleteSnapshotRequest request) throws ServiceException {
         return stub.deleteSnapshot(controller, request);
       }
 
       @Override
       public MasterProtos.IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
-          MasterProtos.IsSnapshotDoneRequest request) throws ServiceException {
+        MasterProtos.IsSnapshotDoneRequest request) throws ServiceException {
         return stub.isSnapshotDone(controller, request);
       }
 
       @Override
       public MasterProtos.RestoreSnapshotResponse restoreSnapshot(RpcController controller,
-          MasterProtos.RestoreSnapshotRequest request) throws ServiceException {
+        MasterProtos.RestoreSnapshotRequest request) throws ServiceException {
         return stub.restoreSnapshot(controller, request);
       }
 
       @Override
       public MasterProtos.SetSnapshotCleanupResponse switchSnapshotCleanup(RpcController controller,
-          MasterProtos.SetSnapshotCleanupRequest request) throws ServiceException {
+        MasterProtos.SetSnapshotCleanupRequest request) throws ServiceException {
         return stub.switchSnapshotCleanup(controller, request);
       }
 
       @Override
       public MasterProtos.IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabled(
-          RpcController controller, MasterProtos.IsSnapshotCleanupEnabledRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.IsSnapshotCleanupEnabledRequest request)
+        throws ServiceException {
         return stub.isSnapshotCleanupEnabled(controller, request);
       }
 
       @Override
       public MasterProtos.ExecProcedureResponse execProcedure(RpcController controller,
-          MasterProtos.ExecProcedureRequest request) throws ServiceException {
+        MasterProtos.ExecProcedureRequest request) throws ServiceException {
         return stub.execProcedure(controller, request);
       }
 
       @Override
       public MasterProtos.ExecProcedureResponse execProcedureWithRet(RpcController controller,
-          MasterProtos.ExecProcedureRequest request) throws ServiceException {
+        MasterProtos.ExecProcedureRequest request) throws ServiceException {
         return stub.execProcedureWithRet(controller, request);
       }
 
       @Override
       public MasterProtos.IsProcedureDoneResponse isProcedureDone(RpcController controller,
-          MasterProtos.IsProcedureDoneRequest request) throws ServiceException {
+        MasterProtos.IsProcedureDoneRequest request) throws ServiceException {
         return stub.isProcedureDone(controller, request);
       }
 
       @Override
       public MasterProtos.GetProcedureResultResponse getProcedureResult(RpcController controller,
-          MasterProtos.GetProcedureResultRequest request) throws ServiceException {
+        MasterProtos.GetProcedureResultRequest request) throws ServiceException {
         return stub.getProcedureResult(controller, request);
       }
 
       @Override
       public MasterProtos.IsMasterRunningResponse isMasterRunning(RpcController controller,
-          MasterProtos.IsMasterRunningRequest request) throws ServiceException {
+        MasterProtos.IsMasterRunningRequest request) throws ServiceException {
         return stub.isMasterRunning(controller, request);
       }
 
       @Override
       public MasterProtos.ModifyNamespaceResponse modifyNamespace(RpcController controller,
-          MasterProtos.ModifyNamespaceRequest request) throws ServiceException {
+        MasterProtos.ModifyNamespaceRequest request) throws ServiceException {
         return stub.modifyNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.CreateNamespaceResponse createNamespace(RpcController controller,
-          MasterProtos.CreateNamespaceRequest request) throws ServiceException {
+        MasterProtos.CreateNamespaceRequest request) throws ServiceException {
         return stub.createNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.DeleteNamespaceResponse deleteNamespace(RpcController controller,
-          MasterProtos.DeleteNamespaceRequest request) throws ServiceException {
+        MasterProtos.DeleteNamespaceRequest request) throws ServiceException {
         return stub.deleteNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.ListNamespacesResponse listNamespaces(RpcController controller,
-          MasterProtos.ListNamespacesRequest request) throws ServiceException {
+        MasterProtos.ListNamespacesRequest request) throws ServiceException {
         return stub.listNamespaces(controller, request);
       }
 
       @Override
       public MasterProtos.GetNamespaceDescriptorResponse getNamespaceDescriptor(
-          RpcController controller, MasterProtos.GetNamespaceDescriptorRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.GetNamespaceDescriptorRequest request)
+        throws ServiceException {
         return stub.getNamespaceDescriptor(controller, request);
       }
 
       @Override
       public MasterProtos.ListNamespaceDescriptorsResponse listNamespaceDescriptors(
-          RpcController controller, MasterProtos.ListNamespaceDescriptorsRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.ListNamespaceDescriptorsRequest request)
+        throws ServiceException {
         return stub.listNamespaceDescriptors(controller, request);
       }
 
       @Override
       public MasterProtos.ListTableDescriptorsByNamespaceResponse listTableDescriptorsByNamespace(
-          RpcController controller, MasterProtos.ListTableDescriptorsByNamespaceRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.ListTableDescriptorsByNamespaceRequest request)
+        throws ServiceException {
         return stub.listTableDescriptorsByNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.ListTableNamesByNamespaceResponse listTableNamesByNamespace(
-          RpcController controller, MasterProtos.ListTableNamesByNamespaceRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.ListTableNamesByNamespaceRequest request)
+        throws ServiceException {
         return stub.listTableNamesByNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.GetTableStateResponse getTableState(RpcController controller,
-          MasterProtos.GetTableStateRequest request) throws ServiceException {
+        MasterProtos.GetTableStateRequest request) throws ServiceException {
         return stub.getTableState(controller, request);
       }
 
@@ -1699,220 +1697,220 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
       @Override
       public MasterProtos.GetSchemaAlterStatusResponse getSchemaAlterStatus(
-          RpcController controller, MasterProtos.GetSchemaAlterStatusRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.GetSchemaAlterStatusRequest request)
+        throws ServiceException {
         return stub.getSchemaAlterStatus(controller, request);
       }
 
       @Override
       public MasterProtos.GetTableDescriptorsResponse getTableDescriptors(RpcController controller,
-          MasterProtos.GetTableDescriptorsRequest request) throws ServiceException {
+        MasterProtos.GetTableDescriptorsRequest request) throws ServiceException {
         return stub.getTableDescriptors(controller, request);
       }
 
       @Override
       public MasterProtos.GetTableNamesResponse getTableNames(RpcController controller,
-          MasterProtos.GetTableNamesRequest request) throws ServiceException {
+        MasterProtos.GetTableNamesRequest request) throws ServiceException {
         return stub.getTableNames(controller, request);
       }
 
       @Override
       public MasterProtos.GetClusterStatusResponse getClusterStatus(RpcController controller,
-          MasterProtos.GetClusterStatusRequest request) throws ServiceException {
+        MasterProtos.GetClusterStatusRequest request) throws ServiceException {
         return stub.getClusterStatus(controller, request);
       }
 
       @Override
       public MasterProtos.SetQuotaResponse setQuota(RpcController controller,
-          MasterProtos.SetQuotaRequest request) throws ServiceException {
+        MasterProtos.SetQuotaRequest request) throws ServiceException {
         return stub.setQuota(controller, request);
       }
 
       @Override
       public MasterProtos.MajorCompactionTimestampResponse getLastMajorCompactionTimestamp(
-          RpcController controller, MasterProtos.MajorCompactionTimestampRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.MajorCompactionTimestampRequest request)
+        throws ServiceException {
         return stub.getLastMajorCompactionTimestamp(controller, request);
       }
 
       @Override
       public MasterProtos.MajorCompactionTimestampResponse getLastMajorCompactionTimestampForRegion(
-          RpcController controller, MasterProtos.MajorCompactionTimestampForRegionRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.MajorCompactionTimestampForRegionRequest request)
+        throws ServiceException {
         return stub.getLastMajorCompactionTimestampForRegion(controller, request);
       }
 
       @Override
       public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
-          IsBalancerEnabledRequest request) throws ServiceException {
+        IsBalancerEnabledRequest request) throws ServiceException {
         return stub.isBalancerEnabled(controller, request);
       }
 
       @Override
       public MasterProtos.SetSplitOrMergeEnabledResponse setSplitOrMergeEnabled(
-          RpcController controller, MasterProtos.SetSplitOrMergeEnabledRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.SetSplitOrMergeEnabledRequest request)
+        throws ServiceException {
         return stub.setSplitOrMergeEnabled(controller, request);
       }
 
       @Override
       public MasterProtos.IsSplitOrMergeEnabledResponse isSplitOrMergeEnabled(
-          RpcController controller, MasterProtos.IsSplitOrMergeEnabledRequest request)
-          throws ServiceException {
+        RpcController controller, MasterProtos.IsSplitOrMergeEnabledRequest request)
+        throws ServiceException {
         return stub.isSplitOrMergeEnabled(controller, request);
       }
 
       @Override
       public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
-          IsNormalizerEnabledRequest request) throws ServiceException {
+        IsNormalizerEnabledRequest request) throws ServiceException {
         return stub.isNormalizerEnabled(controller, request);
       }
 
       @Override
       public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
-          SecurityCapabilitiesRequest request) throws ServiceException {
+        SecurityCapabilitiesRequest request) throws ServiceException {
         return stub.getSecurityCapabilities(controller, request);
       }
 
       @Override
       public AddReplicationPeerResponse addReplicationPeer(RpcController controller,
-          AddReplicationPeerRequest request) throws ServiceException {
+        AddReplicationPeerRequest request) throws ServiceException {
         return stub.addReplicationPeer(controller, request);
       }
 
       @Override
       public RemoveReplicationPeerResponse removeReplicationPeer(RpcController controller,
-          RemoveReplicationPeerRequest request) throws ServiceException {
+        RemoveReplicationPeerRequest request) throws ServiceException {
         return stub.removeReplicationPeer(controller, request);
       }
 
       @Override
       public EnableReplicationPeerResponse enableReplicationPeer(RpcController controller,
-          EnableReplicationPeerRequest request) throws ServiceException {
+        EnableReplicationPeerRequest request) throws ServiceException {
         return stub.enableReplicationPeer(controller, request);
       }
 
       @Override
       public DisableReplicationPeerResponse disableReplicationPeer(RpcController controller,
-          DisableReplicationPeerRequest request) throws ServiceException {
+        DisableReplicationPeerRequest request) throws ServiceException {
         return stub.disableReplicationPeer(controller, request);
       }
 
       @Override
       public ListDecommissionedRegionServersResponse listDecommissionedRegionServers(
-          RpcController controller, ListDecommissionedRegionServersRequest request)
-          throws ServiceException {
+        RpcController controller, ListDecommissionedRegionServersRequest request)
+        throws ServiceException {
         return stub.listDecommissionedRegionServers(controller, request);
       }
 
       @Override
       public DecommissionRegionServersResponse decommissionRegionServers(RpcController controller,
-          DecommissionRegionServersRequest request) throws ServiceException {
+        DecommissionRegionServersRequest request) throws ServiceException {
         return stub.decommissionRegionServers(controller, request);
       }
 
       @Override
       public RecommissionRegionServerResponse recommissionRegionServer(RpcController controller,
-          RecommissionRegionServerRequest request) throws ServiceException {
+        RecommissionRegionServerRequest request) throws ServiceException {
         return stub.recommissionRegionServer(controller, request);
       }
 
       @Override
       public GetReplicationPeerConfigResponse getReplicationPeerConfig(RpcController controller,
-          GetReplicationPeerConfigRequest request) throws ServiceException {
+        GetReplicationPeerConfigRequest request) throws ServiceException {
         return stub.getReplicationPeerConfig(controller, request);
       }
 
       @Override
       public UpdateReplicationPeerConfigResponse updateReplicationPeerConfig(
-          RpcController controller, UpdateReplicationPeerConfigRequest request)
-          throws ServiceException {
+        RpcController controller, UpdateReplicationPeerConfigRequest request)
+        throws ServiceException {
         return stub.updateReplicationPeerConfig(controller, request);
       }
 
       @Override
       public ListReplicationPeersResponse listReplicationPeers(RpcController controller,
-          ListReplicationPeersRequest request) throws ServiceException {
+        ListReplicationPeersRequest request) throws ServiceException {
         return stub.listReplicationPeers(controller, request);
       }
 
       @Override
       public GetSpaceQuotaRegionSizesResponse getSpaceQuotaRegionSizes(RpcController controller,
-          GetSpaceQuotaRegionSizesRequest request) throws ServiceException {
+        GetSpaceQuotaRegionSizesRequest request) throws ServiceException {
         return stub.getSpaceQuotaRegionSizes(controller, request);
       }
 
       @Override
       public GetQuotaStatesResponse getQuotaStates(RpcController controller,
-          GetQuotaStatesRequest request) throws ServiceException {
+        GetQuotaStatesRequest request) throws ServiceException {
         return stub.getQuotaStates(controller, request);
       }
 
       @Override
       public MasterProtos.ClearDeadServersResponse clearDeadServers(RpcController controller,
-          MasterProtos.ClearDeadServersRequest request) throws ServiceException {
+        MasterProtos.ClearDeadServersRequest request) throws ServiceException {
         return stub.clearDeadServers(controller, request);
       }
 
       @Override
       public SwitchRpcThrottleResponse switchRpcThrottle(RpcController controller,
-          SwitchRpcThrottleRequest request) throws ServiceException {
+        SwitchRpcThrottleRequest request) throws ServiceException {
         return stub.switchRpcThrottle(controller, request);
       }
 
       @Override
       public IsRpcThrottleEnabledResponse isRpcThrottleEnabled(RpcController controller,
-          IsRpcThrottleEnabledRequest request) throws ServiceException {
+        IsRpcThrottleEnabledRequest request) throws ServiceException {
         return stub.isRpcThrottleEnabled(controller, request);
       }
 
       @Override
       public SwitchExceedThrottleQuotaResponse switchExceedThrottleQuota(RpcController controller,
-          SwitchExceedThrottleQuotaRequest request) throws ServiceException {
+        SwitchExceedThrottleQuotaRequest request) throws ServiceException {
         return stub.switchExceedThrottleQuota(controller, request);
       }
 
       @Override
       public AccessControlProtos.GrantResponse grant(RpcController controller,
-          AccessControlProtos.GrantRequest request) throws ServiceException {
+        AccessControlProtos.GrantRequest request) throws ServiceException {
         return stub.grant(controller, request);
       }
 
       @Override
       public AccessControlProtos.RevokeResponse revoke(RpcController controller,
-          AccessControlProtos.RevokeRequest request) throws ServiceException {
+        AccessControlProtos.RevokeRequest request) throws ServiceException {
         return stub.revoke(controller, request);
       }
 
       @Override
       public GetUserPermissionsResponse getUserPermissions(RpcController controller,
-          GetUserPermissionsRequest request) throws ServiceException {
+        GetUserPermissionsRequest request) throws ServiceException {
         return stub.getUserPermissions(controller, request);
       }
 
       @Override
       public HasUserPermissionsResponse hasUserPermissions(RpcController controller,
-          HasUserPermissionsRequest request) throws ServiceException {
+        HasUserPermissionsRequest request) throws ServiceException {
         return stub.hasUserPermissions(controller, request);
       }
 
       @Override
       public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-          HBaseProtos.LogRequest request) throws ServiceException {
+        HBaseProtos.LogRequest request) throws ServiceException {
         return stub.getLogEntries(controller, request);
       }
 
       @Override
       public ModifyTableStoreFileTrackerResponse modifyTableStoreFileTracker(
-          RpcController controller, ModifyTableStoreFileTrackerRequest request)
-          throws ServiceException {
+        RpcController controller, ModifyTableStoreFileTrackerRequest request)
+        throws ServiceException {
         return stub.modifyTableStoreFileTracker(controller, request);
       }
 
       @Override
       public ModifyColumnStoreFileTrackerResponse modifyColumnStoreFileTracker(
-          RpcController controller, ModifyColumnStoreFileTrackerRequest request)
-          throws ServiceException {
+        RpcController controller, ModifyColumnStoreFileTrackerRequest request)
+        throws ServiceException {
         return stub.modifyColumnStoreFileTracker(controller, request);
       }
     };
@@ -1983,15 +1981,15 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    * it from the cache. Does nothing if we can be sure from the exception that the location is still
    * accurate, or if the cache has already been updated.
    * @param exception an object (to simplify user code) on which we will try to find a nested or
-   *          wrapped or both RegionMovedException
-   * @param source server that is the source of the location update.
+   *                  wrapped or both RegionMovedException
+   * @param source    server that is the source of the location update.
    */
   @Override
   public void updateCachedLocations(final TableName tableName, byte[] regionName, byte[] rowkey,
-      final Object exception, final ServerName source) {
+    final Object exception, final ServerName source) {
     if (rowkey == null || tableName == null) {
       LOG.warn("Coding error, see method javadoc. row=" + (rowkey == null ? "null" : rowkey)
-          + ", tableName=" + (tableName == null ? "null" : tableName));
+        + ", tableName=" + (tableName == null ? "null" : tableName));
       return;
     }
 
@@ -2033,7 +2031,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         RegionMovedException rme = (RegionMovedException) cause;
         if (LOG.isTraceEnabled()) {
           LOG.trace("Region " + regionInfo.getRegionNameAsString() + " moved to "
-              + rme.getHostname() + ":" + rme.getPort() + " according to " + source.getAddress());
+            + rme.getHostname() + ":" + rme.getPort() + " according to " + source.getAddress());
         }
         // We know that the region is not anymore on this region server, but we know
         // the new location.

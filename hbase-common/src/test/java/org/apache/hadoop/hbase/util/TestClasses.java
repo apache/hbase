@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +27,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestClasses {
 
   @Rule
@@ -37,7 +35,7 @@ public class TestClasses {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-          HBaseClassTestRule.forClass(TestClasses.class);
+    HBaseClassTestRule.forClass(TestClasses.class);
 
   @Test
   public void testExtendedForName() throws ClassNotFoundException {
@@ -59,6 +57,6 @@ public class TestClasses {
     assertEquals("", Classes.stringify(new Class[0]));
     assertEquals("NULL", Classes.stringify(null));
     assertEquals("java.lang.String,java.lang.Integer",
-            Classes.stringify(new Class[]{String.class, Integer.class}));
+      Classes.stringify(new Class[] { String.class, Integer.class }));
   }
 }

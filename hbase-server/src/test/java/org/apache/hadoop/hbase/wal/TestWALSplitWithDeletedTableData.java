@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,12 +48,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestWALSplitWithDeletedTableData {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-      .forClass(TestWALSplitWithDeletedTableData.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestWALSplitWithDeletedTableData.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -74,8 +73,8 @@ public class TestWALSplitWithDeletedTableData {
     final byte[] VALUE = Bytes.toBytes("v1");
     final TableName t1 = TableName.valueOf("t1");
     final TableName t2 = TableName.valueOf("t2");
-    final byte[][] splitRows = { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
-        Bytes.toBytes("d") };
+    final byte[][] splitRows =
+      { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d") };
     TableDescriptorBuilder htdBuilder1 = TableDescriptorBuilder.newBuilder(t1);
     htdBuilder1.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CFNAME).build());
     Table tab1 = TEST_UTIL.createTable(htdBuilder1.build(), splitRows);
@@ -83,8 +82,8 @@ public class TestWALSplitWithDeletedTableData {
     htdBuilder2.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CFNAME).build());
     Table tab2 = TEST_UTIL.createTable(htdBuilder2.build(), splitRows);
     List<Put> puts = new ArrayList<Put>(4);
-    byte[][] rks = { Bytes.toBytes("ac"), Bytes.toBytes("ba"), Bytes.toBytes("ca"),
-        Bytes.toBytes("dd") };
+    byte[][] rks =
+      { Bytes.toBytes("ac"), Bytes.toBytes("ba"), Bytes.toBytes("ca"), Bytes.toBytes("dd") };
     for (byte[] rk : rks) {
       puts.add(new Put(rk).addColumn(CFNAME, QNAME, VALUE));
     }

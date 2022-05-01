@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,12 +63,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMaster {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMaster.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestMaster.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestMaster.class);
@@ -104,7 +103,7 @@ public class TestMaster {
    * of the pair may be null.
    */
   private Pair<RegionInfo, ServerName> getTableRegionForRow(HMaster master, TableName tableName,
-      byte[] rowKey) throws IOException {
+    byte[] rowKey) throws IOException {
     final AtomicReference<Pair<RegionInfo, ServerName>> result = new AtomicReference<>(null);
 
     MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
@@ -138,14 +137,12 @@ public class TestMaster {
       TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     }
 
-    List<Pair<RegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-        m.getConnection(), TABLENAME);
+    List<Pair<RegionInfo, ServerName>> tableRegions =
+      MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
-    assertArrayEquals(HConstants.EMPTY_START_ROW,
-        tableRegions.get(0).getFirst().getStartKey());
-    assertArrayEquals(HConstants.EMPTY_END_ROW,
-        tableRegions.get(0).getFirst().getEndKey());
+    assertArrayEquals(HConstants.EMPTY_START_ROW, tableRegions.get(0).getFirst().getStartKey());
+    assertArrayEquals(HConstants.EMPTY_END_ROW, tableRegions.get(0).getFirst().getEndKey());
 
     // Now trigger a split and stop when the split is in progress
     LOG.info("Splitting table");
@@ -153,8 +150,8 @@ public class TestMaster {
 
     LOG.info("Making sure we can call getTableRegions while opening");
     while (tableRegions.size() < 3) {
-      tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
-          TABLENAME, false);
+      tableRegions =
+        MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(), TABLENAME, false);
       Thread.sleep(100);
     }
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
@@ -164,8 +161,7 @@ public class TestMaster {
     Pair<RegionInfo, ServerName> pair = getTableRegionForRow(m, TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<RegionInfo, ServerName> tableRegionFromName =
-        MetaTableAccessor.getRegion(m.getConnection(),
-          pair.getFirst().getRegionName());
+      MetaTableAccessor.getRegion(m.getConnection(), pair.getFirst().getRegionName());
     assertTrue(RegionInfo.COMPARATOR.compare(tableRegionFromName.getFirst(), pair.getFirst()) == 0);
   }
 
@@ -194,10 +190,8 @@ public class TestMaster {
 
     admin.createTable(htd, null);
     try {
-      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName)
-          .setStartKey(Bytes.toBytes("A"))
-          .setEndKey(Bytes.toBytes("Z"))
-          .build();
+      RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("A"))
+        .setEndKey(Bytes.toBytes("Z")).build();
       admin.move(hri.getEncodedNameAsBytes());
       fail("Region should not be moved since it is fake");
     } catch (IOException ioe) {
@@ -234,16 +228,16 @@ public class TestMaster {
   public void testBlockingHbkc1WithLockFile() throws IOException {
     // This is how the patch to the lock file is created inside in HBaseFsck. Too hard to use its
     // actual method without disturbing HBaseFsck... Do the below mimic instead.
-    Path hbckLockPath = new Path(HBaseFsck.getTmpDir(TEST_UTIL.getConfiguration()),
-        HBaseFsck.HBCK_LOCK_FILE);
+    Path hbckLockPath =
+      new Path(HBaseFsck.getTmpDir(TEST_UTIL.getConfiguration()), HBaseFsck.HBCK_LOCK_FILE);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     assertTrue(fs.exists(hbckLockPath));
-    TEST_UTIL.getMiniHBaseCluster().
-        killMaster(TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName());
+    TEST_UTIL.getMiniHBaseCluster()
+      .killMaster(TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName());
     assertTrue(fs.exists(hbckLockPath));
     TEST_UTIL.getMiniHBaseCluster().startMaster();
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null &&
-        TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null
+      && TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     assertTrue(fs.exists(hbckLockPath));
     // Start a second Master. Should be fine.
     TEST_UTIL.getMiniHBaseCluster().startMaster();
@@ -251,20 +245,19 @@ public class TestMaster {
     fs.delete(hbckLockPath, true);
     assertFalse(fs.exists(hbckLockPath));
     // Kill all Masters.
-    TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads().stream().
-        map(sn -> sn.getMaster().getServerName()).forEach(sn -> {
-          try {
-            TEST_UTIL.getMiniHBaseCluster().killMaster(sn);
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        });
+    TEST_UTIL.getMiniHBaseCluster().getLiveMasterThreads().stream()
+      .map(sn -> sn.getMaster().getServerName()).forEach(sn -> {
+        try {
+          TEST_UTIL.getMiniHBaseCluster().killMaster(sn);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      });
     // Start a new one.
     TEST_UTIL.getMiniHBaseCluster().startMaster();
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null &&
-        TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
+    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster().getMaster() != null
+      && TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     // Assert lock gets put in place again.
     assertTrue(fs.exists(hbckLockPath));
   }
 }
-

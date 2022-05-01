@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,40 +35,38 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionInfoDisplay {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionInfoDisplay.class);
+    HBaseClassTestRule.forClass(TestRegionInfoDisplay.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   @Test
   public void testRegionDetailsForDisplay() throws IOException {
-    byte[] startKey = new byte[] {0x01, 0x01, 0x02, 0x03};
-    byte[] endKey = new byte[] {0x01, 0x01, 0x02, 0x04};
+    byte[] startKey = new byte[] { 0x01, 0x01, 0x02, 0x03 };
+    byte[] endKey = new byte[] { 0x01, 0x01, 0x02, 0x04 };
     Configuration conf = new Configuration();
     conf.setBoolean("hbase.display.keys", false);
     RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setStartKey(startKey).setEndKey(endKey).build();
     checkEquality(ri, conf);
     // check HRIs with non-default replicaId
-    ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-    .setStartKey(startKey)
-    .setEndKey(endKey)
-    .setSplit(false)
-    .setRegionId(EnvironmentEdgeManager.currentTime())
-    .setReplicaId(1).build();
+    ri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setStartKey(startKey)
+      .setEndKey(endKey).setSplit(false).setRegionId(EnvironmentEdgeManager.currentTime())
+      .setReplicaId(1).build();
     checkEquality(ri, conf);
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_END_KEY,
-        RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
+      RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
     Assert.assertArrayEquals(RegionInfoDisplay.HIDDEN_START_KEY,
-        RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
+      RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
 
     RegionState state = RegionState.createForTesting(convert(ri), RegionState.State.OPEN);
     String descriptiveNameForDisplay =
-        RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
+      RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf);
     String originalDescriptive = state.toDescriptiveString();
     checkDescriptiveNameEquality(descriptiveNameForDisplay, originalDescriptive, startKey);
 
@@ -76,25 +74,22 @@ public class TestRegionInfoDisplay {
     Assert.assertArrayEquals(endKey, RegionInfoDisplay.getEndKeyForDisplay(ri, conf));
     Assert.assertArrayEquals(startKey, RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
     Assert.assertEquals(originalDescriptive,
-        RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
+      RegionInfoDisplay.getDescriptiveNameFromRegionStateForDisplay(state, conf));
   }
 
   private void checkDescriptiveNameEquality(String descriptiveNameForDisplay, String origDesc,
-      byte[] startKey) {
+    byte[] startKey) {
     // except for the "hidden-start-key" substring everything else should exactly match
-    String firstPart = descriptiveNameForDisplay.substring(0,
-        descriptiveNameForDisplay.indexOf(
-        new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8)));
-    String secondPart = descriptiveNameForDisplay.substring(
-        descriptiveNameForDisplay.indexOf(
-        new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8)) +
-            RegionInfoDisplay.HIDDEN_START_KEY.length);
+    String firstPart = descriptiveNameForDisplay.substring(0, descriptiveNameForDisplay
+      .indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8)));
+    String secondPart = descriptiveNameForDisplay.substring(descriptiveNameForDisplay
+      .indexOf(new String(RegionInfoDisplay.HIDDEN_START_KEY, StandardCharsets.UTF_8))
+      + RegionInfoDisplay.HIDDEN_START_KEY.length);
     String firstPartOrig = origDesc.substring(0, origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
-        origDesc.indexOf(Bytes.toStringBinary(startKey)) +
-            Bytes.toStringBinary(startKey).length());
-    assert(firstPart.equals(firstPartOrig));
-    assert(secondPart.equals(secondPartOrig));
+      origDesc.indexOf(Bytes.toStringBinary(startKey)) + Bytes.toStringBinary(startKey).length());
+    assert (firstPart.equals(firstPartOrig));
+    assert (secondPart.equals(secondPartOrig));
   }
 
   private void checkEquality(RegionInfo ri, Configuration conf) throws IOException {
@@ -103,18 +98,18 @@ public class TestRegionInfoDisplay {
     byte[][] modifiedRegionNameParts = RegionInfo.parseRegionName(modifiedRegionName);
     byte[][] regionNameParts = RegionInfo.parseRegionName(ri.getRegionName());
 
-    //same number of parts
-    assert(modifiedRegionNameParts.length == regionNameParts.length);
+    // same number of parts
+    assert (modifiedRegionNameParts.length == regionNameParts.length);
     for (int i = 0; i < regionNameParts.length; i++) {
       // all parts should match except for [1] where in the modified one,
       // we should have "hidden_start_key"
       if (i != 1) {
-        System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " " +
-          Bytes.toString(modifiedRegionNameParts[i]));
+        System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " "
+          + Bytes.toString(modifiedRegionNameParts[i]));
         Assert.assertArrayEquals(regionNameParts[i], modifiedRegionNameParts[i]);
       } else {
-        System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " " +
-          Bytes.toString(modifiedRegionNameParts[i]));
+        System.out.println("" + i + " " + Bytes.toString(regionNameParts[i]) + " "
+          + Bytes.toString(modifiedRegionNameParts[i]));
         Assert.assertNotEquals(regionNameParts[i], modifiedRegionNameParts[i]);
         Assert.assertArrayEquals(modifiedRegionNameParts[1],
           RegionInfoDisplay.getStartKeyForDisplay(ri, conf));
@@ -123,8 +118,8 @@ public class TestRegionInfoDisplay {
   }
 
   private HRegionInfo convert(RegionInfo ri) {
-    HRegionInfo hri =new HRegionInfo(ri.getTable(), ri.getStartKey(), ri.getEndKey(),
-        ri.isSplit(), ri.getRegionId());
+    HRegionInfo hri = new HRegionInfo(ri.getTable(), ri.getStartKey(), ri.getEndKey(), ri.isSplit(),
+      ri.getRegionId());
     hri.setOffline(ri.isOffline());
     return hri;
   }

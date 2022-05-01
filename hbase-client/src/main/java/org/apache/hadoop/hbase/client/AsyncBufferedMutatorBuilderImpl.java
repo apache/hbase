@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
   private int maxKeyValueSize;
 
   public AsyncBufferedMutatorBuilderImpl(AsyncConnectionConfiguration connConf,
-      AsyncTableBuilder<?> tableBuilder, HashedWheelTimer periodicalFlushTimer) {
+    AsyncTableBuilder<?> tableBuilder, HashedWheelTimer periodicalFlushTimer) {
     this.tableBuilder = tableBuilder;
     this.writeBufferSize = connConf.getWriteBufferSize();
     this.periodicFlushTimeoutNs = connConf.getWriteBufferPeriodicFlushTimeoutNs();

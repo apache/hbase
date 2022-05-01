@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool.coprocessor;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -26,7 +24,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 @InterfaceAudience.Private
 public class CoprocessorViolation {
   public enum Severity {
-    WARNING, ERROR
+    WARNING,
+    ERROR
   }
 
   private final String className;
@@ -38,8 +37,7 @@ public class CoprocessorViolation {
     this(className, severity, message, null);
   }
 
-  public CoprocessorViolation(String className, Severity severity, String message,
-      Throwable t) {
+  public CoprocessorViolation(String className, Severity severity, String message, Throwable t) {
     this.className = className;
     this.severity = severity;
     this.message = message;
@@ -64,11 +62,7 @@ public class CoprocessorViolation {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("className", className)
-        .add("severity", severity)
-        .add("message", message)
-        .add("throwable", throwable)
-        .toString();
+    return MoreObjects.toStringHelper(this).add("className", className).add("severity", severity)
+      .add("message", message).add("throwable", throwable).toString();
   }
 }

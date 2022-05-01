@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -20,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -33,8 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 
 /**
- * Test seek performance for encoded data blocks. Read an HFile and do several
- * random seeks.
+ * Test seek performance for encoded data blocks. Read an HFile and do several random seeks.
  */
 public class EncodedSeekPerformanceTest {
   private static final double NANOSEC_IN_SEC = 1000.0 * 1000.0 * 1000.0;
@@ -59,8 +58,8 @@ public class EncodedSeekPerformanceTest {
     List<Cell> allKeyValues = new ArrayList<>();
 
     // read all of the key values
-    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
-        path, configuration, cacheConf, BloomType.NONE, true);
+    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
+      cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
     StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
@@ -76,8 +75,7 @@ public class EncodedSeekPerformanceTest {
     // pick seeks by random
     List<Cell> seeks = new ArrayList<>();
     for (int i = 0; i < numberOfSeeks; ++i) {
-      Cell keyValue = allKeyValues.get(
-          randomizer.nextInt(allKeyValues.size()));
+      Cell keyValue = allKeyValues.get(randomizer.nextInt(allKeyValues.size()));
       seeks.add(keyValue);
     }
 
@@ -86,11 +84,11 @@ public class EncodedSeekPerformanceTest {
     return seeks;
   }
 
-  private void runTest(Path path, DataBlockEncoding blockEncoding,
-      List<Cell> seeks) throws IOException {
+  private void runTest(Path path, DataBlockEncoding blockEncoding, List<Cell> seeks)
+    throws IOException {
     // read all of the key values
-    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(),
-      path, configuration, cacheConf, BloomType.NONE, true);
+    HStoreFile storeFile = new HStoreFile(testingUtility.getTestFileSystem(), path, configuration,
+      cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     long totalSize = 0;
 
@@ -114,23 +112,23 @@ public class EncodedSeekPerformanceTest {
       scanner.seek(keyValue);
       Cell toVerify = scanner.next();
       if (!keyValue.equals(toVerify)) {
-        System.out.println(String.format("KeyValue doesn't match:\n" + "Orig key: %s\n"
-            + "Ret key:  %s", KeyValueUtil.ensureKeyValue(keyValue).getKeyString(), KeyValueUtil
-            .ensureKeyValue(toVerify).getKeyString()));
+        System.out
+          .println(String.format("KeyValue doesn't match:\n" + "Orig key: %s\n" + "Ret key:  %s",
+            KeyValueUtil.ensureKeyValue(keyValue).getKeyString(),
+            KeyValueUtil.ensureKeyValue(toVerify).getKeyString()));
         break;
       }
     }
     long finishSeeksTime = System.nanoTime();
     if (finishSeeksTime < startSeeksTime) {
-      throw new AssertionError("Finish time " + finishSeeksTime +
-          " is earlier than start time " + startSeeksTime);
+      throw new AssertionError(
+        "Finish time " + finishSeeksTime + " is earlier than start time " + startSeeksTime);
     }
 
     // write some stats
-    double readInMbPerSec = (totalSize * NANOSEC_IN_SEC) /
-        (BYTES_IN_MEGABYTES * (finishReadingTime - startReadingTime));
-    double seeksPerSec = (seeks.size() * NANOSEC_IN_SEC) /
-        (finishSeeksTime - startSeeksTime);
+    double readInMbPerSec =
+      (totalSize * NANOSEC_IN_SEC) / (BYTES_IN_MEGABYTES * (finishReadingTime - startReadingTime));
+    double seeksPerSec = (seeks.size() * NANOSEC_IN_SEC) / (finishSeeksTime - startSeeksTime);
 
     storeFile.closeStoreFile(cacheConf.shouldEvictOnClose());
     clearBlockCache();
@@ -142,12 +140,11 @@ public class EncodedSeekPerformanceTest {
   }
 
   /**
-   * @param path Path to the HFile which will be used.
+   * @param path      Path to the HFile which will be used.
    * @param encodings the data block encoding algorithms to use
    * @throws IOException if there is a bug while reading from disk
    */
-  public void runTests(Path path, DataBlockEncoding[] encodings)
-      throws IOException {
+  public void runTests(Path path, DataBlockEncoding[] encodings) throws IOException {
     List<Cell> seeks = prepareListOfTestSeeks(path);
 
     for (DataBlockEncoding blockEncoding : encodings) {

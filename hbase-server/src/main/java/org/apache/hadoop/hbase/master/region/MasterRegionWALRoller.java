@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,8 @@ import org.slf4j.LoggerFactory;
  * roller logic by our own.
  * <p/>
  * We can reuse most of the code for normal wal roller, the only difference is that there is only
- * one region, so in {@link #scheduleFlush(String, List)} method we can just schedule flush
- * for the master local region.
+ * one region, so in {@link #scheduleFlush(String, List)} method we can just schedule flush for the
+ * master local region.
  */
 @InterfaceAudience.Private
 public final class MasterRegionWALRoller extends AbstractWALRoller<Abortable> {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,7 +78,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * all checks passes then the procedure can not be rolled back any more.
    */
   protected abstract void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException;
+    throws IOException, ReplicationException;
 
   protected abstract void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException;
 
@@ -92,7 +92,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * update the peer storage.
    */
   protected abstract void postPeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException;
+    throws IOException, ReplicationException;
 
   private void releaseLatch() {
     ProcedurePrepareLatch.releaseLatch(latch, this);
@@ -116,8 +116,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   private void refreshPeer(MasterProcedureEnv env, PeerOperationType type) {
     addChildProcedure(env.getMasterServices().getServerManager().getOnlineServersList().stream()
-      .map(sn -> new RefreshPeerProcedure(peerId, type, sn))
-      .toArray(RefreshPeerProcedure[]::new));
+      .map(sn -> new RefreshPeerProcedure(peerId, type, sn)).toArray(RefreshPeerProcedure[]::new));
   }
 
   protected ReplicationPeerConfig getOldPeerConfig() {
@@ -129,7 +128,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     throw new UnsupportedOperationException();
   }
 
@@ -167,8 +166,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
       if (!peerConfig.needToReplicate(tn)) {
         continue;
       }
-      if (oldPeerConfig != null && oldPeerConfig.isSerial() &&
-        oldPeerConfig.needToReplicate(tn)) {
+      if (oldPeerConfig != null && oldPeerConfig.isSerial() && oldPeerConfig.needToReplicate(tn)) {
         continue;
       }
       if (needReopen(tsm, tn)) {
@@ -183,7 +181,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   private void addToMap(Map<String, Long> lastSeqIds, String encodedRegionName, long barrier,
-      ReplicationQueueStorage queueStorage) throws ReplicationException {
+    ReplicationQueueStorage queueStorage) throws ReplicationException {
     if (barrier >= 0) {
       lastSeqIds.put(encodedRegionName, barrier);
       if (lastSeqIds.size() >= UPDATE_LAST_SEQ_ID_BATCH_SIZE) {
@@ -194,7 +192,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   protected final void setLastPushedSequenceId(MasterProcedureEnv env,
-      ReplicationPeerConfig peerConfig) throws IOException, ReplicationException {
+    ReplicationPeerConfig peerConfig) throws IOException, ReplicationException {
     Map<String, Long> lastSeqIds = new HashMap<String, Long>();
     for (TableDescriptor td : env.getMasterServices().getTableDescriptors().getAll().values()) {
       if (!td.hasGlobalReplicationScope()) {
@@ -216,7 +214,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   // sequence id, if the table has been deleted already, i.e, we hit TableStateNotFoundException,
   // then we do not need to update last pushed sequence id for this table.
   private boolean needSetLastPushedSequenceId(TableStateManager tsm, TableName tn)
-      throws IOException {
+    throws IOException {
     for (;;) {
       try {
         if (!tsm.getTableState(tn).isDisabling()) {
@@ -236,7 +234,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   // should not forget to check whether the map is empty at last, if not you should call
   // queueStorage.setLastSequenceIds to write out the remaining entries in the map.
   protected final void setLastPushedSequenceIdForTable(MasterProcedureEnv env, TableName tableName,
-      Map<String, Long> lastSeqIds) throws IOException, ReplicationException {
+    Map<String, Long> lastSeqIds) throws IOException, ReplicationException {
     TableStateManager tsm = env.getMasterServices().getTableStateManager();
     ReplicationQueueStorage queueStorage = env.getReplicationPeerManager().getQueueStorage();
     Connection conn = env.getMasterServices().getConnection();
@@ -259,8 +257,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     return false;
   }
 
-  private ProcedureSuspendedException suspend(Configuration conf,
-      LongConsumer backoffConsumer) throws ProcedureSuspendedException {
+  private ProcedureSuspendedException suspend(Configuration conf, LongConsumer backoffConsumer)
+    throws ProcedureSuspendedException {
     if (retryCounter == null) {
       retryCounter = ProcedureUtil.createRetryCounter(conf);
     }
@@ -274,14 +272,14 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, PeerModificationState state)
-      throws ProcedureSuspendedException {
+    throws ProcedureSuspendedException {
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
-            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
+            + "mark the procedure as failure and give up", getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
           releaseLatch();
           return Flow.NO_MORE_STATE;
@@ -328,7 +326,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               getClass().getName(), peerId, backoff / 1000, e));
         }
         retryCounter = null;
-        setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
+        setNextState(enablePeerBeforeFinish()
+          ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
           : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_SET_PEER_ENABLED:
@@ -355,8 +354,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               "{} failed to call postPeerModification for peer {},  sleep {} secs",
               getClass().getName(), peerId, backoff / 1000, e));
         } catch (IOException e) {
-          LOG.warn("{} failed to call post CP hook for peer {}, " +
-            "ignore since the procedure has already done", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call post CP hook for peer {}, "
+            + "ignore since the procedure has already done", getClass().getName(), peerId, e);
         }
         releaseLatch();
         return Flow.NO_MORE_STATE;
@@ -367,7 +366,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, PeerModificationState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     if (state == PeerModificationState.PRE_PEER_MODIFICATION) {
       // actually the peer related operations has no rollback, but if we haven't done any
       // modifications on the peer storage yet, we can just return.

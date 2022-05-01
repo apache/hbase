@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -61,14 +60,9 @@ public class DumpClusterStatusAction extends Action {
    * Build a set of all the host:port pairs of region servers known to this cluster.
    */
   private static Set<Address> collectKnownRegionServers(final ClusterMetrics clusterMetrics) {
-    final Set<Address> regionServers = clusterMetrics.getLiveServerMetrics()
-      .keySet()
-      .stream()
-      .map(ServerName::getAddress)
-      .collect(Collectors.toSet());
-    clusterMetrics.getDeadServerNames()
-      .stream()
-      .map(ServerName::getAddress)
+    final Set<Address> regionServers = clusterMetrics.getLiveServerMetrics().keySet().stream()
+      .map(ServerName::getAddress).collect(Collectors.toSet());
+    clusterMetrics.getDeadServerNames().stream().map(ServerName::getAddress)
       .forEach(regionServers::add);
     return Collections.unmodifiableSet(regionServers);
   }
@@ -78,10 +72,9 @@ public class DumpClusterStatusAction extends Action {
     final Set<Address> missingRegionServers = new HashSet<>(initialRegionServers);
     missingRegionServers.removeAll(regionServers);
     if (!missingRegionServers.isEmpty()) {
-      final StringBuilder stringBuilder = new StringBuilder()
-        .append("region server(s) are missing from this cluster report");
-      missingRegionServers.stream()
-        .sorted()
+      final StringBuilder stringBuilder =
+        new StringBuilder().append("region server(s) are missing from this cluster report");
+      missingRegionServers.stream().sorted()
         .forEach(address -> stringBuilder.append("\n  ").append(address));
       getLogger().warn(stringBuilder.toString());
     }
@@ -92,10 +85,9 @@ public class DumpClusterStatusAction extends Action {
     final Set<Address> newRegionServers = new HashSet<>(regionServers);
     newRegionServers.removeAll(initialRegionServers);
     if (!newRegionServers.isEmpty()) {
-      final StringBuilder stringBuilder = new StringBuilder()
-        .append("region server(s) are new for this cluster report");
-      newRegionServers.stream()
-        .sorted()
+      final StringBuilder stringBuilder =
+        new StringBuilder().append("region server(s) are new for this cluster report");
+      newRegionServers.stream().sorted()
         .forEach(address -> stringBuilder.append("\n  ").append(address));
       getLogger().warn(stringBuilder.toString());
     }

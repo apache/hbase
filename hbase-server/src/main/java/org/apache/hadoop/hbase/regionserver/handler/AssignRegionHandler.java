@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 
 /**
@@ -63,7 +64,7 @@ public class AssignRegionHandler extends EventHandler {
   private final RetryCounter retryCounter;
 
   public AssignRegionHandler(HRegionServer server, RegionInfo regionInfo, long openProcId,
-      @Nullable TableDescriptor tableDesc, long masterSystemTime, EventType eventType) {
+    @Nullable TableDescriptor tableDesc, long masterSystemTime, EventType eventType) {
     super(server, eventType);
     this.regionInfo = regionInfo;
     this.openProcId = openProcId;
@@ -81,8 +82,10 @@ public class AssignRegionHandler extends EventHandler {
       error);
     HRegionServer rs = getServer();
     rs.getRegionsInTransitionInRS().remove(regionInfo.getEncodedNameAsBytes(), Boolean.TRUE);
-    if (!rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.FAILED_OPEN,
-      HConstants.NO_SEQNUM, openProcId, masterSystemTime, regionInfo))) {
+    if (
+      !rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.FAILED_OPEN,
+        HConstants.NO_SEQNUM, openProcId, masterSystemTime, regionInfo))
+    ) {
       throw new IOException(
         "Failed to report failed open to master: " + regionInfo.getRegionNameAsString());
     }
@@ -108,16 +111,15 @@ public class AssignRegionHandler extends EventHandler {
     if (previous != null) {
       if (previous) {
         // The region is opening and this maybe a retry on the rpc call, it is safe to ignore it.
-        LOG.info("Receiving OPEN for {} which we are already trying to OPEN" +
-          " - ignoring this new request for this region.", regionName);
+        LOG.info("Receiving OPEN for {} which we are already trying to OPEN"
+          + " - ignoring this new request for this region.", regionName);
       } else {
         // The region is closing. This is possible as we will update the region state to CLOSED when
         // calling reportRegionStateTransition, so the HMaster will think the region is offline,
         // before we actually close the region, as reportRegionStateTransition is part of the
         // closing process.
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-        LOG.info(
-          "Receiving OPEN for {} which we are trying to close, try again after {}ms",
+        LOG.info("Receiving OPEN for {} which we are trying to close, try again after {}ms",
           regionName, backoff);
         rs.getExecutorService().delayedSubmit(this, backoff, TimeUnit.MILLISECONDS);
       }
@@ -138,8 +140,8 @@ public class AssignRegionHandler extends EventHandler {
       if (ServerRegionReplicaUtil.isMetaRegionReplicaReplicationEnabled(conf, tn)) {
         if (RegionReplicaUtil.isDefaultReplica(this.regionInfo.getReplicaId())) {
           // Add the hbase:meta replication source on replica zero/default.
-          rs.getReplicationSourceService().getReplicationManager().
-            addCatalogReplicationSource(this.regionInfo);
+          rs.getReplicationSourceService().getReplicationManager()
+            .addCatalogReplicationSource(this.regionInfo);
         }
       }
       region = HRegion.openHRegion(regionInfo, htd, rs.getWAL(regionInfo), conf, rs, null);
@@ -176,12 +178,14 @@ public class AssignRegionHandler extends EventHandler {
   }
 
   public static AssignRegionHandler create(HRegionServer server, RegionInfo regionInfo,
-      long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
+    long openProcId, TableDescriptor tableDesc, long masterSystemTime) {
     EventType eventType;
     if (regionInfo.isMetaRegion()) {
       eventType = EventType.M_RS_OPEN_META;
-    } else if (regionInfo.getTable().isSystemTable() ||
-      (tableDesc != null && tableDesc.getPriority() >= HConstants.ADMIN_QOS)) {
+    } else if (
+      regionInfo.getTable().isSystemTable()
+        || (tableDesc != null && tableDesc.getPriority() >= HConstants.ADMIN_QOS)
+    ) {
       eventType = EventType.M_RS_OPEN_PRIORITY_REGION;
     } else {
       eventType = EventType.M_RS_OPEN_REGION;

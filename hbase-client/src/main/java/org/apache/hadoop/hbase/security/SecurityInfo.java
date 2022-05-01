@@ -35,30 +35,28 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos;
 @InterfaceAudience.Private
 public class SecurityInfo {
   /** Maps RPC service names to authentication information */
-  private static ConcurrentMap<String,SecurityInfo> infos = new ConcurrentHashMap<>();
+  private static ConcurrentMap<String, SecurityInfo> infos = new ConcurrentHashMap<>();
   // populate info for known services
   static {
     infos.put(AdminProtos.AdminService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL,
-            Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(ClientProtos.ClientService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL,
-            Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.REGIONSERVER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(MasterService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(RegionServerStatusProtos.RegionServerStatusService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(MasterProtos.HbckService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     infos.put(RegistryProtos.ClientMetaService.getDescriptor().getName(),
-        new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
+      new SecurityInfo(SecurityConstants.MASTER_KRB_PRINCIPAL, Kind.HBASE_AUTH_TOKEN));
     // NOTE: IF ADDING A NEW SERVICE, BE SURE TO UPDATE HBasePolicyProvider ALSO ELSE
     // new Service will not be found when all is Kerberized!!!!
   }
 
   /**
-   * Adds a security configuration for a new service name.  Note that this will have no effect if
-   * the service name was already registered.
+   * Adds a security configuration for a new service name. Note that this will have no effect if the
+   * service name was already registered.
    */
   public static void addInfo(String serviceName, SecurityInfo securityInfo) {
     infos.putIfAbsent(serviceName, securityInfo);

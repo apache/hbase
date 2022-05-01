@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestZKReplicationQueueStorage {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
+    HBaseClassTestRule.forClass(TestZKReplicationQueueStorage.class);
 
   private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
 
@@ -247,7 +247,7 @@ public class TestZKReplicationQueueStorage {
 
       @Override
       protected Pair<Long, Integer> getLastSequenceIdWithVersion(String encodedRegionName,
-          String peerId) throws KeeperException {
+        String peerId) throws KeeperException {
         Pair<Long, Integer> oldPair = super.getLastSequenceIdWithVersion(encodedRegionName, peerId);
         if (getLastSeqIdOpIndex < 100) {
           // Let the ZNode version increase.

@@ -31,12 +31,10 @@ import org.slf4j.LoggerFactory;
  * a delimiter. Only the first delimiter for the row key will define the prefix of the row key that
  * is used for grouping.
  * <p>
- * This ensures that a region is not split "inside" a prefix of a row key.
- * I.e. rows can be co-located in a region by their prefix.
- *
- * As an example, if you have row keys delimited with <code>_</code>, like
- * <code>userid_eventtype_eventid</code>, and use prefix delimiter _, this split policy ensures
- * that all rows starting with the same userid, belongs to the same region.
+ * This ensures that a region is not split "inside" a prefix of a row key. I.e. rows can be
+ * co-located in a region by their prefix. As an example, if you have row keys delimited with
+ * <code>_</code>, like <code>userid_eventtype_eventid</code>, and use prefix delimiter _, this
+ * split policy ensures that all rows starting with the same userid, belongs to the same region.
  */
 @InterfaceAudience.Private
 public class DelimitedKeyPrefixRegionSplitRestriction extends RegionSplitRestriction {
@@ -54,9 +52,8 @@ public class DelimitedKeyPrefixRegionSplitRestriction extends RegionSplitRestric
     if (delimiterString == null || delimiterString.length() == 0) {
       delimiterString = conf.get(DELIMITER_KEY);
       if (delimiterString == null || delimiterString.length() == 0) {
-        LOG.error("{} not specified for table {}. "
-          + "Using the default RegionSplitRestriction", DELIMITER_KEY,
-          tableDescriptor.getTableName());
+        LOG.error("{} not specified for table {}. " + "Using the default RegionSplitRestriction",
+          DELIMITER_KEY, tableDescriptor.getTableName());
         return;
       }
     }
@@ -67,8 +64,8 @@ public class DelimitedKeyPrefixRegionSplitRestriction extends RegionSplitRestric
   public byte[] getRestrictedSplitPoint(byte[] splitPoint) {
     if (delimiter != null) {
       // find the first occurrence of delimiter in split point
-      int index = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.indexOf(
-        splitPoint, delimiter);
+      int index = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.indexOf(splitPoint,
+        delimiter);
       if (index < 0) {
         LOG.warn("Delimiter {} not found for split key {}", Bytes.toString(delimiter),
           Bytes.toStringBinary(splitPoint));

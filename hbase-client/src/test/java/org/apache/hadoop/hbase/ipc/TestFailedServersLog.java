@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -92,7 +92,7 @@ public class TestFailedServersLog {
 
     verify(mockAppender, times(1)).append(any(org.apache.logging.log4j.core.LogEvent.class));
     assertEquals(org.apache.logging.log4j.Level.DEBUG, level.get());
-    assertEquals("Added failed server with address " + addr.toString() + " to list caused by " +
-      nullException.toString(), msg.get());
+    assertEquals("Added failed server with address " + addr.toString() + " to list caused by "
+      + nullException.toString(), msg.get());
   }
 }

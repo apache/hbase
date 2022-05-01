@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static junit.framework.TestCase.assertTrue;
+
+import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -39,19 +40,18 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-import java.io.IOException;
-
-import static junit.framework.TestCase.assertTrue;
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
- * Tests that table state is mirrored out to zookeeper for hbase-1.x clients.
- * Also tests that table state gets migrated from zookeeper on master start.
+ * Tests that table state is mirrored out to zookeeper for hbase-1.x clients. Also tests that table
+ * state gets migrated from zookeeper on master start.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestMirroringTableStateManager {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMirroringTableStateManager.class);
+    HBaseClassTestRule.forClass(TestMirroringTableStateManager.class);
   @Rule
   public TestName name = new TestName();
 
@@ -80,17 +80,17 @@ public class TestMirroringTableStateManager {
   }
 
   private TableState.State getTableStateInZK(ZKWatcher watcher, final TableName tableName)
-      throws KeeperException, IOException, InterruptedException {
-    String znode = ZNodePaths.joinZNode(watcher.getZNodePaths().tableZNode,
-            tableName.getNameAsString());
-    byte [] data = ZKUtil.getData(watcher, znode);
+    throws KeeperException, IOException, InterruptedException {
+    String znode =
+      ZNodePaths.joinZNode(watcher.getZNodePaths().tableZNode, tableName.getNameAsString());
+    byte[] data = ZKUtil.getData(watcher, znode);
     if (data == null || data.length <= 0) {
       return null;
     }
     try {
       ProtobufUtil.expectPBMagicPrefix(data);
       ZooKeeperProtos.DeprecatedTableState.Builder builder =
-          ZooKeeperProtos.DeprecatedTableState.newBuilder();
+        ZooKeeperProtos.DeprecatedTableState.newBuilder();
       int magicLen = ProtobufUtil.lengthOfPBMagic();
       ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
       return TableState.State.valueOf(builder.getState().toString());

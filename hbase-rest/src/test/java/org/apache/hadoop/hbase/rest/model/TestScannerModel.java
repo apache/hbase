@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.ScannerResultGenerator;
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -32,11 +31,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestScannerModel extends TestModelBase<ScannerModel> {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerModel.class);
+    HBaseClassTestRule.forClass(TestScannerModel.class);
 
   private static final String PRIVATE = "private";
   private static final String PUBLIC = "public";
@@ -53,21 +52,19 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
   public TestScannerModel() throws Exception {
     super(ScannerModel.class);
     AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-        + "<Scanner batch=\"100\" cacheBlocks=\"false\" caching=\"1000\" endRow=\"enp5eng=\" "
-        + "endTime=\"1245393318192\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" "
-        + "startTime=\"1245219839331\">"
-        + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
-        + "<labels>private</labels><labels>public</labels>"
-        + "</Scanner>";
+      + "<Scanner batch=\"100\" cacheBlocks=\"false\" caching=\"1000\" endRow=\"enp5eng=\" "
+      + "endTime=\"1245393318192\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" "
+      + "startTime=\"1245219839331\">"
+      + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
+      + "<labels>private</labels><labels>public</labels>" + "</Scanner>";
 
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
-        + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
-        + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-        +"\"labels\":[\"private\",\"public\"]"
-        +"}";
+      + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
+      + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
+      + "\"labels\":[\"private\",\"public\"]" + "}";
 
     AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf"
-        + "JDj/////B0joB1IHcHJpdmF0ZVIGcHVibGljWAA=";
+      + "JDj/////B0joB1IHcHJpdmF0ZVIGcHVibGljWAA=";
   }
 
   @Override

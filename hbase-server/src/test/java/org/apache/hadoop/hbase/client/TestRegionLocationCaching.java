@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertNotEquals;
@@ -25,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -38,12 +36,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestRegionLocationCaching {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
+    HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static int SLAVES = 1;
@@ -67,7 +65,7 @@ public class TestRegionLocationCaching {
   @Test
   public void testCachingForHTableMultiplexerSinglePut() throws Exception {
     HTableMultiplexer multiplexer =
-        new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
     byte[] row = Bytes.toBytes("htable_multiplexer_single_put");
     byte[] value = Bytes.toBytes("value");
 
@@ -84,7 +82,7 @@ public class TestRegionLocationCaching {
   @Test
   public void testCachingForHTableMultiplexerMultiPut() throws Exception {
     HTableMultiplexer multiplexer =
-        new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
+      new HTableMultiplexer(TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
 
     List<Put> multiput = new ArrayList<Put>();
     for (int i = 0; i < 10; i++) {
@@ -147,7 +145,7 @@ public class TestRegionLocationCaching {
    * immediately.
    */
   private void checkRegionLocationIsCached(final TableName tableName, final Connection conn)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     for (int count = 0; count < 50; count++) {
       int number = ((ConnectionImplementation) conn).getNumberOfCachedRegionLocations(tableName);
       assertNotEquals("Expected non-zero number of cached region locations", 0, number);
@@ -159,7 +157,7 @@ public class TestRegionLocationCaching {
    * Method to check whether the passed row exists in the given table
    */
   private static void checkExistence(final TableName tableName, final byte[] row,
-      final byte[] family, final byte[] qualifier) throws Exception {
+    final byte[] family, final byte[] qualifier) throws Exception {
     // verify that the row exists
     Result r;
     Get get = new Get(row);

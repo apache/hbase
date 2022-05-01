@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.client.TestFromClientSideWithCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -44,14 +42,14 @@ public class NoOpScanPolicyObserver implements RegionCoprocessor, RegionObserver
 
   @Override
   public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+    InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
     return new DelegatingInternalScanner(scanner);
   }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-      CompactionRequest request) throws IOException {
+    InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
     return new DelegatingInternalScanner(scanner);
   }
 

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,12 +19,9 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
 import java.io.InputStream;
-
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +48,7 @@ public class Response {
 
   /**
    * Constructor
-   * @param code the HTTP response code
+   * @param code    the HTTP response code
    * @param headers the HTTP response headers
    */
   public Response(int code, Header[] headers) {
@@ -61,23 +57,22 @@ public class Response {
 
   /**
    * Constructor
-   * @param code the HTTP response code
+   * @param code    the HTTP response code
    * @param headers the HTTP response headers
-   * @param body the response body, can be null
+   * @param body    the response body, can be null
    */
   public Response(int code, Header[] headers, byte[] body) {
     this.code = code;
     this.headers = headers;
     this.body = body;
   }
-  
+
   /**
    * Constructor. Note: this is not thread-safe
-   *
-   * @param code the HTTP response code
+   * @param code    the HTTP response code
    * @param headers headers the HTTP response headers
-   * @param resp the response
-   * @param in Inputstream if the response had one.
+   * @param resp    the response
+   * @param in      Inputstream if the response had one.
    */
   public Response(int code, Header[] headers, HttpResponse resp, InputStream in) {
     this.code = code;
@@ -93,13 +88,12 @@ public class Response {
   public int getCode() {
     return code;
   }
-  
+
   /**
    * Gets the input stream instance.
-   *
    * @return an instance of InputStream class.
    */
-  public InputStream getStream(){
+  public InputStream getStream() {
     return this.stream;
   }
 

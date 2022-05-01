@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -100,8 +100,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   private static boolean hasNonce(HRegion region, long nonce) {
     RegionServerServices rsServices = region.getRegionServerServices();
-    return nonce != HConstants.NO_NONCE && rsServices != null &&
-      rsServices.getNonceManager() != null;
+    return nonce != HConstants.NO_NONCE && rsServices != null
+      && rsServices.getNonceManager() != null;
   }
 
   RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
@@ -162,8 +162,10 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         HStore store = region.getStore(entry.getKey());
         KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
         instantiatedScanners.add(scanner);
-        if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand() ||
-          this.filter.isFamilyEssential(entry.getKey())) {
+        if (
+          this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
+            || this.filter.isFamilyEssential(entry.getKey())
+        ) {
           scanners.add(scanner);
         } else {
           joinedScanners.add(scanner);
@@ -242,9 +244,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
     throws IOException {
     if (this.filterClosed) {
-      throw new UnknownScannerException("Scanner was closed (timed out?) " +
-        "after we renewed it. Could be caused by a very slow scanner " +
-        "or a lengthy garbage collection");
+      throw new UnknownScannerException("Scanner was closed (timed out?) "
+        + "after we renewed it. Could be caused by a very slow scanner "
+        + "or a lengthy garbage collection");
     }
     region.startRegionOperation(Operation.SCAN);
     try {
@@ -390,8 +392,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       long afterTime = rpcCall.get().disconnectSince();
       if (afterTime >= 0) {
         throw new CallerDisconnectedException(
-          "Aborting on region " + getRegionInfo().getRegionNameAsString() + ", call " + this +
-            " after " + afterTime + " ms, since " + "caller disconnected");
+          "Aborting on region " + getRegionInfo().getRegionNameAsString() + ", call " + this
+            + " after " + afterTime + " ms, since " + "caller disconnected");
       }
     }
   }
@@ -455,8 +457,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // LimitScope.BETWEEN_ROWS so that those limits are not reached mid-row
       if (hasFilterRow) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("filter#hasFilterRow is true which prevents partial results from being " +
-            " formed. Changing scope of limits that may create partials");
+          LOG.trace("filter#hasFilterRow is true which prevents partial results from being "
+            + " formed. Changing scope of limits that may create partials");
         }
         scannerContext.setSizeLimitScope(LimitScope.BETWEEN_ROWS);
         scannerContext.setTimeLimitScope(LimitScope.BETWEEN_ROWS);
@@ -466,8 +468,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
         if (hasFilterRow) {
           throw new IncompatibleFilterException(
-            "Filter whose hasFilterRow() returns true is incompatible with scans that must " +
-              " stop mid-row because of a limit. ScannerContext:" + scannerContext);
+            "Filter whose hasFilterRow() returns true is incompatible with scans that must "
+              + " stop mid-row because of a limit. ScannerContext:" + scannerContext);
         }
         return true;
       }
@@ -513,8 +515,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         if (scannerContext.checkAnyLimitReached(LimitScope.BETWEEN_CELLS)) {
           if (hasFilterRow) {
             throw new IncompatibleFilterException(
-              "Filter whose hasFilterRow() returns true is incompatible with scans that must " +
-                " stop mid-row because of a limit. ScannerContext:" + scannerContext);
+              "Filter whose hasFilterRow() returns true is incompatible with scans that must "
+                + " stop mid-row because of a limit. ScannerContext:" + scannerContext);
           }
           return true;
         }
@@ -654,8 +656,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     if (!matchCurrentRow) {
       Cell firstOnCurrentRow = PrivateCellUtil.createFirstOnRow(currentRowCell);
       boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
-      matchAfterSeek = seekSuccessful && joinedHeap.peek() != null &&
-        CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
+      matchAfterSeek = seekSuccessful && joinedHeap.peek() != null
+        && CellUtil.matchingRows(joinedHeap.peek(), currentRowCell);
     }
 
     return matchCurrentRow || matchAfterSeek;
@@ -716,8 +718,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     resetFilters();
 
     // Calling the hook in CP which allows it to do a fast forward
-    return this.region.getCoprocessorHost() == null ||
-      this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+    return this.region.getCoprocessorHost() == null
+      || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
   }
 
   protected boolean shouldStop(Cell currentRowCell) {
@@ -732,7 +734,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
-    justification = "this method is only called inside close which is synchronized")
+      justification = "this method is only called inside close which is synchronized")
   private void closeInternal() {
     if (storeHeap != null) {
       storeHeap.close();

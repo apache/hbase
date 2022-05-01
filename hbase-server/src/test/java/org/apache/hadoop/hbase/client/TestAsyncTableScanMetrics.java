@@ -52,7 +52,7 @@ public class TestAsyncTableScanMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScanMetrics.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScanMetrics.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -84,7 +84,7 @@ public class TestAsyncTableScanMetrics {
     ScanWithMetrics doScanWithRawAsyncTable = TestAsyncTableScanMetrics::doScanWithRawAsyncTable;
     ScanWithMetrics doScanWithAsyncTableScan = TestAsyncTableScanMetrics::doScanWithAsyncTableScan;
     ScanWithMetrics doScanWithAsyncTableScanner =
-        TestAsyncTableScanMetrics::doScanWithAsyncTableScanner;
+      TestAsyncTableScanMetrics::doScanWithAsyncTableScanner;
     return Arrays.asList(new Object[] { "doScanWithRawAsyncTable", doScanWithRawAsyncTable },
       new Object[] { "doScanWithAsyncTableScan", doScanWithAsyncTableScan },
       new Object[] { "doScanWithAsyncTableScanner", doScanWithAsyncTableScanner });
@@ -111,7 +111,7 @@ public class TestAsyncTableScanMetrics {
   }
 
   private static Pair<List<Result>, ScanMetrics> doScanWithRawAsyncTable(Scan scan)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     BufferingScanResultConsumer consumer = new BufferingScanResultConsumer();
     CONN.getTable(TABLE_NAME).scan(scan, consumer);
     List<Result> results = new ArrayList<>();
@@ -122,16 +122,16 @@ public class TestAsyncTableScanMetrics {
   }
 
   private static Pair<List<Result>, ScanMetrics> doScanWithAsyncTableScan(Scan scan)
-      throws Exception {
+    throws Exception {
     SimpleScanResultConsumerImpl consumer = new SimpleScanResultConsumerImpl();
     CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).scan(scan, consumer);
     return Pair.newPair(consumer.getAll(), consumer.getScanMetrics());
   }
 
   private static Pair<List<Result>, ScanMetrics> doScanWithAsyncTableScanner(Scan scan)
-      throws IOException {
+    throws IOException {
     try (ResultScanner scanner =
-        CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).getScanner(scan)) {
+      CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool()).getScanner(scan)) {
       List<Result> results = new ArrayList<>();
       for (Result result; (result = scanner.next()) != null;) {
         results.add(result);
@@ -153,7 +153,7 @@ public class TestAsyncTableScanMetrics {
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = results.stream().flatMap(r -> Arrays.asList(r.rawCells()).stream())
-        .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
+      .mapToLong(c -> PrivateCellUtil.estimatedSerializedSizeOf(c)).sum();
     ScanMetrics scanMetrics = pair.getSecond();
     assertEquals(NUM_REGIONS, scanMetrics.countOfRegions.get());
     assertEquals(bytes, scanMetrics.countOfBytesInResults.get());

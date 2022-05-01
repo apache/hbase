@@ -51,22 +51,18 @@ public class MockServer implements Server {
   }
 
   public MockServer(final HBaseTestingUtility htu)
-  throws ZooKeeperConnectionException, IOException {
+    throws ZooKeeperConnectionException, IOException {
     this(htu, true);
   }
 
   /**
    * @param htu Testing utility to use
-   * @param zkw If true, create a zkw.
-   * @throws ZooKeeperConnectionException
-   * @throws IOException
+   * @param zkw If true, create a zkw. nn
    */
   public MockServer(final HBaseTestingUtility htu, final boolean zkw)
-  throws ZooKeeperConnectionException, IOException {
+    throws ZooKeeperConnectionException, IOException {
     this.htu = htu;
-    this.zk = zkw?
-      new ZKWatcher(htu.getConfiguration(), NAME.toString(), this, true):
-      null;
+    this.zk = zkw ? new ZKWatcher(htu.getConfiguration(), NAME.toString(), this, true) : null;
   }
 
   @Override

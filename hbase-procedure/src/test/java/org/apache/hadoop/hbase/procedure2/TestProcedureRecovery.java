@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,11 +45,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Int32Value;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestProcedureRecovery {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureRecovery.class);
+    HBaseClassTestRule.forClass(TestProcedureRecovery.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureRecovery.class);
 
@@ -98,7 +98,8 @@ public class TestProcedureRecovery {
   public static class TestSingleStepProcedure extends SequentialProcedure<TestProcEnv> {
     private int step = 0;
 
-    public TestSingleStepProcedure() { }
+    public TestSingleStepProcedure() {
+    }
 
     @Override
     protected Procedure[] execute(TestProcEnv env) throws InterruptedException {
@@ -110,7 +111,8 @@ public class TestProcedureRecovery {
     }
 
     @Override
-    protected void rollback(TestProcEnv env) { }
+    protected void rollback(TestProcEnv env) {
+    }
 
     @Override
     protected boolean abort(TestProcEnv env) {
@@ -130,9 +132,8 @@ public class TestProcedureRecovery {
       step++;
       Threads.sleepWithoutInterrupt(procSleepInterval);
       if (isAborted()) {
-        setFailure(new RemoteProcedureException(getClass().getName(),
-          new ProcedureAbortedException(
-            "got an abort at " + getClass().getName() + " step=" + step)));
+        setFailure(new RemoteProcedureException(getClass().getName(), new ProcedureAbortedException(
+          "got an abort at " + getClass().getName() + " step=" + step)));
         return null;
       }
       return null;
@@ -155,7 +156,7 @@ public class TestProcedureRecovery {
       boolean aborted = abort.get();
       BaseTestStepProcedure proc = this;
       while (proc.hasParent() && !aborted) {
-        proc = (BaseTestStepProcedure)procExecutor.getProcedure(proc.getParentProcId());
+        proc = (BaseTestStepProcedure) procExecutor.getProcedure(proc.getParentProcId());
         aborted = proc.isAborted();
       }
       return aborted;
@@ -163,7 +164,8 @@ public class TestProcedureRecovery {
   }
 
   public static class TestMultiStepProcedure extends BaseTestStepProcedure {
-    public TestMultiStepProcedure() { }
+    public TestMultiStepProcedure() {
+    }
 
     @Override
     public Procedure[] execute(TestProcEnv env) throws InterruptedException {
@@ -172,7 +174,8 @@ public class TestProcedureRecovery {
     }
 
     public static class Step1Procedure extends BaseTestStepProcedure {
-      public Step1Procedure() { }
+      public Step1Procedure() {
+      }
 
       @Override
       protected Procedure[] execute(TestProcEnv env) throws InterruptedException {
@@ -182,7 +185,8 @@ public class TestProcedureRecovery {
     }
 
     public static class Step2Procedure extends BaseTestStepProcedure {
-      public Step2Procedure() { }
+      public Step2Procedure() {
+      }
     }
   }
 
@@ -294,10 +298,16 @@ public class TestProcedureRecovery {
   }
 
   public static class TestStateMachineProcedure
-      extends StateMachineProcedure<TestProcEnv, TestStateMachineProcedure.State> {
-    enum State { STATE_1, STATE_2, STATE_3, DONE }
+    extends StateMachineProcedure<TestProcEnv, TestStateMachineProcedure.State> {
+    enum State {
+      STATE_1,
+      STATE_2,
+      STATE_3,
+      DONE
+    }
 
-    public TestStateMachineProcedure() {}
+    public TestStateMachineProcedure() {
+    }
 
     public TestStateMachineProcedure(final boolean testSubmitChildProc) {
       this.submitChildProc = testSubmitChildProc;
@@ -388,16 +398,14 @@ public class TestProcedureRecovery {
     }
 
     @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
       super.serializeStateData(serializer);
       Int32Value.Builder builder = Int32Value.newBuilder().setValue(iResult);
       serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
       super.deserializeStateData(serializer);
       Int32Value value = serializer.deserialize(Int32Value.class);
       iResult = value.getValue();
@@ -515,7 +523,7 @@ public class TestProcedureRecovery {
     try {
       FileStatus[] files = fs.listStatus(logDir);
       if (files != null && files.length > 0) {
-        for (FileStatus file: files) {
+        for (FileStatus file : files) {
           assertTrue(file.toString(), file.isFile());
           LOG.debug("log file " + file.getPath() + " size=" + file.getLen());
         }

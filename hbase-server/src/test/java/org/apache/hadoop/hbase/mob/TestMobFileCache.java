@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestMobFileCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobFileCache.class);
+    HBaseClassTestRule.forClass(TestMobFileCache.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestMobFileCache.class);
   private HBaseTestingUtility UTIL;
@@ -103,8 +103,8 @@ public class TestMobFileCache {
     htd.addFamily(hcd3);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
     mobFileCache = new MobFileCache(conf);
-    region = HBaseTestingUtility
-        .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd, mobFileCache);
+    region = HBaseTestingUtility.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, htd,
+      mobFileCache);
   }
 
   @After
@@ -133,8 +133,7 @@ public class TestMobFileCache {
   /**
    * Create the mob store file
    */
-  private Path createMobStoreFile(HColumnDescriptor hcd)
-      throws IOException {
+  private Path createMobStoreFile(HColumnDescriptor hcd) throws IOException {
     // Setting up a Store
     TableName tn = TableName.valueOf(TABLE);
     HTableDescriptor htd = new HTableDescriptor(tn);
@@ -146,8 +145,8 @@ public class TestMobFileCache {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     HRegionInfo regionInfo = new HRegionInfo(tn);
-    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
-        maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey(), false);
+    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate, maxKeyCount,
+      hcd.getCompactionCompression(), regionInfo.getStartKey(), false);
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();
     mobWriter.append(key1);
@@ -171,8 +170,7 @@ public class TestMobFileCache {
     // Before open one file by the MobFileCache
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     // Open one file by the MobFileCache
-    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertNotNull(cachedMobFile1);
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
@@ -180,25 +178,22 @@ public class TestMobFileCache {
     // The evict is also managed by a schedule thread pool.
     // And its check period is set as 3600 seconds by default.
     // This evict should get the lock at the most time
-    mobFileCache.evict();  // Cache not full, evict it
+    mobFileCache.evict(); // Cache not full, evict it
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
 
-    mobFileCache.evictFile(file1Path.getName());  // Evict one file
+    mobFileCache.evictFile(file1Path.getName()); // Evict one file
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     assertEquals(EXPECTED_REFERENCE_ONE, cachedMobFile1.getReferenceCount());
 
-    cachedMobFile1.close();  // Close the cached mob file
+    cachedMobFile1.close(); // Close the cached mob file
 
     // Reopen three cached file
-    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(
-        fs, file2Path, cacheConf);
+    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(fs, file2Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_TWO, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(
-        fs, file3Path, cacheConf);
+    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(fs, file3Path, cacheConf);
     // Before the evict
     // Evict the cache, should close the first file 1
     assertEquals(EXPECTED_CACHE_SIZE_THREE, mobFileCache.getCacheSize());

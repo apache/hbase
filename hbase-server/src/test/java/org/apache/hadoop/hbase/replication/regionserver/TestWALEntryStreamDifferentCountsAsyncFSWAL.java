@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +31,7 @@ import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestWALEntryStreamDifferentCountsAsyncFSWAL
-  extends TestWALEntryStreamDifferentCounts {
+public class TestWALEntryStreamDifferentCountsAsyncFSWAL extends TestWALEntryStreamDifferentCounts {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

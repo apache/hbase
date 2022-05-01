@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test the {@link TimeoutExceptionInjector} to ensure we fulfill contracts
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestTimeoutExceptionInjector {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTimeoutExceptionInjector.class);
+    HBaseClassTestRule.forClass(TestTimeoutExceptionInjector.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTimeoutExceptionInjector.class);
 
@@ -88,8 +88,8 @@ public class TestTimeoutExceptionInjector {
   }
 
   /**
-   * Demonstrate TimeoutExceptionInjector semantics -- triggering fires exception and completes
-   * the timer.
+   * Demonstrate TimeoutExceptionInjector semantics -- triggering fires exception and completes the
+   * timer.
    */
   @Test
   public void testStartAfterTrigger() throws InterruptedException {

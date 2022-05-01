@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,16 +20,13 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Convert HBase tabular data from multiple scanners into a format that
- * is consumable by Map/Reduce.
- *
+ * Convert HBase tabular data from multiple scanners into a format that is consumable by Map/Reduce.
  * <p>
  * Usage example
  * </p>
@@ -49,13 +46,12 @@ import org.apache.hadoop.hbase.client.Scan;
  * scan1.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, table2);
  * scans.add(scan2);
  *
- * TableMapReduceUtil.initTableMapperJob(scans, TableMapper.class, Text.class,
- *     IntWritable.class, job);
+ * TableMapReduceUtil.initTableMapperJob(scans, TableMapper.class, Text.class, IntWritable.class,
+ *   job);
  * </pre>
  */
 @InterfaceAudience.Public
-public class MultiTableInputFormat extends MultiTableInputFormatBase implements
-    Configurable {
+public class MultiTableInputFormat extends MultiTableInputFormatBase implements Configurable {
 
   /** Job parameter that specifies the scan list. */
   public static final String SCANS = "hbase.mapreduce.scans";
@@ -65,7 +61,6 @@ public class MultiTableInputFormat extends MultiTableInputFormatBase implements
 
   /**
    * Returns the current configuration.
-   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -75,20 +70,17 @@ public class MultiTableInputFormat extends MultiTableInputFormatBase implements
   }
 
   /**
-   * Sets the configuration. This is used to set the details for the tables to
-   *  be scanned.
-   *
+   * Sets the configuration. This is used to set the details for the tables to be scanned.
    * @param configuration The configuration to set.
-   * @see org.apache.hadoop.conf.Configurable#setConf(
-   *        org.apache.hadoop.conf.Configuration)
+   * @see org.apache.hadoop.conf.Configurable#setConf( org.apache.hadoop.conf.Configuration)
    */
   @Override
   public void setConf(Configuration configuration) {
     this.conf = configuration;
     String[] rawScans = conf.getStrings(SCANS);
     if (rawScans.length <= 0) {
-      throw new IllegalArgumentException("There must be at least 1 scan configuration set to : "
-          + SCANS);
+      throw new IllegalArgumentException(
+        "There must be at least 1 scan configuration set to : " + SCANS);
     }
     List<Scan> scans = new ArrayList<>();
 

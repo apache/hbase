@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TestClientScannerRPCTimeout;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,9 +43,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
 
-@Category({ RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestScannerRPCScanMetrics {
 
   @ClassRule
@@ -58,7 +56,6 @@ public class TestScannerRPCScanMetrics {
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final byte[] VALUE = Bytes.toBytes("testValue");
-
 
   @Rule
   public TestName name = new TestName();
@@ -80,7 +77,7 @@ public class TestScannerRPCScanMetrics {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] splits = new byte[1][];
     splits[0] = Bytes.toBytes("row-4");
-    Table ht = TEST_UTIL.createTable(tableName, FAMILY,splits);
+    Table ht = TEST_UTIL.createTable(tableName, FAMILY, splits);
     byte[] r0 = Bytes.toBytes("row-0");
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");
@@ -112,8 +109,8 @@ public class TestScannerRPCScanMetrics {
     // This scan should increment rpc full scan count by 2 (both regions - no stop/start row)
     scanNextIterate(ht, dummyScan);
 
-    RSRpcServices testClusterRSRPCServices = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-      .rpcServices;
+    RSRpcServices testClusterRSRPCServices =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).rpcServices;
     assertEquals(4, testClusterRSRPCServices.rpcFullScanRequestCount.intValue());
   }
 
@@ -123,10 +120,9 @@ public class TestScannerRPCScanMetrics {
     ht.put(put);
   }
 
-  private void scanNextIterate(Table ht, Scan scan) throws Exception{
+  private void scanNextIterate(Table ht, Scan scan) throws Exception {
     ResultScanner scanner = ht.getScanner(scan);
-    for (Result result = scanner.next(); result != null; result = scanner.next())
-    {
+    for (Result result = scanner.next(); result != null; result = scanner.next()) {
       // Use the result object
     }
     scanner.close();
@@ -142,15 +138,17 @@ public class TestScannerRPCScanMetrics {
       return new RSRPCServicesWithScanMetrics(this);
     }
   }
+
   private static class RSRPCServicesWithScanMetrics extends RSRpcServices {
     public long getScanRequestCount() {
       return super.rpcScanRequestCount.longValue();
     }
+
     public long getFullScanRequestCount() {
       return super.rpcFullScanRequestCount.longValue();
     }
-    public RSRPCServicesWithScanMetrics(HRegionServer rs)
-      throws IOException {
+
+    public RSRPCServicesWithScanMetrics(HRegionServer rs) throws IOException {
       super(rs);
     }
   }

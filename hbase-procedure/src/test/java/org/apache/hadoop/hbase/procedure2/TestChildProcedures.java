@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,12 +36,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestChildProcedures {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestChildProcedures.class);
+    HBaseClassTestRule.forClass(TestChildProcedures.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChildProcedures.class);
 
@@ -109,11 +109,9 @@ public class TestChildProcedures {
     ProcedureTestingUtility.assertProcNotFailed(procExecutor, procId);
   }
 
-
   /**
-   * Test the state setting that happens after store to WAL; in particular the bit where we
-   * set the parent runnable again after its children have all completed successfully.
-   * See HBASE-20978.
+   * Test the state setting that happens after store to WAL; in particular the bit where we set the
+   * parent runnable again after its children have all completed successfully. See HBASE-20978.
    */
   @Test
   public void testChildLoadWithRestartAfterChildSuccess() throws Exception {
@@ -170,7 +168,8 @@ public class TestChildProcedures {
   }
 
   public static class TestRootProcedure extends SequentialProcedure<TestProcEnv> {
-    public TestRootProcedure() {}
+    public TestRootProcedure() {
+    }
 
     @Override
     public Procedure[] execute(TestProcEnv env) {
@@ -194,7 +193,8 @@ public class TestChildProcedures {
   }
 
   public static class TestChildProcedure extends SequentialProcedure<TestProcEnv> {
-    public TestChildProcedure() {}
+    public TestChildProcedure() {
+    }
 
     @Override
     public Procedure[] execute(TestProcEnv env) {

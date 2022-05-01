@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Iterator;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -43,11 +40,9 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ScannerResultGenerator extends ResultGenerator {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(ScannerResultGenerator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScannerResultGenerator.class);
 
-  public static Filter buildFilterFromModel(final ScannerModel model) 
-      throws Exception {
+  public static Filter buildFilterFromModel(final ScannerModel model) throws Exception {
     String filter = model.getFilter();
     if (filter == null || filter.length() == 0) {
       return null;
@@ -61,15 +56,13 @@ public class ScannerResultGenerator extends ResultGenerator {
   private ResultScanner scanner;
   private Result cached;
 
-  public ScannerResultGenerator(final String tableName, final RowSpec rowspec,
-      final Filter filter, final boolean cacheBlocks)
-      throws IllegalArgumentException, IOException {
+  public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
+    final boolean cacheBlocks) throws IllegalArgumentException, IOException {
     this(tableName, rowspec, filter, -1, cacheBlocks);
   }
 
-  public ScannerResultGenerator(final String tableName, final RowSpec rowspec,
-      final Filter filter, final int caching, final boolean cacheBlocks)
-      throws IllegalArgumentException, IOException {
+  public ScannerResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
+    final int caching, final boolean cacheBlocks) throws IllegalArgumentException, IOException {
     Table table = RESTServlet.getInstance().getTable(tableName);
     try {
       Scan scan;
@@ -80,7 +73,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       }
       if (rowspec.hasColumns()) {
         byte[][] columns = rowspec.getColumns();
-        for (byte[] column: columns) {
+        for (byte[] column : columns) {
           byte[][] split = CellUtil.parseColumn(column);
           if (split.length == 1) {
             scan.addFamily(split[0]);
@@ -91,12 +84,12 @@ public class ScannerResultGenerator extends ResultGenerator {
           }
         }
       }
-      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          
+      scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
       scan.setMaxVersions(rowspec.getMaxVersions());
       if (filter != null) {
         scan.setFilter(filter);
       }
-      if (caching > 0 ) {
+      if (caching > 0) {
         scan.setCaching(caching);
       }
       scan.setCacheBlocks(cacheBlocks);
@@ -105,8 +98,8 @@ public class ScannerResultGenerator extends ResultGenerator {
       }
       scanner = table.getScanner(scan);
       cached = null;
-      id = Long.toString(EnvironmentEdgeManager.currentTime()) +
-             Integer.toHexString(scanner.hashCode());
+      id = Long.toString(EnvironmentEdgeManager.currentTime())
+        + Integer.toHexString(scanner.hashCode());
     } finally {
       table.close();
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -157,8 +157,8 @@ public class TestClientOperationTimeout {
   }
 
   /**
-   * Tests that a batch mutate on a table throws {@link SocketTimeoutException} when the
-   * operation takes longer than 'hbase.client.operation.timeout'.
+   * Tests that a batch mutate on a table throws {@link SocketTimeoutException} when the operation
+   * takes longer than 'hbase.client.operation.timeout'.
    */
   @Test
   public void testMultiPutsTimeout() {
@@ -216,7 +216,7 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.GetResponse get(RpcController controller, ClientProtos.GetRequest request)
-        throws ServiceException {
+      throws ServiceException {
       try {
         Thread.sleep(DELAY_GET);
       } catch (InterruptedException e) {
@@ -227,7 +227,7 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.MutateResponse mutate(RpcController rpcc,
-        ClientProtos.MutateRequest request) throws ServiceException {
+      ClientProtos.MutateRequest request) throws ServiceException {
       try {
         Thread.sleep(DELAY_MUTATE);
       } catch (InterruptedException e) {
@@ -238,7 +238,7 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.ScanResponse scan(RpcController controller,
-        ClientProtos.ScanRequest request) throws ServiceException {
+      ClientProtos.ScanRequest request) throws ServiceException {
       try {
         Thread.sleep(DELAY_SCAN);
       } catch (InterruptedException e) {
@@ -249,7 +249,7 @@ public class TestClientOperationTimeout {
 
     @Override
     public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
-        throws ServiceException {
+      throws ServiceException {
       try {
         Thread.sleep(DELAY_BATCH_MUTATE);
       } catch (InterruptedException e) {

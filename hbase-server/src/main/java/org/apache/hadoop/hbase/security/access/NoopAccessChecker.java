@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.util.Collection;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -28,8 +27,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * NoopAccessChecker is returned when hbase.security.authorization is not enabled.
- * Always allow authorization if any user require any permission.
+ * NoopAccessChecker is returned when hbase.security.authorization is not enabled. Always allow
+ * authorization if any user require any permission.
  */
 @InterfaceAudience.Private
 public final class NoopAccessChecker extends AccessChecker {
@@ -49,7 +48,7 @@ public final class NoopAccessChecker extends AccessChecker {
 
   @Override
   public void requireGlobalPermission(User user, String request, Action perm, TableName tableName,
-      Map<byte[], ? extends Collection<byte[]>> familyMap, String filterUser) {
+    Map<byte[], ? extends Collection<byte[]>> familyMap, String filterUser) {
   }
 
   @Override
@@ -58,23 +57,23 @@ public final class NoopAccessChecker extends AccessChecker {
 
   @Override
   public void requireNamespacePermission(User user, String request, String namespace,
-      String filterUser, Action... permissions) {
+    String filterUser, Action... permissions) {
   }
 
   @Override
   public void requireNamespacePermission(User user, String request, String namespace,
-      TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap,
-      Action... permissions) {
+    TableName tableName, Map<byte[], ? extends Collection<byte[]>> familyMap,
+    Action... permissions) {
   }
 
   @Override
   public void requirePermission(User user, String request, TableName tableName, byte[] family,
-      byte[] qualifier, String filterUser, Action... permissions) {
+    byte[] qualifier, String filterUser, Action... permissions) {
   }
 
   @Override
   public void requireTablePermission(User user, String request, TableName tableName, byte[] family,
-      byte[] qualifier, Action... permissions) {
+    byte[] qualifier, Action... permissions) {
   }
 
   @Override
@@ -83,7 +82,7 @@ public final class NoopAccessChecker extends AccessChecker {
 
   @Override
   public void checkLockPermissions(User user, String namespace, TableName tableName,
-      RegionInfo[] regionInfos, String reason) {
+    RegionInfo[] regionInfos, String reason) {
   }
 
   @Override
@@ -93,7 +92,7 @@ public final class NoopAccessChecker extends AccessChecker {
 
   @Override
   public AuthResult permissionGranted(String request, User user, Action permRequest,
-      TableName tableName, Map<byte[], ? extends Collection<?>> families) {
+    TableName tableName, Map<byte[], ? extends Collection<?>> families) {
     return AuthResult.allow(request, "All users allowed because authorization is disabled", user,
       permRequest, tableName, families);
   }

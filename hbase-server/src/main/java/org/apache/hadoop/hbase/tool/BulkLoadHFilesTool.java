@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,20 +44,20 @@ public class BulkLoadHFilesTool extends LoadIncrementalHFiles implements BulkLoa
     super(conf);
   }
 
-  private Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> convert(
-      Map<LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> map) {
+  private Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer>
+    convert(Map<LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> map) {
     return map.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
   }
 
   @Override
   public Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName,
-      Map<byte[], List<Path>> family2Files) throws TableNotFoundException, IOException {
+    Map<byte[], List<Path>> family2Files) throws TableNotFoundException, IOException {
     return convert(run(family2Files, tableName));
   }
 
   @Override
   public Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Path dir)
-      throws TableNotFoundException, IOException {
+    throws TableNotFoundException, IOException {
     return convert(run(dir, tableName));
   }
 

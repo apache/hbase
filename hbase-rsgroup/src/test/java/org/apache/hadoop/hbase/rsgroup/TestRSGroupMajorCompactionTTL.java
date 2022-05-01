@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,21 +6,20 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -36,12 +35,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupMajorCompactionTTL.class);
+    HBaseClassTestRule.forClass(TestRSGroupMajorCompactionTTL.class);
 
   private final static int NUM_SLAVES_BASE = 6;
 
@@ -58,12 +58,12 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     MiniHBaseCluster cluster = utility.getHBaseCluster();
     final HMaster master = cluster.getMaster();
 
-    //wait for balancer to come online
+    // wait for balancer to come online
     utility.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() {
-        return master.isInitialized() &&
-            ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
+        return master.isInitialized()
+          && ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).isOnline();
       }
     });
     admin = utility.getAdmin();
@@ -92,8 +92,8 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     }
 
     RSGroupMajorCompactionTTL compactor = new RSGroupMajorCompactionTTL();
-    compactor.compactTTLRegionsOnGroup(utility.getConfiguration(),
-        RSGroupInfo.DEFAULT_GROUP, 1, 200, -1, -1, false, false);
+    compactor.compactTTLRegionsOnGroup(utility.getConfiguration(), RSGroupInfo.DEFAULT_GROUP, 1,
+      200, -1, -1, false, false);
 
     for (TableName tableName : tableNames) {
       int numberOfRegions = admin.getRegions(tableName).size();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,12 @@ import org.junit.rules.TestName;
 /**
  * Test reading/writing the constraints into the {@link HTableDescriptor}
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestConstraints {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestConstraints.class);
+    HBaseClassTestRule.forClass(TestConstraints.class);
 
   @Rule
   public TestName name = new TestName();
@@ -58,8 +58,8 @@ public class TestConstraints {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
     Constraints.add(desc, WorksConstraint.class);
 
-    List<? extends Constraint> constraints = Constraints.getConstraints(desc,
-        this.getClass().getClassLoader());
+    List<? extends Constraint> constraints =
+      Constraints.getConstraints(desc, this.getClass().getClassLoader());
     assertEquals(1, constraints.size());
 
     assertEquals(WorksConstraint.class, constraints.get(0).getClass());
@@ -67,8 +67,7 @@ public class TestConstraints {
     // Check that we can add more than 1 constraint and that ordering is
     // preserved
     Constraints.add(desc, AlsoWorks.class, NameConstraint.class);
-    constraints = Constraints.getConstraints(desc, this.getClass()
-        .getClassLoader());
+    constraints = Constraints.getConstraints(desc, this.getClass().getClassLoader());
     assertEquals(3, constraints.size());
 
     assertEquals(WorksConstraint.class, constraints.get(0).getClass());
@@ -81,19 +80,17 @@ public class TestConstraints {
   @Test
   public void testReadWriteWithConf() throws Throwable {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    Constraints.add(desc,
-      new Pair<>(CheckConfigurationConstraint.class,
-        CheckConfigurationConstraint.getConfiguration()));
+    Constraints.add(desc, new Pair<>(CheckConfigurationConstraint.class,
+      CheckConfigurationConstraint.getConfiguration()));
 
-    List<? extends Constraint> c = Constraints.getConstraints(desc, this
-        .getClass().getClassLoader());
+    List<? extends Constraint> c =
+      Constraints.getConstraints(desc, this.getClass().getClassLoader());
     assertEquals(1, c.size());
 
     assertEquals(CheckConfigurationConstraint.class, c.get(0).getClass());
 
     // check to make sure that we overwrite configurations
-    Constraints.add(desc, new Pair<>(
-        CheckConfigurationConstraint.class, new Configuration(false)));
+    Constraints.add(desc, new Pair<>(CheckConfigurationConstraint.class, new Configuration(false)));
 
     try {
       Constraints.getConstraints(desc, this.getClass().getClassLoader());
@@ -104,9 +101,7 @@ public class TestConstraints {
   }
 
   /**
-   * Test that Constraints are properly enabled, disabled, and removed
-   *
-   * @throws Exception
+   * Test that Constraints are properly enabled, disabled, and removed n
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -140,36 +135,29 @@ public class TestConstraints {
   }
 
   /**
-   * Test that when we update a constraint the ordering is not modified.
-   *
-   * @throws Exception
+   * Test that when we update a constraint the ordering is not modified. n
    */
   @SuppressWarnings("unchecked")
   @Test
   public void testUpdateConstraint() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-    Constraints.add(desc, CheckConfigurationConstraint.class,
-        CheckWasRunConstraint.class);
+    Constraints.add(desc, CheckConfigurationConstraint.class, CheckWasRunConstraint.class);
     Constraints.setConfiguration(desc, CheckConfigurationConstraint.class,
-        CheckConfigurationConstraint.getConfiguration());
+      CheckConfigurationConstraint.getConfiguration());
 
-    List<? extends Constraint> constraints = Constraints.getConstraints(desc,
-        this.getClass().getClassLoader());
+    List<? extends Constraint> constraints =
+      Constraints.getConstraints(desc, this.getClass().getClassLoader());
 
     assertEquals(2, constraints.size());
 
     // check to make sure the order didn't change
-    assertEquals(CheckConfigurationConstraint.class, constraints.get(0)
-        .getClass());
+    assertEquals(CheckConfigurationConstraint.class, constraints.get(0).getClass());
     assertEquals(CheckWasRunConstraint.class, constraints.get(1).getClass());
   }
 
   /**
-   * Test that if a constraint hasn't been set that there are no problems with
-   * attempting to remove it.
-   *
-   * @throws Throwable
-   *           on failure.
+   * Test that if a constraint hasn't been set that there are no problems with attempting to remove
+   * it. n * on failure.
    */
   @Test
   public void testRemoveUnsetConstraint() throws Throwable {
@@ -187,15 +175,13 @@ public class TestConstraints {
     Constraints.add(desc, AlsoWorks.class, conf);
     Constraints.add(desc, WorksConstraint.class);
     assertFalse(Constraints.enabled(desc, AlsoWorks.class));
-    List<? extends Constraint> constraints = Constraints.getConstraints(desc,
-        this.getClass().getClassLoader());
+    List<? extends Constraint> constraints =
+      Constraints.getConstraints(desc, this.getClass().getClassLoader());
     for (Constraint c : constraints) {
       Configuration storedConf = c.getConf();
-      if (c instanceof AlsoWorks)
-        assertEquals(10, storedConf.getLong("_PRIORITY", -1));
+      if (c instanceof AlsoWorks) assertEquals(10, storedConf.getLong("_PRIORITY", -1));
       // its just a worksconstraint
-      else
-        assertEquals(2, storedConf.getLong("_PRIORITY", -1));
+      else assertEquals(2, storedConf.getLong("_PRIORITY", -1));
 
     }
 

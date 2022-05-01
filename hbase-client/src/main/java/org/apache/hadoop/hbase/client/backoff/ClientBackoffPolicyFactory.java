@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client.backoff;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -37,17 +37,16 @@ public final class ClientBackoffPolicyFactory {
   public static ClientBackoffPolicy create(Configuration conf) {
     // create the backoff policy
     String className =
-        conf.get(ClientBackoffPolicy.BACKOFF_POLICY_CLASS, NoBackoffPolicy.class
-            .getName());
-      return ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class<?>[] { Configuration.class }, new Object[] { conf });
+      conf.get(ClientBackoffPolicy.BACKOFF_POLICY_CLASS, NoBackoffPolicy.class.getName());
+    return ReflectionUtils.instantiateWithCustomCtor(className,
+      new Class<?>[] { Configuration.class }, new Object[] { conf });
   }
 
   /**
    * Default backoff policy that doesn't create any backoff for the client, regardless of load
    */
   public static class NoBackoffPolicy implements ClientBackoffPolicy {
-    public NoBackoffPolicy(Configuration conf){
+    public NoBackoffPolicy(Configuration conf) {
       // necessary to meet contract
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,18 +49,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests unhandled exceptions thrown by coprocessors running on master.
- * Expected result is that the master will remove the buggy coprocessor from
- * its set of coprocessors and throw a org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
- * back to the client.
- * (HBASE-4014).
+ * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
+ * master will remove the buggy coprocessor from its set of coprocessors and throw a
+ * org.apache.hadoop.hbase.exceptions.DoNotRetryIOException back to the client. (HBASE-4014).
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestMasterCoprocessorExceptionWithRemove {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithRemove.class);
+    HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithRemove.class);
 
   public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
@@ -91,7 +89,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     @SuppressWarnings("null")
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableDescriptor desc, RegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // Cause a NullPointerException and don't catch it: this should cause the
       // master to throw an o.apache.hadoop.hbase.DoNotRetryIOException to the
       // client.
@@ -106,7 +104,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     @Override
     public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       postStartMasterCalled = true;
     }
 
@@ -135,8 +133,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        BuggyMasterObserver.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, BuggyMasterObserver.class.getName());
     UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     UTIL.startMiniCluster();
   }
@@ -147,8 +144,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
   }
 
   @Test
-  public void testExceptionFromCoprocessorWhenCreatingTable()
-      throws IOException {
+  public void testExceptionFromCoprocessorWhenCreatingTable() throws IOException {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
@@ -162,29 +158,29 @@ public class TestMasterCoprocessorExceptionWithRemove {
     // we are testing that the default setting of hbase.coprocessor.abortonerror
     // =false
     // is respected.
-    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
-      "unittest", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(), "unittest", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException("Fatal ZK error: " + why, e);
       }
+
       @Override
       public boolean isAborted() {
         return false;
       }
     });
 
-    MasterTracker masterTracker = new MasterTracker(zkw,"/hbase/master",
-        new Abortable() {
-          @Override
-          public void abort(String why, Throwable e) {
-            throw new RuntimeException("Fatal ZooKeeper tracker error, why=", e);
-          }
-          @Override
-          public boolean isAborted() {
-            return false;
-          }
-        });
+    MasterTracker masterTracker = new MasterTracker(zkw, "/hbase/master", new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException("Fatal ZooKeeper tracker error, why=", e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    });
 
     masterTracker.start();
     zkw.registerListener(masterTracker);
@@ -192,8 +188,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     // Test (part of the) output that should have be printed by master when it aborts:
     // (namely the part that shows the set of loaded coprocessors).
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
-    String coprocessorName =
-        BuggyMasterObserver.class.getName();
+    String coprocessorName = BuggyMasterObserver.class.getName();
     assertTrue(HMaster.getLoadedCoprocessors().contains(coprocessorName));
 
     HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(TEST_TABLE1));
@@ -219,7 +214,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     }
 
     assertFalse("Master survived coprocessor NPE, as expected.",
-        masterTracker.masterZKNodeWasDeleted);
+      masterTracker.masterZKNodeWasDeleted);
 
     String loadedCoprocessors = HMaster.getLoadedCoprocessors();
     assertTrue(loadedCoprocessors.contains(coprocessorName));

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,7 @@ public class TestReportRegionStateTransitionRetry {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(req);
       CountDownLatch latch = RESUME_AND_FAIL.getAndSet(null);
       if (latch != null) {

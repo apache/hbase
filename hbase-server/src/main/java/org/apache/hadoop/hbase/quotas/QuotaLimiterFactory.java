@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 
 @InterfaceAudience.Private
@@ -31,7 +31,7 @@ public class QuotaLimiterFactory {
 
   public static QuotaLimiter update(final QuotaLimiter a, final QuotaLimiter b) {
     if (a.getClass().equals(b.getClass()) && a instanceof TimeBasedLimiter) {
-      ((TimeBasedLimiter)a).update(((TimeBasedLimiter)b));
+      ((TimeBasedLimiter) a).update(((TimeBasedLimiter) b));
       return a;
     }
     throw new UnsupportedOperationException("TODO not implemented yet");

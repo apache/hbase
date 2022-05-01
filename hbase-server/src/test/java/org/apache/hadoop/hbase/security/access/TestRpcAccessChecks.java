@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
@@ -67,32 +66,25 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * This class tests operations in MasterRpcServices which require ADMIN access.
- * It doesn't test all operations which require ADMIN access, only those which get vetted within
- * MasterRpcServices at the point of entry itself (unlike old approach of using
- * hooks in AccessController).
- *
- * Sidenote:
+ * This class tests operations in MasterRpcServices which require ADMIN access. It doesn't test all
+ * operations which require ADMIN access, only those which get vetted within MasterRpcServices at
+ * the point of entry itself (unlike old approach of using hooks in AccessController). Sidenote:
  * There is one big difference between how security tests for AccessController hooks work, and how
- * the tests in this class for security in MasterRpcServices work.
- * The difference arises because of the way AC & MasterRpcServices get the user.
- *
- * In AccessController, it first checks if there is an active rpc user in ObserverContext. If not,
- * it uses UserProvider for current user. This *might* make sense in the context of coprocessors,
- * because they can be called outside the context of RPCs.
- * But in the context of MasterRpcServices, only one way makes sense - RPCServer.getRequestUser().
- *
- * In AC tests, when we do FooUser.runAs on AccessController instance directly, it bypasses
- * the rpc framework completely, but works because UserProvider provides the correct user, i.e.
- * FooUser in this case.
- *
- * But this doesn't work for the tests here, so we go around by doing complete RPCs.
+ * the tests in this class for security in MasterRpcServices work. The difference arises because of
+ * the way AC & MasterRpcServices get the user. In AccessController, it first checks if there is an
+ * active rpc user in ObserverContext. If not, it uses UserProvider for current user. This *might*
+ * make sense in the context of coprocessors, because they can be called outside the context of
+ * RPCs. But in the context of MasterRpcServices, only one way makes sense -
+ * RPCServer.getRequestUser(). In AC tests, when we do FooUser.runAs on AccessController instance
+ * directly, it bypasses the rpc framework completely, but works because UserProvider provides the
+ * correct user, i.e. FooUser in this case. But this doesn't work for the tests here, so we go
+ * around by doing complete RPCs.
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestRpcAccessChecks {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRpcAccessChecks.class);
+    HBaseClassTestRule.forClass(TestRpcAccessChecks.class);
 
   @Rule
   public final TestName TEST_NAME = new TestName();
@@ -114,7 +106,8 @@ public class TestRpcAccessChecks {
 
   // Dummy service to test execService calls. Needs to be public so can be loaded as Coprocessor.
   public static class DummyCpService implements MasterCoprocessor, RegionServerCoprocessor {
-    public DummyCpService() {}
+    public DummyCpService() {
+    }
 
     @Override
     public Iterable<Service> getServices() {
@@ -125,11 +118,11 @@ public class TestRpcAccessChecks {
   private static void enableSecurity(Configuration conf) throws IOException {
     conf.set("hadoop.security.authorization", "false");
     conf.set("hadoop.security.authentication", "simple");
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
-      "," + DummyCpService.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      AccessController.class.getName() + "," + DummyCpService.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName());
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
-      "," + DummyCpService.class.getName());
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      AccessController.class.getName() + "," + DummyCpService.class.getName());
     conf.set(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, "true");
     SecureTestUtil.configureSuperuser(conf);
   }
@@ -146,9 +139,9 @@ public class TestRpcAccessChecks {
     USER_ADMIN = User.createUserForTesting(conf, "admin", new String[0]);
     USER_NON_ADMIN = User.createUserForTesting(conf, "non_admin", new String[0]);
     USER_GROUP_ADMIN =
-        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+      User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
     USER_IN_SUPERGROUPS =
-        User.createUserForTesting(conf, "user_in_supergroup", new String[] { "supergroup" });
+      User.createUserForTesting(conf, "user_in_supergroup", new String[] { "supergroup" });
     USER_ADMIN_NOT_SUPER = User.createUserForTesting(conf, "normal_admin", new String[0]);
 
     TEST_UTIL.startMiniCluster();
@@ -156,8 +149,8 @@ public class TestRpcAccessChecks {
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     // Assign permissions to groups
-    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN),
-      Permission.Action.ADMIN, Permission.Action.CREATE);
+    SecureTestUtil.grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN,
+      Permission.Action.CREATE);
     SecureTestUtil.grantGlobal(TEST_UTIL, USER_ADMIN_NOT_SUPER.getShortName(),
       Permission.Action.ADMIN);
   }
@@ -169,7 +162,7 @@ public class TestRpcAccessChecks {
   private void verifyAllowed(User user, Action action) throws Exception {
     user.runAs((PrivilegedExceptionAction<?>) () -> {
       try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         action.run(admin);
       } catch (IOException e) {
         fail(e.toString());
@@ -182,7 +175,7 @@ public class TestRpcAccessChecks {
     user.runAs((PrivilegedExceptionAction<?>) () -> {
       boolean accessDenied = false;
       try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         action.run(admin);
       } catch (AccessDeniedException e) {
         accessDenied = true;
@@ -196,7 +189,7 @@ public class TestRpcAccessChecks {
     user.runAs((PrivilegedExceptionAction<?>) () -> {
       boolean accessDenied = false;
       try (Connection conn = ConnectionFactory.createConnection(conf);
-          Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         action.run(admin);
       } catch (ServiceException e) {
         // For MasterRpcServices.execService.
@@ -241,7 +234,7 @@ public class TestRpcAccessChecks {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
       admin.execProcedure("flush-table-proc", TableName.META_TABLE_NAME.getNameAsString(),
-          new HashMap<>());
+        new HashMap<>());
     });
   }
 
@@ -249,7 +242,7 @@ public class TestRpcAccessChecks {
   public void testExecService() throws Exception {
     Action action = (admin) -> {
       TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
-          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
+        TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
       service.ping(null, TestProtos.EmptyRequestProto.getDefaultInstance());
     };
 
@@ -264,7 +257,7 @@ public class TestRpcAccessChecks {
     verifyAdminCheckForAction((admin) -> {
       // Using existing table instead of creating a new one.
       admin.execProcedureWithReturn("flush-table-proc", TableName.META_TABLE_NAME.getNameAsString(),
-          new HashMap<>());
+        new HashMap<>());
     });
   }
 
@@ -283,8 +276,8 @@ public class TestRpcAccessChecks {
     Action action = (admin) -> {
       ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
       TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
-          TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(
-              admin.coprocessorService(serverName));
+        TestRpcServiceProtos.TestProtobufRpcProto
+          .newBlockingStub(admin.coprocessorService(serverName));
       service.ping(null, TestProtos.EmptyRequestProto.getDefaultInstance());
     };
 
@@ -297,13 +290,12 @@ public class TestRpcAccessChecks {
   public void testTableFlush() throws Exception {
     TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
     Action adminAction = (admin) -> {
       admin.createTable(desc);
       // Avoid giving a global permission which may screw up other tests
-      SecureTestUtil.grantOnTable(
-          TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null, Permission.Action.READ,
-          Permission.Action.WRITE, Permission.Action.CREATE);
+      SecureTestUtil.grantOnTable(TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null,
+        Permission.Action.READ, Permission.Action.WRITE, Permission.Action.CREATE);
     };
     verifyAllowed(USER_ADMIN, adminAction);
 
@@ -320,8 +312,8 @@ public class TestRpcAccessChecks {
         // Flush should not require ADMIN permission
         admin.flush(tn);
         // Nb: ideally, we would verify snapshot permission too (as that was fixed in the
-        //   regression HBASE-20185) but taking a snapshot requires ADMIN permission which
-        //   masks the root issue.
+        // regression HBASE-20185) but taking a snapshot requires ADMIN permission which
+        // masks the root issue.
         // Make sure we read the value
         Result result = table.get(new Get(rowKey));
         assertFalse(result.isEmpty());
@@ -336,13 +328,13 @@ public class TestRpcAccessChecks {
   public void testTableFlushAndSnapshot() throws Exception {
     TableName tn = TableName.valueOf(TEST_NAME.getMethodName());
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
     Action adminAction = (admin) -> {
       admin.createTable(desc);
       // Giving ADMIN here, but only on this table, *not* globally
-      SecureTestUtil.grantOnTable(
-          TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null, Permission.Action.READ,
-          Permission.Action.WRITE, Permission.Action.CREATE, Permission.Action.ADMIN);
+      SecureTestUtil.grantOnTable(TEST_UTIL, USER_NON_ADMIN.getShortName(), tn, null, null,
+        Permission.Action.READ, Permission.Action.WRITE, Permission.Action.CREATE,
+        Permission.Action.ADMIN);
     };
     verifyAllowed(USER_ADMIN, adminAction);
 
@@ -383,16 +375,15 @@ public class TestRpcAccessChecks {
     try {
       // Namespace
       SecureTestUtil.grantOnNamespace(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getShortName(),
-        TEST_NAME.getMethodName(),
-        Permission.Action.ADMIN, Permission.Action.CREATE);
+        TEST_NAME.getMethodName(), Permission.Action.ADMIN, Permission.Action.CREATE);
       fail("Granting superuser's namespace permissions is not allowed.");
     } catch (Exception e) {
     }
     try {
       // Table
       SecureTestUtil.grantOnTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
-        TableName.valueOf(TEST_NAME.getMethodName()), null, null,
-        Permission.Action.ADMIN, Permission.Action.CREATE);
+        TableName.valueOf(TEST_NAME.getMethodName()), null, null, Permission.Action.ADMIN,
+        Permission.Action.CREATE);
       fail("Granting superuser's table permissions is not allowed.");
     } catch (Exception e) {
     }
@@ -426,8 +417,7 @@ public class TestRpcAccessChecks {
     try {
       // Table
       SecureTestUtil.revokeFromTable(USER_ADMIN_NOT_SUPER, TEST_UTIL, USER_ADMIN.getName(),
-        TableName.valueOf(TEST_NAME.getMethodName()), null, null,
-        Permission.Action.ADMIN);
+        TableName.valueOf(TEST_NAME.getMethodName()), null, null, Permission.Action.ADMIN);
       fail("Revoking superuser's table permissions is not allowed.");
     } catch (Exception e) {
     }
@@ -436,8 +426,7 @@ public class TestRpcAccessChecks {
     try {
       // Global revoke
       SecureTestUtil.revokeGlobal(USER_ADMIN_NOT_SUPER, TEST_UTIL,
-        AuthUtil.toGroupEntry("supergroup"),
-        Permission.Action.ADMIN, Permission.Action.CREATE);
+        AuthUtil.toGroupEntry("supergroup"), Permission.Action.ADMIN, Permission.Action.CREATE);
       fail("Revoking supergroup's permissions is not allowed.");
     } catch (Exception e) {
     }

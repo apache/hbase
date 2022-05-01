@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -39,17 +37,15 @@ import org.slf4j.LoggerFactory;
 public final class MasterDDLOperationHelper {
   private static final Logger LOG = LoggerFactory.getLogger(MasterDDLOperationHelper.class);
 
-  private MasterDDLOperationHelper() {}
+  private MasterDDLOperationHelper() {
+  }
 
   /**
    * Remove the column family from the file system
    **/
-  public static void deleteColumnFamilyFromFileSystem(
-      final MasterProcedureEnv env,
-      final TableName tableName,
-      final List<RegionInfo> regionInfoList,
-      final byte[] familyName,
-      final boolean hasMob) throws IOException {
+  public static void deleteColumnFamilyFromFileSystem(final MasterProcedureEnv env,
+    final TableName tableName, final List<RegionInfo> regionInfoList, final byte[] familyName,
+    final boolean hasMob) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing family=" + Bytes.toString(familyName) + " from table=" + tableName);

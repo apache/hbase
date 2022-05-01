@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
@@ -42,24 +42,24 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
   // Command line options and defaults.
-  public static int DEFAULT_NUM_PROCS = 1000000;  // 1M
-  public static Option NUM_PROCS_OPTION = new Option("procs", true,
-      "Total number of procedures. Default: " + DEFAULT_NUM_PROCS);
+  public static int DEFAULT_NUM_PROCS = 1000000; // 1M
+  public static Option NUM_PROCS_OPTION =
+    new Option("procs", true, "Total number of procedures. Default: " + DEFAULT_NUM_PROCS);
   public static int DEFAULT_NUM_WALS = 0;
   public static Option NUM_WALS_OPTION = new Option("wals", true,
-      "Number of WALs to write. If -ve or 0, uses " + WALProcedureStore.ROLL_THRESHOLD_CONF_KEY +
-          " conf to roll the logs. Default: " + DEFAULT_NUM_WALS);
-  public static int DEFAULT_STATE_SIZE = 1024;  // 1KB
-  public static Option STATE_SIZE_OPTION = new Option("state_size", true,
-      "Size of serialized state in bytes to write on update. Default: " + DEFAULT_STATE_SIZE
-          + " bytes");
+    "Number of WALs to write. If -ve or 0, uses " + WALProcedureStore.ROLL_THRESHOLD_CONF_KEY
+      + " conf to roll the logs. Default: " + DEFAULT_NUM_WALS);
+  public static int DEFAULT_STATE_SIZE = 1024; // 1KB
+  public static Option STATE_SIZE_OPTION =
+    new Option("state_size", true, "Size of serialized state in bytes to write on update. Default: "
+      + DEFAULT_STATE_SIZE + " bytes");
   public static int DEFAULT_UPDATES_PER_PROC = 5;
   public static Option UPDATES_PER_PROC_OPTION = new Option("updates_per_proc", true,
-      "Number of update states to write for each proc. Default: " + DEFAULT_UPDATES_PER_PROC);
+    "Number of update states to write for each proc. Default: " + DEFAULT_UPDATES_PER_PROC);
   public static double DEFAULT_DELETE_PROCS_FRACTION = 0.50;
   public static Option DELETE_PROCS_FRACTION_OPTION = new Option("delete_procs_fraction", true,
-      "Fraction of procs for which to write delete state. Distribution of procs chosen for "
-          + "delete is uniform across all procs. Default: " + DEFAULT_DELETE_PROCS_FRACTION);
+    "Fraction of procs for which to write delete state. Distribution of procs chosen for "
+      + "delete is uniform across all procs. Default: " + DEFAULT_DELETE_PROCS_FRACTION);
 
   public int numProcs;
   public int updatesPerProc;
@@ -69,7 +69,8 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
   static byte[] serializedState;
 
   private static class LoadCounter implements ProcedureStore.ProcedureLoader {
-    public LoadCounter() {}
+    public LoadCounter() {
+    }
 
     @Override
     public void setMaxProcId(long maxProcId) {
@@ -105,10 +106,10 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     numWals = getOptionAsInt(cmd, NUM_WALS_OPTION.getOpt(), DEFAULT_NUM_WALS);
     int stateSize = getOptionAsInt(cmd, STATE_SIZE_OPTION.getOpt(), DEFAULT_STATE_SIZE);
     serializedState = new byte[stateSize];
-    updatesPerProc = getOptionAsInt(cmd, UPDATES_PER_PROC_OPTION.getOpt(),
-        DEFAULT_UPDATES_PER_PROC);
-    deleteProcsFraction = getOptionAsDouble(cmd, DELETE_PROCS_FRACTION_OPTION.getOpt(),
-        DEFAULT_DELETE_PROCS_FRACTION);
+    updatesPerProc =
+      getOptionAsInt(cmd, UPDATES_PER_PROC_OPTION.getOpt(), DEFAULT_UPDATES_PER_PROC);
+    deleteProcsFraction =
+      getOptionAsDouble(cmd, DELETE_PROCS_FRACTION_OPTION.getOpt(), DEFAULT_DELETE_PROCS_FRACTION);
     setupConf();
   }
 
@@ -140,7 +141,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     Set<Integer> toBeDeletedProcs = new HashSet<>();
     // Add n + 1 entries of the proc id for insert + updates. If proc is chosen for delete, add
     // extra entry which is marked -ve in the loop after shuffle.
-    for (int procId  = 1; procId <= numProcs; ++procId) {
+    for (int procId = 1; procId <= numProcs; ++procId) {
       procStatesSequence.addAll(Collections.nCopies(updatesPerProc + 1, procId));
       if (ThreadLocalRandom.current().nextFloat() < deleteProcsFraction) {
         procStatesSequence.add(procId);
@@ -161,7 +162,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
 
   private void writeWals() throws IOException {
     List<Integer> procStates = shuffleProcWriteSequence();
-    TestProcedure[] procs = new TestProcedure[numProcs + 1];  // 0 is not used.
+    TestProcedure[] procs = new TestProcedure[numProcs + 1]; // 0 is not used.
     int numProcsPerWal = numWals > 0 ? procStates.size() / numWals : Integer.MAX_VALUE;
     long startTime = EnvironmentEdgeManager.currentTime();
     long lastTime = startTime;
@@ -179,15 +180,15 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
       }
       if (i > 0 && i % numProcsPerWal == 0) {
         long currentTime = EnvironmentEdgeManager.currentTime();
-        System.out.println("Forcing wall roll. Time taken on last WAL: " +
-            (currentTime - lastTime) / 1000.0f + " sec");
+        System.out.println("Forcing wall roll. Time taken on last WAL: "
+          + (currentTime - lastTime) / 1000.0f + " sec");
         store.rollWriterForTesting();
         lastTime = currentTime;
       }
     }
     long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     System.out.println("\n\nDone writing WALs.\nNum procs : " + numProcs + "\nTotal time taken : "
-        + StringUtils.humanTimeDiff(timeTaken) + "\n\n");
+      + StringUtils.humanTimeDiff(timeTaken) + "\n\n");
   }
 
   private void storeRestart(ProcedureStore.ProcedureLoader loader) throws IOException {
@@ -203,11 +204,11 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
     System.out.println("Load time : " + (timeTaken / 1000.0f) + "sec");
     System.out.println("******************************************");
     System.out.println("Raw format for scripts");
-    System.out.println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, "
-                + "total_time_ms=%s]",
-          NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
-          UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
-          deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
+    System.out
+      .println(String.format("RESULT [%s=%s, %s=%s, %s=%s, %s=%s, %s=%s, " + "total_time_ms=%s]",
+        NUM_PROCS_OPTION.getOpt(), numProcs, STATE_SIZE_OPTION.getOpt(), serializedState.length,
+        UPDATES_PER_PROC_OPTION.getOpt(), updatesPerProc, DELETE_PROCS_FRACTION_OPTION.getOpt(),
+        deleteProcsFraction, NUM_WALS_OPTION.getOpt(), numWals, timeTaken));
   }
 
   public void tearDownProcedureStore() {
@@ -216,7 +217,7 @@ public class ProcedureWALLoaderPerformanceEvaluation extends AbstractHBaseTool {
       store.getFileSystem().delete(store.getWALDir(), true);
     } catch (IOException e) {
       System.err.println("Error: Couldn't delete log dir. You can delete it manually to free up "
-          + "disk space. Location: " + store.getWALDir().toString());
+        + "disk space. Location: " + store.getWALDir().toString());
       System.err.println(e.toString());
     }
   }

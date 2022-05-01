@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestMetricRegistriesLoader {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricRegistriesLoader.class);
+    HBaseClassTestRule.forClass(TestMetricRegistriesLoader.class);
 
   @Test
   public void testLoadSinleInstance() {
@@ -51,8 +51,8 @@ public class TestMetricRegistriesLoader {
     MetricRegistries loader1 = mock(MetricRegistries.class);
     MetricRegistries loader2 = mock(MetricRegistries.class);
     MetricRegistries loader3 = mock(MetricRegistries.class);
-    MetricRegistries instance = MetricRegistriesLoader.load(Lists.newArrayList(loader1, loader2,
-        loader3));
+    MetricRegistries instance =
+      MetricRegistriesLoader.load(Lists.newArrayList(loader1, loader2, loader3));
 
     // the load() returns the first instance
     assertEquals(loader1, instance);

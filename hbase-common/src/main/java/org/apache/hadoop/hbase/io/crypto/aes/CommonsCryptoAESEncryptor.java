@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,7 +23,6 @@ import java.security.Key;
 import java.security.SecureRandom;
 import java.util.Properties;
 import javax.crypto.spec.IvParameterSpec;
-
 import org.apache.commons.crypto.stream.CryptoOutputStream;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -81,8 +80,7 @@ public class CommonsCryptoAESEncryptor implements Encryptor {
       reset();
     }
     try {
-      return new CryptoOutputStream(cipherMode, properties, out, key,  new
-          IvParameterSpec(iv));
+      return new CryptoOutputStream(cipherMode, properties, out, key, new IvParameterSpec(iv));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

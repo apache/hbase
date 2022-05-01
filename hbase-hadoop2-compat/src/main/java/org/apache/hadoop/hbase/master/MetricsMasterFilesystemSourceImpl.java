@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -23,9 +22,8 @@ import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsMasterFilesystemSourceImpl
-    extends BaseSourceImpl
-    implements MetricsMasterFileSystemSource {
+public class MetricsMasterFilesystemSourceImpl extends BaseSourceImpl
+  implements MetricsMasterFileSystemSource {
 
   private MetricHistogram splitSizeHisto;
   private MetricHistogram splitTimeHisto;
@@ -36,9 +34,8 @@ public class MetricsMasterFilesystemSourceImpl
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-  public MetricsMasterFilesystemSourceImpl(String metricsName,
-                                           String metricsDescription,
-                                           String metricsContext, String metricsJmxContext) {
+  public MetricsMasterFilesystemSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
@@ -47,9 +44,9 @@ public class MetricsMasterFilesystemSourceImpl
     splitSizeHisto = metricsRegistry.newSizeHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
     splitTimeHisto = metricsRegistry.newTimeHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
     metaSplitTimeHisto =
-        metricsRegistry.newTimeHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
+      metricsRegistry.newTimeHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
     metaSplitSizeHisto =
-        metricsRegistry.newSizeHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
+      metricsRegistry.newSizeHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
   }
 
   @Override
@@ -61,7 +58,6 @@ public class MetricsMasterFilesystemSourceImpl
   public void updateSplitSize(long size) {
     splitSizeHisto.add(size);
   }
-
 
   @Override
   public void updateMetaWALSplitTime(long time) {

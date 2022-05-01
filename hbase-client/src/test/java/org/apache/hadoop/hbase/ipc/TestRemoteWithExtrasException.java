@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseServerException;
@@ -37,18 +38,17 @@ public class TestRemoteWithExtrasException {
     HBaseClassTestRule.forClass(TestRemoteWithExtrasException.class);
 
   /**
-   * test verifies that we honor the inherent value of an exception for isServerOverloaded.
-   * We don't want a false value passed into RemoteWithExtrasExceptions to override the
-   * inherent value of an exception if it's already true. This could be due to an out of date
-   * server not sending the proto field we expect.
+   * test verifies that we honor the inherent value of an exception for isServerOverloaded. We don't
+   * want a false value passed into RemoteWithExtrasExceptions to override the inherent value of an
+   * exception if it's already true. This could be due to an out of date server not sending the
+   * proto field we expect.
    */
   @Test
   public void itUsesExceptionDefaultValueForServerOverloaded() {
     // pass false for server overloaded, we still expect the exception to be true due to
     // the exception type
-    RemoteWithExtrasException ex =
-      new RemoteWithExtrasException(ServerOverloadedException.class.getName(),
-        "server is overloaded", false, false);
+    RemoteWithExtrasException ex = new RemoteWithExtrasException(
+      ServerOverloadedException.class.getName(), "server is overloaded", false, false);
     IOException result = ex.unwrapRemoteException();
 
     assertEquals(result.getClass(), ServerOverloadedException.class);

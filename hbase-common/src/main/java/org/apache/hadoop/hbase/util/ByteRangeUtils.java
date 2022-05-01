@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -72,7 +71,7 @@ public class ByteRangeUtils {
   }
 
   public static void write(OutputStream os, ByteRange byteRange, int byteRangeInnerOffset)
-      throws IOException {
+    throws IOException {
     os.write(byteRange.getBytes(), byteRange.getOffset() + byteRangeInnerOffset,
       byteRange.getLength() - byteRangeInnerOffset);
   }

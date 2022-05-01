@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,7 +41,7 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
   private QuotaLimiter regionServerLimiter;
 
   public ExceedOperationQuota(final Configuration conf, QuotaLimiter regionServerLimiter,
-      final QuotaLimiter... limiters) {
+    final QuotaLimiter... limiters) {
     super(conf, limiters);
     this.regionServerLimiter = regionServerLimiter;
   }
@@ -69,8 +68,7 @@ public class ExceedOperationQuota extends DefaultOperationQuota {
         exceed = true;
         if (LOG.isDebugEnabled()) {
           LOG.debug("Read/Write requests num exceeds quota: writes:{} reads:{} scan:{}, "
-              + "try use region server quota",
-            numWrites, numReads, numScans);
+            + "try use region server quota", numWrites, numReads, numScans);
         }
       }
       // 4. Region server limiter is enough and grab estimated consume quota.

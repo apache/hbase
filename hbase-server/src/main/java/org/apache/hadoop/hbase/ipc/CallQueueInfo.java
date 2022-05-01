@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class CallQueueInfo {
@@ -45,7 +43,8 @@ public class CallQueueInfo {
   public long getCallMethodCount(String callQueueName, String methodName) {
     long methodCount;
 
-    Map<String, Long> methodCountMap = callQueueMethodCountsSummary.getOrDefault(callQueueName, null);
+    Map<String, Long> methodCountMap =
+      callQueueMethodCountsSummary.getOrDefault(callQueueName, null);
 
     if (null != methodCountMap) {
       methodCount = methodCountMap.getOrDefault(methodName, 0L);

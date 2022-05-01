@@ -35,6 +35,7 @@ class TableSkewCostFunction extends CostFunction {
   TableSkewCostFunction(Configuration conf) {
     this.setMultiplier(conf.getFloat(TABLE_SKEW_COST_KEY, DEFAULT_TABLE_SKEW_COST));
   }
+
   @Override
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);

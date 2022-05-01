@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -26,8 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Consistency;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -35,8 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Creates multiple threads that read and verify previously written data */
-public class MultiThreadedReader extends MultiThreadedAction
-{
+public class MultiThreadedReader extends MultiThreadedAction {
   private static final Logger LOG = LoggerFactory.getLogger(MultiThreadedReader.class);
 
   protected Set<HBaseReaderThread> readers = new HashSet<>();
@@ -46,30 +46,27 @@ public class MultiThreadedReader extends MultiThreadedAction
   protected MultiThreadedWriterBase writer = null;
 
   /**
-   * The number of keys verified in a sequence. This will never be larger than
-   * the total number of keys in the range. The reader might also verify
-   * random keys when it catches up with the writer.
+   * The number of keys verified in a sequence. This will never be larger than the total number of
+   * keys in the range. The reader might also verify random keys when it catches up with the writer.
    */
   private final AtomicLong numUniqueKeysVerified = new AtomicLong();
 
   /**
-   * Default maximum number of read errors to tolerate before shutting down all
-   * readers.
+   * Default maximum number of read errors to tolerate before shutting down all readers.
    */
   public static final int DEFAULT_MAX_ERRORS = 10;
 
   /**
-   * Default "window" size between the last key written by the writer and the
-   * key that we attempt to read. The lower this number, the stricter our
-   * testing is. If this is zero, we always attempt to read the highest key
-   * in the contiguous sequence of keys written by the writers.
+   * Default "window" size between the last key written by the writer and the key that we attempt to
+   * read. The lower this number, the stricter our testing is. If this is zero, we always attempt to
+   * read the highest key in the contiguous sequence of keys written by the writers.
    */
   public static final int DEFAULT_KEY_WINDOW = 0;
 
   /**
    * Default batch size for multigets
    */
-  public static final int DEFAULT_BATCH_SIZE = 1; //translates to simple GET (no multi GET)
+  public static final int DEFAULT_BATCH_SIZE = 1; // translates to simple GET (no multi GET)
 
   protected AtomicLong numKeysVerified = new AtomicLong(0);
   protected AtomicLong numReadErrors = new AtomicLong(0);
@@ -80,8 +77,8 @@ public class MultiThreadedReader extends MultiThreadedAction
   private int batchSize = DEFAULT_BATCH_SIZE;
   private int regionReplicaId = -1; // particular region replica id to do reads against if set
 
-  public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double verifyPercent) throws IOException {
+  public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf, TableName tableName,
+    double verifyPercent) throws IOException {
     super(dataGen, conf, tableName, "R");
     this.verifyPercent = verifyPercent;
   }
@@ -147,8 +144,8 @@ public class MultiThreadedReader extends MultiThreadedAction
     private boolean printExceptionTrace = true;
 
     /**
-     * @param readerId only the keys with this remainder from division by
-     *          {@link #numThreads} will be read by this thread
+     * @param readerId only the keys with this remainder from division by {@link #numThreads} will
+     *                 be read by this thread
      */
     public HBaseReaderThread(int readerId) throws IOException {
       this.readerId = readerId;
@@ -187,7 +184,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
       startTimeMs = EnvironmentEdgeManager.currentTime();
       curKey = startKey;
-      long [] keysForThisReader = new long[batchSize];
+      long[] keysForThisReader = new long[batchSize];
       while (curKey < endKey && !aborted) {
         int readingRandomKeyStartIndex = -1;
         int numKeys = 0;
@@ -196,9 +193,8 @@ public class MultiThreadedReader extends MultiThreadedAction
           long k = getNextKeyToRead();
           if (k < startKey || k >= endKey) {
             numReadErrors.incrementAndGet();
-            throw new AssertionError("Load tester logic error: proposed key " +
-                "to read " + k + " is out of range (startKey=" + startKey +
-                ", endKey=" + endKey + ")");
+            throw new AssertionError("Load tester logic error: proposed key " + "to read " + k
+              + " is out of range (startKey=" + startKey + ", endKey=" + endKey + ")");
           }
           if (k % numThreads != readerId || (writer != null && writer.failedToWriteKey(k))) {
             // Skip keys that this thread should not read, as well as the keys
@@ -207,25 +203,24 @@ public class MultiThreadedReader extends MultiThreadedAction
           }
           keysForThisReader[numKeys] = k;
           if (readingRandomKey && readingRandomKeyStartIndex == -1) {
-            //store the first index of a random read
+            // store the first index of a random read
             readingRandomKeyStartIndex = numKeys;
           }
           numKeys++;
         } while (numKeys < batchSize && curKey < endKey && !aborted);
 
-        if (numKeys > 0) { //meaning there is some key to read
+        if (numKeys > 0) { // meaning there is some key to read
           readKey(keysForThisReader);
           // We have verified some unique key(s).
-          numUniqueKeysVerified.getAndAdd(readingRandomKeyStartIndex == -1 ?
-              numKeys : readingRandomKeyStartIndex);
+          numUniqueKeysVerified
+            .getAndAdd(readingRandomKeyStartIndex == -1 ? numKeys : readingRandomKeyStartIndex);
         }
       }
     }
 
     /**
-     * Should only be used for the concurrent writer/reader workload. The
-     * maximum key we are allowed to read, subject to the "key window"
-     * constraint.
+     * Should only be used for the concurrent writer/reader workload. The maximum key we are allowed
+     * to read, subject to the "key window" constraint.
      */
     private long maxKeyWeCanRead() {
       long insertedUpToKey = writer.wroteUpToKey();
@@ -263,13 +258,13 @@ public class MultiThreadedReader extends MultiThreadedAction
       // later. Set a flag to make sure that we don't count this key towards
       // the set of unique keys we have verified.
       readingRandomKey = true;
-      return startKey + Math.abs(ThreadLocalRandom.current().nextLong())
-          % (maxKeyToRead - startKey + 1);
+      return startKey
+        + Math.abs(ThreadLocalRandom.current().nextLong()) % (maxKeyToRead - startKey + 1);
     }
 
     private Get[] readKey(long[] keysToRead) {
       Random rand = ThreadLocalRandom.current();
-      Get [] gets = new Get[keysToRead.length];
+      Get[] gets = new Get[keysToRead.length];
       int i = 0;
       for (long keyToRead : keysToRead) {
         try {
@@ -281,8 +276,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         } catch (IOException e) {
           numReadFailures.addAndGet(1);
           LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
-              + ", time from start: "
-              + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
+            + ", time from start: " + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
           if (printExceptionTrace) {
             LOG.warn(e.toString(), e);
             printExceptionTrace = false;
@@ -295,8 +289,8 @@ public class MultiThreadedReader extends MultiThreadedAction
         } catch (IOException e) {
           numReadFailures.addAndGet(gets.length);
           for (long keyToRead : keysToRead) {
-            LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
-                + ", time from start: "
+            LOG.debug(
+              "[" + readerId + "] FAILED read, key = " + (keyToRead + "") + ", time from start: "
                 + (EnvironmentEdgeManager.currentTime() - startTimeMs) + " ms");
           }
           if (printExceptionTrace) {
@@ -352,38 +346,35 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-        Result[] results, Table table, boolean isNullExpected)
-        throws IOException {
+      Result[] results, Table table, boolean isNullExpected) throws IOException {
       totalOpTimeMs.addAndGet(elapsedNano / 1000000);
       numKeys.addAndGet(gets.length);
       int i = 0;
       for (Result result : results) {
         verifyResultsAndUpdateMetricsOnAPerGetBasis(verify, gets[i++], result, table,
-            isNullExpected);
+          isNullExpected);
       }
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get get, long elapsedNano,
-        Result result, Table table, boolean isNullExpected)
-        throws IOException {
-      verifyResultsAndUpdateMetrics(verify, new Get[]{get}, elapsedNano,
-          new Result[]{result}, table, isNullExpected);
+      Result result, Table table, boolean isNullExpected) throws IOException {
+      verifyResultsAndUpdateMetrics(verify, new Get[] { get }, elapsedNano, new Result[] { result },
+        table, isNullExpected);
     }
 
-    private void verifyResultsAndUpdateMetricsOnAPerGetBasis(boolean verify, Get get,
-        Result result, Table table, boolean isNullExpected) throws IOException {
+    private void verifyResultsAndUpdateMetricsOnAPerGetBasis(boolean verify, Get get, Result result,
+      Table table, boolean isNullExpected) throws IOException {
       if (!result.isEmpty()) {
         if (verify) {
           numKeysVerified.incrementAndGet();
         }
       } else {
-        HRegionLocation hloc = connection.getRegionLocation(tableName,
-          get.getRow(), false);
+        HRegionLocation hloc = connection.getRegionLocation(tableName, get.getRow(), false);
         String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", Region location: " + hloc);
-        if(isNullExpected) {
+        if (isNullExpected) {
           nullResult.incrementAndGet();
-          LOG.debug("Null result obtained for the key ="+rowKey);
+          LOG.debug("Null result obtained for the key =" + rowKey);
           return;
         }
       }

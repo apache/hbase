@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends BalancerTe
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaWithRacks.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplicaWithRacks.class);
 
   private static class ForTestRackManager extends RackManager {
     int numRacks;
@@ -69,7 +69,7 @@ public class TestStochasticLoadBalancerRegionReplicaWithRacks extends BalancerTe
     int numTables = 1;
     int numRacks = 3; // all replicas should be on a different rack
     Map<ServerName, List<RegionInfo>> serverMap =
-        createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
+      createServerMap(numNodes, numRegions, numRegionsPerServer, replication, numTables);
     RackManager rm = new ForTestRackManager(numRacks);
 
     testWithClusterWithIteration(serverMap, rm, true, true);

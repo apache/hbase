@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -30,11 +28,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
-
 import org.apache.hadoop.util.StringUtils;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,9 +40,8 @@ public class RowResultGenerator extends ResultGenerator {
   private Iterator<Cell> valuesI;
   private Cell cache;
 
-  public RowResultGenerator(final String tableName, final RowSpec rowspec,
-      final Filter filter, final boolean cacheBlocks)
-      throws IllegalArgumentException, IOException {
+  public RowResultGenerator(final String tableName, final RowSpec rowspec, final Filter filter,
+    final boolean cacheBlocks) throws IllegalArgumentException, IOException {
     try (Table table = RESTServlet.getInstance().getTable(tableName)) {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {

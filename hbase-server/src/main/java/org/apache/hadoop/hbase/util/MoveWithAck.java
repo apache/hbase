@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Callable;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,10 +32,6 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * Move Regions and make sure that they are up on the target server.If a region movement fails we
@@ -66,10 +63,10 @@ class MoveWithAck implements Callable<Boolean> {
   public Boolean call() throws IOException, InterruptedException {
     boolean moved = false;
     int count = 0;
-    int retries = admin.getConfiguration()
-      .getInt(RegionMover.MOVE_RETRIES_MAX_KEY, RegionMover.DEFAULT_MOVE_RETRIES_MAX);
-    int maxWaitInSeconds = admin.getConfiguration()
-      .getInt(RegionMover.MOVE_WAIT_MAX_KEY, RegionMover.DEFAULT_MOVE_WAIT_MAX);
+    int retries = admin.getConfiguration().getInt(RegionMover.MOVE_RETRIES_MAX_KEY,
+      RegionMover.DEFAULT_MOVE_RETRIES_MAX);
+    int maxWaitInSeconds = admin.getConfiguration().getInt(RegionMover.MOVE_WAIT_MAX_KEY,
+      RegionMover.DEFAULT_MOVE_WAIT_MAX);
     long startTime = EnvironmentEdgeManager.currentTime();
     boolean sameServer = true;
     // Assert we can scan the region in its current location
@@ -114,8 +111,7 @@ class MoveWithAck implements Callable<Boolean> {
    */
   private void isSuccessfulScan(RegionInfo region) throws IOException {
     Scan scan = new Scan().withStartRow(region.getStartKey()).setRaw(true).setOneRowLimit()
-      .setMaxResultSize(1L).setCaching(1).setFilter(new FirstKeyOnlyFilter())
-      .setCacheBlocks(false);
+      .setMaxResultSize(1L).setCaching(1).setFilter(new FirstKeyOnlyFilter()).setCacheBlocks(false);
     try (Table table = conn.getTable(region.getTable());
       ResultScanner scanner = table.getScanner(scan)) {
       scanner.next();
@@ -129,8 +125,7 @@ class MoveWithAck implements Callable<Boolean> {
    * Returns true if passed region is still on serverName when we look at hbase:meta.
    * @return true if region is hosted on serverName otherwise false
    */
-  private boolean isSameServer(RegionInfo region, ServerName serverName)
-    throws IOException {
+  private boolean isSameServer(RegionInfo region, ServerName serverName) throws IOException {
     ServerName serverForRegion = getServerNameForRegion(region, admin, conn);
     return serverForRegion != null && serverForRegion.equals(serverName);
   }
@@ -141,14 +136,14 @@ class MoveWithAck implements Callable<Boolean> {
    * @return regionServer hosting the given region
    */
   static ServerName getServerNameForRegion(RegionInfo region, Admin admin, Connection conn)
-      throws IOException {
+    throws IOException {
     if (!admin.isTableEnabled(region.getTable())) {
       return null;
     }
     HRegionLocation loc;
     try {
-      loc = conn.getRegionLocator(region.getTable())
-        .getRegionLocation(region.getStartKey(), region.getReplicaId(), true);
+      loc = conn.getRegionLocator(region.getTable()).getRegionLocation(region.getStartKey(),
+        region.getReplicaId(), true);
     } catch (IOException e) {
       if (e.getMessage() != null && e.getMessage().startsWith("Unable to find region for")) {
         return null;

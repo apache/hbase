@@ -1,16 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.balancer;
 
@@ -53,10 +56,10 @@ import org.slf4j.LoggerFactory;
 public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
+    LoggerFactory.getLogger(TestStochasticLoadBalancerHeterogeneousCost.class);
   private static final double ALLOWED_WINDOW = 1.20;
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static String RULES_FILE;
@@ -71,8 +74,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
       HeterogeneousRegionCountCostFunction.class.getName());
     // Need to ensure test dir has been created.
     assertTrue(FileSystem.get(HTU.getConfiguration()).mkdirs(HTU.getDataTestDir()));
-    RULES_FILE = HTU.getDataTestDir(
-      TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_FILE_NAME).toString();
+    RULES_FILE =
+      HTU.getDataTestDir(TestStochasticLoadBalancerHeterogeneousCostRules.DEFAULT_RULES_FILE_NAME)
+        .toString();
     BalancerTestBase.conf.set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
       RULES_FILE);
@@ -154,26 +158,26 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
     TestStochasticLoadBalancerHeterogeneousCostRules.createRulesFile(RULES_FILE);
     final Map<ServerName, List<RegionInfo>> serverMap =
-        this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
+      this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     final List<RegionPlan> plans =
-        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+      BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     // As we disabled all the other cost functions, balancing only according to
     // the heterogeneous cost function should return nothing.
     assertNull(plans);
   }
 
   private void testHeterogeneousWithCluster(final int numNodes, final int numRegions,
-      final int numRegionsPerServer, final List<String> rules) throws IOException {
+    final int numRegionsPerServer, final List<String> rules) throws IOException {
 
     TestStochasticLoadBalancerHeterogeneousCostRules.createRulesFile(RULES_FILE, rules);
     final Map<ServerName, List<RegionInfo>> serverMap =
-        this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
+      this.createServerMap(numNodes, numRegions, numRegionsPerServer, 1, 1);
     this.testWithCluster(serverMap, null, true, false);
   }
 
   protected void testWithCluster(final Map<ServerName, List<RegionInfo>> serverMap,
-      final RackManager rackManager, final boolean assertFullyBalanced,
-      final boolean assertFullyBalancedForReplicas) {
+    final RackManager rackManager, final boolean assertFullyBalanced,
+    final boolean assertFullyBalancedForReplicas) {
     final List<ServerAndLoad> list = this.convertToList(serverMap);
     LOG.info("Mock Cluster : " + this.printMock(list) + " " + this.printStats(list));
 
@@ -181,7 +185,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
     // Run the balancer.
     final List<RegionPlan> plans =
-        BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+      BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
     assertNotNull(plans);
 
     // Check to see that this actually got to a stable place.
@@ -194,16 +198,15 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
       if (assertFullyBalanced) {
         final List<RegionPlan> secondPlans =
-            BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+          BalancerTestBase.loadBalancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
         assertNull(secondPlans);
 
         // create external cost function to retrieve limit
         // for each RS
         final HeterogeneousRegionCountCostFunction cf =
-            new HeterogeneousRegionCountCostFunction(conf);
+          new HeterogeneousRegionCountCostFunction(conf);
         assertNotNull(cf);
-        BalancerClusterState cluster =
-            new BalancerClusterState(serverMap, null, null, null);
+        BalancerClusterState cluster = new BalancerClusterState(serverMap, null, null, null);
         cf.prepare(cluster);
 
         // checking that we all hosts have a number of regions below their limit
@@ -219,9 +222,8 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
           // as the balancer is stochastic, we cannot check exactly the result of the balancing,
           // hence the allowedWindow parameter
           assertTrue("Host " + sn.getHostname() + " should be below "
-              + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage +
-              ", " + usage + ", " + numberRegions + ", " + limit,
-            usage <= cf.overallUsage * ALLOWED_WINDOW);
+            + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage + ", "
+            + numberRegions + ", " + limit, usage <= cf.overallUsage * ALLOWED_WINDOW);
         }
       }
 
@@ -233,7 +235,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
   @Override
   protected Map<ServerName, List<RegionInfo>> createServerMap(int numNodes, int numRegions,
-      int numRegionsPerServer, int replication, int numTables) {
+    int numRegionsPerServer, int replication, int numTables) {
     // construct a cluster of numNodes, having a total of numRegions. Each RS will hold
     // numRegionsPerServer many regions except for the last one, which will host all the
     // remaining regions
@@ -260,7 +262,7 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
 
   @Override
   protected TreeMap<ServerName, List<RegionInfo>> mockClusterServers(int[] mockCluster,
-      int numTables) {
+    int numTables) {
     int numServers = mockCluster.length;
     TreeMap<ServerName, List<RegionInfo>> servers = new TreeMap<>();
     for (int i = 0; i < numServers; i++) {
@@ -286,12 +288,11 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBas
     return new ServerAndLoad(sn, 0);
   }
 
-  static class FairRandomCandidateGenerator extends
-    RandomCandidateGenerator {
+  static class FairRandomCandidateGenerator extends RandomCandidateGenerator {
 
     @Override
-    public BalanceAction pickRandomRegions(BalancerClusterState cluster,
-      int thisServer, int otherServer) {
+    public BalanceAction pickRandomRegions(BalancerClusterState cluster, int thisServer,
+      int otherServer) {
       if (thisServer < 0 || otherServer < 0) {
         return BalanceAction.NULL_ACTION;
       }

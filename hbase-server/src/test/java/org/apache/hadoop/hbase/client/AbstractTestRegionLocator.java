@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -203,16 +203,16 @@ public abstract class AbstractTestRegionLocator {
   protected abstract byte[][] getEndKeys(TableName tableName) throws IOException;
 
   protected abstract Pair<byte[][], byte[][]> getStartEndKeys(TableName tableName)
-      throws IOException;
+    throws IOException;
 
   protected abstract HRegionLocation getRegionLocation(TableName tableName, byte[] row,
-      int replicaId) throws IOException;
+    int replicaId) throws IOException;
 
   protected abstract List<HRegionLocation> getRegionLocations(TableName tableName, byte[] row)
-      throws IOException;
+    throws IOException;
 
   protected abstract List<HRegionLocation> getAllRegionLocations(TableName tableName)
-      throws IOException;
+    throws IOException;
 
   protected abstract void clearCache(TableName tableName) throws IOException;
 }

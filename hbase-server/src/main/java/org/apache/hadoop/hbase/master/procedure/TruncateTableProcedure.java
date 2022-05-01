@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -43,8 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 
 @InterfaceAudience.Private
-public class TruncateTableProcedure
-    extends AbstractStateMachineTableProcedure<TruncateTableState> {
+public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<TruncateTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(TruncateTableProcedure.class);
 
   private boolean preserveSplits;
@@ -58,14 +56,12 @@ public class TruncateTableProcedure
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      boolean preserveSplits)
-  throws HBaseIOException {
+    boolean preserveSplits) throws HBaseIOException {
     this(env, tableName, preserveSplits, null);
   }
 
   public TruncateTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      boolean preserveSplits, ProcedurePrepareLatch latch)
-  throws HBaseIOException {
+    boolean preserveSplits, ProcedurePrepareLatch latch) throws HBaseIOException {
     super(env, latch);
     this.tableName = tableName;
     preflightChecks(env, false);
@@ -74,7 +70,7 @@ public class TruncateTableProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, TruncateTableState state)
-      throws InterruptedException {
+    throws InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -97,9 +93,9 @@ public class TruncateTableProcedure
           // Call coprocessors
           preTruncate(env);
 
-          //We need to cache table descriptor in the initial stage, so that it's saved within
-          //the procedure stage and can get recovered if the procedure crashes between
-          //TRUNCATE_TABLE_REMOVE_FROM_META and TRUNCATE_TABLE_CREATE_FS_LAYOUT
+          // We need to cache table descriptor in the initial stage, so that it's saved within
+          // the procedure stage and can get recovered if the procedure crashes between
+          // TRUNCATE_TABLE_REMOVE_FROM_META and TRUNCATE_TABLE_CREATE_FS_LAYOUT
           tableDescriptor = env.getMasterServices().getTableDescriptors().get(tableName);
           setNextState(TruncateTableState.TRUNCATE_TABLE_CLEAR_FS_LAYOUT);
           break;
@@ -120,8 +116,8 @@ public class TruncateTableProcedure
           setNextState(TruncateTableState.TRUNCATE_TABLE_REMOVE_FROM_META);
           break;
         case TRUNCATE_TABLE_REMOVE_FROM_META:
-          List<RegionInfo> originalRegions = env.getAssignmentManager()
-            .getRegionStates().getRegionsOfTable(getTableName());
+          List<RegionInfo> originalRegions =
+            env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
           DeleteTableProcedure.deleteFromMeta(env, getTableName(), originalRegions);
           DeleteTableProcedure.deleteAssignmentState(env, getTableName());
           setNextState(TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT);
@@ -155,8 +151,8 @@ public class TruncateTableProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-truncate-table", e);
       } else {
-        LOG.warn("Retriable error trying to truncate table=" + getTableName()
-          + " state=" + state, e);
+        LOG.warn("Retriable error trying to truncate table=" + getTableName() + " state=" + state,
+          e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -231,8 +227,7 @@ public class TruncateTableProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.TruncateTableStateData.Builder state =
@@ -245,7 +240,7 @@ public class TruncateTableProcedure
       state.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (regions != null) {
-      for (RegionInfo hri: regions) {
+      for (RegionInfo hri : regions) {
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -253,12 +248,11 @@ public class TruncateTableProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.TruncateTableStateData state =
-        serializer.deserialize(MasterProcedureProtos.TruncateTableStateData.class);
+      serializer.deserialize(MasterProcedureProtos.TruncateTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     if (state.hasTableSchema()) {
       tableDescriptor = ProtobufUtil.toTableDescriptor(state.getTableSchema());
@@ -271,7 +265,7 @@ public class TruncateTableProcedure
       regions = null;
     } else {
       regions = new ArrayList<>(state.getRegionInfoCount());
-      for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
+      for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -279,11 +273,9 @@ public class TruncateTableProcedure
 
   private static List<RegionInfo> recreateRegionInfo(final List<RegionInfo> regions) {
     ArrayList<RegionInfo> newRegions = new ArrayList<>(regions.size());
-    for (RegionInfo hri: regions) {
-      newRegions.add(RegionInfoBuilder.newBuilder(hri.getTable())
-          .setStartKey(hri.getStartKey())
-          .setEndKey(hri.getEndKey())
-          .build());
+    for (RegionInfo hri : regions) {
+      newRegions.add(RegionInfoBuilder.newBuilder(hri.getTable()).setStartKey(hri.getStartKey())
+        .setEndKey(hri.getEndKey()).build());
     }
     return newRegions;
   }
@@ -291,7 +283,7 @@ public class TruncateTableProcedure
   private boolean prepareTruncate(final MasterProcedureEnv env) throws IOException {
     try {
       env.getMasterServices().checkTableModifiable(getTableName());
-    } catch (TableNotFoundException|TableNotDisabledException e) {
+    } catch (TableNotFoundException | TableNotDisabledException e) {
       setFailure("master-truncate-table", e);
       return false;
     }
@@ -299,7 +291,7 @@ public class TruncateTableProcedure
   }
 
   private boolean preTruncate(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();
@@ -308,8 +300,7 @@ public class TruncateTableProcedure
     return true;
   }
 
-  private void postTruncate(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+  private void postTruncate(final MasterProcedureEnv env) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = getTableName();

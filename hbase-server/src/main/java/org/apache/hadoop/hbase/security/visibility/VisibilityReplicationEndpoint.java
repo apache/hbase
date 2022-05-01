@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -47,7 +46,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   private final VisibilityLabelService visibilityLabelsService;
 
   public VisibilityReplicationEndpoint(ReplicationEndpoint endpoint,
-      VisibilityLabelService visibilityLabelsService) {
+    VisibilityLabelService visibilityLabelsService) {
     this.delegator = endpoint;
     this.visibilityLabelsService = visibilityLabelsService;
   }
@@ -58,7 +57,7 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
-  public void peerConfigUpdated(ReplicationPeerConfig rpc){
+  public void peerConfigUpdated(ReplicationPeerConfig rpc) {
     delegator.peerConfigUpdated(rpc);
   }
 
@@ -80,22 +79,22 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
           if (cell.getTagsLength() > 0) {
             visTags.clear();
             nonVisTags.clear();
-            Byte serializationFormat = VisibilityUtils.extractAndPartitionTags(cell, visTags,
-                nonVisTags);
+            Byte serializationFormat =
+              VisibilityUtils.extractAndPartitionTags(cell, visTags, nonVisTags);
             if (!visTags.isEmpty()) {
               try {
                 byte[] modifiedVisExpression = visibilityLabelsService
-                    .encodeVisibilityForReplication(visTags, serializationFormat);
+                  .encodeVisibilityForReplication(visTags, serializationFormat);
                 if (modifiedVisExpression != null) {
                   nonVisTags
-                      .add(new ArrayBackedTag(TagType.STRING_VIS_TAG_TYPE, modifiedVisExpression));
+                    .add(new ArrayBackedTag(TagType.STRING_VIS_TAG_TYPE, modifiedVisExpression));
                 }
               } catch (Exception ioe) {
                 LOG.error(
-                    "Exception while reading the visibility labels from the cell. The replication "
-                        + "would happen as per the existing format and not as " +
-                        "string type for the cell "
-                        + cell + ".", ioe);
+                  "Exception while reading the visibility labels from the cell. The replication "
+                    + "would happen as per the existing format and not as "
+                    + "string type for the cell " + cell + ".",
+                  ioe);
                 // just return the old entries as it is without applying the string type change
                 newEdit.add(cell);
                 continue;
@@ -140,7 +139,9 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
-  public boolean isStarting() {return this.delegator.isStarting();}
+  public boolean isStarting() {
+    return this.delegator.isStarting();
+  }
 
   @Override
   public void start() {

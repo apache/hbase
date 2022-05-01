@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,43 +52,42 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 // TODO: cover more test cases
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestGet {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGet.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestGet.class);
 
-  private static final byte [] ROW = new byte [] {'r'};
+  private static final byte[] ROW = new byte[] { 'r' };
 
   private static final String PB_GET = "CgNyb3ciEwoPdGVzdC5Nb2NrRmlsdGVyEgAwATgB";
   private static final String PB_GET_WITH_FILTER_LIST =
-    "CgFyIosBCilvcmcuYXBhY2hlLmhhZG9vcC5oYmFzZS5maWx0ZXIuRmlsdGVyTGlzdBJeCAESEwoP" +
-    "dGVzdC5Nb2NrRmlsdGVyEgASEQoNbXkuTW9ja0ZpbHRlchIAEjIKLG9yZy5hcGFjaGUuaGFkb29w" +
-    "LmhiYXNlLmZpbHRlci5LZXlPbmx5RmlsdGVyEgIIADABOAE=";
+    "CgFyIosBCilvcmcuYXBhY2hlLmhhZG9vcC5oYmFzZS5maWx0ZXIuRmlsdGVyTGlzdBJeCAESEwoP"
+      + "dGVzdC5Nb2NrRmlsdGVyEgASEQoNbXkuTW9ja0ZpbHRlchIAEjIKLG9yZy5hcGFjaGUuaGFkb29w"
+      + "LmhiYXNlLmZpbHRlci5LZXlPbmx5RmlsdGVyEgIIADABOAE=";
 
   private static final String MOCK_FILTER_JAR =
-    "UEsDBBQACAgIANWDlEMAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA" +
-    "AAAAAFBLAwQUAAgICADVg5RDAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M" +
-    "y0xLLS7RDUstKs7Mz7NSMNQz4OVyLkpNLElN0XWqBAmY6xnEG1gqaPgXJSbnpCo45xcV5BcllgCV" +
-    "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMEFAAICAgAUoOUQwAAAAAAAAAAAAAAABMAAABteS9N" +
-    "b2NrRmlsdGVyLmNsYXNzdZHPTsJAEMa/LYVCRVFQMd68gQc38YrxUJUTetGQGE7bstrVwjbbYsSn" +
-    "0hOJJj6AD2WcFoP/4iYzX+bb32xmd9/en18B7GPLhY11BxsurEw3GUoHaqzSQ4ZCq91nsI/0UDLU" +
-    "emoszyYjX5oL4Ufk1Hs6EFFfGJXVn6adhirJ6NGUn+rgtquiVJoOQyUWJpFdo0cMjdbAa/8hnNj3" +
-    "pqmkbmvgMbgn94GMU6XHiYMm1ed6YgJJeDbNV+fejbgTVRRRYlj+cSZDW5trLmIRhJKHYqh1zENf" +
-    "JJJf5QCfcx45DJ3/WLmYgx/LRNJ1I/UgMmMxIXbo9WxkywLLZqHsUMVJGWlxdwb2lG+XKZdys4kK" +
-    "5eocgIsl0grVy0Q5+e9Y+V75BdblDIXHX/3b3/rLWEGNdJXCJmeNop7zjQ9QSwcI1kzyMToBAADs" +
-    "AQAAUEsDBBQACAgIAFKDlEMAAAAAAAAAAAAAAAAVAAAAdGVzdC9Nb2NrRmlsdGVyLmNsYXNzdVHB" +
-    "TsJAFJwthUJFERQx3ryBBzfxivFQlRN60ZAYTtuy2tXCNtti1K/SE4kmfoAfZXwtBg3RTd6bzOy8" +
-    "zezux+frO4ADbLuwsemg6cLKcIuhdKgmKj1iKLQ7Awb7WI8kQ62vJvJ8OvaluRR+REqjrwMRDYRR" +
-    "Gf8W7TRUCUO9n8ok5Wc6uOupKJWmy1CJhUlkz+gxQ7M99Dp/eJzY9x5JZrCGHoN7+hDIOFV6kjho" +
-    "Eb/QUxNIsmeJfib3b8W9qKKIEslLpzJ0tLnhIhZBKHkoRlrHPPRFIvl1buBzn0cKQ/c/r1wk4Scy" +
-    "kXTpSD2JTFhkxC69oY1sWWBZGuoOMU7ICIt7M7CXfLtMvZSLLVSoV+cGuFghrBBfJZeT/5GV75Xf" +
-    "YF3NUHhemt/5NV/GGmqE61Q2KXWqRu7f+AJQSwcIrS5nKDoBAADyAQAAUEsBAhQAFAAICAgA1YOU" +
-    "QwAAAAACAAAAAAAAAAkABAAAAAAAAAAAAAAAAAAAAE1FVEEtSU5GL/7KAABQSwECFAAUAAgICADV" +
-    "g5RDMcqkW0MAAABEAAAAFAAAAAAAAAAAAAAAAAA9AAAATUVUQS1JTkYvTUFOSUZFU1QuTUZQSwEC" +
-    "FAAUAAgICABSg5RD1kzyMToBAADsAQAAEwAAAAAAAAAAAAAAAADCAAAAbXkvTW9ja0ZpbHRlci5j" +
-    "bGFzc1BLAQIUABQACAgIAFKDlEOtLmcoOgEAAPIBAAAVAAAAAAAAAAAAAAAAAD0CAAB0ZXN0L01v" +
-    "Y2tGaWx0ZXIuY2xhc3NQSwUGAAAAAAQABAABAQAAugMAAAAA";
+    "UEsDBBQACAgIANWDlEMAAAAAAAAAAAAAAAAJAAQATUVUQS1JTkYv/soAAAMAUEsHCAAAAAACAAAA"
+      + "AAAAAFBLAwQUAAgICADVg5RDAAAAAAAAAAAAAAAAFAAAAE1FVEEtSU5GL01BTklGRVNULk1G803M"
+      + "y0xLLS7RDUstKs7Mz7NSMNQz4OVyLkpNLElN0XWqBAmY6xnEG1gqaPgXJSbnpCo45xcV5BcllgCV"
+      + "a/Jy8XIBAFBLBwgxyqRbQwAAAEQAAABQSwMEFAAICAgAUoOUQwAAAAAAAAAAAAAAABMAAABteS9N"
+      + "b2NrRmlsdGVyLmNsYXNzdZHPTsJAEMa/LYVCRVFQMd68gQc38YrxUJUTetGQGE7bstrVwjbbYsSn"
+      + "0hOJJj6AD2WcFoP/4iYzX+bb32xmd9/en18B7GPLhY11BxsurEw3GUoHaqzSQ4ZCq91nsI/0UDLU"
+      + "emoszyYjX5oL4Ufk1Hs6EFFfGJXVn6adhirJ6NGUn+rgtquiVJoOQyUWJpFdo0cMjdbAa/8hnNj3"
+      + "pqmkbmvgMbgn94GMU6XHiYMm1ed6YgJJeDbNV+fejbgTVRRRYlj+cSZDW5trLmIRhJKHYqh1zENf"
+      + "JJJf5QCfcx45DJ3/WLmYgx/LRNJ1I/UgMmMxIXbo9WxkywLLZqHsUMVJGWlxdwb2lG+XKZdys4kK"
+      + "5eocgIsl0grVy0Q5+e9Y+V75BdblDIXHX/3b3/rLWEGNdJXCJmeNop7zjQ9QSwcI1kzyMToBAADs"
+      + "AQAAUEsDBBQACAgIAFKDlEMAAAAAAAAAAAAAAAAVAAAAdGVzdC9Nb2NrRmlsdGVyLmNsYXNzdVHB"
+      + "TsJAFJwthUJFERQx3ryBBzfxivFQlRN60ZAYTtuy2tXCNtti1K/SE4kmfoAfZXwtBg3RTd6bzOy8"
+      + "zezux+frO4ADbLuwsemg6cLKcIuhdKgmKj1iKLQ7Awb7WI8kQ62vJvJ8OvaluRR+REqjrwMRDYRR"
+      + "Gf8W7TRUCUO9n8ok5Wc6uOupKJWmy1CJhUlkz+gxQ7M99Dp/eJzY9x5JZrCGHoN7+hDIOFV6kjho"
+      + "Eb/QUxNIsmeJfib3b8W9qKKIEslLpzJ0tLnhIhZBKHkoRlrHPPRFIvl1buBzn0cKQ/c/r1wk4Scy"
+      + "kXTpSD2JTFhkxC69oY1sWWBZGuoOMU7ICIt7M7CXfLtMvZSLLVSoV+cGuFghrBBfJZeT/5GV75Xf"
+      + "YF3NUHhemt/5NV/GGmqE61Q2KXWqRu7f+AJQSwcIrS5nKDoBAADyAQAAUEsBAhQAFAAICAgA1YOU"
+      + "QwAAAAACAAAAAAAAAAkABAAAAAAAAAAAAAAAAAAAAE1FVEEtSU5GL/7KAABQSwECFAAUAAgICADV"
+      + "g5RDMcqkW0MAAABEAAAAFAAAAAAAAAAAAAAAAAA9AAAATUVUQS1JTkYvTUFOSUZFU1QuTUZQSwEC"
+      + "FAAUAAgICABSg5RD1kzyMToBAADsAQAAEwAAAAAAAAAAAAAAAADCAAAAbXkvTW9ja0ZpbHRlci5j"
+      + "bGFzc1BLAQIUABQACAgIAFKDlEOtLmcoOgEAAPIBAAAVAAAAAAAAAAAAAAAAAD0CAAB0ZXN0L01v"
+      + "Y2tGaWx0ZXIuY2xhc3NQSwUGAAAAAAQABAABAQAAugMAAAAA";
 
   @Test
   public void testAttributesSerialization() throws IOException {
@@ -121,22 +120,22 @@ public class TestGet {
     get.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
-        get.getAttributesMap().get("attribute1")));
+    Assert
+      .assertTrue(Arrays.equals(Bytes.toBytes("value1"), get.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     get.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), get.getAttribute("attribute1")));
     Assert.assertEquals(1, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
-        get.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(
+      Arrays.equals(Bytes.toBytes("value12"), get.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     get.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttribute("attribute2")));
     Assert.assertEquals(2, get.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
-        get.getAttributesMap().get("attribute2")));
+    Assert
+      .assertTrue(Arrays.equals(Bytes.toBytes("value2"), get.getAttributesMap().get("attribute2")));
 
     // removing attribute
     get.setAttribute("attribute2", null);
@@ -209,14 +208,12 @@ public class TestGet {
   @Test
   public void testDynamicFilter() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    String localPath = conf.get("hbase.local.dir")
-      + File.separator + "jars" + File.separator;
+    String localPath = conf.get("hbase.local.dir") + File.separator + "jars" + File.separator;
     File jarFile = new File(localPath, "MockFilter.jar");
     jarFile.delete();
     assertFalse("Should be deleted: " + jarFile.getPath(), jarFile.exists());
 
-    ClientProtos.Get getProto1 =
-      ClientProtos.Get.parseFrom(Base64.getDecoder().decode(PB_GET));
+    ClientProtos.Get getProto1 = ClientProtos.Get.parseFrom(Base64.getDecoder().decode(PB_GET));
     ClientProtos.Get getProto2 =
       ClientProtos.Get.parseFrom(Base64.getDecoder().decode(PB_GET_WITH_FILTER_LIST));
     try {
@@ -230,9 +227,8 @@ public class TestGet {
       fail("Should not be able to load the filter class");
     } catch (IOException ioe) {
       assertTrue(ioe.getCause() instanceof InvocationTargetException);
-      InvocationTargetException ite = (InvocationTargetException)ioe.getCause();
-      assertTrue(ite.getTargetException()
-        instanceof DeserializationException);
+      InvocationTargetException ite = (InvocationTargetException) ioe.getCause();
+      assertTrue(ite.getTargetException() instanceof DeserializationException);
     }
     FileOutputStream fos = new FileOutputStream(jarFile);
     fos.write(Base64.getDecoder().decode(MOCK_FILTER_JAR));
@@ -243,7 +239,7 @@ public class TestGet {
 
     Get get2 = ProtobufUtil.toGet(getProto2);
     assertTrue(get2.getFilter() instanceof FilterList);
-    List<Filter> filters = ((FilterList)get2.getFilter()).getFilters();
+    List<Filter> filters = ((FilterList) get2.getFilter()).getFilters();
     assertEquals(3, filters.size());
     assertEquals("test.MockFilter", filters.get(0).getClass().getName());
     assertEquals("my.MockFilter", filters.get(1).getClass().getName());

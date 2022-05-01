@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
@@ -260,7 +259,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public long getMemStoreLimit() {
-	  return 419;
+    return 419;
   }
 
   @Override
@@ -314,7 +313,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-   public long getBlockCachePrimaryEvictedCount() {
+  public long getBlockCachePrimaryEvictedCount() {
     return 420;
   }
 
@@ -380,7 +379,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public void forceRecompute() {
-    //IGNORED.
+    // IGNORED.
   }
 
   @Override
@@ -654,7 +653,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public  long getRpcFullScanRequestsCount() {
+  public long getRpcFullScanRequestsCount() {
     return 10;
   }
 }

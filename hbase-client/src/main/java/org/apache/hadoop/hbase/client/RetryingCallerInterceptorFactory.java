@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.lang.reflect.Constructor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -27,49 +25,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory implementation to provide the {@link ConnectionImplementation} with
- * the implementation of the {@link RetryingCallerInterceptor} that we would use
- * to intercept the {@link RpcRetryingCaller} during the course of their calls.
- * 
+ * Factory implementation to provide the {@link ConnectionImplementation} with the implementation of
+ * the {@link RetryingCallerInterceptor} that we would use to intercept the
+ * {@link RpcRetryingCaller} during the course of their calls.
  */
 
 @InterfaceAudience.Private
 class RetryingCallerInterceptorFactory {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(RetryingCallerInterceptorFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RetryingCallerInterceptorFactory.class);
   private Configuration conf;
   private final boolean failFast;
   public static final RetryingCallerInterceptor NO_OP_INTERCEPTOR =
-      new NoOpRetryableCallerInterceptor(null);
+    new NoOpRetryableCallerInterceptor(null);
 
   public RetryingCallerInterceptorFactory(Configuration conf) {
     this.conf = conf;
     failFast = conf.getBoolean(HConstants.HBASE_CLIENT_FAST_FAIL_MODE_ENABLED,
-        HConstants.HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT);
+      HConstants.HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT);
   }
 
   /**
-   * This builds the implementation of {@link RetryingCallerInterceptor} that we
-   * specify in the conf and returns the same.
-   * 
-   * To use {@link PreemptiveFastFailInterceptor}, set HBASE_CLIENT_ENABLE_FAST_FAIL_MODE to true.
-   * HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL is defaulted to {@link PreemptiveFastFailInterceptor}
-   * 
-   * @return The factory build method which creates the
-   *         {@link RetryingCallerInterceptor} object according to the
-   *         configuration.
+   * This builds the implementation of {@link RetryingCallerInterceptor} that we specify in the conf
+   * and returns the same. To use {@link PreemptiveFastFailInterceptor}, set
+   * HBASE_CLIENT_ENABLE_FAST_FAIL_MODE to true. HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL is
+   * defaulted to {@link PreemptiveFastFailInterceptor}
+   * @return The factory build method which creates the {@link RetryingCallerInterceptor} object
+   *         according to the configuration.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-      justification="Convert thrown exception to unchecked")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
+      justification = "Convert thrown exception to unchecked")
   public RetryingCallerInterceptor build() {
     RetryingCallerInterceptor ret = NO_OP_INTERCEPTOR;
     if (failFast) {
       try {
-        Class<?> c = conf.getClass(
-            HConstants.HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL,
-            PreemptiveFastFailInterceptor.class);
-        Constructor<?> constructor = c
-            .getDeclaredConstructor(Configuration.class);
+        Class<?> c = conf.getClass(HConstants.HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL,
+          PreemptiveFastFailInterceptor.class);
+        Constructor<?> constructor = c.getDeclaredConstructor(Configuration.class);
         constructor.setAccessible(true);
         ret = (RetryingCallerInterceptor) constructor.newInstance(conf);
       } catch (Exception e) {

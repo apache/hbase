@@ -38,9 +38,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 
 /**
- * Maintains a collection of peers to replicate to, and randomly selects a
- * single peer to replicate to per set of data to replicate. Also handles
- * keeping track of peer availability.
+ * Maintains a collection of peers to replicate to, and randomly selects a single peer to replicate
+ * to per set of data to replicate. Also handles keeping track of peer availability.
  */
 @InterfaceAudience.Private
 public class ReplicationSinkManager {
@@ -48,18 +47,16 @@ public class ReplicationSinkManager {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSinkManager.class);
 
   /**
-   * Default maximum number of times a replication sink can be reported as bad before
-   * it will no longer be provided as a sink for replication without the pool of
-   * replication sinks being refreshed.
+   * Default maximum number of times a replication sink can be reported as bad before it will no
+   * longer be provided as a sink for replication without the pool of replication sinks being
+   * refreshed.
    */
   static final int DEFAULT_BAD_SINK_THRESHOLD = 3;
 
   /**
-   * Default ratio of the total number of peer cluster region servers to consider
-   * replicating to.
+   * Default ratio of the total number of peer cluster region servers to consider replicating to.
    */
   static final float DEFAULT_REPLICATION_SOURCE_RATIO = 0.5f;
-
 
   private final Connection conn;
 
@@ -87,27 +84,26 @@ public class ReplicationSinkManager {
 
   /**
    * Instantiate for a single replication peer cluster.
-   * @param conn connection to the peer cluster
+   * @param conn          connection to the peer cluster
    * @param peerClusterId identifier of the peer cluster
-   * @param endpoint replication endpoint for inter cluster replication
-   * @param conf HBase configuration, used for determining replication source ratio and bad peer
-   *          threshold
+   * @param endpoint      replication endpoint for inter cluster replication
+   * @param conf          HBase configuration, used for determining replication source ratio and bad
+   *                      peer threshold
    */
   public ReplicationSinkManager(ClusterConnection conn, String peerClusterId,
-      HBaseReplicationEndpoint endpoint, Configuration conf) {
+    HBaseReplicationEndpoint endpoint, Configuration conf) {
     this.conn = conn;
     this.peerClusterId = peerClusterId;
     this.endpoint = endpoint;
     this.badReportCounts = Maps.newHashMap();
     this.ratio = conf.getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
-    this.badSinkThreshold = conf.getInt("replication.bad.sink.threshold",
-                                        DEFAULT_BAD_SINK_THRESHOLD);
+    this.badSinkThreshold =
+      conf.getInt("replication.bad.sink.threshold", DEFAULT_BAD_SINK_THRESHOLD);
     this.random = new Random();
   }
 
   /**
    * Get a randomly-chosen replication sink to replicate to.
-   *
    * @return a replication sink to replicate to
    */
   public synchronized SinkPeer getReplicationSink() throws IOException {
@@ -124,18 +120,15 @@ public class ReplicationSinkManager {
   }
 
   /**
-   * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it
-   * failed). If a single SinkPeer is reported as bad more than
-   * replication.bad.sink.threshold times, it will be removed
-   * from the pool of potential replication targets.
-   *
-   * @param sinkPeer
-   *          The SinkPeer that had a failed replication attempt on it
+   * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it failed). If a single
+   * SinkPeer is reported as bad more than replication.bad.sink.threshold times, it will be removed
+   * from the pool of potential replication targets. n * The SinkPeer that had a failed replication
+   * attempt on it
    */
   public synchronized void reportBadSink(SinkPeer sinkPeer) {
     ServerName serverName = sinkPeer.getServerName();
-    int badReportCount = (badReportCounts.containsKey(serverName)
-                    ? badReportCounts.get(serverName) : 0) + 1;
+    int badReportCount =
+      (badReportCounts.containsKey(serverName) ? badReportCounts.get(serverName) : 0) + 1;
     badReportCounts.put(serverName, badReportCount);
     if (badReportCount > badSinkThreshold) {
       this.sinks.remove(serverName);
@@ -146,10 +139,8 @@ public class ReplicationSinkManager {
   }
 
   /**
-   * Report that a {@code SinkPeer} successfully replicated a chunk of data.
-   *
-   * @param sinkPeer
-   *          The SinkPeer that had a failed replication attempt on it
+   * Report that a {@code SinkPeer} successfully replicated a chunk of data. n * The SinkPeer that
+   * had a failed replication attempt on it
    */
   public synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
     badReportCounts.remove(sinkPeer.getServerName());
@@ -160,7 +151,7 @@ public class ReplicationSinkManager {
    */
   public synchronized void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
-    if(slaveAddresses.isEmpty()){
+    if (slaveAddresses.isEmpty()) {
       LOG.warn("No sinks available at peer. Will not be able to replicate");
     }
     Collections.shuffle(slaveAddresses, random);
@@ -179,8 +170,7 @@ public class ReplicationSinkManager {
   }
 
   /**
-   * Wraps a replication region server sink to provide the ability to identify
-   * it.
+   * Wraps a replication region server sink to provide the ability to identify it.
    */
   public static class SinkPeer {
     private ServerName serverName;

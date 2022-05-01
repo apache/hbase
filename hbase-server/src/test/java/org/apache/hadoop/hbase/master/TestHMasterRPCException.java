@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestHMasterRPCException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHMasterRPCException.class);
+    HBaseClassTestRule.forClass(TestHMasterRPCException.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHMasterRPCException.class);
 
@@ -73,7 +73,7 @@ public class TestHMasterRPCException {
 
     ZKWatcher watcher = testUtil.getZooKeeperWatcher();
     ZKUtil.createWithParents(watcher, watcher.getZNodePaths().masterAddressZNode,
-            Bytes.toBytes("fake:123"));
+      Bytes.toBytes("fake:123"));
     master = new HMaster(conf);
     rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
   }
@@ -97,9 +97,9 @@ public class TestHMasterRPCException {
       try {
         BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sm, User.getCurrent(), 0);
         MasterProtos.MasterService.BlockingInterface stub =
-            MasterProtos.MasterService.newBlockingStub(channel);
+          MasterProtos.MasterService.newBlockingStub(channel);
         assertTrue(stub.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance())
-            .getIsMasterRunning());
+          .getIsMasterRunning());
         return;
       } catch (ServiceException ex) {
         IOException ie = ProtobufUtil.handleRemoteException(ex);
@@ -110,7 +110,7 @@ public class TestHMasterRPCException {
         LOG.info("Expected exception: ", ie);
         if (!fakeZNodeDelete) {
           testUtil.getZooKeeperWatcher().getRecoverableZooKeeper()
-              .delete(testUtil.getZooKeeperWatcher().getZNodePaths().masterAddressZNode, -1);
+            .delete(testUtil.getZooKeeperWatcher().getZNodePaths().masterAddressZNode, -1);
           fakeZNodeDelete = true;
         }
       }

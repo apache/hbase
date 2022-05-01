@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestCompactedHFilesDischarger {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
+    HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private HRegion region;
@@ -100,7 +100,7 @@ public class TestCompactedHFilesDischarger {
   public void testCompactedHFilesCleaner() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -129,7 +129,7 @@ public class TestCompactedHFilesDischarger {
 
     Collection<HStoreFile> storefiles = store.getStorefiles();
     Collection<HStoreFile> compactedfiles =
-        store.getStoreEngine().getStoreFileManager().getCompactedfiles();
+      store.getStoreEngine().getStoreFileManager().getCompactedfiles();
     // None of the files should be in compacted state.
     for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
@@ -166,7 +166,7 @@ public class TestCompactedHFilesDischarger {
   public void testCleanerWithParallelScannersAfterCompaction() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -195,7 +195,7 @@ public class TestCompactedHFilesDischarger {
 
     Collection<HStoreFile> storefiles = store.getStorefiles();
     Collection<HStoreFile> compactedfiles =
-        store.getStoreEngine().getStoreFileManager().getCompactedfiles();
+      store.getStoreEngine().getStoreFileManager().getCompactedfiles();
     // None of the files should be in compacted state.
     for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
@@ -213,7 +213,7 @@ public class TestCompactedHFilesDischarger {
       }
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
-    for(HStoreFile file : compactedfiles) {
+    for (HStoreFile file : compactedfiles) {
       assertEquals("Refcount should be 3", 0, ((HStoreFile) file).getRefCount());
       unusedReaderCount++;
     }
@@ -237,7 +237,7 @@ public class TestCompactedHFilesDischarger {
   public void testCleanerWithParallelScanners() throws Exception {
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     for (int i = 1; i < 10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -266,7 +266,7 @@ public class TestCompactedHFilesDischarger {
 
     Collection<HStoreFile> storefiles = store.getStorefiles();
     Collection<HStoreFile> compactedfiles =
-        store.getStoreEngine().getStoreFileManager().getCompactedfiles();
+      store.getStoreEngine().getStoreFileManager().getCompactedfiles();
     // None of the files should be in compacted state.
     for (HStoreFile file : storefiles) {
       assertFalse(file.isCompactedAway());
@@ -284,7 +284,7 @@ public class TestCompactedHFilesDischarger {
       }
     }
     compactedfiles = store.getStoreEngine().getStoreFileManager().getCompactedfiles();
-    for(HStoreFile file : compactedfiles) {
+    for (HStoreFile file : compactedfiles) {
       assertEquals("Refcount should be 3", 3, ((HStoreFile) file).getRefCount());
       usedReaderCount++;
     }
@@ -367,7 +367,7 @@ public class TestCompactedHFilesDischarger {
 
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     cleaner.chore();
     // This issues scan next
     scanner.next(res);

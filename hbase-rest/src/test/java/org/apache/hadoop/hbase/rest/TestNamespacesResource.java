@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,18 +43,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestNamespacesResource {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespacesResource.class);
+    HBaseClassTestRule.forClass(TestNamespacesResource.class);
 
   private static String NAMESPACE1 = "TestNamespacesInstanceResource1";
   private static String NAMESPACE2 = "TestNamespacesInstanceResource2";
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;

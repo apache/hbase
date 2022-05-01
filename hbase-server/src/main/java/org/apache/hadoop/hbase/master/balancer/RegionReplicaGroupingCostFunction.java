@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.agrona.collections.Hashing;
 import org.agrona.collections.Int2IntCounterMap;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -47,8 +45,8 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
 
   protected final long getMaxCost(BalancerClusterState cluster) {
     // max cost is the case where every region replica is hosted together regardless of host
-    Int2IntCounterMap colocatedReplicaCounts = new Int2IntCounterMap(cluster.numRegions,
-      Hashing.DEFAULT_LOAD_FACTOR, 0);
+    Int2IntCounterMap colocatedReplicaCounts =
+      new Int2IntCounterMap(cluster.numRegions, Hashing.DEFAULT_LOAD_FACTOR, 0);
     for (int i = 0; i < cluster.regionIndexToPrimaryIndex.length; i++) {
       colocatedReplicaCounts.getAndIncrement(cluster.regionIndexToPrimaryIndex[i]);
     }
@@ -86,7 +84,7 @@ abstract class RegionReplicaGroupingCostFunction extends CostFunction {
     final AtomicLong cost = new AtomicLong(0);
     // colocatedReplicaCounts is a sorted array of primary ids of regions. Replicas of regions
     // sharing the same primary will have consecutive numbers in the array.
-    colocatedReplicaCounts.forEach((primary,count) -> {
+    colocatedReplicaCounts.forEach((primary, count) -> {
       if (count > 1) { // means consecutive primaries, indicating co-location
         cost.getAndAdd((count - 1) * (count - 1));
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,24 +29,23 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestWeakObjectPool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWeakObjectPool.class);
+    HBaseClassTestRule.forClass(TestWeakObjectPool.class);
 
   ObjectPool<String, Object> pool;
 
   @Before
   public void setUp() {
-    pool = new WeakObjectPool<>(
-        new ObjectPool.ObjectFactory<String, Object>() {
-          @Override
-          public Object createObject(String key) {
-            return new Object();
-          }
-        });
+    pool = new WeakObjectPool<>(new ObjectPool.ObjectFactory<String, Object>() {
+      @Override
+      public Object createObject(String key) {
+        return new Object();
+      }
+    });
   }
 
   @Test
@@ -104,7 +103,7 @@ public class TestWeakObjectPool {
     final CountDownLatch startLatch = new CountDownLatch(1);
     final CountDownLatch endLatch = new CountDownLatch(THREAD_COUNT);
 
-    for (int i=0; i<THREAD_COUNT; i++) {
+    for (int i = 0; i < THREAD_COUNT; i++) {
       new Thread() {
         @Override
         public void run() {
@@ -113,7 +112,7 @@ public class TestWeakObjectPool {
             startLatch.await();
 
             Object obj = pool.get("a");
-            if (! expectedObjRef.compareAndSet(null, obj)) {
+            if (!expectedObjRef.compareAndSet(null, obj)) {
               if (expectedObjRef.get() != obj) {
                 assertionFailed.set(true);
               }

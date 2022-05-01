@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestResultFromCoprocessor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResultFromCoprocessor.class);
+    HBaseClassTestRule.forClass(TestResultFromCoprocessor.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] ROW = Bytes.toBytes("normal_row");
@@ -55,17 +55,17 @@ public class TestResultFromCoprocessor {
   private static final byte[] QUAL = Bytes.toBytes("qual");
   private static final byte[] VALUE = Bytes.toBytes(100L);
   private static final byte[] FIXED_VALUE = Bytes.toBytes("fixed_value");
-  private static final Cell FIXED_CELL = CellUtil.createCell(ROW, FAMILY,
-          QUAL, 0, KeyValue.Type.Put.getCode(), FIXED_VALUE);
+  private static final Cell FIXED_CELL =
+    CellUtil.createCell(ROW, FAMILY, QUAL, 0, KeyValue.Type.Put.getCode(), FIXED_VALUE);
   private static final Result FIXED_RESULT = Result.create(Arrays.asList(FIXED_CELL));
   private static final TableName TABLE_NAME = TableName.valueOf("TestResultFromCoprocessor");
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-            .setCoprocessor(MyObserver.class.getName())
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-            .build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TABLE_NAME).setCoprocessor(MyObserver.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 

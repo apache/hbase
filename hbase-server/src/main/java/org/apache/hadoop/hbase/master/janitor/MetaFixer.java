@@ -52,11 +52,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
- * Server-side fixing of bad or inconsistent state in hbase:meta.
- * Distinct from MetaTableAccessor because {@link MetaTableAccessor} is about low-level
- * manipulations driven by the Master. This class MetaFixer is
- * employed by the Master and it 'knows' about holes and orphans
- * and encapsulates their fixing on behalf of the Master.
+ * Server-side fixing of bad or inconsistent state in hbase:meta. Distinct from MetaTableAccessor
+ * because {@link MetaTableAccessor} is about low-level manipulations driven by the Master. This
+ * class MetaFixer is employed by the Master and it 'knows' about holes and orphans and encapsulates
+ * their fixing on behalf of the Master.
  */
 @InterfaceAudience.Private
 public class MetaFixer {
@@ -72,15 +71,15 @@ public class MetaFixer {
 
   public MetaFixer(MasterServices masterServices) {
     this.masterServices = masterServices;
-    this.maxMergeCount = this.masterServices.getConfiguration().
-        getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
+    this.maxMergeCount =
+      this.masterServices.getConfiguration().getInt(MAX_MERGE_COUNT_KEY, MAX_MERGE_COUNT_DEFAULT);
   }
 
   public void fix() throws IOException {
     Report report = this.masterServices.getCatalogJanitor().getLastReport();
     if (report == null) {
-      LOG.info("CatalogJanitor has not generated a report yet; run 'catalogjanitor_run' in " +
-          "shell or wait until CatalogJanitor chore runs.");
+      LOG.info("CatalogJanitor has not generated a report yet; run 'catalogjanitor_run' in "
+        + "shell or wait until CatalogJanitor chore runs.");
       return;
     }
     fixHoles(report);
@@ -91,8 +90,8 @@ public class MetaFixer {
   }
 
   /**
-   * If hole, it papers it over by adding a region in the filesystem and to hbase:meta.
-   * Does not assign.
+   * If hole, it papers it over by adding a region in the filesystem and to hbase:meta. Does not
+   * assign.
    */
   void fixHoles(Report report) {
     final List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
@@ -106,25 +105,20 @@ public class MetaFixer {
 
     final List<RegionInfo> newRegionInfos = createRegionInfosForHoles(holes);
     final List<RegionInfo> newMetaEntries = createMetaEntries(masterServices, newRegionInfos);
-    final TransitRegionStateProcedure[] assignProcedures = masterServices
-      .getAssignmentManager()
-      .createRoundRobinAssignProcedures(newMetaEntries);
+    final TransitRegionStateProcedure[] assignProcedures =
+      masterServices.getAssignmentManager().createRoundRobinAssignProcedures(newMetaEntries);
 
     masterServices.getMasterProcedureExecutor().submitProcedures(assignProcedures);
-    LOG.info(
-      "Scheduled {}/{} new regions for assignment.", assignProcedures.length, holes.size());
+    LOG.info("Scheduled {}/{} new regions for assignment.", assignProcedures.length, holes.size());
   }
 
   /**
    * Create a new {@link RegionInfo} corresponding to each provided "hole" pair.
    */
-  private static List<RegionInfo> createRegionInfosForHoles(
-    final List<Pair<RegionInfo, RegionInfo>> holes) {
-    final List<RegionInfo> newRegionInfos = holes.stream()
-      .map(MetaFixer::getHoleCover)
-      .filter(Optional::isPresent)
-      .map(Optional::get)
-      .collect(Collectors.toList());
+  private static List<RegionInfo>
+    createRegionInfosForHoles(final List<Pair<RegionInfo, RegionInfo>> holes) {
+    final List<RegionInfo> newRegionInfos = holes.stream().map(MetaFixer::getHoleCover)
+      .filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
     LOG.debug("Constructed {}/{} RegionInfo descriptors corresponding to identified holes.",
       newRegionInfos.size(), holes.size());
     return newRegionInfos;
@@ -132,7 +126,7 @@ public class MetaFixer {
 
   /**
    * @return Attempts to calculate a new {@link RegionInfo} that covers the region range described
-   *   in {@code hole}.
+   *         in {@code hole}.
    */
   private static Optional<RegionInfo> getHoleCover(Pair<RegionInfo, RegionInfo> hole) {
     final RegionInfo left = hole.getFirst();
@@ -153,23 +147,23 @@ public class MetaFixer {
     final boolean last = left.isLast();
     final boolean first = right.isFirst();
     if (leftUndefined && rightUndefined) {
-      LOG.warn("Skipping hole fix; both the hole left-side and right-side RegionInfos are " +
-        "UNDEFINED; left=<{}>, right=<{}>", left, right);
+      LOG.warn("Skipping hole fix; both the hole left-side and right-side RegionInfos are "
+        + "UNDEFINED; left=<{}>, right=<{}>", left, right);
       return Optional.empty();
     }
     if (leftUndefined || last) {
-      return Optional.of(
-        buildRegionInfo(right.getTable(), HConstants.EMPTY_START_ROW, right.getStartKey()));
+      return Optional
+        .of(buildRegionInfo(right.getTable(), HConstants.EMPTY_START_ROW, right.getStartKey()));
     }
     if (rightUndefined || first) {
-      return Optional.of(
-        buildRegionInfo(left.getTable(), left.getEndKey(), HConstants.EMPTY_END_ROW));
+      return Optional
+        .of(buildRegionInfo(left.getTable(), left.getEndKey(), HConstants.EMPTY_END_ROW));
     }
     LOG.warn("Skipping hole fix; don't know what to do with left=<{}>, right=<{}>", left, right);
     return Optional.empty();
   }
 
-  private static RegionInfo buildRegionInfo(TableName tn, byte [] start, byte [] end) {
+  private static RegionInfo buildRegionInfo(TableName tn, byte[] start, byte[] end) {
     return RegionInfoBuilder.newBuilder(tn).setStartKey(start).setEndKey(end).build();
   }
 
@@ -178,13 +172,13 @@ public class MetaFixer {
    * @param masterServices used to connect to {@code hbase:meta}
    * @param newRegionInfos the new {@link RegionInfo} entries to add to the filesystem
    * @return a list of {@link RegionInfo} entries for which {@code hbase:meta} entries were
-   *   successfully created
+   *         successfully created
    */
   private static List<RegionInfo> createMetaEntries(final MasterServices masterServices,
     final List<RegionInfo> newRegionInfos) {
 
-    final List<Either<List<RegionInfo>, IOException>> addMetaEntriesResults = newRegionInfos.
-      stream().map(regionInfo -> {
+    final List<Either<List<RegionInfo>, IOException>> addMetaEntriesResults =
+      newRegionInfos.stream().map(regionInfo -> {
         try {
           TableDescriptor td = masterServices.getTableDescriptors().get(regionInfo.getTable());
 
@@ -207,28 +201,25 @@ public class MetaFixer {
         } catch (ReplicationException e) {
           return Either.<List<RegionInfo>, IOException> ofRight(new HBaseIOException(e));
         }
-      })
-      .collect(Collectors.toList());
-    final List<RegionInfo> createMetaEntriesSuccesses = addMetaEntriesResults.stream()
-      .filter(Either::hasLeft)
-      .map(Either::getLeft)
-      .flatMap(List::stream)
-      .collect(Collectors.toList());
+      }).collect(Collectors.toList());
+    final List<RegionInfo> createMetaEntriesSuccesses =
+      addMetaEntriesResults.stream().filter(Either::hasLeft).map(Either::getLeft)
+        .flatMap(List::stream).collect(Collectors.toList());
     final List<IOException> createMetaEntriesFailures = addMetaEntriesResults.stream()
-      .filter(Either::hasRight)
-      .map(Either::getRight)
-      .collect(Collectors.toList());
-    LOG.debug("Added {}/{} entries to hbase:meta",
-      createMetaEntriesSuccesses.size(), newRegionInfos.size());
+      .filter(Either::hasRight).map(Either::getRight).collect(Collectors.toList());
+    LOG.debug("Added {}/{} entries to hbase:meta", createMetaEntriesSuccesses.size(),
+      newRegionInfos.size());
 
     if (!createMetaEntriesFailures.isEmpty()) {
-      LOG.warn("Failed to create entries in hbase:meta for {}/{} RegionInfo descriptors. First"
+      LOG.warn(
+        "Failed to create entries in hbase:meta for {}/{} RegionInfo descriptors. First"
           + " failure message included; full list of failures with accompanying stack traces is"
-          + " available at log level DEBUG. message={}", createMetaEntriesFailures.size(),
-        addMetaEntriesResults.size(), createMetaEntriesFailures.get(0).getMessage());
+          + " available at log level DEBUG. message={}",
+        createMetaEntriesFailures.size(), addMetaEntriesResults.size(),
+        createMetaEntriesFailures.get(0).getMessage());
       if (LOG.isDebugEnabled()) {
-        createMetaEntriesFailures.forEach(
-          ioe -> LOG.debug("Attempt to fix region hole in hbase:meta failed.", ioe));
+        createMetaEntriesFailures
+          .forEach(ioe -> LOG.debug("Attempt to fix region hole in hbase:meta failed.", ioe));
       }
     }
 
@@ -240,11 +231,11 @@ public class MetaFixer {
    */
   List<Long> fixOverlaps(Report report) throws IOException {
     List<Long> pidList = new ArrayList<>();
-    for (Set<RegionInfo> regions: calculateMerges(maxMergeCount, report.getOverlaps())) {
-      RegionInfo [] regionsArray = regions.toArray(new RegionInfo [] {});
+    for (Set<RegionInfo> regions : calculateMerges(maxMergeCount, report.getOverlaps())) {
+      RegionInfo[] regionsArray = regions.toArray(new RegionInfo[] {});
       try {
-        pidList.add(this.masterServices
-          .mergeRegions(regionsArray, true, HConstants.NO_NONCE, HConstants.NO_NONCE));
+        pidList.add(this.masterServices.mergeRegions(regionsArray, true, HConstants.NO_NONCE,
+          HConstants.NO_NONCE));
       } catch (MergeRegionException mre) {
         LOG.warn("Failed overlap fix of {}", regionsArray, mre);
       }
@@ -253,14 +244,12 @@ public class MetaFixer {
   }
 
   /**
-   * Run through <code>overlaps</code> and return a list of merges to run.
-   * Presumes overlaps are ordered (which they are coming out of the CatalogJanitor
-   * consistency report).
-   * @param maxMergeCount Maximum regions to merge at a time (avoid merging
-   *   100k regions in one go!)
+   * Run through <code>overlaps</code> and return a list of merges to run. Presumes overlaps are
+   * ordered (which they are coming out of the CatalogJanitor consistency report).
+   * @param maxMergeCount Maximum regions to merge at a time (avoid merging 100k regions in one go!)
    */
   static List<SortedSet<RegionInfo>> calculateMerges(int maxMergeCount,
-      List<Pair<RegionInfo, RegionInfo>> overlaps) {
+    List<Pair<RegionInfo, RegionInfo>> overlaps) {
     if (overlaps.isEmpty()) {
       LOG.debug("No overlaps.");
       return Collections.emptyList();
@@ -283,11 +272,12 @@ public class MetaFixer {
     Collection<Pair<RegionInfo, RegionInfo>> overlaps) {
     SortedSet<RegionInfo> currentMergeSet = new TreeSet<>();
     HashSet<RegionInfo> regionsInMergeSet = new HashSet<>();
-    RegionInfo regionInfoWithlargestEndKey =  null;
-    for (Pair<RegionInfo, RegionInfo> pair: overlaps) {
+    RegionInfo regionInfoWithlargestEndKey = null;
+    for (Pair<RegionInfo, RegionInfo> pair : overlaps) {
       if (regionInfoWithlargestEndKey != null) {
-        if (!isOverlap(regionInfoWithlargestEndKey, pair) ||
-            currentMergeSet.size() >= maxMergeCount) {
+        if (
+          !isOverlap(regionInfoWithlargestEndKey, pair) || currentMergeSet.size() >= maxMergeCount
+        ) {
           // Log when we cut-off-merge because we hit the configured maximum merge limit.
           if (currentMergeSet.size() >= maxMergeCount) {
             LOG.warn("Ran into maximum-at-a-time merges limit={}", maxMergeCount);
@@ -321,14 +311,14 @@ public class MetaFixer {
 
       regionInfoWithlargestEndKey = getRegionInfoWithLargestEndKey(
         getRegionInfoWithLargestEndKey(pair.getFirst(), pair.getSecond()),
-          regionInfoWithlargestEndKey);
+        regionInfoWithlargestEndKey);
     }
     merges.add(currentMergeSet);
   }
 
   /**
-   * @return Either <code>a</code> or <code>b</code>, whichever has the
-   *   endkey that is furthest along in the Table.
+   * @return Either <code>a</code> or <code>b</code>, whichever has the endkey that is furthest
+   *         along in the Table.
    */
   static RegionInfo getRegionInfoWithLargestEndKey(RegionInfo a, RegionInfo b) {
     if (a == null) {
@@ -350,12 +340,12 @@ public class MetaFixer {
       return b;
     }
     int compare = Bytes.compareTo(a.getEndKey(), b.getEndKey());
-    return compare == 0 || compare > 0? a: b;
+    return compare == 0 || compare > 0 ? a : b;
   }
 
   /**
-   * @return True if an overlap found between passed in <code>ri</code> and
-   *   the <code>pair</code>. Does NOT check the pairs themselves overlap.
+   * @return True if an overlap found between passed in <code>ri</code> and the <code>pair</code>.
+   *         Does NOT check the pairs themselves overlap.
    */
   static boolean isOverlap(RegionInfo ri, Pair<RegionInfo, RegionInfo> pair) {
     if (ri == null || pair == null) {

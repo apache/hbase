@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -43,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * The aggregation implementation at a region.
  */
 public class ColumnAggregationEndpoint extends ColumnAggregationService
-        implements RegionCoprocessor {
+  implements RegionCoprocessor {
   private static final Logger LOG = LoggerFactory.getLogger(ColumnAggregationEndpoint.class);
   private RegionCoprocessorEnvironment env = null;
 
@@ -55,7 +53,7 @@ public class ColumnAggregationEndpoint extends ColumnAggregationService
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment) {
-      this.env = (RegionCoprocessorEnvironment)env;
+      this.env = (RegionCoprocessorEnvironment) env;
       return;
     }
     throw new CoprocessorException("Must be loaded on a table region!");
@@ -71,8 +69,8 @@ public class ColumnAggregationEndpoint extends ColumnAggregationService
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
-    byte [] family = request.getFamily().toByteArray();
-    byte [] qualifier = request.hasQualifier()? request.getQualifier().toByteArray(): null;
+    byte[] family = request.getFamily().toByteArray();
+    byte[] qualifier = request.hasQualifier() ? request.getQualifier().toByteArray() : null;
     if (request.hasQualifier()) {
       scan.addColumn(family, qualifier);
     } else {

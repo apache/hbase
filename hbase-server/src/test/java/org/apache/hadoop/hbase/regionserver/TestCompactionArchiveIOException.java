@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,7 +69,7 @@ public class TestCompactionArchiveIOException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionArchiveIOException.class);
+    HBaseClassTestRule.forClass(TestCompactionArchiveIOException.class);
 
   private static final String ERROR_FILE = "fffffffffffffffffdeadbeef";
 
@@ -102,7 +102,7 @@ public class TestCompactionArchiveIOException {
 
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
@@ -112,7 +112,7 @@ public class TestCompactionArchiveIOException {
 
     // Create the cleaner object
     final CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     int batchSize = 10;
     int fileCount = 10;
@@ -156,8 +156,7 @@ public class TestCompactionArchiveIOException {
     out.close();
 
     HStoreFile errStoreFile = new MockHStoreFile(testUtil, errFile, 1, 0, false, 1);
-    fileManager.addCompactionResults(
-        ImmutableList.of(errStoreFile), ImmutableList.of());
+    fileManager.addCompactionResults(ImmutableList.of(errStoreFile), ImmutableList.of());
 
     // cleanup compacted files
     cleaner.chore();
@@ -181,8 +180,8 @@ public class TestCompactionArchiveIOException {
 
   private HRegion initHRegion(TableDescriptor htd, RegionInfo info) throws IOException {
     Configuration conf = testUtil.getConfiguration();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
     Path regionDir = new Path(tableDir, info.getEncodedName());
     Path storeDir = new Path(regionDir, htd.getColumnFamilies()[0].getNameAsString());
@@ -192,7 +191,7 @@ public class TestCompactionArchiveIOException {
     // none of the other files are cleared from the compactedfiles list.
     // Simulate this condition with a dummy file
     doThrow(new IOException("Error for test")).when(errFS)
-        .rename(eq(new Path(storeDir, ERROR_FILE)), any());
+      .rename(eq(new Path(storeDir, ERROR_FILE)), any());
 
     HRegionFileSystem fs = new HRegionFileSystem(conf, errFS, tableDir, info);
     final Configuration walConf = new Configuration(conf);

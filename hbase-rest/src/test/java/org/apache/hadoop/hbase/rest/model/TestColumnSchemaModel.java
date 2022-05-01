@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,12 +27,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnSchemaModel.class);
+    HBaseClassTestRule.forClass(TestColumnSchemaModel.class);
 
   protected static final String COLUMN_NAME = "testcolumn";
   protected static final boolean BLOCKCACHE = true;
@@ -45,15 +45,13 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
 
   public TestColumnSchemaModel() throws Exception {
     super(ColumnSchemaModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><ColumnSchema " +
-          "name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" BLOCKCACHE=\"true\" " +
-          "COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><ColumnSchema "
+      + "name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" BLOCKCACHE=\"true\" "
+      + "COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>";
 
-    AS_JSON =
-      "{\"name\":\"testcolumn\",\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\"," +
-          "\"BLOCKCACHE\":\"true\",\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\"," +
-          "\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}";
+    AS_JSON = "{\"name\":\"testcolumn\",\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\","
+      + "\"BLOCKCACHE\":\"true\",\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\","
+      + "\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}";
   }
 
   @Override
@@ -87,4 +85,3 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
   public void testFromPB() throws Exception {
   }
 }
-

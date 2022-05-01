@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -35,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   private static final Logger LOG = LoggerFactory.getLogger(ReaderBase.class);
   protected Configuration conf;
@@ -44,7 +42,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   protected long edit = 0;
   protected long fileLength;
   /**
-   * Compression context to use reading.  Can be null if no compression.
+   * Compression context to use reading. Can be null if no compression.
    */
   protected CompressionContext compressionContext = null;
   protected boolean emptyCompressionContext = true;
@@ -57,7 +55,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
 
   @Override
   public void init(FileSystem fs, Path path, Configuration conf, FSDataInputStream stream)
-      throws IOException {
+    throws IOException {
     this.conf = conf;
     this.path = path;
     this.fs = fs;
@@ -70,14 +68,15 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
       try {
         if (compressionContext == null) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Initializing compression context for {}: isRecoveredEdits={}" +
-              ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
-              CommonFSUtils.isRecoveredEdits(path), hasTagCompression(), hasValueCompression(),
-              getValueCompressionAlgorithm());
+            LOG.debug(
+              "Initializing compression context for {}: isRecoveredEdits={}"
+                + ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}",
+              path, CommonFSUtils.isRecoveredEdits(path), hasTagCompression(),
+              hasValueCompression(), getValueCompressionAlgorithm());
           }
-          compressionContext = new CompressionContext(LRUDictionary.class,
-            CommonFSUtils.isRecoveredEdits(path), hasTagCompression(),
-            hasValueCompression(), getValueCompressionAlgorithm());
+          compressionContext =
+            new CompressionContext(LRUDictionary.class, CommonFSUtils.isRecoveredEdits(path),
+              hasTagCompression(), hasValueCompression(), getValueCompressionAlgorithm());
         } else {
           compressionContext.clear();
         }
@@ -109,8 +108,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
         // It is old ROOT table edit, ignore it
         LOG.info("Got an old ROOT edit, ignoring ");
         return next(e);
-      }
-      else throw iae;
+      } else throw iae;
     }
     edit++;
     if (compressionContext != null && emptyCompressionContext) {
@@ -133,8 +131,8 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
   }
 
   /**
-   * Initializes the log reader with a particular stream (may be null).
-   * Reader assumes ownership of the stream if not null and may use it. Called once.
+   * Initializes the log reader with a particular stream (may be null). Reader assumes ownership of
+   * the stream if not null and may use it. Called once.
    * @return the class name of cell Codec, null if such information is not available
    */
   protected abstract String initReader(FSDataInputStream stream) throws IOException;
@@ -149,6 +147,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    * @param cellCodecClsName class name of cell Codec
    */
   protected abstract void initAfterCompression(String cellCodecClsName) throws IOException;
+
   /**
    * @return Whether compression is enabled for this log.
    */

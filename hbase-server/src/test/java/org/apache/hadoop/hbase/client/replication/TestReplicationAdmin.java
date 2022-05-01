@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,17 +65,16 @@ import org.slf4j.LoggerFactory;
 /**
  * Unit testing of ReplicationAdmin
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestReplicationAdmin {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationAdmin.class);
+    HBaseClassTestRule.forClass(TestReplicationAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationAdmin.class);
 
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private final String ID_ONE = "1";
   private static String KEY_ONE;
@@ -115,7 +114,7 @@ public class TestReplicationAdmin {
       hbaseAdmin.removeReplicationPeer(desc.getPeerId());
     }
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
-        .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
+      .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
     for (ServerName serverName : queueStorage.getListOfReplicators()) {
       for (String queue : queueStorage.getAllQueues(serverName)) {
         queueStorage.removeQueue(serverName, queue);
@@ -211,9 +210,8 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * Simple testing of adding and removing peers, basically shows that
-   * all interactions with ZK work
-   * @throws Exception
+   * Simple testing of adding and removing peers, basically shows that all interactions with ZK work
+   * n
    */
   @Test
   public void testAddRemovePeer() throws Exception {
@@ -268,8 +266,7 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * Tests that the peer configuration used by ReplicationAdmin contains all
-   * the peer's properties.
+   * Tests that the peer configuration used by ReplicationAdmin contains all the peer's properties.
    */
   @Test
   public void testPeerConfig() throws Exception {
@@ -322,8 +319,7 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * basic checks that when we add a peer that it is enabled, and that we can disable
-   * @throws Exception
+   * basic checks that when we add a peer that it is enabled, and that we can disable n
    */
   @Test
   public void testEnableDisable() throws Exception {
@@ -643,7 +639,7 @@ public class TestReplicationAdmin {
     rpc.setExcludeTableCFsMap(tableCFs);
     hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
     Map<TableName, List<String>> result =
-        hbaseAdmin.getReplicationPeerConfig(ID_ONE).getExcludeTableCFsMap();
+      hbaseAdmin.getReplicationPeerConfig(ID_ONE).getExcludeTableCFsMap();
     assertEquals(1, result.size());
     assertEquals(true, result.containsKey(tab1));
     assertNull(result.get(tab1));
@@ -697,7 +693,7 @@ public class TestReplicationAdmin {
       rpc.setNamespaces(namespaces);
       hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
       fail("Should throw Exception."
-          + " When replicate all flag is true, no need to config namespaces");
+        + " When replicate all flag is true, no need to config namespaces");
     } catch (IOException e) {
       // OK
       rpc.setNamespaces(null);
@@ -707,7 +703,7 @@ public class TestReplicationAdmin {
       rpc.setTableCFsMap(tableCfs);
       hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
       fail("Should throw Exception."
-          + " When replicate all flag is true, no need to config table-cfs");
+        + " When replicate all flag is true, no need to config table-cfs");
     } catch (IOException e) {
       // OK
       rpc.setTableCFsMap(null);
@@ -719,7 +715,7 @@ public class TestReplicationAdmin {
       rpc.setExcludeNamespaces(namespaces);
       hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
       fail("Should throw Exception."
-          + " When replicate all flag is false, no need to config exclude namespaces");
+        + " When replicate all flag is false, no need to config exclude namespaces");
     } catch (IOException e) {
       // OK
       rpc.setExcludeNamespaces(null);
@@ -729,7 +725,7 @@ public class TestReplicationAdmin {
       rpc.setExcludeTableCFsMap(tableCfs);
       hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
       fail("Should throw Exception."
-          + " When replicate all flag is false, no need to config exclude table-cfs");
+        + " When replicate all flag is false, no need to config exclude table-cfs");
     } catch (IOException e) {
       // OK
       rpc.setExcludeTableCFsMap(null);
@@ -777,7 +773,7 @@ public class TestReplicationAdmin {
       rpc.setTableCFsMap(tableCfs);
       hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
       fail("Should throw ReplicationException" + " Because table " + tableName1
-          + " conflict with namespace " + ns1);
+        + " conflict with namespace " + ns1);
     } catch (Exception e) {
       // OK
     }
@@ -794,7 +790,7 @@ public class TestReplicationAdmin {
       rpc.setNamespaces(namespaces);
       hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
       fail("Should throw ReplicationException" + " Because namespace " + ns2
-          + " conflict with table " + tableName2);
+        + " conflict with table " + tableName2);
     } catch (Exception e) {
       // OK
     }
@@ -815,7 +811,7 @@ public class TestReplicationAdmin {
       rpc2.setExcludeTableCFsMap(excludeTableCfs);
       hbaseAdmin.updateReplicationPeerConfig(ID_SECOND, rpc2);
       fail("Should throw ReplicationException" + " Because exclude table " + tableName1
-          + " conflict with exclude namespace " + ns1);
+        + " conflict with exclude namespace " + ns1);
     } catch (Exception e) {
       // OK
     }
@@ -832,7 +828,7 @@ public class TestReplicationAdmin {
       rpc2.setNamespaces(namespaces);
       hbaseAdmin.updateReplicationPeerConfig(ID_SECOND, rpc2);
       fail("Should throw ReplicationException" + " Because exclude namespace " + ns2
-          + " conflict with exclude table " + tableName2);
+        + " conflict with exclude table " + tableName2);
     } catch (Exception e) {
       // OK
     }

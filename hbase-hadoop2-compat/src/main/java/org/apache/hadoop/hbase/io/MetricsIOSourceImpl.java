@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -38,21 +37,18 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
   }
 
-  public MetricsIOSourceImpl(String metricsName,
-      String metricsDescription,
-      String metricsContext,
-      String metricsJmxContext,
-      MetricsIOWrapper wrapper) {
+  public MetricsIOSourceImpl(String metricsName, String metricsDescription, String metricsContext,
+    String metricsJmxContext, MetricsIOWrapper wrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     this.wrapper = wrapper;
 
-    fsReadTimeHisto = getMetricsRegistry()
-        .newTimeHistogram(FS_READ_TIME_HISTO_KEY, FS_READ_TIME_HISTO_DESC);
-    fsPReadTimeHisto = getMetricsRegistry()
-        .newTimeHistogram(FS_PREAD_TIME_HISTO_KEY, FS_PREAD_TIME_HISTO_DESC);
-    fsWriteTimeHisto = getMetricsRegistry()
-        .newTimeHistogram(FS_WRITE_HISTO_KEY, FS_WRITE_TIME_HISTO_DESC);
+    fsReadTimeHisto =
+      getMetricsRegistry().newTimeHistogram(FS_READ_TIME_HISTO_KEY, FS_READ_TIME_HISTO_DESC);
+    fsPReadTimeHisto =
+      getMetricsRegistry().newTimeHistogram(FS_PREAD_TIME_HISTO_KEY, FS_PREAD_TIME_HISTO_DESC);
+    fsWriteTimeHisto =
+      getMetricsRegistry().newTimeHistogram(FS_WRITE_HISTO_KEY, FS_WRITE_TIME_HISTO_DESC);
   }
 
   @Override

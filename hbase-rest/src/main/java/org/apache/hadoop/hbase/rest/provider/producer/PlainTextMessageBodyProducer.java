@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.provider.producer;
 
 import java.io.IOException;
@@ -35,35 +33,31 @@ import org.apache.hbase.thirdparty.javax.ws.rs.ext.MessageBodyWriter;
 import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
- * An adapter between Jersey and Object.toString(). Hooks up plain text output
- * to the Jersey content handling framework. 
- * Jersey will first call getSize() to learn the number of bytes that will be
+ * An adapter between Jersey and Object.toString(). Hooks up plain text output to the Jersey content
+ * handling framework. Jersey will first call getSize() to learn the number of bytes that will be
  * sent, then writeTo to perform the actual I/O.
  */
 @Provider
 @Produces(Constants.MIMETYPE_TEXT)
 @InterfaceAudience.Private
-public class PlainTextMessageBodyProducer 
-  implements MessageBodyWriter<Object> {
+public class PlainTextMessageBodyProducer implements MessageBodyWriter<Object> {
 
   @Override
-  public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2,
-      MediaType arg3) {
+  public boolean isWriteable(Class<?> arg0, Type arg1, Annotation[] arg2, MediaType arg3) {
     return true;
   }
 
   @Override
-  public long getSize(Object object, Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType) {
+  public long getSize(Object object, Class<?> type, Type genericType, Annotation[] annotations,
+    MediaType mediaType) {
     // deprecated by JAX-RS 2.0 and ignored by Jersey runtime
     return -1;
   }
 
   @Override
-  public void writeTo(Object object, Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType,
-      MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
-      throws IOException, WebApplicationException {
+  public void writeTo(Object object, Class<?> type, Type genericType, Annotation[] annotations,
+    MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
+    throws IOException, WebApplicationException {
     outStream.write(Bytes.toBytes(object.toString()));
   }
 }

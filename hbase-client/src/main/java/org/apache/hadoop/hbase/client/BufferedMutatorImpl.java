@@ -1,16 +1,18 @@
-/**
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
@@ -43,19 +45,17 @@ import org.slf4j.LoggerFactory;
 
 /**
  * <p>
- * Used to communicate with a single HBase table similar to {@link Table}
- * but meant for batched, potentially asynchronous puts. Obtain an instance from
- * a {@link Connection} and call {@link #close()} afterwards. Provide an alternate
- * to this implementation by setting {@link BufferedMutatorParams#implementationClassName(String)}
- * or by setting alternate classname via the key {} in Configuration.
+ * Used to communicate with a single HBase table similar to {@link Table} but meant for batched,
+ * potentially asynchronous puts. Obtain an instance from a {@link Connection} and call
+ * {@link #close()} afterwards. Provide an alternate to this implementation by setting
+ * {@link BufferedMutatorParams#implementationClassName(String)} or by setting alternate classname
+ * via the key {} in Configuration.
  * </p>
- *
  * <p>
- * While this can be used across threads, great care should be used when doing so.
- * Errors are global to the buffered mutator and the Exceptions can be thrown on any
- * thread that causes the flush for requests.
+ * While this can be used across threads, great care should be used when doing so. Errors are global
+ * to the buffered mutator and the Exceptions can be thrown on any thread that causes the flush for
+ * requests.
  * </p>
- *
  * @see ConnectionFactory
  * @see Connection
  * @since 1.0.0
@@ -74,15 +74,15 @@ public class BufferedMutatorImpl implements BufferedMutator {
   private final ConcurrentLinkedQueue<Mutation> writeAsyncBuffer = new ConcurrentLinkedQueue<>();
   private final AtomicLong currentWriteBufferSize = new AtomicLong(0);
   /**
-   * Count the size of {@link BufferedMutatorImpl#writeAsyncBuffer}.
-   * The {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
+   * Count the size of {@link BufferedMutatorImpl#writeAsyncBuffer}. The
+   * {@link ConcurrentLinkedQueue#size()} is NOT a constant-time operation.
    */
   private final AtomicInteger undealtMutationCount = new AtomicInteger(0);
   private final long writeBufferSize;
 
   private final AtomicLong writeBufferPeriodicFlushTimeoutMs = new AtomicLong(0);
   private final AtomicLong writeBufferPeriodicFlushTimerTickMs =
-          new AtomicLong(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
+    new AtomicLong(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS);
   private Timer writeBufferPeriodicFlushTimer = null;
 
   private final int maxKeyValueSize;
@@ -108,38 +108,38 @@ public class BufferedMutatorImpl implements BufferedMutator {
       cleanupPoolOnClose = false;
     }
     ConnectionConfiguration tableConf = new ConnectionConfiguration(conf);
-    this.writeBufferSize =
-            params.getWriteBufferSize() != UNSET ?
-            params.getWriteBufferSize() : tableConf.getWriteBufferSize();
+    this.writeBufferSize = params.getWriteBufferSize() != UNSET
+      ? params.getWriteBufferSize()
+      : tableConf.getWriteBufferSize();
 
     // Set via the setter because it does value validation and starts/stops the TimerTask
     long newWriteBufferPeriodicFlushTimeoutMs =
-            params.getWriteBufferPeriodicFlushTimeoutMs() != UNSET
-              ? params.getWriteBufferPeriodicFlushTimeoutMs()
-              : tableConf.getWriteBufferPeriodicFlushTimeoutMs();
+      params.getWriteBufferPeriodicFlushTimeoutMs() != UNSET
+        ? params.getWriteBufferPeriodicFlushTimeoutMs()
+        : tableConf.getWriteBufferPeriodicFlushTimeoutMs();
     long newWriteBufferPeriodicFlushTimerTickMs =
-            params.getWriteBufferPeriodicFlushTimerTickMs() != UNSET
-              ? params.getWriteBufferPeriodicFlushTimerTickMs()
-              : tableConf.getWriteBufferPeriodicFlushTimerTickMs();
-    this.setWriteBufferPeriodicFlush(
-            newWriteBufferPeriodicFlushTimeoutMs,
-            newWriteBufferPeriodicFlushTimerTickMs);
+      params.getWriteBufferPeriodicFlushTimerTickMs() != UNSET
+        ? params.getWriteBufferPeriodicFlushTimerTickMs()
+        : tableConf.getWriteBufferPeriodicFlushTimerTickMs();
+    this.setWriteBufferPeriodicFlush(newWriteBufferPeriodicFlushTimeoutMs,
+      newWriteBufferPeriodicFlushTimerTickMs);
 
-    this.maxKeyValueSize =
-            params.getMaxKeyValueSize() != UNSET ?
-            params.getMaxKeyValueSize() : tableConf.getMaxKeyValueSize();
+    this.maxKeyValueSize = params.getMaxKeyValueSize() != UNSET
+      ? params.getMaxKeyValueSize()
+      : tableConf.getMaxKeyValueSize();
 
-    this.rpcTimeout = new AtomicInteger(
-            params.getRpcTimeout() != UNSET ?
-            params.getRpcTimeout() : conn.getConnectionConfiguration().getWriteRpcTimeout());
+    this.rpcTimeout = new AtomicInteger(params.getRpcTimeout() != UNSET
+      ? params.getRpcTimeout()
+      : conn.getConnectionConfiguration().getWriteRpcTimeout());
 
-    this.operationTimeout = new AtomicInteger(
-            params.getOperationTimeout() != UNSET ?
-            params.getOperationTimeout() : conn.getConnectionConfiguration().getOperationTimeout());
+    this.operationTimeout = new AtomicInteger(params.getOperationTimeout() != UNSET
+      ? params.getOperationTimeout()
+      : conn.getConnectionConfiguration().getOperationTimeout());
     this.ap = ap;
   }
+
   BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
-      RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
+    RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
     this(conn, params,
       // puts need to track errors globally due to how the APIs currently work.
       new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, rpcFactory));
@@ -170,14 +170,14 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   @Override
-  public void mutate(Mutation m) throws InterruptedIOException,
-      RetriesExhaustedWithDetailsException {
+  public void mutate(Mutation m)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     mutate(Collections.singletonList(m));
   }
 
   @Override
-  public void mutate(List<? extends Mutation> ms) throws InterruptedIOException,
-      RetriesExhaustedWithDetailsException {
+  public void mutate(List<? extends Mutation> ms)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     checkClose();
 
     long toAddSize = 0;
@@ -251,12 +251,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   private AsyncProcessTask createTask(QueueRowAccess access) {
-    return new AsyncProcessTask(AsyncProcessTask.newBuilder()
-        .setPool(pool)
-        .setTableName(tableName)
-        .setRowAccess(access)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE)
-        .build()) {
+    return new AsyncProcessTask(AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
+      .setRowAccess(access).setSubmittedRows(AsyncProcessTask.SubmittedRows.AT_LEAST_ONE).build()) {
       @Override
       public int getRpcTimeout() {
         return rpcTimeout.get();
@@ -277,12 +273,11 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
   /**
    * Send the operations in the buffer to the servers.
-   *
    * @param flushAll - if true, sends all the writes and wait for all of them to finish before
    *                 returning. Otherwise, flush until buffer size is smaller than threshold
    */
-  private void doFlush(boolean flushAll) throws InterruptedIOException,
-      RetriesExhaustedWithDetailsException {
+  private void doFlush(boolean flushAll)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     List<RetriesExhaustedWithDetailsException> errors = new ArrayList<>();
     while (true) {
       if (!flushAll && currentWriteBufferSize.get() <= writeBufferSize) {
@@ -308,15 +303,15 @@ public class BufferedMutatorImpl implements BufferedMutator {
     RetriesExhaustedWithDetailsException exception = makeException(errors);
     if (exception == null) {
       return;
-    } else if(listener == null) {
+    } else if (listener == null) {
       throw exception;
     } else {
       listener.onException(exception, this);
     }
   }
 
-  private static RetriesExhaustedWithDetailsException makeException(
-    List<RetriesExhaustedWithDetailsException> errors) {
+  private static RetriesExhaustedWithDetailsException
+    makeException(List<RetriesExhaustedWithDetailsException> errors) {
     switch (errors.size()) {
       case 0:
         return null;
@@ -345,17 +340,19 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
   @Override
   public synchronized void setWriteBufferPeriodicFlush(long timeoutMs, long timerTickMs) {
-    long originalTimeoutMs   = this.writeBufferPeriodicFlushTimeoutMs.get();
+    long originalTimeoutMs = this.writeBufferPeriodicFlushTimeoutMs.get();
     long originalTimerTickMs = this.writeBufferPeriodicFlushTimerTickMs.get();
 
     // Both parameters have minimal values.
     writeBufferPeriodicFlushTimeoutMs.set(Math.max(0, timeoutMs));
-    writeBufferPeriodicFlushTimerTickMs.set(
-            Math.max(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS, timerTickMs));
+    writeBufferPeriodicFlushTimerTickMs
+      .set(Math.max(MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS, timerTickMs));
 
     // If something changed we stop the old Timer.
-    if (writeBufferPeriodicFlushTimeoutMs.get() != originalTimeoutMs ||
-        writeBufferPeriodicFlushTimerTickMs.get() != originalTimerTickMs) {
+    if (
+      writeBufferPeriodicFlushTimeoutMs.get() != originalTimeoutMs
+        || writeBufferPeriodicFlushTimerTickMs.get() != originalTimerTickMs
+    ) {
       if (writeBufferPeriodicFlushTimer != null) {
         writeBufferPeriodicFlushTimer.cancel();
         writeBufferPeriodicFlushTimer = null;
@@ -363,16 +360,14 @@ public class BufferedMutatorImpl implements BufferedMutator {
     }
 
     // If we have the need for a timer and there is none we start it
-    if (writeBufferPeriodicFlushTimer == null &&
-        writeBufferPeriodicFlushTimeoutMs.get() > 0) {
+    if (writeBufferPeriodicFlushTimer == null && writeBufferPeriodicFlushTimeoutMs.get() > 0) {
       writeBufferPeriodicFlushTimer = new Timer(true); // Create Timer running as Daemon.
       writeBufferPeriodicFlushTimer.schedule(new TimerTask() {
         @Override
         public void run() {
           BufferedMutatorImpl.this.timerCallbackForWriteBufferPeriodicFlush();
         }
-      }, writeBufferPeriodicFlushTimerTickMs.get(),
-         writeBufferPeriodicFlushTimerTickMs.get());
+      }, writeBufferPeriodicFlushTimerTickMs.get(), writeBufferPeriodicFlushTimerTickMs.get());
     }
   }
 
@@ -446,10 +441,12 @@ public class BufferedMutatorImpl implements BufferedMutator {
     public Iterator<Row> iterator() {
       return new Iterator<Row>() {
         private int countDown = remainder;
+
         @Override
         public boolean hasNext() {
           return countDown > 0;
         }
+
         @Override
         public Row next() {
           restoreLastMutation();
@@ -464,6 +461,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
           --countDown;
           return last;
         }
+
         @Override
         public void remove() {
           if (last == null) {

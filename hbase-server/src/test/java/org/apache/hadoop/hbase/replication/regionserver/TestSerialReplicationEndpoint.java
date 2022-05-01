@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
@@ -63,7 +62,7 @@ public class TestSerialReplicationEndpoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
+    HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Configuration CONF;
@@ -89,7 +88,7 @@ public class TestSerialReplicationEndpoint {
   }
 
   private void testHBaseReplicationEndpoint(String tableNameStr, String peerId, boolean isSerial)
-      throws IOException {
+    throws IOException {
     TestEndpoint.reset();
     int cellNum = 10000;
 
@@ -97,15 +96,15 @@ public class TestSerialReplicationEndpoint {
     byte[] family = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-            .newBuilder(family).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(family).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     UTIL.createTable(td, null);
 
     try (Admin admin = CONN.getAdmin()) {
       ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-          .setClusterKey(getZKClusterKey()).setReplicationEndpointImpl(TestEndpoint.class.getName())
-          .setReplicateAllUserTables(false).setSerial(isSerial)
-          .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of())).build();
+        .setClusterKey(getZKClusterKey()).setReplicationEndpointImpl(TestEndpoint.class.getName())
+        .setReplicateAllUserTables(false).setSerial(isSerial)
+        .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of())).build();
       admin.addReplicationPeer(peerId, peerConfig);
     }
 
@@ -178,11 +177,11 @@ public class TestSerialReplicationEndpoint {
     public synchronized List<ServerName> getRegionServers() {
       // Return multiple server names for endpoint parallel replication.
       return new ArrayList<>(
-          ImmutableList.of(ServerName.valueOf("www.example.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example2.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example3.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L),
-            ServerName.valueOf("www.example4.com", 12016, 1525245876026L)));
+        ImmutableList.of(ServerName.valueOf("www.example.com", 12016, 1525245876026L),
+          ServerName.valueOf("www.example2.com", 12016, 1525245876026L),
+          ServerName.valueOf("www.example3.com", 12016, 1525245876026L),
+          ServerName.valueOf("www.example4.com", 12016, 1525245876026L),
+          ServerName.valueOf("www.example4.com", 12016, 1525245876026L)));
     }
   }
 }

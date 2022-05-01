@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
@@ -123,8 +125,8 @@ public abstract class AbstractTestDLS {
     conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    StartMiniClusterOption option = StartMiniClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
+    StartMiniClusterOption option =
+      StartMiniClusterOption.builder().numMasters(NUM_MASTERS).numRegionServers(numRS).build();
     TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -190,13 +192,13 @@ public abstract class AbstractTestDLS {
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (HBaseTestingUtility.getAllOnlineRegions(cluster)
-              .size() >= (numRegionsToCreate + 1));
+          return (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
+              >= (numRegionsToCreate + 1));
         }
       });
 
-      LOG.info("Current Open Regions After Master Node Starts Up:" +
-          HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+      LOG.info("Current Open Regions After Master Node Starts Up:"
+        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
       assertEquals(numLogLines, TEST_UTIL.countRows(ht));
     }
@@ -326,12 +328,12 @@ public abstract class AbstractTestDLS {
   }
 
   public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int num_edits, int edit_size)
-      throws IOException {
+    throws IOException {
     makeWAL(hrs, regions, num_edits, edit_size, true);
   }
 
   public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int numEdits, int editSize,
-      boolean cleanShutdown) throws IOException {
+    boolean cleanShutdown) throws IOException {
     // remove root and meta region
     regions.remove(RegionInfoBuilder.FIRST_META_REGIONINFO);
 
@@ -372,8 +374,8 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
-          value));
+        e.add(
+          new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(), value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
           tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
         if (0 == i % syncEvery) {
@@ -418,7 +420,7 @@ public abstract class AbstractTestDLS {
   }
 
   private void putData(Region region, byte[] startRow, int numRows, byte[] qf, byte[]... families)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < numRows; i++) {
       Put put = new Put(Bytes.add(startRow, Bytes.toBytes(i)));
       for (byte[] family : families) {
@@ -429,7 +431,7 @@ public abstract class AbstractTestDLS {
   }
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
-      throws InterruptedException {
+    throws InterruptedException {
     long curt = EnvironmentEdgeManager.currentTime();
     long endt = curt + timems;
     while (curt < endt) {
@@ -496,7 +498,7 @@ public abstract class AbstractTestDLS {
           TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(), destRS.getServerName());
           // wait for region move completes
           RegionStates regionStates =
-              TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+            TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
           TEST_UTIL.waitFor(45000, 200, new Waiter.Predicate<Exception>() {
             @Override
             public boolean evaluate() throws Exception {

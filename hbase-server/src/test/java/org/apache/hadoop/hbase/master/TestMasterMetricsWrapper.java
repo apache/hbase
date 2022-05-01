@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,12 +36,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterMetricsWrapper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterMetricsWrapper.class);
+    HBaseClassTestRule.forClass(TestMasterMetricsWrapper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterMetricsWrapper.class);
 
@@ -62,18 +62,19 @@ public class TestMasterMetricsWrapper {
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
-    assertEquals(
-      master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(), 0);
-    assertEquals(
-      master.getRegionNormalizerManager().getMergePlanCount(), info.getMergePlanCount(), 0);
+    assertEquals(master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(),
+      0);
+    assertEquals(master.getRegionNormalizerManager().getMergePlanCount(), info.getMergePlanCount(),
+      0);
     assertEquals(master.getAverageLoad(), info.getAverageLoad(), 0);
     assertEquals(master.getClusterId(), info.getClusterId());
     assertEquals(master.getMasterActiveTime(), info.getActiveTime());
     assertEquals(master.getMasterStartTime(), info.getStartTime());
     assertEquals(master.getMasterCoprocessors().length, info.getCoprocessors().length);
-    assertEquals(master.getServerManager().getOnlineServersList().size(), info.getNumRegionServers());
+    assertEquals(master.getServerManager().getOnlineServersList().size(),
+      info.getNumRegionServers());
     int regionServerCount =
-      NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration())? 1: 0);
+      NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration()) ? 1 : 0);
     assertEquals(regionServerCount, info.getNumRegionServers());
 
     String zkServers = info.getZookeeperQuorum();
@@ -85,8 +86,10 @@ public class TestMasterMetricsWrapper {
     TEST_UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
     // We stopped the regionserver but could take a while for the master to notice it so hang here
     // until it does... then move forward to see if metrics wrapper notices.
-    while (TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size() ==
-        regionServerCount ) {
+    while (
+      TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getOnlineServers().size()
+          == regionServerCount
+    ) {
       Threads.sleep(10);
     }
     assertEquals(regionServerCount - 1, info.getNumRegionServers());
@@ -98,13 +101,11 @@ public class TestMasterMetricsWrapper {
 
   @Test
   public void testQuotaSnapshotConversion() {
-    MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(
-        TEST_UTIL.getHBaseCluster().getMaster());
-    assertEquals(new SimpleImmutableEntry<Long,Long>(1024L, 2048L),
-        info.convertSnapshot(new SpaceQuotaSnapshot(
-            SpaceQuotaStatus.notInViolation(), 1024L, 2048L)));
-    assertEquals(new SimpleImmutableEntry<Long,Long>(4096L, 2048L),
-        info.convertSnapshot(new SpaceQuotaSnapshot(
-            new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 4096L, 2048L)));
+    MetricsMasterWrapperImpl info =
+      new MetricsMasterWrapperImpl(TEST_UTIL.getHBaseCluster().getMaster());
+    assertEquals(new SimpleImmutableEntry<Long, Long>(1024L, 2048L), info
+      .convertSnapshot(new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 1024L, 2048L)));
+    assertEquals(new SimpleImmutableEntry<Long, Long>(4096L, 2048L), info.convertSnapshot(
+      new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 4096L, 2048L)));
   }
 }

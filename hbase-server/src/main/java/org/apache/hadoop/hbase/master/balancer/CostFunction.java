@@ -85,14 +85,16 @@ abstract class CostFunction {
 
   /**
    * Scale the value between 0 and 1.
-   * @param min Min value
-   * @param max The Max value
+   * @param min   Min value
+   * @param max   The Max value
    * @param value The value to be scaled.
    * @return The scaled value.
    */
   protected static double scale(double min, double max, double value) {
-    if (max <= min || value <= min
-      || Math.abs(max - min) <= COST_EPSILON || Math.abs(value - min) <= COST_EPSILON) {
+    if (
+      max <= min || value <= min || Math.abs(max - min) <= COST_EPSILON
+        || Math.abs(value - min) <= COST_EPSILON
+    ) {
       return 0;
     }
     if (max <= min || Math.abs(max - min) <= COST_EPSILON) {

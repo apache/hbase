@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -25,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * Corrupt network packets on a random regionserver.
  */
 public class CorruptPacketsCommandAction extends TCCommandAction {
@@ -35,11 +33,11 @@ public class CorruptPacketsCommandAction extends TCCommandAction {
 
   /**
    * Corrupt network packets on a random regionserver.
-   *
-   * @param ratio the ratio of packets corrupted
+   * @param ratio    the ratio of packets corrupted
    * @param duration the time this issue persists in milliseconds
-   * @param timeout the timeout for executing required commands on the region server in milliseconds
-   * @param network network interface the regionserver uses for communication
+   * @param timeout  the timeout for executing required commands on the region server in
+   *                 milliseconds
+   * @param network  network interface the regionserver uses for communication
    */
   public CorruptPacketsCommandAction(float ratio, long duration, long timeout, String network) {
     super(timeout, network);
@@ -47,7 +45,8 @@ public class CorruptPacketsCommandAction extends TCCommandAction {
     this.duration = duration;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -68,8 +67,8 @@ public class CorruptPacketsCommandAction extends TCCommandAction {
     getLogger().info("Finished to execute CorruptPacketsCommandAction");
   }
 
-  private String getCommand(String operation){
+  private String getCommand(String operation) {
     return String.format("tc qdisc %s dev %s root netem corrupt %s%%", operation, network,
-        ratio * 100);
+      ratio * 100);
   }
 }

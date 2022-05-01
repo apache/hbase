@@ -10,28 +10,24 @@
  See the License for the specific language governing permissions and
  limitations under the License. See accompanying LICENSE file.
 -->
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase</artifactId>
     <version>2.5.0-SNAPSHOT</version>
     <relativePath>../..</relativePath>
   </parent>
   <artifactId>hbase-shaded-with-hadoop-check-invariants</artifactId>
   <packaging>pom</packaging>
-
-  <description>
-  Enforces our invariants for our shaded artifacts. e.g. shaded clients have
-  a specific set of transitive dependencies and shaded clients only contain
-  classes that are in particular packages. Does the enforcement through
-  the maven-enforcer-plugin and integration test.
-  </description>
   <name>Apache HBase Shaded Packaging Invariants (with Hadoop bundled)</name>
 
-  <properties>
-  </properties>
+  <description>Enforces our invariants for our shaded artifacts. e.g. shaded clients have
+  a specific set of transitive dependencies and shaded clients only contain
+  classes that are in particular packages. Does the enforcement through
+  the maven-enforcer-plugin and integration test.</description>
+
+  <properties/>
 
   <dependencies>
     <!-- This should only be client facing artifacts that bundle
@@ -96,7 +92,7 @@
               <skip>true</skip>
               <rules>
                 <banTransitiveDependencies>
-<!--
+                  <!--
                   <message>
     Our client-facing artifacts are not supposed to have additional dependencies
     and one or more of them do. The output from the enforcer plugin should give
@@ -133,10 +129,10 @@
         <executions>
           <execution>
             <id>test-resources</id>
-            <phase>pre-integration-test</phase>
             <goals>
               <goal>testResources</goal>
             </goals>
+            <phase>pre-integration-test</phase>
           </execution>
         </executions>
       </plugin>
@@ -150,10 +146,10 @@
         <executions>
           <execution>
             <id>put-client-artifacts-in-a-property</id>
-            <phase>pre-integration-test</phase>
             <goals>
               <goal>build-classpath</goal>
             </goals>
+            <phase>pre-integration-test</phase>
             <configuration>
               <excludeScope>provided</excludeScope>
               <excludeTransitive>true</excludeTransitive>
@@ -173,10 +169,10 @@
             -->
           <execution>
             <id>make-sure-validation-files-are-in-sync</id>
-            <phase>validate</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <phase>validate</phase>
             <configuration>
               <executable>diff</executable>
               <requiresOnline>false</requiresOnline>
@@ -195,10 +191,10 @@
             -->
           <execution>
             <id>check-jar-contents-for-stuff-with-hadoop</id>
-            <phase>integration-test</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <phase>integration-test</phase>
             <configuration>
               <executable>${shell-executable}</executable>
               <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>

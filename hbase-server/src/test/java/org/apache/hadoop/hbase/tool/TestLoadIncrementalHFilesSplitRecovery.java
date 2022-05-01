@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -96,7 +96,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLoadIncrementalHFilesSplitRecovery.class);
+    HBaseClassTestRule.forClass(TestLoadIncrementalHFilesSplitRecovery.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
 
@@ -144,7 +144,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   private TableDescriptor createTableDesc(TableName name, int cfs) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     IntStream.range(0, cfs).mapToObj(i -> ColumnFamilyDescriptorBuilder.of(family(i)))
-        .forEachOrdered(builder::setColumnFamily);
+      .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
@@ -153,7 +153,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * not already exist.
    */
   private void setupTable(final Connection connection, TableName table, int cfs)
-      throws IOException {
+    throws IOException {
     try {
       LOG.info("Creating table " + table);
       try (Admin admin = connection.getAdmin()) {
@@ -166,13 +166,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   /**
    * Creates a table with given table name,specified number of column families<br>
-   * and splitkeys if the table does not already exist.
-   * @param table
-   * @param cfs
-   * @param SPLIT_KEYS
+   * and splitkeys if the table does not already exist. nnn
    */
   private void setupTableWithSplitkeys(TableName table, int cfs, byte[][] SPLIT_KEYS)
-      throws IOException {
+    throws IOException {
     try {
       LOG.info("Creating table " + table);
       util.createTable(createTableDesc(table, cfs), SPLIT_KEYS);
@@ -193,13 +190,13 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Populate table with known values.
    */
   private void populateTable(final Connection connection, TableName table, int value)
-      throws Exception {
+    throws Exception {
     // create HFiles for different column families
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
     Path bulk1 = buildBulkFiles(table, value);
     try (Table t = connection.getTable(table);
-        RegionLocator locator = connection.getRegionLocator(table);
-        Admin admin = connection.getAdmin()) {
+      RegionLocator locator = connection.getRegionLocator(table);
+      Admin admin = connection.getAdmin()) {
       lih.doBulkLoad(bulk1, admin, t, locator);
     }
   }
@@ -254,17 +251,17 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
-   * @throws IOException
+   * n
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
     TableDescriptor htd = util.getAdmin().getDescriptor(table);
     assertNotNull(htd);
     try (Table t = util.getConnection().getTable(table);
-        ResultScanner sr = t.getScanner(new Scan())) {
+      ResultScanner sr = t.getScanner(new Scan())) {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {
         r.getNoVersionMap().values().stream().flatMap(m -> m.values().stream())
-            .forEach(v -> assertArrayEquals(value(value), v));
+          .forEach(v -> assertArrayEquals(value(value), v));
         i++;
       }
       assertEquals(count, i);
@@ -288,8 +285,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
         @Override
         protected List<LoadQueueItem> tryAtomicRegionLoad(Connection connection,
-            TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis,
-            boolean copyFile) throws IOException {
+          TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile)
+          throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
             Connection errConn;
@@ -310,8 +307,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         // create HFiles for different column families
         Path dir = buildBulkFiles(table, 1);
         try (Table t = connection.getTable(table);
-            RegionLocator locator = connection.getRegionLocator(table);
-            Admin admin = connection.getAdmin()) {
+          RegionLocator locator = connection.getRegionLocator(table);
+          Admin admin = connection.getAdmin()) {
           lih.doBulkLoad(dir, admin, t, locator);
         }
       } finally {
@@ -337,13 +334,15 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     final LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
       @Override
       protected ClientServiceCallable<byte[]> buildClientServiceCallable(Connection conn,
-          TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
-        if (calls.get() < util.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+        TableName tableName, byte[] first, Collection<LoadQueueItem> lqis, boolean copyFile) {
+        if (
+          calls.get() < util.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)
+        ) {
           calls.getAndIncrement();
           return new ClientServiceCallable<byte[]>(conn, tableName, first,
-              new RpcControllerFactory(util.getConfiguration()).newController(),
-              HConstants.PRIORITY_UNSET) {
+            new RpcControllerFactory(util.getConfiguration()).newController(),
+            HConstants.PRIORITY_UNSET) {
             @Override
             public byte[] rpcCall() throws Exception {
               throw new IOException("Error calling something on RegionServer");
@@ -362,23 +361,22 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   }
 
   private ClusterConnection getMockedConnection(final Configuration conf)
-      throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
+    throws IOException, org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     ClusterConnection c = Mockito.mock(ClusterConnection.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(RegionInfoBuilder.FIRST_META_REGIONINFO,
-        ServerName.valueOf("example.org", 1234, 0));
+      ServerName.valueOf("example.org", 1234, 0));
     Mockito.when(
       c.getRegionLocation((TableName) Mockito.any(), (byte[]) Mockito.any(), Mockito.anyBoolean()))
-        .thenReturn(loc);
+      .thenReturn(loc);
     Mockito.when(c.locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any())).thenReturn(loc);
     ClientProtos.ClientService.BlockingInterface hri =
-        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     Mockito
-        .when(
-          hri.bulkLoadHFile((RpcController) Mockito.any(), (BulkLoadHFileRequest) Mockito.any()))
-        .thenThrow(new ServiceException(new IOException("injecting bulk load error")));
+      .when(hri.bulkLoadHFile((RpcController) Mockito.any(), (BulkLoadHFileRequest) Mockito.any()))
+      .thenThrow(new ServiceException(new IOException("injecting bulk load error")));
     Mockito.when(c.getClient(Mockito.any())).thenReturn(hri);
     return c;
   }
@@ -402,9 +400,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(util.getConfiguration()) {
         @Override
         protected void bulkLoadPhase(final Table htable, final Connection conn,
-            ExecutorService pool, Deque<LoadQueueItem> queue,
-            final Multimap<ByteBuffer, LoadQueueItem> regionGroups, boolean copyFile,
-            Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+          ExecutorService pool, Deque<LoadQueueItem> queue,
+          final Multimap<ByteBuffer, LoadQueueItem> regionGroups, boolean copyFile,
+          Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
           int i = attemptedCalls.incrementAndGet();
           if (i == 1) {
             // On first attempt force a split.
@@ -416,8 +414,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       // create HFiles for different column families
       try (Table t = connection.getTable(table);
-          RegionLocator locator = connection.getRegionLocator(table);
-          Admin admin = connection.getAdmin()) {
+        RegionLocator locator = connection.getRegionLocator(table);
+        Admin admin = connection.getAdmin()) {
         Path bulk = buildBulkFiles(table, 2);
         lih2.doBulkLoad(bulk, admin, t, locator);
       }
@@ -447,10 +445,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
         @Override
         protected Pair<List<LoadQueueItem>, String> groupOrSplit(
-            Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-            final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
+          final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
           Pair<List<LoadQueueItem>, String> lqis =
-              super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+            super.groupOrSplit(regionGroups, item, htable, startEndKeys);
           if (lqis != null && lqis.getFirst() != null) {
             countedLqis.addAndGet(lqis.getFirst().size());
           }
@@ -461,8 +459,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // create HFiles for different column families
       Path bulk = buildBulkFiles(table, 2);
       try (Table t = connection.getTable(table);
-          RegionLocator locator = connection.getRegionLocator(table);
-          Admin admin = connection.getAdmin()) {
+        RegionLocator locator = connection.getRegionLocator(table);
+        Admin admin = connection.getAdmin()) {
         lih.doBulkLoad(bulk, admin, t, locator);
       }
       assertExpectedTable(connection, table, ROWCOUNT, 2);
@@ -474,9 +472,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   public void testCorrectSplitPoint() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
-        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
-        Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"),
-        Bytes.toBytes("row_00000070") };
+      Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+      Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"), Bytes.toBytes("row_00000070") };
     setupTableWithSplitkeys(table, NUM_CFS, SPLIT_KEYS);
 
     final AtomicInteger bulkloadRpcTimes = new AtomicInteger();
@@ -484,9 +481,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(Table table, Connection conn, ExecutorService pool,
-          Deque<LoadIncrementalHFiles.LoadQueueItem> queue,
-          Multimap<ByteBuffer, LoadIncrementalHFiles.LoadQueueItem> regionGroups, boolean copyFile,
-          Map<LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        Deque<LoadIncrementalHFiles.LoadQueueItem> queue,
+        Multimap<ByteBuffer, LoadIncrementalHFiles.LoadQueueItem> regionGroups, boolean copyFile,
+        Map<LoadIncrementalHFiles.LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
         bulkloadRpcTimes.addAndGet(1);
         super.bulkLoadPhase(table, conn, pool, queue, regionGroups, copyFile, item2RegionMap);
       }
@@ -506,8 +503,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   public void testSplitTmpFileCleanUp() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
-        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
-        Bytes.toBytes("row_00000050") };
+      Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+      Bytes.toBytes("row_00000050") };
     try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
       setupTableWithSplitkeys(table, 10, SPLIT_KEYS);
 
@@ -516,8 +513,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // create HFiles
       Path bulk = buildBulkFiles(table, 2);
       try (Table t = connection.getTable(table);
-          RegionLocator locator = connection.getRegionLocator(table);
-          Admin admin = connection.getAdmin()) {
+        RegionLocator locator = connection.getRegionLocator(table);
+        Admin admin = connection.getAdmin()) {
         lih.doBulkLoad(bulk, admin, t, locator);
       }
       // family path
@@ -548,8 +545,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
         @Override
         protected Pair<List<LoadQueueItem>, String> groupOrSplit(
-            Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-            final Table table, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
+          final Table table, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
           i++;
 
           if (i == 5) {
@@ -562,8 +559,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // create HFiles for different column families
       Path dir = buildBulkFiles(tableName, 1);
       try (Table t = connection.getTable(tableName);
-          RegionLocator locator = connection.getRegionLocator(tableName);
-          Admin admin = connection.getAdmin()) {
+        RegionLocator locator = connection.getRegionLocator(tableName);
+        Admin admin = connection.getAdmin()) {
         lih.doBulkLoad(dir, admin, t, locator);
       }
     }
@@ -589,10 +586,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       @Override
       protected Pair<List<LoadQueueItem>, String> groupOrSplit(
-          Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
-          final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+        Multimap<ByteBuffer, LoadQueueItem> regionGroups, final LoadQueueItem item,
+        final Table htable, final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
         Pair<List<LoadQueueItem>, String> lqis =
-            super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+          super.groupOrSplit(regionGroups, item, htable, startEndKeys);
         if (lqis != null && lqis.getFirst() != null) {
           countedLqis.addAndGet(lqis.getFirst().size());
         }
@@ -602,8 +599,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     // do bulkload when there is no region hole in hbase:meta.
     try (Table t = connection.getTable(tableName);
-        RegionLocator locator = connection.getRegionLocator(tableName);
-        Admin admin = connection.getAdmin()) {
+      RegionLocator locator = connection.getRegionLocator(tableName);
+      Admin admin = connection.getAdmin()) {
       loader.doBulkLoad(dir, admin, t, locator);
     } catch (Exception e) {
       LOG.error("exeception=", e);
@@ -623,8 +620,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     }
 
     try (Table t = connection.getTable(tableName);
-        RegionLocator locator = connection.getRegionLocator(tableName);
-        Admin admin = connection.getAdmin()) {
+      RegionLocator locator = connection.getRegionLocator(tableName);
+      Admin admin = connection.getAdmin()) {
       loader.doBulkLoad(dir, admin, t, locator);
     } catch (Exception e) {
       LOG.error("exception=", e);
@@ -643,17 +640,17 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
-   * @throws IOException
+   * n
    */
   void assertExpectedTable(final Connection connection, TableName table, int count, int value)
-      throws IOException {
+    throws IOException {
     TableDescriptor htd = util.getAdmin().getDescriptor(table);
     assertNotNull(htd);
     try (Table t = connection.getTable(table); ResultScanner sr = t.getScanner(new Scan())) {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {
         r.getNoVersionMap().values().stream().flatMap(m -> m.values().stream())
-            .forEach(v -> assertArrayEquals(value(value), v));
+          .forEach(v -> assertArrayEquals(value(value), v));
         i++;
       }
       assertEquals(count, i);

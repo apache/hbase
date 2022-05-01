@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,8 +52,8 @@ import org.junit.runners.Parameterized;
 
 /**
  * Class to test asynchronous table admin operations.
- * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our
- *     ten minute timeout so they were split.
+ * @see TestAsyncTableAdminApi2 This test and it used to be joined it was taking longer than our ten
+ *      minute timeout so they were split.
  * @see TestAsyncTableAdminApi3 Another split out from this class so each runs under ten minutes.
  */
 @RunWith(Parameterized.class)
@@ -62,7 +62,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncTableAdminApi.class);
 
   @Test
   public void testCreateTable() throws Exception {
@@ -72,13 +72,13 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     tables = admin.listTableDescriptors().get();
     assertEquals(numTables + 1, tables.size());
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster().getMaster()
-        .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
+      .getTableStateManager().isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
   static TableState.State getStateFromMeta(TableName table) throws Exception {
     Optional<TableState> state = AsyncMetaTableAccessor
-        .getTableState(ASYNC_CONN.getTable(TableName.META_TABLE_NAME), table).get();
+      .getTableState(ASYNC_CONN.getTable(TableName.META_TABLE_NAME), table).get();
     assertTrue(state.isPresent());
     return state.get().getState();
   }
@@ -88,8 +88,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
 
     createTableWithDefaultConf(tableName);
-    List<HRegionLocation> regionLocations = AsyncMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regionLocations =
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     assertEquals("Table should have only 1 region", 1, regionLocations.size());
 
     final TableName tableName2 = TableName.valueOf(tableName.getNameAsString() + "_2");
@@ -135,8 +135,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
     AsyncTable<AdvancedScanResultConsumer> metaTable = ASYNC_CONN.getTable(META_TABLE_NAME);
-    List<HRegionLocation> regions = AsyncMetaTableAccessor
-      .getTableHRegionLocations(metaTable, tableName).get();
+    List<HRegionLocation> regions =
+      AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName).get();
     Iterator<HRegionLocation> hris = regions.iterator();
 
     assertEquals(
@@ -246,8 +246,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build(), startKey, endKey, expectedRegions).join();
 
-    regions = AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName3)
-      .get();
+    regions = AsyncMetaTableAccessor.getTableHRegionLocations(metaTable, tableName3).get();
     assertEquals(
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
       expectedRegions, regions.size());
@@ -336,7 +335,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
-      throws Exception {
+    throws Exception {
     byte[][] splitKeys = new byte[2][];
     splitKeys[0] = Bytes.toBytes(4);
     splitKeys[1] = Bytes.toBytes(8);
@@ -377,8 +376,8 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     testCloneTableSchema(tableName, newTableName, true);
   }
 
-  private void testCloneTableSchema(final TableName tableName,
-      final TableName newTableName, boolean preserveSplits) throws Exception {
+  private void testCloneTableSchema(final TableName tableName, final TableName newTableName,
+    boolean preserveSplits) throws Exception {
     byte[][] splitKeys = new byte[2][];
     splitKeys[0] = Bytes.toBytes(4);
     splitKeys[1] = Bytes.toBytes(8);
@@ -389,20 +388,16 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     boolean BLOCK_CACHE = false;
 
     // Create the table
-    TableDescriptor tableDesc = TableDescriptorBuilder
-        .newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder
-            .newBuilder(FAMILY_1)
-            .setBlocksize(BLOCK_SIZE)
-            .setBlockCacheEnabled(BLOCK_CACHE)
-            .setTimeToLive(TTL)
-            .build()).build();
+    TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_0))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(BLOCK_SIZE)
+        .setBlockCacheEnabled(BLOCK_CACHE).setTimeToLive(TTL).build())
+      .build();
     admin.createTable(tableDesc, splitKeys).join();
 
     assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
     assertTrue("Table should be created with splitKyes + 1 rows in META",
-        admin.isTableAvailable(tableName, splitKeys).get());
+      admin.isTableAvailable(tableName, splitKeys).get());
 
     // Clone & Verify
     admin.cloneTableSchema(tableName, newTableName, preserveSplits).join();
@@ -412,16 +407,15 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     assertEquals(BLOCK_SIZE, newTableDesc.getColumnFamily(FAMILY_1).getBlocksize());
     assertEquals(BLOCK_CACHE, newTableDesc.getColumnFamily(FAMILY_1).isBlockCacheEnabled());
     assertEquals(TTL, newTableDesc.getColumnFamily(FAMILY_1).getTimeToLive());
-    //HBASE-26246 introduced persist of store file tracker into table descriptor
+    // HBASE-26246 introduced persist of store file tracker into table descriptor
     tableDesc = TableDescriptorBuilder.newBuilder(tableDesc).setValue(TRACKER_IMPL,
-      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).
-      build();
+      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).build();
     TEST_UTIL.verifyTableDescriptorIgnoreTableName(tableDesc, newTableDesc);
 
     if (preserveSplits) {
       assertEquals(NUM_REGIONS, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
       assertTrue("New table should be created with splitKyes + 1 rows in META",
-          admin.isTableAvailable(newTableName, splitKeys).get());
+        admin.isTableAvailable(newTableName, splitKeys).get());
     } else {
       assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(newTableName).size());
     }

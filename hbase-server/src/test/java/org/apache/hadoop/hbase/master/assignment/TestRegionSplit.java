@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,12 +53,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRegionSplit {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSplit.class);
+    HBaseClassTestRule.forClass(TestRegionSplit.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplit.class);
 
@@ -80,7 +79,7 @@ public class TestRegionSplit {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartMiniClusterOption option =
-        StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
+      StartMiniClusterOption.builder().numMasters(1).numRegionServers(3).numDataNodes(3).build();
     UTIL.startMiniCluster(option);
   }
 
@@ -99,8 +98,7 @@ public class TestRegionSplit {
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     // Disable compaction.
     for (int i = 0; i < UTIL.getHBaseCluster().getLiveRegionServerThreads().size(); i++) {
-      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(
-        false);
+      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(false);
     }
   }
 
@@ -134,16 +132,16 @@ public class TestRegionSplit {
 
     assertTrue("not able to split table", UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
 
-    //disable table
+    // disable table
     UTIL.getAdmin().disableTable(tableName);
     Thread.sleep(500);
 
-    //stop master
+    // stop master
     UTIL.getHBaseCluster().stopMaster(0);
     UTIL.getHBaseCluster().waitOnMaster(0);
     Thread.sleep(500);
 
-    //restart master
+    // restart master
     JVMClusterUtil.MasterThread t = UTIL.getHBaseCluster().startMaster();
     Thread.sleep(500);
 
@@ -165,14 +163,14 @@ public class TestRegionSplit {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(procExec, tableName,
-      null, columnFamilyName);
+    RegionInfo[] regions =
+      MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName);
     // flush the memstore
     insertData(UTIL, tableName, rowCount, startRowNum, true, columnFamilyName);
 
     // assert the hfile count of the table
     int storeFilesCountSum = 0;
-    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+    for (HRegion region : UTIL.getHBaseCluster().getRegions(tableName)) {
       storeFilesCountSum += region.getStore(Bytes.toBytes(columnFamilyName)).getStorefiles().size();
     }
     assertEquals(1, storeFilesCountSum);
@@ -190,12 +188,11 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertEquals("Not able to split table",
-      2, UTIL.getHBaseCluster().getRegions(tableName).size());
+    assertEquals("Not able to split table", 2, UTIL.getHBaseCluster().getRegions(tableName).size());
 
     // assert sum of the hfiles of all regions
     int childStoreFilesSum = 0;
-    for(HRegion region : UTIL.getHBaseCluster().getRegions(tableName)){
+    for (HRegion region : UTIL.getHBaseCluster().getRegions(tableName)) {
       childStoreFilesSum += region.getStore(Bytes.toBytes(columnFamilyName)).getStorefiles().size();
     }
     assertEquals(1, childStoreFilesSum);

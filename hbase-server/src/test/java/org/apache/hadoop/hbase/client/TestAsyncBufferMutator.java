@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,6 +46,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
@@ -203,7 +204,7 @@ public class TestAsyncBufferMutator {
 
   @Test
   public void testCancelPeriodicFlushByManuallyFlush()
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     try (AsyncBufferedMutatorImpl mutator =
       (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
         .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
@@ -243,7 +244,7 @@ public class TestAsyncBufferMutator {
     private int flushCount;
 
     AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-        long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
+      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
       super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize);
     }
 
@@ -256,7 +257,7 @@ public class TestAsyncBufferMutator {
 
   @Test
   public void testRaceBetweenNormalFlushAndPeriodicFlush()
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferMutatorForTest mutator =
       new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),

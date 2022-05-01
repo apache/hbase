@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -170,7 +170,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
   protected abstract void snapshot(String snapshotName, TableName tableName) throws Exception;
 
   protected abstract void cloneSnapshot(String snapshotName, TableName tableName,
-      boolean restoreAcl) throws Exception;
+    boolean restoreAcl) throws Exception;
 
   protected abstract void restoreSnapshot(String snapshotName, boolean restoreAcl) throws Exception;
 
@@ -232,12 +232,13 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(new AccessWriteAction(TEST_TABLE), USER_RO, USER_NONE);
   }
 
-
   final class AccessSnapshotAction implements AccessTestAction {
     private String snapshotName;
+
     private AccessSnapshotAction(String snapshotName) {
       this.snapshotName = snapshotName;
     }
+
     @Override
     public Object run() throws Exception {
       try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -254,8 +255,8 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyAllowed(new AccessSnapshotAction(testSnapshotName), USER_OWNER);
     verifyDenied(new AccessSnapshotAction(HBaseCommonTestingUtility.getRandomUUID().toString()),
       USER_RO, USER_RW, USER_NONE);
-    List<SnapshotDescription> snapshotDescriptions = TEST_UTIL.getAdmin().listSnapshots(
-      Pattern.compile(testSnapshotName));
+    List<SnapshotDescription> snapshotDescriptions =
+      TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(testSnapshotName));
     Assert.assertEquals(1, snapshotDescriptions.size());
     Assert.assertEquals(USER_OWNER.getShortName(), snapshotDescriptions.get(0).getOwner());
     AccessTestAction deleteSnapshotAction = () -> {
@@ -268,8 +269,8 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(deleteSnapshotAction, USER_RO, USER_RW, USER_NONE);
     verifyAllowed(deleteSnapshotAction, USER_OWNER);
 
-    List<SnapshotDescription> snapshotsAfterDelete = TEST_UTIL.getAdmin().listSnapshots(
-      Pattern.compile(testSnapshotName));
+    List<SnapshotDescription> snapshotsAfterDelete =
+      TEST_UTIL.getAdmin().listSnapshots(Pattern.compile(testSnapshotName));
     Assert.assertEquals(0, snapshotsAfterDelete.size());
   }
 }

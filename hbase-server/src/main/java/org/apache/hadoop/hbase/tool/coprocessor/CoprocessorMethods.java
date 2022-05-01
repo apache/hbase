@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool.coprocessor;
 
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -32,35 +30,35 @@ public class CoprocessorMethods {
     methods = new HashSet<>();
   }
 
-  public void addMethod(String name, String ... parameters) {
+  public void addMethod(String name, String... parameters) {
     CoprocessorMethod cpMethod = new CoprocessorMethod(name).withParameters(parameters);
     methods.add(cpMethod);
   }
 
-  public void addMethod(String name, Class<?> ... parameters) {
+  public void addMethod(String name, Class<?>... parameters) {
     CoprocessorMethod cpMethod = new CoprocessorMethod(name).withParameters(parameters);
     methods.add(cpMethod);
   }
 
   public void addMethod(Method method) {
-    CoprocessorMethod cpMethod = new CoprocessorMethod(method.getName())
-        .withParameters(method.getParameterTypes());
+    CoprocessorMethod cpMethod =
+      new CoprocessorMethod(method.getName()).withParameters(method.getParameterTypes());
     methods.add(cpMethod);
   }
 
-  public boolean hasMethod(String name, String ... parameters) {
+  public boolean hasMethod(String name, String... parameters) {
     CoprocessorMethod method = new CoprocessorMethod(name).withParameters(parameters);
     return methods.contains(method);
   }
 
-  public boolean hasMethod(String name, Class<?> ... parameters) {
+  public boolean hasMethod(String name, Class<?>... parameters) {
     CoprocessorMethod method = new CoprocessorMethod(name).withParameters(parameters);
     return methods.contains(method);
   }
 
   public boolean hasMethod(Method method) {
-    CoprocessorMethod cpMethod = new CoprocessorMethod(method.getName())
-        .withParameters(method.getParameterTypes());
+    CoprocessorMethod cpMethod =
+      new CoprocessorMethod(method.getName()).withParameters(method.getParameterTypes());
     return methods.contains(cpMethod);
   }
 }

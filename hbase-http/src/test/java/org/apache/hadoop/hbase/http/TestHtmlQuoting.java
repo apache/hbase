@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,13 +31,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHtmlQuoting {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHtmlQuoting.class);
+    HBaseClassTestRule.forClass(TestHtmlQuoting.class);
 
-  @Test public void testNeedsQuoting() throws Exception {
+  @Test
+  public void testNeedsQuoting() throws Exception {
     assertTrue(HtmlQuoting.needsQuoting("abcde>"));
     assertTrue(HtmlQuoting.needsQuoting("<abcde"));
     assertTrue(HtmlQuoting.needsQuoting("abc'de"));
@@ -48,7 +49,8 @@ public class TestHtmlQuoting {
     assertFalse(HtmlQuoting.needsQuoting(null));
   }
 
-  @Test public void testQuoting() throws Exception {
+  @Test
+  public void testQuoting() throws Exception {
     assertEquals("ab&lt;cd", HtmlQuoting.quoteHtmlChars("ab<cd"));
     assertEquals("ab&gt;", HtmlQuoting.quoteHtmlChars("ab>"));
     assertEquals("&amp;&amp;&amp;", HtmlQuoting.quoteHtmlChars("&&&"));
@@ -58,18 +60,18 @@ public class TestHtmlQuoting {
   }
 
   private void runRoundTrip(String str) throws Exception {
-    assertEquals(str,
-                 HtmlQuoting.unquoteHtmlChars(HtmlQuoting.quoteHtmlChars(str)));
+    assertEquals(str, HtmlQuoting.unquoteHtmlChars(HtmlQuoting.quoteHtmlChars(str)));
   }
 
-  @Test public void testRoundtrip() throws Exception {
+  @Test
+  public void testRoundtrip() throws Exception {
     runRoundTrip("");
     runRoundTrip("<>&'\"");
     runRoundTrip("ab>cd<ef&ghi'\"");
     runRoundTrip("A string\n with no quotable chars in it!");
     runRoundTrip(null);
     StringBuilder buffer = new StringBuilder();
-    for(char ch=0; ch < 127; ++ch) {
+    for (char ch = 0; ch < 127; ++ch) {
       buffer.append(ch);
     }
     runRoundTrip(buffer.toString());
@@ -82,19 +84,17 @@ public class TestHtmlQuoting {
       new HttpServer.QuotingInputFilter.RequestQuoter(mockReq);
 
     Mockito.doReturn("a<b").when(mockReq).getParameter("x");
-    assertEquals("Test simple param quoting",
-        "a&lt;b", quoter.getParameter("x"));
+    assertEquals("Test simple param quoting", "a&lt;b", quoter.getParameter("x"));
 
     Mockito.doReturn(null).when(mockReq).getParameter("x");
-    assertEquals("Test that missing parameters dont cause NPE",
-        null, quoter.getParameter("x"));
+    assertEquals("Test that missing parameters dont cause NPE", null, quoter.getParameter("x"));
 
-    Mockito.doReturn(new String[]{"a<b", "b"}).when(mockReq).getParameterValues("x");
-    assertArrayEquals("Test escaping of an array",
-        new String[]{"a&lt;b", "b"}, quoter.getParameterValues("x"));
+    Mockito.doReturn(new String[] { "a<b", "b" }).when(mockReq).getParameterValues("x");
+    assertArrayEquals("Test escaping of an array", new String[] { "a&lt;b", "b" },
+      quoter.getParameterValues("x"));
 
     Mockito.doReturn(null).when(mockReq).getParameterValues("x");
-    assertArrayEquals("Test that missing parameters dont cause NPE for array",
-        null, quoter.getParameterValues("x"));
+    assertArrayEquals("Test that missing parameters dont cause NPE for array", null,
+      quoter.getParameterValues("x"));
   }
 }

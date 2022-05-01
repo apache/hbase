@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,12 +61,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestFastFail {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFastFail.class);
+    HBaseClassTestRule.forClass(TestFastFail.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -85,8 +85,7 @@ public class TestFastFail {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Just to prevent fastpath FIFO from picking calls up bypassing the queue.
-    TEST_UTIL.getConfiguration().set(
-      RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
+    TEST_UTIL.getConfiguration().set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
@@ -115,13 +114,13 @@ public class TestFastFail {
     // Nothing to do.
   }
 
-  @Ignore ("Can go zombie -- see HBASE-14421; FIX") @Test
+  @Ignore("Can go zombie -- see HBASE-14421; FIX")
+  @Test
   public void testFastFail() throws IOException, InterruptedException {
     Admin admin = TEST_UTIL.getAdmin();
 
     final String tableName = name.getMethodName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
-        .toBytes(tableName)));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(tableName)));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), 32);
     final long numRows = 1000;
@@ -132,8 +131,7 @@ public class TestFastFail {
     conf.setBoolean(HConstants.HBASE_CLIENT_FAST_FAIL_MODE_ENABLED, true);
     conf.setLong(HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS, 0);
     conf.setClass(HConstants.HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL,
-        MyPreemptiveFastFailInterceptor.class,
-        PreemptiveFastFailInterceptor.class);
+      MyPreemptiveFastFailInterceptor.class, PreemptiveFastFailInterceptor.class);
 
     final Connection connection = ConnectionFactory.createConnection(conf);
 
@@ -154,8 +152,7 @@ public class TestFastFail {
     }
 
     /**
-     * The number of threads that are going to perform actions against the test
-     * table.
+     * The number of threads that are going to perform actions against the test table.
      */
     int nThreads = 100;
     ExecutorService service = Executors.newFixedThreadPool(nThreads);
@@ -174,16 +171,15 @@ public class TestFastFail {
     for (int i = 0; i < nThreads; i++) {
       futures.add(service.submit(new Callable<Boolean>() {
         /**
-         * The workers are going to perform a couple of reads. The second read
-         * will follow the killing of a regionserver so that we make sure that
-         * some of threads go into PreemptiveFastFailExcception
+         * The workers are going to perform a couple of reads. The second read will follow the
+         * killing of a regionserver so that we make sure that some of threads go into
+         * PreemptiveFastFailExcception
          */
         @Override
         public Boolean call() throws Exception {
           try (Table table = connection.getTable(TableName.valueOf(tableName))) {
             Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
-            byte[] row = longToByteArrayKey(Math.abs(random.nextLong())
-                % numRows);
+            byte[] row = longToByteArrayKey(Math.abs(random.nextLong()) % numRows);
             Get g = new Get(row);
             g.addColumn(FAMILY, QUALIFIER);
             try {
@@ -259,51 +255,37 @@ public class TestFastFail {
         numThreadsThrewExceptions++;
       }
     }
-    LOG.debug("numThreadsReturnedFalse:"
-        + numThreadsReturnedFalse
-        + " numThreadsReturnedTrue:"
-        + numThreadsReturnedTrue
-        + " numThreadsThrewExceptions:"
-        + numThreadsThrewExceptions
-        + " numFailedThreads:"
-        + numFailedThreads.get()
-        + " numSuccessfullThreads:"
-        + numSuccessfullThreads.get()
-        + " numBlockedWorkers:"
-        + numBlockedWorkers.get()
-        + " totalTimeWaited: "
-        + totalTimeTaken.get()
-        / (numBlockedWorkers.get() == 0 ? Long.MAX_VALUE : numBlockedWorkers
-            .get()) + " numPFFEs: " + numPreemptiveFastFailExceptions.get());
+    LOG.debug("numThreadsReturnedFalse:" + numThreadsReturnedFalse + " numThreadsReturnedTrue:"
+      + numThreadsReturnedTrue + " numThreadsThrewExceptions:" + numThreadsThrewExceptions
+      + " numFailedThreads:" + numFailedThreads.get() + " numSuccessfullThreads:"
+      + numSuccessfullThreads.get() + " numBlockedWorkers:" + numBlockedWorkers.get()
+      + " totalTimeWaited: "
+      + totalTimeTaken.get()
+        / (numBlockedWorkers.get() == 0 ? Long.MAX_VALUE : numBlockedWorkers.get())
+      + " numPFFEs: " + numPreemptiveFastFailExceptions.get());
 
-    assertEquals("The expected number of all the successfull and the failed "
-        + "threads should equal the total number of threads that we spawned",
-        nThreads, numFailedThreads.get() + numSuccessfullThreads.get());
     assertEquals(
-        "All the failures should be coming from the secondput failure",
-        numFailedThreads.get(), numThreadsReturnedFalse);
-    assertEquals("Number of threads that threw execution exceptions "
-        + "otherwise should be 0", 0, numThreadsThrewExceptions);
-    assertEquals("The regionservers that returned true should equal to the"
-        + " number of successful threads", numThreadsReturnedTrue,
-        numSuccessfullThreads.get());
-    assertTrue(
-        "There will be atleast one thread that retried instead of failing",
-        MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);
-    assertTrue(
-        "There will be atleast one PreemptiveFastFail exception,"
-            + " otherwise, the test makes little sense."
-            + "numPreemptiveFastFailExceptions: "
-            + numPreemptiveFastFailExceptions.get(),
-        numPreemptiveFastFailExceptions.get() > 0);
+      "The expected number of all the successfull and the failed "
+        + "threads should equal the total number of threads that we spawned",
+      nThreads, numFailedThreads.get() + numSuccessfullThreads.get());
+    assertEquals("All the failures should be coming from the secondput failure",
+      numFailedThreads.get(), numThreadsReturnedFalse);
+    assertEquals("Number of threads that threw execution exceptions " + "otherwise should be 0", 0,
+      numThreadsThrewExceptions);
+    assertEquals(
+      "The regionservers that returned true should equal to the" + " number of successful threads",
+      numThreadsReturnedTrue, numSuccessfullThreads.get());
+    assertTrue("There will be atleast one thread that retried instead of failing",
+      MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);
+    assertTrue("There will be atleast one PreemptiveFastFail exception,"
+      + " otherwise, the test makes little sense." + "numPreemptiveFastFailExceptions: "
+      + numPreemptiveFastFailExceptions.get(), numPreemptiveFastFailExceptions.get() > 0);
 
     assertTrue(
-        "Only few thread should ideally be waiting for the dead "
-            + "regionserver to be coming back. numBlockedWorkers:"
-            + numBlockedWorkers.get() + " threads that retried : "
-            + MyPreemptiveFastFailInterceptor.numBraveSouls.get(),
-        numBlockedWorkers.get() <= MyPreemptiveFastFailInterceptor.numBraveSouls
-            .get());
+      "Only few thread should ideally be waiting for the dead "
+        + "regionserver to be coming back. numBlockedWorkers:" + numBlockedWorkers.get()
+        + " threads that retried : " + MyPreemptiveFastFailInterceptor.numBraveSouls.get(),
+      numBlockedWorkers.get() <= MyPreemptiveFastFailInterceptor.numBraveSouls.get());
   }
 
   @Test
@@ -311,8 +293,7 @@ public class TestFastFail {
     Admin admin = TEST_UTIL.getAdmin();
 
     final String tableName = name.getMethodName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes
-      .toBytes(tableName)));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(tableName)));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), 3);
 
@@ -328,9 +309,9 @@ public class TestFastFail {
 
     final Connection connection = ConnectionFactory.createConnection(conf);
 
-    //Set max call queues size to 0
-    SimpleRpcScheduler srs = (SimpleRpcScheduler)
-      TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer().getScheduler();
+    // Set max call queues size to 0
+    SimpleRpcScheduler srs = (SimpleRpcScheduler) TEST_UTIL.getHBaseCluster().getRegionServer(0)
+      .getRpcServer().getScheduler();
     Configuration newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     newConf.setInt("hbase.ipc.server.max.callqueue.length", 0);
     srs.onConfigurationChange(newConf);
@@ -341,24 +322,23 @@ public class TestFastFail {
     } catch (Throwable ex) {
     }
 
-    assertEquals("We should have not entered PFFE mode on CQTBE, but we did;"
-      + " number of times this mode should have been entered:", 0,
-      CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get());
+    assertEquals(
+      "We should have not entered PFFE mode on CQTBE, but we did;"
+        + " number of times this mode should have been entered:",
+      0, CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get());
 
     newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     newConf.setInt("hbase.ipc.server.max.callqueue.length", 250);
     srs.onConfigurationChange(newConf);
   }
 
-  public static class MyPreemptiveFastFailInterceptor extends
-      PreemptiveFastFailInterceptor {
+  public static class MyPreemptiveFastFailInterceptor extends PreemptiveFastFailInterceptor {
     public static AtomicInteger numBraveSouls = new AtomicInteger();
 
     @Override
     protected boolean shouldRetryInspiteOfFastFail(FailureInfo fInfo) {
       boolean ret = super.shouldRetryInspiteOfFastFail(fInfo);
-      if (ret)
-        numBraveSouls.addAndGet(1);
+      if (ret) numBraveSouls.addAndGet(1);
       return ret;
     }
 
@@ -371,8 +351,7 @@ public class TestFastFail {
     return LoadTestKVGenerator.md5PrefixedKey(rowKey).getBytes();
   }
 
-  public static class CallQueueTooBigPffeInterceptor extends
-    PreemptiveFastFailInterceptor {
+  public static class CallQueueTooBigPffeInterceptor extends PreemptiveFastFailInterceptor {
     public static AtomicInteger numCallQueueTooBig = new AtomicInteger();
 
     @Override

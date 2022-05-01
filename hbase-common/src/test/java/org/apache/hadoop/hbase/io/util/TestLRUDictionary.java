@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -37,12 +36,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests LRUDictionary
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestLRUDictionary {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLRUDictionary.class);
+    HBaseClassTestRule.forClass(TestLRUDictionary.class);
 
   LRUDictionary testee;
 
@@ -62,16 +61,14 @@ public class TestLRUDictionary {
    */
   @Test
   public void testPassingEmptyArrayToFindEntry() {
-    assertEquals(Dictionary.NOT_IN_DICTIONARY,
-      testee.findEntry(HConstants.EMPTY_BYTE_ARRAY, 0, 0));
-    assertEquals(Dictionary.NOT_IN_DICTIONARY,
-      testee.addEntry(HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+    assertEquals(Dictionary.NOT_IN_DICTIONARY, testee.findEntry(HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+    assertEquals(Dictionary.NOT_IN_DICTIONARY, testee.addEntry(HConstants.EMPTY_BYTE_ARRAY, 0, 0));
   }
 
   @Test
   public void testPassingSameArrayToAddEntry() {
     // Add random predefined byte array, in this case a random byte array from
-    // HConstants.  Assert that when we add, we get new index.  Thats how it
+    // HConstants. Assert that when we add, we get new index. Thats how it
     // works.
     int len = HConstants.CATALOG_FAMILY.length;
     int index = testee.addEntry(HConstants.CATALOG_FAMILY, 0, len);
@@ -116,45 +113,47 @@ public class TestLRUDictionary {
   }
 
   @Test
-  public void TestLRUPolicy(){
-    //start by filling the dictionary up with byte arrays
+  public void TestLRUPolicy() {
+    // start by filling the dictionary up with byte arrays
     for (int i = 0; i < Short.MAX_VALUE; i++) {
       testee.findEntry((BigInteger.valueOf(i)).toByteArray(), 0,
-          (BigInteger.valueOf(i)).toByteArray().length);
+        (BigInteger.valueOf(i)).toByteArray().length);
     }
 
     // check we have the first element added
-    assertTrue(testee.findEntry(BigInteger.ZERO.toByteArray(), 0,
-        BigInteger.ZERO.toByteArray().length) != -1);
+    assertTrue(
+      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length)
+          != -1);
 
     // check for an element we know isn't there
     assertTrue(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
-        BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) == -1);
+      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) == -1);
 
     // since we just checked for this element, it should be there now.
     assertTrue(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
-        BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) != -1);
+      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) != -1);
 
     // test eviction, that the least recently added or looked at element is
-    // evicted.  We looked at ZERO so it should be in the dictionary still.
-    assertTrue(testee.findEntry(BigInteger.ZERO.toByteArray(), 0,
-      BigInteger.ZERO.toByteArray().length) != -1);
+    // evicted. We looked at ZERO so it should be in the dictionary still.
+    assertTrue(
+      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length)
+          != -1);
     // Now go from beyond 1 to the end.
-    for(int i = 1; i < Short.MAX_VALUE; i++) {
+    for (int i = 1; i < Short.MAX_VALUE; i++) {
       assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
-          BigInteger.valueOf(i).toByteArray().length) == -1);
+        BigInteger.valueOf(i).toByteArray().length) == -1);
     }
 
     // check we can find all of these.
     for (int i = 0; i < Short.MAX_VALUE; i++) {
       assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
-          BigInteger.valueOf(i).toByteArray().length) != -1);
+        BigInteger.valueOf(i).toByteArray().length) != -1);
     }
   }
 
   static private boolean isDictionaryEmpty(LRUDictionary dict) {
     try {
-      dict.getEntry((short)0);
+      dict.getEntry((short) 0);
       return false;
     } catch (IndexOutOfBoundsException ioobe) {
       return true;

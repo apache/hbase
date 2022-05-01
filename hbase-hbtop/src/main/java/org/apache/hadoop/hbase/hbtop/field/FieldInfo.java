@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,11 @@ package org.apache.hadoop.hbase.hbtop.field;
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * Information about a field.
- *
- * This has a {@link Field} itself and additional information (e.g. {@code defaultLength} and
- * {@code displayByDefault}). This additional information is different between the
- * {@link org.apache.hadoop.hbase.hbtop.mode.Mode}s even when the field is the same. That's why the
- * additional information is separated from {@link Field}.
+ * Information about a field. This has a {@link Field} itself and additional information (e.g.
+ * {@code defaultLength} and {@code displayByDefault}). This additional information is different
+ * between the {@link org.apache.hadoop.hbase.hbtop.mode.Mode}s even when the field is the same.
+ * That's why the additional information is separated from {@link Field}.
  */
 @InterfaceAudience.Private
 public class FieldInfo {

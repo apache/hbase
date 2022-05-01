@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,20 +19,17 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServiceNotRunningException;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.NonceKey;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * View and edit the current cluster schema. Use this API making any modification to
- * namespaces, tables, etc.
- *
- * <h2>Implementation Notes</h2>
- * Nonces are for when operation is non-idempotent to ensure once-only semantic, even
- * across process failures.
+ * View and edit the current cluster schema. Use this API making any modification to namespaces,
+ * tables, etc.
+ * <h2>Implementation Notes</h2> Nonces are for when operation is non-idempotent to ensure once-only
+ * semantic, even across process failures.
  */
 // ClusterSchema is introduced to encapsulate schema modification. Currently the different aspects
 // are spread about the code base. This effort is about cleanup, shutting down access, and
@@ -61,16 +58,15 @@ public interface ClusterSchema {
    * Timeout for cluster operations in milliseconds.
    */
   public static final String HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT_KEY =
-      "hbase.master.cluster.schema.operation.timeout";
+    "hbase.master.cluster.schema.operation.timeout";
   /**
    * Default operation timeout in milliseconds.
    */
-  public static final int DEFAULT_HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT =
-      5 * 60 * 1000;
+  public static final int DEFAULT_HBASE_MASTER_CLUSTER_SCHEMA_OPERATION_TIMEOUT = 5 * 60 * 1000;
 
   /**
-   * For internals use only. Do not use! Provisionally part of this Interface.
-   * Prefer the high-level APIs available elsewhere in this API.
+   * For internals use only. Do not use! Provisionally part of this Interface. Prefer the high-level
+   * APIs available elsewhere in this API.
    * @return Instance of {@link TableNamespaceManager}
    */
   // TODO: Remove from here. Keep internal. This Interface is too high-level to host this accessor.
@@ -79,34 +75,33 @@ public interface ClusterSchema {
   /**
    * Create a new Namespace.
    * @param namespaceDescriptor descriptor for new Namespace
-   * @param nonceKey A unique identifier for this operation from the client or process.
-   * @param latch A latch to block on for precondition validation
+   * @param nonceKey            A unique identifier for this operation from the client or process.
+   * @param latch               A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
-  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
-  throws IOException;
+  long createNamespace(NamespaceDescriptor namespaceDescriptor, NonceKey nonceKey,
+    ProcedurePrepareLatch latch) throws IOException;
 
   /**
    * Modify an existing Namespace.
    * @param nonceKey A unique identifier for this operation from the client or process.
-   * @param latch A latch to block on for precondition validation
+   * @param latch    A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
-  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey, ProcedurePrepareLatch latch)
-  throws IOException;
+  long modifyNamespace(NamespaceDescriptor descriptor, NonceKey nonceKey,
+    ProcedurePrepareLatch latch) throws IOException;
 
   /**
-   * Delete an existing Namespace.
-   * Only empty Namespaces (no tables) can be removed.
+   * Delete an existing Namespace. Only empty Namespaces (no tables) can be removed.
    * @param nonceKey A unique identifier for this operation from the client or process.
-   * @param latch A latch to block on for precondition validation
+   * @param latch    A latch to block on for precondition validation
    * @return procedure id
    * @throws IOException if service is not running see {@link ServiceNotRunningException}
    */
   long deleteNamespace(String name, NonceKey nonceKey, ProcedurePrepareLatch latch)
-  throws IOException;
+    throws IOException;
 
   /**
    * Get a Namespace

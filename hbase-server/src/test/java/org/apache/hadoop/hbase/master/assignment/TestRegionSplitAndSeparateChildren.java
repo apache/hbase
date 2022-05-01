@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.assignment;
+
+import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -48,20 +53,16 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
-@Category({ MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestRegionSplitAndSeparateChildren {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRegionSplitAndSeparateChildren.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    TestRegionSplitAndSeparateChildren.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestRegionSplitAndSeparateChildren.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -101,8 +102,7 @@ public class TestRegionSplitAndSeparateChildren {
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     // Disable compaction.
     for (int i = 0; i < UTIL.getHBaseCluster().getLiveRegionServerThreads().size(); i++) {
-      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(
-        false);
+      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(false);
     }
   }
 
@@ -134,19 +134,18 @@ public class TestRegionSplitAndSeparateChildren {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue("not able to split table",
-      UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
+    assertTrue("not able to split table", UTIL.getHBaseCluster().getRegions(tableName).size() == 2);
 
-    //disable table
+    // disable table
     UTIL.getAdmin().disableTable(tableName);
     Thread.sleep(500);
 
-    //stop master
+    // stop master
     UTIL.getHBaseCluster().stopMaster(0);
     UTIL.getHBaseCluster().waitOnMaster(0);
     Thread.sleep(500);
 
-    //restart master
+    // restart master
     JVMClusterUtil.MasterThread t = UTIL.getHBaseCluster().startMaster();
     Thread.sleep(500);
 

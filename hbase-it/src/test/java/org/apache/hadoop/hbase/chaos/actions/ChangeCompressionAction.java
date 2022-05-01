@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -38,7 +37,8 @@ public class ChangeCompressionAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -64,8 +64,8 @@ public class ChangeCompressionAction extends Action {
         algo.returnCompressor(c);
         break;
       } catch (Throwable t) {
-        getLogger().info("Performing action: Changing compression algorithms to " + algo +
-            " is not supported, pick another one");
+        getLogger().info("Performing action: Changing compression algorithms to " + algo
+          + " is not supported, pick another one");
       }
     } while (true);
 

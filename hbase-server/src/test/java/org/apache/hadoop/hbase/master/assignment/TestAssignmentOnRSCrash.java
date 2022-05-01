@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,12 +44,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestAssignmentOnRSCrash {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
+    HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
@@ -72,9 +72,8 @@ public class TestAssignmentOnRSCrash {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
 
-    UTIL.createTable(TEST_TABLE, new byte[][] { FAMILY }, new byte[][] {
-      Bytes.toBytes("B"), Bytes.toBytes("D"), Bytes.toBytes("F"), Bytes.toBytes("L")
-    });
+    UTIL.createTable(TEST_TABLE, new byte[][] { FAMILY }, new byte[][] { Bytes.toBytes("B"),
+      Bytes.toBytes("D"), Bytes.toBytes("F"), Bytes.toBytes("L") });
   }
 
   @After
@@ -103,10 +102,10 @@ public class TestAssignmentOnRSCrash {
   }
 
   private void testCrashRsWithUserRegion(final boolean kill, final boolean withData)
-      throws Exception {
+    throws Exception {
     final int NROWS = 100;
     int nkilled = 0;
-    for (RegionInfo hri: UTIL.getHBaseAdmin().getTableRegions(TEST_TABLE)) {
+    for (RegionInfo hri : UTIL.getHBaseAdmin().getTableRegions(TEST_TABLE)) {
       ServerName serverName = AssignmentTestingUtil.getServerHoldingRegion(UTIL, hri);
       if (AssignmentTestingUtil.isServerHoldingMeta(UTIL, serverName)) continue;
 
@@ -145,7 +144,7 @@ public class TestAssignmentOnRSCrash {
 
   private void testCrashRsWithMetaRegion(final boolean kill) throws Exception {
     int nkilled = 0;
-    for (RegionInfo hri: AssignmentTestingUtil.getMetaRegions(UTIL)) {
+    for (RegionInfo hri : AssignmentTestingUtil.getMetaRegions(UTIL)) {
       ServerName serverName = AssignmentTestingUtil.crashRsWithRegion(UTIL, hri, kill);
 
       // wait for region to enter in transition and then to get out of transition
@@ -179,8 +178,7 @@ public class TestAssignmentOnRSCrash {
     for (int i = 0; i < nrows; ++i) {
       final byte[] row = Bytes.add(hri.getStartKey(), Bytes.toBytes(i));
       final Result result = table.get(new Get(row));
-      if (result != null && !result.isEmpty() &&
-          Bytes.equals(row, result.getValue(FAMILY, null))) {
+      if (result != null && !result.isEmpty() && Bytes.equals(row, result.getValue(FAMILY, null))) {
         nresults++;
       }
     }

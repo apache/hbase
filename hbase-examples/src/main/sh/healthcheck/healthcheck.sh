@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
  # Licensed to the Apache Software Foundation (ASF) under one
  # or more contributor license agreements.  See the NOTICE file
  # distributed with this work for additional information
@@ -15,9 +15,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
 
- # This is an example script for checking health of a node ( master or region server). 
+ # This is an example script for checking health of a node ( master or region server).
  # The health chore script should essentially output an message containing "ERROR" at an undesirable
- # outcome of the checks in the script. 
+ # outcome of the checks in the script.
 
 err=0;
 
@@ -43,7 +43,7 @@ for m in `awk '$3~/ext3/ {printf" %s ",$2}' /etc/fstab` ; do
 
 function check_link {
   /usr/bin/snmpwalk -t 5 -Oe  -Oq  -Os -v 1 -c public localhost if | \
-        awk ' { 
+        awk ' {
           split($1,a,".") ;
           if ( a[1] == "ifIndex" ) { ifIndex[a[2]] = $2 }
           if ( a[1] == "ifDescr" ) { ifDescr[a[2]] = $2 }
@@ -75,10 +75,10 @@ for check in disks link ; do
 done
 
 if [ ! -z "$err_msg" ] ; then
-  echo -n "ERROR $err_msg " 
+  echo -n "ERROR $err_msg "
 fi
 if [ ! -z "$ok_msg" ] ; then
-  echo -n "OK: $ok_msg" 
+  echo -n "OK: $ok_msg"
 fi
 echo
 exit 0

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,6 @@ class WALEntryBatch {
     this.walEntriesWithSize = new ArrayList<>(maxNbEntries);
     this.lastWalPath = lastWalPath;
   }
-
 
   static WALEntryBatch endOfFile(Path lastWalPath) {
     WALEntryBatch batch = new WALEntryBatch(0, lastWalPath);
@@ -174,9 +173,9 @@ class WALEntryBatch {
 
   @Override
   public String toString() {
-    return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath +
-      ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles=" +
-      nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile=" +
-      endOfFile + "]";
+    return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath
+      + ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles="
+      + nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile="
+      + endOfFile + "]";
   }
 }

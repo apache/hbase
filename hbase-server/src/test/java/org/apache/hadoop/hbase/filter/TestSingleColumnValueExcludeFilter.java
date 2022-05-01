@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,17 +36,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
- * extends {@link SingleColumnValueFilter}, only the added functionality is
- * tested. That is, method filterCell(Cell).
- *
+ * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter extends
+ * {@link SingleColumnValueFilter}, only the added functionality is tested. That is, method
+ * filterCell(Cell).
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestSingleColumnValueExcludeFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSingleColumnValueExcludeFilter.class);
+    HBaseClassTestRule.forClass(TestSingleColumnValueExcludeFilter.class);
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -56,21 +55,20 @@ public class TestSingleColumnValueExcludeFilter {
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
 
   /**
-   * Test the overridden functionality of filterCell(Cell)
-   * @throws Exception
+   * Test the overridden functionality of filterCell(Cell) n
    */
   @Test
   public void testFilterCell() throws Exception {
     Filter filter = new SingleColumnValueExcludeFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
-    CompareOperator.EQUAL, VAL_1);
+      CompareOperator.EQUAL, VAL_1);
 
     // A 'match' situation
     List<Cell> kvs = new ArrayList<>();
     KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
 
-    kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));
-    kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1));
-    kvs.add (new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));
+    kvs.add(new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));
+    kvs.add(new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1));
+    kvs.add(new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1));
 
     filter.filterRowCells(kvs);
 
@@ -92,6 +90,4 @@ public class TestSingleColumnValueExcludeFilter {
     assertTrue("otherColumn", filter.filterCell(c) == Filter.ReturnCode.NEXT_ROW);
   }
 
-
 }
-

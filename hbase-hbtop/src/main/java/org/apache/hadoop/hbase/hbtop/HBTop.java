@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-
 
 /**
  * A real-time monitoring tool for HBase like Unix top command.
@@ -212,15 +211,12 @@ public class HBTop extends Configured implements Tool {
 
   private Options getOptions() {
     Options opts = new Options();
-    opts.addOption("h", "help", false,
-      "Print usage; for help while the tool is running press 'h'");
-    opts.addOption("d", "delay", true,
-      "The refresh delay (in seconds); default is 3 seconds");
+    opts.addOption("h", "help", false, "Print usage; for help while the tool is running press 'h'");
+    opts.addOption("d", "delay", true, "The refresh delay (in seconds); default is 3 seconds");
     opts.addOption("m", "mode", true,
       "The mode; n (Namespace)|t (Table)|r (Region)|s (RegionServer)|u (User)"
         + "|c (Client), default is r");
-    opts.addOption("n", "numberOfIterations", true,
-      "The number of iterations");
+    opts.addOption("n", "numberOfIterations", true, "The number of iterations");
     opts.addOption("s", "sortField", true,
       "The initial sort field. You can prepend a `+' or `-' to the field name to also override"
         + " the sort direction. A leading `+' will force sorting high to low, whereas a `-' will"

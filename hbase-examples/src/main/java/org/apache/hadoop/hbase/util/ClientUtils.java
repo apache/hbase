@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
@@ -30,7 +27,6 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
@@ -47,9 +43,8 @@ public final class ClientUtils {
   }
 
   /**
-   * To authenticate the demo client, kinit should be invoked ahead. Here we try to get the
-   * Kerberos credential from the ticket cache
-   *
+   * To authenticate the demo client, kinit should be invoked ahead. Here we try to get the Kerberos
+   * credential from the ticket cache
    * @return LoginContext Object
    * @throws LoginException Exception thrown if unable to get LoginContext
    */
@@ -72,9 +67,9 @@ public final class ClientUtils {
         }
         options.put("debug", "true");
 
-        return new AppConfigurationEntry[]{new AppConfigurationEntry(
-            "com.sun.security.auth.module.Krb5LoginModule",
-            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options)};
+        return new AppConfigurationEntry[] {
+          new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options) };
       }
     });
 
@@ -82,7 +77,6 @@ public final class ClientUtils {
 
   /**
    * copy values into a TreeMap to get them in sorted order and print it
-   *
    * @param rowResult Holds row name and then a map of columns to cells
    */
   public static void printRow(final TRowResult rowResult) {
@@ -105,7 +99,6 @@ public final class ClientUtils {
 
   /**
    * Helper to translate byte[]'s to UTF8 strings
-   *
    * @param buf byte array buffer
    * @return UTF8 decoded string value
    */

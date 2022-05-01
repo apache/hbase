@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestPermissionBuilder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPermissionBuilder.class);
+    HBaseClassTestRule.forClass(TestPermissionBuilder.class);
 
   @Test
   public void testBuildGlobalPermission() {
@@ -54,14 +54,14 @@ public class TestPermissionBuilder {
     byte[] qualifier = Bytes.toBytes("q");
     try {
       permission = Permission.newBuilder().withQualifier(qualifier)
-          .withActions(Action.CREATE, Action.READ).build();
+        .withActions(Action.CREATE, Action.READ).build();
       fail("Should throw NPE");
     } catch (NullPointerException e) {
       // catch NPE because set qualifier but table name is null
     }
 
     permission = Permission.newBuilder().withActionCodes(Bytes.toBytes("ACP"))
-        .withActions(Action.READ, Action.ADMIN).build();
+      .withActions(Action.READ, Action.ADMIN).build();
     assertEquals(3, permission.getActions().length);
     assertEquals(Action.READ, permission.getActions()[0]);
     assertEquals(Action.CREATE, permission.getActions()[1]);
@@ -73,7 +73,7 @@ public class TestPermissionBuilder {
     String namespace = "ns";
     // check namespace permission with CREATE and READ actions
     Permission permission =
-        Permission.newBuilder(namespace).withActions(Action.CREATE, Action.READ).build();
+      Permission.newBuilder(namespace).withActions(Action.CREATE, Action.READ).build();
     assertTrue(permission instanceof NamespacePermission);
     NamespacePermission namespacePermission = (NamespacePermission) permission;
     assertEquals(namespace, namespacePermission.getNamespace());
@@ -84,7 +84,7 @@ public class TestPermissionBuilder {
     byte[] family = Bytes.toBytes("f");
     try {
       permission = Permission.newBuilder(namespace).withFamily(family)
-          .withActions(Action.CREATE, Action.READ).build();
+        .withActions(Action.CREATE, Action.READ).build();
       fail("Should throw NPE");
     } catch (NullPointerException e) {
       // catch NPE because set family but table name is null
@@ -98,7 +98,7 @@ public class TestPermissionBuilder {
     byte[] qualifier = Bytes.toBytes("q");
     // check table permission without family or qualifier
     Permission permission =
-        Permission.newBuilder(tableName).withActions(Action.WRITE, Action.READ).build();
+      Permission.newBuilder(tableName).withActions(Action.WRITE, Action.READ).build();
     assertTrue(permission instanceof TablePermission);
     assertEquals(2, permission.getActions().length);
     assertEquals(Action.READ, permission.getActions()[0]);
@@ -110,7 +110,7 @@ public class TestPermissionBuilder {
 
     // check table permission with family
     permission =
-        Permission.newBuilder(tableName).withFamily(family).withActions(Action.EXEC).build();
+      Permission.newBuilder(tableName).withFamily(family).withActions(Action.EXEC).build();
     assertTrue(permission instanceof TablePermission);
     assertEquals(1, permission.getActions().length);
     assertEquals(Action.EXEC, permission.getActions()[0]);
@@ -121,7 +121,7 @@ public class TestPermissionBuilder {
 
     // check table permission with family and qualifier
     permission =
-        Permission.newBuilder(tableName).withFamily(family).withQualifier(qualifier).build();
+      Permission.newBuilder(tableName).withFamily(family).withQualifier(qualifier).build();
     assertTrue(permission instanceof TablePermission);
     assertEquals(0, permission.getActions().length);
     tPerm = (TablePermission) permission;

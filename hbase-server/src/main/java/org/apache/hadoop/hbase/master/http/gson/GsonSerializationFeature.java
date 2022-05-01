@@ -22,6 +22,7 @@ import javax.inject.Singleton;
 import org.apache.hadoop.hbase.http.gson.GsonMessageBodyWriter;
 import org.apache.hadoop.hbase.http.jersey.SupplierFactoryAdapter;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.Feature;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.FeatureContext;
@@ -48,12 +49,8 @@ public class GsonSerializationFeature implements Feature {
 
     @Override
     protected void configure() {
-      bindFactory(GsonFactory::buildGson)
-        .to(Gson.class)
-        .in(Singleton.class);
-      bind(GsonMessageBodyWriter.class)
-        .to(MessageBodyWriter.class)
-        .in(Singleton.class);
+      bindFactory(GsonFactory::buildGson).to(Gson.class).in(Singleton.class);
+      bind(GsonMessageBodyWriter.class).to(MessageBodyWriter.class).in(Singleton.class);
     }
 
     /**

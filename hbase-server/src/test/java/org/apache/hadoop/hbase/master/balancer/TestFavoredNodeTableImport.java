@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORE
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +45,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /*
@@ -55,7 +57,7 @@ public class TestFavoredNodeTableImport {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
+    HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFavoredNodeTableImport.class);
 
@@ -95,7 +97,7 @@ public class TestFavoredNodeTableImport {
     Thread.sleep(2000);
     LOG.info("Starting cluster again with FN Balancer");
     UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        FavoredStochasticBalancer.class.getName());
+      FavoredStochasticBalancer.class.getName());
     UTIL.restartHBaseCluster(SLAVES);
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     while (!master.isInitialized()) {

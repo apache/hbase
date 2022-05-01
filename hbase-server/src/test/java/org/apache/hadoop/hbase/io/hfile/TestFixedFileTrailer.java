@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaCellComparator;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,20 +55,22 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HFileProtos;
+
 @RunWith(Parameterized.class)
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestFixedFileTrailer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFixedFileTrailer.class);
+    HBaseClassTestRule.forClass(TestFixedFileTrailer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFixedFileTrailer.class);
   private static final int MAX_COMPARATOR_NAME_LENGTH = 128;
 
   /**
-   * The number of used fields by version. Indexed by version minus two.
-   * Min version that we support is V2
+   * The number of used fields by version. Indexed by version minus two. Min version that we support
+   * is V2
    */
   private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 14, 15 };
 
@@ -79,8 +80,7 @@ public class TestFixedFileTrailer {
   private int version;
 
   static {
-    assert NUM_FIELDS_BY_VERSION.length == HFile.MAX_FORMAT_VERSION
-        - HFile.MIN_FORMAT_VERSION + 1;
+    assert NUM_FIELDS_BY_VERSION.length == HFile.MAX_FORMAT_VERSION - HFile.MIN_FORMAT_VERSION + 1;
   }
 
   public TestFixedFileTrailer(int version) {
@@ -94,7 +94,7 @@ public class TestFixedFileTrailer {
   public static Collection<Object[]> getParameters() {
     List<Object[]> versionsToTest = new ArrayList<>();
     for (int v = HFile.MIN_FORMAT_VERSION; v <= HFile.MAX_FORMAT_VERSION; ++v)
-      versionsToTest.add(new Integer[] { v } );
+      versionsToTest.add(new Integer[] { v });
     return versionsToTest;
   }
 
@@ -112,8 +112,7 @@ public class TestFixedFileTrailer {
     assertEquals(KeyValue.COMPARATOR.getClass().getName(), pb.getComparatorClassName());
     t.setComparatorClass(MetaCellComparator.META_COMPARATOR.getClass());
     pb = t.toProtobuf();
-    assertEquals(KeyValue.META_COMPARATOR.getClass().getName(),
-        pb.getComparatorClassName());
+    assertEquals(KeyValue.META_COMPARATOR.getClass().getName(), pb.getComparatorClassName());
   }
 
   @Test
@@ -121,31 +120,31 @@ public class TestFixedFileTrailer {
     FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
     try {
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName()).getClass());
+        t.createComparator(KeyValue.COMPARATOR.getLegacyKeyComparatorName()).getClass());
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
+        t.createComparator(KeyValue.COMPARATOR.getClass().getName()).getClass());
       assertEquals(CellComparatorImpl.class,
-          t.createComparator(CellComparator.class.getName()).getClass());
+        t.createComparator(CellComparator.class.getName()).getClass());
       assertEquals(MetaCellComparator.class,
-          t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
+        t.createComparator(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName()).getClass());
       assertEquals(MetaCellComparator.class,
-          t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
+        t.createComparator(KeyValue.META_COMPARATOR.getClass().getName()).getClass());
       assertEquals(MetaCellComparator.class,
         t.createComparator("org.apache.hadoop.hbase.CellComparator$MetaCellComparator").getClass());
       assertEquals(MetaCellComparator.class,
         t.createComparator("org.apache.hadoop.hbase.CellComparatorImpl$MetaCellComparator")
-            .getClass());
-      assertEquals(MetaCellComparator.class, t.createComparator(
-          MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(MetaCellComparator.META_COMPARATOR.getClass(), t.createComparator(
-        MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
-      assertEquals(CellComparatorImpl.COMPARATOR.getClass(), t.createComparator(
-        MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
+          .getClass());
+      assertEquals(MetaCellComparator.class,
+        t.createComparator(MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(MetaCellComparator.META_COMPARATOR.getClass(),
+        t.createComparator(MetaCellComparator.META_COMPARATOR.getClass().getName()).getClass());
+      assertEquals(CellComparatorImpl.COMPARATOR.getClass(),
+        t.createComparator(MetaCellComparator.COMPARATOR.getClass().getName()).getClass());
       assertNull(t.createComparator(Bytes.BYTES_RAWCOMPARATOR.getClass().getName()));
       assertNull(t.createComparator("org.apache.hadoop.hbase.KeyValue$RawBytesComparator"));
     } catch (IOException e) {
       fail("Unexpected exception while testing FixedFileTrailer#createComparator(), "
-          + e.getMessage());
+        + e.getMessage());
     }
 
     // Test an invalid comparatorClassName
@@ -156,8 +155,7 @@ public class TestFixedFileTrailer {
 
   @Test
   public void testTrailer() throws IOException {
-    FixedFileTrailer t = new FixedFileTrailer(version,
-        HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
+    FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
     t.setDataIndexCount(3);
     t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
 
@@ -189,8 +187,8 @@ public class TestFixedFileTrailer {
     // Finished writing, trying to read.
     {
       DataInputStream dis = new DataInputStream(bais);
-      FixedFileTrailer t2 = new FixedFileTrailer(version,
-          HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
+      FixedFileTrailer t2 =
+        new FixedFileTrailer(version, HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
       t2.deserialize(dis);
       assertEquals(-1, bais.read()); // Ensure we have read everything.
       checkLoadedTrailer(version, t, t2);
@@ -201,7 +199,7 @@ public class TestFixedFileTrailer {
 
     {
       for (byte invalidVersion : new byte[] { HFile.MIN_FORMAT_VERSION - 1,
-          HFile.MAX_FORMAT_VERSION + 1}) {
+        HFile.MAX_FORMAT_VERSION + 1 }) {
         bytes[bytes.length - 1] = invalidVersion;
         writeTrailer(trailerPath, null, bytes);
         try {
@@ -210,12 +208,10 @@ public class TestFixedFileTrailer {
         } catch (IllegalArgumentException ex) {
           // Make it easy to debug this.
           String msg = ex.getMessage();
-          String cleanMsg = msg.replaceAll(
-              "^(java(\\.[a-zA-Z]+)+:\\s+)?|\\s+\\(.*\\)\\s*$", "");
+          String cleanMsg = msg.replaceAll("^(java(\\.[a-zA-Z]+)+:\\s+)?|\\s+\\(.*\\)\\s*$", "");
           // will be followed by " expected: ..."
           assertEquals("Actual exception message is \"" + msg + "\".\nCleaned-up message",
-            "Invalid HFile version: " + invalidVersion,
-            cleanMsg);
+            "Invalid HFile version: " + invalidVersion, cleanMsg);
           LOG.info("Got an expected exception: " + msg);
         }
       }
@@ -230,17 +226,16 @@ public class TestFixedFileTrailer {
     checkLoadedTrailer(version, t, t4);
 
     String trailerStr = t.toString();
-    assertEquals("Invalid number of fields in the string representation "
-        + "of the trailer: " + trailerStr, NUM_FIELDS_BY_VERSION[version - 2],
-        trailerStr.split(", ").length);
+    assertEquals(
+      "Invalid number of fields in the string representation " + "of the trailer: " + trailerStr,
+      NUM_FIELDS_BY_VERSION[version - 2], trailerStr.split(", ").length);
     assertEquals(trailerStr, t4.toString());
   }
 
   @Test
   public void testTrailerForV2NonPBCompatibility() throws Exception {
     if (version == 2) {
-      FixedFileTrailer t = new FixedFileTrailer(version,
-          HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
+      FixedFileTrailer t = new FixedFileTrailer(version, HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
       t.setDataIndexCount(3);
       t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
       t.setLastDataBlockOffset(291);
@@ -266,8 +261,8 @@ public class TestFixedFileTrailer {
       ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
       {
         DataInputStream dis = new DataInputStream(bais);
-        FixedFileTrailer t2 = new FixedFileTrailer(version,
-            HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
+        FixedFileTrailer t2 =
+          new FixedFileTrailer(version, HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
         t2.deserialize(dis);
         assertEquals(-1, bais.read()); // Ensure we have read everything.
         checkLoadedTrailer(version, t, t2);
@@ -279,7 +274,7 @@ public class TestFixedFileTrailer {
   // FixedFileTrailer of non PB
   // serialized FFTs.
   private void serializeAsWritable(DataOutputStream output, FixedFileTrailer fft)
-      throws IOException {
+    throws IOException {
     BlockType.TRAILER.write(output);
     output.writeLong(fft.getFileInfoOffset());
     output.writeLong(fft.getLoadOnOpenDataOffset());
@@ -293,21 +288,20 @@ public class TestFixedFileTrailer {
     output.writeLong(fft.getFirstDataBlockOffset());
     output.writeLong(fft.getLastDataBlockOffset());
     Bytes.writeStringFixedSize(output, fft.getComparatorClassName(), MAX_COMPARATOR_NAME_LENGTH);
-    output.writeInt(FixedFileTrailer.materializeVersion(fft.getMajorVersion(),
-        fft.getMinorVersion()));
+    output
+      .writeInt(FixedFileTrailer.materializeVersion(fft.getMajorVersion(), fft.getMinorVersion()));
   }
-
 
   private FixedFileTrailer readTrailer(Path trailerPath) throws IOException {
     FSDataInputStream fsdis = fs.open(trailerPath);
-    FixedFileTrailer trailerRead = FixedFileTrailer.readFromStream(fsdis,
-        fs.getFileStatus(trailerPath).getLen());
+    FixedFileTrailer trailerRead =
+      FixedFileTrailer.readFromStream(fsdis, fs.getFileStatus(trailerPath).getLen());
     fsdis.close();
     return trailerRead;
   }
 
-  private void writeTrailer(Path trailerPath, FixedFileTrailer t,
-      byte[] useBytesInstead) throws IOException {
+  private void writeTrailer(Path trailerPath, FixedFileTrailer t, byte[] useBytesInstead)
+    throws IOException {
     assert (t == null) != (useBytesInstead == null); // Expect one non-null.
 
     FSDataOutputStream fsdos = fs.create(trailerPath);
@@ -320,42 +314,33 @@ public class TestFixedFileTrailer {
     fsdos.close();
   }
 
-  private void checkLoadedTrailer(int version, FixedFileTrailer expected,
-      FixedFileTrailer loaded) throws IOException {
+  private void checkLoadedTrailer(int version, FixedFileTrailer expected, FixedFileTrailer loaded)
+    throws IOException {
     assertEquals(version, loaded.getMajorVersion());
     assertEquals(expected.getDataIndexCount(), loaded.getDataIndexCount());
 
-    assertEquals(Math.min(expected.getEntryCount(),
-        version == 1 ? Integer.MAX_VALUE : Long.MAX_VALUE),
-        loaded.getEntryCount());
+    assertEquals(
+      Math.min(expected.getEntryCount(), version == 1 ? Integer.MAX_VALUE : Long.MAX_VALUE),
+      loaded.getEntryCount());
 
     if (version == 1) {
       assertEquals(expected.getFileInfoOffset(), loaded.getFileInfoOffset());
     }
 
     if (version == 2) {
-      assertEquals(expected.getLastDataBlockOffset(),
-          loaded.getLastDataBlockOffset());
-      assertEquals(expected.getNumDataIndexLevels(),
-          loaded.getNumDataIndexLevels());
+      assertEquals(expected.getLastDataBlockOffset(), loaded.getLastDataBlockOffset());
+      assertEquals(expected.getNumDataIndexLevels(), loaded.getNumDataIndexLevels());
       assertEquals(expected.createComparator().getClass().getName(),
-          loaded.createComparator().getClass().getName());
-      assertEquals(expected.getFirstDataBlockOffset(),
-          loaded.getFirstDataBlockOffset());
-      assertTrue(
-          expected.createComparator() instanceof CellComparatorImpl);
-      assertEquals(expected.getUncompressedDataIndexSize(),
-          loaded.getUncompressedDataIndexSize());
+        loaded.createComparator().getClass().getName());
+      assertEquals(expected.getFirstDataBlockOffset(), loaded.getFirstDataBlockOffset());
+      assertTrue(expected.createComparator() instanceof CellComparatorImpl);
+      assertEquals(expected.getUncompressedDataIndexSize(), loaded.getUncompressedDataIndexSize());
     }
 
-    assertEquals(expected.getLoadOnOpenDataOffset(),
-        loaded.getLoadOnOpenDataOffset());
+    assertEquals(expected.getLoadOnOpenDataOffset(), loaded.getLoadOnOpenDataOffset());
     assertEquals(expected.getMetaIndexCount(), loaded.getMetaIndexCount());
 
-    assertEquals(expected.getTotalUncompressedBytes(),
-        loaded.getTotalUncompressedBytes());
+    assertEquals(expected.getTotalUncompressedBytes(), loaded.getTotalUncompressedBytes());
   }
 
-
 }
-

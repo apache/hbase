@@ -51,20 +51,17 @@ import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
-
 /**
- * Start the HBase Thrift HTTP server on a random port through the command-line
- * interface and talk to it from client side.
+ * Start the HBase Thrift HTTP server on a random port through the command-line interface and talk
+ * to it from client side.
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThriftHttpServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThriftHttpServer.class);
+    HBaseClassTestRule.forClass(TestThriftHttpServer.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestThriftHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftHttpServer.class);
 
   protected static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -73,8 +70,8 @@ public class TestThriftHttpServer {
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     TEST_UTIL.startMiniCluster();
-    //ensure that server time increments every time we do an operation, otherwise
-    //successive puts having the same timestamp will override each other
+    // ensure that server time increments every time we do an operation, otherwise
+    // successive puts having the same timestamp will override each other
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
@@ -93,8 +90,8 @@ public class TestThriftHttpServer {
     ThriftServerRunner tsr = null;
     try {
       thrown.expect(IllegalArgumentException.class);
-      thrown.expectMessage("Thrift HTTP Server's QoP is privacy, " +
-          "but hbase.thrift.ssl.enabled is false");
+      thrown.expectMessage(
+        "Thrift HTTP Server's QoP is privacy, " + "but hbase.thrift.ssl.enabled is false");
       tsr = TestThriftServerCmdLine.createBoundServer(() -> new ThriftServer(conf));
       fail("Thrift HTTP Server starts up even with wrong security configurations.");
     } catch (Exception e) {
@@ -135,9 +132,9 @@ public class TestThriftHttpServer {
 
   void runThriftServer(int customHeaderSize) throws Exception {
     // Add retries in case we see stuff like connection reset
-    Exception clientSideException =  null;
+    Exception clientSideException = null;
     for (int i = 0; i < 10; i++) {
-      clientSideException =  null;
+      clientSideException = null;
       ThriftServerRunner tsr = createBoundServer(getThriftServerSupplier());
       String url = "http://" + HConstants.LOCALHOST + ":" + tsr.getThriftServer().listenPort;
       try {
@@ -169,8 +166,8 @@ public class TestThriftHttpServer {
     HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
     conn.setRequestMethod("TRACE");
     conn.connect();
-    Assert.assertEquals(conn.getResponseMessage(),
-      HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+    Assert.assertEquals(conn.getResponseMessage(), HttpURLConnection.HTTP_FORBIDDEN,
+      conn.getResponseCode());
   }
 
   protected static volatile boolean tableCreated = false;
@@ -191,7 +188,7 @@ public class TestThriftHttpServer {
       TProtocol prot;
       prot = new TBinaryProtocol(httpClient);
       Hbase.Client client = new Hbase.Client(prot);
-      if (!tableCreated){
+      if (!tableCreated) {
         TestThriftServer.createTestTables(client);
         tableCreated = true;
       }

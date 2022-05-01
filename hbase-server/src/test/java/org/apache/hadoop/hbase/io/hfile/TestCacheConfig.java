@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,15 +53,15 @@ import org.slf4j.LoggerFactory;
  * Tests that {@link CacheConfig} does as expected.
  */
 // This test is marked as a large test though it runs in a short amount of time
-// (seconds).  It is large because it depends on being able to reset the global
-// blockcache instance which is in a global variable.  Experience has it that
+// (seconds). It is large because it depends on being able to reset the global
+// blockcache instance which is in a global variable. Experience has it that
 // tests clash on the global variable if this test is run as small sized test.
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestCacheConfig {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCacheConfig.class);
+    HBaseClassTestRule.forClass(TestCacheConfig.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheConfig.class);
   private Configuration conf;
@@ -81,8 +81,7 @@ public class TestCacheConfig {
     }
 
     @Override
-    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc)
-        throws IOException {
+    public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
       LOG.info("Deserialized " + b);
       return cacheable;
     }
@@ -158,14 +157,14 @@ public class TestCacheConfig {
   }
 
   /**
-   * @param bc The block cache instance.
-   * @param cc Cache config.
-   * @param doubling If true, addition of element ups counter by 2, not 1, because element added
-   * to onheap and offheap caches.
-   * @param sizing True if we should run sizing test (doesn't always apply).
+   * @param bc       The block cache instance.
+   * @param cc       Cache config.
+   * @param doubling If true, addition of element ups counter by 2, not 1, because element added to
+   *                 onheap and offheap caches.
+   * @param sizing   True if we should run sizing test (doesn't always apply).
    */
   void basicBlockCacheOps(final BlockCache bc, final CacheConfig cc, final boolean doubling,
-      final boolean sizing) {
+    final boolean sizing) {
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
     BlockCacheKey bck = new BlockCacheKey("f", 0);
     Cacheable c = new DataCacheEntry();
@@ -175,7 +174,7 @@ public class TestCacheConfig {
     assertEquals(doubling ? 2 : 1, bc.getBlockCount() - initialBlockCount);
     bc.evictBlock(bck);
     assertEquals(initialBlockCount, bc.getBlockCount());
-    // Do size accounting.  Do it after the above 'warm-up' because it looks like some
+    // Do size accounting. Do it after the above 'warm-up' because it looks like some
     // buffers do lazy allocation so sizes are off on first go around.
     if (sizing) {
       long originalSize = bc.getCurrentSize();
@@ -311,7 +310,7 @@ public class TestCacheConfig {
   @Test
   public void testBucketCacheConfigL1L2Setup() {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    // Make lru size is smaller than bcSize for sure.  Need this to be true so when eviction
+    // Make lru size is smaller than bcSize for sure. Need this to be true so when eviction
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
@@ -340,7 +339,7 @@ public class TestCacheConfig {
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
     // Force evictions by putting in a block too big.
-    final long justTooBigSize = ((LruBlockCache)lbc).acceptableSize() + 1;
+    final long justTooBigSize = ((LruBlockCache) lbc).acceptableSize() + 1;
     lbc.cacheBlock(new BlockCacheKey("bck2", 0), new DataCacheEntry() {
       @Override
       public long heapSize() {
@@ -349,11 +348,12 @@ public class TestCacheConfig {
 
       @Override
       public int getSerializedLength() {
-        return (int)heapSize();
+        return (int) heapSize();
       }
     });
     // The eviction thread in lrublockcache needs to run.
-    while (initialL1BlockCount != lbc.getBlockCount()) Threads.sleep(10);
+    while (initialL1BlockCount != lbc.getBlockCount())
+      Threads.sleep(10);
     assertEquals(initialL1BlockCount, lbc.getBlockCount());
   }
 

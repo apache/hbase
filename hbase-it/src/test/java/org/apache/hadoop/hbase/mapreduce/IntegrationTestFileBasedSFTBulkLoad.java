@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,38 +29,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test Bulk Load and MR on a distributed cluster.
- * With FileBased StorefileTracker enabled.
- * It starts an MR job that creates linked chains
- *
- * The format of rows is like this:
- * Row Key -> Long
- *
- * L:<< Chain Id >> -> Row Key of the next link in the chain
- * S:<< Chain Id >> -> The step in the chain that his link is.
- * D:<< Chain Id >> -> Random Data.
- *
- * All chains start on row 0.
- * All rk's are > 0.
- *
+ * Test Bulk Load and MR on a distributed cluster. With FileBased StorefileTracker enabled. It
+ * starts an MR job that creates linked chains The format of rows is like this: Row Key -> Long L:<<
+ * Chain Id >> -> Row Key of the next link in the chain S:<< Chain Id >> -> The step in the chain
+ * that his link is. D:<< Chain Id >> -> Random Data. All chains start on row 0. All rk's are > 0.
  * After creating the linked lists they are walked over using a TableMapper based Mapreduce Job.
- *
- * There are a few options exposed:
- *
- * hbase.IntegrationTestBulkLoad.chainLength
- * The number of rows that will be part of each and every chain.
- *
- * hbase.IntegrationTestBulkLoad.numMaps
- * The number of mappers that will be run.  Each mapper creates on linked list chain.
- *
- * hbase.IntegrationTestBulkLoad.numImportRounds
- * How many jobs will be run to create linked lists.
- *
- * hbase.IntegrationTestBulkLoad.tableName
- * The name of the table.
- *
- * hbase.IntegrationTestBulkLoad.replicaCount
- * How many region replicas to configure for the table under test.
+ * There are a few options exposed: hbase.IntegrationTestBulkLoad.chainLength The number of rows
+ * that will be part of each and every chain. hbase.IntegrationTestBulkLoad.numMaps The number of
+ * mappers that will be run. Each mapper creates on linked list chain.
+ * hbase.IntegrationTestBulkLoad.numImportRounds How many jobs will be run to create linked lists.
+ * hbase.IntegrationTestBulkLoad.tableName The name of the table.
+ * hbase.IntegrationTestBulkLoad.replicaCount How many region replicas to configure for the table
+ * under test.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad {
@@ -103,7 +82,7 @@ public class IntegrationTestFileBasedSFTBulkLoad extends IntegrationTestBulkLoad
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
-    int status =  ToolRunner.run(conf, new IntegrationTestFileBasedSFTBulkLoad(), args);
+    int status = ToolRunner.run(conf, new IntegrationTestFileBasedSFTBulkLoad(), args);
     System.exit(status);
   }
 }

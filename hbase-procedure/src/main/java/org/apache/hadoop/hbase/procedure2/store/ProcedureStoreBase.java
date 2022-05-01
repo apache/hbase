@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,14 +27,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class ProcedureStoreBase implements ProcedureStore {
   private final CopyOnWriteArrayList<ProcedureStoreListener> listeners =
-          new CopyOnWriteArrayList<>();
+    new CopyOnWriteArrayList<>();
 
   private final AtomicBoolean running = new AtomicBoolean(false);
 
   /**
-   * Change the state to 'isRunning',
-   * returns true if the store state was changed,
-   * false if the store was already in that state.
+   * Change the state to 'isRunning', returns true if the store state was changed, false if the
+   * store was already in that state.
    * @param isRunning the state to set.
    * @return true if the store state was changed, otherwise false.
    */

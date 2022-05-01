@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.security.Permission;
 
 /**
-  * class for masquerading System.exit(int).
-  * Use for test main method with System.exit(int )
-  * usage:
-  * new LauncherSecurityManager();
-  *    try {
-  *      CellCounter.main(args);
-  *      fail("should be exception");
-  *    } catch (SecurityException e) {
-  *      assert(.,e.getExitCode());
-  *    }
+ * class for masquerading System.exit(int). Use for test main method with System.exit(int ) usage:
+ * new LauncherSecurityManager(); try { CellCounter.main(args); fail("should be exception"); } catch
+ * (SecurityException e) { assert(.,e.getExitCode()); }
  */
 public class LauncherSecurityManager extends SecurityManager {
 
@@ -64,7 +55,7 @@ public class LauncherSecurityManager extends SecurityManager {
     throw new SecurityException("Intercepted System.exit(" + status + ")");
   }
 
-  public  int getExitCode() {
+  public int getExitCode() {
     return exitCode;
   }
 

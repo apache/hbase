@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This client class is for invoking the refresh HFile function deployed on the
- * Region Server side via the RefreshHFilesService.
+ * This client class is for invoking the refresh HFile function deployed on the Region Server side
+ * via the RefreshHFilesService.
  */
 @InterfaceAudience.Private
 public class RefreshHFilesClient extends Configured implements Tool, Closeable {
@@ -49,7 +48,6 @@ public class RefreshHFilesClient extends Configured implements Tool, Closeable {
 
   /**
    * Constructor with Conf object
-   *
    * @param cfg the {@link Configuration} object to use
    */
   public RefreshHFilesClient(Configuration cfg) {
@@ -75,18 +73,16 @@ public class RefreshHFilesClient extends Configured implements Tool, Closeable {
 
   public void refreshHFiles(final Table table) throws Throwable {
     final RefreshHFilesProtos.RefreshHFilesRequest request =
-            RefreshHFilesProtos.RefreshHFilesRequest.getDefaultInstance();
+      RefreshHFilesProtos.RefreshHFilesRequest.getDefaultInstance();
     table.coprocessorService(RefreshHFilesProtos.RefreshHFilesService.class,
-            HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW,
-            new Batch.Call<RefreshHFilesProtos.RefreshHFilesService,
-                    RefreshHFilesProtos.RefreshHFilesResponse>() {
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, new Batch.Call<
+        RefreshHFilesProtos.RefreshHFilesService, RefreshHFilesProtos.RefreshHFilesResponse>() {
         @Override
-        public RefreshHFilesProtos.RefreshHFilesResponse call(
-              RefreshHFilesProtos.RefreshHFilesService refreshHFilesService)
-              throws IOException {
+        public RefreshHFilesProtos.RefreshHFilesResponse
+          call(RefreshHFilesProtos.RefreshHFilesService refreshHFilesService) throws IOException {
           ServerRpcController controller = new ServerRpcController();
           BlockingRpcCallback<RefreshHFilesProtos.RefreshHFilesResponse> rpcCallback =
-                new BlockingRpcCallback<>();
+            new BlockingRpcCallback<>();
           refreshHFilesService.refreshHFiles(controller, request, rpcCallback);
 
           if (controller.failedOnException()) {
@@ -103,8 +99,8 @@ public class RefreshHFilesClient extends Configured implements Tool, Closeable {
   public int run(String[] args) throws Exception {
     if (args.length != 1) {
       String message = "When there are multiple HBase clusters are sharing a common root dir, "
-          + "especially for read replica cluster (see detail in HBASE-18477), please consider to "
-          + "use this tool manually sync the flushed HFiles from the source cluster.";
+        + "especially for read replica cluster (see detail in HBASE-18477), please consider to "
+        + "use this tool manually sync the flushed HFiles from the source cluster.";
       message += "\nUsage: " + this.getClass().getName() + " tableName";
       System.out.println(message);
       return -1;

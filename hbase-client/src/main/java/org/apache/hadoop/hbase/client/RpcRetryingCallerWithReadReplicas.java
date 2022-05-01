@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 import java.io.IOException;
@@ -29,7 +28,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -49,15 +47,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
- * Caller that goes to replica if the primary region does no answer within a configurable
- * timeout. If the timeout is reached, it calls all the secondary replicas, and returns
- * the first answer. If the answer comes from one of the secondary replica, it will
- * be marked as stale.
+ * Caller that goes to replica if the primary region does no answer within a configurable timeout.
+ * If the timeout is reached, it calls all the secondary replicas, and returns the first answer. If
+ * the answer comes from one of the secondary replica, it will be marked as stale.
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RpcRetryingCallerWithReadReplicas.class);
+    LoggerFactory.getLogger(RpcRetryingCallerWithReadReplicas.class);
 
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;
@@ -71,11 +68,9 @@ public class RpcRetryingCallerWithReadReplicas {
   private final RpcControllerFactory rpcControllerFactory;
   private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
 
-  public RpcRetryingCallerWithReadReplicas(
-      RpcControllerFactory rpcControllerFactory, TableName tableName,
-      ClusterConnection cConnection, final Get get,
-      ExecutorService pool, int retries, int operationTimeout, int rpcTimeout,
-      int timeBeforeReplicas) {
+  public RpcRetryingCallerWithReadReplicas(RpcControllerFactory rpcControllerFactory,
+    TableName tableName, ClusterConnection cConnection, final Get get, ExecutorService pool,
+    int retries, int operationTimeout, int rpcTimeout, int timeBeforeReplicas) {
     this.rpcControllerFactory = rpcControllerFactory;
     this.tableName = tableName;
     this.cConnection = cConnection;
@@ -90,25 +85,24 @@ public class RpcRetryingCallerWithReadReplicas {
   }
 
   /**
-   * A RegionServerCallable that takes into account the replicas, i.e.
-   * - the call can be on any replica
-   * - we need to stop retrying when the call is completed
-   * - we can be interrupted
+   * A RegionServerCallable that takes into account the replicas, i.e. - the call can be on any
+   * replica - we need to stop retrying when the call is completed - we can be interrupted
    */
   class ReplicaRegionServerCallable extends CancellableRegionServerCallable<Result> {
     final int id;
+
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection,
-          RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
-          rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(), PRIORITY_UNSET);
+        RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
+        rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(),
+        PRIORITY_UNSET);
       this.id = id;
       this.location = location;
     }
 
     /**
-     * Two responsibilities
-     * - if the call is already completed (by another replica) stops the retries.
-     * - set the location to the right region, depending on the replica.
+     * Two responsibilities - if the call is already completed (by another replica) stops the
+     * retries. - set the location to the right region, depending on the replica.
      */
     @Override
     // TODO: Very like the super class implemenation. Can we shrink this down?
@@ -124,7 +118,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
       if (location == null || location.getServerName() == null) {
         // With this exception, there will be a retry. The location can be null for a replica
-        //  when the table is created or after a split.
+        // when the table is created or after a split.
         throw new HBaseIOException("There is no location for replica id #" + id);
       }
 
@@ -140,7 +134,7 @@ public class RpcRetryingCallerWithReadReplicas {
       }
       byte[] reg = location.getRegionInfo().getRegionName();
       ClientProtos.GetRequest request = RequestConverter.buildGetRequest(reg, get);
-      HBaseRpcController hrc = (HBaseRpcController)getRpcController();
+      HBaseRpcController hrc = (HBaseRpcController) getRpcController();
       hrc.reset();
       hrc.setCallTimeout(rpcTimeout);
       hrc.setPriority(tableName);
@@ -154,24 +148,19 @@ public class RpcRetryingCallerWithReadReplicas {
 
   /**
    * <p>
-   * Algo:
-   * - we put the query into the execution pool.
-   * - after x ms, if we don't have a result, we add the queries for the secondary replicas
-   * - we take the first answer
-   * - when done, we cancel what's left. Cancelling means:
-   * - removing from the pool if the actual call was not started
-   * - interrupting the call if it has started
-   * Client side, we need to take into account
-   * - a call is not executed immediately after being put into the pool
-   * - a call is a thread. Let's not multiply the number of thread by the number of replicas.
-   * Server side, if we can cancel when it's still in the handler pool, it's much better, as a call
-   * can take some i/o.
+   * Algo: - we put the query into the execution pool. - after x ms, if we don't have a result, we
+   * add the queries for the secondary replicas - we take the first answer - when done, we cancel
+   * what's left. Cancelling means: - removing from the pool if the actual call was not started -
+   * interrupting the call if it has started Client side, we need to take into account - a call is
+   * not executed immediately after being put into the pool - a call is a thread. Let's not multiply
+   * the number of thread by the number of replicas. Server side, if we can cancel when it's still
+   * in the handler pool, it's much better, as a call can take some i/o.
    * </p>
-   * Globally, the number of retries, timeout and so on still applies, but it's per replica,
-   * not global. We continue until all retries are done, or all timeouts are exceeded.
+   * Globally, the number of retries, timeout and so on still applies, but it's per replica, not
+   * global. We continue until all retries are done, or all timeouts are exceeded.
    */
   public Result call(int operationTimeout)
-      throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
+    throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
     boolean isTargetReplicaSpecified = (get.getReplicaId() >= 0);
 
     RegionLocations rl = null;
@@ -188,7 +177,7 @@ public class RpcRetryingCallerWithReadReplicas {
         // We cannot get the primary replica location, it is possible that the region
         // server hosting meta is down, it needs to proceed to try cached replicas.
         if (cConnection instanceof ConnectionImplementation) {
-          rl = ((ConnectionImplementation)cConnection).getCachedLocation(tableName, get.getRow());
+          rl = ((ConnectionImplementation) cConnection).getCachedLocation(tableName, get.getRow());
           if (rl == null) {
             // No cached locations
             throw e;
@@ -204,11 +193,11 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     final ResultBoundedCompletionService<Result> cs =
-        new ResultBoundedCompletionService<>(this.rpcRetryingCallerFactory, pool, rl.size());
+      new ResultBoundedCompletionService<>(this.rpcRetryingCallerFactory, pool, rl.size());
     int startIndex = 0;
     int endIndex = rl.size();
 
-    if(isTargetReplicaSpecified) {
+    if (isTargetReplicaSpecified) {
       addCallsForReplica(cs, rl, get.getReplicaId(), get.getReplicaId());
       endIndex = 1;
     } else {
@@ -216,9 +205,10 @@ public class RpcRetryingCallerWithReadReplicas {
         addCallsForReplica(cs, rl, 0, 0);
         try {
           // wait for the timeout to see whether the primary responds back
-          Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
+          Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes,
+                                                                                 // microseconds
           if (f != null) {
-            return f.get(); //great we got a response
+            return f.get(); // great we got a response
           }
           if (cConnection.getConnectionMetrics() != null) {
             cConnection.getConnectionMetrics().incrHedgedReadOps();
@@ -238,7 +228,7 @@ public class RpcRetryingCallerWithReadReplicas {
         }
       } else {
         // Since primary replica is skipped, the endIndex needs to be adjusted accordingly
-        endIndex --;
+        endIndex--;
       }
 
       // submit call for the all of the secondaries at once
@@ -246,14 +236,17 @@ public class RpcRetryingCallerWithReadReplicas {
     }
     try {
       ResultBoundedCompletionService<Result>.QueueingFuture<Result> f =
-          cs.pollForFirstSuccessfullyCompletedTask(operationTimeout, TimeUnit.MILLISECONDS, startIndex, endIndex);
+        cs.pollForFirstSuccessfullyCompletedTask(operationTimeout, TimeUnit.MILLISECONDS,
+          startIndex, endIndex);
       if (f == null) {
-        throw new RetriesExhaustedException("Timed out after " + operationTimeout +
-            "ms. Get is sent to replicas with startIndex: " + startIndex +
-            ", endIndex: " + endIndex + ", Locations: " + rl);
+        throw new RetriesExhaustedException(
+          "Timed out after " + operationTimeout + "ms. Get is sent to replicas with startIndex: "
+            + startIndex + ", endIndex: " + endIndex + ", Locations: " + rl);
       }
-      if (cConnection.getConnectionMetrics() != null && !isTargetReplicaSpecified &&
-          !skipPrimary && f.getReplicaId() != RegionReplicaUtil.DEFAULT_REPLICA_ID) {
+      if (
+        cConnection.getConnectionMetrics() != null && !isTargetReplicaSpecified && !skipPrimary
+          && f.getReplicaId() != RegionReplicaUtil.DEFAULT_REPLICA_ID
+      ) {
         cConnection.getConnectionMetrics().incrHedgedReadWin();
       }
       return f.get();
@@ -274,11 +267,10 @@ public class RpcRetryingCallerWithReadReplicas {
   }
 
   /**
-   * Extract the real exception from the ExecutionException, and throws what makes more
-   * sense.
+   * Extract the real exception from the ExecutionException, and throws what makes more sense.
    */
   static void throwEnrichedException(ExecutionException e, int retries)
-      throws RetriesExhaustedException, DoNotRetryIOException {
+    throws RetriesExhaustedException, DoNotRetryIOException {
     Throwable t = e.getCause();
     assert t != null; // That's what ExecutionException is about: holding an exception
     t.printStackTrace();
@@ -292,25 +284,24 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     RetriesExhaustedException.ThrowableWithExtraContext qt =
-        new RetriesExhaustedException.ThrowableWithExtraContext(t,
-            EnvironmentEdgeManager.currentTime(), null);
+      new RetriesExhaustedException.ThrowableWithExtraContext(t,
+        EnvironmentEdgeManager.currentTime(), null);
 
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
-        Collections.singletonList(qt);
+      Collections.singletonList(qt);
 
     throw new RetriesExhaustedException(retries, exceptions);
   }
 
   /**
    * Creates the calls and submit them
-   *
    * @param cs  - the completion service to use for submitting
    * @param rl  - the region locations
    * @param min - the id of the first replica, inclusive
    * @param max - the id of the last replica, inclusive.
    */
-  private void addCallsForReplica(ResultBoundedCompletionService<Result> cs,
-                                 RegionLocations rl, int min, int max) {
+  private void addCallsForReplica(ResultBoundedCompletionService<Result> cs, RegionLocations rl,
+    int min, int max) {
     for (int id = min; id <= max; id++) {
       HRegionLocation hrl = rl.getRegionLocation(id);
       ReplicaRegionServerCallable callOnReplica = new ReplicaRegionServerCallable(id, hrl);
@@ -319,8 +310,8 @@ public class RpcRetryingCallerWithReadReplicas {
   }
 
   static RegionLocations getRegionLocations(boolean useCache, int replicaId,
-                 ClusterConnection cConnection, TableName tableName, byte[] row)
-      throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
+    ClusterConnection cConnection, TableName tableName, byte[] row)
+    throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
 
     RegionLocations rl;
     try {
@@ -333,11 +324,11 @@ public class RpcRetryingCallerWithReadReplicas {
       throw e;
     } catch (IOException e) {
       throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
-          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName, e);
+        + " of region for " + Bytes.toStringBinary(row) + " in " + tableName, e);
     }
     if (rl == null) {
       throw new RetriesExhaustedException("Cannot get the location for replica" + replicaId
-          + " of region for " + Bytes.toStringBinary(row) + " in " + tableName);
+        + " of region for " + Bytes.toStringBinary(row) + " in " + tableName);
     }
 
     return rl;

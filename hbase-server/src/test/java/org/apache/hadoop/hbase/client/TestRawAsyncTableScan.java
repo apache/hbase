@@ -56,7 +56,7 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawAsyncTableScan.class);
+    HBaseClassTestRule.forClass(TestRawAsyncTableScan.class);
 
   @Parameter(0)
   public String scanType;
@@ -101,44 +101,44 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   protected void assertTraceContinuity() {
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher =
-        allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
     final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     // RawAsyncTableImpl never invokes the callback to `onScanMetricsCreated` -- bug?
     final Matcher<SpanData> onScanMetricsCreatedMatcher =
-        hasName("TracedAdvancedScanResultConsumer#onScanMetricsCreated");
+      hasName("TracedAdvancedScanResultConsumer#onScanMetricsCreated");
     assertThat(spans, not(hasItem(onScanMetricsCreatedMatcher)));
 
     final Matcher<SpanData> onNextMatcher = hasName("TracedAdvancedScanResultConsumer#onNext");
     assertThat(spans, hasItem(onNextMatcher));
     spans.stream().filter(onNextMatcher::matches)
-        .forEach(span -> assertThat(span, hasParentSpanId(scanOperationSpanId)));
+      .forEach(span -> assertThat(span, hasParentSpanId(scanOperationSpanId)));
     assertThat(spans, hasItem(allOf(onNextMatcher, hasParentSpanId(scanOperationSpanId),
       hasStatusWithCode(StatusCode.OK), hasEnded())));
 
     final Matcher<SpanData> onCompleteMatcher =
-        hasName("TracedAdvancedScanResultConsumer#onComplete");
+      hasName("TracedAdvancedScanResultConsumer#onComplete");
     assertThat(spans, hasItem(onCompleteMatcher));
     spans.stream().filter(onCompleteMatcher::matches)
-        .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
-          hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
+      .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
+        hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 
   @Override
@@ -148,27 +148,27 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
     waitForSpan(parentSpanMatcher);
 
     final List<SpanData> spans =
-        otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
     final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> scanOperationSpanMatcher =
-        allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-          hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
-          hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
+        hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
     final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-        .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
     final Matcher<SpanData> onCompleteMatcher = hasName("TracedAdvancedScanResultConsumer#onError");
     assertThat(spans, hasItem(onCompleteMatcher));
     spans.stream().filter(onCompleteMatcher::matches)
-        .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
-          hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
+      .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
+        hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 }

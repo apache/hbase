@@ -1,6 +1,6 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!--
+  <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,8 +21,8 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-build-configuration</artifactId>
     <version>2.5.0-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
@@ -40,105 +40,6 @@
     <!-- To run a single integration test, use -Dit.test=IntegrationTestXXX -->
   </properties>
 
-  <build>
-    <testResources>
-      <testResource>
-         <!-- We depend on hbase-server test resources -->
-        <directory>../hbase-server/src/test/resources</directory>
-        <excludes>
-          <exclude>META-INF/NOTICE</exclude>
-          <exclude>META-INF/LICENSE</exclude>
-        </excludes>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-      </testResource>
-    </testResources>
-    <pluginManagement>
-      <plugins>
-        <!-- Make a jar and put the sources in the jar -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-        </plugin>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>${surefire.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.surefire</groupId>
-              <artifactId>surefire-junit4</artifactId>
-              <version>${surefire.version}</version>
-            </dependency>
-          </dependencies>
-          <configuration>
-            <includes>
-              <include>${integrationtest.include}</include>
-            </includes>
-            <excludes>
-              <exclude>${unittest.include}</exclude>
-              <exclude>**/*$*</exclude>
-            </excludes>
-            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
-            <environmentVariables>
-              <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
-              <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
-              <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
-            </environmentVariables>
-            <failIfNoTests>false</failIfNoTests>
-            <testFailureIgnore>false</testFailureIgnore>
-          </configuration>
-          <executions>
-            <execution>
-              <id>integration-test</id>
-              <phase>integration-test</phase>
-              <goals>
-                <goal>integration-test</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>verify</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>verify</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-
-    <plugins>
-      <!--  Run integration tests with mvn verify -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-          <configuration>
-            <skip>false</skip>
-            <forkMode>always</forkMode>
-            <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
-                 I believe it is a failsafe bug, we may consider using surefire -->
-            <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx${failsafe.Xmx}
-                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
-                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
-          </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-
   <dependencies>
     <!--This one is upfront to get in front of
          any dependency that pulls in jersey-core.
@@ -150,7 +51,7 @@
       <artifactId>javax.ws.rs-api</artifactId>
       <scope>test</scope>
     </dependency>
-	<!-- Intra-project dependencies -->
+    <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-annotations</artifactId>
@@ -217,8 +118,8 @@
              which pulls in the below. It messes up
              this build at assembly time. See HBASE-22029-->
         <exclusion>
-         <groupId>com.sun.jersey</groupId>
-         <artifactId>jersey-core</artifactId>
+          <groupId>com.sun.jersey</groupId>
+          <artifactId>jersey-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -288,8 +189,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <artifactId>javax.servlet-api</artifactId>
       <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -313,6 +214,129 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <testResources>
+      <testResource>
+        <!-- We depend on hbase-server test resources -->
+        <directory>../hbase-server/src/test/resources</directory>
+        <excludes>
+          <exclude>META-INF/NOTICE</exclude>
+          <exclude>META-INF/LICENSE</exclude>
+        </excludes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+      </testResource>
+    </testResources>
+    <pluginManagement>
+      <plugins>
+        <!-- Make a jar and put the sources in the jar -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+        </plugin>
+        <plugin>
+          <!--Make it so assembly:single does nothing in here-->
+          <artifactId>maven-assembly-plugin</artifactId>
+          <configuration>
+            <skipAssembly>true</skipAssembly>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${surefire.version}</version>
+          <configuration>
+            <includes>
+              <include>${integrationtest.include}</include>
+            </includes>
+            <excludes>
+              <exclude>${unittest.include}</exclude>
+              <exclude>**/*$*</exclude>
+            </excludes>
+            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
+            <environmentVariables>
+              <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
+              <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
+              <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
+            </environmentVariables>
+            <failIfNoTests>false</failIfNoTests>
+            <testFailureIgnore>false</testFailureIgnore>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.surefire</groupId>
+              <artifactId>surefire-junit4</artifactId>
+              <version>${surefire.version}</version>
+            </dependency>
+          </dependencies>
+          <executions>
+            <execution>
+              <id>integration-test</id>
+              <goals>
+                <goal>integration-test</goal>
+              </goals>
+              <phase>integration-test</phase>
+            </execution>
+            <execution>
+              <id>verify</id>
+              <goals>
+                <goal>verify</goal>
+              </goals>
+              <phase>verify</phase>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!--  Run integration tests with mvn verify -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+          <forkMode>always</forkMode>
+          <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
+                 I believe it is a failsafe bug, we may consider using surefire -->
+          <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+          <argLine>-enableassertions -Xmx${failsafe.Xmx}
+                -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
+                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>${surefire.version}</version>
+        <reportSets>
+          <reportSet>
+            <id>integration-tests</id>
+            <reports>
+              <report>report-only</report>
+            </reports>
+            <configuration>
+              <outputName>failsafe-report</outputName>
+              <reportsDirectories>
+                <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
+              </reportsDirectories>
+            </configuration>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
 
   <profiles>
     <!-- Skip the tests in this module -->
@@ -345,8 +369,9 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2-->
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -388,10 +413,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -422,7 +447,7 @@
         <hadoop.version>3.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
-	    <dependency>
+        <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </dependency>
@@ -452,10 +477,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -497,7 +522,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>
@@ -509,29 +534,5 @@
       </build>
     </profile>
   </profiles>
-
-  <reporting>
-    <plugins>
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-surefire-report-plugin</artifactId>
-      <version>${surefire.version}</version>
-      <reportSets>
-        <reportSet>
-          <id>integration-tests</id>
-          <reports>
-            <report>report-only</report>
-          </reports>
-          <configuration>
-            <outputName>failsafe-report</outputName>
-            <reportsDirectories>
-              <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
-            </reportsDirectories>
-          </configuration>
-        </reportSet>
-      </reportSets>
-    </plugin>
-  </plugins>
-  </reporting>
 
 </project>

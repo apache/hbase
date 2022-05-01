@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ public class TestServerSideScanMetricsFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
+    HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -97,7 +98,7 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
-      byte[][] qualifiers, byte[] cellValue) throws IOException {
+    byte[][] qualifiers, byte[] cellValue) throws IOException {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
@@ -112,15 +113,15 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Make puts to put the input value into each combination of row, family, and qualifier
-   * @param rows the rows to use
-   * @param families the column families to use
+   * @param rows       the rows to use
+   * @param families   the column families to use
    * @param qualifiers the column qualifiers to use
-   * @param value the value to put
+   * @param value      the value to put
    * @return the putted input values added in puts
    * @throws IOException If an IO problem is encountered
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
-      byte[] value) throws IOException {
+    byte[] value) throws IOException {
     Put put;
     ArrayList<Put> puts = new ArrayList<>();
 
@@ -226,21 +227,21 @@ public class TestServerSideScanMetricsFromClientSide {
 
     // The filter should filter out all rows, but we still expect to see every row.
     Filter filter =
-        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
+      new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     scan = new Scan(baseScan);
     scan.setFilter(filter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should pass on all rows
     SingleColumnValueFilter singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
+      new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
 
     // Filter should filter out all rows
     singleColumnValueFilter =
-        new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
+      new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
     scan = new Scan(baseScan);
     scan.setFilter(singleColumnValueFilter);
     testMetric(scan, ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, ROWS.length);
@@ -277,7 +278,7 @@ public class TestServerSideScanMetricsFromClientSide {
 
     // Row filter doesn't match any row key. All rows should be filtered
     Filter filter =
-        new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
+      new RowFilter(CompareOperator.EQUAL, new BinaryComparator(Bytes.toBytes("xyz")));
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     // Filter will return results containing only the first key. Number of entire rows filtered
@@ -299,8 +300,8 @@ public class TestServerSideScanMetricsFromClientSide {
     testRowsFilteredMetric(baseScan, filter, 0);
 
     // No matching column value should exist in any row. Filter all rows
-    filter = new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0],
-      CompareOperator.NOT_EQUAL, VALUE);
+    filter =
+      new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
     testRowsFilteredMetric(baseScan, filter, ROWS.length);
 
     List<Filter> filters = new ArrayList<>();
@@ -325,7 +326,7 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   public void testRowsFilteredMetric(Scan baseScan, Filter filter, int expectedNumFiltered)
-      throws Exception {
+    throws Exception {
     Scan scan = new Scan(baseScan);
     if (filter != null) {
       scan.setFilter(filter);
@@ -336,8 +337,8 @@ public class TestServerSideScanMetricsFromClientSide {
 
   /**
    * Run the scan to completion and check the metric against the specified value
-   * @param scan The scan instance to use to record metrics
-   * @param metricKey The metric key name
+   * @param scan          The scan instance to use to record metrics
+   * @param metricKey     The metric key name
    * @param expectedValue The expected value of metric
    * @throws Exception on unexpected failure
    */
@@ -353,8 +354,9 @@ public class TestServerSideScanMetricsFromClientSide {
     assertTrue("Metrics are null", metrics != null);
     assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
     final long actualMetricValue = metrics.getCounter(metricKey).get();
-    assertEquals("Metric: " + metricKey + " Expected: " + expectedValue + " Actual: "
-        + actualMetricValue, expectedValue, actualMetricValue);
+    assertEquals(
+      "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
+      expectedValue, actualMetricValue);
 
   }
 }

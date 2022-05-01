@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,7 +52,7 @@ public class TestReplicationProcedureRetry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationProcedureRetry.class);
+    HBaseClassTestRule.forClass(TestReplicationProcedureRetry.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -77,13 +78,13 @@ public class TestReplicationProcedureRetry {
     Admin admin = UTIL.getAdmin();
     String peerId = "1";
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/hbase2").build();
+      .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/hbase2").build();
     admin.addReplicationPeer(peerId, peerConfig, true);
 
     assertEquals(peerConfig.getClusterKey(),
       admin.getReplicationPeerConfig(peerId).getClusterKey());
     ReplicationPeerConfig newPeerConfig =
-        ReplicationPeerConfig.newBuilder(peerConfig).setBandwidth(123456).build();
+      ReplicationPeerConfig.newBuilder(peerConfig).setBandwidth(123456).build();
     admin.updateReplicationPeerConfig(peerId, newPeerConfig);
     assertEquals(newPeerConfig.getBandwidth(),
       admin.getReplicationPeerConfig(peerId).getBandwidth());
@@ -137,7 +138,7 @@ public class TestReplicationProcedureRetry {
     }
 
     private Object invokeWithError(InvocationOnMock invocation, boolean errorBeforeUpdate)
-        throws Throwable {
+      throws Throwable {
       if (errorBeforeUpdate) {
         throw new ReplicationException("mock error before update");
       }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -32,9 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An implementation of {@link MobCompactionRequest} that is used in
- * {@link PartitionedMobCompactor}.
- * The mob files that have the same start key and date in their names belong to
- * the same partition.
+ * {@link PartitionedMobCompactor}. The mob files that have the same start key and date in their
+ * names belong to the same partition.
  */
 @InterfaceAudience.Private
 public class PartitionedMobCompactionRequest extends MobCompactionRequest {
@@ -66,9 +63,8 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
   }
 
   /**
-   * The partition in the mob compaction.
-   * The mob files that have the same start key and date in their names belong to
-   * the same partition.
+   * The partition in the mob compaction. The mob files that have the same start key and date in
+   * their names belong to the same partition.
    */
   protected static class CompactionPartition {
     private List<FileStatus> files = new ArrayList<>();
@@ -94,7 +90,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       return Collections.unmodifiableList(files);
     }
 
-    public int getFileCount () {
+    public int getFileCount() {
       return files.size();
     }
 
@@ -103,8 +99,8 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     }
 
     /**
-     * Set start key of this partition, only if the input startKey is less than
-     * the current start key.
+     * Set start key of this partition, only if the input startKey is less than the current start
+     * key.
      */
     public void setStartKey(final byte[] startKey) {
       if ((this.startKey == null) || (Bytes.compareTo(startKey, this.startKey) < 0)) {
@@ -117,8 +113,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     }
 
     /**
-     * Set end key of this partition, only if the input endKey is greater than
-     * the current end key.
+     * Set end key of this partition, only if the input endKey is greater than the current end key.
      */
     public void setEndKey(final byte[] endKey) {
       if ((this.endKey == null) || (Bytes.compareTo(endKey, this.endKey) > 0)) {
@@ -154,11 +149,11 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       this.threshold = 0;
     }
 
-    public void setThreshold (final long threshold) {
+    public void setThreshold(final long threshold) {
       this.threshold = threshold;
     }
 
-    public long getThreshold () {
+    public long getThreshold() {
       return this.threshold;
     }
 
@@ -178,7 +173,9 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       this.date = date;
     }
 
-    public String getLatestDate () { return this.latestDate; }
+    public String getLatestDate() {
+      return this.latestDate;
+    }
 
     public void updateLatestDate(final String latestDate) {
       if (this.latestDate.compareTo(latestDate) < 0) {
@@ -219,10 +216,9 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
   }
 
   /**
-   * The delete file partition in the mob compaction.
-   * The delete partition is defined as [startKey, endKey] pair.
-   * The mob delete files that have the same start key and end key belong to
-   * the same partition.
+   * The delete file partition in the mob compaction. The delete partition is defined as [startKey,
+   * endKey] pair. The mob delete files that have the same start key and end key belong to the same
+   * partition.
    */
   protected static class CompactionDelPartition {
     private List<Path> delFiles = new ArrayList<Path>();
@@ -240,6 +236,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     void addDelFile(FileStatus file) {
       delFiles.add(file.getPath());
     }
+
     public void addStoreFile(HStoreFile file) {
       storeFiles.add(file);
     }
@@ -256,7 +253,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
       delFiles.addAll(list);
     }
 
-    int getDelFileCount () {
+    int getDelFileCount() {
       return delFiles.size();
     }
 
@@ -283,6 +280,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     public byte[] getStartKey() {
       return this.startKey;
     }
+
     public void setStartKey(final byte[] startKey) {
       this.startKey = startKey;
     }
@@ -290,6 +288,7 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     public byte[] getEndKey() {
       return this.endKey;
     }
+
     public void setEndKey(final byte[] endKey) {
       this.endKey = endKey;
     }
@@ -297,9 +296,8 @@ public class PartitionedMobCompactionRequest extends MobCompactionRequest {
     @Override
     public int compareTo(CompactionDelPartitionId o) {
       /*
-       * 1). Compare the start key, if the k1 < k2, then k1 is less
-       * 2). If start Key is same, check endKey, k1 < k2, k1 is less
-       *     If both are same, then they are equal.
+       * 1). Compare the start key, if the k1 < k2, then k1 is less 2). If start Key is same, check
+       * endKey, k1 < k2, k1 is less If both are same, then they are equal.
        */
       int result = Bytes.compareTo(this.startKey, o.getStartKey());
       if (result != 0) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,9 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@code DataType} for interacting with variable-length values
- * encoded using {@link Bytes#putBytes(byte[], int, byte[], int, int)}.
- * Intended to make it easier to transition away from direct use of
- * {@link Bytes}.
+ * An {@code DataType} for interacting with variable-length values encoded using
+ * {@link Bytes#putBytes(byte[], int, byte[], int, int)}. Intended to make it easier to transition
+ * away from direct use of {@link Bytes}.
  * @see Bytes#putBytes(byte[], int, byte[], int, int)
  * @see RawBytesTerminated
  * @see RawBytesFixedLength

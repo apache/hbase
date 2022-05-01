@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -34,15 +32,15 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPlan;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * Helper class that is used by {@link RegionPlacementMaintainer} to print
- * information for favored nodes
- *
+ * Helper class that is used by {@link RegionPlacementMaintainer} to print information for favored
+ * nodes
  */
 @InterfaceAudience.Private
 public class AssignmentVerificationReport {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AssignmentVerificationReport.class.getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(AssignmentVerificationReport.class.getName());
 
   private TableName tableName = null;
   private boolean enforceLocality = false;
@@ -63,7 +61,7 @@ public class AssignmentVerificationReport {
   private int totalFavoredAssignments = 0;
   private int[] favoredNodes = new int[FavoredNodeAssignmentHelper.FAVORED_NODES_NUM];
   private float[] favoredNodesLocalitySummary =
-      new float[FavoredNodeAssignmentHelper.FAVORED_NODES_NUM];
+    new float[FavoredNodeAssignmentHelper.FAVORED_NODES_NUM];
   private float actualLocalitySummary = 0;
 
   // For region balancing information
@@ -86,21 +84,19 @@ public class AssignmentVerificationReport {
   private Set<ServerName> minDispersionNumServerSet = new HashSet<>();
 
   public void fillUp(TableName tableName, SnapshotOfRegionAssignmentFromMeta snapshot,
-      Map<String, Map<String, Float>> regionLocalityMap) {
+    Map<String, Map<String, Float>> regionLocalityMap) {
     // Set the table name
     this.tableName = tableName;
 
     // Get all the regions for this table
-    List<RegionInfo> regionInfoList =
-      snapshot.getTableToRegionMap().get(tableName);
+    List<RegionInfo> regionInfoList = snapshot.getTableToRegionMap().get(tableName);
     // Get the total region num for the current table
     this.totalRegions = regionInfoList.size();
 
     // Get the existing assignment plan
     FavoredNodesPlan favoredNodesAssignment = snapshot.getExistingAssignmentPlan();
     // Get the region to region server mapping
-    Map<RegionInfo, ServerName> currentAssignment =
-      snapshot.getRegionToRegionServerMap();
+    Map<RegionInfo, ServerName> currentAssignment = snapshot.getRegionToRegionServerMap();
     // Initialize the server to its hosing region counter map
     Map<ServerName, Integer> serverToHostingRegionCounterMap = new HashMap<>();
 
@@ -128,18 +124,17 @@ public class AssignmentVerificationReport {
 
         // Get the favored nodes from the assignment plan and verify it.
         List<ServerName> favoredNodes = favoredNodesAssignment.getFavoredNodes(region);
-        if (favoredNodes == null ||
-            favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+        if (
+          favoredNodes == null
+            || favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM
+        ) {
           regionsWithoutValidFavoredNodes.add(region);
           continue;
         }
         // Get the primary, secondary and tertiary region server
-        ServerName primaryRS =
-          favoredNodes.get(FavoredNodesPlan.Position.PRIMARY.ordinal());
-        ServerName secondaryRS =
-          favoredNodes.get(FavoredNodesPlan.Position.SECONDARY.ordinal());
-        ServerName tertiaryRS =
-          favoredNodes.get(FavoredNodesPlan.Position.TERTIARY.ordinal());
+        ServerName primaryRS = favoredNodes.get(FavoredNodesPlan.Position.PRIMARY.ordinal());
+        ServerName secondaryRS = favoredNodes.get(FavoredNodesPlan.Position.SECONDARY.ordinal());
+        ServerName tertiaryRS = favoredNodes.get(FavoredNodesPlan.Position.TERTIARY.ordinal());
 
         // Update the primary rs to its region set map
         Integer regionCounter = primaryRSToRegionCounterMap.get(primaryRS);
@@ -187,43 +182,37 @@ public class AssignmentVerificationReport {
           for (FavoredNodesPlan.Position p : FavoredNodesPlan.Position.values()) {
             ServerName favoredNode = favoredNodes.get(p.ordinal());
             // Get the locality for the current favored nodes
-            Float locality =
-              regionDegreeLocalityMap.get(favoredNode.getHostname());
+            Float locality = regionDegreeLocalityMap.get(favoredNode.getHostname());
             if (locality != null) {
               this.favoredNodesLocalitySummary[p.ordinal()] += locality;
             }
           }
 
           // Get the locality summary for the current region server
-          Float actualLocality =
-            regionDegreeLocalityMap.get(currentRS.getHostname());
+          Float actualLocality = regionDegreeLocalityMap.get(currentRS.getHostname());
           if (actualLocality != null) {
             this.actualLocalitySummary += actualLocality;
           }
         }
       } catch (Exception e) {
-        LOG.error("Cannot verify the region assignment for region " +
-            ((region == null) ? " null " : region.getRegionNameAsString()) +
-            "because of " + e);
+        LOG.error("Cannot verify the region assignment for region "
+          + ((region == null) ? " null " : region.getRegionNameAsString()) + "because of " + e);
       }
     }
 
     float dispersionScoreSummary = 0;
     float dispersionNumSummary = 0;
     // Calculate the secondary score for each primary region server
-    for (Map.Entry<ServerName, Integer> entry :
-      primaryRSToRegionCounterMap.entrySet()) {
+    for (Map.Entry<ServerName, Integer> entry : primaryRSToRegionCounterMap.entrySet()) {
       ServerName primaryRS = entry.getKey();
       Integer regionsOnPrimary = entry.getValue();
 
       // Process the dispersion number and score
       float dispersionScore = 0;
       int dispersionNum = 0;
-      if (primaryToSecTerRSMap.get(primaryRS) != null
-          && regionsOnPrimary.intValue() != 0) {
+      if (primaryToSecTerRSMap.get(primaryRS) != null && regionsOnPrimary.intValue() != 0) {
         dispersionNum = primaryToSecTerRSMap.get(primaryRS).size();
-        dispersionScore = dispersionNum /
-          ((float) regionsOnPrimary.intValue() * 2);
+        dispersionScore = dispersionNum / ((float) regionsOnPrimary.intValue() * 2);
       }
       // Update the max dispersion score
       if (dispersionScore > this.maxDispersionScore) {
@@ -267,15 +256,14 @@ public class AssignmentVerificationReport {
 
     // Update the avg dispersion score
     if (primaryRSToRegionCounterMap.keySet().size() != 0) {
-      this.avgDispersionScore = dispersionScoreSummary /
-         (float) primaryRSToRegionCounterMap.keySet().size();
-      this.avgDispersionNum = dispersionNumSummary /
-         (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionScore =
+        dispersionScoreSummary / (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionNum =
+        dispersionNumSummary / (float) primaryRSToRegionCounterMap.keySet().size();
     }
 
     // Fill up the most loaded and least loaded region server information
-    for (Map.Entry<ServerName, Integer> entry :
-      serverToHostingRegionCounterMap.entrySet()) {
+    for (Map.Entry<ServerName, Integer> entry : serverToHostingRegionCounterMap.entrySet()) {
       ServerName currentRS = entry.getKey();
       int hostRegionCounter = entry.getValue().intValue();
 
@@ -300,25 +288,21 @@ public class AssignmentVerificationReport {
 
     // and total region servers
     this.totalRegionServers = serverToHostingRegionCounterMap.keySet().size();
-    this.avgRegionsOnRS = (totalRegionServers == 0) ? 0 :
-      (totalRegions / (float) totalRegionServers);
+    this.avgRegionsOnRS =
+      (totalRegionServers == 0) ? 0 : (totalRegions / (float) totalRegionServers);
     // Set the isFilledUp as true
     isFilledUp = true;
   }
 
   /**
-   * Use this to project the dispersion scores
-   * @param tableName
-   * @param snapshot
-   * @param newPlan
+   * Use this to project the dispersion scores nnn
    */
-  public void fillUpDispersion(TableName tableName,
-      SnapshotOfRegionAssignmentFromMeta snapshot, FavoredNodesPlan newPlan) {
+  public void fillUpDispersion(TableName tableName, SnapshotOfRegionAssignmentFromMeta snapshot,
+    FavoredNodesPlan newPlan) {
     // Set the table name
     this.tableName = tableName;
     // Get all the regions for this table
-    List<RegionInfo> regionInfoList = snapshot.getTableToRegionMap().get(
-        tableName);
+    List<RegionInfo> regionInfoList = snapshot.getTableToRegionMap().get(tableName);
     // Get the total region num for the current table
     this.totalRegions = regionInfoList.size();
     FavoredNodesPlan plan = null;
@@ -337,18 +321,17 @@ public class AssignmentVerificationReport {
       try {
         // Get the favored nodes from the assignment plan and verify it.
         List<ServerName> favoredNodes = plan.getFavoredNodes(region);
-        if (favoredNodes == null
-            || favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+        if (
+          favoredNodes == null
+            || favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM
+        ) {
           regionsWithoutValidFavoredNodes.add(region);
           continue;
         }
         // Get the primary, secondary and tertiary region server
-        ServerName primaryRS = favoredNodes
-            .get(FavoredNodesPlan.Position.PRIMARY.ordinal());
-        ServerName secondaryRS = favoredNodes
-            .get(FavoredNodesPlan.Position.SECONDARY.ordinal());
-        ServerName tertiaryRS = favoredNodes
-            .get(FavoredNodesPlan.Position.TERTIARY.ordinal());
+        ServerName primaryRS = favoredNodes.get(FavoredNodesPlan.Position.PRIMARY.ordinal());
+        ServerName secondaryRS = favoredNodes.get(FavoredNodesPlan.Position.SECONDARY.ordinal());
+        ServerName tertiaryRS = favoredNodes.get(FavoredNodesPlan.Position.TERTIARY.ordinal());
 
         // Update the primary rs to its region set map
         Integer regionCounter = primaryRSToRegionCounterMap.get(primaryRS);
@@ -368,26 +351,22 @@ public class AssignmentVerificationReport {
         primaryToSecTerRSMap.put(primaryRS, secAndTerSet);
       } catch (Exception e) {
         LOG.error("Cannot verify the region assignment for region "
-            + ((region == null) ? " null " : region.getRegionNameAsString())
-            + "because of " + e);
+          + ((region == null) ? " null " : region.getRegionNameAsString()) + "because of " + e);
       }
     }
     float dispersionScoreSummary = 0;
     float dispersionNumSummary = 0;
     // Calculate the secondary score for each primary region server
-    for (Map.Entry<ServerName, Integer> entry :
-      primaryRSToRegionCounterMap.entrySet()) {
+    for (Map.Entry<ServerName, Integer> entry : primaryRSToRegionCounterMap.entrySet()) {
       ServerName primaryRS = entry.getKey();
       Integer regionsOnPrimary = entry.getValue();
 
       // Process the dispersion number and score
       float dispersionScore = 0;
       int dispersionNum = 0;
-      if (primaryToSecTerRSMap.get(primaryRS) != null
-          && regionsOnPrimary.intValue() != 0) {
+      if (primaryToSecTerRSMap.get(primaryRS) != null && regionsOnPrimary.intValue() != 0) {
         dispersionNum = primaryToSecTerRSMap.get(primaryRS).size();
-        dispersionScore = dispersionNum /
-          ((float) regionsOnPrimary.intValue() * 2);
+        dispersionScore = dispersionNum / ((float) regionsOnPrimary.intValue() * 2);
       }
 
       // Update the max dispersion num
@@ -423,18 +402,16 @@ public class AssignmentVerificationReport {
 
     // Update the avg dispersion score
     if (primaryRSToRegionCounterMap.keySet().size() != 0) {
-      this.avgDispersionScore = dispersionScoreSummary /
-         (float) primaryRSToRegionCounterMap.keySet().size();
-      this.avgDispersionNum = dispersionNumSummary /
-         (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionScore =
+        dispersionScoreSummary / (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionNum =
+        dispersionNumSummary / (float) primaryRSToRegionCounterMap.keySet().size();
     }
   }
 
   /**
-   * @return list which contains just 3 elements: average dispersion score, max
-   * dispersion score and min dispersion score as first, second and third element
-   * respectively.
-   *
+   * @return list which contains just 3 elements: average dispersion score, max dispersion score and
+   *         min dispersion score as first, second and third element respectively.
    */
   public List<Float> getDispersionInformation() {
     List<Float> dispersion = new ArrayList<>();
@@ -446,41 +423,38 @@ public class AssignmentVerificationReport {
 
   public void print(boolean isDetailMode) {
     if (!isFilledUp) {
-      System.err.println("[Error] Region assignment verification report" +
-          "hasn't been filled up");
+      System.err.println("[Error] Region assignment verification report" + "hasn't been filled up");
     }
-    DecimalFormat df = new java.text.DecimalFormat( "#.##");
+    DecimalFormat df = new java.text.DecimalFormat("#.##");
 
     // Print some basic information
-    System.out.println("Region Assignment Verification for Table: " + tableName +
-        "\n\tTotal regions : " + totalRegions);
+    System.out.println("Region Assignment Verification for Table: " + tableName
+      + "\n\tTotal regions : " + totalRegions);
 
     // Print the number of regions on each kinds of the favored nodes
-    System.out.println("\tTotal regions on favored nodes " +
-        totalFavoredAssignments);
+    System.out.println("\tTotal regions on favored nodes " + totalFavoredAssignments);
     for (FavoredNodesPlan.Position p : FavoredNodesPlan.Position.values()) {
-      System.out.println("\t\tTotal regions on "+ p.toString() +
-          " region servers: " + favoredNodes[p.ordinal()]);
+      System.out.println(
+        "\t\tTotal regions on " + p.toString() + " region servers: " + favoredNodes[p.ordinal()]);
     }
     // Print the number of regions in each kinds of invalid assignment
-    System.out.println("\tTotal unassigned regions: " +
-        unAssignedRegionsList.size());
+    System.out.println("\tTotal unassigned regions: " + unAssignedRegionsList.size());
     if (isDetailMode) {
       for (RegionInfo region : unAssignedRegionsList) {
         System.out.println("\t\t" + region.getRegionNameAsString());
       }
     }
 
-    System.out.println("\tTotal regions NOT on favored nodes: " +
-        nonFavoredAssignedRegionList.size());
+    System.out
+      .println("\tTotal regions NOT on favored nodes: " + nonFavoredAssignedRegionList.size());
     if (isDetailMode) {
       for (RegionInfo region : nonFavoredAssignedRegionList) {
         System.out.println("\t\t" + region.getRegionNameAsString());
       }
     }
 
-    System.out.println("\tTotal regions without favored nodes: " +
-        regionsWithoutValidFavoredNodes.size());
+    System.out
+      .println("\tTotal regions without favored nodes: " + regionsWithoutValidFavoredNodes.size());
     if (isDetailMode) {
       for (RegionInfo region : regionsWithoutValidFavoredNodes) {
         System.out.println("\t\t" + region.getRegionNameAsString());
@@ -490,77 +464,68 @@ public class AssignmentVerificationReport {
     // Print the locality information if enabled
     if (this.enforceLocality && totalRegions != 0) {
       // Print the actual locality for this table
-      float actualLocality = 100 *
-        this.actualLocalitySummary / (float) totalRegions;
-      System.out.println("\n\tThe actual avg locality is " +
-          df.format(actualLocality) + " %");
+      float actualLocality = 100 * this.actualLocalitySummary / (float) totalRegions;
+      System.out.println("\n\tThe actual avg locality is " + df.format(actualLocality) + " %");
 
       // Print the expected locality if regions are placed on the each kinds of
       // favored nodes
       for (FavoredNodesPlan.Position p : FavoredNodesPlan.Position.values()) {
-        float avgLocality = 100 *
-          (favoredNodesLocalitySummary[p.ordinal()] / (float) totalRegions);
-        System.out.println("\t\tThe expected avg locality if all regions" +
-            " on the " + p.toString() + " region servers: "
-            + df.format(avgLocality) + " %");
+        float avgLocality = 100 * (favoredNodesLocalitySummary[p.ordinal()] / (float) totalRegions);
+        System.out.println("\t\tThe expected avg locality if all regions" + " on the "
+          + p.toString() + " region servers: " + df.format(avgLocality) + " %");
       }
     }
 
     // Print the region balancing information
-    System.out.println("\n\tTotal hosting region servers: " +
-        totalRegionServers);
+    System.out.println("\n\tTotal hosting region servers: " + totalRegionServers);
     // Print the region balance information
     if (totalRegionServers != 0) {
-      System.out.println(
-          "\tAvg dispersion num: " +df.format(avgDispersionNum) +
-          " hosts;\tMax dispersion num: " + df.format(maxDispersionNum) +
-          " hosts;\tMin dispersion num: " + df.format(minDispersionNum) +
-          " hosts;");
+      System.out.println("\tAvg dispersion num: " + df.format(avgDispersionNum)
+        + " hosts;\tMax dispersion num: " + df.format(maxDispersionNum)
+        + " hosts;\tMin dispersion num: " + df.format(minDispersionNum) + " hosts;");
 
-      System.out.println("\t\tThe number of the region servers with the max" +
-          " dispersion num: " + this.maxDispersionNumServerSet.size());
+      System.out.println("\t\tThe number of the region servers with the max" + " dispersion num: "
+        + this.maxDispersionNumServerSet.size());
       if (isDetailMode) {
         printHServerAddressSet(maxDispersionNumServerSet);
       }
 
-      System.out.println("\t\tThe number of the region servers with the min" +
-          " dispersion num: " + this.minDispersionNumServerSet.size());
+      System.out.println("\t\tThe number of the region servers with the min" + " dispersion num: "
+        + this.minDispersionNumServerSet.size());
       if (isDetailMode) {
         printHServerAddressSet(maxDispersionNumServerSet);
       }
 
-      System.out.println(
-          "\tAvg dispersion score: " + df.format(avgDispersionScore) +
-          ";\tMax dispersion score: " + df.format(maxDispersionScore) +
-          ";\tMin dispersion score: " + df.format(minDispersionScore) + ";");
+      System.out.println("\tAvg dispersion score: " + df.format(avgDispersionScore)
+        + ";\tMax dispersion score: " + df.format(maxDispersionScore) + ";\tMin dispersion score: "
+        + df.format(minDispersionScore) + ";");
 
-      System.out.println("\t\tThe number of the region servers with the max" +
-          " dispersion score: " + this.maxDispersionScoreServerSet.size());
+      System.out.println("\t\tThe number of the region servers with the max" + " dispersion score: "
+        + this.maxDispersionScoreServerSet.size());
       if (isDetailMode) {
         printHServerAddressSet(maxDispersionScoreServerSet);
       }
 
-      System.out.println("\t\tThe number of the region servers with the min" +
-          " dispersion score: " + this.minDispersionScoreServerSet.size());
+      System.out.println("\t\tThe number of the region servers with the min" + " dispersion score: "
+        + this.minDispersionScoreServerSet.size());
       if (isDetailMode) {
         printHServerAddressSet(minDispersionScoreServerSet);
       }
 
-      System.out.println(
-          "\tAvg regions/region server: " + df.format(avgRegionsOnRS) +
-          ";\tMax regions/region server: " + maxRegionsOnRS +
-          ";\tMin regions/region server: " + minRegionsOnRS + ";");
+      System.out.println("\tAvg regions/region server: " + df.format(avgRegionsOnRS)
+        + ";\tMax regions/region server: " + maxRegionsOnRS + ";\tMin regions/region server: "
+        + minRegionsOnRS + ";");
 
       // Print the details about the most loaded region servers
-      System.out.println("\t\tThe number of the most loaded region servers: "
-          + mostLoadedRSSet.size());
+      System.out
+        .println("\t\tThe number of the most loaded region servers: " + mostLoadedRSSet.size());
       if (isDetailMode) {
         printHServerAddressSet(mostLoadedRSSet);
       }
 
       // Print the details about the least loaded region servers
-      System.out.println("\t\tThe number of the least loaded region servers: "
-          + leastLoadedRSSet.size());
+      System.out
+        .println("\t\tThe number of the least loaded region servers: " + leastLoadedRSSet.size());
       if (isDetailMode) {
         printHServerAddressSet(leastLoadedRSSet);
       }
@@ -601,10 +566,8 @@ public class AssignmentVerificationReport {
   }
 
   /**
-   * Return the number of regions based on the position (primary/secondary/
-   * tertiary) assigned to their favored nodes
-   * @param position
-   * @return the number of regions
+   * Return the number of regions based on the position (primary/secondary/ tertiary) assigned to
+   * their favored nodes n * @return the number of regions
    */
   int getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position position) {
     return favoredNodes[position.ordinal()];
@@ -612,10 +575,10 @@ public class AssignmentVerificationReport {
 
   private void printHServerAddressSet(Set<ServerName> serverSet) {
     if (serverSet == null) {
-      return ;
+      return;
     }
     int i = 0;
-    for (ServerName addr : serverSet){
+    for (ServerName addr : serverSet) {
       if ((i++) % 3 == 0) {
         System.out.print("\n\t\t\t");
       }

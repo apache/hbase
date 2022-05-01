@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.Arrays;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
@@ -27,18 +26,17 @@ import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Just shows a simple example of how the attributes can be extracted and added
- * to the puts
+ * Just shows a simple example of how the attributes can be extracted and added to the puts
  */
 public class TsvImporterCustomTestMapperForOprAttr extends TsvImporterMapper {
   @Override
   protected void populatePut(byte[] lineBytes, ParsedLine parsed, Put put, int i)
-      throws BadTsvLineException, IOException {
+    throws BadTsvLineException, IOException {
     KeyValue kv;
     kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-        parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
-        parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes, parsed.getColumnOffset(i),
-        parsed.getColumnLength(i));
+      parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+      parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes, parsed.getColumnOffset(i),
+      parsed.getColumnLength(i));
     if (parsed.getIndividualAttributes() != null) {
       String[] attributes = parsed.getIndividualAttributes();
       for (String attr : attributes) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,17 +27,16 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The following class is an abstraction class to provide a common interface to support different
@@ -72,7 +71,7 @@ public abstract class OutputSink {
   protected final CompletionService<Void> closeCompletionService;
 
   public OutputSink(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-      int numWriters) {
+    int numWriters) {
     this.numThreads = numWriters;
     this.controller = controller;
     this.entryBuffers = entryBuffers;
@@ -102,9 +101,9 @@ public abstract class OutputSink {
   }
 
   public synchronized void restartWriterThreadsIfNeeded() {
-    for(int i = 0; i< writerThreads.size(); i++){
+    for (int i = 0; i < writerThreads.size(); i++) {
       WriterThread t = writerThreads.get(i);
-      if (!t.isAlive()){
+      if (!t.isAlive()) {
         String threadName = t.getName();
         LOG.debug("Replacing dead thread: " + threadName);
         WriterThread newThread = new WriterThread(controller, entryBuffers, this, threadName);
@@ -116,7 +115,6 @@ public abstract class OutputSink {
 
   /**
    * Wait for writer threads to dump all info to the sink
-   *
    * @return true when there is no error
    */
   protected boolean finishWriterThreads(boolean interrupt) throws IOException {
@@ -201,12 +199,12 @@ public abstract class OutputSink {
     private OutputSink outputSink = null;
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, int i) {
+      OutputSink sink, int i) {
       this(controller, entryBuffers, sink, Thread.currentThread().getName() + "-Writer-" + i);
     }
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, String threadName) {
+      OutputSink sink, String threadName) {
       super(threadName);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
@@ -214,7 +212,7 @@ public abstract class OutputSink {
     }
 
     @Override
-    public void run()  {
+    public void run() {
       try {
         doRun();
       } catch (Throwable t) {

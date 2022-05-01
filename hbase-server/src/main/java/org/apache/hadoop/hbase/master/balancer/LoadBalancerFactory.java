@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,8 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class LoadBalancerFactory {
 
   /**
-   * The default {@link LoadBalancer} class. 
-   *
+   * The default {@link LoadBalancer} class.
    * @return The Class for the default {@link LoadBalancer}.
    */
   public static Class<? extends LoadBalancer> getDefaultLoadBalancerClass() {
@@ -39,9 +38,7 @@ public class LoadBalancerFactory {
   }
 
   /**
-   * Create a loadbalancer from the given conf.
-   * @param conf
-   * @return A {@link LoadBalancer}
+   * Create a loadbalancer from the given conf. n * @return A {@link LoadBalancer}
    */
   public static LoadBalancer getLoadBalancer(Configuration conf) {
     // Create the balancer

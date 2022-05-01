@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
@@ -55,14 +54,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 /**
- * Scanner operations such as create, next, etc.
- * Used by {@link ResultScanner}s made by {@link Table}. Passed to a retrying caller such as
- * {@link RpcRetryingCaller} so fails are retried.
+ * Scanner operations such as create, next, etc. Used by {@link ResultScanner}s made by
+ * {@link Table}. Passed to a retrying caller such as {@link RpcRetryingCaller} so fails are
+ * retried.
  */
 @InterfaceAudience.Private
 public class ScannerCallable extends ClientServiceCallable<Result[]> {
-  public static final String LOG_SCANNER_LATENCY_CUTOFF
-    = "hbase.client.log.scanner.latency.cutoff";
+  public static final String LOG_SCANNER_LATENCY_CUTOFF = "hbase.client.log.scanner.latency.cutoff";
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   // Keeping LOG public as it is being used in TestScannerHeartbeatMessages
@@ -79,7 +77,9 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   protected final int id;
 
   enum MoreResults {
-    YES, NO, UNKNOWN
+    YES,
+    NO,
+    UNKNOWN
   }
 
   private MoreResults moreResultsInRegion;
@@ -99,17 +99,18 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   protected final RpcControllerFactory rpcControllerFactory;
 
   /**
-   * @param connection which connection
-   * @param tableName table callable is on
-   * @param scan the scan to execute
-   * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
-   *          metrics
+   * @param connection           which connection
+   * @param tableName            table callable is on
+   * @param scan                 the scan to execute
+   * @param scanMetrics          the ScanMetrics to used, if it is null, ScannerCallable won't
+   *                             collect metrics
    * @param rpcControllerFactory factory to use when creating
-   *        {@link com.google.protobuf.RpcController}
+   *                             {@link com.google.protobuf.RpcController}
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
-    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(), scan.getPriority());
+    ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
+    super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(),
+      scan.getPriority());
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
@@ -131,14 +132,12 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   }
 
   /**
-   * Fetch region locations for the row. Since this is for prepare, we always useCache.
-   * This is because we can be sure that RpcRetryingCaller will have cleared the cache
-   * in error handling if this is a retry.
-   *
+   * Fetch region locations for the row. Since this is for prepare, we always useCache. This is
+   * because we can be sure that RpcRetryingCaller will have cleared the cache in error handling if
+   * this is a retry.
    * @param row the row to look up region location for
    */
-  protected final RegionLocations getRegionLocationsForPrepare(byte[] row)
-    throws IOException {
+  protected final RegionLocations getRegionLocationsForPrepare(byte[] row) throws IOException {
     // always use cache, because cache will have been cleared if necessary
     // in the try/catch before retrying
     return RpcRetryingCallerWithReadReplicas.getRegionLocations(true, id, getConnection(),
@@ -154,8 +153,10 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       throw new InterruptedIOException();
     }
 
-    if (reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
-      && getConnection().isTableDisabled(getTableName())) {
+    if (
+      reload && getTableName() != null && !getTableName().equals(TableName.META_TABLE_NAME)
+        && getConnection().isTableDisabled(getTableName())
+    ) {
       throw new TableNotEnabledException(getTableName().getNameAsString() + " is disabled.");
     }
 
@@ -203,16 +204,15 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
         if (ioe instanceof UnknownScannerException) {
           try {
             HRegionLocation location =
-                getConnection().relocateRegion(getTableName(), scan.getStartRow());
+              getConnection().relocateRegion(getTableName(), scan.getStartRow());
             LOG.info("Scanner=" + scannerId + " expired, current region location is "
-                + location.toString());
+              + location.toString());
           } catch (Throwable t) {
             LOG.info("Failed to relocate region", t);
           }
         } else if (ioe instanceof ScannerResetException) {
           LOG.info("Scanner=" + scannerId + " has received an exception, and the server "
-              + "asked us to reset the scanner state.",
-            ioe);
+            + "asked us to reset the scanner state.", ioe);
         }
       }
       // The below convertion of exceptions into DoNotRetryExceptions is a little strange.
@@ -271,8 +271,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       long now = EnvironmentEdgeManager.currentTime();
       if (now - timestamp > logCutOffLatency) {
         int rows = rrs == null ? 0 : rrs.length;
-        LOG.info("Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner="
-            + scannerId);
+        LOG.info(
+          "Took " + (now - timestamp) + "ms to fetch " + rows + " rows from scanner=" + scannerId);
       }
     }
     updateServerSideMetrics(scanMetrics, response);
@@ -326,7 +326,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     try {
       incRPCCallsMetrics(scanMetrics, isRegionServerRemote);
       ScanRequest request =
-          RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
+        RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
       HBaseRpcController controller = rpcControllerFactory.newController();
 
       // Set fields from the original controller onto the close-specific controller
@@ -349,8 +349,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     } catch (IOException e) {
       TableName table = getTableName();
       String tableDetails = (table == null) ? "" : (" on table: " + table.getNameAsString());
-      LOG.warn("Ignore, probably already closed. Current scan: " + getScan().toString()
-          + tableDetails, e);
+      LOG.warn(
+        "Ignore, probably already closed. Current scan: " + getScan().toString() + tableDetails, e);
     }
     this.scannerId = -1L;
   }
@@ -363,8 +363,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
       ScanResponse response = getStub().scan(getRpcController(), request);
       long id = response.getScannerId();
       if (logScannerActivity) {
-        LOG.info("Open scanner=" + id + " for scan=" + scan.toString()
-          + " on region " + getLocation().toString());
+        LOG.info("Open scanner=" + id + " for scan=" + scan.toString() + " on region "
+          + getLocation().toString());
       }
       if (response.hasMvccReadPoint()) {
         this.scan.setMvccReadPoint(response.getMvccReadPoint());
@@ -424,8 +424,8 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
   }
 
   public ScannerCallable getScannerCallableForReplica(int id) {
-    ScannerCallable s = new ScannerCallable(this.getConnection(), getTableName(),
-        this.getScan(), this.scanMetrics, this.rpcControllerFactory, id);
+    ScannerCallable s = new ScannerCallable(this.getConnection(), getTableName(), this.getScan(),
+      this.scanMetrics, this.rpcControllerFactory, id);
     s.setCaching(this.caching);
     return s;
   }

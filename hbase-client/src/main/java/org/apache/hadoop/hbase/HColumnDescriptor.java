@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.ModifyableColumnFamilyDescriptor;
@@ -32,30 +29,39 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An HColumnDescriptor contains information about a column family such as the
- * number of versions, compression settings, etc.
- *
- * It is used as input when creating a table or adding a column.
+ * An HColumnDescriptor contains information about a column family such as the number of versions,
+ * compression settings, etc. It is used as input when creating a table or adding a column.
  */
 @InterfaceAudience.Public
 @Deprecated // remove it in 3.0
 public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HColumnDescriptor> {
-  public static final String IN_MEMORY_COMPACTION = ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION;
+  public static final String IN_MEMORY_COMPACTION =
+    ColumnFamilyDescriptorBuilder.IN_MEMORY_COMPACTION;
   public static final String COMPRESSION = ColumnFamilyDescriptorBuilder.COMPRESSION;
-  public static final String COMPRESSION_COMPACT = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT;
-  public static final String COMPRESSION_COMPACT_MAJOR = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MAJOR;
-  public static final String COMPRESSION_COMPACT_MINOR = ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MINOR;
+  public static final String COMPRESSION_COMPACT =
+    ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT;
+  public static final String COMPRESSION_COMPACT_MAJOR =
+    ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MAJOR;
+  public static final String COMPRESSION_COMPACT_MINOR =
+    ColumnFamilyDescriptorBuilder.COMPRESSION_COMPACT_MINOR;
   public static final String ENCODE_ON_DISK = "ENCODE_ON_DISK";
-  public static final String DATA_BLOCK_ENCODING = ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING;
+  public static final String DATA_BLOCK_ENCODING =
+    ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING;
   public static final String BLOCKCACHE = ColumnFamilyDescriptorBuilder.BLOCKCACHE;
-  public static final String CACHE_DATA_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_DATA_ON_WRITE;
-  public static final String CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_INDEX_ON_WRITE;
-  public static final String CACHE_BLOOMS_ON_WRITE = ColumnFamilyDescriptorBuilder.CACHE_BLOOMS_ON_WRITE;
-  public static final String EVICT_BLOCKS_ON_CLOSE = ColumnFamilyDescriptorBuilder.EVICT_BLOCKS_ON_CLOSE;
+  public static final String CACHE_DATA_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.CACHE_DATA_ON_WRITE;
+  public static final String CACHE_INDEX_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.CACHE_INDEX_ON_WRITE;
+  public static final String CACHE_BLOOMS_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.CACHE_BLOOMS_ON_WRITE;
+  public static final String EVICT_BLOCKS_ON_CLOSE =
+    ColumnFamilyDescriptorBuilder.EVICT_BLOCKS_ON_CLOSE;
   public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
-  public static final String PREFETCH_BLOCKS_ON_OPEN = ColumnFamilyDescriptorBuilder.PREFETCH_BLOCKS_ON_OPEN;
+  public static final String PREFETCH_BLOCKS_ON_OPEN =
+    ColumnFamilyDescriptorBuilder.PREFETCH_BLOCKS_ON_OPEN;
   public static final String BLOCKSIZE = ColumnFamilyDescriptorBuilder.BLOCKSIZE;
   public static final String LENGTH = "LENGTH";
   public static final String TTL = ColumnFamilyDescriptorBuilder.TTL;
@@ -72,46 +78,62 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   public static final byte[] IS_MOB_BYTES = Bytes.toBytes(IS_MOB);
   public static final String MOB_THRESHOLD = ColumnFamilyDescriptorBuilder.MOB_THRESHOLD;
   public static final byte[] MOB_THRESHOLD_BYTES = Bytes.toBytes(MOB_THRESHOLD);
-  public static final long DEFAULT_MOB_THRESHOLD = ColumnFamilyDescriptorBuilder.DEFAULT_MOB_THRESHOLD;
-  public static final String MOB_COMPACT_PARTITION_POLICY = ColumnFamilyDescriptorBuilder.MOB_COMPACT_PARTITION_POLICY;
-  public static final byte[] MOB_COMPACT_PARTITION_POLICY_BYTES = Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY);
-  public static final MobCompactPartitionPolicy DEFAULT_MOB_COMPACT_PARTITION_POLICY
-        = ColumnFamilyDescriptorBuilder.DEFAULT_MOB_COMPACT_PARTITION_POLICY;
+  public static final long DEFAULT_MOB_THRESHOLD =
+    ColumnFamilyDescriptorBuilder.DEFAULT_MOB_THRESHOLD;
+  public static final String MOB_COMPACT_PARTITION_POLICY =
+    ColumnFamilyDescriptorBuilder.MOB_COMPACT_PARTITION_POLICY;
+  public static final byte[] MOB_COMPACT_PARTITION_POLICY_BYTES =
+    Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY);
+  public static final MobCompactPartitionPolicy DEFAULT_MOB_COMPACT_PARTITION_POLICY =
+    ColumnFamilyDescriptorBuilder.DEFAULT_MOB_COMPACT_PARTITION_POLICY;
   public static final String DFS_REPLICATION = ColumnFamilyDescriptorBuilder.DFS_REPLICATION;
-  public static final short DEFAULT_DFS_REPLICATION = ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION;
+  public static final short DEFAULT_DFS_REPLICATION =
+    ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION;
   public static final String STORAGE_POLICY = ColumnFamilyDescriptorBuilder.STORAGE_POLICY;
-  public static final String DEFAULT_COMPRESSION = ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESSION.name();
+  public static final String DEFAULT_COMPRESSION =
+    ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESSION.name();
   public static final boolean DEFAULT_ENCODE_ON_DISK = true;
-  public static final String DEFAULT_DATA_BLOCK_ENCODING = ColumnFamilyDescriptorBuilder.DEFAULT_DATA_BLOCK_ENCODING.name();
+  public static final String DEFAULT_DATA_BLOCK_ENCODING =
+    ColumnFamilyDescriptorBuilder.DEFAULT_DATA_BLOCK_ENCODING.name();
   public static final int DEFAULT_VERSIONS = ColumnFamilyDescriptorBuilder.DEFAULT_MAX_VERSIONS;
   public static final int DEFAULT_MIN_VERSIONS = ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS;
   public static final boolean DEFAULT_IN_MEMORY = ColumnFamilyDescriptorBuilder.DEFAULT_IN_MEMORY;
-  public static final KeepDeletedCells DEFAULT_KEEP_DELETED = ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED;
+  public static final KeepDeletedCells DEFAULT_KEEP_DELETED =
+    ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED;
   public static final boolean DEFAULT_BLOCKCACHE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
-  public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_ON_WRITE;
+  public static final boolean DEFAULT_CACHE_DATA_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_DATA_ON_WRITE;
   public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
-  public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_INDEX_ON_WRITE;
+  public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_INDEX_ON_WRITE;
   public static final int DEFAULT_BLOCKSIZE = ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
-  public static final String DEFAULT_BLOOMFILTER =  ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
-  public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_BLOOMS_ON_WRITE;
+  public static final String DEFAULT_BLOOMFILTER =
+    ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
+  public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE =
+    ColumnFamilyDescriptorBuilder.DEFAULT_CACHE_BLOOMS_ON_WRITE;
   public static final int DEFAULT_TTL = ColumnFamilyDescriptorBuilder.DEFAULT_TTL;
-  public static final int DEFAULT_REPLICATION_SCOPE = ColumnFamilyDescriptorBuilder.DEFAULT_REPLICATION_SCOPE;
-  public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = ColumnFamilyDescriptorBuilder.DEFAULT_EVICT_BLOCKS_ON_CLOSE;
-  public static final boolean DEFAULT_COMPRESS_TAGS = ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESS_TAGS;
-  public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN = ColumnFamilyDescriptorBuilder.DEFAULT_PREFETCH_BLOCKS_ON_OPEN;
-  public static final String NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
-  public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR = ColumnFamilyDescriptorBuilder.DEFAULT_NEW_VERSION_BEHAVIOR;
+  public static final int DEFAULT_REPLICATION_SCOPE =
+    ColumnFamilyDescriptorBuilder.DEFAULT_REPLICATION_SCOPE;
+  public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE =
+    ColumnFamilyDescriptorBuilder.DEFAULT_EVICT_BLOCKS_ON_CLOSE;
+  public static final boolean DEFAULT_COMPRESS_TAGS =
+    ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESS_TAGS;
+  public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN =
+    ColumnFamilyDescriptorBuilder.DEFAULT_PREFETCH_BLOCKS_ON_OPEN;
+  public static final String NEW_VERSION_BEHAVIOR =
+    ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
+  public static final boolean DEFAULT_NEW_VERSION_BEHAVIOR =
+    ColumnFamilyDescriptorBuilder.DEFAULT_NEW_VERSION_BEHAVIOR;
   protected final ModifyableColumnFamilyDescriptor delegatee;
 
   /**
-   * Construct a column descriptor specifying only the family name
-   * The other attributes are defaulted.
-   *
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
+   * Construct a column descriptor specifying only the family name The other attributes are
+   * defaulted.
+   * @param familyName Column family name. Must be 'printable' -- digit or letter -- and may not
+   *                   contain a <code>:</code>
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
-   *             Use {@link ColumnFamilyDescriptorBuilder#of(String)}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>). Use
+   *             {@link ColumnFamilyDescriptorBuilder#of(String)}.
    */
   @Deprecated
   public HColumnDescriptor(final String familyName) {
@@ -119,29 +141,26 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Construct a column descriptor specifying only the family name
-   * The other attributes are defaulted.
-   *
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
+   * Construct a column descriptor specifying only the family name The other attributes are
+   * defaulted.
+   * @param familyName Column family name. Must be 'printable' -- digit or letter -- and may not
+   *                   contain a <code>:</code>
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
-   *             Use {@link ColumnFamilyDescriptorBuilder#of(byte[])}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>). Use
+   *             {@link ColumnFamilyDescriptorBuilder#of(byte[])}.
    */
   @Deprecated
-  public HColumnDescriptor(final byte [] familyName) {
+  public HColumnDescriptor(final byte[] familyName) {
     this(new ModifyableColumnFamilyDescriptor(familyName));
   }
 
   /**
-   * Constructor.
-   * Makes a deep copy of the supplied descriptor.
-   * Can make a modifiable descriptor from an UnmodifyableHColumnDescriptor.
-   *
+   * Constructor. Makes a deep copy of the supplied descriptor. Can make a modifiable descriptor
+   * from an UnmodifyableHColumnDescriptor.
    * @param desc The descriptor.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>).
-   *             Use {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-18433">HBASE-18433</a>). Use
+   *             {@link ColumnFamilyDescriptorBuilder#copy(ColumnFamilyDescriptor)}.
    */
   @Deprecated
   public HColumnDescriptor(HColumnDescriptor desc) {
@@ -149,8 +168,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   protected HColumnDescriptor(HColumnDescriptor desc, boolean deepClone) {
-    this(deepClone ? new ModifyableColumnFamilyDescriptor(desc)
-            : desc.delegatee);
+    this(deepClone ? new ModifyableColumnFamilyDescriptor(desc) : desc.delegatee);
   }
 
   protected HColumnDescriptor(ModifyableColumnFamilyDescriptor delegate) {
@@ -160,17 +178,18 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * @param b Family name.
    * @return <code>b</code>
-   * @throws IllegalArgumentException If not null and not a legitimate family
-   * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
-   * <code>b</code> can be null when deserializing).  Cannot start with a '.'
-   * either. Also Family can not be an empty value or equal "recovered.edits".
+   * @throws IllegalArgumentException If not null and not a legitimate family name: i.e. 'printable'
+   *                                  and ends in a ':' (Null passes are allowed because
+   *                                  <code>b</code> can be null when deserializing). Cannot start
+   *                                  with a '.' either. Also Family can not be an empty value or
+   *                                  equal "recovered.edits".
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use
-   *   {@link ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])} instead.
+   *             {@link ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])} instead.
    * @see ColumnFamilyDescriptorBuilder#isLegalColumnFamilyName(byte[])
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-18008">HBASE-18008</a>
    */
   @Deprecated
-  public static byte [] isLegalFamilyName(final byte [] b) {
+  public static byte[] isLegalFamilyName(final byte[] b) {
     return ColumnFamilyDescriptorBuilder.isLegalColumnFamilyName(b);
   }
 
@@ -178,7 +197,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
    * @return Name of this column family
    */
   @Override
-  public byte [] getName() {
+  public byte[] getName() {
     return delegatee.getName();
   }
 
@@ -214,7 +233,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param key The key.
+   * @param key   The key.
    * @param value The value.
    * @return this (for chained invocation)
    */
@@ -226,12 +245,12 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * @param key Key whose key and value we're to remove from HCD parameters.
    */
-  public void remove(final byte [] key) {
+  public void remove(final byte[] key) {
     getDelegateeForModification().removeValue(new Bytes(key));
   }
 
   /**
-   * @param key The key.
+   * @param key   The key.
    * @param value The value.
    * @return this (for chained invocation)
    */
@@ -243,8 +262,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * @return compression type being used for the column family
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>).
-   *             Use {@link #getCompressionType()}.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>). Use
+   *             {@link #getCompressionType()}.
    */
   @Deprecated
   public Compression.Algorithm getCompression() {
@@ -252,10 +271,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   *  @return compression type being used for the column family for major compaction
-   *  @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>).
-   *             Use {@link #getCompactionCompressionType()}.
+   * @return compression type being used for the column family for major compaction
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>). Use
+   *             {@link #getCompactionCompressionType()}.
    */
   @Deprecated
   public Compression.Algorithm getCompactionCompression() {
@@ -278,7 +297,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * Set minimum and maximum versions to keep
-   *
    * @param minVersions minimal number of versions
    * @param maxVersions maximum number of versions
    * @return this (for chained invocation)
@@ -291,9 +309,9 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     }
 
     if (maxVersions < minVersions) {
-      throw new IllegalArgumentException("Unable to set MaxVersion to " + maxVersions
-        + " and set MinVersion to " + minVersions
-        + ", as maximum versions must be >= minimum versions.");
+      throw new IllegalArgumentException(
+        "Unable to set MaxVersion to " + maxVersions + " and set MinVersion to " + minVersions
+          + ", as maximum versions must be >= minimum versions.");
     }
     setMinVersions(minVersions);
     setMaxVersions(maxVersions);
@@ -306,8 +324,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value Blocksize to use when writing out storefiles/hfiles on this
-   * column family.
+   * @param value Blocksize to use when writing out storefiles/hfiles on this column family.
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setBlocksize(int value) {
@@ -326,10 +343,9 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Compression types supported in hbase.
-   * LZO is not bundled as part of the hbase distribution.
-   * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
-   * for how to enable it.
+   * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution. See
+   * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how to
+   * enable it.
    * @param value Compression type setting.
    * @return this (for chained invocation)
    */
@@ -355,10 +371,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * Set whether the tags should be compressed along with DataBlockEncoding. When no
-   * DataBlockEncoding is been used, this is having no effect.
-   *
-   * @param value
-   * @return this (for chained invocation)
+   * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
+   * invocation)
    */
   public HColumnDescriptor setCompressTags(boolean value) {
     getDelegateeForModification().setCompressTags(value);
@@ -386,10 +400,9 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Compression types supported in hbase.
-   * LZO is not bundled as part of the hbase distribution.
-   * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a>
-   * for how to enable it.
+   * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution. See
+   * <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how to
+   * enable it.
    * @param value Compression type setting.
    * @return this (for chained invocation)
    */
@@ -415,7 +428,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * @param value True if we are to favor keeping all values for this column family in the
-   * HRegionServer cache
+   *              HRegionServer cache
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setInMemory(boolean value) {
@@ -429,8 +442,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value the prefered in-memory compaction policy
-   *                  for this column family
+   * @param value the prefered in-memory compaction policy for this column family
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setInMemoryCompaction(MemoryCompactionPolicy value) {
@@ -444,8 +456,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value True if deleted rows should not be collected
-   * immediately.
+   * @param value True if deleted rows should not be collected immediately.
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setKeepDeletedCells(KeepDeletedCells value) {
@@ -454,9 +465,9 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts
-   * will mask a later Put with lower ts. Set this to true to enable new semantics of versions.
-   * We will also consider mvcc in versions. See HBASE-15968 for details.
+   * By default, HBase only consider timestamp in versions. So a previous Delete with higher ts will
+   * mask a later Put with lower ts. Set this to true to enable new semantics of versions. We will
+   * also consider mvcc in versions. See HBASE-15968 for details.
    */
   @Override
   public boolean isNewVersionBehavior() {
@@ -467,7 +478,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     getDelegateeForModification().setNewVersionBehavior(newVersionBehavior);
     return this;
   }
-
 
   @Override
   public int getTimeToLive() {
@@ -485,7 +495,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * @param value Time to live of cell contents, in human readable format
-   *                   @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
+   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setTimeToLive(String value) throws HBaseException {
@@ -499,8 +509,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value The minimum number of versions to keep.
-   * (used when timeToLive is set)
+   * @param value The minimum number of versions to keep. (used when timeToLive is set)
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setMinVersions(int value) {
@@ -514,8 +523,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value True if hfile DATA type blocks should be cached (We always cache
-   * INDEX and BLOOM blocks; you cannot turn this off).
+   * @param value True if hfile DATA type blocks should be cached (We always cache INDEX and BLOOM
+   *              blocks; you cannot turn this off).
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setBlockCacheEnabled(boolean value) {
@@ -542,10 +551,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getScope();
   }
 
- /**
-  * @param value the scope tag
-  * @return this (for chained invocation)
-  */
+  /**
+   * @param value the scope tag
+   * @return this (for chained invocation)
+   */
   public HColumnDescriptor setScope(int value) {
     getDelegateeForModification().setScope(value);
     return this;
@@ -567,7 +576,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * This is a noop call from HBase 2.0 onwards
-   *
    * @return this (for chained invocation)
    * @deprecated Since 2.0 and will be removed in 3.0 with out any replacement. Caching data in on
    *             heap Cache, when there are both on heap LRU Cache and Bucket Cache will no longer
@@ -612,8 +620,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @param value true if we should evict cached blocks from the blockcache on
-   * close
+   * @param value true if we should evict cached blocks from the blockcache on close
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setEvictBlocksOnClose(boolean value) {
@@ -696,11 +703,10 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
-   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray()
+   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code> n * @see
+   *         #toByteArray()
    */
-  public static HColumnDescriptor parseFrom(final byte [] bytes) throws DeserializationException {
+  public static HColumnDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
     ColumnFamilyDescriptor desc = ColumnFamilyDescriptorBuilder.parseFrom(bytes);
     if (desc instanceof ModifyableColumnFamilyDescriptor) {
       return new HColumnDescriptor((ModifyableColumnFamilyDescriptor) desc);
@@ -721,7 +727,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * Setter for storing a configuration setting.
-   * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
+   * @param key   Config key. Same as XML config key e.g. hbase.something.or.other.
    * @param value String value. If null, removes the configuration.
    */
   public HColumnDescriptor setConfiguration(String key, String value) {
@@ -742,8 +748,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Set the encryption algorithm for use with this family
-   * @param value
+   * Set the encryption algorithm for use with this family n
    */
   public HColumnDescriptor setEncryptionType(String value) {
     getDelegateeForModification().setEncryptionType(value);
@@ -814,8 +819,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Set the replication factor to hfile(s) belonging to this family
    * @param value number of replicas the blocks(s) belonging to this CF should have, or
-   *          {@link #DEFAULT_DFS_REPLICATION} for the default replication factor set in the
-   *          filesystem
+   *              {@link #DEFAULT_DFS_REPLICATION} for the default replication factor set in the
+   *              filesystem
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setDFSReplication(short value) {
@@ -831,7 +836,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Set the storage policy for use with this family
    * @param value the policy to set, valid setting includes: <i>"LAZY_PERSIST"</i>,
-   *          <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>, <i>"COLD"</i>
+   *              <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>, <i>"COLD"</i>
    */
   public HColumnDescriptor setStoragePolicy(String value) {
     getDelegateeForModification().setStoragePolicy(value);

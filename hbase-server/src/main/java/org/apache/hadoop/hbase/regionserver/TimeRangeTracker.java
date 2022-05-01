@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,14 +35,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
  * Stores minimum and maximum timestamp values, it is [minimumTimestamp, maximumTimestamp] in
- * interval notation.
- * Use this class at write-time ONLY. Too much synchronization to use at read time
- * Use {@link TimeRange} at read time instead of this. See toTimeRange() to make TimeRange to use.
- * MemStores use this class to track minimum and maximum timestamps. The TimeRangeTracker made by
- * the MemStore is passed to the StoreFile for it to write out as part a flush in the the file
+ * interval notation. Use this class at write-time ONLY. Too much synchronization to use at read
+ * time Use {@link TimeRange} at read time instead of this. See toTimeRange() to make TimeRange to
+ * use. MemStores use this class to track minimum and maximum timestamps. The TimeRangeTracker made
+ * by the MemStore is passed to the StoreFile for it to write out as part a flush in the the file
  * metadata. If no memstore involved -- i.e. a compaction -- then the StoreFile will calculate its
- * own TimeRangeTracker as it appends. The StoreFile serialized TimeRangeTracker is used
- * at read time via an instance of {@link TimeRange} to test if Cells fit the StoreFile TimeRange.
+ * own TimeRangeTracker as it appends. The StoreFile serialized TimeRangeTracker is used at read
+ * time via an instance of {@link TimeRange} to test if Cells fit the StoreFile TimeRange.
  */
 @InterfaceAudience.Private
 public abstract class TimeRangeTracker {
@@ -92,13 +90,17 @@ public abstract class TimeRangeTracker {
   }
 
   protected abstract void setMax(long ts);
+
   protected abstract void setMin(long ts);
+
   protected abstract boolean compareAndSetMin(long expect, long update);
+
   protected abstract boolean compareAndSetMax(long expect, long update);
+
   /**
-   * Update the current TimestampRange to include the timestamp from <code>cell</code>.
-   * If the Key is of type DeleteColumn or DeleteFamily, it includes the
-   * entire time range from 0 to timestamp of the key.
+   * Update the current TimestampRange to include the timestamp from <code>cell</code>. If the Key
+   * is of type DeleteColumn or DeleteFamily, it includes the entire time range from 0 to timestamp
+   * of the key.
    * @param cell the Cell to include
    */
   public void includeTimestamp(final Cell cell) {
@@ -112,8 +114,8 @@ public abstract class TimeRangeTracker {
    * If required, update the current TimestampRange to include timestamp
    * @param timestamp the timestamp value to include
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MT_CORRECTNESS",
-      justification="Intentional")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MT_CORRECTNESS",
+      justification = "Intentional")
   void includeTimestamp(final long timestamp) {
     long initialMinTimestamp = getMin();
     if (timestamp < initialMinTimestamp) {
@@ -128,14 +130,14 @@ public abstract class TimeRangeTracker {
       }
 
       // When it reaches here, there are two possibilities:
-      //  1). timestamp >= curMinTimestamp, someone already sets the minimumTimestamp. In this case,
-      //      it still needs to check if initialMinTimestamp == INITIAL_MIN_TIMESTAMP to see
-      //      if it needs to update minimumTimestamp. Someone may already set both
-      //      minimumTimestamp/minimumTimestamp to the same value(curMinTimestamp),
-      //      need to check if maximumTimestamp needs to be updated.
-      //  2). timestamp < curMinTimestamp, it sets the minimumTimestamp successfully.
-      //      In this case,it still needs to check if initialMinTimestamp == INITIAL_MIN_TIMESTAMP
-      //      to see if it needs to set maximumTimestamp.
+      // 1). timestamp >= curMinTimestamp, someone already sets the minimumTimestamp. In this case,
+      // it still needs to check if initialMinTimestamp == INITIAL_MIN_TIMESTAMP to see
+      // if it needs to update minimumTimestamp. Someone may already set both
+      // minimumTimestamp/minimumTimestamp to the same value(curMinTimestamp),
+      // need to check if maximumTimestamp needs to be updated.
+      // 2). timestamp < curMinTimestamp, it sets the minimumTimestamp successfully.
+      // In this case,it still needs to check if initialMinTimestamp == INITIAL_MIN_TIMESTAMP
+      // to see if it needs to set maximumTimestamp.
       if (initialMinTimestamp != INITIAL_MIN_TIMESTAMP) {
         // Someone already sets minimumTimestamp and timestamp is less than minimumTimestamp.
         // In this case, no need to set maximumTimestamp as it will be set to at least
@@ -185,8 +187,7 @@ public abstract class TimeRangeTracker {
   /**
    * @param data the serialization data. It can't be null!
    * @return An instance of NonSyncTimeRangeTracker filled w/ the content of serialized
-   * NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>.
-   * @throws IOException
+   *         NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>. n
    */
   public static TimeRangeTracker parseFrom(final byte[] data) throws IOException {
     return parseFrom(data, Type.NON_SYNC);
@@ -207,11 +208,11 @@ public abstract class TimeRangeTracker {
   }
 
   /**
-   * This method used to serialize TimeRangeTracker (TRT) by protobuf while this breaks the
-   * forward compatibility on HFile.(See HBASE-21008) In previous hbase version ( < 2.0.0 ) we use
-   * DataOutput to serialize TRT, these old versions don't have capability to deserialize TRT
-   * which is serialized by protobuf. So we need to revert the change of serializing
-   * TimeRangeTracker back to DataOutput. For more information, please check HBASE-21012.
+   * This method used to serialize TimeRangeTracker (TRT) by protobuf while this breaks the forward
+   * compatibility on HFile.(See HBASE-21008) In previous hbase version ( < 2.0.0 ) we use
+   * DataOutput to serialize TRT, these old versions don't have capability to deserialize TRT which
+   * is serialized by protobuf. So we need to revert the change of serializing TimeRangeTracker back
+   * to DataOutput. For more information, please check HBASE-21012.
    * @param tracker TimeRangeTracker needed to be serialized.
    * @return byte array filled with serialized TimeRangeTracker.
    * @throws IOException if something goes wrong in writeLong.
@@ -242,7 +243,7 @@ public abstract class TimeRangeTracker {
     return new TimeRange(min, max);
   }
 
-  //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
+  // In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
   public static class NonSyncTimeRangeTracker extends TimeRangeTracker {
     private long minimumTimestamp = INITIAL_MIN_TIMESTAMP;
     private long maximumTimestamp = INITIAL_MAX_TIMESTAMP;
@@ -299,7 +300,7 @@ public abstract class TimeRangeTracker {
     }
   }
 
-  //In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
+  // In order to estimate the heap size, this inner class need to be accessible to TestHeapSize.
   public static class SyncTimeRangeTracker extends TimeRangeTracker {
     private final AtomicLong minimumTimestamp = new AtomicLong(INITIAL_MIN_TIMESTAMP);
     private final AtomicLong maximumTimestamp = new AtomicLong(INITIAL_MAX_TIMESTAMP);

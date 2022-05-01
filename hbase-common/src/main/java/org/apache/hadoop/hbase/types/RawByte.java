@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,8 +24,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@code DataType} for interacting with values encoded using
- * {@link Bytes#putByte(byte[], int, byte)}. Intended to make it easier to
- * transition away from direct use of {@link Bytes}.
+ * {@link Bytes#putByte(byte[], int, byte)}. Intended to make it easier to transition away from
+ * direct use of {@link Bytes}.
  * @see Bytes#putByte(byte[], int, byte)
  */
 @InterfaceAudience.Public

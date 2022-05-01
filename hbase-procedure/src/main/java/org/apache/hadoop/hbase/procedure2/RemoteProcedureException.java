@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -32,25 +31,25 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.For
  * RemoteProcedureExceptions are sent to 'remote' peers to signal an abort in the face of failures.
  * When serialized for transmission we encode using Protobufs to ensure version compatibility.
  * <p>
- * RemoteProcedureException exceptions contain a Throwable as its cause.
- * This can be a "regular" exception generated locally or a ProxyThrowable that is a representation
- * of the original exception created on original 'remote' source.  These ProxyThrowables have their
- * their stacks traces and messages overridden to reflect the original 'remote' exception.
+ * RemoteProcedureException exceptions contain a Throwable as its cause. This can be a "regular"
+ * exception generated locally or a ProxyThrowable that is a representation of the original
+ * exception created on original 'remote' source. These ProxyThrowables have their their stacks
+ * traces and messages overridden to reflect the original 'remote' exception.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class RemoteProcedureException extends ProcedureException {
   /**
-   * Name of the throwable's source such as a host or thread name.  Must be non-null.
+   * Name of the throwable's source such as a host or thread name. Must be non-null.
    */
   private final String source;
 
   /**
-   * Create a new RemoteProcedureException that can be serialized.
-   * It is assumed that this came form a local source.
+   * Create a new RemoteProcedureException that can be serialized. It is assumed that this came form
+   * a local source.
    * @param source the host or thread name of the source
-   * @param cause the actual cause of the exception
+   * @param cause  the actual cause of the exception
    */
   public RemoteProcedureException(String source, Throwable cause) {
     super(cause);
@@ -66,10 +65,10 @@ public class RemoteProcedureException extends ProcedureException {
   public Exception unwrapRemoteException() {
     final Throwable cause = getCause();
     if (cause instanceof RemoteException) {
-      return ((RemoteException)cause).unwrapRemoteException();
+      return ((RemoteException) cause).unwrapRemoteException();
     }
     if (cause instanceof Exception) {
-      return (Exception)cause;
+      return (Exception) cause;
     }
     return new Exception(cause);
   }
@@ -81,7 +80,7 @@ public class RemoteProcedureException extends ProcedureException {
   public IOException unwrapRemoteIOException() {
     final Exception cause = unwrapRemoteException();
     if (cause instanceof IOException) {
-      return (IOException)cause;
+      return (IOException) cause;
     }
     return new IOException(cause);
   }
@@ -95,7 +94,7 @@ public class RemoteProcedureException extends ProcedureException {
   /**
    * Converts a RemoteProcedureException to an array of bytes.
    * @param source the name of the external exception source
-   * @param t the "local" external exception (local)
+   * @param t      the "local" external exception (local)
    * @return protobuf serialized version of RemoteProcedureException
    */
   public static byte[] serialize(String source, Throwable t) {

@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoreCoprocessor;
@@ -48,7 +45,6 @@ import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBul
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SecureBulkLoadManager;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,8 +66,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   @Override
   public void start(CoprocessorEnvironment env) {
-    this.env = (RegionCoprocessorEnvironment)env;
-    rsServices = ((HasRegionServerServices)this.env).getRegionServerServices();
+    this.env = (RegionCoprocessorEnvironment) env;
+    rsServices = ((HasRegionServerServices) this.env).getRegionServerServices();
     LOG.warn("SecureBulkLoadEndpoint is deprecated. It will be removed in future releases.");
     LOG.warn("Secure bulk load has been integrated into HBase core.");
   }
@@ -82,12 +78,12 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
 
   @Override
   public void prepareBulkLoad(RpcController controller, PrepareBulkLoadRequest request,
-          RpcCallback<PrepareBulkLoadResponse> done) {
+    RpcCallback<PrepareBulkLoadResponse> done) {
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
 
-      String bulkToken = secureBulkLoadManager.prepareBulkLoad((HRegion) this.env.getRegion(),
-          convert(request));
+      String bulkToken =
+        secureBulkLoadManager.prepareBulkLoad((HRegion) this.env.getRegion(), convert(request));
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -96,23 +92,22 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   }
 
   /**
-   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   * Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest
     convert(PrepareBulkLoadRequest request)
-    throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
-    byte [] bytes = request.toByteArray();
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest.Builder
-          builder =
-        org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest.
-        newBuilder();
+      throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
+    byte[] bytes = request.toByteArray();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest.Builder builder =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.PrepareBulkLoadRequest
+        .newBuilder();
     builder.mergeFrom(bytes);
     return builder.build();
   }
 
   @Override
   public void cleanupBulkLoad(RpcController controller, CleanupBulkLoadRequest request,
-          RpcCallback<CleanupBulkLoadResponse> done) {
+    RpcCallback<CleanupBulkLoadResponse> done) {
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       secureBulkLoadManager.cleanupBulkLoad((HRegion) this.env.getRegion(), convert(request));
@@ -124,30 +119,29 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   }
 
   /**
-   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   * Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest
     convert(CleanupBulkLoadRequest request)
       throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
-    byte [] bytes = request.toByteArray();
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest.Builder
-        builder =
-      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest.
-      newBuilder();
+    byte[] bytes = request.toByteArray();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest.Builder builder =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CleanupBulkLoadRequest
+        .newBuilder();
     builder.mergeFrom(bytes);
     return builder.build();
   }
 
   @Override
   public void secureBulkLoadHFiles(RpcController controller, SecureBulkLoadHFilesRequest request,
-          RpcCallback<SecureBulkLoadHFilesResponse> done) {
+    RpcCallback<SecureBulkLoadHFilesResponse> done) {
     boolean loaded = false;
     Map<byte[], List<Path>> map = null;
     try {
       SecureBulkLoadManager secureBulkLoadManager = this.rsServices.getSecureBulkLoadManager();
       BulkLoadHFileRequest bulkLoadHFileRequest = ConvertSecureBulkLoadHFilesRequest(request);
       map = secureBulkLoadManager.secureBulkLoadHFiles((HRegion) this.env.getRegion(),
-          convert(bulkLoadHFileRequest));
+        convert(bulkLoadHFileRequest));
       loaded = map != null && !map.isEmpty();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -156,29 +150,27 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService implements Reg
   }
 
   /**
-   *  Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
+   * Convert from CPEP protobuf 2.5 to internal protobuf 3.3.
    */
   org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest
     convert(BulkLoadHFileRequest request)
       throws org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException {
-    byte [] bytes = request.toByteArray();
-    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest.Builder
-        builder =
-      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest.
-        newBuilder();
+    byte[] bytes = request.toByteArray();
+    org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest.Builder builder =
+      org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.BulkLoadHFileRequest
+        .newBuilder();
     builder.mergeFrom(bytes);
     return builder.build();
   }
 
-  private BulkLoadHFileRequest ConvertSecureBulkLoadHFilesRequest(
-          SecureBulkLoadHFilesRequest request) {
+  private BulkLoadHFileRequest
+    ConvertSecureBulkLoadHFilesRequest(SecureBulkLoadHFilesRequest request) {
     BulkLoadHFileRequest.Builder bulkLoadHFileRequest = BulkLoadHFileRequest.newBuilder();
-    RegionSpecifier region =
-        ProtobufUtil.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, this.env
-            .getRegionInfo().getRegionName());
+    RegionSpecifier region = ProtobufUtil.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,
+      this.env.getRegionInfo().getRegionName());
     bulkLoadHFileRequest.setRegion(region).setFsToken(request.getFsToken())
-        .setBulkToken(request.getBulkToken()).setAssignSeqNum(request.getAssignSeqNum())
-        .addAllFamilyPath(request.getFamilyPathList());
+      .setBulkToken(request.getBulkToken()).setAssignSeqNum(request.getAssignSeqNum())
+      .addAllFamilyPath(request.getFamilyPathList());
     return bulkLoadHFileRequest.build();
   }
 

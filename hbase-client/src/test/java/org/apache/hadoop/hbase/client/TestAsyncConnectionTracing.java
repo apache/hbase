@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,8 +69,8 @@ public class TestAsyncConnectionTracing {
         return CompletableFuture.completedFuture(masterServer);
       }
     };
-    conn = new AsyncConnectionImpl(CONF, registry, "test",
-      UserProvider.instantiate(CONF).getCurrent());
+    conn =
+      new AsyncConnectionImpl(CONF, registry, "test", UserProvider.instantiate(CONF).getCurrent());
   }
 
   @After
@@ -81,14 +81,13 @@ public class TestAsyncConnectionTracing {
   private void assertTrace(String methodName, ServerName serverName) {
     Waiter.waitFor(CONF, 1000,
       () -> traceRule.getSpans().stream()
-        .anyMatch(span -> span.getName().equals("AsyncConnection." + methodName) &&
-          span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
+        .anyMatch(span -> span.getName().equals("AsyncConnection." + methodName)
+          && span.getKind() == SpanKind.INTERNAL && span.hasEnded()));
     SpanData data = traceRule.getSpans().stream()
       .filter(s -> s.getName().equals("AsyncConnection." + methodName)).findFirst().get();
     assertEquals(StatusCode.OK, data.getStatus().getStatusCode());
     if (serverName != null) {
-      assertEquals(
-        serverName.getServerName(),
+      assertEquals(serverName.getServerName(),
         data.getAttributes().get(HBaseSemanticAttributes.SERVER_NAME_KEY));
     }
   }

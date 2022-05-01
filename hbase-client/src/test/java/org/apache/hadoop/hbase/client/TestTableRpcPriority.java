@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
@@ -62,13 +63,15 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
- * Test that correct rpc priority is sent to server from blocking Table calls. Currently
- * only implements checks for scans, but more could be added here.
+ * Test that correct rpc priority is sent to server from blocking Table calls. Currently only
+ * implements checks for scans, but more could be added here.
  */
 @Category({ ClientTests.class, MediumTests.class })
 public class TestTableRpcPriority {
@@ -123,8 +126,8 @@ public class TestTableRpcPriority {
   }
 
   /**
-   * This test verifies that our closeScanner request honors the original
-   * priority of the scan if it's greater than our expected HIGH_QOS for close calls.
+   * This test verifies that our closeScanner request honors the original priority of the scan if
+   * it's greater than our expected HIGH_QOS for close calls.
    */
   @Test
   public void testScanSuperHighPriority() throws Exception {
@@ -163,19 +166,19 @@ public class TestTableRpcPriority {
     // just verify that the calls happened. verification of priority occurred in the mocking
     // open, next, then several renew lease
     verify(stub, atLeast(3)).scan(any(), any(ClientProtos.ScanRequest.class));
-    verify(stub, times(1)).scan(
-      assertControllerArgs(Math.max(priority.orElse(0), HIGH_QOS)), assertScannerCloseRequest());
+    verify(stub, times(1)).scan(assertControllerArgs(Math.max(priority.orElse(0), HIGH_QOS)),
+      assertScannerCloseRequest());
   }
 
   private void mockScan(int scanPriority) throws ServiceException {
     int scannerId = 1;
 
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
-      @Override public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      @Override
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         throw new IllegalArgumentException(
-          "Call not covered by explicit mock for arguments controller="
-          + invocation.getArgument(0) + ", request=" + invocation.getArgument(1));
+          "Call not covered by explicit mock for arguments controller=" + invocation.getArgument(0)
+            + ", request=" + invocation.getArgument(1));
       }
     }).when(stub).scan(any(), any());
 
@@ -183,8 +186,7 @@ public class TestTableRpcPriority {
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
 
       @Override
-      public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
         assertFalse("close scanner should not come in with scan priority " + scanPriority,
           req.hasCloseScanner() && req.getCloseScanner());
@@ -208,8 +210,7 @@ public class TestTableRpcPriority {
     doAnswer(new Answer<ClientProtos.ScanResponse>() {
 
       @Override
-      public ClientProtos.ScanResponse answer(InvocationOnMock invocation)
-        throws Throwable {
+      public ClientProtos.ScanResponse answer(InvocationOnMock invocation) throws Throwable {
         ClientProtos.ScanRequest req = invocation.getArgument(1);
         assertTrue("close request should have scannerId", req.hasScannerId());
         assertEquals("close request's scannerId should match", scannerId, req.getScannerId());

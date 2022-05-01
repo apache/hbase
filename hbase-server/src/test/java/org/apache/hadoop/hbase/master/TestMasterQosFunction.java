@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,17 +43,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestMasterQosFunction extends QosTestHelper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterQosFunction.class);
+    HBaseClassTestRule.forClass(TestMasterQosFunction.class);
 
   private Configuration conf;
   private RSRpcServices rpcServices;
   private AnnotationReadingPriorityFunction qosFunction;
-
 
   @Before
   public void setUp() {
@@ -67,37 +66,32 @@ public class TestMasterQosFunction extends QosTestHelper {
   public void testRegionInTransition() throws IOException {
     // Check ReportRegionInTransition
     HBaseProtos.RegionInfo meta_ri = HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO);
-    HBaseProtos.RegionInfo normal_ri = HRegionInfo.convert(
-        new HRegionInfo(TableName.valueOf("test:table"),
-            Bytes.toBytes("a"), Bytes.toBytes("b"), false));
+    HBaseProtos.RegionInfo normal_ri =
+      HRegionInfo.convert(new HRegionInfo(TableName.valueOf("test:table"), Bytes.toBytes("a"),
+        Bytes.toBytes("b"), false));
 
-
-    RegionServerStatusProtos.RegionStateTransition metaTransition = RegionServerStatusProtos
-        .RegionStateTransition.newBuilder()
-        .addRegionInfo(meta_ri)
+    RegionServerStatusProtos.RegionStateTransition metaTransition =
+      RegionServerStatusProtos.RegionStateTransition.newBuilder().addRegionInfo(meta_ri)
         .setTransitionCode(RegionServerStatusProtos.RegionStateTransition.TransitionCode.CLOSED)
         .build();
 
-    RegionServerStatusProtos.RegionStateTransition normalTransition = RegionServerStatusProtos
-        .RegionStateTransition.newBuilder()
-        .addRegionInfo(normal_ri)
+    RegionServerStatusProtos.RegionStateTransition normalTransition =
+      RegionServerStatusProtos.RegionStateTransition.newBuilder().addRegionInfo(normal_ri)
         .setTransitionCode(RegionServerStatusProtos.RegionStateTransition.TransitionCode.CLOSED)
         .build();
 
     RegionServerStatusProtos.ReportRegionStateTransitionRequest metaTransitionRequest =
-        RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
-            .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
-            .addTransition(normalTransition)
-            .addTransition(metaTransition).build();
+      RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
+        .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
+        .addTransition(normalTransition).addTransition(metaTransition).build();
 
     RegionServerStatusProtos.ReportRegionStateTransitionRequest normalTransitionRequest =
-        RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
-            .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
-            .addTransition(normalTransition).build();
+      RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
+        .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
+        .addTransition(normalTransition).build();
 
     final String reportFuncName = "ReportRegionStateTransition";
-    checkMethod(conf, reportFuncName, HConstants.META_QOS, qosFunction,
-        metaTransitionRequest);
+    checkMethod(conf, reportFuncName, HConstants.META_QOS, qosFunction, metaTransitionRequest);
     checkMethod(conf, reportFuncName, HConstants.HIGH_QOS, qosFunction, normalTransitionRequest);
   }
 

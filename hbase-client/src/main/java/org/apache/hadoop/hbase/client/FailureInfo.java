@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Keeps track of repeated failures to any region server. Multiple threads manipulate the contents
- * of this thread.
- *
- * Access to the members is guarded by the concurrent nature of the members inherently.
- * 
+ * of this thread. Access to the members is guarded by the concurrent nature of the members
+ * inherently.
  */
 @InterfaceAudience.Private
 class FailureInfo {
@@ -46,12 +43,10 @@ class FailureInfo {
 
   @Override
   public String toString() {
-    return "FailureInfo: numConsecutiveFailures = "
-        + numConsecutiveFailures + " timeOfFirstFailureMilliSec = "
-        + timeOfFirstFailureMilliSec + " timeOfLatestAttemptMilliSec = "
-        + timeOfLatestAttemptMilliSec
-        + " exclusivelyRetringInspiteOfFastFail  = "
-        + exclusivelyRetringInspiteOfFastFail.get();
+    return "FailureInfo: numConsecutiveFailures = " + numConsecutiveFailures
+      + " timeOfFirstFailureMilliSec = " + timeOfFirstFailureMilliSec
+      + " timeOfLatestAttemptMilliSec = " + timeOfLatestAttemptMilliSec
+      + " exclusivelyRetringInspiteOfFastFail  = " + exclusivelyRetringInspiteOfFastFail.get();
   }
 
   FailureInfo(long firstFailureTime) {

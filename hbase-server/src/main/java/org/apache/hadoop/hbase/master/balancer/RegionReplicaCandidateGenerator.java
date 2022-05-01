@@ -15,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.agrona.collections.Int2IntCounterMap;
 import org.agrona.collections.IntArrayList;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generates candidates which moves the replicas out of the region server for
- * co-hosted region replicas
+ * Generates candidates which moves the replicas out of the region server for co-hosted region
+ * replicas
  */
 @InterfaceAudience.Private
 class RegionReplicaCandidateGenerator extends CandidateGenerator {
@@ -37,9 +35,11 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
    * Randomly select one regionIndex out of all region replicas co-hosted in the same group (a group
    * is a server, host or rack)
    * @param colocatedReplicaCountsPerGroup either Cluster.colocatedReplicaCountsPerServer,
-   *          colocatedReplicaCountsPerHost or colocatedReplicaCountsPerRack
-   * @param regionsPerGroup either Cluster.regionsPerServer, regionsPerHost or regionsPerRack
-   * @param regionIndexToPrimaryIndex Cluster.regionsIndexToPrimaryIndex
+   *                                       colocatedReplicaCountsPerHost or
+   *                                       colocatedReplicaCountsPerRack
+   * @param regionsPerGroup                either Cluster.regionsPerServer, regionsPerHost or
+   *                                       regionsPerRack
+   * @param regionIndexToPrimaryIndex      Cluster.regionsIndexToPrimaryIndex
    * @return a regionIndex for the selected primary or -1 if there is no co-locating
    */
   int selectCoHostedRegionPerGroup(Int2IntCounterMap colocatedReplicaCountsPerGroup,
@@ -75,9 +75,9 @@ class RegionReplicaCandidateGenerator extends CandidateGenerator {
       return BalanceAction.NULL_ACTION;
     }
 
-    int regionIndex = selectCoHostedRegionPerGroup(
-      cluster.colocatedReplicaCountsPerServer[serverIndex],
-      cluster.regionsPerServer[serverIndex], cluster.regionIndexToPrimaryIndex);
+    int regionIndex =
+      selectCoHostedRegionPerGroup(cluster.colocatedReplicaCountsPerServer[serverIndex],
+        cluster.regionsPerServer[serverIndex], cluster.regionIndexToPrimaryIndex);
 
     // if there are no pairs of region replicas co-hosted, default to random generator
     if (regionIndex == -1) {

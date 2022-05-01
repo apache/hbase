@@ -81,14 +81,8 @@ public final class HBaseTestAppender extends AbstractOutputStreamAppender<Output
       Layout<? extends Serializable> layout = getOrCreateLayout(StandardCharsets.UTF_8);
       OutputStreamManager manager =
         OutputStreamManager.getManager(target.name(), FACTORY, new FactoryData(target, layout));
-      return new HBaseTestAppender(getName(),
-        layout,
-        getFilter(),
-        isIgnoreExceptions(),
-        isImmediateFlush(),
-        getPropertyArray(),
-        manager,
-        size);
+      return new HBaseTestAppender(getName(), layout, getFilter(), isIgnoreExceptions(),
+        isImmediateFlush(), getPropertyArray(), manager, size);
     }
   }
 

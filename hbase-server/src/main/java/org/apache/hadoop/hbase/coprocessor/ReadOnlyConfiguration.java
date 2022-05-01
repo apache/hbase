@@ -34,11 +34,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Wraps a Configuration to make it read-only.
@@ -292,7 +290,7 @@ public class ReadOnlyConfiguration extends Configuration {
 
   @Override
   public InetSocketAddress getSocketAddr(String hostProperty, String addressProperty,
-      String defaultAddressValue, int defaultPort) {
+    String defaultAddressValue, int defaultPort) {
     return conf.getSocketAddr(hostProperty, addressProperty, defaultAddressValue, defaultPort);
   }
 
@@ -308,7 +306,7 @@ public class ReadOnlyConfiguration extends Configuration {
 
   @Override
   public InetSocketAddress updateConnectAddr(String hostProperty, String addressProperty,
-      String defaultAddressValue, InetSocketAddress addr) {
+    String defaultAddressValue, InetSocketAddress addr) {
     throw new UnsupportedOperationException("Read-only Configuration");
   }
 
@@ -339,7 +337,7 @@ public class ReadOnlyConfiguration extends Configuration {
 
   @Override
   public <U> Class<? extends U> getClass(String name, Class<? extends U> defaultValue,
-      Class<U> xface) {
+    Class<U> xface) {
     return conf.getClass(name, defaultValue, xface);
   }
 

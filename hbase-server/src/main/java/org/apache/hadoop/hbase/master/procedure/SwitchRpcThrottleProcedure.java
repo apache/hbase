@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public class SwitchRpcThrottleProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, SwitchRpcThrottleState>
-    implements ServerProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, SwitchRpcThrottleState>
+  implements ServerProcedureInterface {
 
   private static Logger LOG = LoggerFactory.getLogger(SwitchRpcThrottleProcedure.class);
 
@@ -54,7 +54,7 @@ public class SwitchRpcThrottleProcedure
   }
 
   public SwitchRpcThrottleProcedure(RpcThrottleStorage rpcThrottleStorage,
-      boolean rpcThrottleEnabled, ServerName serverName, final ProcedurePrepareLatch syncLatch) {
+    boolean rpcThrottleEnabled, ServerName serverName, final ProcedurePrepareLatch syncLatch) {
     this.rpcThrottleStorage = rpcThrottleStorage;
     this.syncLatch = syncLatch;
     this.rpcThrottleEnabled = rpcThrottleEnabled;
@@ -63,7 +63,7 @@ public class SwitchRpcThrottleProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, SwitchRpcThrottleState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     switch (state) {
       case UPDATE_SWITCH_RPC_THROTTLE_STORAGE:
         try {
@@ -84,9 +84,9 @@ public class SwitchRpcThrottleProcedure
         return Flow.HAS_MORE_STATE;
       case SWITCH_RPC_THROTTLE_ON_RS:
         SwitchRpcThrottleRemoteProcedure[] subProcedures =
-            env.getMasterServices().getServerManager().getOnlineServersList().stream()
-                .map(sn -> new SwitchRpcThrottleRemoteProcedure(sn, rpcThrottleEnabled))
-                .toArray(SwitchRpcThrottleRemoteProcedure[]::new);
+          env.getMasterServices().getServerManager().getOnlineServersList().stream()
+            .map(sn -> new SwitchRpcThrottleRemoteProcedure(sn, rpcThrottleEnabled))
+            .toArray(SwitchRpcThrottleRemoteProcedure[]::new);
         addChildProcedure(subProcedures);
         setNextState(SwitchRpcThrottleState.POST_SWITCH_RPC_THROTTLE);
         return Flow.HAS_MORE_STATE;
@@ -100,7 +100,7 @@ public class SwitchRpcThrottleProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, SwitchRpcThrottleState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
   }
 
   @Override
@@ -153,7 +153,7 @@ public class SwitchRpcThrottleProcedure
   }
 
   public void switchThrottleState(MasterProcedureEnv env, boolean rpcThrottleEnabled)
-      throws IOException {
+    throws IOException {
     rpcThrottleStorage.switchRpcThrottle(rpcThrottleEnabled);
   }
 

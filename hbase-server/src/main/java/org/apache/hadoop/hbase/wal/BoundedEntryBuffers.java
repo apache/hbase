@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +21,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used for {@link BoundedRecoveredEditsOutputSink}. The core part of limiting opening writers is it
- * doesn't return chunk only if the heap size is over maxHeapUsage. Thus it doesn't need to create
- * a writer for each region during splitting. The returned {@link EntryBuffers.RegionEntryBuffer}
- * will be write to recovered edits file and close the writer immediately.
- * See {@link BoundedRecoveredEditsOutputSink#append(EntryBuffers.RegionEntryBuffer)} for more
- * details.
+ * doesn't return chunk only if the heap size is over maxHeapUsage. Thus it doesn't need to create a
+ * writer for each region during splitting. The returned {@link EntryBuffers.RegionEntryBuffer} will
+ * be write to recovered edits file and close the writer immediately. See
+ * {@link BoundedRecoveredEditsOutputSink#append(EntryBuffers.RegionEntryBuffer)} for more details.
  */
 @InterfaceAudience.Private
 public class BoundedEntryBuffers extends EntryBuffers {

@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -42,14 +40,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test coprocessor endpoint that always returns {@code null} for requests to the last region
- * in the table.  This allows tests to provide assurance of correct {@code null} handling for
- * response values.
+ * Test coprocessor endpoint that always returns {@code null} for requests to the last region in the
+ * table. This allows tests to provide assurance of correct {@code null} handling for response
+ * values.
  */
 public class ColumnAggregationEndpointNullResponse extends ColumnAggregationServiceNullResponse
-        implements RegionCoprocessor {
+  implements RegionCoprocessor {
   private static final Logger LOG =
-      LoggerFactory.getLogger(ColumnAggregationEndpointNullResponse.class);
+    LoggerFactory.getLogger(ColumnAggregationEndpointNullResponse.class);
 
   private RegionCoprocessorEnvironment env = null;
 
@@ -61,7 +59,7 @@ public class ColumnAggregationEndpointNullResponse extends ColumnAggregationServ
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment) {
-      this.env = (RegionCoprocessorEnvironment)env;
+      this.env = (RegionCoprocessorEnvironment) env;
       return;
     }
     throw new CoprocessorException("Must be loaded on a table region!");
@@ -74,7 +72,7 @@ public class ColumnAggregationEndpointNullResponse extends ColumnAggregationServ
 
   @Override
   public void sum(RpcController controller, ColumnAggregationNullResponseSumRequest request,
-       RpcCallback<ColumnAggregationNullResponseSumResponse> done) {
+    RpcCallback<ColumnAggregationNullResponseSumResponse> done) {
     // aggregate at each region
     Scan scan = new Scan();
     // Family is required in pb. Qualifier is not.
@@ -122,9 +120,8 @@ public class ColumnAggregationEndpointNullResponse extends ColumnAggregationServ
         }
       }
     }
-    done.run(ColumnAggregationNullResponseSumResponse.newBuilder().setSum(sumResult)
-      .build());
-    LOG.info("Returning sum " + sumResult + " for region " +
-        Bytes.toStringBinary(env.getRegion().getRegionInfo().getRegionName()));
+    done.run(ColumnAggregationNullResponseSumResponse.newBuilder().setSum(sumResult).build());
+    LOG.info("Returning sum " + sumResult + " for region "
+      + Bytes.toStringBinary(env.getRegion().getRegionInfo().getRegionName()));
   }
 }

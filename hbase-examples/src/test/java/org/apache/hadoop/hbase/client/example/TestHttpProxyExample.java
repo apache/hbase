@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestHttpProxyExample {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHttpProxyExample.class);
+    HBaseClassTestRule.forClass(TestHttpProxyExample.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -88,14 +88,14 @@ public class TestHttpProxyExample {
   public void test() throws Exception {
     try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
       HttpPut put = new HttpPut(
-          String.format(URL_TEMPLCATE, PORT, TABLE_NAME.getNameAsString(), ROW, FAMILY, QUALIFIER));
+        String.format(URL_TEMPLCATE, PORT, TABLE_NAME.getNameAsString(), ROW, FAMILY, QUALIFIER));
       put.setEntity(EntityBuilder.create().setText(VALUE)
-          .setContentType(ContentType.create("text-plain", StandardCharsets.UTF_8)).build());
+        .setContentType(ContentType.create("text-plain", StandardCharsets.UTF_8)).build());
       try (CloseableHttpResponse resp = client.execute(put)) {
         assertEquals(HttpStatus.SC_OK, resp.getStatusLine().getStatusCode());
       }
       HttpGet get = new HttpGet(
-          String.format(URL_TEMPLCATE, PORT, TABLE_NAME.getNameAsString(), ROW, FAMILY, QUALIFIER));
+        String.format(URL_TEMPLCATE, PORT, TABLE_NAME.getNameAsString(), ROW, FAMILY, QUALIFIER));
       try (CloseableHttpResponse resp = client.execute(get)) {
         assertEquals(HttpStatus.SC_OK, resp.getStatusLine().getStatusCode());
         assertEquals("value",

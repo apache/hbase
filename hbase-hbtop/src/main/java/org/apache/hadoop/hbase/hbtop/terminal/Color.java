@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +19,17 @@ package org.apache.hadoop.hbase.hbtop.terminal;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Terminal color definitions.
  */
 @InterfaceAudience.Private
 public enum Color {
-  BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+  BLACK,
+  RED,
+  GREEN,
+  YELLOW,
+  BLUE,
+  MAGENTA,
+  CYAN,
+  WHITE
 }

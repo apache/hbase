@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestClearRegionBlockCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClearRegionBlockCache.class);
+    HBaseClassTestRule.forClass(TestClearRegionBlockCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClearRegionBlockCache.class);
   private static final TableName TABLE_NAME = TableName.valueOf("testClearRegionBlockCache");
@@ -69,7 +69,8 @@ public class TestClearRegionBlockCache {
   private HRegionServer rs1, rs2;
   private MiniHBaseCluster cluster;
 
-  @Parameterized.Parameter public String cacheType;
+  @Parameterized.Parameter
+  public String cacheType;
 
   @Parameterized.Parameters(name = "{index}: {0}")
   public static Object[] data() {
@@ -118,10 +119,8 @@ public class TestClearRegionBlockCache {
       HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
     clearRegionBlockCache(rs2);
 
-    assertEquals("" + blockCache1.getBlockCount(),
-      initialBlockCount1, blockCache1.getBlockCount());
-    assertEquals("" + blockCache2.getBlockCount(),
-      initialBlockCount2, blockCache2.getBlockCount());
+    assertEquals("" + blockCache1.getBlockCount(), initialBlockCount1, blockCache1.getBlockCount());
+    assertEquals("" + blockCache2.getBlockCount(), initialBlockCount2, blockCache2.getBlockCount());
   }
 
   @Test
@@ -136,22 +135,22 @@ public class TestClearRegionBlockCache {
     // scan will cause blocks to be added in BlockCache
     scanAllRegionsForRS(rs1);
     assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
-        HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
+      HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
     scanAllRegionsForRS(rs2);
     assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
-        HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
+      HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
 
     CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME);
     assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY)
-        + HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
+      + HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
     assertEquals(initialBlockCount1, blockCache1.getBlockCount());
     assertEquals(initialBlockCount2, blockCache2.getBlockCount());
   }
 
   @Test
   public void testClearBlockCacheFromAsyncAdmin() throws Exception {
-    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(HTU.getConfiguration())
-      .get()) {
+    try (AsyncConnection conn =
+      ConnectionFactory.createAsyncConnection(HTU.getConfiguration()).get()) {
       AsyncAdmin admin = conn.getAdmin();
 
       BlockCache blockCache1 = rs1.getBlockCache().get();
@@ -168,8 +167,8 @@ public class TestClearRegionBlockCache {
         HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
 
       CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME).get();
-      assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY) + HTU
-        .getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
+      assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY)
+        + HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
       assertEquals(initialBlockCount1, blockCache1.getBlockCount());
       assertEquals(initialBlockCount2, blockCache2.getBlockCount());
     }
@@ -178,7 +177,8 @@ public class TestClearRegionBlockCache {
   private void scanAllRegionsForRS(HRegionServer rs) throws IOException {
     for (Region region : rs.getRegions(TABLE_NAME)) {
       RegionScanner scanner = region.getScanner(new Scan());
-      while (scanner.next(new ArrayList<Cell>()));
+      while (scanner.next(new ArrayList<Cell>()))
+        ;
     }
   }
 

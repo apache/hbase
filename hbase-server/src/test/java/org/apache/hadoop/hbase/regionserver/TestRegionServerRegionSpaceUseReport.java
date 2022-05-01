@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,32 +43,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUseReportRequest;
 
 /**
- * Test class for isolated (non-cluster) tests surrounding the report
- * of Region space use to the Master by RegionServers.
+ * Test class for isolated (non-cluster) tests surrounding the report of Region space use to the
+ * Master by RegionServers.
  */
 @Category(SmallTests.class)
 public class TestRegionServerRegionSpaceUseReport {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerRegionSpaceUseReport.class);
+    HBaseClassTestRule.forClass(TestRegionServerRegionSpaceUseReport.class);
 
   @Test
   public void testConversion() {
     TableName tn = TableName.valueOf("table1");
 
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tn)
-        .setStartKey(Bytes.toBytes("a"))
-        .setEndKey(Bytes.toBytes("b"))
-        .build();
-    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tn)
-        .setStartKey(Bytes.toBytes("b"))
-        .setEndKey(Bytes.toBytes("c"))
-        .build();
-    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tn)
-        .setStartKey(Bytes.toBytes("c"))
-        .setEndKey(Bytes.toBytes("d"))
-        .build();
+    RegionInfo hri1 = RegionInfoBuilder.newBuilder(tn).setStartKey(Bytes.toBytes("a"))
+      .setEndKey(Bytes.toBytes("b")).build();
+    RegionInfo hri2 = RegionInfoBuilder.newBuilder(tn).setStartKey(Bytes.toBytes("b"))
+      .setEndKey(Bytes.toBytes("c")).build();
+    RegionInfo hri3 = RegionInfoBuilder.newBuilder(tn).setStartKey(Bytes.toBytes("c"))
+      .setEndKey(Bytes.toBytes("d")).build();
     RegionSizeStore store = RegionSizeStoreFactory.getInstance().createStore();
     store.put(hri1, 1024L * 1024L);
     store.put(hri2, 1024L * 1024L * 8L);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -93,8 +93,8 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
-    public SingleRequestCallerBuilder<T> action(
-        AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
+    public SingleRequestCallerBuilder<T>
+      action(AsyncSingleRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -243,7 +243,7 @@ class AsyncRpcRetryingCallerFactory {
     }
 
     public ScanSingleRegionCallerBuilder scannerLeaseTimeoutPeriod(long scannerLeaseTimeoutPeriod,
-        TimeUnit unit) {
+      TimeUnit unit) {
       this.scannerLeaseTimeoutPeriodNs = unit.toNanos(scannerLeaseTimeoutPeriod);
       return this;
     }
@@ -300,7 +300,7 @@ class AsyncRpcRetryingCallerFactory {
      * Short cut for {@code build().start(HBaseRpcController, ScanResponse)}.
      */
     public CompletableFuture<Boolean> start(HBaseRpcController controller,
-        ScanResponse respWhenOpen) {
+      ScanResponse respWhenOpen) {
       return build().start(controller, respWhenOpen);
     }
   }
@@ -386,8 +386,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int priority = PRIORITY_UNSET;
 
-    public MasterRequestCallerBuilder<T> action(
-        AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
+    public MasterRequestCallerBuilder<T>
+      action(AsyncMasterRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -468,8 +468,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private int priority;
 
-    public AdminRequestCallerBuilder<T> action(
-        AsyncAdminRequestRetryingCaller.Callable<T> callable) {
+    public AdminRequestCallerBuilder<T>
+      action(AsyncAdminRequestRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -540,8 +540,8 @@ class AsyncRpcRetryingCallerFactory {
 
     private ServerName serverName;
 
-    public ServerRequestCallerBuilder<T> action(
-        AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
+    public ServerRequestCallerBuilder<T>
+      action(AsyncServerRequestRpcRetryingCaller.Callable<T> callable) {
       this.callable = callable;
       return this;
     }
@@ -583,9 +583,9 @@ class AsyncRpcRetryingCallerFactory {
 
     public AsyncServerRequestRpcRetryingCaller<T> build() {
       return new AsyncServerRequestRpcRetryingCaller<T>(retryTimer, conn, pauseNs,
-        pauseNsForServerOverloaded,
-        maxAttempts, operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt,
-        checkNotNull(serverName, "serverName is null"), checkNotNull(callable, "action is null"));
+        pauseNsForServerOverloaded, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
+        startLogErrorsCnt, checkNotNull(serverName, "serverName is null"),
+        checkNotNull(callable, "action is null"));
     }
 
     public CompletableFuture<T> call() {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.util;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,18 +26,18 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * WALDictionary using an LRU eviction algorithm. Uses a linked list running
- * through a hashtable.  Currently has max of 2^15 entries.  Will start
- * evicting if exceeds this number  The maximum memory we expect this dictionary
- * to take in the worst case is about:
- * <code>(2 ^ 15) * 5 (Regionname, Row key, CF, Column qual, table) * 100 bytes 
- * (these are some big names) = ~16MB</code>.
- * If you want to get silly, even at 1kb entries, it maxes out at 160 megabytes.
+ * WALDictionary using an LRU eviction algorithm. Uses a linked list running through a hashtable.
+ * Currently has max of 2^15 entries. Will start evicting if exceeds this number The maximum memory
+ * we expect this dictionary to take in the worst case is about:
+ * <code>(2 ^ 15) * 5 (Regionname, Row key, CF, Column qual, table) * 100 bytes
+ * (these are some big names) = ~16MB</code>. If you want to get silly, even at 1kb entries, it
+ * maxes out at 160 megabytes.
  */
 @InterfaceAudience.Private
 public class LRUDictionary implements Dictionary {
 
   BidirectionalLRUMap backingStore;
+
   @Override
   public byte[] getEntry(short idx) {
     return backingStore.get(idx);
@@ -49,6 +47,7 @@ public class LRUDictionary implements Dictionary {
   public void init(int initialSize) {
     backingStore = new BidirectionalLRUMap(initialSize);
   }
+
   @Override
   public short findEntry(byte[] data, int offset, int length) {
     short ret = backingStore.findIdx(data, offset, length);
@@ -74,10 +73,8 @@ public class LRUDictionary implements Dictionary {
   }
 
   /*
-   * Internal class used to implement LRU eviction and dual lookup (by key and
-   * value).
-   * 
-   * This is not thread safe. Don't use in multi-threaded applications.
+   * Internal class used to implement LRU eviction and dual lookup (by key and value). This is not
+   * thread safe. Don't use in multi-threaded applications.
    */
   static class BidirectionalLRUMap {
     private int currSize = 0;
@@ -213,11 +210,15 @@ public class LRUDictionary implements Dictionary {
       int length;
       Node next; // link towards the tail
       Node prev; // link towards the head
+
       abstract void setContents(byte[] container, int offset, int length);
+
       abstract byte[] getContents();
+
       abstract void resetContents();
     }
-    // The actual contents of the LRUDictionary are of ByteArrayBackedNode type 
+
+    // The actual contents of the LRUDictionary are of ByteArrayBackedNode type
     private static class ByteArrayBackedNode extends Node {
       private byte[] container;
 
@@ -250,8 +251,8 @@ public class LRUDictionary implements Dictionary {
         }
 
         Node casted = (Node) other;
-        return Bytes.equals(container, offset, length, casted.getContents(),
-            casted.offset, casted.length);
+        return Bytes.equals(container, offset, length, casted.getContents(), casted.offset,
+          casted.length);
       }
     }
 
@@ -287,7 +288,7 @@ public class LRUDictionary implements Dictionary {
         // This ideally should not be called
         byte[] copy = new byte[this.length];
         ByteBufferUtils.copyFromBufferToArray(copy, (ByteBuffer) this.container, this.offset, 0,
-            length);
+          length);
         return copy;
       }
 
@@ -305,8 +306,8 @@ public class LRUDictionary implements Dictionary {
         Node casted = (Node) other;
         // The other side should be a byte array backed node only as we add only
         // ByteArrayBackedNode to the indexToNode map.
-        return ByteBufferUtils.equals(this.container, offset, length,
-            casted.getContents(), casted.offset, casted.length);
+        return ByteBufferUtils.equals(this.container, offset, length, casted.getContents(),
+          casted.offset, casted.length);
       }
     }
   }

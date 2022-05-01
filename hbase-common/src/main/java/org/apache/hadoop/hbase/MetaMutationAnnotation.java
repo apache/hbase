@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.lang.annotation.Documented;
@@ -24,15 +22,14 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The field or the parameter to which this annotation can be applied only when it
- * holds mutations for hbase:meta table.
+ * The field or the parameter to which this annotation can be applied only when it holds mutations
+ * for hbase:meta table.
  */
 @Documented
-@Target( { ElementType.LOCAL_VARIABLE, ElementType.PARAMETER })
+@Target({ ElementType.LOCAL_VARIABLE, ElementType.PARAMETER })
 @Retention(RetentionPolicy.CLASS)
 @InterfaceAudience.Private
 public @interface MetaMutationAnnotation {

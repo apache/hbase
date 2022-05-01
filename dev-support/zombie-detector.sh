@@ -29,7 +29,7 @@
 #set -x
 # printenv
 
-### Setup some variables.  
+### Setup some variables.
 bindir=$(dirname $0)
 
 # This key is set by our surefire configuration up in the main pom.xml
