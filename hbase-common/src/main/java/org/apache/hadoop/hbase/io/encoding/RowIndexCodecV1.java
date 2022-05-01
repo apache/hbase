@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -34,17 +35,10 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Store cells following every row's start offset, so we can binary search to a row's cells.
- *
- * Format:
- * flat cells
- * integer: number of rows
- * integer: row0's offset
- * integer: row1's offset
- * ....
- * integer: dataSize
- *
-*/
+ * Store cells following every row's start offset, so we can binary search to a row's cells. Format:
+ * flat cells integer: number of rows integer: row0's offset integer: row1's offset .... integer:
+ * dataSize
+ */
 @InterfaceAudience.Private
 public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
 
@@ -60,12 +54,11 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx,
-      DataOutputStream out) throws IOException {
+  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx, DataOutputStream out)
+    throws IOException {
     if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
       throw new IOException(this.getClass().getName() + " only accepts "
-          + HFileBlockDefaultEncodingContext.class.getName() + " as the "
-          + "encoding context.");
+        + HFileBlockDefaultEncodingContext.class.getName() + " as the " + "encoding context.");
     }
 
     HFileBlockDefaultEncodingContext encodingCtx =
@@ -79,30 +72,26 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
   }
 
   @Override
-  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx,
-      DataOutputStream out) throws IOException {
-    RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx
-        .getEncodingState();
+  public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+    throws IOException {
+    RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx.getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
     encoder.write(cell);
   }
 
   @Override
-  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx,
-      DataOutputStream out, byte[] uncompressedBytesWithHeader)
-      throws IOException {
-    RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx
-        .getEncodingState();
+  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+    byte[] uncompressedBytesWithHeader) throws IOException {
+    RowIndexEncodingState state = (RowIndexEncodingState) encodingCtx.getEncodingState();
     RowIndexEncoderV1 encoder = state.encoder;
     encoder.flush();
     postEncoding(encodingCtx);
   }
 
   @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      HFileBlockDecodingContext decodingCtx) throws IOException {
-    ByteBuffer sourceAsBuffer = ByteBufferUtils
-        .drainInputStreamToBuffer(source);// waste
+  public ByteBuffer decodeKeyValues(DataInputStream source, HFileBlockDecodingContext decodingCtx)
+    throws IOException {
+    ByteBuffer sourceAsBuffer = ByteBufferUtils.drainInputStreamToBuffer(source);// waste
     sourceAsBuffer.mark();
     if (!decodingCtx.getHFileContext().isIncludesTags()) {
       sourceAsBuffer.position(sourceAsBuffer.limit() - Bytes.SIZEOF_INT);
@@ -125,8 +114,7 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
       try (DataOutputStream out = new DataOutputStream(baos)) {
         for (Cell cell : kvs) {
           KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(cell);
-          out.write(currentCell.getBuffer(), currentCell.getOffset(),
-                  currentCell.getLength());
+          out.write(currentCell.getBuffer(), currentCell.getOffset(), currentCell.getLength());
           if (includesMvcc) {
             WritableUtils.writeVLong(out, cell.getSequenceId());
           }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -43,12 +42,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for DumpReplicationQueues tool
  */
-@Category({ ReplicationTests.class, SmallTests.class})
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestDumpReplicationQueues {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDumpReplicationQueues.class);
+    HBaseClassTestRule.forClass(TestDumpReplicationQueues.class);
 
   /**
    * Makes sure dumpQueues returns wals znodes ordered chronologically.
@@ -66,18 +65,17 @@ public class TestDumpReplicationQueues {
     String server = "rs1,60030," + EnvironmentEdgeManager.currentTime();
     nodes.add(server);
     when(recoverableZooKeeperMock.getChildren("/hbase/rs", null)).thenReturn(nodes);
-    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs", null)).
-        thenReturn(nodes);
+    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs", null)).thenReturn(nodes);
     List<String> queuesIds = new ArrayList<>();
     queuesIds.add("1");
-    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs/"+server, null)).
-        thenReturn(queuesIds);
+    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs/" + server, null))
+      .thenReturn(queuesIds);
     List<String> wals = new ArrayList<>();
     wals.add("rs1%2C60964%2C1549394085556.1549394101427");
     wals.add("rs1%2C60964%2C1549394085556.1549394101426");
     wals.add("rs1%2C60964%2C1549394085556.1549394101428");
-    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs/"+server+"/1",
-        null)).thenReturn(wals);
+    when(recoverableZooKeeperMock.getChildren("/hbase/replication/rs/" + server + "/1", null))
+      .thenReturn(wals);
     DumpReplicationQueues dumpQueues = new DumpReplicationQueues();
     Set<String> peerIds = new HashSet<>();
     peerIds.add("1");
@@ -85,15 +83,15 @@ public class TestDumpReplicationQueues {
     String dump = dumpQueues.dumpQueues(zkWatcherMock, peerIds, false);
     String[] parsedDump = dump.split("Replication position for");
     assertEquals("Parsed dump should have 4 parts.", 4, parsedDump.length);
-    assertTrue("First wal should be rs1%2C60964%2C1549394085556.1549394101426, but got: "
-        + parsedDump[1],
-        parsedDump[1].indexOf("rs1%2C60964%2C1549394085556.1549394101426")>=0);
-    assertTrue("Second wal should be rs1%2C60964%2C1549394085556.1549394101427, but got: "
-            + parsedDump[2],
-        parsedDump[2].indexOf("rs1%2C60964%2C1549394085556.1549394101427")>=0);
-    assertTrue("Third wal should be rs1%2C60964%2C1549394085556.1549394101428, but got: "
-            + parsedDump[3],
-        parsedDump[3].indexOf("rs1%2C60964%2C1549394085556.1549394101428")>=0);
+    assertTrue(
+      "First wal should be rs1%2C60964%2C1549394085556.1549394101426, but got: " + parsedDump[1],
+      parsedDump[1].indexOf("rs1%2C60964%2C1549394085556.1549394101426") >= 0);
+    assertTrue(
+      "Second wal should be rs1%2C60964%2C1549394085556.1549394101427, but got: " + parsedDump[2],
+      parsedDump[2].indexOf("rs1%2C60964%2C1549394085556.1549394101427") >= 0);
+    assertTrue(
+      "Third wal should be rs1%2C60964%2C1549394085556.1549394101428, but got: " + parsedDump[3],
+      parsedDump[3].indexOf("rs1%2C60964%2C1549394085556.1549394101428") >= 0);
   }
 
 }

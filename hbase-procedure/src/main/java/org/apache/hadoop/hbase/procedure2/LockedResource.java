@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -30,9 +29,9 @@ public class LockedResource {
   private final int sharedLockCount;
   private final List<Procedure<?>> waitingProcedures;
 
-  public LockedResource(LockedResourceType resourceType, String resourceName,
-      LockType lockType, Procedure<?> exclusiveLockOwnerProcedure,
-      int sharedLockCount, List<Procedure<?>> waitingProcedures) {
+  public LockedResource(LockedResourceType resourceType, String resourceName, LockType lockType,
+    Procedure<?> exclusiveLockOwnerProcedure, int sharedLockCount,
+    List<Procedure<?>> waitingProcedures) {
     this.resourceType = resourceType;
     this.resourceName = resourceName;
     this.lockType = lockType;

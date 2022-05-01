@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,23 +36,22 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureDescriber {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureDescriber.class);
+    HBaseClassTestRule.forClass(TestProcedureDescriber.class);
 
   public static class TestProcedure extends Procedure {
     @Override
-    protected Procedure[] execute(Object env) throws ProcedureYieldException,
-        ProcedureSuspendedException, InterruptedException {
+    protected Procedure[] execute(Object env)
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       return null;
     }
 
     @Override
-    protected void rollback(Object env)
-        throws IOException, InterruptedException {
+    protected void rollback(Object env) throws IOException, InterruptedException {
     }
 
     @Override
@@ -61,16 +60,14 @@ public class TestProcedureDescriber {
     }
 
     @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
       ByteString byteString = ByteString.copyFrom(new byte[] { 'A' });
       BytesValue state = BytesValue.newBuilder().setValue(byteString).build();
       serializer.serialize(state);
     }
 
     @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     }
   }
 
@@ -82,8 +79,8 @@ public class TestProcedureDescriber {
     Date epoch = new Date(0);
 
     assertEquals("{ ID => '-1', PARENT_ID => '-1', STATE => 'INITIALIZING', OWNER => '', "
-        + "TYPE => 'org.apache.hadoop.hbase.procedure.TestProcedureDescriber$TestProcedure', "
-        + "START_TIME => '" + epoch + "', LAST_UPDATE => '" + epoch + "', PARAMETERS => [ "
-        + "{ value => 'QQ==' } ] }", result);
+      + "TYPE => 'org.apache.hadoop.hbase.procedure.TestProcedureDescriber$TestProcedure', "
+      + "START_TIME => '" + epoch + "', LAST_UPDATE => '" + epoch + "', PARAMETERS => [ "
+      + "{ value => 'QQ==' } ] }", result);
   }
 }

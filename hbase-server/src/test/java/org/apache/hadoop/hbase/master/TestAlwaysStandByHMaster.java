@@ -21,6 +21,7 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MiniClusterRule;
@@ -31,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class, MasterTests.class})
+@Category({ MediumTests.class, MasterTests.class })
 public class TestAlwaysStandByHMaster {
 
   @ClassRule
@@ -39,21 +40,18 @@ public class TestAlwaysStandByHMaster {
     HBaseClassTestRule.forClass(TestAlwaysStandByHMaster.class);
 
   private static final StartTestingClusterOption OPTION = StartTestingClusterOption.builder()
-    .numAlwaysStandByMasters(1)
-    .numMasters(1)
-    .numRegionServers(1)
-    .build();
+    .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(1).build();
 
   @ClassRule
-  public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-    .setMiniClusterOption(OPTION)
-    .build();
+  public static final MiniClusterRule miniClusterRule =
+    MiniClusterRule.newBuilder().setMiniClusterOption(OPTION).build();
 
   /**
    * Tests that the AlwaysStandByHMaster does not transition to active state even if no active
    * master exists.
    */
-  @Test  public void testAlwaysStandBy() throws Exception {
+  @Test
+  public void testAlwaysStandBy() throws Exception {
     HBaseTestingUtil testUtil = miniClusterRule.getTestingUtility();
     // Make sure there is an active master.
     assertNotNull(testUtil.getMiniHBaseCluster().getMaster());
@@ -67,6 +65,6 @@ public class TestAlwaysStandByHMaster {
     assertTrue(testUtil.getMiniHBaseCluster().waitForActiveAndReadyMaster(5000));
     // Newly added master should be the active.
     assertEquals(newActive.getServerName(),
-        testUtil.getMiniHBaseCluster().getMaster().getServerName());
+      testUtil.getMiniHBaseCluster().getMaster().getServerName());
   }
 }

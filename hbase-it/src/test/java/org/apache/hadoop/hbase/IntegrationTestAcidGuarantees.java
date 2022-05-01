@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.FAMILY_C;
 import static org.apache.hadoop.hbase.AcidGuaranteesTestTool.TABLE_NAME;
 
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -85,10 +84,10 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
   }
 
   private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-      int numUniqueRows) throws Exception {
+    int numUniqueRows) throws Exception {
     tool.run(new String[] { "-millis", String.valueOf(millisToRun), "-numWriters",
-        String.valueOf(numWriters), "-numGetters", String.valueOf(numGetters), "-numScanners",
-        String.valueOf(numScanners), "-numUniqueRows", String.valueOf(numUniqueRows) });
+      String.valueOf(numWriters), "-numGetters", String.valueOf(numGetters), "-numScanners",
+      String.valueOf(numScanners), "-numUniqueRows", String.valueOf(numUniqueRows) });
   }
 
   // ***** Actual integration tests

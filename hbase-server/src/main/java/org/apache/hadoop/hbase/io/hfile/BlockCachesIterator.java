@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -29,10 +26,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 class BlockCachesIterator implements Iterator<CachedBlock> {
   int index = 0;
-  final BlockCache [] bcs;
+  final BlockCache[] bcs;
   Iterator<CachedBlock> current;
 
-  BlockCachesIterator(final BlockCache [] blockCaches) {
+  BlockCachesIterator(final BlockCache[] blockCaches) {
     this.bcs = blockCaches;
     this.current = this.bcs[this.index].iterator();
   }

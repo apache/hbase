@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.security.InvalidParameterException;
@@ -52,14 +51,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Integration test that verifies lazy CF loading during scans by doing repeated scans
- * with this feature while multiple threads are continuously writing values; and
- * verifying the result.
+ * Integration test that verifies lazy CF loading during scans by doing repeated scans with this
+ * feature while multiple threads are continuously writing values; and verifying the result.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestLazyCfLoading {
   private static final TableName TABLE_NAME =
-      TableName.valueOf(IntegrationTestLazyCfLoading.class.getSimpleName());
+    TableName.valueOf(IntegrationTestLazyCfLoading.class.getSimpleName());
   private static final String TIMEOUT_KEY = "hbase.%s.timeout";
   private static final String ENCODING_KEY = "hbase.%s.datablock.encoding";
 
@@ -77,11 +75,11 @@ public class IntegrationTestLazyCfLoading {
   private IntegrationTestingUtility util = new IntegrationTestingUtility();
   private final DataGenerator dataGen = new DataGenerator();
 
-  /** Custom LoadTestDataGenerator. Uses key generation and verification from
-   * LoadTestKVGenerator. Creates 3 column families; one with an integer column to
-   * filter on, the 2nd one with an integer column that matches the first integer column (for
-   * test-specific verification), and byte[] value that is used for general verification; and
-   * the third one with just the value.
+  /**
+   * Custom LoadTestDataGenerator. Uses key generation and verification from LoadTestKVGenerator.
+   * Creates 3 column families; one with an integer column to filter on, the 2nd one with an integer
+   * column that matches the first integer column (for test-specific verification), and byte[] value
+   * that is used for general verification; and the third one with just the value.
    */
   private static class DataGenerator extends LoadTestDataGenerator {
     private static final int MIN_DATA_SIZE = 4096;
@@ -166,7 +164,7 @@ public class IntegrationTestLazyCfLoading {
 
     public Filter getScanFilter() {
       SingleColumnValueFilter scf = new SingleColumnValueFilter(ESSENTIAL_CF, FILTER_COLUMN,
-          CompareOperator.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
+        CompareOperator.EQUAL, Bytes.toBytes(ACCEPTED_VALUE));
       scf.setFilterIfMissing(true);
       return scf;
     }
@@ -196,8 +194,8 @@ public class IntegrationTestLazyCfLoading {
         ColumnFamilyDescriptorBuilder.newBuilder(cf).setDataBlockEncoding(blockEncoding).build();
       builder.setColumnFamily(familyDescriptor);
     }
-    int serverCount = util.getHBaseClusterInterface().getClusterMetrics()
-      .getLiveServerMetrics().size();
+    int serverCount =
+      util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size();
     byte[][] splits = new RegionSplitter.HexStringSplit().split(serverCount * REGIONS_PER_SERVER);
     util.getAdmin().createTable(builder.build(), splits);
     LOG.info("Created table");
@@ -224,16 +222,15 @@ public class IntegrationTestLazyCfLoading {
     Configuration conf = util.getConfiguration();
     String timeoutKey = String.format(TIMEOUT_KEY, this.getClass().getSimpleName());
     long maxRuntime = conf.getLong(timeoutKey, DEFAULT_TIMEOUT_MINUTES);
-    long serverCount = util.getHBaseClusterInterface().getClusterMetrics()
-      .getLiveServerMetrics().size();
+    long serverCount =
+      util.getHBaseClusterInterface().getClusterMetrics().getLiveServerMetrics().size();
     long keysToWrite = serverCount * KEYS_TO_WRITE_PER_SERVER;
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(TABLE_NAME);
 
     // Create multi-threaded writer and start it. We write multiple columns/CFs and verify
     // their integrity, therefore multi-put is necessary.
-    MultiThreadedWriter writer =
-      new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
+    MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
 
     LOG.info("Starting writer; the number of keys to write is " + keysToWrite);
@@ -245,8 +242,8 @@ public class IntegrationTestLazyCfLoading {
     long timeLimit = now + (maxRuntime * 60000);
     boolean isWriterDone = false;
     while (now < timeLimit && !isWriterDone) {
-      LOG.info("Starting the scan; wrote approximately "
-        + dataGen.getTotalNumberOfKeys() + " keys");
+      LOG
+        .info("Starting the scan; wrote approximately " + dataGen.getTotalNumberOfKeys() + " keys");
       isWriterDone = writer.isDone();
       if (isWriterDone) {
         LOG.info("Scanning full result, writer is done");
@@ -268,14 +265,15 @@ public class IntegrationTestLazyCfLoading {
       // Verify and count the results.
       while ((result = results.next()) != null) {
         boolean isOk = writer.verifyResultAgainstDataGenerator(result, true, true);
-        Assert.assertTrue("Failed to verify [" + Bytes.toString(result.getRow())+ "]", isOk);
+        Assert.assertTrue("Failed to verify [" + Bytes.toString(result.getRow()) + "]", isOk);
         ++resultCount;
       }
       long timeTaken = EnvironmentEdgeManager.currentTime() - startTs;
       // Verify the result count.
       long onesGennedAfterScan = dataGen.getExpectedNumberOfKeys();
-      Assert.assertTrue("Read " + resultCount + " keys when at most " + onesGennedAfterScan
-        + " were generated ", onesGennedAfterScan >= resultCount);
+      Assert.assertTrue(
+        "Read " + resultCount + " keys when at most " + onesGennedAfterScan + " were generated ",
+        onesGennedAfterScan >= resultCount);
       if (isWriterDone) {
         Assert.assertTrue("Read " + resultCount + " keys; the writer is done and "
           + onesGennedAfterScan + " keys were generated", onesGennedAfterScan == resultCount);

@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_CONNECTION_STRING;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_SYSTEM;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_SYSTEM_VALUE;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_USER;
+
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -65,9 +65,8 @@ public class ConnectionSpanBuilder implements Supplier<Span> {
 
   @SuppressWarnings("unchecked")
   public Span build() {
-    final SpanBuilder builder = TraceUtil.getGlobalTracer()
-      .spanBuilder(name)
-      .setSpanKind(SpanKind.INTERNAL);
+    final SpanBuilder builder =
+      TraceUtil.getGlobalTracer().spanBuilder(name).setSpanKind(SpanKind.INTERNAL);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
     return builder.startSpan();
   }
@@ -76,33 +75,27 @@ public class ConnectionSpanBuilder implements Supplier<Span> {
    * Static utility method that performs the primary logic of this builder. It is visible to other
    * classes in this package so that other builders can use this functionality as a mix-in.
    * @param attributes the attributes map to be populated.
-   * @param conn the source of connection attribute values.
+   * @param conn       the source of connection attribute values.
    */
-  static void populateConnectionAttributes(
-    final Map<AttributeKey<?>, Object> attributes,
-    final AsyncConnectionImpl conn
-  ) {
-    final Supplier<String> connStringSupplier = () -> conn.getConnectionRegistry()
-      .getConnectionString();
+  static void populateConnectionAttributes(final Map<AttributeKey<?>, Object> attributes,
+    final AsyncConnectionImpl conn) {
+    final Supplier<String> connStringSupplier =
+      () -> conn.getConnectionRegistry().getConnectionString();
     populateConnectionAttributes(attributes, connStringSupplier, conn::getUser);
   }
 
   /**
    * Static utility method that performs the primary logic of this builder. It is visible to other
    * classes in this package so that other builders can use this functionality as a mix-in.
-   * @param attributes the attributes map to be populated.
+   * @param attributes               the attributes map to be populated.
    * @param connectionStringSupplier the source of the {@code db.connection_string} attribute value.
-   * @param userSupplier the source of the {@code db.user} attribute value.
+   * @param userSupplier             the source of the {@code db.user} attribute value.
    */
-  static void populateConnectionAttributes(
-    final Map<AttributeKey<?>, Object> attributes,
-    final Supplier<String> connectionStringSupplier,
-    final Supplier<User> userSupplier
-  ) {
+  static void populateConnectionAttributes(final Map<AttributeKey<?>, Object> attributes,
+    final Supplier<String> connectionStringSupplier, final Supplier<User> userSupplier) {
     attributes.put(DB_SYSTEM, DB_SYSTEM_VALUE);
     attributes.put(DB_CONNECTION_STRING, connectionStringSupplier.get());
-    attributes.put(DB_USER, Optional.ofNullable(userSupplier.get())
-      .map(Object::toString)
-      .orElse(null));
+    attributes.put(DB_USER,
+      Optional.ofNullable(userSupplier.get()).map(Object::toString).orElse(null));
   }
 }

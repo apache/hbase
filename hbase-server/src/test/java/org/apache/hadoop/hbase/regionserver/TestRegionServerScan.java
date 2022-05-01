@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 public class TestRegionServerScan {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerScan.class);
+    HBaseClassTestRule.forClass(TestRegionServerScan.class);
 
   @Rule
   public TestName name = new TestName();
@@ -114,8 +114,7 @@ public class TestRegionServerScan {
     ResultScanner resultScanner = null;
     Table table = null;
     try {
-      table =
-          TEST_UTIL.createTable(tableName, new byte[][] { CF }, 1, 1024, null);
+      table = TEST_UTIL.createTable(tableName, new byte[][] { CF }, 1, 1024, null);
       putToTable(table, r0);
       putToTable(table, r1);
       putToTable(table, r2);
@@ -179,7 +178,7 @@ public class TestRegionServerScan {
 
     @Override
     public ScanResponse scan(RpcController controller, ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
       try {
         if (!inTest) {
           return super.scan(controller, request);
@@ -190,13 +189,12 @@ public class TestRegionServerScan {
           region = this.getRegion(request.getRegion());
         }
 
-        if (region != null
-            && !tableName.equals(region.getTableDescriptor().getTableName())) {
+        if (region != null && !tableName.equals(region.getTableDescriptor().getTableName())) {
           return super.scan(controller, request);
         }
 
         ScanResponse result = null;
-        //Simulate RpcCallContext is null for test.
+        // Simulate RpcCallContext is null for test.
         Optional<RpcCall> rpcCall = RpcServer.unsetCurrentCall();
         try {
           result = super.scan(controller, request);

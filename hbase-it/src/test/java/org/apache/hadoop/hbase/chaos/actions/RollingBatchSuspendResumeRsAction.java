@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -34,12 +33,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Suspend then resume a ratio of the regionservers in a rolling fashion. At each step, either
  * suspend a server, or resume one, sleeping (sleepTime) in between steps. The parameter
- * maxSuspendedServers limits the maximum number of servers that can be down at the same time
- * during rolling restarts.
+ * maxSuspendedServers limits the maximum number of servers that can be down at the same time during
+ * rolling restarts.
  */
 public class RollingBatchSuspendResumeRsAction extends Action {
   private static final Logger LOG =
-      LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
+    LoggerFactory.getLogger(RollingBatchSuspendResumeRsAction.class);
   private final float ratio;
   private final long sleepTime;
   private final int maxSuspendedServers; // number of maximum suspended servers at any given time.
@@ -55,10 +54,12 @@ public class RollingBatchSuspendResumeRsAction extends Action {
   }
 
   enum SuspendOrResume {
-    SUSPEND, RESUME
+    SUSPEND,
+    RESUME
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -71,8 +72,9 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     Queue<ServerName> suspendedServers = new LinkedList<>();
     Random rand = ThreadLocalRandom.current();
     // loop while there are servers to be suspended or suspended servers to be resumed
-    while ((!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty()) && !context
-        .isStopping()) {
+    while (
+      (!serversToBeSuspended.isEmpty() || !suspendedServers.isEmpty()) && !context.isStopping()
+    ) {
 
       final SuspendOrResume action;
       if (serversToBeSuspended.isEmpty()) { // no more servers to suspend

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.lib;
 
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -28,7 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MutableSizeHistogram extends MutableRangeHistogram {
 
   private final static String RANGE_TYPE = "SizeRangeCount";
-  private final static long[] RANGES = {10,100,1000,10000,100000,1000000,10000000,100000000};
+  private final static long[] RANGES =
+    { 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000 };
 
   public MutableSizeHistogram(MetricsInfo info) {
     this(info.name(), info.description());

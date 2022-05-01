@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestTableSpaceQuotaViolationNotifier {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableSpaceQuotaViolationNotifier.class);
+    HBaseClassTestRule.forClass(TestTableSpaceQuotaViolationNotifier.class);
 
   private TableSpaceQuotaSnapshotNotifier notifier;
   private Connection conn;
@@ -68,18 +68,16 @@ public class TestTableSpaceQuotaViolationNotifier {
   @Test
   public void testToViolation() throws Exception {
     final TableName tn = TableName.valueOf("inviolation");
-    final SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(
-        new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 1024L, 512L);
+    final SpaceQuotaSnapshot snapshot =
+      new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 1024L, 512L);
     final Table quotaTable = mock(Table.class);
     when(conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)).thenReturn(quotaTable);
 
     final Put expectedPut = new Put(Bytes.toBytes("t." + tn.getNameAsString()));
     final QuotaProtos.SpaceQuotaSnapshot protoQuota = QuotaProtos.SpaceQuotaSnapshot.newBuilder()
-        .setQuotaStatus(QuotaProtos.SpaceQuotaStatus.newBuilder().setInViolation(true)
+      .setQuotaStatus(QuotaProtos.SpaceQuotaStatus.newBuilder().setInViolation(true)
         .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_INSERTS))
-        .setQuotaLimit(512L)
-        .setQuotaUsage(1024L)
-        .build();
+      .setQuotaLimit(512L).setQuotaUsage(1024L).build();
     expectedPut.addColumn(Bytes.toBytes("u"), Bytes.toBytes("p"), protoQuota.toByteArray());
 
     notifier.transitionTable(tn, snapshot);
@@ -109,10 +107,10 @@ public class TestTableSpaceQuotaViolationNotifier {
       if (expected.size() != actual.size()) {
         return false;
       }
-      NavigableMap<byte[],List<Cell>> expectedCells = expected.getFamilyCellMap();
-      NavigableMap<byte[],List<Cell>> actualCells = actual.getFamilyCellMap();
-      Entry<byte[],List<Cell>> expectedEntry = expectedCells.entrySet().iterator().next();
-      Entry<byte[],List<Cell>> actualEntry = actualCells.entrySet().iterator().next();
+      NavigableMap<byte[], List<Cell>> expectedCells = expected.getFamilyCellMap();
+      NavigableMap<byte[], List<Cell>> actualCells = actual.getFamilyCellMap();
+      Entry<byte[], List<Cell>> expectedEntry = expectedCells.entrySet().iterator().next();
+      Entry<byte[], List<Cell>> actualEntry = actualCells.entrySet().iterator().next();
       if (!Arrays.equals(expectedEntry.getKey(), actualEntry.getKey())) {
         return false;
       }

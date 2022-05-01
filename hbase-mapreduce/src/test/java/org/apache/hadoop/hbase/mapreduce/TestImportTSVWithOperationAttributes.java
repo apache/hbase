@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,21 +65,20 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImportTSVWithOperationAttributes.class);
+    HBaseClassTestRule.forClass(TestImportTSVWithOperationAttributes.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestImportTSVWithOperationAttributes.class);
+    LoggerFactory.getLogger(TestImportTSVWithOperationAttributes.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
+   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is false.
    */
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
@@ -126,10 +125,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY
+        + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest=>myvalue\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, true);
@@ -142,10 +141,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY
+        + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest1=>myvalue\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, false);
@@ -153,18 +152,14 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   /**
-   * Run an ImportTsv job and perform basic validation on the results. Returns
-   * the ImportTsv <code>Tool</code> instance so that other tests can inspect it
-   * for further validation as necessary. This method is static to insure
-   * non-reliance on instance's util/conf facilities.
-   *
-   * @param args
-   *          Any arguments to pass BEFORE inputFile path is appended.
-   * @param dataAvailable
-   * @return The Tool instance used to run the test.
+   * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
+   * <code>Tool</code> instance so that other tests can inspect it for further validation as
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. n *
+   * Any arguments to pass BEFORE inputFile path is appended. n * @return The Tool instance used to
+   * run the test.
    */
   private Tool doMROnTableTest(HBaseTestingUtil util, String family, String data, String[] args,
-      int valueMultiplier, boolean dataAvailable) throws Exception {
+    int valueMultiplier, boolean dataAvailable) throws Exception {
     String table = args[args.length - 1];
     Configuration conf = new Configuration(util.getConfiguration());
 
@@ -198,12 +193,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   /**
-   * Confirm ImportTsv via data in online table.
-   *
-   * @param dataAvailable
+   * Confirm ImportTsv via data in online table. n
    */
   private static void validateTable(Configuration conf, TableName tableName, String family,
-      int valueMultiplier, boolean dataAvailable) throws IOException {
+    int valueMultiplier, boolean dataAvailable) throws IOException {
 
     LOG.debug("Validating table.");
     Connection connection = ConnectionFactory.createConnection(conf);
@@ -224,9 +217,10 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
             List<Cell> kvs = res.listCells();
             assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
             assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
-            assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
-            assertTrue(CellUtil.matchingValue(kvs.get(1),
-                Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
+            assertTrue(
+              CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
+            assertTrue(
+              CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
             // Only one result set is expected, so let it loop.
             verified = true;
           }
@@ -254,7 +248,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   public static class OperationAttributesTestController
-      implements RegionCoprocessor, RegionObserver {
+    implements RegionCoprocessor, RegionObserver {
 
     @Override
     public Optional<RegionObserver> getRegionObserver() {
@@ -263,10 +257,11 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       Region region = e.getEnvironment().getRegion();
-      if (!region.getRegionInfo().isMetaRegion()
-          && !region.getRegionInfo().getTable().isSystemTable()) {
+      if (
+        !region.getRegionInfo().isMetaRegion() && !region.getRegionInfo().getTable().isSystemTable()
+      ) {
         if (put.getAttribute(TEST_ATR_KEY) != null) {
           LOG.debug("allow any put to happen " + region.getRegionInfo().getRegionNameAsString());
         } else {

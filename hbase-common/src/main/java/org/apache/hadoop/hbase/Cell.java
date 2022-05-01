@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * The unit of storage in HBase consisting of the following fields:
- * <br>
+ * The unit of storage in HBase consisting of the following fields: <br>
+ *
  * <pre>
  * 1) row
  * 2) column family
@@ -35,8 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * 7) value
  * </pre>
  * <p>
- * Uniqueness is determined by the combination of row, column family, column qualifier,
- * timestamp, and type.
+ * Uniqueness is determined by the combination of row, column family, column qualifier, timestamp,
+ * and type.
  * </p>
  * <p>
  * The natural comparator will perform a bitwise comparison on row, column family, and column
@@ -44,9 +42,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * the goal of sorting newer cells first.
  * </p>
  * <p>
- * Cell implements Comparable&lt;Cell&gt; which is only meaningful when
- * comparing to other keys in the
- * same table. It uses CellComparator which does not work on the -ROOT- and hbase:meta tables.
+ * Cell implements Comparable&lt;Cell&gt; which is only meaningful when comparing to other keys in
+ * the same table. It uses CellComparator which does not work on the -ROOT- and hbase:meta tables.
  * </p>
  * <p>
  * In the future, we may consider adding a boolean isOnHeap() method and a getValueBuffer() method
@@ -62,7 +59,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface Cell extends HeapSize {
 
-  //1) Row
+  // 1) Row
 
   /**
    * Contiguous raw bytes that may start at any index in the containing array. Max length is
@@ -81,8 +78,7 @@ public interface Cell extends HeapSize {
    */
   short getRowLength();
 
-
-  //2) Family
+  // 2) Family
 
   /**
    * Contiguous bytes composed of legal HDFS filename characters which may start at any index in the
@@ -97,12 +93,11 @@ public interface Cell extends HeapSize {
   int getFamilyOffset();
 
   /**
-   * @return Number of family bytes.  Must be &lt; familyArray.length - offset.
+   * @return Number of family bytes. Must be &lt; familyArray.length - offset.
    */
   byte getFamilyLength();
 
-
-  //3) Qualifier
+  // 3) Qualifier
 
   /**
    * Contiguous raw bytes that may start at any index in the containing array.
@@ -116,21 +111,19 @@ public interface Cell extends HeapSize {
   int getQualifierOffset();
 
   /**
-   * @return Number of qualifier bytes.  Must be &lt; qualifierArray.length - offset.
+   * @return Number of qualifier bytes. Must be &lt; qualifierArray.length - offset.
    */
   int getQualifierLength();
 
-
-  //4) Timestamp
+  // 4) Timestamp
 
   /**
-   * @return Long value representing time at which this cell was "Put" into the row.  Typically
-   * represents the time of insertion, but can be any value from 0 to Long.MAX_VALUE.
+   * @return Long value representing time at which this cell was "Put" into the row. Typically
+   *         represents the time of insertion, but can be any value from 0 to Long.MAX_VALUE.
    */
   long getTimestamp();
 
-
-  //5) Type
+  // 5) Type
 
   /**
    * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
@@ -139,8 +132,7 @@ public interface Cell extends HeapSize {
   @Deprecated
   byte getTypeByte();
 
-
-  //6) SequenceId
+  // 6) SequenceId
 
   /**
    * A region-specific unique monotonically increasing sequence ID given to each Cell. It always
@@ -153,7 +145,7 @@ public interface Cell extends HeapSize {
   @Deprecated
   long getSequenceId();
 
-  //7) Value
+  // 7) Value
 
   /**
    * Contiguous raw bytes that may start at any index in the containing array. Max length is
@@ -168,7 +160,7 @@ public interface Cell extends HeapSize {
   int getValueOffset();
 
   /**
-   * @return Number of value bytes.  Must be &lt; valueArray.length - offset.
+   * @return Number of value bytes. Must be &lt; valueArray.length - offset.
    */
   int getValueLength();
 
@@ -193,13 +185,11 @@ public interface Cell extends HeapSize {
   int getTagsOffset();
 
   /**
-   * HBase internally uses 2 bytes to store tags length in Cell.
-   * As the tags length is always a non-negative number, to make good use of the sign bit,
-   * the max of tags length is defined 2 * Short.MAX_VALUE + 1 = 65535.
-   * As a result, the return type is int, because a short is not capable of handling that.
-   * Please note that even if the return type is int, the max tags length is far
-   * less than Integer.MAX_VALUE.
-   *
+   * HBase internally uses 2 bytes to store tags length in Cell. As the tags length is always a
+   * non-negative number, to make good use of the sign bit, the max of tags length is defined 2 *
+   * Short.MAX_VALUE + 1 = 65535. As a result, the return type is int, because a short is not
+   * capable of handling that. Please note that even if the return type is int, the max tags length
+   * is far less than Integer.MAX_VALUE.
    * @return the total length of the tags in the Cell.
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
    */
@@ -207,8 +197,8 @@ public interface Cell extends HeapSize {
   int getTagsLength();
 
   /**
-   * Returns the type of cell in a human readable format using {@link Type}.
-   * Note : This does not expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
+   * Returns the type of cell in a human readable format using {@link Type}. Note : This does not
+   * expose the internal types of Cells like {@link KeyValue.Type#Maximum} and
    * {@link KeyValue.Type#Minimum}
    * @return The data type this cell: one of Put, Delete, etc
    */

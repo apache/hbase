@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.lib;
 
 import org.apache.hadoop.hbase.metrics.Interns;
@@ -40,16 +39,15 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   }
 
   /**
-   * Returns the type of range histogram size or time 
+   * Returns the type of range histogram size or time
    */
   public abstract String getRangeType();
-  
+
   /**
-   * Returns the ranges to be counted 
+   * Returns the ranges to be counted
    */
   public abstract long[] getRanges();
 
-  
   @Override
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
@@ -61,7 +59,7 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
   }
 
   public void updateSnapshotRangeMetrics(MetricsRecordBuilder metricsRecordBuilder,
-                                         Snapshot snapshot) {
+    Snapshot snapshot) {
     long priorRange = 0;
     long cumNum = 0;
 
@@ -71,8 +69,8 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
       long val = snapshot.getCountAtOrBelow(ranges[i]);
       if (val - cumNum > 0) {
         metricsRecordBuilder.addCounter(
-            Interns.info(name + "_" + rangeType + "_" + priorRange + "-" + ranges[i], desc),
-            val - cumNum);
+          Interns.info(name + "_" + rangeType + "_" + priorRange + "-" + ranges[i], desc),
+          val - cumNum);
       }
       priorRange = ranges[i];
       cumNum = val;
@@ -80,12 +78,12 @@ public abstract class MutableRangeHistogram extends MutableHistogram implements 
     long val = snapshot.getCount();
     if (val - cumNum > 0) {
       metricsRecordBuilder.addCounter(
-          Interns.info(name + "_" + rangeType + "_" + priorRange + "-inf", desc),
-          val - cumNum);
+        Interns.info(name + "_" + rangeType + "_" + priorRange + "-inf", desc), val - cumNum);
     }
   }
 
-  @Override public long getCount() {
+  @Override
+  public long getCount() {
     return histogram.getCount();
   }
 }

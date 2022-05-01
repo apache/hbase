@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,11 +21,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.jcodings.Encoding;
 import org.jcodings.EncodingDB;
 import org.jcodings.specific.UTF8Encoding;
@@ -36,36 +33,39 @@ import org.joni.Regex;
 import org.joni.Syntax;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
+
 /**
- * This comparator is for use with {@link CompareFilter} implementations, such
- * as {@link RowFilter}, {@link QualifierFilter}, and {@link ValueFilter}, for
- * filtering based on the value of a given column. Use it to test if a given
- * regular expression matches a cell value in the column.
+ * This comparator is for use with {@link CompareFilter} implementations, such as {@link RowFilter},
+ * {@link QualifierFilter}, and {@link ValueFilter}, for filtering based on the value of a given
+ * column. Use it to test if a given regular expression matches a cell value in the column.
  * <p>
  * Only EQUAL or NOT_EQUAL comparisons are valid with this comparator.
  * <p>
  * For example:
  * <p>
+ *
  * <pre>
- * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
- *     new RegexStringComparator(
- *       // v4 IP address
- *       "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3,3}" +
- *         "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(\\/[0-9]+)?" +
- *         "|" +
- *       // v6 IP address
- *       "((([\\dA-Fa-f]{1,4}:){7}[\\dA-Fa-f]{1,4})(:([\\d]{1,3}.)" +
- *         "{3}[\\d]{1,3})?)(\\/[0-9]+)?"));
+ * ValueFilter vf = new ValueFilter(CompareOp.EQUAL, new RegexStringComparator(
+ *   // v4 IP address
+ *   "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3,3}"
+ *     + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(\\/[0-9]+)?" + "|" +
+ *     // v6 IP address
+ *     "((([\\dA-Fa-f]{1,4}:){7}[\\dA-Fa-f]{1,4})(:([\\d]{1,3}.)"
+ *     + "{3}[\\d]{1,3})?)(\\/[0-9]+)?"));
  * </pre>
  * <p>
  * Supports {@link java.util.regex.Pattern} flags as well:
  * <p>
+ *
  * <pre>
  * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
- *     new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL));
+ *   new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL));
  * </pre>
+ *
  * @see java.util.regex.Pattern
  */
 @InterfaceAudience.Public
@@ -84,8 +84,7 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * Constructor
-   * Adds Pattern.DOTALL to the underlying Pattern
+   * Constructor Adds Pattern.DOTALL to the underlying Pattern
    * @param expr a valid regular expression
    */
   public RegexStringComparator(String expr) {
@@ -93,9 +92,8 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * Constructor
-   * Adds Pattern.DOTALL to the underlying Pattern
-   * @param expr a valid regular expression
+   * Constructor Adds Pattern.DOTALL to the underlying Pattern
+   * @param expr   a valid regular expression
    * @param engine engine implementation type
    */
   public RegexStringComparator(String expr, EngineType engine) {
@@ -104,7 +102,7 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   /**
    * Constructor
-   * @param expr a valid regular expression
+   * @param expr  a valid regular expression
    * @param flags java.util.regex.Pattern flags
    */
   public RegexStringComparator(String expr, int flags) {
@@ -113,8 +111,8 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   /**
    * Constructor
-   * @param expr a valid regular expression
-   * @param flags java.util.regex.Pattern flags
+   * @param expr   a valid regular expression
+   * @param flags  java.util.regex.Pattern flags
    * @param engine engine implementation type
    */
   public RegexStringComparator(String expr, int flags, EngineType engine) {
@@ -132,12 +130,10 @@ public class RegexStringComparator extends ByteArrayComparable {
   /**
    * Specifies the {@link Charset} to use to convert the row key to a String.
    * <p>
-   * The row key needs to be converted to a String in order to be matched
-   * against the regular expression.  This method controls which charset is
-   * used to do this conversion.
+   * The row key needs to be converted to a String in order to be matched against the regular
+   * expression. This method controls which charset is used to do this conversion.
    * <p>
-   * If the row key is made of arbitrary bytes, the charset {@code ISO-8859-1}
-   * is recommended.
+   * If the row key is made of arbitrary bytes, the charset {@code ISO-8859-1} is recommended.
    * @param charset The charset to use.
    */
   public void setCharset(final Charset charset) {
@@ -153,18 +149,17 @@ public class RegexStringComparator extends ByteArrayComparable {
    * @return The comparator serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     return engine.toByteArray();
   }
 
   /**
    * @param pbBytes A pb serialized {@link RegexStringComparator} instance
-   * @return An instance of {@link RegexStringComparator} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray
+   * @return An instance of {@link RegexStringComparator} made from <code>bytes</code> n * @see
+   *         #toByteArray
    */
-  public static RegexStringComparator parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static RegexStringComparator parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     ComparatorProtos.RegexStringComparator proto;
     try {
       proto = ComparatorProtos.RegexStringComparator.parseFrom(pbBytes);
@@ -174,8 +169,7 @@ public class RegexStringComparator extends ByteArrayComparable {
     RegexStringComparator comparator;
     if (proto.hasEngine()) {
       EngineType engine = EngineType.valueOf(proto.getEngine());
-      comparator = new RegexStringComparator(proto.getPattern(), proto.getPatternFlags(),
-        engine);
+      comparator = new RegexStringComparator(proto.getPattern(), proto.getPatternFlags(), engine);
     } else {
       comparator = new RegexStringComparator(proto.getPattern(), proto.getPatternFlags());
     }
@@ -191,15 +185,14 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the comparator that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * n * @return true if and only if the fields of the comparator that are serialized are equal to
+   * the corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof RegexStringComparator)) return false;
-    RegexStringComparator comparator = (RegexStringComparator)other;
+    RegexStringComparator comparator = (RegexStringComparator) other;
     return super.areSerializedFieldsEqual(comparator)
       && engine.getClass().isInstance(comparator.getEngine())
       && engine.getPattern().equals(comparator.getEngine().getPattern())
@@ -212,19 +205,17 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * This is an internal interface for abstracting access to different regular
-   * expression matching engines.
+   * This is an internal interface for abstracting access to different regular expression matching
+   * engines.
    */
   static interface Engine {
     /**
-     * Returns the string representation of the configured regular expression
-     * for matching
+     * Returns the string representation of the configured regular expression for matching
      */
     String getPattern();
 
     /**
-     * Returns the set of configured match flags, a bit mask that may include
-     * {@link Pattern} flags
+     * Returns the set of configured match flags, a bit mask that may include {@link Pattern} flags
      */
     int getFlags();
 
@@ -242,11 +233,11 @@ public class RegexStringComparator extends ByteArrayComparable {
     /**
      * Return the serialized form of the configured matcher
      */
-    byte [] toByteArray();
+    byte[] toByteArray();
 
     /**
      * Match the given input against the configured pattern
-     * @param value the data to be matched
+     * @param value  the data to be matched
      * @param offset offset of the data to be matched
      * @param length length of the data to be matched
      * @return 0 if a match was made, 1 otherwise
@@ -305,7 +296,7 @@ public class RegexStringComparator extends ByteArrayComparable {
     @Override
     public byte[] toByteArray() {
       ComparatorProtos.RegexStringComparator.Builder builder =
-          ComparatorProtos.RegexStringComparator.newBuilder();
+        ComparatorProtos.RegexStringComparator.newBuilder();
       builder.setPattern(pattern.pattern());
       builder.setPatternFlags(pattern.flags());
       builder.setCharset(charset.name());
@@ -317,11 +308,10 @@ public class RegexStringComparator extends ByteArrayComparable {
   /**
    * Implementation of the Engine interface using Jruby's joni regex engine.
    * <p>
-   * This engine operates on byte arrays directly so is expected to be more GC
-   * friendly, and reportedly is twice as fast as Java's Pattern engine.
+   * This engine operates on byte arrays directly so is expected to be more GC friendly, and
+   * reportedly is twice as fast as Java's Pattern engine.
    * <p>
-   * NOTE: Only the {@link Pattern} flags CASE_INSENSITIVE, DOTALL, and
-   * MULTILINE are supported.
+   * NOTE: Only the {@link Pattern} flags CASE_INSENSITIVE, DOTALL, and MULTILINE are supported.
    */
   static class JoniRegexEngine implements Engine {
     private Encoding encoding = UTF8Encoding.INSTANCE;
@@ -365,12 +355,12 @@ public class RegexStringComparator extends ByteArrayComparable {
     @Override
     public byte[] toByteArray() {
       ComparatorProtos.RegexStringComparator.Builder builder =
-          ComparatorProtos.RegexStringComparator.newBuilder();
-        builder.setPattern(regex);
-        builder.setPatternFlags(joniToPatternFlags(pattern.getOptions()));
-        builder.setCharset(encoding.getCharsetName());
-        builder.setEngine(EngineType.JONI.name());
-        return builder.build().toByteArray();
+        ComparatorProtos.RegexStringComparator.newBuilder();
+      builder.setPattern(regex);
+      builder.setPatternFlags(joniToPatternFlags(pattern.getOptions()));
+      builder.setCharset(encoding.getCharsetName());
+      builder.setEngine(EngineType.JONI.name());
+      return builder.build().toByteArray();
     }
 
     private int patternToJoniFlags(int flags) {

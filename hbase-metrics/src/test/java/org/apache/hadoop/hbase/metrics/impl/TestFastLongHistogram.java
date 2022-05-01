@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -34,12 +33,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Testcases for FastLongHistogram.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestFastLongHistogram {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFastLongHistogram.class);
+    HBaseClassTestRule.forClass(TestFastLongHistogram.class);
 
   private static void doTestUniform(FastLongHistogram hist) {
     long[] VALUES = { 0, 10, 20, 30, 40, 50 };
@@ -97,7 +96,6 @@ public class TestFastLongHistogram {
     }
   }
 
-
   @Test
   public void testGetNumAtOrBelow() {
     long[] VALUES = { 1, 10, 20, 30, 40, 50 };
@@ -125,7 +123,6 @@ public class TestFastLongHistogram {
     assertEquals(200, h.getNumAtOrBelow(11));
     assertEquals(601, h.getNumAtOrBelow(Long.MAX_VALUE));
   }
-
 
   @Test
   public void testSameValues() {

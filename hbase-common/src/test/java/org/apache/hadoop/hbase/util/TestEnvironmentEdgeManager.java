@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -31,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestEnvironmentEdgeManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEnvironmentEdgeManager.class);
+    HBaseClassTestRule.forClass(TestEnvironmentEdgeManager.class);
 
   @Test
   public void testManageSingleton() {
@@ -51,7 +52,7 @@ public class TestEnvironmentEdgeManager {
     EnvironmentEdgeManager.injectEdge(newEdge);
     assertEquals(newEdge, EnvironmentEdgeManager.getDelegate());
 
-    //injecting null will result in default being assigned.
+    // injecting null will result in default being assigned.
     EnvironmentEdgeManager.injectEdge(null);
     EnvironmentEdge nullResult = EnvironmentEdgeManager.getDelegate();
     assertTrue(nullResult instanceof DefaultEnvironmentEdge);

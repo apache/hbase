@@ -35,6 +35,6 @@ public class MasterRegistryFetchException extends HBaseIOException {
 
   public MasterRegistryFetchException(Set<ServerName> masters, Throwable failure) {
     super(String.format("Exception making rpc to masters %s", PrettyPrinter.toString(masters)),
-        failure);
+      failure);
   }
 }

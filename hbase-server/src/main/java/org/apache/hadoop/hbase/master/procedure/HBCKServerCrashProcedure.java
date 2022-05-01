@@ -38,35 +38,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Acts like the super class in all cases except when no Regions found in the
- * current Master in-memory context. In this latter case, when the call to
- * super#getRegionsOnCrashedServer returns nothing, this SCP will scan
- * hbase:meta for references to the passed ServerName. If any found, we'll
- * clean them up.
- *
- * <p>This version of SCP is for external invocation as part of fix-up (e.g. HBCK2's
- * scheduleRecoveries); the super class is used during normal recovery operations.
- * It is for the case where meta has references to 'Unknown Servers',
- * servers that are in hbase:meta but not in live-server or dead-server lists; i.e. Master
- * and hbase:meta content have deviated. It should never happen in normal running
- * cluster but if we do drop accounting of servers, we need a means of fix-up.
- * Eventually, as part of normal CatalogJanitor task, rather than just identify
- * these 'Unknown Servers', it would make repair, queuing something like this
- * HBCKSCP to do cleanup, reassigning them so Master and hbase:meta are aligned again.
- *
- * <p>NOTE that this SCP is costly to run; does a full scan of hbase:meta.</p>
+ * Acts like the super class in all cases except when no Regions found in the current Master
+ * in-memory context. In this latter case, when the call to super#getRegionsOnCrashedServer returns
+ * nothing, this SCP will scan hbase:meta for references to the passed ServerName. If any found,
+ * we'll clean them up.
+ * <p>
+ * This version of SCP is for external invocation as part of fix-up (e.g. HBCK2's
+ * scheduleRecoveries); the super class is used during normal recovery operations. It is for the
+ * case where meta has references to 'Unknown Servers', servers that are in hbase:meta but not in
+ * live-server or dead-server lists; i.e. Master and hbase:meta content have deviated. It should
+ * never happen in normal running cluster but if we do drop accounting of servers, we need a means
+ * of fix-up. Eventually, as part of normal CatalogJanitor task, rather than just identify these
+ * 'Unknown Servers', it would make repair, queuing something like this HBCKSCP to do cleanup,
+ * reassigning them so Master and hbase:meta are aligned again.
+ * <p>
+ * NOTE that this SCP is costly to run; does a full scan of hbase:meta.
+ * </p>
  */
 @InterfaceAudience.Private
 public class HBCKServerCrashProcedure extends ServerCrashProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(HBCKServerCrashProcedure.class);
 
   /**
-   * @param serverName Name of the crashed server.
+   * @param serverName     Name of the crashed server.
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
-   * @param carryingMeta True if carrying hbase:meta table region.
+   * @param carryingMeta   True if carrying hbase:meta table region.
    */
   public HBCKServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
-                              final boolean shouldSplitWal, final boolean carryingMeta) {
+    final boolean shouldSplitWal, final boolean carryingMeta) {
     super(env, serverName, shouldSplitWal, carryingMeta);
   }
 
@@ -74,16 +73,17 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
    * Used when deserializing from a procedure store; we'll construct one of these then call
    * #deserializeStateData(InputStream). Do not use directly.
    */
-  public HBCKServerCrashProcedure() {}
+  public HBCKServerCrashProcedure() {
+  }
 
   /**
-   * If no Regions found in Master context, then we will search hbase:meta for references
-   * to the passed server. Operator may have passed ServerName because they have found
-   * references to 'Unknown Servers'. They are using HBCKSCP to clear them out.
+   * If no Regions found in Master context, then we will search hbase:meta for references to the
+   * passed server. Operator may have passed ServerName because they have found references to
+   * 'Unknown Servers'. They are using HBCKSCP to clear them out.
    */
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
-    justification="FindBugs seems confused on ps in below.")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
+      justification = "FindBugs seems confused on ps in below.")
   List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
     // Super will return an immutable list (empty if nothing on this server).
     List<RegionInfo> ris = super.getRegionsOnCrashedServer(env);
@@ -97,18 +97,17 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
     // This mis-accounting does not happen in normal circumstance but may arise in-extremis
     // when cluster has been damaged in operation.
     UnknownServerVisitor visitor =
-        new UnknownServerVisitor(env.getMasterServices().getConnection(), getServerName());
+      new UnknownServerVisitor(env.getMasterServices().getConnection(), getServerName());
     try {
-      MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(),
-          visitor, null);
+      MetaTableAccessor.scanMetaForTableRegions(env.getMasterServices().getConnection(), visitor,
+        null);
     } catch (IOException ioe) {
       LOG.warn("Failed scan of hbase:meta for 'Unknown Servers'", ioe);
       return ris;
     }
     LOG.info("Found {} mentions of {} in hbase:meta of OPEN/OPENING Regions: {}",
-        visitor.getReassigns().size(), getServerName(),
-        visitor.getReassigns().stream().map(RegionInfo::getEncodedName).
-            collect(Collectors.joining(",")));
+      visitor.getReassigns().size(), getServerName(), visitor.getReassigns().stream()
+        .map(RegionInfo::getEncodedName).collect(Collectors.joining(",")));
     return visitor.getReassigns();
   }
 
@@ -132,7 +131,7 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
       if (rls == null) {
         return true;
       }
-      for (HRegionLocation hrl: rls.getRegionLocations()) {
+      for (HRegionLocation hrl : rls.getRegionLocations()) {
         if (hrl == null) {
           continue;
         }
@@ -150,10 +149,10 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
         if (rs.isClosing()) {
           // Move region to CLOSED in hbase:meta.
           LOG.info("Moving {} from CLOSING to CLOSED in hbase:meta",
-              hrl.getRegion().getRegionNameAsString());
+            hrl.getRegion().getRegionNameAsString());
           try {
             MetaTableAccessor.updateRegionState(this.connection, hrl.getRegion(),
-                RegionState.State.CLOSED);
+              RegionState.State.CLOSED);
           } catch (IOException ioe) {
             LOG.warn("Failed moving {} from CLOSING to CLOSED",
               hrl.getRegion().getRegionNameAsString(), ioe);
@@ -173,11 +172,11 @@ public class HBCKServerCrashProcedure extends ServerCrashProcedure {
   }
 
   /**
-   * The RegionStateNode will not have a location if a confirm of an OPEN fails. On fail,
-   * the RegionStateNode regionLocation is set to null. This is 'looser' than the test done
-   * in the superclass. The HBCKSCP has been scheduled by an operator via hbck2 probably at the
-   * behest of a report of an 'Unknown Server' in the 'HBCK Report'. Let the operators operation
-   * succeed even in case where the region location in the RegionStateNode is null.
+   * The RegionStateNode will not have a location if a confirm of an OPEN fails. On fail, the
+   * RegionStateNode regionLocation is set to null. This is 'looser' than the test done in the
+   * superclass. The HBCKSCP has been scheduled by an operator via hbck2 probably at the behest of a
+   * report of an 'Unknown Server' in the 'HBCK Report'. Let the operators operation succeed even in
+   * case where the region location in the RegionStateNode is null.
    */
   @Override
   protected boolean isMatchingRegionLocation(RegionStateNode rsn) {

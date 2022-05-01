@@ -53,13 +53,12 @@ public class TestRemoteBackup extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRemoteBackup.class);
+    HBaseClassTestRule.forClass(TestRemoteBackup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteBackup.class);
 
   /**
    * Setup Cluster with appropriate configurations before running tests.
-   *
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
   @BeforeClass
@@ -73,7 +72,6 @@ public class TestRemoteBackup extends TestBackupBase {
 
   /**
    * Verify that a remote full backup is created on a single table with data correctly.
-   *
    * @throws Exception if an operation on the table fails
    */
   @Test
@@ -118,7 +116,7 @@ public class TestRemoteBackup extends TestBackupBase {
 
     latch.countDown();
     String backupId =
-        backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR);
+      backupTables(BackupType.FULL, Lists.newArrayList(table1), BACKUP_REMOTE_ROOT_DIR);
     assertTrue(checkSucceeded(backupId));
 
     LOG.info("backup complete " + backupId);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * A class to manage a list of servers that failed recently.
@@ -38,8 +37,8 @@ public class FailedServers {
   private static final Logger LOG = LoggerFactory.getLogger(FailedServers.class);
 
   public FailedServers(Configuration conf) {
-    this.recheckServersTimeout = conf.getInt(
-        RpcClient.FAILED_SERVER_EXPIRY_KEY, RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+    this.recheckServersTimeout =
+      conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
   }
 
   /**
@@ -50,15 +49,13 @@ public class FailedServers {
     this.failedServers.put(address, expiry);
     this.latestExpiry = expiry;
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-        "Added failed server with address " + address + " to list caused by "
-            + throwable.toString());
+      LOG.debug("Added failed server with address " + address + " to list caused by "
+        + throwable.toString());
     }
   }
 
   /**
    * Check if the server should be considered as bad. Clean the old entries of the list.
-   *
    * @return true if the server is in the failed servers list
    */
   public synchronized boolean isFailedServer(final Address address) {

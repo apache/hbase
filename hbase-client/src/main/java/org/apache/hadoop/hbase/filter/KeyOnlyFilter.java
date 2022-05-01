@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,21 +37,27 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
- * A filter that will only return the key component of each KV (the value will
- * be rewritten as empty).
+ * A filter that will only return the key component of each KV (the value will be rewritten as
+ * empty).
  * <p>
- * This filter can be used to grab all of the keys without having to also grab
- * the values.
+ * This filter can be used to grab all of the keys without having to also grab the values.
  */
 @InterfaceAudience.Public
 public class KeyOnlyFilter extends FilterBase {
 
   boolean lenAsVal;
-  public KeyOnlyFilter() { this(false); }
-  public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
+
+  public KeyOnlyFilter() {
+    this(false);
+  }
+
+  public KeyOnlyFilter(boolean lenAsVal) {
+    this.lenAsVal = lenAsVal;
+  }
 
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
@@ -79,9 +83,9 @@ public class KeyOnlyFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     Preconditions.checkArgument((filterArguments.isEmpty() || filterArguments.size() == 1),
-                                "Expected: 0 or 1 but got: %s", filterArguments.size());
+      "Expected: 0 or 1 but got: %s", filterArguments.size());
     KeyOnlyFilter filter = new KeyOnlyFilter();
     if (filterArguments.size() == 1) {
       filter.lenAsVal = ParseFilter.convertByteArrayToBoolean(filterArguments.get(0));
@@ -93,21 +97,17 @@ public class KeyOnlyFilter extends FilterBase {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.KeyOnlyFilter.Builder builder =
-      FilterProtos.KeyOnlyFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.KeyOnlyFilter.Builder builder = FilterProtos.KeyOnlyFilter.newBuilder();
     builder.setLenAsVal(this.lenAsVal);
     return builder.build().toByteArray();
   }
 
   /**
    * @param pbBytes A pb serialized {@link KeyOnlyFilter} instance
-   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code>
-   * @throws DeserializationException
-   * @see #toByteArray
+   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code> n * @see #toByteArray
    */
-  public static KeyOnlyFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static KeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.KeyOnlyFilter proto;
     try {
       proto = FilterProtos.KeyOnlyFilter.parseFrom(pbBytes);
@@ -119,15 +119,15 @@ public class KeyOnlyFilter extends FilterBase {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof KeyOnlyFilter)) return false;
 
-    KeyOnlyFilter other = (KeyOnlyFilter)o;
+    KeyOnlyFilter other = (KeyOnlyFilter) o;
     return this.lenAsVal == other.lenAsVal;
   }
 
@@ -212,7 +212,6 @@ public class KeyOnlyFilter extends FilterBase {
       return cell.getType();
     }
 
-
     @Override
     public long getSequenceId() {
       return 0;
@@ -268,8 +267,8 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   static class KeyOnlyByteBufferExtendedCell extends ByteBufferExtendedCell {
-    public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-        + Bytes.SIZEOF_BOOLEAN;
+    public static final int FIXED_OVERHEAD =
+      ClassSize.OBJECT + ClassSize.REFERENCE + Bytes.SIZEOF_BOOLEAN;
     private ByteBufferExtendedCell cell;
     private boolean lenAsVal;
 

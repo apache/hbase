@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncDecommissionAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncDecommissionAdminApi.class);
 
   @Test
   public void testAsyncDecommissionRegionServers() throws Exception {
@@ -52,9 +52,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
 
     TEST_UTIL.createMultiRegionTable(tableName, FAMILY, 4);
 
-    ArrayList<ServerName> clusterRegionServers =
-        new ArrayList<>(admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get()
-          .getLiveServerMetrics().keySet());
+    ArrayList<ServerName> clusterRegionServers = new ArrayList<>(admin
+      .getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get().getLiveServerMetrics().keySet());
 
     assertEquals(TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size(),
       clusterRegionServers.size());
@@ -75,8 +74,8 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     ServerName remainingServer = clusterRegionServers.get(0);
 
     // Decommission
-    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()),
-        true).get();
+    admin.decommissionRegionServers(new ArrayList<ServerName>(serversToDecommssion.keySet()), true)
+      .get();
     assertEquals(1, admin.listDecommissionedRegionServers().get().size());
 
     // Verify the regions have been off the decommissioned servers, all on the remaining server.
@@ -94,7 +93,7 @@ public class TestAsyncDecommissionAdminApi extends TestAsyncAdminBase {
     // Recommission and load regions
     for (ServerName server : serversToDecommssion.keySet()) {
       List<byte[]> encodedRegionNames = serversToDecommssion.get(server).stream()
-          .map(region -> region.getEncodedNameAsBytes()).collect(Collectors.toList());
+        .map(region -> region.getEncodedNameAsBytes()).collect(Collectors.toList());
       admin.recommissionRegionServer(server, encodedRegionNames).get();
     }
     assertTrue(admin.listDecommissionedRegionServers().get().isEmpty());

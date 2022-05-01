@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -40,18 +41,18 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test
  */
-@Category({ IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileReaderImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileReaderImpl.class);
+    HBaseClassTestRule.forClass(TestHFileReaderImpl.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   static KeyValue toKV(String row) {
     return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-        Bytes.toBytes("value"));
+      Bytes.toBytes("value"));
   }
 
   static String toRowStr(Cell c) {
@@ -63,10 +64,10 @@ public class TestHFileReaderImpl {
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     int blocksize = toKV("a").getLength() * 3;
     HFileContext context =
-        new HFileContextBuilder().withBlockSize(blocksize).withIncludesTags(true).build();
+      new HFileContextBuilder().withBlockSize(blocksize).withIncludesTags(true).build();
     Configuration conf = TEST_UTIL.getConfiguration();
-    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
-      .withOutputStream(fout).withFileContext(context).create();
+    HFile.Writer writer =
+      HFile.getWriterFactoryNoCache(conf).withOutputStream(fout).withFileContext(context).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c"));
@@ -87,7 +88,7 @@ public class TestHFileReaderImpl {
     Configuration conf = TEST_UTIL.getConfiguration();
     int[] bucketSizes = { 512, 2048, 4096, 64 * 1024, 128 * 1024 };
     BucketCache bucketcache =
-        new BucketCache("offheap", 128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
+      new BucketCache("offheap", 128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
 
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, bucketcache), true, conf);
 
@@ -111,7 +112,7 @@ public class TestHFileReaderImpl {
 
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-          new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
       int refCount = bucketcache.getRpcRefCount(cacheKey);
       assertEquals(0, refCount);
     }
@@ -124,7 +125,7 @@ public class TestHFileReaderImpl {
     scanner.close();
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-          new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
       int refCount = bucketcache.getRpcRefCount(cacheKey);
       assertEquals(0, refCount);
     }
@@ -134,7 +135,7 @@ public class TestHFileReaderImpl {
     // clear bucketcache
     for (CachedBlock cachedBlock : Lists.newArrayList(bucketcache)) {
       BlockCacheKey cacheKey =
-          new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
+        new BlockCacheKey(cachedBlock.getFilename(), cachedBlock.getOffset());
       bucketcache.evictBlock(cacheKey);
     }
     bucketcache.shutdown();
@@ -144,7 +145,7 @@ public class TestHFileReaderImpl {
 
   protected void deleteTestDir(FileSystem fs) throws IOException {
     Path dataTestDir = TEST_UTIL.getDataTestDir();
-    if(fs.exists(dataTestDir)) {
+    if (fs.exists(dataTestDir)) {
       fs.delete(dataTestDir, true);
     }
   }

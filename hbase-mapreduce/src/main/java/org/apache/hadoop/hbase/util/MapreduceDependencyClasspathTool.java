@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +27,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Generate a classpath string containing any jars required by mapreduce jobs. Specify
- * additional values by providing a comma-separated list of paths via -Dtmpjars.
+ * Generate a classpath string containing any jars required by mapreduce jobs. Specify additional
+ * values by providing a comma-separated list of paths via -Dtmpjars.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class MapreduceDependencyClasspathTool implements Tool {
@@ -49,8 +49,10 @@ public class MapreduceDependencyClasspathTool implements Tool {
   public int run(String[] args) throws Exception {
     if (args.length > 0) {
       System.err.println("Usage: hbase mapredcp [-Dtmpjars=...]");
-      System.err.println("  Construct a CLASSPATH containing dependency jars required to run a mapreduce");
-      System.err.println("  job. By default, includes any jars detected by TableMapReduceUtils. Provide");
+      System.err
+        .println("  Construct a CLASSPATH containing dependency jars required to run a mapreduce");
+      System.err
+        .println("  job. By default, includes any jars detected by TableMapReduceUtils. Provide");
       System.err.println("  additional entries by specifying a comma-separated list in tmpjars.");
       return 0;
     }
@@ -63,7 +65,7 @@ public class MapreduceDependencyClasspathTool implements Tool {
   public static void main(String[] argv) throws Exception {
     // Silence the usual noise. This is probably fragile...
     Log4jUtils.setLogLevel("org.apache.hadoop.hbase", "WARN");
-    System.exit(ToolRunner.run(
-      HBaseConfiguration.create(), new MapreduceDependencyClasspathTool(), argv));
+    System.exit(
+      ToolRunner.run(HBaseConfiguration.create(), new MapreduceDependencyClasspathTool(), argv));
   }
 }

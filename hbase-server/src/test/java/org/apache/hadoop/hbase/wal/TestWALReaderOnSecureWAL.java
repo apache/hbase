@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -64,12 +65,12 @@ import org.junit.rules.TestName;
 /**
  * Test that verifies WAL written by SecureProtobufLogWriter is not readable by ProtobufLogReader
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestWALReaderOnSecureWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALReaderOnSecureWAL.class);
+    HBaseClassTestRule.forClass(TestWALReaderOnSecureWAL.class);
 
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   final byte[] value = Bytes.toBytes("Test value");
@@ -90,7 +91,7 @@ public class TestWALReaderOnSecureWAL {
   }
 
   private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
-      throws IOException {
+    throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, SecureWALCellCodec.class,
@@ -144,8 +145,7 @@ public class TestWALReaderOnSecureWAL {
 
   private void testSecureWALInternal(boolean offheap) throws IOException, FileNotFoundException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class,
-      WAL.Reader.class);
+    conf.setClass("hbase.regionserver.hlog.reader.impl", ProtobufLogReader.class, WAL.Reader.class);
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
       WALProvider.Writer.class);
     conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
@@ -158,7 +158,7 @@ public class TestWALReaderOnSecureWAL {
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
     FSDataInputStream in = fs.open(walPath);
-    byte[] fileData = new byte[(int)length];
+    byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
     assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
@@ -188,15 +188,15 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.Writer.class);
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, ServerName
-      .valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
+    final WALFactory wals = new WALFactory(conf,
+      ServerName.valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
         .toString());
     Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
 
     // Ensure edits are plaintext
     long length = fs.getFileStatus(walPath).getLen();
     FSDataInputStream in = fs.open(walPath);
-    byte[] fileData = new byte[(int)length];
+    byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
     assertTrue("Cells should be plaintext", Bytes.contains(fileData, value));
@@ -214,8 +214,8 @@ public class TestWALReaderOnSecureWAL {
     try {
       WALSplitter s = new WALSplitter(wals, conf, rootdir, fs, rootdir, fs, null, null, null);
       s.splitWAL(listStatus[0], null);
-      Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
-        "corrupt");
+      Path file =
+        new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()), "corrupt");
       assertTrue(!fs.exists(file));
     } catch (IOException ioe) {
       assertTrue("WAL should have been processed", false);

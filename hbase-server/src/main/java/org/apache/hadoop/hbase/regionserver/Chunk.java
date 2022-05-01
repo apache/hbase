@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,20 +56,18 @@ public abstract class Chunk {
   private final boolean fromPool;
 
   /**
-   * Create an uninitialized chunk. Note that memory is not allocated yet, so
-   * this is cheap.
+   * Create an uninitialized chunk. Note that memory is not allocated yet, so this is cheap.
    * @param size in bytes
-   * @param id the chunk id
+   * @param id   the chunk id
    */
   public Chunk(int size, int id, ChunkType chunkType) {
     this(size, id, chunkType, false);
   }
 
   /**
-   * Create an uninitialized chunk. Note that memory is not allocated yet, so
-   * this is cheap.
-   * @param size in bytes
-   * @param id the chunk id
+   * Create an uninitialized chunk. Note that memory is not allocated yet, so this is cheap.
+   * @param size     in bytes
+   * @param id       the chunk id
    * @param fromPool if the chunk is formed by pool
    */
   public Chunk(int size, int id, ChunkType chunkType, boolean fromPool) {
@@ -139,9 +136,9 @@ public abstract class Chunk {
   }
 
   /**
-   * Try to allocate <code>size</code> bytes from the chunk.
-   * If a chunk is tried to get allocated before init() call, the thread doing the allocation
-   * will be in busy-wait state as it will keep looping till the nextFreeOffset is set.
+   * Try to allocate <code>size</code> bytes from the chunk. If a chunk is tried to get allocated
+   * before init() call, the thread doing the allocation will be in busy-wait state as it will keep
+   * looping till the nextFreeOffset is set.
    * @return the offset of the successful allocation, or -1 to indicate not-enough-space
    */
   public int alloc(int size) {
@@ -184,7 +181,7 @@ public abstract class Chunk {
   @Override
   public String toString() {
     return "Chunk@" + System.identityHashCode(this) + " allocs=" + allocCount.get() + "waste="
-        + (data.capacity() - nextFreeOffset.get());
+      + (data.capacity() - nextFreeOffset.get());
   }
 
   int getNextFreeOffset() {

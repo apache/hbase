@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -27,7 +26,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,16 +36,17 @@ public class AdminAuthorizedFilter implements Filter {
   private Configuration conf;
   private AccessControlList adminsAcl;
 
-  @Override public void init(FilterConfig filterConfig) throws ServletException {
-    adminsAcl = (AccessControlList) filterConfig.getServletContext().getAttribute(
-        HttpServer.ADMINS_ACL);
-    conf = (Configuration) filterConfig.getServletContext().getAttribute(
-        HttpServer.CONF_CONTEXT_ATTRIBUTE);
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+    adminsAcl =
+      (AccessControlList) filterConfig.getServletContext().getAttribute(HttpServer.ADMINS_ACL);
+    conf = (Configuration) filterConfig.getServletContext()
+      .getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
   }
 
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-      throws IOException, ServletException {
+    throws IOException, ServletException {
     if (!(request instanceof HttpServletRequest) || !(response instanceof HttpServletResponse)) {
       throw new UnsupportedOperationException("Only accepts HTTP");
     }
@@ -61,5 +60,7 @@ public class AdminAuthorizedFilter implements Filter {
     chain.doFilter(request, response);
   }
 
-  @Override public void destroy() {}
+  @Override
+  public void destroy() {
+  }
 }

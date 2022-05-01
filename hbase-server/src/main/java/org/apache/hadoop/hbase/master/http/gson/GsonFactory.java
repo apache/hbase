@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.http.gson;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.http.gson.ByteArraySerializer;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.gson.FieldNamingPolicy;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
@@ -30,14 +31,13 @@ import org.apache.hbase.thirdparty.com.google.gson.GsonBuilder;
 @InterfaceAudience.Private
 public final class GsonFactory {
 
-  private GsonFactory() {}
+  private GsonFactory() {
+  }
 
   public static Gson buildGson() {
-    return new GsonBuilder()
-      .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+    return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
       .enableComplexMapKeySerialization()
       .registerTypeAdapter(byte[].class, new ByteArraySerializer())
-      .registerTypeAdapter(Size.class, new SizeAsBytesSerializer())
-      .create();
+      .registerTypeAdapter(Size.class, new SizeAsBytesSerializer()).create();
   }
 }

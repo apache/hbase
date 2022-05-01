@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.util.Arrays;
 import java.util.Locale;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -37,43 +35,42 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  */
 @InterfaceAudience.Private
 public class CreateSnapshot extends AbstractHBaseTool {
-    private SnapshotType snapshotType = SnapshotType.FLUSH;
-    private TableName tableName = null;
-    private String snapshotName = null;
+  private SnapshotType snapshotType = SnapshotType.FLUSH;
+  private TableName tableName = null;
+  private String snapshotName = null;
 
-    public static void main(String[] args) {
-        new CreateSnapshot().doStaticMain(args);
-    }
+  public static void main(String[] args) {
+    new CreateSnapshot().doStaticMain(args);
+  }
 
-    @Override
-    protected void addOptions() {
-        this.addRequiredOptWithArg("t", "table", "The name of the table");
-        this.addRequiredOptWithArg("n", "name", "The name of the created snapshot");
-        this.addOptWithArg("s", "snapshot_type",
-                "Snapshot Type. FLUSH is default. Posible values are "
-                + Arrays.toString(SnapshotType.values()));
-    }
+  @Override
+  protected void addOptions() {
+    this.addRequiredOptWithArg("t", "table", "The name of the table");
+    this.addRequiredOptWithArg("n", "name", "The name of the created snapshot");
+    this.addOptWithArg("s", "snapshot_type", "Snapshot Type. FLUSH is default. Posible values are "
+      + Arrays.toString(SnapshotType.values()));
+  }
 
-    @Override
-    protected void processOptions(CommandLine cmd) {
-        this.tableName = TableName.valueOf(cmd.getOptionValue('t'));
-        this.snapshotName = cmd.getOptionValue('n');
-        String snapshotTypeName = cmd.getOptionValue('s');
-        if (snapshotTypeName != null) {
-          snapshotTypeName = snapshotTypeName.toUpperCase(Locale.ROOT);
-          this.snapshotType = SnapshotType.valueOf(snapshotTypeName);
-        }
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    this.tableName = TableName.valueOf(cmd.getOptionValue('t'));
+    this.snapshotName = cmd.getOptionValue('n');
+    String snapshotTypeName = cmd.getOptionValue('s');
+    if (snapshotTypeName != null) {
+      snapshotTypeName = snapshotTypeName.toUpperCase(Locale.ROOT);
+      this.snapshotType = SnapshotType.valueOf(snapshotTypeName);
     }
+  }
 
-    @Override
-    protected int doWork() throws Exception {
-        try (Connection connection = ConnectionFactory.createConnection(getConf());
-              Admin admin = connection.getAdmin()) {
-          admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
-        } catch (Exception e) {
-          System.err.println("failed to take the snapshot: " + e.getMessage());
-          return -1;
-        }
-      return 0;
+  @Override
+  protected int doWork() throws Exception {
+    try (Connection connection = ConnectionFactory.createConnection(getConf());
+      Admin admin = connection.getAdmin()) {
+      admin.snapshot(new SnapshotDescription(snapshotName, tableName, snapshotType));
+    } catch (Exception e) {
+      System.err.println("failed to take the snapshot: " + e.getMessage());
+      return -1;
     }
+    return 0;
+  }
 }

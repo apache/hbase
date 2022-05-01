@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,21 +19,19 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map.Entry;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Combine Puts. Merges Put instances grouped by <code>K</code> into a single
- * instance.
+ * Combine Puts. Merges Put instances grouped by <code>K</code> into a single instance.
  * @see TableMapReduceUtil
  */
 @InterfaceAudience.Public
@@ -43,14 +40,14 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
 
   @Override
   protected void reduce(K row, Iterable<Put> vals, Context context)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // Using HeapSize to create an upper bound on the memory size of
     // the puts and flush some portion of the content while looping. This
     // flush could result in multiple Puts for a single rowkey. That is
     // acceptable because Combiner is run as an optimization and it's not
     // critical that all Puts are grouped perfectly.
-    long threshold = context.getConfiguration().getLong(
-        "putcombiner.row.threshold", 1L * (1<<30));
+    long threshold =
+      context.getConfiguration().getLong("putcombiner.row.threshold", 1L * (1 << 30));
     int cnt = 0;
     long curSize = 0;
     Put put = null;
@@ -61,8 +58,7 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
         put = p;
         familyMap = put.getFamilyCellMap();
       } else {
-        for (Entry<byte[], List<Cell>> entry : p.getFamilyCellMap()
-            .entrySet()) {
+        for (Entry<byte[], List<Cell>> entry : p.getFamilyCellMap().entrySet()) {
           List<Cell> cells = familyMap.get(entry.getKey());
           List<Cell> kvs = (cells != null) ? (List<Cell>) cells : null;
           for (Cell cell : entry.getValue()) {

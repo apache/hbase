@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,105 +20,84 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.regionserver.Shipper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A scanner allows you to position yourself within a HFile and
- * scan through it.  It allows you to reposition yourself as well.
- *
- * <p>A scanner doesn't always have a key/value that it is pointing to
- * when it is first created and before
- * {@link #seekTo()}/{@link #seekTo(Cell)} are called.
- * In this case, {@link #getKey()}/{@link #getValue()} returns null.  At most
- * other times, a key and value will be available.  The general pattern is that
- * you position the Scanner using the seekTo variants and then getKey and
- * getValue.
+ * A scanner allows you to position yourself within a HFile and scan through it. It allows you to
+ * reposition yourself as well.
+ * <p>
+ * A scanner doesn't always have a key/value that it is pointing to when it is first created and
+ * before {@link #seekTo()}/{@link #seekTo(Cell)} are called. In this case,
+ * {@link #getKey()}/{@link #getValue()} returns null. At most other times, a key and value will be
+ * available. The general pattern is that you position the Scanner using the seekTo variants and
+ * then getKey and getValue.
  */
 @InterfaceAudience.Private
 public interface HFileScanner extends Shipper, Closeable {
   /**
-   * SeekTo or just before the passed <code>cell</code>.  Examine the return
-   * code to figure whether we found the cell or not.
-   * Consider the cell stream of all the cells in the file,
-   * <code>c[0] .. c[n]</code>, where there are n cells in the file.
-   * @param cell
-   * @return -1, if cell &lt; c[0], no position;
-   * 0, such that c[i] = cell and scanner is left in position i; and
-   * 1, such that c[i] &lt; cell, and scanner is left in position i.
-   * The scanner will position itself between c[i] and c[i+1] where
-   * c[i] &lt; cell &lt;= c[i+1].
-   * If there is no cell c[i+1] greater than or equal to the input cell, then the
-   * scanner will position itself at the end of the file and next() will return
-   * false when it is called.
-   * @throws IOException
+   * SeekTo or just before the passed <code>cell</code>. Examine the return code to figure whether
+   * we found the cell or not. Consider the cell stream of all the cells in the file,
+   * <code>c[0] .. c[n]</code>, where there are n cells in the file. n * @return -1, if cell &lt;
+   * c[0], no position; 0, such that c[i] = cell and scanner is left in position i; and 1, such that
+   * c[i] &lt; cell, and scanner is left in position i. The scanner will position itself between
+   * c[i] and c[i+1] where c[i] &lt; cell &lt;= c[i+1]. If there is no cell c[i+1] greater than or
+   * equal to the input cell, then the scanner will position itself at the end of the file and
+   * next() will return false when it is called. n
    */
   int seekTo(Cell cell) throws IOException;
 
   /**
-   * Reseek to or just before the passed <code>cell</code>. Similar to seekTo
-   * except that this can be called even if the scanner is not at the beginning
-   * of a file.
-   * This can be used to seek only to cells which come after the current position
-   * of the scanner.
-   * Consider the cell stream of all the cells in the file,
-   * <code>c[0] .. c[n]</code>, where there are n cellc in the file after
-   * current position of HFileScanner.
-   * The scanner will position itself between c[i] and c[i+1] where
-   * c[i] &lt; cell &lt;= c[i+1].
-   * If there is no cell c[i+1] greater than or equal to the input cell, then the
-   * scanner will position itself at the end of the file and next() will return
+   * Reseek to or just before the passed <code>cell</code>. Similar to seekTo except that this can
+   * be called even if the scanner is not at the beginning of a file. This can be used to seek only
+   * to cells which come after the current position of the scanner. Consider the cell stream of all
+   * the cells in the file, <code>c[0] .. c[n]</code>, where there are n cellc in the file after
+   * current position of HFileScanner. The scanner will position itself between c[i] and c[i+1]
+   * where c[i] &lt; cell &lt;= c[i+1]. If there is no cell c[i+1] greater than or equal to the
+   * input cell, then the scanner will position itself at the end of the file and next() will return
    * false when it is called.
    * @param cell Cell to find (should be non-null)
-   * @return -1, if cell &lt; c[0], no position;
-   * 0, such that c[i] = cell and scanner is left in position i; and
-   * 1, such that c[i] &lt; cell, and scanner is left in position i.
-   * @throws IOException
+   * @return -1, if cell &lt; c[0], no position; 0, such that c[i] = cell and scanner is left in
+   *         position i; and 1, such that c[i] &lt; cell, and scanner is left in position i. n
    */
   int reseekTo(Cell cell) throws IOException;
 
   /**
-   * Consider the cell stream of all the cells in the file,
-   * <code>c[0] .. c[n]</code>, where there are n cells in the file.
+   * Consider the cell stream of all the cells in the file, <code>c[0] .. c[n]</code>, where there
+   * are n cells in the file.
    * @param cell Cell to find
-   * @return false if cell &lt;= c[0] or true with scanner in position 'i' such
-   * that: c[i] &lt; cell.  Furthermore: there may be a c[i+1], such that
-   * c[i] &lt; cell &lt;= c[i+1] but there may also NOT be a c[i+1], and next() will
-   * return false (EOF).
-   * @throws IOException
+   * @return false if cell &lt;= c[0] or true with scanner in position 'i' such that: c[i] &lt;
+   *         cell. Furthermore: there may be a c[i+1], such that c[i] &lt; cell &lt;= c[i+1] but
+   *         there may also NOT be a c[i+1], and next() will return false (EOF). n
    */
   boolean seekBefore(Cell cell) throws IOException;
 
   /**
    * Positions this scanner at the start of the file.
-   * @return False if empty file; i.e. a call to next would return false and
-   * the current key and value are undefined.
-   * @throws IOException
+   * @return False if empty file; i.e. a call to next would return false and the current key and
+   *         value are undefined. n
    */
   boolean seekTo() throws IOException;
 
   /**
    * Scans to the next entry in the file.
-   * @return Returns false if you are at the end otherwise true if more in file.
-   * @throws IOException
+   * @return Returns false if you are at the end otherwise true if more in file. n
    */
   boolean next() throws IOException;
 
   /**
-   * Gets the current key in the form of a cell. You must call
-   * {@link #seekTo(Cell)} before this method.
+   * Gets the current key in the form of a cell. You must call {@link #seekTo(Cell)} before this
+   * method.
    * @return gets the current key as a Cell.
    */
   Cell getKey();
 
   /**
-   * Gets a buffer view to the current value.  You must call
-   * {@link #seekTo(Cell)} before this method.
-   *
-   * @return byte buffer for the value. The limit is set to the value size, and
-   * the position is 0, the start of the buffer view.
+   * Gets a buffer view to the current value. You must call {@link #seekTo(Cell)} before this
+   * method.
+   * @return byte buffer for the value. The limit is set to the value size, and the position is 0,
+   *         the start of the buffer view.
    */
   ByteBuffer getValue();
 
@@ -129,8 +107,8 @@ public interface HFileScanner extends Shipper, Closeable {
   Cell getCell();
 
   /**
-   * Convenience method to get a copy of the key as a string - interpreting the
-   * bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
+   * Convenience method to get a copy of the key as a string - interpreting the bytes as UTF8. You
+   * must call {@link #seekTo(Cell)} before this method.
    * @return key as a string
    * @deprecated Since hbase-2.0.0
    */
@@ -138,8 +116,8 @@ public interface HFileScanner extends Shipper, Closeable {
   String getKeyString();
 
   /**
-   * Convenience method to get a copy of the value as a string - interpreting
-   * the bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
+   * Convenience method to get a copy of the value as a string - interpreting the bytes as UTF8. You
+   * must call {@link #seekTo(Cell)} before this method.
    * @return value as a string
    * @deprecated Since hbase-2.0.0
    */
@@ -152,9 +130,8 @@ public interface HFileScanner extends Shipper, Closeable {
   HFile.Reader getReader();
 
   /**
-   * @return True is scanner has had one of the seek calls invoked; i.e.
-   * {@link #seekBefore(Cell)} or {@link #seekTo()} or {@link #seekTo(Cell)}.
-   * Otherwise returns false.
+   * @return True is scanner has had one of the seek calls invoked; i.e. {@link #seekBefore(Cell)}
+   *         or {@link #seekTo()} or {@link #seekTo(Cell)}. Otherwise returns false.
    */
   boolean isSeeked();
 

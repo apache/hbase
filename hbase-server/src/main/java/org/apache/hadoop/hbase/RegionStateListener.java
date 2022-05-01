@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,27 +26,23 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface RegionStateListener {
-// TODO: Get rid of this!!!! Ain't there a better way to watch region
-// state than introduce a whole new listening mechanism? St.Ack
+  // TODO: Get rid of this!!!! Ain't there a better way to watch region
+  // state than introduce a whole new listening mechanism? St.Ack
   /**
    * Process region split event.
-   *
-   * @param hri An instance of RegionInfo
-   * @throws IOException
+   * @param hri An instance of RegionInfo n
    */
   void onRegionSplit(RegionInfo hri) throws IOException;
 
   /**
    * Process region split reverted event.
-   *
    * @param hri An instance of RegionInfo
    * @throws IOException Signals that an I/O exception has occurred.
    */
   void onRegionSplitReverted(RegionInfo hri) throws IOException;
 
   /**
-   * Process region merge event.
-   * @throws IOException
+   * Process region merge event. n
    */
   void onRegionMerged(RegionInfo mergedRegion) throws IOException;
 }

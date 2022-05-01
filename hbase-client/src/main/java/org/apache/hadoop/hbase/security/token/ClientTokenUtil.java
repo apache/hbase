@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
 import java.io.IOException;
@@ -52,7 +51,8 @@ public final class ClientTokenUtil {
   // Set in TestClientTokenUtil via reflection
   private static ServiceException injectedException;
 
-  private ClientTokenUtil() {}
+  private ClientTokenUtil() {
+  }
 
   private static void injectFault() throws ServiceException {
     if (injectedException != null) {
@@ -66,8 +66,8 @@ public final class ClientTokenUtil {
    * @return the authentication token instance, wrapped by a {@link CompletableFuture}.
    */
   @InterfaceAudience.Private
-  public static CompletableFuture<Token<AuthenticationTokenIdentifier>> obtainToken(
-      AsyncConnection conn) {
+  public static CompletableFuture<Token<AuthenticationTokenIdentifier>>
+    obtainToken(AsyncConnection conn) {
     CompletableFuture<Token<AuthenticationTokenIdentifier>> future = new CompletableFuture<>();
     if (injectedException != null) {
       future.completeExceptionally(ProtobufUtil.handleRemoteException(injectedException));
@@ -75,11 +75,12 @@ public final class ClientTokenUtil {
     }
     AsyncTable<?> table = conn.getTable(TableName.META_TABLE_NAME);
     table.<AuthenticationProtos.AuthenticationService.Interface,
-        AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
-      AuthenticationProtos.AuthenticationService::newStub,
-          (s, c, r) -> s.getAuthenticationToken(c,
-              AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance(), r),
-      HConstants.EMPTY_START_ROW).whenComplete((resp, error) -> {
+      AuthenticationProtos.GetAuthenticationTokenResponse> coprocessorService(
+        AuthenticationProtos.AuthenticationService::newStub,
+        (s, c, r) -> s.getAuthenticationToken(c,
+          AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance(), r),
+        HConstants.EMPTY_START_ROW)
+      .whenComplete((resp, error) -> {
         if (error != null) {
           future.completeExceptionally(ProtobufUtil.handleRemoteException(error));
         } else {
@@ -96,20 +97,17 @@ public final class ClientTokenUtil {
    * @return the authentication token instance
    */
   @InterfaceAudience.Private
-  static Token<AuthenticationTokenIdentifier> obtainToken(
-      Connection conn) throws IOException {
+  static Token<AuthenticationTokenIdentifier> obtainToken(Connection conn) throws IOException {
     Table meta = null;
     try {
       injectFault();
 
       meta = conn.getTable(TableName.META_TABLE_NAME);
-      CoprocessorRpcChannel rpcChannel = meta.coprocessorService(
-              HConstants.EMPTY_START_ROW);
+      CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
-          AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
-      AuthenticationProtos.GetAuthenticationTokenResponse response =
-              service.getAuthenticationToken(null,
-          AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance());
+        AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
+      AuthenticationProtos.GetAuthenticationTokenResponse response = service.getAuthenticationToken(
+        null, AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance());
 
       return toToken(response.getToken());
     } catch (ServiceException se) {
@@ -123,7 +121,6 @@ public final class ClientTokenUtil {
 
   /**
    * Converts a Token instance (with embedded identifier) to the protobuf representation.
-   *
    * @param token the Token instance to copy
    * @return the protobuf Token message
    */
@@ -140,17 +137,15 @@ public final class ClientTokenUtil {
 
   /**
    * Converts a protobuf Token message back into a Token instance.
-   *
    * @param proto the protobuf Token message
    * @return the Token instance
    */
   @InterfaceAudience.Private
   static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<>(
-        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
-        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
-        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
-        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
+    return new Token<>(proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
+      proto.hasPassword() ? proto.getPassword().toByteArray() : null,
+      AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
+      proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
   }
 
   /**
@@ -160,8 +155,8 @@ public final class ClientTokenUtil {
    * @return the authentication token instance
    */
   @InterfaceAudience.Private
-  static Token<AuthenticationTokenIdentifier> obtainToken(
-      final Connection conn, User user) throws IOException, InterruptedException {
+  static Token<AuthenticationTokenIdentifier> obtainToken(final Connection conn, User user)
+    throws IOException, InterruptedException {
     return user.runAs(new PrivilegedExceptionAction<Token<AuthenticationTokenIdentifier>>() {
       @Override
       public Token<AuthenticationTokenIdentifier> run() throws Exception {
@@ -171,16 +166,14 @@ public final class ClientTokenUtil {
   }
 
   /**
-   * Obtain an authentication token for the given user and add it to the
-   * user's credentials.
+   * Obtain an authentication token for the given user and add it to the user's credentials.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the authentication service fails
+   * @throws IOException          If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
-  public static void obtainAndCacheToken(final Connection conn,
-      User user)
-      throws IOException, InterruptedException {
+  public static void obtainAndCacheToken(final Connection conn, User user)
+    throws IOException, InterruptedException {
     try {
       Token<AuthenticationTokenIdentifier> token = obtainToken(conn, user);
 
@@ -188,15 +181,14 @@ public final class ClientTokenUtil {
         throw new IOException("No token returned for user " + user.getName());
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Obtained token " + token.getKind().toString() + " for user " +
-            user.getName());
+        LOG.debug("Obtained token " + token.getKind().toString() + " for user " + user.getName());
       }
       user.addToken(token);
     } catch (IOException | InterruptedException | RuntimeException e) {
       throw e;
     } catch (Exception e) {
       throw new UndeclaredThrowableException(e,
-          "Unexpected exception obtaining token for user " + user.getName());
+        "Unexpected exception obtaining token for user " + user.getName());
     }
   }
 }

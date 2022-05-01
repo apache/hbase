@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.trace.hamcrest;
 
 import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.hamcrest.Matchers.allOf;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import org.apache.hadoop.hbase.TableName;
@@ -29,24 +29,23 @@ import org.hamcrest.Matcher;
 
 public final class TraceTestUtil {
 
-  private TraceTestUtil() { }
+  private TraceTestUtil() {
+  }
 
   /**
    * All {@link Span}s involving {@code conn} should include these attributes.
    */
   public static Matcher<SpanData> buildConnectionAttributesMatcher(AsyncConnectionImpl conn) {
-    return hasAttributes(allOf(
-      containsEntry("db.system", "hbase"),
-      containsEntry("db.connection_string", "nothing"),
-      containsEntry("db.user", conn.getUser().toString())));
+    return hasAttributes(
+      allOf(containsEntry("db.system", "hbase"), containsEntry("db.connection_string", "nothing"),
+        containsEntry("db.user", conn.getUser().toString())));
   }
 
   /**
    * All {@link Span}s involving {@code tableName} should include these attributes.
    */
   public static Matcher<SpanData> buildTableAttributesMatcher(TableName tableName) {
-    return hasAttributes(allOf(
-      containsEntry("db.name", tableName.getNamespaceAsString()),
+    return hasAttributes(allOf(containsEntry("db.name", tableName.getNamespaceAsString()),
       containsEntry("db.hbase.table", tableName.getNameAsString())));
   }
 }

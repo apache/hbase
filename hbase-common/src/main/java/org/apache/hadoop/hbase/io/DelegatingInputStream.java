@@ -15,26 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.FilterInputStream;
 import java.io.InputStream;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An input stream that delegates all operations to another input stream.
- * The delegate can be switched out for another at any time but to minimize the
- * possibility of violating the InputStream contract it would be best to replace
- * the delegate only once it has been fully consumed. <p> For example, a
- * ByteArrayInputStream, which is implicitly bounded by the size of the underlying
- * byte array can be converted into an unbounded stream fed by multiple instances
- * of ByteArrayInputStream, switched out one for the other in sequence.
+ * An input stream that delegates all operations to another input stream. The delegate can be
+ * switched out for another at any time but to minimize the possibility of violating the InputStream
+ * contract it would be best to replace the delegate only once it has been fully consumed.
  * <p>
- * Although multithreaded access is allowed, users of this class will want to take
- * care to order operations on this stream and the swap out of one delegate for
- * another in a way that provides a valid view of stream contents.
+ * For example, a ByteArrayInputStream, which is implicitly bounded by the size of the underlying
+ * byte array can be converted into an unbounded stream fed by multiple instances of
+ * ByteArrayInputStream, switched out one for the other in sequence.
+ * <p>
+ * Although multithreaded access is allowed, users of this class will want to take care to order
+ * operations on this stream and the swap out of one delegate for another in a way that provides a
+ * valid view of stream contents.
  */
 @InterfaceAudience.Private
 public class DelegatingInputStream extends FilterInputStream {

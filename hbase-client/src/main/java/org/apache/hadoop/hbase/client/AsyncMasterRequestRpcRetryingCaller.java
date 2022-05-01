@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,8 +44,8 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
   private final Callable<T> callable;
 
   public AsyncMasterRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-      Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
-      int maxRetries, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
+    int maxRetries, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
     super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxRetries,
       operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.callable = callable;
@@ -53,8 +53,10 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
 
   private void clearMasterStubCacheOnError(MasterService.Interface stub, Throwable error) {
     // ServerNotRunningYetException may because it is the backup master.
-    if (ClientExceptionsUtil.isConnectionException(error) ||
-      error instanceof ServerNotRunningYetException) {
+    if (
+      ClientExceptionsUtil.isConnectionException(error)
+        || error instanceof ServerNotRunningYetException
+    ) {
       conn.clearMasterStubCache(stub);
     }
   }

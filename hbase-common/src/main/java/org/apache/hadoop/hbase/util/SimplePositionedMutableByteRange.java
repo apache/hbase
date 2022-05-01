@@ -14,94 +14,49 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * The portion of this file denoted by 'Copied from com.google.protobuf.CodedOutputStream'
- * is from Protocol Buffers v2.5.0 under the following license
- *
- * Copyright 2008 Google Inc.  All rights reserved.
- * http://code.google.com/p/protobuf/
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Extends the basic {@link AbstractPositionedByteRange} implementation with
- * position support and it is a mutable version. {@code position} is considered transient,
- * not fundamental to the definition of the range, and does not participate in
- * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
+ * Extends the basic {@link AbstractPositionedByteRange} implementation with position support and it
+ * is a mutable version. {@code position} is considered transient, not fundamental to the definition
+ * of the range, and does not participate in {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
  * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Public
 @edu.umd.cs.findbugs.annotations.SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public class SimplePositionedMutableByteRange extends AbstractPositionedByteRange {
   /**
-   * Create a new {@code PositionedByteRange} lacking a backing array and with
-   * an undefined viewport.
+   * Create a new {@code PositionedByteRange} lacking a backing array and with an undefined
+   * viewport.
    */
   public SimplePositionedMutableByteRange() {
     super();
   }
 
   /**
-   * Create a new {@code PositionedByteRange} over a new backing array of size
-   * {@code capacity}. The range's offset and length are 0 and {@code capacity},
-   * respectively.
-   * 
-   * @param capacity
-   *          the size of the backing array.
+   * Create a new {@code PositionedByteRange} over a new backing array of size {@code capacity}. The
+   * range's offset and length are 0 and {@code capacity}, respectively. n * the size of the backing
+   * array.
    */
   public SimplePositionedMutableByteRange(int capacity) {
     this(new byte[capacity]);
   }
 
   /**
-   * Create a new {@code PositionedByteRange} over the provided {@code bytes}.
-   * 
-   * @param bytes
-   *          The array to wrap.
+   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. n * The array to
+   * wrap.
    */
   public SimplePositionedMutableByteRange(byte[] bytes) {
     set(bytes);
   }
 
   /**
-   * Create a new {@code PositionedByteRange} over the provided {@code bytes}.
-   * 
-   * @param bytes
-   *          The array to wrap.
-   * @param offset
-   *          The offset into {@code bytes} considered the beginning of this
-   *          range.
-   * @param length
-   *          The length of this range.
+   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. n * The array to
+   * wrap. n * The offset into {@code bytes} considered the beginning of this range. n * The length
+   * of this range.
    */
   public SimplePositionedMutableByteRange(byte[] bytes, int offset, int length) {
     set(bytes, offset, length);
@@ -142,11 +97,8 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   /**
-   * Update the beginning of this range. {@code offset + length} may not be
-   * greater than {@code bytes.length}. Resets {@code position} to 0.
-   * 
-   * @param offset
-   *          the new start of this range.
+   * Update the beginning of this range. {@code offset + length} may not be greater than
+   * {@code bytes.length}. Resets {@code position} to 0. n * the new start of this range.
    * @return this.
    */
   @Override
@@ -157,12 +109,9 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   /**
-   * Update the length of this range. {@code offset + length} should not be
-   * greater than {@code bytes.length}. If {@code position} is greater than the
-   * new {@code length}, sets {@code position} to {@code length}.
-   * 
-   * @param length
-   *          The new length of this range.
+   * Update the length of this range. {@code offset + length} should not be greater than
+   * {@code bytes.length}. If {@code position} is greater than the new {@code length}, sets
+   * {@code position} to {@code length}. n * The new length of this range.
    * @return this.
    */
   @Override
@@ -180,15 +129,13 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
 
   @Override
   public PositionedByteRange put(byte[] val) {
-    if (0 == val.length)
-      return this;
+    if (0 == val.length) return this;
     return this.put(val, 0, val.length);
   }
 
   @Override
   public PositionedByteRange put(byte[] val, int offset, int length) {
-    if (0 == length)
-      return this;
+    if (0 == length) return this;
     put(position, val, offset, length);
     this.position += length;
     return this;
@@ -214,39 +161,37 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
 
   @Override
   public PositionedByteRange put(int index, byte[] val) {
-    if (0 == val.length)
-      return this;
+    if (0 == val.length) return this;
     return put(index, val, 0, val.length);
   }
 
   @Override
   public PositionedByteRange put(int index, byte[] val, int offset, int length) {
-    if (0 == length)
-      return this;
+    if (0 == length) return this;
     System.arraycopy(val, offset, this.bytes, this.offset + index, length);
     return this;
   }
 
   @Override
   public PositionedByteRange deepCopy() {
-    SimplePositionedMutableByteRange clone = new SimplePositionedMutableByteRange(
-        deepCopyToNewArray());
+    SimplePositionedMutableByteRange clone =
+      new SimplePositionedMutableByteRange(deepCopyToNewArray());
     clone.position = this.position;
     return clone;
   }
 
   @Override
   public PositionedByteRange shallowCopy() {
-    SimplePositionedMutableByteRange clone = new SimplePositionedMutableByteRange(bytes, offset,
-        length);
+    SimplePositionedMutableByteRange clone =
+      new SimplePositionedMutableByteRange(bytes, offset, length);
     clone.position = this.position;
     return clone;
   }
 
   @Override
   public PositionedByteRange shallowCopySubRange(int innerOffset, int copyLength) {
-    SimplePositionedMutableByteRange clone = new SimplePositionedMutableByteRange(bytes, offset
-        + innerOffset, copyLength);
+    SimplePositionedMutableByteRange clone =
+      new SimplePositionedMutableByteRange(bytes, offset + innerOffset, copyLength);
     clone.position = this.position;
     return clone;
   }

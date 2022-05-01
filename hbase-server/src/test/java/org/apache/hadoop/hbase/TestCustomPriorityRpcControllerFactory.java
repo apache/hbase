@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,8 +54,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
@@ -75,7 +77,9 @@ public class TestCustomPriorityRpcControllerFactory {
   private static final AtomicInteger EXPECTED_PRIORITY = new AtomicInteger();
 
   private enum State {
-    SETUP, WAITING, SUCCESS
+    SETUP,
+    WAITING,
+    SUCCESS
   }
 
   private static final TableName TABLE_NAME = TableName.valueOf("Timeout");
@@ -106,45 +110,50 @@ public class TestCustomPriorityRpcControllerFactory {
   }
 
   @Test
-	public void tetGetPriority() throws Exception {
+  public void tetGetPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         TABLE.get(new Get(ROW));
       }
     });
   }
 
   @Test
-	public void testDeletePriority() throws Exception {
+  public void testDeletePriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         TABLE.delete(new Delete(ROW));
       }
     });
   }
 
   @Test
-	public void testIncrementPriority() throws Exception {
+  public void testIncrementPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         TABLE.increment(new Increment(ROW).addColumn(FAMILY, QUALIFIER, 1));
       }
     });
   }
 
   @Test
-	public void testAppendPriority() throws Exception {
+  public void testAppendPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         TABLE.append(new Append(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
       }
     });
   }
 
   @Test
-	public void testPutPriority() throws Exception {
+  public void testPutPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         Put put = new Put(ROW);
         put.addColumn(FAMILY, QUALIFIER, VALUE);
         TABLE.put(put);
@@ -154,9 +163,10 @@ public class TestCustomPriorityRpcControllerFactory {
   }
 
   @Test
-	public void testExistsPriority() throws Exception {
+  public void testExistsPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         TABLE.exists(new Get(ROW));
       }
     });
@@ -165,7 +175,8 @@ public class TestCustomPriorityRpcControllerFactory {
   @Test
   public void testMutatePriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         RowMutations mutation = new RowMutations(ROW);
         mutation.add(new Delete(ROW));
         mutation.add(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
@@ -177,7 +188,8 @@ public class TestCustomPriorityRpcControllerFactory {
   @Test
   public void testCheckAndMutatePriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         RowMutations mutation = new RowMutations(ROW);
         mutation.add(new Put(ROW).addColumn(FAMILY, QUALIFIER, VALUE));
         TABLE.checkAndMutate(
@@ -187,9 +199,10 @@ public class TestCustomPriorityRpcControllerFactory {
   }
 
   @Test
-	public void testMultiGetsPriority() throws Exception {
+  public void testMultiGetsPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws Exception {
+      @Override
+      public void call() throws Exception {
         Get get1 = new Get(ROW);
         get1.addColumn(FAMILY, QUALIFIER);
         Get get2 = new Get(ROW);
@@ -203,9 +216,10 @@ public class TestCustomPriorityRpcControllerFactory {
   }
 
   @Test
-	public void testMultiPutsPriority() throws Exception {
+  public void testMultiPutsPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws Exception {
+      @Override
+      public void call() throws Exception {
         Put put1 = new Put(ROW);
         put1.addColumn(FAMILY, QUALIFIER, VALUE);
         Put put2 = new Put(ROW);
@@ -219,9 +233,10 @@ public class TestCustomPriorityRpcControllerFactory {
   }
 
   @Test
-	public void testScanPriority() throws Exception {
+  public void testScanPriority() throws Exception {
     testForCall(new ThrowingCallable() {
-      @Override public void call() throws IOException {
+      @Override
+      public void call() throws IOException {
         ResultScanner scanner = TABLE.getScanner(new Scan());
         scanner.next();
       }
@@ -248,7 +263,8 @@ public class TestCustomPriorityRpcControllerFactory {
       super(conf);
     }
 
-    @Override protected RSRpcServices createRpcServices() throws IOException {
+    @Override
+    protected RSRpcServices createRpcServices() throws IOException {
       return new PriorityRpcServices(this);
     }
   }
@@ -259,15 +275,18 @@ public class TestCustomPriorityRpcControllerFactory {
       super(conf);
     }
 
-    @Override public HBaseRpcController newController() {
+    @Override
+    public HBaseRpcController newController() {
       return new PriorityController(EXPECTED_PRIORITY.get(), super.newController());
     }
 
-    @Override public HBaseRpcController newController(CellScanner cellScanner) {
+    @Override
+    public HBaseRpcController newController(CellScanner cellScanner) {
       return new PriorityController(EXPECTED_PRIORITY.get(), super.newController(cellScanner));
     }
 
-    @Override public HBaseRpcController newController(List<CellScannable> cellIterables) {
+    @Override
+    public HBaseRpcController newController(List<CellScannable> cellIterables) {
       return new PriorityController(EXPECTED_PRIORITY.get(), super.newController(cellIterables));
     }
   }
@@ -280,7 +299,8 @@ public class TestCustomPriorityRpcControllerFactory {
       this.priority = priority;
     }
 
-    @Override public int getPriority() {
+    @Override
+    public int getPriority() {
       return priority;
     }
   }
@@ -308,13 +328,15 @@ public class TestCustomPriorityRpcControllerFactory {
       return super.get(controller, request);
     }
 
-    @Override public ClientProtos.MutateResponse mutate(RpcController rpcc,
+    @Override
+    public ClientProtos.MutateResponse mutate(RpcController rpcc,
       ClientProtos.MutateRequest request) throws ServiceException {
       checkPriorityIfWaiting();
       return super.mutate(rpcc, request);
     }
 
-    @Override public ClientProtos.ScanResponse scan(RpcController controller,
+    @Override
+    public ClientProtos.ScanResponse scan(RpcController controller,
       ClientProtos.ScanRequest request) throws ServiceException {
       checkPriorityIfWaiting();
       return super.scan(controller, request);

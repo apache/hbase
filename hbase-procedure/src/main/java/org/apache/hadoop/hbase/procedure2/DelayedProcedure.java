@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 class DelayedProcedure<TEnvironment>
-    extends DelayedUtil.DelayedContainerWithTimestamp<Procedure<TEnvironment>> {
+  extends DelayedUtil.DelayedContainerWithTimestamp<Procedure<TEnvironment>> {
   public DelayedProcedure(Procedure<TEnvironment> procedure) {
     super(procedure, procedure.getTimeoutTimestamp());
   }

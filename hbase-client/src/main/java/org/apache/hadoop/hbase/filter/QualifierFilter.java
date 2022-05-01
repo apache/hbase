@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,38 +19,36 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * This filter is used to filter based on the column qualifier. It takes an
- * operator (equal, greater, not equal, etc) and a byte [] comparator for the
- * column qualifier portion of a key.
+ * This filter is used to filter based on the column qualifier. It takes an operator (equal,
+ * greater, not equal, etc) and a byte [] comparator for the column qualifier portion of a key.
  * <p>
- * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter}
- * to add more control.
+ * This filter can be wrapped with {@link WhileMatchFilter} and {@link SkipFilter} to add more
+ * control.
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * If an already known column qualifier is looked for, 
- * use {@link org.apache.hadoop.hbase.client.Get#addColumn}
- * directly rather than a filter.
+ * If an already known column qualifier is looked for, use
+ * {@link org.apache.hadoop.hbase.client.Get#addColumn} directly rather than a filter.
  */
 @InterfaceAudience.Public
 public class QualifierFilter extends CompareFilter {
   /**
    * Constructor.
-   * @param op the compare op for column qualifier matching
+   * @param op                  the compare op for column qualifier matching
    * @param qualifierComparator the comparator for column qualifier matching
    */
-  public QualifierFilter(final CompareOperator op,
-                         final ByteArrayComparable qualifierComparator) {
+  public QualifierFilter(final CompareOperator op, final ByteArrayComparable qualifierComparator) {
     super(op, qualifierComparator);
   }
 
@@ -63,10 +60,10 @@ public class QualifierFilter extends CompareFilter {
     return ReturnCode.INCLUDE;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     ArrayList<?> arguments = CompareFilter.extractArguments(filterArguments);
-    CompareOperator compareOp = (CompareOperator)arguments.get(0);
-    ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
+    CompareOperator compareOp = (CompareOperator) arguments.get(0);
+    ByteArrayComparable comparator = (ByteArrayComparable) arguments.get(1);
     return new QualifierFilter(compareOp, comparator);
   }
 
@@ -74,9 +71,8 @@ public class QualifierFilter extends CompareFilter {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
-    FilterProtos.QualifierFilter.Builder builder =
-      FilterProtos.QualifierFilter.newBuilder();
+  public byte[] toByteArray() {
+    FilterProtos.QualifierFilter.Builder builder = FilterProtos.QualifierFilter.newBuilder();
     builder.setCompareFilter(super.convert());
     return builder.build().toByteArray();
   }
@@ -87,8 +83,7 @@ public class QualifierFilter extends CompareFilter {
    * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
-  public static QualifierFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static QualifierFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.QualifierFilter proto;
     try {
       proto = FilterProtos.QualifierFilter.parseFrom(pbBytes);
@@ -105,12 +100,12 @@ public class QualifierFilter extends CompareFilter {
     } catch (IOException ioe) {
       throw new DeserializationException(ioe);
     }
-    return new QualifierFilter(valueCompareOp,valueComparator);
+    return new QualifierFilter(valueCompareOp, valueComparator);
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {

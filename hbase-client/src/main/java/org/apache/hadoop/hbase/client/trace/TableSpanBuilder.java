@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DB_NAME;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.TABLE_KEY;
+
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -62,9 +62,8 @@ public class TableSpanBuilder implements Supplier<Span> {
 
   @SuppressWarnings("unchecked")
   public Span build() {
-    final SpanBuilder builder = TraceUtil.getGlobalTracer()
-      .spanBuilder(name)
-      .setSpanKind(SpanKind.INTERNAL);
+    final SpanBuilder builder =
+      TraceUtil.getGlobalTracer().spanBuilder(name).setSpanKind(SpanKind.INTERNAL);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
     return builder.startSpan();
   }
@@ -73,12 +72,10 @@ public class TableSpanBuilder implements Supplier<Span> {
    * Static utility method that performs the primary logic of this builder. It is visible to other
    * classes in this package so that other builders can use this functionality as a mix-in.
    * @param attributes the attributes map to be populated.
-   * @param tableName the source of attribute values.
+   * @param tableName  the source of attribute values.
    */
-  static void populateTableNameAttributes(
-    final Map<AttributeKey<?>, Object> attributes,
-    final TableName tableName
-  ) {
+  static void populateTableNameAttributes(final Map<AttributeKey<?>, Object> attributes,
+    final TableName tableName) {
     attributes.put(DB_NAME, tableName.getNamespaceAsString());
     attributes.put(TABLE_KEY, tableName.getNameAsString());
   }

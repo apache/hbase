@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A filter that returns the cells which have mob reference tags. It's a server-side filter.

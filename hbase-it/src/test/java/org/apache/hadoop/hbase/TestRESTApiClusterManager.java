@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -75,8 +76,8 @@ public class TestRESTApiClusterManager {
     final Map<String, String> hostProperties = new HashMap<>();
     hostProperties.put("roleState", "STARTED");
     hostProperties.put("healthSummary", "GOOD");
-    registerHostProperties(
-      clusterName, serviceName, hostId, ServiceType.HBASE_MASTER, hostProperties);
+    registerHostProperties(clusterName, serviceName, hostId, ServiceType.HBASE_MASTER,
+      hostProperties);
     assertTrue(clusterManager.isRunning(ServiceType.HBASE_MASTER, hostName, -1));
   }
 
@@ -84,46 +85,30 @@ public class TestRESTApiClusterManager {
     conf.set("hbase.it.clustermanager.restapi.hostname", mockHttpApi.getURI().toString());
   }
 
-  private static void registerServiceName(
-    final String clusterName,
-    final Service service,
-    final String serviceName
-  ) {
+  private static void registerServiceName(final String clusterName, final Service service,
+    final String serviceName) {
     final String target = String.format("^/api/v6/clusters/%s/services", clusterName);
-    final String response = String.format(
-      "{ \"items\": [ { \"type\": \"%s\", \"name\": \"%s\" } ] }", service, serviceName);
+    final String response = String
+      .format("{ \"items\": [ { \"type\": \"%s\", \"name\": \"%s\" } ] }", service, serviceName);
     mockHttpApi.registerOk(target, response);
   }
 
   private static void registerHost(final String hostName, final String hostId) {
     final String target = "^/api/v6/hosts";
-    final String response = String.format(
-      "{ \"items\": [ { \"hostname\": \"%s\", \"hostId\": \"%s\" } ] }", hostName, hostId);
+    final String response = String
+      .format("{ \"items\": [ { \"hostname\": \"%s\", \"hostId\": \"%s\" } ] }", hostName, hostId);
     mockHttpApi.registerOk(target, response);
   }
 
-  private static void registerHostProperties(
-    final String clusterName,
-    final String serviceName,
-    final String hostId,
-    final ServiceType serviceType,
-    final Map<String, String> properties
-  ) {
-    final String target = String.format(
-      "^/api/v6/clusters/%s/services/%s/roles", clusterName, serviceName);
-    final StringBuilder builder = new StringBuilder()
-      .append("{ \"items\": [ ")
-      .append("{ \"hostRef\": { \"hostId\": \"")
-      .append(hostId)
-      .append("\" }, \"type\": \"")
-      .append(serviceType)
-      .append("\"");
-    properties.forEach((k, v) -> builder
-      .append(", \"")
-      .append(k)
-      .append("\": \"")
-      .append(v)
-      .append("\""));
+  private static void registerHostProperties(final String clusterName, final String serviceName,
+    final String hostId, final ServiceType serviceType, final Map<String, String> properties) {
+    final String target =
+      String.format("^/api/v6/clusters/%s/services/%s/roles", clusterName, serviceName);
+    final StringBuilder builder =
+      new StringBuilder().append("{ \"items\": [ ").append("{ \"hostRef\": { \"hostId\": \"")
+        .append(hostId).append("\" }, \"type\": \"").append(serviceType).append("\"");
+    properties
+      .forEach((k, v) -> builder.append(", \"").append(k).append("\": \"").append(v).append("\""));
     builder.append(" } ] }");
     mockHttpApi.registerOk(target, builder.toString());
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -79,7 +79,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALMonotonicallyIncreasingSeqId.class);
+    HBaseClassTestRule.forClass(TestWALMonotonicallyIncreasingSeqId.class);
 
   private final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -102,30 +102,31 @@ public class TestWALMonotonicallyIncreasingSeqId {
 
   private TableDescriptor getTableDesc(TableName tableName, byte[]... families) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
-    Arrays.stream(families).map(
-      f -> ColumnFamilyDescriptorBuilder.newBuilder(f).setMaxVersions(Integer.MAX_VALUE).build())
-        .forEachOrdered(builder::setColumnFamily);
+    Arrays.stream(families)
+      .map(
+        f -> ColumnFamilyDescriptorBuilder.newBuilder(f).setMaxVersions(Integer.MAX_VALUE).build())
+      .forEachOrdered(builder::setColumnFamily);
     return builder.build();
   }
 
   private HRegion initHRegion(TableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
-      throws IOException {
+    throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set("hbase.wal.provider", walProvider);
     conf.setBoolean("hbase.hregion.mvcc.preassign", false);
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     RegionInfo info = RegionInfoBuilder.newBuilder(htd.getTableName()).setStartKey(startKey)
-        .setEndKey(stopKey).setReplicaId(replicaId).setRegionId(0).build();
+      .setEndKey(stopKey).setReplicaId(replicaId).setRegionId(0).build();
     fileSystem = tableDir.getFileSystem(conf);
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     this.walConf = walConf;
     wals = new WALFactory(walConf, "log_" + replicaId);
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDefaultRootDirPath(), conf, htd,
-      wals.getWAL(info));
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    HRegion region =
+      HRegion.createHRegion(info, TEST_UTIL.getDefaultRootDirPath(), conf, htd, wals.getWAL(info));
     return region;
   }
 
@@ -236,8 +237,8 @@ public class TestWALMonotonicallyIncreasingSeqId {
           if (currentSeqid > currentMaxSeqid) {
             currentMaxSeqid = currentSeqid;
           } else {
-            fail("Current max Seqid is " + currentMaxSeqid +
-              ", but the next seqid in wal is smaller:" + currentSeqid);
+            fail("Current max Seqid is " + currentMaxSeqid
+              + ", but the next seqid in wal is smaller:" + currentSeqid);
           }
         }
       }

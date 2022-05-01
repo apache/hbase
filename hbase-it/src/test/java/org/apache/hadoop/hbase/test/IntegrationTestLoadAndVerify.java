@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,28 +84,22 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * A large test which loads a lot of data that has internal references, and
- * verifies the data.
- *
- * In load step, 200 map tasks are launched, which in turn write loadmapper.num_to_write
- * (default 100K) rows to an hbase table. Rows are written in blocks, for a total of
- * 100 blocks. Each row in a block, contains loadmapper.backrefs (default 50) references
- * to random rows in the prev block.
- *
- * Verify step is scans the table, and verifies that for every referenced row, the row is
- * actually there (no data loss). Failed rows are output from reduce to be saved in the
- * job output dir in hdfs and inspected later.
- *
- * This class can be run as a unit test, as an integration test, or from the command line
- *
- * Originally taken from Apache Bigtop.
+ * A large test which loads a lot of data that has internal references, and verifies the data. In
+ * load step, 200 map tasks are launched, which in turn write loadmapper.num_to_write (default 100K)
+ * rows to an hbase table. Rows are written in blocks, for a total of 100 blocks. Each row in a
+ * block, contains loadmapper.backrefs (default 50) references to random rows in the prev block.
+ * Verify step is scans the table, and verifies that for every referenced row, the row is actually
+ * there (no data loss). Failed rows are output from reduce to be saved in the job output dir in
+ * hdfs and inspected later. This class can be run as a unit test, as an integration test, or from
+ * the command line Originally taken from Apache Bigtop.
  */
 @Category(IntegrationTests.class)
-public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
+public class IntegrationTestLoadAndVerify extends IntegrationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestLoadAndVerify.class);
 
@@ -113,9 +107,8 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q1");
 
-  private static final String NUM_TO_WRITE_KEY =
-    "loadmapper.num_to_write";
-  private static final long NUM_TO_WRITE_DEFAULT = 100*1000;
+  private static final String NUM_TO_WRITE_KEY = "loadmapper.num_to_write";
+  private static final long NUM_TO_WRITE_DEFAULT = 100 * 1000;
 
   private static final String TABLE_NAME_KEY = "loadmapper.table";
   private static final String TABLE_NAME_DEFAULT = "table";
@@ -154,36 +147,28 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     }
   }
 
-@Override
-public void cleanUpCluster() throws Exception {
-  super.cleanUpCluster();
-  if (!util.isDistributedCluster()) {
-    util.shutdownMiniMapReduceCluster();
+  @Override
+  public void cleanUpCluster() throws Exception {
+    super.cleanUpCluster();
+    if (!util.isDistributedCluster()) {
+      util.shutdownMiniMapReduceCluster();
+    }
   }
-}
 
   /**
-   * Converts a "long" value between endian systems.
-   * Borrowed from Apache Commons IO
+   * Converts a "long" value between endian systems. Borrowed from Apache Commons IO
    * @param value value to convert
    * @return the converted value
    */
-  public static long swapLong(long value)
-  {
-    return
-      ( ( ( value >> 0 ) & 0xff ) << 56 ) +
-      ( ( ( value >> 8 ) & 0xff ) << 48 ) +
-      ( ( ( value >> 16 ) & 0xff ) << 40 ) +
-      ( ( ( value >> 24 ) & 0xff ) << 32 ) +
-      ( ( ( value >> 32 ) & 0xff ) << 24 ) +
-      ( ( ( value >> 40 ) & 0xff ) << 16 ) +
-      ( ( ( value >> 48 ) & 0xff ) << 8 ) +
-      ( ( ( value >> 56 ) & 0xff ) << 0 );
+  public static long swapLong(long value) {
+    return (((value >> 0) & 0xff) << 56) + (((value >> 8) & 0xff) << 48)
+      + (((value >> 16) & 0xff) << 40) + (((value >> 24) & 0xff) << 32)
+      + (((value >> 32) & 0xff) << 24) + (((value >> 40) & 0xff) << 16)
+      + (((value >> 48) & 0xff) << 8) + (((value >> 56) & 0xff) << 0);
   }
 
   public static class LoadMapper
-      extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable>
-  {
+    extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable> {
     protected long recordsToWrite;
     protected Connection connection;
     protected BufferedMutator mutator;
@@ -200,8 +185,7 @@ public void cleanUpCluster() throws Exception {
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
       this.connection = ConnectionFactory.createConnection(conf);
       mutator = connection.getBufferedMutator(
-          new BufferedMutatorParams(TableName.valueOf(tableName))
-              .writeBufferSize(4 * 1024 * 1024));
+        new BufferedMutatorParams(TableName.valueOf(tableName)).writeBufferSize(4 * 1024 * 1024));
 
       String taskId = conf.get("mapreduce.task.attempt.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);
@@ -221,19 +205,18 @@ public void cleanUpCluster() throws Exception {
     }
 
     @Override
-    protected void map(NullWritable key, NullWritable value,
-        Context context) throws IOException, InterruptedException {
+    protected void map(NullWritable key, NullWritable value, Context context)
+      throws IOException, InterruptedException {
 
       String suffix = "/" + shortTaskId;
       byte[] row = Bytes.add(new byte[8], Bytes.toBytes(suffix));
-      int BLOCK_SIZE = (int)(recordsToWrite / 100);
+      int BLOCK_SIZE = (int) (recordsToWrite / 100);
       Random rand = ThreadLocalRandom.current();
 
       for (long i = 0; i < recordsToWrite;) {
         long blockStart = i;
-        for (long idxInBlock = 0;
-             idxInBlock < BLOCK_SIZE && i < recordsToWrite;
-             idxInBlock++, i++) {
+        for (long idxInBlock = 0; idxInBlock < BLOCK_SIZE
+          && i < recordsToWrite; idxInBlock++, i++) {
 
           long byteSwapped = swapLong(i);
           Bytes.putLong(row, 0, byteSwapped);
@@ -266,15 +249,16 @@ public void cleanUpCluster() throws Exception {
   public static class VerifyMapper extends TableMapper<BytesWritable, BytesWritable> {
     static final BytesWritable EMPTY = new BytesWritable(HConstants.EMPTY_BYTE_ARRAY);
 
-
     @Override
     protected void map(ImmutableBytesWritable key, Result value, Context context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       BytesWritable bwKey = new BytesWritable(key.get());
       BytesWritable bwVal = new BytesWritable();
       for (Cell kv : value.listCells()) {
-        if (Bytes.compareTo(TEST_QUALIFIER, 0, TEST_QUALIFIER.length,
-                            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()) == 0) {
+        if (
+          Bytes.compareTo(TEST_QUALIFIER, 0, TEST_QUALIFIER.length, kv.getQualifierArray(),
+            kv.getQualifierOffset(), kv.getQualifierLength()) == 0
+        ) {
           context.write(bwKey, EMPTY);
         } else {
           bwVal.set(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
@@ -296,7 +280,7 @@ public void cleanUpCluster() throws Exception {
 
     @Override
     protected void reduce(BytesWritable referredRow, Iterable<BytesWritable> referrers,
-        VerifyReducer.Context ctx) throws IOException, InterruptedException {
+      VerifyReducer.Context ctx) throws IOException, InterruptedException {
       boolean gotOriginalRow = false;
       int refCount = 0;
 
@@ -366,9 +350,8 @@ public void cleanUpCluster() throws Exception {
 
     Scan scan = new Scan();
 
-    TableMapReduceUtil.initTableMapperJob(
-        tableDescriptor.getTableName().getNameAsString(), scan, VerifyMapper.class,
-        BytesWritable.class, BytesWritable.class, job);
+    TableMapReduceUtil.initTableMapperJob(tableDescriptor.getTableName().getNameAsString(), scan,
+      VerifyMapper.class, BytesWritable.class, BytesWritable.class, job);
     TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
@@ -383,10 +366,9 @@ public void cleanUpCluster() throws Exception {
   }
 
   /**
-   * Tool to search missing rows in WALs and hfiles.
-   * Pass in file or dir of keys to search for. Key file must have been written by Verify step
-   * (we depend on the format it writes out. We'll read them in and then search in hbase
-   * WALs and oldWALs dirs (Some of this is TODO).
+   * Tool to search missing rows in WALs and hfiles. Pass in file or dir of keys to search for. Key
+   * file must have been written by Verify step (we depend on the format it writes out. We'll read
+   * them in and then search in hbase WALs and oldWALs dirs (Some of this is TODO).
    */
   public static class WALSearcher extends WALPlayer {
     public WALSearcher(Configuration conf) {
@@ -397,12 +379,12 @@ public void cleanUpCluster() throws Exception {
      * The actual searcher mapper.
      */
     public static class WALMapperSearcher extends WALMapper {
-      private SortedSet<byte []> keysToFind;
+      private SortedSet<byte[]> keysToFind;
       private AtomicInteger rows = new AtomicInteger(0);
 
       @Override
       public void setup(Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation>.Context context)
-          throws IOException {
+        throws IOException {
         super.setup(context);
         try {
           this.keysToFind = readKeysToSearch(context.getConfiguration());
@@ -415,14 +397,14 @@ public void cleanUpCluster() throws Exception {
       @Override
       protected boolean filter(Context context, Cell cell) {
         // TODO: Can I do a better compare than this copying out key?
-        byte [] row = new byte [cell.getRowLength()];
+        byte[] row = new byte[cell.getRowLength()];
         System.arraycopy(cell.getRowArray(), cell.getRowOffset(), row, 0, cell.getRowLength());
         boolean b = this.keysToFind.contains(row);
         if (b) {
           String keyStr = Bytes.toStringBinary(row);
           try {
             LOG.info("Found cell=" + cell + " , walKey=" + context.getCurrentKey());
-          } catch (IOException|InterruptedException e) {
+          } catch (IOException | InterruptedException e) {
             LOG.warn(e.toString(), e);
           }
           if (rows.addAndGet(1) < MISSING_ROWS_TO_LOG) {
@@ -449,11 +431,11 @@ public void cleanUpCluster() throws Exception {
   static final String FOUND_GROUP_KEY = "Found";
   static final String SEARCHER_INPUTDIR_KEY = "searcher.keys.inputdir";
 
-  static SortedSet<byte []> readKeysToSearch(final Configuration conf)
-      throws IOException, InterruptedException {
+  static SortedSet<byte[]> readKeysToSearch(final Configuration conf)
+    throws IOException, InterruptedException {
     Path keysInputDir = new Path(conf.get(SEARCHER_INPUTDIR_KEY));
     FileSystem fs = FileSystem.get(conf);
-    SortedSet<byte []> result = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    SortedSet<byte[]> result = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     if (!fs.exists(keysInputDir)) {
       throw new FileNotFoundException(keysInputDir.toString());
     }
@@ -462,7 +444,7 @@ public void cleanUpCluster() throws Exception {
       readFileToSearch(conf, fs, keyFileStatus, result);
     } else {
       RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(keysInputDir, false);
-      while(iterator.hasNext()) {
+      while (iterator.hasNext()) {
         LocatedFileStatus keyFileStatus = iterator.next();
         // Skip "_SUCCESS" file.
         if (keyFileStatus.getPath().getName().startsWith("_")) continue;
@@ -472,13 +454,12 @@ public void cleanUpCluster() throws Exception {
     return result;
   }
 
-  private static SortedSet<byte[]> readFileToSearch(final Configuration conf,
-    final FileSystem fs, final FileStatus keyFileStatus, SortedSet<byte []> result)
-        throws IOException,
-    InterruptedException {
+  private static SortedSet<byte[]> readFileToSearch(final Configuration conf, final FileSystem fs,
+    final FileStatus keyFileStatus, SortedSet<byte[]> result)
+    throws IOException, InterruptedException {
     // verify uses file output format and writes <Text, Text>. We can read it as a text file
     try (InputStream in = fs.open(keyFileStatus.getPath());
-        BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+      BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
       // extract out the key and return that missing as a missing key
       String line;
       while ((line = reader.readLine()) != null) {
@@ -500,24 +481,25 @@ public void cleanUpCluster() throws Exception {
     Path inputDir = new Path(keysDir);
 
     getConf().set(SEARCHER_INPUTDIR_KEY, inputDir.toString());
-    SortedSet<byte []> keys = readKeysToSearch(getConf());
+    SortedSet<byte[]> keys = readKeysToSearch(getConf());
     if (keys.isEmpty()) throw new RuntimeException("No keys to find");
     LOG.info("Count of keys to find: " + keys.size());
-    for(byte [] key: keys)  LOG.info("Key: " + Bytes.toStringBinary(key));
+    for (byte[] key : keys)
+      LOG.info("Key: " + Bytes.toStringBinary(key));
     // Now read all WALs. In two dirs. Presumes certain layout.
     Path walsDir = new Path(CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_LOGDIR_NAME);
-    Path oldWalsDir = new Path(
-        CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_OLDLOGDIR_NAME);
-    LOG.info("Running Search with keys inputDir=" + inputDir +
-      " against " + getConf().get(HConstants.HBASE_DIR));
-    int ret = ToolRunner.run(new WALSearcher(getConf()), new String [] {walsDir.toString(), ""});
+    Path oldWalsDir =
+      new Path(CommonFSUtils.getWALRootDir(getConf()), HConstants.HREGION_OLDLOGDIR_NAME);
+    LOG.info("Running Search with keys inputDir=" + inputDir + " against "
+      + getConf().get(HConstants.HBASE_DIR));
+    int ret = ToolRunner.run(new WALSearcher(getConf()), new String[] { walsDir.toString(), "" });
     if (ret != 0) return ret;
-    return ToolRunner.run(new WALSearcher(getConf()), new String [] {oldWalsDir.toString(), ""});
+    return ToolRunner.run(new WALSearcher(getConf()), new String[] { oldWalsDir.toString(), "" });
   }
 
   private static void setJobScannerConf(Job job) {
     long lpr = job.getConfiguration().getLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT) / 100;
-    job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, (int)lpr);
+    job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, (int) lpr);
   }
 
   public Path getTestDir(String testName, String subdir) throws IOException {
@@ -548,20 +530,27 @@ public void cleanUpCluster() throws Exception {
   @Override
   public void printUsage() {
     printUsage(this.getClass().getSimpleName() + " <options>"
-        + " [-Doptions] <load|verify|loadAndVerify|search>", "Options", "");
+      + " [-Doptions] <load|verify|loadAndVerify|search>", "Options", "");
     System.err.println("");
     System.err.println("  Loads a table with row dependencies and verifies the dependency chains");
     System.err.println("Options");
-    System.err.println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
-    System.err.println("  -Dloadmapper.backrefs=<n>        Number of backreferences per row (default 50)");
-    System.err.println("  -Dloadmapper.num_to_write=<n>    Number of rows per mapper (default 100,000 per mapper)");
-    System.err.println("  -Dloadmapper.deleteAfter=<bool>  Delete after a successful verify (default true)");
-    System.err.println("  -Dloadmapper.numPresplits=<n>    Number of presplit regions to start with (default 40)");
-    System.err.println("  -Dloadmapper.map.tasks=<n>       Number of map tasks for load (default 200)");
-    System.err.println("  -Dverify.reduce.tasks=<n>        Number of reduce tasks for verify (default 35)");
-    System.err.println("  -Dverify.scannercaching=<n>      Number hbase scanner caching rows to read (default 50)");
+    System.err
+      .println("  -Dloadmapper.table=<name>        Table to write/verify (default autogen)");
+    System.err
+      .println("  -Dloadmapper.backrefs=<n>        Number of backreferences per row (default 50)");
+    System.err.println(
+      "  -Dloadmapper.num_to_write=<n>    Number of rows per mapper (default 100,000 per mapper)");
+    System.err.println(
+      "  -Dloadmapper.deleteAfter=<bool>  Delete after a successful verify (default true)");
+    System.err.println(
+      "  -Dloadmapper.numPresplits=<n>    Number of presplit regions to start with (default 40)");
+    System.err
+      .println("  -Dloadmapper.map.tasks=<n>       Number of map tasks for load (default 200)");
+    System.err
+      .println("  -Dverify.reduce.tasks=<n>        Number of reduce tasks for verify (default 35)");
+    System.err.println(
+      "  -Dverify.scannercaching=<n>      Number hbase scanner caching rows to read (default 50)");
   }
-
 
   @Override
   protected void processOptions(CommandLine cmd) {
@@ -586,19 +575,19 @@ public void cleanUpCluster() throws Exception {
     boolean doLoad = false;
     boolean doVerify = false;
     boolean doSearch = false;
-    boolean doDelete = getConf().getBoolean("loadmapper.deleteAfter",true);
+    boolean doDelete = getConf().getBoolean("loadmapper.deleteAfter", true);
     int numPresplits = getConf().getInt("loadmapper.numPresplits", 40);
 
     if (toRun.equalsIgnoreCase("load")) {
       doLoad = true;
     } else if (toRun.equalsIgnoreCase("verify")) {
-      doVerify= true;
+      doVerify = true;
     } else if (toRun.equalsIgnoreCase("loadAndVerify")) {
-      doLoad=true;
-      doVerify= true;
+      doLoad = true;
+      doVerify = true;
     } else if (toRun.equalsIgnoreCase("search")) {
-      doLoad=false;
-      doVerify= false;
+      doLoad = false;
+      doVerify = false;
       doSearch = true;
       if (keysDir == null) {
         System.err.println("Usage: search <KEYS_DIR>]");
@@ -617,7 +606,7 @@ public void cleanUpCluster() throws Exception {
 
     if (doLoad) {
       try (Connection conn = ConnectionFactory.createConnection(getConf());
-          Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin()) {
         admin.createTable(tableDescriptor, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
         doLoad(getConf(), tableDescriptor);
       }

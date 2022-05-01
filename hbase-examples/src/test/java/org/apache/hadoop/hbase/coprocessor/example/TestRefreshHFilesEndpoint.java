@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ import org.junit.experimental.categories.Category;
 public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRefreshHFilesEndpoint.class);
+    HBaseClassTestRule.forClass(TestRefreshHFilesEndpoint.class);
 
   @Test
   public void testRefreshRegionHFilesEndpoint() throws Exception {
@@ -81,8 +81,8 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     HStoreWithFaultyRefreshHFilesAPI store;
 
     public HRegionForRefreshHFilesEP(final Path tableDir, final WAL wal, final FileSystem fs,
-        final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
-        final RegionServerServices rsServices) {
+      final Configuration confParam, final RegionInfo regionInfo, final TableDescriptor htd,
+      final RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
@@ -90,13 +90,12 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
     public List<HStore> getStores() {
       List<HStore> list = new ArrayList<>(stores.size());
       /*
-       * This is used to trigger the custom definition (faulty)
-       * of refresh HFiles API.
+       * This is used to trigger the custom definition (faulty) of refresh HFiles API.
        */
       try {
         if (this.store == null) {
           store = new HStoreWithFaultyRefreshHFilesAPI(this,
-              ColumnFamilyDescriptorBuilder.of(FAMILY), this.conf);
+            ColumnFamilyDescriptorBuilder.of(FAMILY), this.conf);
         }
         list.add(store);
       } catch (IOException ioe) {
@@ -110,7 +109,7 @@ public class TestRefreshHFilesEndpoint extends TestRefreshHFilesBase {
 
   public static class HStoreWithFaultyRefreshHFilesAPI extends HStore {
     public HStoreWithFaultyRefreshHFilesAPI(final HRegion region,
-        final ColumnFamilyDescriptor family, final Configuration confParam) throws IOException {
+      final ColumnFamilyDescriptor family, final Configuration confParam) throws IOException {
       super(region, family, confParam, false);
     }
 

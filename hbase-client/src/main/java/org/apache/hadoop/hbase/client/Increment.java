@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +38,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Used to perform Increment operations on a single row.
  * <p>
- * This operation ensures atomicity to readers. Increments are done
- * under a single row lock, so write operations to a row are synchronized, and
- * readers are guaranteed to see this operation fully completed.
+ * This operation ensures atomicity to readers. Increments are done under a single row lock, so
+ * write operations to a row are synchronized, and readers are guaranteed to see this operation
+ * fully completed.
  * <p>
- * To increment columns of a row, instantiate an Increment object with the row
- * to increment.  At least one column to increment must be specified using the
+ * To increment columns of a row, instantiate an Increment object with the row to increment. At
+ * least one column to increment must be specified using the
  * {@link #addColumn(byte[], byte[], long)} method.
  */
 @InterfaceAudience.Public
@@ -58,7 +57,7 @@ public class Increment extends Mutation {
    * At least one column must be incremented.
    * @param row row key (we will make a copy of this).
    */
-  public Increment(byte [] row) {
+  public Increment(byte[] row) {
     this(row, 0, row.length);
   }
 
@@ -68,10 +67,11 @@ public class Increment extends Mutation {
    * At least one column must be incremented.
    * @param row row key (we will make a copy of this).
    */
-  public Increment(final byte [] row, final int offset, final int length) {
+  public Increment(final byte[] row, final int offset, final int length) {
     checkRow(row, offset, length);
     this.row = Bytes.copy(row, offset, length);
   }
+
   /**
    * Copy constructor
    * @param incrementToCopy increment to copy
@@ -82,39 +82,36 @@ public class Increment extends Mutation {
   }
 
   /**
-   * Construct the Increment with user defined data. NOTED:
-   * 1) all cells in the familyMap must have the Type.Put
-   * 2) the row of each cell must be same with passed row.
-   * @param row row. CAN'T be null
-   * @param ts timestamp
+   * Construct the Increment with user defined data. NOTED: 1) all cells in the familyMap must have
+   * the Type.Put 2) the row of each cell must be same with passed row.
+   * @param row       row. CAN'T be null
+   * @param ts        timestamp
    * @param familyMap the map to collect all cells internally. CAN'T be null
    */
-  public Increment(byte[] row, long ts, NavigableMap<byte [], List<Cell>> familyMap) {
+  public Increment(byte[] row, long ts, NavigableMap<byte[], List<Cell>> familyMap) {
     super(row, ts, familyMap);
   }
 
   /**
    * Add the specified KeyValue to this operation.
-   * @param cell individual Cell
-   * @return this
-   * @throws java.io.IOException e
+   * @param cell individual Cell n * @throws java.io.IOException e
    */
-  public Increment add(Cell cell) throws IOException{
+  public Increment add(Cell cell) throws IOException {
     super.add(cell);
     return this;
   }
 
   /**
-   * Increment the column from the specific family with the specified qualifier
-   * by the specified amount.
+   * Increment the column from the specific family with the specified qualifier by the specified
+   * amount.
    * <p>
    * Overrides previous calls to addColumn for this family and qualifier.
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   * @param amount amount to increment by
+   * @param amount    amount to increment by
    * @return the Increment object
    */
-  public Increment addColumn(byte [] family, byte [] qualifier, long amount) {
+  public Increment addColumn(byte[] family, byte[] qualifier, long amount) {
     if (family == null) {
       throw new IllegalArgumentException("family cannot be null");
     }
@@ -125,8 +122,7 @@ public class Increment extends Mutation {
   }
 
   /**
-   * Gets the TimeRange used for this increment.
-   * @return TimeRange
+   * Gets the TimeRange used for this increment. n
    */
   public TimeRange getTimeRange() {
     return this.tr;
@@ -135,18 +131,16 @@ public class Increment extends Mutation {
   /**
    * Sets the TimeRange to be used on the Get for this increment.
    * <p>
-   * This is useful for when you have counters that only last for specific
-   * periods of time (ie. counters that are partitioned by time).  By setting
-   * the range of valid times for this increment, you can potentially gain
-   * some performance with a more optimal Get operation.
-   * Be careful adding the time range to this class as you will update the old cell if the
-   * time range doesn't include the latest cells.
+   * This is useful for when you have counters that only last for specific periods of time (ie.
+   * counters that are partitioned by time). By setting the range of valid times for this increment,
+   * you can potentially gain some performance with a more optimal Get operation. Be careful adding
+   * the time range to this class as you will update the old cell if the time range doesn't include
+   * the latest cells.
    * <p>
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException if invalid time range
-   * @return this
+   * @throws IOException if invalid time range n
    */
   public Increment setTimeRange(long minStamp, long maxStamp) throws IOException {
     tr = TimeRange.between(minStamp, maxStamp);
@@ -161,8 +155,8 @@ public class Increment extends Mutation {
 
   /**
    * @param returnResults True (default) if the increment operation should return the results. A
-   *          client that is not interested in the result can save network bandwidth setting this
-   *          to false.
+   *                      client that is not interested in the result can save network bandwidth
+   *                      setting this to false.
    */
   @Override
   public Increment setReturnResults(boolean returnResults) {
@@ -197,21 +191,20 @@ public class Increment extends Mutation {
   }
 
   /**
-   * Before 0.95, when you called Increment#getFamilyMap(), you got back
-   * a map of families to a list of Longs.  Now, {@link #getFamilyCellMap()} returns
-   * families by list of Cells.  This method has been added so you can have the
-   * old behavior.
+   * Before 0.95, when you called Increment#getFamilyMap(), you got back a map of families to a list
+   * of Longs. Now, {@link #getFamilyCellMap()} returns families by list of Cells. This method has
+   * been added so you can have the old behavior.
    * @return Map of families to a Map of qualifiers and their Long increments.
    * @since 0.95.0
    */
-  public Map<byte[], NavigableMap<byte [], Long>> getFamilyMapOfLongs() {
+  public Map<byte[], NavigableMap<byte[], Long>> getFamilyMapOfLongs() {
     NavigableMap<byte[], List<Cell>> map = super.getFamilyCellMap();
-    Map<byte [], NavigableMap<byte[], Long>> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte [], List<Cell>> entry: map.entrySet()) {
-      NavigableMap<byte [], Long> longs = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for (Cell cell: entry.getValue()) {
+    Map<byte[], NavigableMap<byte[], Long>> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], List<Cell>> entry : map.entrySet()) {
+      NavigableMap<byte[], Long> longs = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+      for (Cell cell : entry.getValue()) {
         longs.put(CellUtil.cloneQualifier(cell),
-            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
       }
       results.put(entry.getKey(), longs);
     }
@@ -219,21 +212,21 @@ public class Increment extends Mutation {
   }
 
   /**
-   * @return String
+   * n
    */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("row=");
     sb.append(Bytes.toStringBinary(this.row));
-    if(this.familyMap.isEmpty()) {
+    if (this.familyMap.isEmpty()) {
       sb.append(", no columns set to be incremented");
       return sb.toString();
     }
     sb.append(", families=");
     boolean moreThanOne = false;
-    for(Map.Entry<byte [], List<Cell>> entry: this.familyMap.entrySet()) {
-      if(moreThanOne) {
+    for (Map.Entry<byte[], List<Cell>> entry : this.familyMap.entrySet()) {
+      if (moreThanOne) {
         sb.append("), ");
       } else {
         moreThanOne = true;
@@ -242,19 +235,19 @@ public class Increment extends Mutation {
       sb.append("(family=");
       sb.append(Bytes.toString(entry.getKey()));
       sb.append(", columns=");
-      if(entry.getValue() == null) {
+      if (entry.getValue() == null) {
         sb.append("NONE");
       } else {
         sb.append("{");
         boolean moreThanOneB = false;
-        for(Cell cell : entry.getValue()) {
-          if(moreThanOneB) {
+        for (Cell cell : entry.getValue()) {
+          if (moreThanOneB) {
             sb.append(", ");
           } else {
             moreThanOneB = true;
           }
-          sb.append(CellUtil.getCellKeyAsString(cell) + "+=" +
-              Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          sb.append(CellUtil.getCellKeyAsString(cell) + "+="
+            + Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         }
         sb.append("}");
       }
@@ -264,7 +257,7 @@ public class Increment extends Mutation {
   }
 
   @Override
-  protected long extraHeapSize(){
+  protected long extraHeapSize() {
     return HEAP_OVERHEAD;
   }
 

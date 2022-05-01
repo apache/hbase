@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionObserverBypass {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionObserverBypass.class);
+    HBaseClassTestRule.forClass(TestRegionObserverBypass.class);
 
   private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -72,9 +72,8 @@ public class TestRegionObserverBypass {
     // Stack up three coprocessors just so I can check bypass skips subsequent calls.
     Configuration conf = HBaseConfiguration.create();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        new String [] {TestCoprocessor.class.getName(),
-          TestCoprocessor2.class.getName(),
-          TestCoprocessor3.class.getName()});
+      new String[] { TestCoprocessor.class.getName(), TestCoprocessor2.class.getName(),
+        TestCoprocessor3.class.getName() });
     util = new HBaseTestingUtil(conf);
     util.startMiniCluster();
   }
@@ -93,14 +92,13 @@ public class TestRegionObserverBypass {
       }
       admin.deleteTable(tableName);
     }
-    util.createTable(tableName, new byte[][] {dummy, test});
+    util.createTable(tableName, new byte[][] { dummy, test });
     TestCoprocessor.PREPUT_BYPASSES.set(0);
     TestCoprocessor.PREPUT_INVOCATIONS.set(0);
   }
 
   /**
-   * do a single put that is bypassed by a RegionObserver
-   * @throws Exception
+   * do a single put that is bypassed by a RegionObserver n
    */
   @Test
   public void testSimple() throws Exception {
@@ -109,19 +107,17 @@ public class TestRegionObserverBypass {
     p.addColumn(test, dummy, dummy);
     // before HBASE-4331, this would throw an exception
     t.put(p);
-    checkRowAndDelete(t,row1,0);
+    checkRowAndDelete(t, row1, 0);
     t.close();
   }
 
   /**
-   * Test various multiput operations.
-   * If the column family is 'test', then bypass is invoked.
-   * @throws Exception
+   * Test various multiput operations. If the column family is 'test', then bypass is invoked. n
    */
   @Test
   public void testMulti() throws Exception {
-    //ensure that server time increments every time we do an operation, otherwise
-    //previous deletes will eclipse successive puts having the same timestamp
+    // ensure that server time increments every time we do an operation, otherwise
+    // previous deletes will eclipse successive puts having the same timestamp
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     Table t = util.getConnection().getTable(tableName);
@@ -137,9 +133,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);
-    checkRowAndDelete(t,row1,1);
-    checkRowAndDelete(t,row2,0);
-    checkRowAndDelete(t,row3,0);
+    checkRowAndDelete(t, row1, 1);
+    checkRowAndDelete(t, row2, 0);
+    checkRowAndDelete(t, row3, 0);
 
     puts.clear();
     p = new Put(row1);
@@ -153,9 +149,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);
-    checkRowAndDelete(t,row1,0);
-    checkRowAndDelete(t,row2,0);
-    checkRowAndDelete(t,row3,0);
+    checkRowAndDelete(t, row1, 0);
+    checkRowAndDelete(t, row2, 0);
+    checkRowAndDelete(t, row3, 0);
 
     puts.clear();
     p = new Put(row1);
@@ -169,9 +165,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     // this worked fine even before HBASE-4331
     t.put(puts);
-    checkRowAndDelete(t,row1,0);
-    checkRowAndDelete(t,row2,0);
-    checkRowAndDelete(t,row3,1);
+    checkRowAndDelete(t, row1, 0);
+    checkRowAndDelete(t, row2, 0);
+    checkRowAndDelete(t, row3, 1);
 
     puts.clear();
     p = new Put(row1);
@@ -185,9 +181,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     // this worked fine even before HBASE-4331
     t.put(puts);
-    checkRowAndDelete(t,row1,1);
-    checkRowAndDelete(t,row2,0);
-    checkRowAndDelete(t,row3,1);
+    checkRowAndDelete(t, row1, 1);
+    checkRowAndDelete(t, row2, 0);
+    checkRowAndDelete(t, row3, 1);
 
     puts.clear();
     p = new Put(row1);
@@ -201,9 +197,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);
-    checkRowAndDelete(t,row1,0);
-    checkRowAndDelete(t,row2,1);
-    checkRowAndDelete(t,row3,0);
+    checkRowAndDelete(t, row1, 0);
+    checkRowAndDelete(t, row2, 1);
+    checkRowAndDelete(t, row3, 0);
     t.close();
 
     EnvironmentEdgeManager.reset();
@@ -219,13 +215,12 @@ public class TestRegionObserverBypass {
 
   /**
    * Test that when bypass is called, we skip out calling any other coprocessors stacked up method,
-   * in this case, a prePut.
-   * If the column family is 'test', then bypass is invoked.
+   * in this case, a prePut. If the column family is 'test', then bypass is invoked.
    */
   @Test
   public void testBypassAlsoCompletes() throws IOException {
-    //ensure that server time increments every time we do an operation, otherwise
-    //previous deletes will eclipse successive puts having the same timestamp
+    // ensure that server time increments every time we do an operation, otherwise
+    // previous deletes will eclipse successive puts having the same timestamp
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
     Table t = util.getConnection().getTable(tableName);
@@ -241,9 +236,9 @@ public class TestRegionObserverBypass {
     puts.add(p);
     t.put(puts);
     // Ensure expected result.
-    checkRowAndDelete(t,row1,1);
-    checkRowAndDelete(t,row2,0);
-    checkRowAndDelete(t,row3,0);
+    checkRowAndDelete(t, row1, 1);
+    checkRowAndDelete(t, row2, 0);
+    checkRowAndDelete(t, row3, 0);
     // We have three Coprocessors stacked up on the prePut. See the beforeClass setup. We did three
     // puts above two of which bypassed. A bypass means do not call the other coprocessors in the
     // stack so for the two 'test' calls in the above, we should not have call through to all all
@@ -253,7 +248,6 @@ public class TestRegionObserverBypass {
     assertEquals("Total CP invocation count", 5, TestCoprocessor.PREPUT_INVOCATIONS.get());
     assertEquals("Total CP bypasses", 2, TestCoprocessor.PREPUT_BYPASSES.get());
   }
-
 
   public static class TestCoprocessor implements RegionCoprocessor, RegionObserver {
     static AtomicInteger PREPUT_INVOCATIONS = new AtomicInteger(0);
@@ -265,9 +259,8 @@ public class TestRegionObserverBypass {
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Put put, final WALEdit edit, final Durability durability)
-        throws IOException {
+    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
+      final WALEdit edit, final Durability durability) throws IOException {
       PREPUT_INVOCATIONS.incrementAndGet();
       Map<byte[], List<Cell>> familyMap = put.getFamilyCellMap();
       if (familyMap.containsKey(test)) {
@@ -280,10 +273,12 @@ public class TestRegionObserverBypass {
   /**
    * Calls through to TestCoprocessor.
    */
-  public static class TestCoprocessor2 extends TestRegionObserverBypass.TestCoprocessor {}
+  public static class TestCoprocessor2 extends TestRegionObserverBypass.TestCoprocessor {
+  }
 
   /**
    * Calls through to TestCoprocessor.
    */
-  public static class TestCoprocessor3 extends TestRegionObserverBypass.TestCoprocessor {}
+  public static class TestCoprocessor3 extends TestRegionObserverBypass.TestCoprocessor {
+  }
 }

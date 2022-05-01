@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,10 +39,10 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerBalanceCluster.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerBalanceCluster.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestStochasticLoadBalancerBalanceCluster.class);
+    LoggerFactory.getLogger(TestStochasticLoadBalancerBalanceCluster.class);
 
   /**
    * Test the load balancing algorithm.
@@ -57,7 +57,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
       Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
-          (Map) mockClusterServersWithTables(servers);
+        (Map) mockClusterServersWithTables(servers);
       List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
       List<ServerAndLoad> balancedCluster = reconcile(list, plans, servers);
       LOG.info("Mock Balance : " + printMock(balancedCluster));

@@ -1,32 +1,31 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Provide access to all data block encoding algorithms. All of the algorithms
- * are required to have unique id which should <b>NEVER</b> be changed. If you
- * want to add a new algorithm/version, assign it a new id. Announce the new id
- * in the HBase mailing list to prevent collisions.
+ * Provide access to all data block encoding algorithms. All of the algorithms are required to have
+ * unique id which should <b>NEVER</b> be changed. If you want to add a new algorithm/version,
+ * assign it a new id. Announce the new id in the HBase mailing list to prevent collisions.
  */
 @InterfaceAudience.Public
 public enum DataBlockEncoding {
@@ -55,9 +54,9 @@ public enum DataBlockEncoding {
   static {
     for (DataBlockEncoding algo : values()) {
       if (idArray[algo.id] != null) {
-        throw new RuntimeException(String.format(
-          "Two data block encoder algorithms '%s' and '%s' have " + "the same id %d",
-          idArray[algo.id].toString(), algo.toString(), (int) algo.id));
+        throw new RuntimeException(
+          String.format("Two data block encoder algorithms '%s' and '%s' have " + "the same id %d",
+            idArray[algo.id].toString(), algo.toString(), (int) algo.id));
       }
       idArray[algo.id] = algo;
     }
@@ -65,16 +64,15 @@ public enum DataBlockEncoding {
 
   private DataBlockEncoding(int id, String encoderClsName) {
     if (id < 0 || id > Byte.MAX_VALUE) {
-      throw new AssertionError(
-          "Data block encoding algorithm id is out of range: " + id);
+      throw new AssertionError("Data block encoding algorithm id is out of range: " + id);
     }
     this.id = (short) id;
     this.idInBytes = Bytes.toBytes(this.id);
     if (idInBytes.length != ID_SIZE) {
       // White this may seem redundant, if we accidentally serialize
       // the id as e.g. an int instead of a short, all encoders will break.
-      throw new RuntimeException("Unexpected length of encoder ID byte " +
-          "representation: " + Bytes.toStringBinary(idInBytes));
+      throw new RuntimeException("Unexpected length of encoder ID byte " + "representation: "
+        + Bytes.toStringBinary(idInBytes));
     }
     this.encoderCls = encoderClsName;
   }
@@ -101,13 +99,10 @@ public enum DataBlockEncoding {
     stream.write(idInBytes);
   }
 
-
   /**
    * Writes id bytes to the given array starting from offset.
-   *
-   * @param dest output array
-   * @param offset starting offset of the output array
-   * @throws IOException
+   * @param dest   output array
+   * @param offset starting offset of the output array n
    */
   public void writeIdInBytes(byte[] dest, int offset) throws IOException {
     System.arraycopy(idInBytes, 0, dest, offset, ID_SIZE);
@@ -115,8 +110,7 @@ public enum DataBlockEncoding {
 
   /**
    * Return new data block encoder for given algorithm type.
-   * @return data block encoder if algorithm is specified, null if none is
-   *         selected.
+   * @return data block encoder if algorithm is specified, null if none is selected.
    */
   public DataBlockEncoder getEncoder() {
     if (encoder == null && id != 0) {
@@ -146,14 +140,12 @@ public enum DataBlockEncoding {
 
   /**
    * Check if given encoder has this id.
-   * @param encoder encoder which id will be checked
+   * @param encoder   encoder which id will be checked
    * @param encoderId id which we except
    * @return true if id is right for given encoder, false otherwise
-   * @exception IllegalArgumentException
-   *            thrown when there is no matching data block encoder
+   * @exception IllegalArgumentException thrown when there is no matching data block encoder
    */
-  public static boolean isCorrectEncoder(DataBlockEncoder encoder,
-      short encoderId) {
+  public static boolean isCorrectEncoder(DataBlockEncoder encoder, short encoderId) {
     DataBlockEncoding algorithm = getEncodingById(encoderId);
     String encoderCls = encoder.getClass().getName();
     return encoderCls.equals(algorithm.encoderCls);
@@ -165,9 +157,8 @@ public enum DataBlockEncoding {
       algorithm = idArray[dataBlockEncodingId];
     }
     if (algorithm == null) {
-      throw new IllegalArgumentException(String.format(
-          "There is no data block encoder for given id '%d'",
-          (int) dataBlockEncodingId));
+      throw new IllegalArgumentException(String
+        .format("There is no data block encoder for given id '%d'", (int) dataBlockEncodingId));
     }
     return algorithm;
   }
@@ -175,7 +166,7 @@ public enum DataBlockEncoding {
   protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName) {
     try {
       return (DataBlockEncoder) Class.forName(fullyQualifiedClassName).getDeclaredConstructor()
-          .newInstance();
+        .newInstance();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

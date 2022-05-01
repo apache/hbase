@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Query matcher for normal user scan.
@@ -42,7 +41,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   protected final boolean seePastDeleteMarkers;
 
   protected NormalUserScanQueryMatcher(Scan scan, ScanInfo scanInfo, ColumnTracker columns,
-      boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
+    boolean hasNullColumn, DeleteTracker deletes, long oldestUnexpiredTS, long now) {
     super(scan, scanInfo, columns, hasNullColumn, oldestUnexpiredTS, now);
     this.deletes = deletes;
     this.get = scan.isGetScan();
@@ -67,8 +66,8 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     long timestamp = cell.getTimestamp();
     byte typeByte = cell.getTypeByte();
     if (PrivateCellUtil.isDelete(typeByte)) {
-      boolean includeDeleteMarker = seePastDeleteMarkers ? tr.withinTimeRange(timestamp)
-          : tr.withinOrAfterTimeRange(timestamp);
+      boolean includeDeleteMarker =
+        seePastDeleteMarkers ? tr.withinTimeRange(timestamp) : tr.withinOrAfterTimeRange(timestamp);
       if (includeDeleteMarker) {
         this.deletes.add(cell);
       }
@@ -92,12 +91,12 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
   }
 
   public static NormalUserScanQueryMatcher create(Scan scan, ScanInfo scanInfo,
-      ColumnTracker columns, DeleteTracker deletes, boolean hasNullColumn, long oldestUnexpiredTS,
-      long now) throws IOException {
+    ColumnTracker columns, DeleteTracker deletes, boolean hasNullColumn, long oldestUnexpiredTS,
+    long now) throws IOException {
     if (scan.isReversed()) {
       if (scan.includeStopRow()) {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-            oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -106,7 +105,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         };
       } else {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-            oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -117,7 +116,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
     } else {
       if (scan.includeStopRow()) {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-            oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {
@@ -126,7 +125,7 @@ public abstract class NormalUserScanQueryMatcher extends UserScanQueryMatcher {
         };
       } else {
         return new NormalUserScanQueryMatcher(scan, scanInfo, columns, hasNullColumn, deletes,
-            oldestUnexpiredTS, now) {
+          oldestUnexpiredTS, now) {
 
           @Override
           protected boolean moreRowsMayExistsAfter(int cmpToStopRow) {

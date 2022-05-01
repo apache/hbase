@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,52 +33,42 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedBytes {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestOrderedBytes.class);
+    HBaseClassTestRule.forClass(TestOrderedBytes.class);
 
   // integer constants for testing Numeric code paths
   static final Long[] I_VALS =
-    { 0L, 1L, 10L, 99L, 100L, 1234L, 9999L, 10000L, 10001L, 12345L, 123450L, Long.MAX_VALUE,
-      -1L, -10L, -99L, -100L, -123L, -999L, -10000L, -10001L, -12345L, -123450L, Long.MIN_VALUE };
+    { 0L, 1L, 10L, 99L, 100L, 1234L, 9999L, 10000L, 10001L, 12345L, 123450L, Long.MAX_VALUE, -1L,
+      -10L, -99L, -100L, -123L, -999L, -10000L, -10001L, -12345L, -123450L, Long.MIN_VALUE };
   static final int[] I_LENGTHS =
     { 1, 2, 2, 2, 2, 3, 3, 2, 4, 4, 4, 11, 2, 2, 2, 2, 3, 3, 2, 4, 4, 4, 11 };
 
   // real constants for testing Numeric code paths
   static final Double[] D_VALS =
-    { 0.0, 0.00123, 0.0123, 0.123, 1.0, 10.0, 12.345, 99.0, 99.01, 99.0001, 100.0, 100.01,
-      100.1, 1234.0, 1234.5, 9999.0, 9999.000001, 9999.000009, 9999.00001, 9999.00009,
-      9999.000099, 9999.0001, 9999.001, 9999.01, 9999.1, 10000.0, 10001.0, 12345.0, 123450.0,
-      Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, Double.NaN, Double.MAX_VALUE,
-      -0.00123, -0.0123, -0.123, -1.0, -10.0, -12.345, -99.0, -99.01, -99.0001, -100.0, -100.01,
-      -100.1, -1234.0, -1234.5, -9999.0, -9999.000001, -9999.000009, -9999.00001, -9999.00009,
-      -9999.000099, -9999.0001, -9999.001, -9999.01, -9999.1, -10000.0, -10001.0, -12345.0,
-      -123450.0 };
+    { 0.0, 0.00123, 0.0123, 0.123, 1.0, 10.0, 12.345, 99.0, 99.01, 99.0001, 100.0, 100.01, 100.1,
+      1234.0, 1234.5, 9999.0, 9999.000001, 9999.000009, 9999.00001, 9999.00009, 9999.000099,
+      9999.0001, 9999.001, 9999.01, 9999.1, 10000.0, 10001.0, 12345.0, 123450.0,
+      Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, Double.NaN, Double.MAX_VALUE, -0.00123,
+      -0.0123, -0.123, -1.0, -10.0, -12.345, -99.0, -99.01, -99.0001, -100.0, -100.01, -100.1,
+      -1234.0, -1234.5, -9999.0, -9999.000001, -9999.000009, -9999.00001, -9999.00009, -9999.000099,
+      -9999.0001, -9999.001, -9999.01, -9999.1, -10000.0, -10001.0, -12345.0, -123450.0 };
   static final int[] D_LENGTHS =
-    { 1, 4, 4, 4, 2, 2, 4, 2, 3, 4, 2, 4,
-      4, 3, 4, 3, 6, 6, 6, 6,
-      6, 5, 5, 4, 4, 2, 4, 4, 4,
-      1, 1, 1, 11,
-      4, 4, 4, 2, 2, 4, 2, 3, 4, 2, 4,
-      4, 3, 4, 3, 6, 6, 6, 6,
-      6, 5, 5, 4, 4, 2, 4, 4,
-      4 };
+    { 1, 4, 4, 4, 2, 2, 4, 2, 3, 4, 2, 4, 4, 3, 4, 3, 6, 6, 6, 6, 6, 5, 5, 4, 4, 2, 4, 4, 4, 1, 1,
+      1, 11, 4, 4, 4, 2, 2, 4, 2, 3, 4, 2, 4, 4, 3, 4, 3, 6, 6, 6, 6, 6, 5, 5, 4, 4, 2, 4, 4, 4 };
 
   // fill in other gaps in Numeric code paths
-  static final BigDecimal[] BD_VALS =
-    { null, BigDecimal.valueOf(Long.MAX_VALUE), BigDecimal.valueOf(Long.MIN_VALUE),
-      BigDecimal.valueOf(Double.MAX_VALUE), BigDecimal.valueOf(Double.MIN_VALUE),
-      BigDecimal.valueOf(Long.MAX_VALUE).multiply(BigDecimal.valueOf(100)),
-      BigDecimal.valueOf(Long.MAX_VALUE).pow(64),
-      BigDecimal.valueOf(Long.MAX_VALUE).pow(64).negate(),
-      new BigDecimal("0." + String.join("", Collections.nCopies(500, "123"))),
-      new BigDecimal("-0." + String.join("", Collections.nCopies(500, "123")))
-    };
-  static final int[] BD_LENGTHS =
-    { 1, 11, 11, 11, 4, 12, 19, 19, 18, 18 };
+  static final BigDecimal[] BD_VALS = { null, BigDecimal.valueOf(Long.MAX_VALUE),
+    BigDecimal.valueOf(Long.MIN_VALUE), BigDecimal.valueOf(Double.MAX_VALUE),
+    BigDecimal.valueOf(Double.MIN_VALUE),
+    BigDecimal.valueOf(Long.MAX_VALUE).multiply(BigDecimal.valueOf(100)),
+    BigDecimal.valueOf(Long.MAX_VALUE).pow(64), BigDecimal.valueOf(Long.MAX_VALUE).pow(64).negate(),
+    new BigDecimal("0." + String.join("", Collections.nCopies(500, "123"))),
+    new BigDecimal("-0." + String.join("", Collections.nCopies(500, "123"))) };
+  static final int[] BD_LENGTHS = { 1, 11, 11, 11, 4, 12, 19, 19, 18, 18 };
 
   /*
    * This is the smallest difference between two doubles in D_VALS
@@ -122,18 +112,16 @@ public class TestOrderedBytes {
    */
   @Test
   public void testVaruint64Boundaries() {
-    long[] vals = {
-      239L, 240L, 2286L, 2287L, 67822L, 67823L, 16777214L, 16777215L, 4294967294L, 4294967295L,
-      1099511627774L, 1099511627775L, 281474976710654L, 281474976710655L, 72057594037927934L,
-      72057594037927935L, Long.MAX_VALUE - 1, Long.MAX_VALUE, Long.MIN_VALUE + 1,
-      Long.MIN_VALUE, -2L, -1L
-    };
+    long[] vals = { 239L, 240L, 2286L, 2287L, 67822L, 67823L, 16777214L, 16777215L, 4294967294L,
+      4294967295L, 1099511627774L, 1099511627775L, 281474976710654L, 281474976710655L,
+      72057594037927934L, 72057594037927935L, Long.MAX_VALUE - 1, Long.MAX_VALUE,
+      Long.MIN_VALUE + 1, Long.MIN_VALUE, -2L, -1L };
     int[] lens = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9, 9, 9 };
     assertEquals("Broken test!", vals.length, lens.length);
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (boolean comp : new boolean[] { true, false }) {
       for (int i = 0; i < vals.length; i++) {
@@ -142,16 +130,15 @@ public class TestOrderedBytes {
         PositionedByteRange buf = new SimplePositionedMutableByteRange(a, 1, lens[i]);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          lens[i], OrderedBytes.putVaruint64(buf, vals[i], comp));
+        assertEquals("Surprising return value.", lens[i],
+          OrderedBytes.putVaruint64(buf, vals[i], comp));
         assertEquals("Surprising serialized length.", lens[i], buf.getPosition());
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
         buf.setPosition(0);
-        assertEquals("Surprising return value.",
-          lens[i], OrderedBytes.skipVaruint64(buf, comp));
+        assertEquals("Surprising return value.", lens[i], OrderedBytes.skipVaruint64(buf, comp));
         assertEquals("Did not skip enough bytes.", lens[i], buf.getPosition());
 
         // verify decode
@@ -163,14 +150,13 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Test integer encoding. Example input values come from reference wiki
-   * page.
+   * Test integer encoding. Example input values come from reference wiki page.
    */
   @Test
   public void testNumericInt() {
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < I_VALS.length; i++) {
@@ -180,10 +166,10 @@ public class TestOrderedBytes {
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          I_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, I_VALS[i], ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", I_LENGTHS[i],
+          OrderedBytes.encodeNumeric(buf1, I_VALS[i], ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", I_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -196,8 +182,8 @@ public class TestOrderedBytes {
 
         // verify decode
         buf1.setPosition(1);
-        assertEquals("Deserialization failed.",
-          I_VALS[i].longValue(), OrderedBytes.decodeNumericAsLong(buf1));
+        assertEquals("Deserialization failed.", I_VALS[i].longValue(),
+          OrderedBytes.decodeNumericAsLong(buf1));
         assertEquals("Did not consume enough bytes.", I_LENGTHS[i], buf1.getPosition() - 1);
       }
     }
@@ -226,8 +212,7 @@ public class TestOrderedBytes {
         pbr.set(encoded[i]);
         long decoded = OrderedBytes.decodeNumericAsLong(pbr);
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
           sortedVals[i].longValue(), decoded);
       }
@@ -240,8 +225,8 @@ public class TestOrderedBytes {
   @Test
   public void testNumericReal() {
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < D_VALS.length; i++) {
@@ -251,10 +236,10 @@ public class TestOrderedBytes {
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          D_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, D_VALS[i], ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", D_LENGTHS[i],
+          OrderedBytes.encodeNumeric(buf1, D_VALS[i], ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", D_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -267,8 +252,8 @@ public class TestOrderedBytes {
 
         // verify decode
         buf1.setPosition(1);
-        assertEquals("Deserialization failed.", D_VALS[i],
-          OrderedBytes.decodeNumericAsDouble(buf1), MIN_EPSILON);
+        assertEquals("Deserialization failed.", D_VALS[i], OrderedBytes.decodeNumericAsDouble(buf1),
+          MIN_EPSILON);
         assertEquals("Did not consume enough bytes.", D_LENGTHS[i], buf1.getPosition() - 1);
       }
     }
@@ -297,9 +282,9 @@ public class TestOrderedBytes {
         pbr.set(encoded[i]);
         double decoded = OrderedBytes.decodeNumericAsDouble(pbr);
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
-            sortedVals[i], decoded, ord), sortedVals[i], decoded, MIN_EPSILON);
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+            sortedVals[i], decoded, ord),
+          sortedVals[i], decoded, MIN_EPSILON);
       }
     }
   }
@@ -310,8 +295,8 @@ public class TestOrderedBytes {
   @Test
   public void testNumericOther() {
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < BD_VALS.length; i++) {
@@ -321,10 +306,10 @@ public class TestOrderedBytes {
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          BD_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, BD_VALS[i], ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", BD_LENGTHS[i],
+          OrderedBytes.encodeNumeric(buf1, BD_VALS[i], ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", BD_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -374,11 +359,11 @@ public class TestOrderedBytes {
         BigDecimal bd = BigDecimal.valueOf(I_VALS[i]);
         PositionedByteRange pbrbd = new SimplePositionedMutableByteRange(I_LENGTHS[i]);
         OrderedBytes.encodeNumeric(pbrbd, bd, ord);
-        assertArrayEquals("Integer and BigDecimal encodings differ.",
-          pbri.getBytes(), pbrbd.getBytes());
+        assertArrayEquals("Integer and BigDecimal encodings differ.", pbri.getBytes(),
+          pbrbd.getBytes());
         pbri.setPosition(0);
-        assertEquals("Value not preserved when decoding as Long",
-          0, bd.compareTo(BigDecimal.valueOf(OrderedBytes.decodeNumericAsLong(pbri))));
+        assertEquals("Value not preserved when decoding as Long", 0,
+          bd.compareTo(BigDecimal.valueOf(OrderedBytes.decodeNumericAsLong(pbri))));
       }
     }
   }
@@ -388,12 +373,11 @@ public class TestOrderedBytes {
    */
   @Test
   public void testInt8() {
-    Byte[] vals =
-      { Byte.MIN_VALUE, Byte.MIN_VALUE / 2, 0, Byte.MAX_VALUE / 2, Byte.MAX_VALUE };
+    Byte[] vals = { Byte.MIN_VALUE, Byte.MIN_VALUE / 2, 0, Byte.MAX_VALUE / 2, Byte.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Byte val : vals) {
@@ -445,10 +429,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         int decoded = OrderedBytes.decodeInt8(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            sortedVals[i].byteValue(), decoded);
+          sortedVals[i].byteValue(), decoded);
       }
     }
   }
@@ -462,8 +445,8 @@ public class TestOrderedBytes {
       { Short.MIN_VALUE, Short.MIN_VALUE / 2, 0, Short.MAX_VALUE / 2, Short.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Short val : vals) {
@@ -515,10 +498,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         int decoded = OrderedBytes.decodeInt16(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            sortedVals[i].shortValue(), decoded);
+          sortedVals[i].shortValue(), decoded);
       }
     }
   }
@@ -532,8 +514,8 @@ public class TestOrderedBytes {
       { Integer.MIN_VALUE, Integer.MIN_VALUE / 2, 0, Integer.MAX_VALUE / 2, Integer.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Integer val : vals) {
@@ -585,10 +567,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         int decoded = OrderedBytes.decodeInt32(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            sortedVals[i].intValue(), decoded);
+          sortedVals[i].intValue(), decoded);
       }
     }
   }
@@ -601,8 +582,8 @@ public class TestOrderedBytes {
     Long[] vals = { Long.MIN_VALUE, Long.MIN_VALUE / 2, 0L, Long.MAX_VALUE / 2, Long.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Long val : vals) {
@@ -654,10 +635,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         long decoded = OrderedBytes.decodeInt64(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            sortedVals[i].longValue(), decoded);
+          sortedVals[i].longValue(), decoded);
       }
     }
   }
@@ -671,8 +651,8 @@ public class TestOrderedBytes {
       { Float.MIN_VALUE, Float.MIN_VALUE + 1.0f, 0.0f, Float.MAX_VALUE / 2.0f, Float.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Float val : vals) {
@@ -725,11 +705,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         float decoded = OrderedBytes.decodeFloat32(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            Float.floatToIntBits(sortedVals[i]),
-            Float.floatToIntBits(decoded));
+          Float.floatToIntBits(sortedVals[i]), Float.floatToIntBits(decoded));
       }
     }
   }
@@ -743,8 +721,8 @@ public class TestOrderedBytes {
       { Double.MIN_VALUE, Double.MIN_VALUE + 1.0, 0.0, Double.MAX_VALUE / 2.0, Double.MAX_VALUE };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (Double val : vals) {
@@ -797,11 +775,9 @@ public class TestOrderedBytes {
       for (int i = 0; i < sortedVals.length; i++) {
         double decoded = OrderedBytes.decodeFloat64(pbr.set(encoded[i]));
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
-            Double.doubleToLongBits(sortedVals[i]),
-            Double.doubleToLongBits(decoded));
+          Double.doubleToLongBits(sortedVals[i]), Double.doubleToLongBits(decoded));
       }
     }
   }
@@ -815,22 +791,22 @@ public class TestOrderedBytes {
     int[] expectedLengths = { 5, 8, 6 };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[expectedLengths[i] + 3];
-        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1,
-            expectedLengths[i] + 1);
+        PositionedByteRange buf1 =
+          new SimplePositionedMutableByteRange(a, 1, expectedLengths[i] + 1);
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          expectedLengths[i], OrderedBytes.encodeString(buf1, vals[i], ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", expectedLengths[i],
+          OrderedBytes.encodeString(buf1, vals[i], ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", expectedLengths[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -872,8 +848,7 @@ public class TestOrderedBytes {
         pbr.set(encoded[i]);
         String decoded = OrderedBytes.decodeString(pbr);
         assertEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             sortedVals[i], decoded, ord),
           sortedVals[i], decoded);
       }
@@ -887,18 +862,17 @@ public class TestOrderedBytes {
   }
 
   /**
-   * Test length estimation algorithms for BlobVar encoding. Does not cover
-   * 0-length input case properly.
+   * Test length estimation algorithms for BlobVar encoding. Does not cover 0-length input case
+   * properly.
    */
   @Test
   public void testBlobVarLencodedLength() {
     int[][] values = {
-        /* decoded length, encoded length
-         * ceil((n bytes * 8 bits/input byte) / 7 bits/encoded byte) + 1 header
-         */
-        { 1, 3 }, { 2, 4 }, { 3, 5 }, { 4, 6 },
-        { 5, 7 }, { 6, 8 }, { 7, 9 }, { 8, 11 }
-      };
+      /*
+       * decoded length, encoded length ceil((n bytes * 8 bits/input byte) / 7 bits/encoded byte) +
+       * 1 header
+       */
+      { 1, 3 }, { 2, 4 }, { 3, 5 }, { 4, 6 }, { 5, 7 }, { 6, 8 }, { 7, 9 }, { 8, 11 } };
 
     for (int[] pair : values) {
       assertEquals(pair[1], OrderedBytes.blobVarEncodedLength(pair[0]));
@@ -911,37 +885,28 @@ public class TestOrderedBytes {
    */
   @Test
   public void testBlobVar() {
-    byte[][] vals =
-      { Bytes.toBytes(""),
-        Bytes.toBytes("foo"),
-        Bytes.toBytes("foobarbazbub"),
-        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-          (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
-        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-          (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
-        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-          (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-          (byte) 0xaa, (byte) 0xaa, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
-        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-          (byte) 0x55, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
-        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-          (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
-        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-          (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-          (byte) 0x55, (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
-        Bytes.toBytes("1"),
-        Bytes.toBytes("22"),
-        Bytes.toBytes("333"),
-        Bytes.toBytes("4444"),
-        Bytes.toBytes("55555"),
-        Bytes.toBytes("666666"),
-        Bytes.toBytes("7777777"),
-        Bytes.toBytes("88888888")
-      };
+    byte[][] vals = { Bytes.toBytes(""), Bytes.toBytes("foo"), Bytes.toBytes("foobarbazbub"),
+      { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+        (byte) 0xaa, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
+      { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+        (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
+      { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+        (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+        (byte) 0xaa, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
+      { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+        (byte) 0x55, /* 7 bytes of alternating bits; testing around HBASE-9893 */ },
+      { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+        (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
+      { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+        (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+        (byte) 0x55, /* 14 bytes of alternating bits; testing around HBASE-9893 */ },
+      Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"), Bytes.toBytes("4444"),
+      Bytes.toBytes("55555"), Bytes.toBytes("666666"), Bytes.toBytes("7777777"),
+      Bytes.toBytes("88888888") };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] val : vals) {
@@ -952,10 +917,10 @@ public class TestOrderedBytes {
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          expectedLen, OrderedBytes.encodeBlobVar(buf1, val, ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", expectedLen,
+          OrderedBytes.encodeBlobVar(buf1, val, ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -997,8 +962,7 @@ public class TestOrderedBytes {
         pbr.set(encoded[i]);
         byte[] decoded = OrderedBytes.decodeBlobVar(pbr);
         assertArrayEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             Arrays.toString(sortedVals[i]), Arrays.toString(decoded), ord),
           sortedVals[i], decoded);
       }
@@ -1010,19 +974,15 @@ public class TestOrderedBytes {
    */
   @Test
   public void testBlobCopy() {
-    byte[][] vals =
-      { Bytes.toBytes(""),
-        Bytes.toBytes("foo"),
-        Bytes.toBytes("foobarbazbub"),
-        { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
-          (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
-        { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
-          (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 },
-      };
+    byte[][] vals = { Bytes.toBytes(""), Bytes.toBytes("foo"), Bytes.toBytes("foobarbazbub"),
+      { (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa,
+        (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa, (byte) 0xaa },
+      { (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55,
+        (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55, (byte) 0x55 }, };
 
     /*
-     * assert encoded values match decoded values. encode into target buffer
-     * starting at an offset to detect over/underflow conditions.
+     * assert encoded values match decoded values. encode into target buffer starting at an offset
+     * to detect over/underflow conditions.
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] val : vals) {
@@ -1033,10 +993,10 @@ public class TestOrderedBytes {
         buf1.setPosition(1);
 
         // verify encode
-        assertEquals("Surprising return value.",
-          expectedLen, OrderedBytes.encodeBlobCopy(buf1, val, ord));
-        assertEquals("Broken test: serialization did not consume entire buffer.",
-          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising return value.", expectedLen,
+          OrderedBytes.encodeBlobCopy(buf1, val, ord));
+        assertEquals("Broken test: serialization did not consume entire buffer.", buf1.getLength(),
+          buf1.getPosition());
         assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
         assertEquals("Buffer underflow.", 0, a[1]);
@@ -1078,8 +1038,7 @@ public class TestOrderedBytes {
         pbr.set(encoded[i]);
         byte[] decoded = OrderedBytes.decodeBlobCopy(pbr);
         assertArrayEquals(
-          String.format(
-            "Encoded representations do not preserve natural order: <%s>, <%s>, %s",
+          String.format("Encoded representations do not preserve natural order: <%s>, <%s>, %s",
             Arrays.toString(sortedVals[i]), Arrays.toString(decoded), ord),
           sortedVals[i], decoded);
       }
@@ -1091,7 +1050,7 @@ public class TestOrderedBytes {
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[] a = new byte[3 + (Order.ASCENDING == ord ? 1 : 2) + 2];
       PositionedByteRange buf =
-          new SimplePositionedMutableByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
+        new SimplePositionedMutableByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
       OrderedBytes.encodeBlobCopy(buf, Bytes.toBytes("foobarbaz"), 3, 3, ord);
       buf.setPosition(0);
       assertArrayEquals(Bytes.toBytes("bar"), OrderedBytes.decodeBlobCopy(buf));
@@ -1328,8 +1287,8 @@ public class TestOrderedBytes {
   public void testEncodeDecodeMatch() {
     int samplesQuantity = 200;
     for (int i = 0; i < samplesQuantity; i++) {
-      BigDecimal randomData = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble() +
-        ThreadLocalRandom.current().nextLong());
+      BigDecimal randomData = BigDecimal
+        .valueOf(ThreadLocalRandom.current().nextDouble() + ThreadLocalRandom.current().nextLong());
       PositionedByteRange tmp = new SimplePositionedMutableByteRange(100);
       Order ord = ThreadLocalRandom.current().nextBoolean() ? Order.DESCENDING : Order.ASCENDING;
 

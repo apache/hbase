@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -317,29 +317,17 @@ public class TestConnection {
   }
 
   /*
-  ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
-  @Test
-  public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
-    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
-
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }).close();
-
-    Connection connection = ConnectionFactory.createConnection(config);
-    Table table = connection.getTable(tableName);
-
-    // this will cache the meta location and table's region location
-    table.get(new Get(Bytes.toBytes("foo")));
-
-    // restart HBase
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.restartHBaseCluster(2);
-    // this should be able to discover new locations for meta and table's region
-    table.get(new Get(Bytes.toBytes("foo")));
-    TEST_UTIL.deleteTable(tableName);
-    table.close();
-    connection.close();
-  }
+   * ====> With MasterRegistry, connections cannot outlast the masters' lifetime.
+   * @Test public void testConnectionRideOverClusterRestart() throws IOException,
+   * InterruptedException { Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+   * final TableName tableName = TableName.valueOf(name.getMethodName());
+   * TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }).close(); Connection connection =
+   * ConnectionFactory.createConnection(config); Table table = connection.getTable(tableName); //
+   * this will cache the meta location and table's region location table.get(new
+   * Get(Bytes.toBytes("foo"))); // restart HBase TEST_UTIL.shutdownMiniHBaseCluster();
+   * TEST_UTIL.restartHBaseCluster(2); // this should be able to discover new locations for meta and
+   * table's region table.get(new Get(Bytes.toBytes("foo"))); TEST_UTIL.deleteTable(tableName);
+   * table.close(); connection.close(); }
    */
 
   @Test

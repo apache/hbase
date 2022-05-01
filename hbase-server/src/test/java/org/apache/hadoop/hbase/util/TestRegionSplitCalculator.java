@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,19 +39,19 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.ComparisonChain;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestRegionSplitCalculator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSplitCalculator.class);
+    HBaseClassTestRule.forClass(TestRegionSplitCalculator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionSplitCalculator.class);
   public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
   /**
-   * This is range uses a user specified start and end keys. It also has an
-   * extra tiebreaker so that different ranges with the same start/end key pair
-   * count as different regions.
+   * This is range uses a user specified start and end keys. It also has an extra tiebreaker so that
+   * different ranges with the same start/end key pair count as different regions.
    */
   static class SimpleRange implements KeyRange {
     byte[] start, end;
@@ -83,21 +83,18 @@ public class TestRegionSplitCalculator {
     @Override
     public int compare(SimpleRange sr1, SimpleRange sr2) {
       ComparisonChain cc = ComparisonChain.start();
-      cc = cc.compare(sr1.getStartKey(), sr2.getStartKey(),
-          Bytes.BYTES_COMPARATOR);
-      cc = cc.compare(sr1.getEndKey(), sr2.getEndKey(),
-          RegionSplitCalculator.BYTES_COMPARATOR);
+      cc = cc.compare(sr1.getStartKey(), sr2.getStartKey(), Bytes.BYTES_COMPARATOR);
+      cc = cc.compare(sr1.getEndKey(), sr2.getEndKey(), RegionSplitCalculator.BYTES_COMPARATOR);
       cc = cc.compare(sr1.tiebreaker, sr2.tiebreaker);
       return cc.result();
     }
   };
 
   /**
-   * Check the "depth" (number of regions included at a split) of a generated
-   * split calculation
+   * Check the "depth" (number of regions included at a split) of a generated split calculation
    */
-  void checkDepths(SortedSet<byte[]> splits,
-      Multimap<byte[], SimpleRange> regions, Integer... depths) {
+  void checkDepths(SortedSet<byte[]> splits, Multimap<byte[], SimpleRange> regions,
+    Integer... depths) {
     assertEquals(splits.size(), depths.length);
     int i = 0;
     for (byte[] k : splits) {
@@ -109,8 +106,8 @@ public class TestRegionSplitCalculator {
   }
 
   /**
-   * This dumps data in a visually reasonable way for visual debugging. It has
-   * the basic iteration structure.
+   * This dumps data in a visually reasonable way for visual debugging. It has the basic iteration
+   * structure.
    */
   String dump(SortedSet<byte[]> splits, Multimap<byte[], SimpleRange> regions) {
     // we display this way because the last end key should be displayed as well.
@@ -195,8 +192,7 @@ public class TestRegionSplitCalculator {
     LOG.info("AC covers AB, BC");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 2, 2, 0);
-    assertEquals("A:\t[A, B]\t[A, C]\t\n" + "B:\t[A, C]\t[B, C]\t\n"
-        + "C:\t\n", res);
+    assertEquals("A:\t[A, B]\t[A, C]\t\n" + "B:\t[A, C]\t[B, C]\t\n" + "C:\t\n", res);
   }
 
   @Test
@@ -213,8 +209,7 @@ public class TestRegionSplitCalculator {
     LOG.info("AB, BD covers BC");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 1, 2, 1, 0);
-    assertEquals("A:\t[A, B]\t\n" + "B:\t[B, C]\t[B, D]\t\n"
-        + "C:\t[B, D]\t\n" + "D:\t\n", res);
+    assertEquals("A:\t[A, B]\t\n" + "B:\t[B, C]\t[B, D]\t\n" + "C:\t[B, D]\t\n" + "D:\t\n", res);
   }
 
   @Test
@@ -231,8 +226,7 @@ public class TestRegionSplitCalculator {
     LOG.info("Hole between C and E");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 1, 1, 0, 1, 0);
-    assertEquals("A:\t[A, B]\t\n" + "B:\t[B, C]\t\n" + "C:\t\n"
-        + "E:\t[E, F]\t\n" + "F:\t\n", res);
+    assertEquals("A:\t[A, B]\t\n" + "B:\t[B, C]\t\n" + "C:\t\n" + "E:\t[E, F]\t\n" + "F:\t\n", res);
   }
 
   @Test
@@ -247,8 +241,7 @@ public class TestRegionSplitCalculator {
     LOG.info("AC and BD overlap but share no start/end keys");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 1, 2, 1, 0);
-    assertEquals("A:\t[A, C]\t\n" + "B:\t[A, C]\t[B, D]\t\n"
-        + "C:\t[B, D]\t\n" + "D:\t\n", res);
+    assertEquals("A:\t[A, C]\t\n" + "B:\t[A, C]\t[B, D]\t\n" + "C:\t[B, D]\t\n" + "D:\t\n", res);
   }
 
   @Test
@@ -327,11 +320,9 @@ public class TestRegionSplitCalculator {
     LOG.info("Something fairly complex");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 3, 3, 3, 1, 2, 0, 1, 0, 1, 0);
-    assertEquals("A:\t[A, Am]\t[A, B]\t[A, C]\t\n"
-        + "Am:\t[A, B]\t[A, C]\t[Am, C]\t\n"
-        + "B:\t[A, C]\t[Am, C]\t[B, E]\t\n" + "C:\t[B, E]\t\n"
-        + "D:\t[B, E]\t[D, E]\t\n" + "E:\t\n" + "F:\t[F, G]\t\n" + "G:\t\n"
-        + "H:\t[H, I]\t\n" + "I:\t\n", res);
+    assertEquals("A:\t[A, Am]\t[A, B]\t[A, C]\t\n" + "Am:\t[A, B]\t[A, C]\t[Am, C]\t\n"
+      + "B:\t[A, C]\t[Am, C]\t[B, E]\t\n" + "C:\t[B, E]\t\n" + "D:\t[B, E]\t[D, E]\t\n" + "E:\t\n"
+      + "F:\t[F, G]\t\n" + "G:\t\n" + "H:\t[H, I]\t\n" + "I:\t\n", res);
   }
 
   @Test
@@ -345,8 +336,7 @@ public class TestRegionSplitCalculator {
     LOG.info("Special cases -- empty");
     String res = dump(sc.getSplits(), regions);
     checkDepths(sc.getSplits(), regions, 1, 1, 1, 0);
-    assertEquals(":\t[, A]\t\n" + "A:\t[A, B]\t\n" + "B:\t[B, ]\t\n"
-        + "null:\t\n", res);
+    assertEquals(":\t[, A]\t\n" + "A:\t[A, B]\t\n" + "B:\t[B, ]\t\n" + "null:\t\n", res);
   }
 
   @Test
@@ -381,9 +371,7 @@ public class TestRegionSplitCalculator {
     assertEquals("A", Bytes.toString(r2.start));
     String r1e = Bytes.toString(r1.end);
     String r2e = Bytes.toString(r2.end);
-    assertTrue((r1e.equals("C") && r2e.equals("E"))
-      || (r1e.equals("E") && r2e.equals("C")));
+    assertTrue((r1e.equals("C") && r2e.equals("E")) || (r1e.equals("E") && r2e.equals("C")));
   }
 
 }
-

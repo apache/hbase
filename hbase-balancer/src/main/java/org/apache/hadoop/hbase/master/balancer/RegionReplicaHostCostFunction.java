@@ -47,7 +47,8 @@ class RegionReplicaHostCostFunction extends RegionReplicaGroupingCostFunction {
     costsPerGroup = new long[cluster.numHosts];
     // either server based or host based
     colocatedReplicaCountsPerGroup = cluster.multiServersPerHost
-      ? cluster.colocatedReplicaCountsPerHost : cluster.colocatedReplicaCountsPerServer;
+      ? cluster.colocatedReplicaCountsPerHost
+      : cluster.colocatedReplicaCountsPerServer;
     for (int i = 0; i < colocatedReplicaCountsPerGroup.length; i++) {
       costsPerGroup[i] = costPerGroup(colocatedReplicaCountsPerGroup[i]);
     }

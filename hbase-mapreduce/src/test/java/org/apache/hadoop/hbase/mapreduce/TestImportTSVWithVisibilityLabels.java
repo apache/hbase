@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -76,21 +76,20 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImportTSVWithVisibilityLabels.class);
+    HBaseClassTestRule.forClass(TestImportTSVWithVisibilityLabels.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
+    LoggerFactory.getLogger(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtil util = new HBaseTestingUtil();
 
   /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
+   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is false.
    */
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
@@ -125,10 +124,10 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   public static void provisionCluster() throws Exception {
     conf = util.getConfiguration();
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    conf.set("hbase.superuser", "admin,"+User.getCurrent().getName());
+    conf.set("hbase.superuser", "admin," + User.getCurrent().getName());
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     util.startMiniCluster();
     // Wait for the labels table to become available
     util.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
@@ -137,20 +136,20 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   private static void createLabels() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-          LOG.info("Added labels ");
-        } catch (Throwable t) {
-          LOG.error("Error in adding labels" , t);
-          throw new IOException(t);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityClient.addLabels(conn, labels);
+            LOG.info("Added labels ");
+          } catch (Throwable t) {
+            LOG.error("Error in adding labels", t);
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 
@@ -165,10 +164,9 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -181,9 +179,9 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -232,11 +230,9 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
-    String[] args = new String[] {
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-        "-D" + ImportTsv.COLUMNS_CONF_KEY
-            + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+    String[] args = new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -247,18 +243,14 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     String FAMILY = "FAM";
-    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()),"hfiles");
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
-    String[] args =
-        new String[] {
-            "-D" + ImportTsv.MAPPER_CONF_KEY
-                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
-            "-D" + ImportTsv.COLUMNS_CONF_KEY
-                + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
-            table.getNameAsString()
-            };
+    String[] args = new String[] {
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
+      "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
+      table.getNameAsString() };
     String data = "KEY\u001bVALUE4\u001bVALUE8\u001bsecret&private\n";
     doMROnTableTest(util, FAMILY, data, args, 4);
     util.deleteTable(table);
@@ -270,11 +262,10 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
     String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY
-            + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+      "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE4\u001bVALUE8\u001bsecret&private\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -286,14 +277,13 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
-    String[] args =
-        new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-            "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+    String[] args = new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
 
     // 2 Data rows, one with valid label and one with invalid label
     String data =
-        "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
+      "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, 2);
     util.deleteTable(tableName);
@@ -304,49 +294,42 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
     Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName.getNameAsString()), "hfiles");
     // Prepare the arguments required for the test.
-    String[] args =
-        new String[] {
-            "-D" + ImportTsv.MAPPER_CONF_KEY
-                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
-            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-            "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
+    String[] args = new String[] {
+      "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+      "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+      "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
 
     // 2 Data rows, one with valid label and one with invalid label
     String data =
-        "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
+      "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, 2);
     util.deleteTable(tableName);
   }
 
   protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
-      String[] args, int valueMultiplier) throws Exception {
+    String[] args, int valueMultiplier) throws Exception {
     return doMROnTableTest(util, family, data, args, valueMultiplier, -1);
   }
 
   /**
-   * Run an ImportTsv job and perform basic validation on the results. Returns
-   * the ImportTsv <code>Tool</code> instance so that other tests can inspect it
-   * for further validation as necessary. This method is static to insure
-   * non-reliance on instance's util/conf facilities.
-   *
-   * @param args
-   *          Any arguments to pass BEFORE inputFile path is appended.
-   *
+   * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
+   * <code>Tool</code> instance so that other tests can inspect it for further validation as
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. n *
+   * Any arguments to pass BEFORE inputFile path is appended.
    * @param expectedKVCount Expected KV count. pass -1 to skip the kvcount check
-   *
    * @return The Tool instance used to run the test.
    */
   protected static Tool doMROnTableTest(HBaseTestingUtil util, String family, String data,
-      String[] args, int valueMultiplier,int expectedKVCount) throws Exception {
+    String[] args, int valueMultiplier, int expectedKVCount) throws Exception {
     TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());
 
     // populate input file
     FileSystem fs = FileSystem.get(conf);
-    Path inputPath = fs.makeQualified(new Path(util
-        .getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
+    Path inputPath =
+      fs.makeQualified(new Path(util.getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
     FSDataOutputStream op = fs.create(inputPath, true);
     if (data == null) {
       data = "KEY\u001bVALUE1\u001bVALUE2\n";
@@ -381,10 +364,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       }
     }
     LOG.debug("validating the table " + createdHFiles);
-    if (createdHFiles)
-     validateHFiles(fs, outputPath, family,expectedKVCount);
-    else
-      validateTable(conf, table, family, valueMultiplier);
+    if (createdHFiles) validateHFiles(fs, outputPath, family, expectedKVCount);
+    else validateTable(conf, table, family, valueMultiplier);
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
@@ -397,7 +378,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    * Confirm ImportTsv via HFiles on fs.
    */
   private static void validateHFiles(FileSystem fs, String outputPath, String family,
-      int expectedKVCount) throws IOException {
+    int expectedKVCount) throws IOException {
 
     // validate number and content of output columns
     LOG.debug("Validating HFiles.");
@@ -411,20 +392,21 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       String cf = elements[elements.length - 1];
       foundFamilies.add(cf);
       assertTrue(String.format(
-          "HFile ouput contains a column family (%s) not present in input families (%s)", cf,
-          configFamilies), configFamilies.contains(cf));
+        "HFile ouput contains a column family (%s) not present in input families (%s)", cf,
+        configFamilies), configFamilies.contains(cf));
       for (FileStatus hfile : fs.listStatus(cfStatus.getPath())) {
         assertTrue(String.format("HFile %s appears to contain no data.", hfile.getPath()),
-            hfile.getLen() > 0);
+          hfile.getLen() > 0);
         if (expectedKVCount > -1) {
           actualKVCount += getKVCountFromHfile(fs, hfile.getPath());
         }
       }
     }
     if (expectedKVCount > -1) {
-      assertTrue(String.format(
-        "KV count in output hfile=<%d> doesn't match with expected KV count=<%d>", actualKVCount,
-        expectedKVCount), actualKVCount == expectedKVCount);
+      assertTrue(
+        String.format("KV count in output hfile=<%d> doesn't match with expected KV count=<%d>",
+          actualKVCount, expectedKVCount),
+        actualKVCount == expectedKVCount);
     }
   }
 
@@ -432,7 +414,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    * Confirm ImportTsv via data in online table.
    */
   private static void validateTable(Configuration conf, TableName tableName, String family,
-      int valueMultiplier) throws IOException {
+    int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
     Table table = util.getConnection().getTable(tableName);
@@ -444,7 +426,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
         Scan scan = new Scan();
         // Scan entire family.
         scan.addFamily(Bytes.toBytes(family));
-        scan.setAuthorizations(new Authorizations("secret","private"));
+        scan.setAuthorizations(new Authorizations("secret", "private"));
         ResultScanner resScanner = table.getScanner(scan);
         Result[] next = resScanner.next(5);
         assertEquals(1, next.length);
@@ -455,8 +437,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
           assertTrue(CellUtil.matchingRows(kvs.get(0), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingRows(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
-          assertTrue(CellUtil.matchingValue(kvs.get(1),
-              Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
+          assertTrue(
+            CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.
         }
         verified = true;
@@ -478,9 +460,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   /**
    * Method returns the total KVs in given hfile
    * @param fs File System
-   * @param p HFile path
-   * @return KV count in the given hfile
-   * @throws IOException
+   * @param p  HFile path
+   * @return KV count in the given hfile n
    */
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();

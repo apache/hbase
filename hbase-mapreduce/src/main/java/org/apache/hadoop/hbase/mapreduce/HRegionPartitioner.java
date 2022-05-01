@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +18,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -33,24 +29,25 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapred.TableOutputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This is used to partition the output keys into groups of keys.
- * Keys are grouped according to the regions that currently exist
- * so that each reducer fills a single region so load is distributed.
- *
- * <p>This class is not suitable as partitioner creating hfiles
- * for incremental bulk loads as region spread will likely change between time of
- * hfile creation and load time. See {@link org.apache.hadoop.hbase.tool.BulkLoadHFiles}
- * and <a href="http://hbase.apache.org/book.html#arch.bulk.load">Bulk Load</a>.</p>
- *
- * @param <KEY>  The type of the key.
- * @param <VALUE>  The type of the value.
+ * This is used to partition the output keys into groups of keys. Keys are grouped according to the
+ * regions that currently exist so that each reducer fills a single region so load is distributed.
+ * <p>
+ * This class is not suitable as partitioner creating hfiles for incremental bulk loads as region
+ * spread will likely change between time of hfile creation and load time. See
+ * {@link org.apache.hadoop.hbase.tool.BulkLoadHFiles} and
+ * <a href="http://hbase.apache.org/book.html#arch.bulk.load">Bulk Load</a>.
+ * </p>
+ * @param <KEY>   The type of the key.
+ * @param <VALUE> The type of the value.
  */
 @InterfaceAudience.Public
-public class HRegionPartitioner<KEY, VALUE>
-extends Partitioner<ImmutableBytesWritable, VALUE>
-implements Configurable {
+public class HRegionPartitioner<KEY, VALUE> extends Partitioner<ImmutableBytesWritable, VALUE>
+  implements Configurable {
 
   private static final Logger LOG = LoggerFactory.getLogger(HRegionPartitioner.class);
   private Configuration conf = null;
@@ -60,24 +57,23 @@ implements Configurable {
   private byte[][] startKeys;
 
   /**
-   * Gets the partition number for a given key (hence record) given the total
-   * number of partitions i.e. number of reduce-tasks for the job.
-   *
-   * <p>Typically a hash function on a all or a subset of the key.</p>
-   *
-   * @param key  The key to be partitioned.
-   * @param value  The entry value.
-   * @param numPartitions  The total number of partitions.
+   * Gets the partition number for a given key (hence record) given the total number of partitions
+   * i.e. number of reduce-tasks for the job.
+   * <p>
+   * Typically a hash function on a all or a subset of the key.
+   * </p>
+   * @param key           The key to be partitioned.
+   * @param value         The entry value.
+   * @param numPartitions The total number of partitions.
    * @return The partition number for the <code>key</code>.
-   * @see org.apache.hadoop.mapreduce.Partitioner#getPartition(
-   *   java.lang.Object, java.lang.Object, int)
+   * @see org.apache.hadoop.mapreduce.Partitioner#getPartition( java.lang.Object, java.lang.Object,
+   *      int)
    */
   @Override
-  public int getPartition(ImmutableBytesWritable key,
-      VALUE value, int numPartitions) {
+  public int getPartition(ImmutableBytesWritable key, VALUE value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
-    if (this.startKeys.length == 1){
+    if (this.startKeys.length == 1) {
       return 0;
     }
     try {
@@ -87,12 +83,11 @@ implements Configurable {
     } catch (IOException e) {
       LOG.error(e.toString(), e);
     }
-    for (int i = 0; i < this.startKeys.length; i++){
-      if (Bytes.compareTo(region, this.startKeys[i]) == 0 ){
-        if (i >= numPartitions){
+    for (int i = 0; i < this.startKeys.length; i++) {
+      if (Bytes.compareTo(region, this.startKeys[i]) == 0) {
+        if (i >= numPartitions) {
           // cover if we have less reduces then regions.
-          return (Integer.toString(i).hashCode()
-              & Integer.MAX_VALUE) % numPartitions;
+          return (Integer.toString(i).hashCode() & Integer.MAX_VALUE) % numPartitions;
         }
         return i;
       }
@@ -103,7 +98,6 @@ implements Configurable {
 
   /**
    * Returns the current configuration.
-   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -113,12 +107,9 @@ implements Configurable {
   }
 
   /**
-   * Sets the configuration. This is used to determine the start keys for the
-   * given table.
-   *
-   * @param configuration  The configuration to set.
-   * @see org.apache.hadoop.conf.Configurable#setConf(
-   *   org.apache.hadoop.conf.Configuration)
+   * Sets the configuration. This is used to determine the start keys for the given table.
+   * @param configuration The configuration to set.
+   * @see org.apache.hadoop.conf.Configurable#setConf( org.apache.hadoop.conf.Configuration)
    */
   @Override
   public void setConf(Configuration configuration) {

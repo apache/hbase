@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,8 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Stripe implementation of StoreFlusher. Flushes files either into L0 file w/o metadata, or
- * into separate striped files, avoiding L0.
+ * Stripe implementation of StoreFlusher. Flushes files either into L0 file w/o metadata, or into
+ * separate striped files, avoiding L0.
  */
 @InterfaceAudience.Private
 public class StripeStoreFlusher extends StoreFlusher {
@@ -45,8 +44,8 @@ public class StripeStoreFlusher extends StoreFlusher {
   private final StripeCompactionPolicy policy;
   private final StripeCompactionPolicy.StripeInformationProvider stripes;
 
-  public StripeStoreFlusher(Configuration conf, HStore store,
-      StripeCompactionPolicy policy, StripeStoreFileManager stripes) {
+  public StripeStoreFlusher(Configuration conf, HStore store, StripeCompactionPolicy policy,
+    StripeStoreFileManager stripes) {
     super(conf, store);
     this.policy = policy;
     this.stripes = stripes;
@@ -66,8 +65,8 @@ public class StripeStoreFlusher extends StoreFlusher {
     InternalScanner scanner = createScanner(snapshot.getScanners(), tracker);
 
     // Let policy select flush method.
-    StripeFlushRequest req = this.policy.selectFlush(store.getComparator(), this.stripes,
-      cellsCount);
+    StripeFlushRequest req =
+      this.policy.selectFlush(store.getComparator(), this.stripes, cellsCount);
 
     boolean success = false;
     StripeMultiFileWriter mw = null;
@@ -124,7 +123,7 @@ public class StripeStoreFlusher extends StoreFlusher {
 
     public StripeMultiFileWriter createWriter() throws IOException {
       StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(comparator, 1,
-          Long.MAX_VALUE, OPEN_KEY, OPEN_KEY);
+        Long.MAX_VALUE, OPEN_KEY, OPEN_KEY);
       writer.setNoStripeMetadata();
       return writer;
     }
@@ -143,7 +142,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     @Override
     public StripeMultiFileWriter createWriter() throws IOException {
       return new StripeMultiFileWriter.BoundaryMultiWriter(comparator, targetBoundaries, null,
-          null);
+        null);
     }
   }
 
@@ -154,8 +153,8 @@ public class StripeStoreFlusher extends StoreFlusher {
 
     /**
      * @param targetCount The maximum number of stripes to flush into.
-     * @param targetKvs The KV count of each segment. If targetKvs*targetCount is less than
-     *                  total number of kvs, all the overflow data goes into the last stripe.
+     * @param targetKvs   The KV count of each segment. If targetKvs*targetCount is less than total
+     *                    number of kvs, all the overflow data goes into the last stripe.
      */
     public SizeStripeFlushRequest(CellComparator comparator, int targetCount, long targetKvs) {
       super(comparator);
@@ -166,7 +165,7 @@ public class StripeStoreFlusher extends StoreFlusher {
     @Override
     public StripeMultiFileWriter createWriter() throws IOException {
       return new StripeMultiFileWriter.SizeMultiWriter(comparator, this.targetCount, this.targetKvs,
-          OPEN_KEY, OPEN_KEY);
+        OPEN_KEY, OPEN_KEY);
     }
   }
 }

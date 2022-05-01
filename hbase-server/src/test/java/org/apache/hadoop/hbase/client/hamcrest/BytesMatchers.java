@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client.hamcrest;
 
 import static org.hamcrest.core.Is.is;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -28,7 +29,8 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
  */
 public final class BytesMatchers {
 
-  private BytesMatchers() {}
+  private BytesMatchers() {
+  }
 
   public static Matcher<byte[]> bytesAsStringBinary(final String binary) {
     return bytesAsStringBinary(is(binary));
@@ -36,7 +38,8 @@ public final class BytesMatchers {
 
   public static Matcher<byte[]> bytesAsStringBinary(final Matcher<String> matcher) {
     return new TypeSafeDiagnosingMatcher<byte[]>() {
-      @Override protected boolean matchesSafely(byte[] item, Description mismatchDescription) {
+      @Override
+      protected boolean matchesSafely(byte[] item, Description mismatchDescription) {
         final String binary = Bytes.toStringBinary(item);
         if (matcher.matches(binary)) {
           return true;
@@ -46,9 +49,9 @@ public final class BytesMatchers {
         return false;
       }
 
-      @Override public void describeTo(Description description) {
-        description
-          .appendText("has a byte[] with a Bytes.toStringBinary value that ")
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("has a byte[] with a Bytes.toStringBinary value that ")
           .appendDescriptionOf(matcher);
       }
     };

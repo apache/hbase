@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -158,8 +158,7 @@ public class TestMajorCompaction {
   }
 
   /**
-   * Run compaction and flushing memstore Assert deletes get cleaned up.
-   * @throws Exception
+   * Run compaction and flushing memstore Assert deletes get cleaned up. n
    */
   @Test
   public void testMajorCompaction() throws Exception {
@@ -418,8 +417,7 @@ public class TestMajorCompaction {
   /**
    * Test that on a major compaction, if all cells are expired or deleted, then we'll end up with no
    * product. Make sure scanner over region returns right answer in this case - and that it just
-   * basically works.
-   * @throws IOException
+   * basically works. n
    */
   @Test
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.assignment;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -44,15 +43,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterAbortWhileMergingTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterAbortWhileMergingTable.class);
+    HBaseClassTestRule.forClass(TestMasterAbortWhileMergingTable.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestMasterAbortWhileMergingTable.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterAbortWhileMergingTable.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("test");
@@ -61,12 +59,10 @@ public class TestMasterAbortWhileMergingTable {
   private static byte[] SPLITKEY = Bytes.toBytes("bbbbbbb");
   private static CountDownLatch mergeCommitArrive = new CountDownLatch(1);
 
-
-
   @BeforeClass
   public static void setupCluster() throws Exception {
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        MergeRegionObserver.class.getName());
+      MergeRegionObserver.class.getName());
     UTIL.startMiniCluster(3);
     admin = UTIL.getAdmin();
     byte[][] splitKeys = new byte[1][];
@@ -88,27 +84,26 @@ public class TestMasterAbortWhileMergingTable {
   public void test() throws Exception {
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
     MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
-        UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-            .getEnvironment(), new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment(),
+      new RegionInfo[] { regionInfos.get(0), regionInfos.get(1) }, false);
     long procID = UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor()
-        .submitProcedure(mergeTableRegionsProcedure);
+      .submitProcedure(mergeTableRegionsProcedure);
     mergeCommitArrive.await();
     UTIL.getMiniHBaseCluster().stopMaster(0);
     UTIL.getMiniHBaseCluster().startMaster();
-    //wait until master initialized
+    // wait until master initialized
+    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null
+      && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
     UTIL.waitFor(30000,
-      () -> UTIL.getMiniHBaseCluster().getMaster() != null && UTIL
-        .getMiniHBaseCluster().getMaster().isInitialized());
-    UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster()
-      .getMasterProcedureExecutor().isFinished(procID));
-    Assert.assertTrue("Found region RIT, that's impossible! " +
-      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition(),
-      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-        .getRegionsInTransition().size() == 0);
+      () -> UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().isFinished(procID));
+    Assert.assertTrue(
+      "Found region RIT, that's impossible! "
+        + UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition(),
+      UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransition().size()
+          == 0);
   }
 
-  public static class MergeRegionObserver implements MasterCoprocessor,
-      MasterObserver {
+  public static class MergeRegionObserver implements MasterCoprocessor, MasterObserver {
 
     @Override
     public Optional<MasterObserver> getMasterObserver() {
@@ -116,9 +111,8 @@ public class TestMasterAbortWhileMergingTable {
     }
 
     @Override
-    public void preMergeRegionsCommitAction(
-        ObserverContext<MasterCoprocessorEnvironment> ctx,
-        RegionInfo[] regionsToMerge, List<Mutation> metaEntries) {
+    public void preMergeRegionsCommitAction(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      RegionInfo[] regionsToMerge, List<Mutation> metaEntries) {
       mergeCommitArrive.countDown();
       LOG.error("mergeCommitArrive countdown");
     }

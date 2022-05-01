@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,20 +32,22 @@ import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil.StoreFileVisitor;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
-import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest.StoreFile;
 
 /**
- *  Used by {@link org.apache.hadoop.hbase.master.procedure.SnapshotVerifyProcedure} to verify
- *  if the region info and store file info in RegionManifest are intact.
+ * Used by {@link org.apache.hadoop.hbase.master.procedure.SnapshotVerifyProcedure} to verify if the
+ * region info and store file info in RegionManifest are intact.
  */
 @InterfaceAudience.Private
 public class RSSnapshotVerifier {
@@ -59,15 +61,15 @@ public class RSSnapshotVerifier {
     this.conf = conf;
     long expiredTime = conf.getLong("hbase.snapshot-manifest.cache.expired.sec", 600);
     long maxSize = conf.getLong("hbase.snapshot-manifest.cache.max.size", 10);
-    this.SNAPSHOT_MANIFEST_CACHE = CacheBuilder.newBuilder()
-      .expireAfterAccess(expiredTime, TimeUnit.SECONDS).maximumSize(maxSize)
-      .build(new SnapshotManifestCacheLoader(conf));
+    this.SNAPSHOT_MANIFEST_CACHE =
+      CacheBuilder.newBuilder().expireAfterAccess(expiredTime, TimeUnit.SECONDS)
+        .maximumSize(maxSize).build(new SnapshotManifestCacheLoader(conf));
   }
 
   public void verifyRegion(SnapshotDescription snapshot, RegionInfo region) throws IOException {
     try {
-      Pair<FileSystem, Map<String, SnapshotRegionManifest>>
-        cache = SNAPSHOT_MANIFEST_CACHE.get(snapshot);
+      Pair<FileSystem, Map<String, SnapshotRegionManifest>> cache =
+        SNAPSHOT_MANIFEST_CACHE.get(snapshot);
       Map<String, SnapshotRegionManifest> rmMap = cache.getSecond();
       if (rmMap == null) {
         throw new CorruptedSnapshotException(snapshot.getName() + "looks empty");
@@ -86,11 +88,27 @@ public class RSSnapshotVerifier {
       }
       // verify store file
       SnapshotReferenceUtil.visitRegionStoreFiles(regionManifest, new StoreFileVisitor() {
-        @Override public void storeFile(RegionInfo region, String familyName, StoreFile storeFile)
-            throws IOException {
-          SnapshotReferenceUtil.verifyStoreFile(conf, cache.getFirst(),
-            /* snapshotDir= */ null, // snapshotDir is never used, so it's ok to pass null here.
-                                     // maybe we can remove this parameter later.
+        @Override
+        public void storeFile(RegionInfo region, String familyName, StoreFile storeFile)
+          throws IOException {
+          SnapshotReferenceUtil.verifyStoreFile(conf, cache.getFirst(), /* snapshotDir= */ null, // snapshotDir
+                                                                                                 // is
+                                                                                                 // never
+                                                                                                 // used,
+                                                                                                 // so
+                                                                                                 // it's
+                                                                                                 // ok
+                                                                                                 // to
+                                                                                                 // pass
+                                                                                                 // null
+                                                                                                 // here.
+                                                                                                 // maybe
+                                                                                                 // we
+                                                                                                 // can
+                                                                                                 // remove
+                                                                                                 // this
+                                                                                                 // parameter
+                                                                                                 // later.
             snapshot, region, familyName, storeFile);
         }
       });
@@ -99,8 +117,8 @@ public class RSSnapshotVerifier {
         throw new CorruptedSnapshotException(e.getCause().getMessage(),
           ProtobufUtil.createSnapshotDesc(snapshot));
       } else {
-        LOG.error("Failed loading snapshot manifest for {} from filesystem",
-          snapshot.getName(), e.getCause());
+        LOG.error("Failed loading snapshot manifest for {} from filesystem", snapshot.getName(),
+          e.getCause());
         throw new IOException(e.getCause());
       }
     }
@@ -108,7 +126,7 @@ public class RSSnapshotVerifier {
 
   // to avoid loading snapshot manifest from filesystem for each region, try to cache it here
   private static final class SnapshotManifestCacheLoader extends
-      CacheLoader<SnapshotDescription, Pair<FileSystem, Map<String, SnapshotRegionManifest>>> {
+    CacheLoader<SnapshotDescription, Pair<FileSystem, Map<String, SnapshotRegionManifest>>> {
     private final Configuration conf;
 
     private SnapshotManifestCacheLoader(Configuration conf) {
@@ -116,8 +134,8 @@ public class RSSnapshotVerifier {
     }
 
     @Override
-    public Pair<FileSystem, Map<String, SnapshotRegionManifest>>
-        load(SnapshotDescription snapshot) throws Exception {
+    public Pair<FileSystem, Map<String, SnapshotRegionManifest>> load(SnapshotDescription snapshot)
+      throws Exception {
       Path rootDir = CommonFSUtils.getRootDir(conf);
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
       FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);

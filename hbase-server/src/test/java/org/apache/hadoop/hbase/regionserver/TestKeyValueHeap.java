@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -126,8 +126,8 @@ public class TestKeyValueHeap {
 
       List<Cell> actual = Arrays.asList(kvh.peek());
 
-      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = " +
-        Arrays.toString(actual.toArray()), expected, actual);
+      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
+        + Arrays.toString(actual.toArray()), expected, actual);
     }
   }
 

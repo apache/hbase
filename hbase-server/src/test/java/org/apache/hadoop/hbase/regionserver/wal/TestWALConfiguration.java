@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,15 +43,9 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 /**
- * Ensure configuration changes are having an effect on WAL.
- * There is a lot of reflection around WAL setup; could be skipping Configuration changes.
+ * Ensure configuration changes are having an effect on WAL. There is a lot of reflection around WAL
+ * setup; could be skipping Configuration changes.
  */
 @RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, SmallTests.class })
@@ -55,7 +54,7 @@ public class TestWALConfiguration {
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALConfiguration.class);
+    HBaseClassTestRule.forClass(TestWALConfiguration.class);
 
   @Rule
   public TestName name = new TestName();
@@ -74,9 +73,9 @@ public class TestWALConfiguration {
   }
 
   /**
-   * Test blocksize change from HBASE-20520 takes on both asycnfs and old wal provider.
-   * Hard to verify more than this given the blocksize is passed down to HDFS on create -- not
-   * kept local to the streams themselves.
+   * Test blocksize change from HBASE-20520 takes on both asycnfs and old wal provider. Hard to
+   * verify more than this given the blocksize is passed down to HDFS on create -- not kept local to
+   * the streams themselves.
    */
   @Test
   public void testBlocksizeDefaultsToTwiceHDFSBlockSize() throws IOException {
@@ -88,8 +87,8 @@ public class TestWALConfiguration {
     WAL wal = provider.getWAL(null);
     if (wal instanceof AbstractFSWAL) {
       long expectedDefaultBlockSize =
-          WALUtil.getWALBlockSize(conf, FileSystem.get(conf), TEST_UTIL.getDataTestDir());
-      long blocksize = ((AbstractFSWAL)wal).blocksize;
+        WALUtil.getWALBlockSize(conf, FileSystem.get(conf), TEST_UTIL.getDataTestDir());
+      long blocksize = ((AbstractFSWAL) wal).blocksize;
       assertEquals(expectedDefaultBlockSize, blocksize);
       LOG.info("Found blocksize of {} on {}", blocksize, wal);
     } else {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,8 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to view region location information for a single HBase table. Obtain an instance from an
@@ -38,12 +37,14 @@ import org.apache.hadoop.hbase.util.Pair;
 @InterfaceAudience.Public
 public interface RegionLocator extends Closeable {
 
-  /** Configuration for Region Locator's mode when meta replica is configured.
-   * Valid values are: HedgedRead, LoadBalance, None
+  /**
+   * Configuration for Region Locator's mode when meta replica is configured. Valid values are:
+   * HedgedRead, LoadBalance, None
    */
   String LOCATOR_META_REPLICAS_MODE = "hbase.locator.meta.replicas.mode";
 
-  /** Configuration for meta replica selector when Region Locator's LoadBalance mode is configured.
+  /**
+   * Configuration for meta replica selector when Region Locator's LoadBalance mode is configured.
    * The default value is org.apache.hadoop.hbase.client.CatalogReplicaLoadBalanceSimpleSelector.
    */
   String LOCATOR_META_REPLICAS_MODE_LOADBALANCE_SELECTOR =
@@ -61,7 +62,7 @@ public interface RegionLocator extends Closeable {
 
   /**
    * Finds the region on which the given row is being served.
-   * @param row Row to find.
+   * @param row    Row to find.
    * @param reload true to reload information or false to use cached information
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
@@ -72,7 +73,7 @@ public interface RegionLocator extends Closeable {
 
   /**
    * Finds the region with the given replica id on which the given row is being served.
-   * @param row Row to find.
+   * @param row       Row to find.
    * @param replicaId the replica id
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
@@ -83,9 +84,9 @@ public interface RegionLocator extends Closeable {
 
   /**
    * Finds the region with the given replica id on which the given row is being served.
-   * @param row Row to find.
+   * @param row       Row to find.
    * @param replicaId the replica id
-   * @param reload true to reload information or false to use cached information
+   * @param reload    true to reload information or false to use cached information
    * @return Location of the row.
    * @throws IOException if a remote or network exception occurs
    */
@@ -103,7 +104,7 @@ public interface RegionLocator extends Closeable {
 
   /**
    * Find all the replicas for the region on which the given row is being served.
-   * @param row Row to find.
+   * @param row    Row to find.
    * @param reload true to reload information or false to use cached information
    * @return Locations for all the replicas of the row.
    * @throws IOException if a remote or network exception occurs

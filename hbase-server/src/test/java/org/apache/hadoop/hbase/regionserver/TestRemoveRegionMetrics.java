@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestRemoveRegionMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRemoveRegionMetrics.class);
+    HBaseClassTestRule.forClass(TestRemoveRegionMetrics.class);
 
   private static SingleProcessHBaseCluster cluster;
   private static Configuration conf;
@@ -78,7 +78,6 @@ public class TestRemoveRegionMetrics {
     }
   }
 
-
   @Test
   public void testMoveRegion() throws IOException, InterruptedException {
     String tableNameString = name.getMethodName();
@@ -87,8 +86,7 @@ public class TestRemoveRegionMetrics {
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());
     Admin admin = TEST_UTIL.getAdmin();
     RegionInfo regionInfo;
-    byte[] row =  Bytes.toBytes("r1");
-
+    byte[] row = Bytes.toBytes("r1");
 
     for (int i = 0; i < 30; i++) {
       boolean moved = false;
@@ -97,29 +95,22 @@ public class TestRemoveRegionMetrics {
       }
 
       int currentServerIdx = cluster.getServerWith(regionInfo.getRegionName());
-      int destServerIdx = (currentServerIdx +1)% cluster.getLiveRegionServerThreads().size();
+      int destServerIdx = (currentServerIdx + 1) % cluster.getLiveRegionServerThreads().size();
       HRegionServer currentServer = cluster.getRegionServer(currentServerIdx);
       HRegionServer destServer = cluster.getRegionServer(destServerIdx);
-
 
       // Do a put. The counters should be non-zero now
       Put p = new Put(row);
       p.addColumn(Bytes.toBytes("D"), Bytes.toBytes("Zero"), Bytes.toBytes("VALUE"));
       t.put(p);
 
-
       MetricsRegionAggregateSource currentAgg = currentServer.getRegion(regionInfo.getRegionName())
-          .getMetrics()
-          .getSource()
-          .getAggregateSource();
+        .getMetrics().getSource().getAggregateSource();
 
-      String prefix = "namespace_"+ NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
-          "_table_"+tableNameString +
-          "_region_" + regionInfo.getEncodedName()+
-          "_metric";
+      String prefix = "namespace_" + NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR + "_table_"
+        + tableNameString + "_region_" + regionInfo.getEncodedName() + "_metric";
 
       metricsHelper.assertCounter(prefix + "_putCount", 1, currentAgg);
-
 
       try {
         TEST_UTIL.moveRegionAndWait(regionInfo, destServer.getServerName());
@@ -130,9 +121,7 @@ public class TestRemoveRegionMetrics {
 
       if (moved) {
         MetricsRegionAggregateSource destAgg = destServer.getRegion(regionInfo.getRegionName())
-            .getMetrics()
-            .getSource()
-            .getAggregateSource();
+          .getMetrics().getSource().getAggregateSource();
         metricsHelper.assertCounter(prefix + "_putCount", 0, destAgg);
       }
     }

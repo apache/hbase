@@ -29,18 +29,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A specialized collection that holds pending work for the {@link RegionNormalizerWorker}. It is
- * an ordered collection class that has the following properties:
+ * A specialized collection that holds pending work for the {@link RegionNormalizerWorker}. It is an
+ * ordered collection class that has the following properties:
  * <ul>
- *   <li>Guarantees uniqueness of elements, as a {@link Set}.</li>
- *   <li>Consumers retrieve objects from the head, as a {@link Queue}, via {@link #take()}.</li>
- *   <li>Work is retrieved on a FIFO policy.</li>
- *   <li>Work retrieval blocks the calling thread until new work is available, as a
- *     {@link BlockingQueue}.</li>
- *   <li>Allows a producer to insert an item at the head of the queue, if desired.</li>
+ * <li>Guarantees uniqueness of elements, as a {@link Set}.</li>
+ * <li>Consumers retrieve objects from the head, as a {@link Queue}, via {@link #take()}.</li>
+ * <li>Work is retrieved on a FIFO policy.</li>
+ * <li>Work retrieval blocks the calling thread until new work is available, as a
+ * {@link BlockingQueue}.</li>
+ * <li>Allows a producer to insert an item at the head of the queue, if desired.</li>
  * </ul>
- * Assumes low-frequency and low-parallelism concurrent access, so protects state using a
- * simplistic synchronization strategy.
+ * Assumes low-frequency and low-parallelism concurrent access, so protects state using a simplistic
+ * synchronization strategy.
  */
 @InterfaceAudience.Private
 class RegionNormalizerWorkQueue<E> {
@@ -68,8 +68,8 @@ class RegionNormalizerWorkQueue<E> {
   }
 
   /**
-   * Signals a waiting take. Called only from put/offer (which do not
-   * otherwise ordinarily lock takeLock.)
+   * Signals a waiting take. Called only from put/offer (which do not otherwise ordinarily lock
+   * takeLock.)
    */
   private void signalNotEmpty() {
     final ReentrantLock takeLock = this.takeLock;
@@ -99,7 +99,6 @@ class RegionNormalizerWorkQueue<E> {
 
   /**
    * Inserts the specified element at the tail of the queue, if it's not already present.
-   *
    * @param e the element to add
    */
   public void put(E e) {
@@ -121,7 +120,6 @@ class RegionNormalizerWorkQueue<E> {
 
   /**
    * Inserts the specified element at the head of the queue.
-   *
    * @param e the element to add
    */
   public void putFirst(E e) {
@@ -132,9 +130,8 @@ class RegionNormalizerWorkQueue<E> {
   }
 
   /**
-   * Inserts the specified elements at the tail of the queue. Any elements already present in
-   * the queue are ignored.
-   *
+   * Inserts the specified elements at the tail of the queue. Any elements already present in the
+   * queue are ignored.
    * @param c the elements to add
    */
   public void putAll(Collection<? extends E> c) {
@@ -156,7 +153,6 @@ class RegionNormalizerWorkQueue<E> {
 
   /**
    * Inserts the specified elements at the head of the queue.
-   *
    * @param c the elements to add
    */
   public void putAllFirst(Collection<? extends E> c) {
@@ -180,9 +176,8 @@ class RegionNormalizerWorkQueue<E> {
   }
 
   /**
-   * Retrieves and removes the head of this queue, waiting if necessary
-   * until an element becomes available.
-   *
+   * Retrieves and removes the head of this queue, waiting if necessary until an element becomes
+   * available.
    * @return the head of this queue
    * @throws InterruptedException if interrupted while waiting
    */
@@ -206,8 +201,8 @@ class RegionNormalizerWorkQueue<E> {
   }
 
   /**
-   * Atomically removes all of the elements from this queue.
-   * The queue will be empty after this call returns.
+   * Atomically removes all of the elements from this queue. The queue will be empty after this call
+   * returns.
    */
   public void clear() {
     putLock.lock();
@@ -220,7 +215,6 @@ class RegionNormalizerWorkQueue<E> {
 
   /**
    * Returns the number of elements in this queue.
-   *
    * @return the number of elements in this queue
    */
   public int size() {

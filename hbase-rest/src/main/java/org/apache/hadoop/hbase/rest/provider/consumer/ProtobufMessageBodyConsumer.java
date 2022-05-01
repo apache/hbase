@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.provider.consumer;
 
 import java.io.ByteArrayOutputStream;
@@ -39,28 +37,25 @@ import org.apache.hbase.thirdparty.javax.ws.rs.ext.MessageBodyReader;
 import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
- * Adapter for hooking up Jersey content processing dispatch to
- * ProtobufMessageHandler interface capable handlers for decoding protobuf input.
+ * Adapter for hooking up Jersey content processing dispatch to ProtobufMessageHandler interface
+ * capable handlers for decoding protobuf input.
  */
 @Provider
-@Consumes({Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF})
+@Consumes({ Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF })
 @InterfaceAudience.Private
-public class ProtobufMessageBodyConsumer
-    implements MessageBodyReader<ProtobufMessageHandler> {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(ProtobufMessageBodyConsumer.class);
+public class ProtobufMessageBodyConsumer implements MessageBodyReader<ProtobufMessageHandler> {
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufMessageBodyConsumer.class);
 
   @Override
-  public boolean isReadable(Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType) {
+  public boolean isReadable(Class<?> type, Type genericType, Annotation[] annotations,
+    MediaType mediaType) {
     return ProtobufMessageHandler.class.isAssignableFrom(type);
   }
 
   @Override
   public ProtobufMessageHandler readFrom(Class<ProtobufMessageHandler> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType,
-      MultivaluedMap<String, String> httpHeaders, InputStream inputStream)
-      throws IOException, WebApplicationException {
+    Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders,
+    InputStream inputStream) throws IOException, WebApplicationException {
     ProtobufMessageHandler obj = null;
     try {
       obj = type.getDeclaredConstructor().newInstance();
@@ -74,12 +69,11 @@ public class ProtobufMessageBodyConsumer
         }
       } while (read > 0);
       if (LOG.isTraceEnabled()) {
-        LOG.trace(getClass() + ": read " + baos.size() + " bytes from " +
-          inputStream);
+        LOG.trace(getClass() + ": read " + baos.size() + " bytes from " + inputStream);
       }
       obj = obj.getObjectFromMessage(baos.toByteArray());
     } catch (InstantiationException | NoSuchMethodException | InvocationTargetException
-        | IllegalAccessException e) {
+      | IllegalAccessException e) {
       throw new WebApplicationException(e);
     }
     return obj;

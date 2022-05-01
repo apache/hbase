@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFullBackupSetRestoreSet.class);
+    HBaseClassTestRule.forClass(TestFullBackupSetRestoreSet.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullBackupSetRestoreSet.class);
 
@@ -70,9 +70,8 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       LOG.info("backup complete");
 
       // Restore from set into other table
-      args =
-          new String[] { BACKUP_ROOT_DIR, backupId, "-s", name, "-m",
-              table1_restore.getNameAsString(), "-o" };
+      args = new String[] { BACKUP_ROOT_DIR, backupId, "-s", name, "-m",
+        table1_restore.getNameAsString(), "-o" };
       // Run backup
       ret = ToolRunner.run(conf1, new RestoreDriver(), args);
       assertTrue(ret == 0);

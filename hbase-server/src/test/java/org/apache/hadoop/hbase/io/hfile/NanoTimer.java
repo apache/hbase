@@ -1,28 +1,28 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
 /**
  * A nano-second timer.
  * <p>
- * Copied from
- * <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
- * Remove after tfile is committed and use the tfile version of this class
- * instead.</p>
+ * Copied from <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
+ * Remove after tfile is committed and use the tfile version of this class instead.
+ * </p>
  */
 public class NanoTimer {
   private long last = -1;
@@ -30,19 +30,14 @@ public class NanoTimer {
   private long cumulate = 0;
 
   /**
-   * Constructor
-   *
-   * @param start
-   *          Start the timer upon construction.
+   * Constructor n * Start the timer upon construction.
    */
   public NanoTimer(boolean start) {
     if (start) this.start();
   }
 
   /**
-   * Start the timer.
-   *
-   * Note: No effect if timer is already started.
+   * Start the timer. Note: No effect if timer is already started.
    */
   public void start() {
     if (!this.started) {
@@ -52,9 +47,7 @@ public class NanoTimer {
   }
 
   /**
-   * Stop the timer.
-   *
-   * Note: No effect if timer is already stopped.
+   * Stop the timer. Note: No effect if timer is already stopped.
    */
   public void stop() {
     if (this.started) {
@@ -65,9 +58,8 @@ public class NanoTimer {
 
   /**
    * Read the timer.
-   *
-   * @return the elapsed time in nano-seconds. Note: If the timer is never
-   *         started before, -1 is returned.
+   * @return the elapsed time in nano-seconds. Note: If the timer is never started before, -1 is
+   *         returned.
    */
   public long read() {
     if (!readable()) return -1;
@@ -86,7 +78,6 @@ public class NanoTimer {
 
   /**
    * Checking whether the timer is started
-   *
    * @return true if timer is started.
    */
   public boolean isStarted() {
@@ -94,9 +85,8 @@ public class NanoTimer {
   }
 
   /**
-   * Format the elapsed time to a human understandable string.
-   *
-   * Note: If timer is never started, "ERR" will be returned.
+   * Format the elapsed time to a human understandable string. Note: If timer is never started,
+   * "ERR" will be returned.
    */
   @Override
   public String toString() {
@@ -108,11 +98,8 @@ public class NanoTimer {
   }
 
   /**
-   * A utility method to format a time duration in nano seconds into a human
-   * understandable stirng.
-   *
-   * @param t
-   *          Time duration in nano seconds.
+   * A utility method to format a time duration in nano seconds into a human understandable stirng.
+   * n * Time duration in nano seconds.
    * @return String representation.
    */
   public static String nanoTimeToString(long t) {
@@ -161,20 +148,12 @@ public class NanoTimer {
     return String.format("%.2fs", ss);
 
     /**
-     * StringBuilder sb = new StringBuilder(); String sep = "";
-     *
-     * if (dd > 0) { String unit = (dd > 1) ? "days" : "day";
-     * sb.append(String.format("%s%d%s", sep, dd, unit)); sep = " "; }
-     *
-     * if (hh > 0) { String unit = (hh > 1) ? "hrs" : "hr";
-     * sb.append(String.format("%s%d%s", sep, hh, unit)); sep = " "; }
-     *
-     * if (mm > 0) { String unit = (mm > 1) ? "mins" : "min";
-     * sb.append(String.format("%s%d%s", sep, mm, unit)); sep = " "; }
-     *
-     * if (ss > 0) { String unit = (ss > 1) ? "secs" : "sec";
-     * sb.append(String.format("%s%.3f%s", sep, ss, unit)); sep = " "; }
-     *
+     * StringBuilder sb = new StringBuilder(); String sep = ""; if (dd > 0) { String unit = (dd > 1)
+     * ? "days" : "day"; sb.append(String.format("%s%d%s", sep, dd, unit)); sep = " "; } if (hh > 0)
+     * { String unit = (hh > 1) ? "hrs" : "hr"; sb.append(String.format("%s%d%s", sep, hh, unit));
+     * sep = " "; } if (mm > 0) { String unit = (mm > 1) ? "mins" : "min";
+     * sb.append(String.format("%s%d%s", sep, mm, unit)); sep = " "; } if (ss > 0) { String unit =
+     * (ss > 1) ? "secs" : "sec"; sb.append(String.format("%s%.3f%s", sep, ss, unit)); sep = " "; }
      * return sb.toString();
      */
   }
@@ -184,9 +163,7 @@ public class NanoTimer {
   }
 
   /**
-   * Simple tester.
-   *
-   * @param args
+   * Simple tester. n
    */
   public static void main(String[] args) {
     long i = 7;
@@ -196,4 +173,3 @@ public class NanoTimer {
     }
   }
 }
-

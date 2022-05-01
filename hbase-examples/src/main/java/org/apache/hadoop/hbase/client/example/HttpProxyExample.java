@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -138,8 +138,7 @@ public class HttpProxyExample {
       write(ctx, status, null);
     }
 
-    private void write(ChannelHandlerContext ctx, HttpResponseStatus status,
-        String content) {
+    private void write(ChannelHandlerContext ctx, HttpResponseStatus status, String content) {
       DefaultFullHttpResponse resp;
       if (content != null) {
         ByteBuf buf = ctx.alloc().buffer().writeBytes(Bytes.toBytes(content));
@@ -227,9 +226,9 @@ public class HttpProxyExample {
     NettyRpcClientConfigHelper.setEventLoopConfig(conf, workerGroup, NioSocketChannel.class);
     conn = ConnectionFactory.createAsyncConnection(conf).get();
     channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    serverChannel = new ServerBootstrap().group(bossGroup, workerGroup)
-        .channel(NioServerSocketChannel.class).childOption(ChannelOption.TCP_NODELAY, true)
-        .childOption(ChannelOption.SO_REUSEADDR, true)
+    serverChannel =
+      new ServerBootstrap().group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+        .childOption(ChannelOption.TCP_NODELAY, true).childOption(ChannelOption.SO_REUSEADDR, true)
         .childHandler(new ChannelInitializer<Channel>() {
 
           @Override

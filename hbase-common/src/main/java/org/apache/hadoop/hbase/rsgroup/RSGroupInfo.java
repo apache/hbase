@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Collection;
@@ -89,14 +88,14 @@ public class RSGroupInfo {
   /**
    * Adds the given server to the group.
    */
-  public void addServer(Address hostPort){
+  public void addServer(Address hostPort) {
     servers.add(hostPort);
   }
 
   /**
    * Adds the given servers to the group.
    */
-  public void addAllServers(Collection<Address> hostPort){
+  public void addAllServers(Collection<Address> hostPort) {
     servers.addAll(hostPort);
   }
 
@@ -132,7 +131,7 @@ public class RSGroupInfo {
 
   /**
    * Setter for storing a configuration setting in {@link #configuration} map.
-   * @param key Config key.
+   * @param key   Config key.
    * @param value String value.
    */
   public void setConfiguration(String key, String value) {

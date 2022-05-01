@@ -49,9 +49,9 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
-      UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
-      throws IOException {
+    ReplicationQueueStorage rq, ReplicationPeer rp, Server server, String peerClusterId,
+    UUID clusterId, WALFileLengthProvider walFileLengthProvider, MetricsSource metrics)
+    throws IOException {
     this.manager = manager;
     this.peerClusterId = peerClusterId;
     this.metrics = metrics;
@@ -105,8 +105,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   @Override
   public String getPeerId() {
     String[] parts = peerClusterId.split("-", 2);
-    return parts.length != 1 ?
-        parts[0] : peerClusterId;
+    return parts.length != 1 ? parts[0] : peerClusterId;
   }
 
   @Override
@@ -116,7 +115,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
 
   @Override
   public void addHFileRefs(TableName tableName, byte[] family, List<Pair<Path, Path>> files)
-      throws ReplicationException {
+    throws ReplicationException {
     return;
   }
 

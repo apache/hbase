@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.D
  */
 @InterfaceAudience.Private
 public class DeleteNamespaceProcedure
-    extends AbstractStateMachineNamespaceProcedure<DeleteNamespaceState> {
+  extends AbstractStateMachineNamespaceProcedure<DeleteNamespaceState> {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteNamespaceProcedure.class);
 
   private NamespaceDescriptor nsDescriptor;
@@ -56,14 +56,14 @@ public class DeleteNamespaceProcedure
   }
 
   public DeleteNamespaceProcedure(MasterProcedureEnv env, String namespaceName,
-      final ProcedurePrepareLatch latch) {
+    final ProcedurePrepareLatch latch) {
     super(env, latch);
     this.namespaceName = namespaceName;
   }
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, DeleteNamespaceState state)
-      throws InterruptedException {
+    throws InterruptedException {
     LOG.info(this.toString());
     try {
       switch (state) {
@@ -98,8 +98,8 @@ public class DeleteNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-delete-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to delete namespace " + namespaceName + " (in state=" +
-          state + ")", e);
+        LOG.warn("Retriable error trying to delete namespace " + namespaceName + " (in state="
+          + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -107,7 +107,7 @@ public class DeleteNamespaceProcedure
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final DeleteNamespaceState state)
-      throws IOException {
+    throws IOException {
     if (state == DeleteNamespaceState.DELETE_NAMESPACE_PREPARE) {
       // nothing to rollback, pre is just table-state checks.
       // We can fail if the table does not exist or is not disabled.
@@ -205,8 +205,8 @@ public class DeleteNamespaceProcedure
     }
     if (tableCount > 0) {
       setFailure("master-delete-namespace",
-        new ConstraintException("Only empty namespaces can be removed. Namespace " + namespaceName +
-          " has " + tableCount + " tables"));
+        new ConstraintException("Only empty namespaces can be removed. Namespace " + namespaceName
+          + " has " + tableCount + " tables"));
       return false;
     }
 
@@ -217,21 +217,21 @@ public class DeleteNamespaceProcedure
 
   /**
    * delete the row from the ns family in meta table.
-   * @param env MasterProcedureEnv
+   * @param env           MasterProcedureEnv
    * @param namespaceName name of the namespace in string format
    */
   private static void deleteNamespace(MasterProcedureEnv env, String namespaceName)
-      throws IOException {
+    throws IOException {
     getTableNamespaceManager(env).deleteNamespace(namespaceName);
   }
 
   /**
    * Delete the namespace directories from the file system
-   * @param env MasterProcedureEnv
+   * @param env           MasterProcedureEnv
    * @param namespaceName name of the namespace in string format
    */
   private static void deleteDirectory(MasterProcedureEnv env, String namespaceName)
-      throws IOException {
+    throws IOException {
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     FileSystem fs = mfs.getFileSystem();
     Path p = CommonFSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
@@ -253,11 +253,11 @@ public class DeleteNamespaceProcedure
 
   /**
    * remove quota for the namespace
-   * @param env MasterProcedureEnv
+   * @param env           MasterProcedureEnv
    * @param namespaceName name of the namespace in string format
    **/
   private static void removeNamespaceQuota(final MasterProcedureEnv env, final String namespaceName)
-      throws IOException {
+    throws IOException {
     env.getMasterServices().getMasterQuotaManager().removeNamespaceQuota(namespaceName);
   }
 }

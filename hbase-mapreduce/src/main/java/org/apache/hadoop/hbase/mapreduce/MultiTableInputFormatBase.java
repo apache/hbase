@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -47,13 +46,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A base for {@link MultiTableInputFormat}s. Receives a list of
- * {@link Scan} instances that define the input tables and
- * filters etc. Subclasses may use other TableRecordReader implementations.
+ * A base for {@link MultiTableInputFormat}s. Receives a list of {@link Scan} instances that define
+ * the input tables and filters etc. Subclasses may use other TableRecordReader implementations.
  */
 @InterfaceAudience.Public
-public abstract class MultiTableInputFormatBase extends
-    InputFormat<ImmutableBytesWritable, Result> {
+public abstract class MultiTableInputFormatBase
+  extends InputFormat<ImmutableBytesWritable, Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(MultiTableInputFormatBase.class);
 
@@ -64,27 +62,24 @@ public abstract class MultiTableInputFormatBase extends
   private TableRecordReader tableRecordReader = null;
 
   /**
-   * Builds a TableRecordReader. If no TableRecordReader was provided, uses the
-   * default.
-   *
-   * @param split The split to work with.
+   * Builds a TableRecordReader. If no TableRecordReader was provided, uses the default.
+   * @param split   The split to work with.
    * @param context The current context.
    * @return The newly created record reader.
-   * @throws IOException When creating the reader fails.
+   * @throws IOException          When creating the reader fails.
    * @throws InterruptedException when record reader initialization fails
    * @see InputFormat#createRecordReader(InputSplit, TaskAttemptContext)
    */
   @Override
-  public RecordReader<ImmutableBytesWritable, Result> createRecordReader(
-      InputSplit split, TaskAttemptContext context)
-      throws IOException, InterruptedException {
+  public RecordReader<ImmutableBytesWritable, Result> createRecordReader(InputSplit split,
+    TaskAttemptContext context) throws IOException, InterruptedException {
     TableSplit tSplit = (TableSplit) split;
     LOG.info(MessageFormat.format("Input split length: {0} bytes.", tSplit.getLength()));
 
     if (tSplit.getTable() == null) {
       throw new IOException("Cannot create a record reader because of a"
-          + " previous error. Please look at the previous logs lines from"
-          + " the task's full log for more details.");
+        + " previous error. Please look at the previous logs lines from"
+        + " the task's full log for more details.");
     }
     final Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
     Table table = connection.getTable(tSplit.getTable());
@@ -125,7 +120,7 @@ public abstract class MultiTableInputFormatBase extends
 
         @Override
         public void initialize(InputSplit inputsplit, TaskAttemptContext context)
-            throws IOException, InterruptedException {
+          throws IOException, InterruptedException {
           trr.initialize(inputsplit, context);
         }
 
@@ -144,9 +139,8 @@ public abstract class MultiTableInputFormatBase extends
   }
 
   /**
-   * Calculates the splits that will serve as input for the map tasks. The
-   * number of splits matches the number of regions in a table.
-   *
+   * Calculates the splits that will serve as input for the map tasks. The number of splits matches
+   * the number of regions in a table.
    * @param context The current job context.
    * @return The list of input splits.
    * @throws IOException When creating the list of splits fails.
@@ -161,8 +155,7 @@ public abstract class MultiTableInputFormatBase extends
     Map<TableName, List<Scan>> tableMaps = new HashMap<>();
     for (Scan scan : scans) {
       byte[] tableNameBytes = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
-      if (tableNameBytes == null)
-        throw new IOException("A scan object did not have a table name");
+      if (tableNameBytes == null) throw new IOException("A scan object did not have a table name");
 
       TableName tableName = TableName.valueOf(tableNameBytes);
 
@@ -183,14 +176,14 @@ public abstract class MultiTableInputFormatBase extends
         TableName tableName = entry.getKey();
         List<Scan> scanList = entry.getValue();
         try (Table table = conn.getTable(tableName);
-             RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
-          RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(
-              regionLocator, conn.getAdmin());
+          RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
+          RegionSizeCalculator sizeCalculator =
+            new RegionSizeCalculator(regionLocator, conn.getAdmin());
           Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
           for (Scan scan : scanList) {
             if (keys == null || keys.getFirst() == null || keys.getFirst().length == 0) {
-              throw new IOException("Expecting at least one region for table : "
-                  + tableName.getNameAsString());
+              throw new IOException(
+                "Expecting at least one region for table : " + tableName.getNameAsString());
             }
             int count = 0;
 
@@ -202,29 +195,28 @@ public abstract class MultiTableInputFormatBase extends
                 continue;
               }
 
-              if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
-                  Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
-                  (stopRow.length == 0 || Bytes.compareTo(stopRow,
-                      keys.getFirst()[i]) > 0)) {
-                byte[] splitStart = startRow.length == 0 ||
-                    Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ?
-                    keys.getFirst()[i] : startRow;
-                byte[] splitStop = (stopRow.length == 0 ||
-                    Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
-                    keys.getSecond()[i].length > 0 ?
-                    keys.getSecond()[i] : stopRow;
+              if (
+                (startRow.length == 0 || keys.getSecond()[i].length == 0
+                  || Bytes.compareTo(startRow, keys.getSecond()[i]) < 0)
+                  && (stopRow.length == 0 || Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)
+              ) {
+                byte[] splitStart =
+                  startRow.length == 0 || Bytes.compareTo(keys.getFirst()[i], startRow) >= 0
+                    ? keys.getFirst()[i]
+                    : startRow;
+                byte[] splitStop =
+                  (stopRow.length == 0 || Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0)
+                    && keys.getSecond()[i].length > 0 ? keys.getSecond()[i] : stopRow;
 
-                HRegionLocation hregionLocation = regionLocator.getRegionLocation(
-                    keys.getFirst()[i], false);
+                HRegionLocation hregionLocation =
+                  regionLocator.getRegionLocation(keys.getFirst()[i], false);
                 String regionHostname = hregionLocation.getHostname();
                 RegionInfo regionInfo = hregionLocation.getRegion();
                 String encodedRegionName = regionInfo.getEncodedName();
-                long regionSize = sizeCalculator.getRegionSize(
-                    regionInfo.getRegionName());
+                long regionSize = sizeCalculator.getRegionSize(regionInfo.getRegionName());
 
-                TableSplit split = new TableSplit(table.getName(),
-                    scan, splitStart, splitStop, regionHostname,
-                    encodedRegionName, regionSize);
+                TableSplit split = new TableSplit(table.getName(), scan, splitStart, splitStop,
+                  regionHostname, encodedRegionName, regionSize);
 
                 splits.add(split);
 
@@ -242,29 +234,25 @@ public abstract class MultiTableInputFormatBase extends
   }
 
   /**
-   * Test if the given region is to be included in the InputSplit while
-   * splitting the regions of a table.
+   * Test if the given region is to be included in the InputSplit while splitting the regions of a
+   * table.
    * <p>
-   * This optimization is effective when there is a specific reasoning to
-   * exclude an entire region from the M-R job, (and hence, not contributing to
-   * the InputSplit), given the start and end keys of the same. <br>
-   * Useful when we need to remember the last-processed top record and revisit
-   * the [last, current) interval for M-R processing, continuously. In addition
-   * to reducing InputSplits, reduces the load on the region server as well, due
-   * to the ordering of the keys. <br>
+   * This optimization is effective when there is a specific reasoning to exclude an entire region
+   * from the M-R job, (and hence, not contributing to the InputSplit), given the start and end keys
+   * of the same. <br>
+   * Useful when we need to remember the last-processed top record and revisit the [last, current)
+   * interval for M-R processing, continuously. In addition to reducing InputSplits, reduces the
+   * load on the region server as well, due to the ordering of the keys. <br>
    * <br>
-   * Note: It is possible that <code>endKey.length() == 0 </code> , for the last
-   * (recent) region. <br>
-   * Override this method, if you want to bulk exclude regions altogether from
-   * M-R. By default, no region is excluded( i.e. all regions are included).
-   *
+   * Note: It is possible that <code>endKey.length() == 0 </code> , for the last (recent) region.
+   * <br>
+   * Override this method, if you want to bulk exclude regions altogether from M-R. By default, no
+   * region is excluded( i.e. all regions are included).
    * @param startKey Start key of the region
-   * @param endKey End key of the region
-   * @return true, if this region needs to be included as part of the input
-   *         (default).
+   * @param endKey   End key of the region
+   * @return true, if this region needs to be included as part of the input (default).
    */
-  protected boolean includeRegionInSplit(final byte[] startKey,
-      final byte[] endKey) {
+  protected boolean includeRegionInSplit(final byte[] startKey, final byte[] endKey) {
     return true;
   }
 
@@ -277,7 +265,6 @@ public abstract class MultiTableInputFormatBase extends
 
   /**
    * Allows subclasses to set the list of {@link Scan} objects.
-   *
    * @param scans The list of {@link Scan} used to define the input
    */
   protected void setScans(List<Scan> scans) {
@@ -286,9 +273,7 @@ public abstract class MultiTableInputFormatBase extends
 
   /**
    * Allows subclasses to set the {@link TableRecordReader}.
-   *
-   * @param tableRecordReader A different {@link TableRecordReader}
-   *          implementation.
+   * @param tableRecordReader A different {@link TableRecordReader} implementation.
    */
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;

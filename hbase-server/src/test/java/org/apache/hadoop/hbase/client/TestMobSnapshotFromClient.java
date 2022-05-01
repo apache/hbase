@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.experimental.categories.Category;
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
+    HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
 
   /**
    * Setup the config for the cluster

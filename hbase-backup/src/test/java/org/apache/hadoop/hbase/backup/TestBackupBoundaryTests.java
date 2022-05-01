@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,13 +35,12 @@ public class TestBackupBoundaryTests extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupBoundaryTests.class);
+    HBaseClassTestRule.forClass(TestBackupBoundaryTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupBoundaryTests.class);
 
   /**
    * Verify that full backup is created on a single empty table correctly.
-   *
    * @throws Exception if doing the full backup fails
    */
   @Test
@@ -53,7 +52,6 @@ public class TestBackupBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that full backup is created on multiple empty tables correctly.
-   *
    * @throws Exception if doing the full backup fails
    */
   @Test
@@ -66,7 +64,6 @@ public class TestBackupBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that full backup fails on a single table that does not exist.
-   *
    * @throws Exception if doing the full backup fails
    */
   @Test(expected = IOException.class)
@@ -78,7 +75,6 @@ public class TestBackupBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that full backup fails on multiple tables that do not exist.
-   *
    * @throws Exception if doing the full backup fails
    */
   @Test(expected = IOException.class)
@@ -90,7 +86,6 @@ public class TestBackupBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that full backup fails on tableset containing real and fake tables.
-   *
    * @throws Exception if doing the full backup fails
    */
   @Test(expected = IOException.class)

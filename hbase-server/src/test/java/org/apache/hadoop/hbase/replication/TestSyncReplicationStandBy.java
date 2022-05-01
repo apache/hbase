@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,11 +88,11 @@ public class TestSyncReplicationStandBy extends SyncReplicationTestBase {
       assertDisallow(table,
         t -> t.get(Arrays.asList(new Get(Bytes.toBytes("row")), new Get(Bytes.toBytes("row1")))));
       assertDisallow(table,
-        t -> t.put(
-          Arrays.asList(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")),
+        t -> t
+          .put(Arrays.asList(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")),
             new Put(Bytes.toBytes("row1")).addColumn(CF, CQ, Bytes.toBytes("row1")))));
       assertDisallow(table, t -> t.mutateRow(new RowMutations(Bytes.toBytes("row"))
-          .add((Mutation) new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")))));
+        .add((Mutation) new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("row")))));
     }
     // We should still allow replication writes
     writeAndVerifyReplication(UTIL1, UTIL2, 0, 100);

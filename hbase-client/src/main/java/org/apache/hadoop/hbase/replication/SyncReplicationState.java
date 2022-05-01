@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
  */
 @InterfaceAudience.Public
 public enum SyncReplicationState {
-  NONE(0), ACTIVE(1), DOWNGRADE_ACTIVE(2), STANDBY(3);
+  NONE(0),
+  ACTIVE(1),
+  DOWNGRADE_ACTIVE(2),
+  STANDBY(3);
 
   private final byte value;
 

@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,14 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Handles coordination of a single "leader" instance among many possible
- * candidates.  The first {@link ZKLeaderManager} to successfully create
- * the given znode becomes the leader, allowing the instance to continue
- * with whatever processing must be protected.  Other {@link ZKLeaderManager}
- * instances will wait to be notified of changes to the leader znode.
- * If the current master instance fails, the ephemeral leader znode will
- * be removed, and all waiting instances will be notified, with the race
- * to claim the leader znode beginning all over again.
+ * Handles coordination of a single "leader" instance among many possible candidates. The first
+ * {@link ZKLeaderManager} to successfully create the given znode becomes the leader, allowing the
+ * instance to continue with whatever processing must be protected. Other {@link ZKLeaderManager}
+ * instances will wait to be notified of changes to the leader znode. If the current master instance
+ * fails, the ephemeral leader znode will be removed, and all waiting instances will be notified,
+ * with the race to claim the leader znode beginning all over again.
  * @deprecated Not used
  */
 @Deprecated
@@ -49,8 +45,8 @@ public class ZKLeaderManager extends ZKListener {
   private final byte[] nodeId;
   private final Stoppable candidate;
 
-  public ZKLeaderManager(ZKWatcher watcher, String leaderZNode,
-                         byte[] identifier, Stoppable candidate) {
+  public ZKLeaderManager(ZKWatcher watcher, String leaderZNode, byte[] identifier,
+    Stoppable candidate) {
     super(watcher);
     this.leaderZNode = leaderZNode;
     this.nodeId = identifier;
@@ -66,7 +62,7 @@ public class ZKLeaderManager extends ZKListener {
       }
     } catch (KeeperException ke) {
       watcher.abort("Unhandled zk exception when starting", ke);
-      candidate.stop("Unhandled zk exception starting up: "+ke.getMessage());
+      candidate.stop("Unhandled zk exception starting up: " + ke.getMessage());
     }
   }
 
@@ -86,7 +82,7 @@ public class ZKLeaderManager extends ZKListener {
 
   private void handleLeaderChange() {
     try {
-      synchronized(lock) {
+      synchronized (lock) {
         if (ZKUtil.watchAndCheckExists(watcher, leaderZNode)) {
           LOG.info("Found new leader for znode: {}", leaderZNode);
           leaderExists.set(true);
@@ -98,7 +94,7 @@ public class ZKLeaderManager extends ZKListener {
       }
     } catch (KeeperException ke) {
       watcher.abort("ZooKeeper error checking for leader znode", ke);
-      candidate.stop("ZooKeeper error checking for leader: "+ke.getMessage());
+      candidate.stop("ZooKeeper error checking for leader: " + ke.getMessage());
     }
   }
 
@@ -112,8 +108,7 @@ public class ZKLeaderManager extends ZKListener {
           // claimed the leader znode
           leaderExists.set(true);
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Claimed the leader znode as '"+
-                Bytes.toStringBinary(nodeId)+"'");
+            LOG.debug("Claimed the leader znode as '" + Bytes.toStringBinary(nodeId) + "'");
           }
           return;
         }
@@ -122,8 +117,8 @@ public class ZKLeaderManager extends ZKListener {
         byte[] currentId = ZKUtil.getDataAndWatch(watcher, leaderZNode);
         if (currentId != null && Bytes.equals(currentId, nodeId)) {
           // claimed with our ID, but we didn't grab it, possibly restarted?
-          LOG.info("Found existing leader with our ID ("+
-              Bytes.toStringBinary(nodeId)+"), removing");
+          LOG.info(
+            "Found existing leader with our ID (" + Bytes.toStringBinary(nodeId) + "), removing");
           ZKUtil.deleteNode(watcher, leaderZNode);
           leaderExists.set(false);
         } else {
@@ -132,12 +127,12 @@ public class ZKLeaderManager extends ZKListener {
         }
       } catch (KeeperException ke) {
         watcher.abort("Unexpected error from ZK, stopping candidate", ke);
-        candidate.stop("Unexpected error from ZK: "+ke.getMessage());
+        candidate.stop("Unexpected error from ZK: " + ke.getMessage());
         return;
       }
 
       // wait for next chance
-      synchronized(lock) {
+      synchronized (lock) {
         while (leaderExists.get() && !candidate.isStopped()) {
           try {
             lock.wait();
@@ -154,7 +149,7 @@ public class ZKLeaderManager extends ZKListener {
    */
   public void stepDownAsLeader() {
     try {
-      synchronized(lock) {
+      synchronized (lock) {
         if (!leaderExists.get()) {
           return;
         }
@@ -169,12 +164,10 @@ public class ZKLeaderManager extends ZKListener {
       }
     } catch (KeeperException ke) {
       watcher.abort("Unhandled zookeeper exception removing leader node", ke);
-      candidate.stop("Unhandled zookeeper exception removing leader node: "
-          + ke.getMessage());
+      candidate.stop("Unhandled zookeeper exception removing leader node: " + ke.getMessage());
     } catch (InterruptedException e) {
       watcher.abort("Unhandled zookeeper exception removing leader node", e);
-      candidate.stop("Unhandled zookeeper exception removing leader node: "
-          + e.getMessage());
+      candidate.stop("Unhandled zookeeper exception removing leader node: " + e.getMessage());
     }
   }
 

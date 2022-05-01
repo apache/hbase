@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,11 +43,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 // TODO: cover more test cases
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestScan {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScan.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestScan.class);
 
   @Test
   public void testAttributesSerialization() throws IOException {
@@ -70,22 +69,14 @@ public class TestScan {
   @Test
   public void testGetToScan() throws Exception {
     Get get = new Get(Bytes.toBytes(1));
-    get.setCacheBlocks(true)
-            .setConsistency(Consistency.TIMELINE)
-            .setFilter(new FilterList())
-            .setId("get")
-            .setIsolationLevel(IsolationLevel.READ_COMMITTED)
-            .setLoadColumnFamiliesOnDemand(false)
-            .setMaxResultsPerColumnFamily(1000)
-            .readVersions(9999)
-            .setRowOffsetPerColumnFamily(5)
-            .setTimeRange(0, 13)
-            .setAttribute("att_v0", Bytes.toBytes("att_v0"))
-            .setColumnFamilyTimeRange(Bytes.toBytes("cf"), 0, 123)
-            .setReplicaId(3)
-            .setACL("test_user", new Permission(Permission.Action.READ))
-            .setAuthorizations(new Authorizations("test_label"))
-            .setPriority(3);
+    get.setCacheBlocks(true).setConsistency(Consistency.TIMELINE).setFilter(new FilterList())
+      .setId("get").setIsolationLevel(IsolationLevel.READ_COMMITTED)
+      .setLoadColumnFamiliesOnDemand(false).setMaxResultsPerColumnFamily(1000).readVersions(9999)
+      .setRowOffsetPerColumnFamily(5).setTimeRange(0, 13)
+      .setAttribute("att_v0", Bytes.toBytes("att_v0"))
+      .setColumnFamilyTimeRange(Bytes.toBytes("cf"), 0, 123).setReplicaId(3)
+      .setACL("test_user", new Permission(Permission.Action.READ))
+      .setAuthorizations(new Authorizations("test_label")).setPriority(3);
 
     Scan scan = new Scan(get);
     assertEquals(get.getCacheBlocks(), scan.getCacheBlocks());
@@ -94,7 +85,7 @@ public class TestScan {
     assertEquals(get.getId(), scan.getId());
     assertEquals(get.getIsolationLevel(), scan.getIsolationLevel());
     assertEquals(get.getLoadColumnFamiliesOnDemandValue(),
-        scan.getLoadColumnFamiliesOnDemandValue());
+      scan.getLoadColumnFamiliesOnDemandValue());
     assertEquals(get.getMaxResultsPerColumnFamily(), scan.getMaxResultsPerColumnFamily());
     assertEquals(get.getMaxVersions(), scan.getMaxVersions());
     assertEquals(get.getRowOffsetPerColumnFamily(), scan.getRowOffsetPerColumnFamily());
@@ -102,9 +93,9 @@ public class TestScan {
     assertEquals(get.getTimeRange().getMax(), scan.getTimeRange().getMax());
     assertTrue(Bytes.equals(get.getAttribute("att_v0"), scan.getAttribute("att_v0")));
     assertEquals(get.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMin(),
-            scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMin());
+      scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMin());
     assertEquals(get.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMax(),
-            scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMax());
+      scan.getColumnFamilyTimeRange().get(Bytes.toBytes("cf")).getMax());
     assertEquals(get.getReplicaId(), scan.getReplicaId());
     assertEquals(get.getACL(), scan.getACL());
     assertEquals(get.getAuthorizations().getLabels(), scan.getAuthorizations().getLabels());
@@ -125,22 +116,22 @@ public class TestScan {
     scan.setAttribute("attribute1", Bytes.toBytes("value1"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan.getAttribute("attribute1")));
     Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"),
-        scan.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(
+      Arrays.equals(Bytes.toBytes("value1"), scan.getAttributesMap().get("attribute1")));
 
     // overriding attribute value
     scan.setAttribute("attribute1", Bytes.toBytes("value12"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"), scan.getAttribute("attribute1")));
     Assert.assertEquals(1, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value12"),
-        scan.getAttributesMap().get("attribute1")));
+    Assert.assertTrue(
+      Arrays.equals(Bytes.toBytes("value12"), scan.getAttributesMap().get("attribute1")));
 
     // adding another attribute
     scan.setAttribute("attribute2", Bytes.toBytes("value2"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), scan.getAttribute("attribute2")));
     Assert.assertEquals(2, scan.getAttributesMap().size());
-    Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"),
-        scan.getAttributesMap().get("attribute2")));
+    Assert.assertTrue(
+      Arrays.equals(Bytes.toBytes("value2"), scan.getAttributesMap().get("attribute2")));
 
     // removing attribute
     scan.setAttribute("attribute2", null);
@@ -198,7 +189,7 @@ public class TestScan {
     scan.withStartRow(new byte[1]);
     scan.withStartRow(new byte[HConstants.MAX_ROW_LENGTH]);
     try {
-      scan.withStartRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      scan.withStartRow(new byte[HConstants.MAX_ROW_LENGTH + 1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
     } catch (Exception e) {
@@ -209,7 +200,7 @@ public class TestScan {
     scan.withStopRow(new byte[1]);
     scan.withStopRow(new byte[HConstants.MAX_ROW_LENGTH]);
     try {
-      scan.withStopRow(new byte[HConstants.MAX_ROW_LENGTH+1]);
+      scan.withStopRow(new byte[HConstants.MAX_ROW_LENGTH + 1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
     } catch (Exception e) {
@@ -222,36 +213,17 @@ public class TestScan {
     Scan scan = new Scan();
 
     scan.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q"))
-        .setACL("test_user", new Permission(Permission.Action.READ))
-        .setAllowPartialResults(true)
-        .setAsyncPrefetch(false)
-        .setAttribute("test_key", Bytes.toBytes("test_value"))
-        .setAuthorizations(new Authorizations("test_label"))
-        .setBatch(10)
-        .setCacheBlocks(false)
-        .setCaching(10)
-        .setConsistency(Consistency.TIMELINE)
-        .setFilter(new FilterList())
-        .setId("scan_copy_constructor")
-        .setIsolationLevel(IsolationLevel.READ_COMMITTED)
-        .setLimit(100)
-        .setLoadColumnFamiliesOnDemand(false)
-        .setMaxResultSize(100)
-        .setMaxResultsPerColumnFamily(1000)
-        .readVersions(9999)
-        .setMvccReadPoint(5)
-        .setNeedCursorResult(true)
-        .setPriority(1)
-        .setRaw(true)
-        .setReplicaId(3)
-        .setReversed(true)
-        .setRowOffsetPerColumnFamily(5)
-        .setStartStopRowForPrefixScan(Bytes.toBytes("row_"))
-        .setScanMetricsEnabled(true)
-        .setReadType(ReadType.STREAM)
-        .withStartRow(Bytes.toBytes("row_1"))
-        .withStopRow(Bytes.toBytes("row_2"))
-        .setTimeRange(0, 13);
+      .setACL("test_user", new Permission(Permission.Action.READ)).setAllowPartialResults(true)
+      .setAsyncPrefetch(false).setAttribute("test_key", Bytes.toBytes("test_value"))
+      .setAuthorizations(new Authorizations("test_label")).setBatch(10).setCacheBlocks(false)
+      .setCaching(10).setConsistency(Consistency.TIMELINE).setFilter(new FilterList())
+      .setId("scan_copy_constructor").setIsolationLevel(IsolationLevel.READ_COMMITTED).setLimit(100)
+      .setLoadColumnFamiliesOnDemand(false).setMaxResultSize(100).setMaxResultsPerColumnFamily(1000)
+      .readVersions(9999).setMvccReadPoint(5).setNeedCursorResult(true).setPriority(1).setRaw(true)
+      .setReplicaId(3).setReversed(true).setRowOffsetPerColumnFamily(5)
+      .setStartStopRowForPrefixScan(Bytes.toBytes("row_")).setScanMetricsEnabled(true)
+      .setReadType(ReadType.STREAM).withStartRow(Bytes.toBytes("row_1"))
+      .withStopRow(Bytes.toBytes("row_2")).setTimeRange(0, 13);
 
     // create a copy of existing scan object
     Scan scanCopy = new Scan(scan);

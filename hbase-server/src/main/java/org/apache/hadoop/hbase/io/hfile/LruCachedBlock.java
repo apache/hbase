@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,25 +17,24 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Represents an entry in the {@link LruBlockCache}.
- *
- * <p>Makes the block memory-aware with {@link HeapSize} and Comparable
- * to sort by access time for the LRU.  It also takes care of priority by
- * either instantiating as in-memory or handling the transition from single
- * to multiple access.
+ * <p>
+ * Makes the block memory-aware with {@link HeapSize} and Comparable to sort by access time for the
+ * LRU. It also takes care of priority by either instantiating as in-memory or handling the
+ * transition from single to multiple access.
  */
 @InterfaceAudience.Private
 public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
 
-  public final static long PER_BLOCK_OVERHEAD = ClassSize.align(
-    ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG) +
-    ClassSize.STRING + ClassSize.BYTE_BUFFER);
+  public final static long PER_BLOCK_OVERHEAD =
+    ClassSize.align(ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG)
+      + ClassSize.STRING + ClassSize.BYTE_BUFFER);
 
   private final BlockCacheKey cacheKey;
   private final Cacheable buf;
@@ -44,7 +42,7 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
   private long size;
   private BlockPriority priority;
   /**
-   * Time this block was cached.  Presumes we are created just before we are added to the cache.
+   * Time this block was cached. Presumes we are created just before we are added to the cache.
    */
   private final long cachedTime = System.nanoTime();
 
@@ -52,8 +50,7 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
     this(cacheKey, buf, accessTime, false);
   }
 
-  public LruCachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime,
-      boolean inMemory) {
+  public LruCachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime, boolean inMemory) {
     this.cacheKey = cacheKey;
     this.buf = buf;
     this.accessTime = accessTime;
@@ -62,9 +59,9 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
     // the base classes. We also include the base class
     // sizes in the PER_BLOCK_OVERHEAD variable rather than align()ing them with
     // their buffer lengths. This variable is used elsewhere in unit tests.
-    this.size = ClassSize.align(cacheKey.heapSize())
-        + ClassSize.align(buf.heapSize()) + PER_BLOCK_OVERHEAD;
-    if(inMemory) {
+    this.size =
+      ClassSize.align(cacheKey.heapSize()) + ClassSize.align(buf.heapSize()) + PER_BLOCK_OVERHEAD;
+    if (inMemory) {
       this.priority = BlockPriority.MEMORY;
     } else {
       this.priority = BlockPriority.SINGLE;
@@ -74,11 +71,11 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
   /**
    * Block has been accessed.
    * @param accessTime Last access; this is actually a incremented sequence number rather than an
-   * actual time.
+   *                   actual time.
    */
   public void access(long accessTime) {
     this.accessTime = accessTime;
-    if(this.priority == BlockPriority.SINGLE) {
+    if (this.priority == BlockPriority.SINGLE) {
       this.priority = BlockPriority.MULTI;
     }
   }
@@ -104,7 +101,7 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
 
   @Override
   public int hashCode() {
-    return (int)(accessTime ^ (accessTime >>> 32));
+    return (int) (accessTime ^ (accessTime >>> 32));
   }
 
   @Override

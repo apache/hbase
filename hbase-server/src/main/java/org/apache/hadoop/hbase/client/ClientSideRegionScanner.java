@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -38,8 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A client scanner for a region opened for read-only on the client side. Assumes region data
- * is not changing.
+ * A client scanner for a region opened for read-only on the client side. Assumes region data is not
+ * changing.
  */
 @InterfaceAudience.Private
 public class ClientSideRegionScanner extends AbstractClientScanner {
@@ -50,9 +49,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   RegionScanner scanner;
   List<Cell> values;
 
-  public ClientSideRegionScanner(Configuration conf, FileSystem fs,
-      Path rootDir, TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics)
-      throws IOException {
+  public ClientSideRegionScanner(Configuration conf, FileSystem fs, Path rootDir,
+    TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics) throws IOException {
     // region is immutable, set isolation level
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
 
@@ -67,7 +65,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     // IndexOnlyLruBlockCache and set a value to HBASE_CLIENT_SCANNER_BLOCK_CACHE_SIZE_KEY
     conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
     conf.setIfUnset(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY,
-        String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
+      String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
     // don't allow L2 bucket cache for non RS process to avoid unexpected disk usage.
     conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
     region.setBlockCache(BlockCacheFactory.createBlockCache(conf));
@@ -95,7 +93,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     values.clear();
     scanner.nextRaw(values);
     if (values.isEmpty()) {
-      //we are done
+      // we are done
       return null;
     }
 

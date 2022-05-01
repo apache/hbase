@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.tool.coprocessor;
 
 import java.io.IOException;
@@ -56,8 +54,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CoprocessorValidator extends AbstractHBaseTool {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(CoprocessorValidator.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorValidator.class);
 
   private CoprocessorMethods branch1;
   private CoprocessorMethods current;
@@ -79,11 +76,10 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   }
 
   /**
-   * This classloader implementation calls {@link #resolveClass(Class)}
-   * method for every loaded class. It means that some extra validation will
-   * take place <a
-   * href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html#jls-12.3">
-   * according to JLS</a>.
+   * This classloader implementation calls {@link #resolveClass(Class)} method for every loaded
+   * class. It means that some extra validation will take place
+   * <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-12.html#jls-12.3"> according to
+   * JLS</a>.
    */
   private static final class ResolverUrlClassLoader extends URLClassLoader {
     private ResolverUrlClassLoader(URL[] urls, ClassLoader parent) {
@@ -110,7 +106,7 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   }
 
   private ResolverUrlClassLoader createClassLoader(ClassLoader parent,
-      org.apache.hadoop.fs.Path path) throws IOException {
+    org.apache.hadoop.fs.Path path) throws IOException {
     Path tempPath = Files.createTempFile("hbase-coprocessor-", ".jar");
     org.apache.hadoop.fs.Path destination = new org.apache.hadoop.fs.Path(tempPath.toString());
 
@@ -125,7 +121,7 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   }
 
   private void validate(ClassLoader classLoader, String className,
-      List<CoprocessorViolation> violations) {
+    List<CoprocessorViolation> violations) {
     LOG.debug("Validating class '{}'.", className);
 
     try {
@@ -135,45 +131,45 @@ public class CoprocessorValidator extends AbstractHBaseTool {
         LOG.trace("Validating method '{}'.", method);
 
         if (branch1.hasMethod(method) && !current.hasMethod(method)) {
-          CoprocessorViolation violation = new CoprocessorViolation(
-              className, Severity.WARNING, "method '" + method +
-              "' was removed from new coprocessor API, so it won't be called by HBase");
+          CoprocessorViolation violation =
+            new CoprocessorViolation(className, Severity.WARNING, "method '" + method
+              + "' was removed from new coprocessor API, so it won't be called by HBase");
           violations.add(violation);
         }
       }
     } catch (ClassNotFoundException e) {
-      CoprocessorViolation violation = new CoprocessorViolation(
-          className, Severity.ERROR, "no such class", e);
+      CoprocessorViolation violation =
+        new CoprocessorViolation(className, Severity.ERROR, "no such class", e);
       violations.add(violation);
     } catch (RuntimeException | Error e) {
-      CoprocessorViolation violation = new CoprocessorViolation(
-          className, Severity.ERROR, "could not validate class", e);
+      CoprocessorViolation violation =
+        new CoprocessorViolation(className, Severity.ERROR, "could not validate class", e);
       violations.add(violation);
     }
   }
 
   public void validateClasses(ClassLoader classLoader, List<String> classNames,
-      List<CoprocessorViolation> violations) {
+    List<CoprocessorViolation> violations) {
     for (String className : classNames) {
       validate(classLoader, className, violations);
     }
   }
 
   public void validateClasses(ClassLoader classLoader, String[] classNames,
-      List<CoprocessorViolation> violations) {
+    List<CoprocessorViolation> violations) {
     validateClasses(classLoader, Arrays.asList(classNames), violations);
   }
 
   @InterfaceAudience.Private
-  protected void validateTables(ClassLoader classLoader, Admin admin,
-      Pattern pattern, List<CoprocessorViolation> violations) throws IOException {
+  protected void validateTables(ClassLoader classLoader, Admin admin, Pattern pattern,
+    List<CoprocessorViolation> violations) throws IOException {
     List<TableDescriptor> tableDescriptors = admin.listTableDescriptors(pattern);
 
     for (TableDescriptor tableDescriptor : tableDescriptors) {
       LOG.debug("Validating table {}", tableDescriptor.getTableName());
 
       Collection<CoprocessorDescriptor> coprocessorDescriptors =
-          tableDescriptor.getCoprocessorDescriptors();
+        tableDescriptor.getCoprocessorDescriptors();
 
       for (CoprocessorDescriptor coprocessorDescriptor : coprocessorDescriptors) {
         String className = coprocessorDescriptor.getClassName();
@@ -184,9 +180,8 @@ public class CoprocessorValidator extends AbstractHBaseTool {
           try (ResolverUrlClassLoader cpClassLoader = createClassLoader(classLoader, path)) {
             validate(cpClassLoader, className, violations);
           } catch (IOException e) {
-            CoprocessorViolation violation = new CoprocessorViolation(
-                className, Severity.ERROR,
-                "could not validate jar file '" + path + "'", e);
+            CoprocessorViolation violation = new CoprocessorViolation(className, Severity.ERROR,
+              "could not validate jar file '" + path + "'", e);
             violations.add(violation);
           }
         } else {
@@ -197,18 +192,17 @@ public class CoprocessorValidator extends AbstractHBaseTool {
   }
 
   private void validateTables(ClassLoader classLoader, Pattern pattern,
-      List<CoprocessorViolation> violations) throws IOException {
+    List<CoprocessorViolation> violations) throws IOException {
     try (Connection connection = ConnectionFactory.createConnection(getConf());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       validateTables(classLoader, admin, pattern, violations);
     }
   }
 
   @Override
   protected void printUsage() {
-    String header = "hbase " + PreUpgradeValidator.TOOL_NAME + " " +
-        PreUpgradeValidator.VALIDATE_CP_NAME +
-        " [-jar ...] [-class ... | -table ... | -config]";
+    String header = "hbase " + PreUpgradeValidator.TOOL_NAME + " "
+      + PreUpgradeValidator.VALIDATE_CP_NAME + " [-jar ...] [-class ... | -table ... | -config]";
     printUsage(header, "Options:", "");
   }
 
@@ -249,9 +243,8 @@ public class CoprocessorValidator extends AbstractHBaseTool {
       Path jarPath = Paths.get(jar);
       if (Files.isDirectory(jarPath)) {
         try (Stream<Path> stream = Files.list(jarPath)) {
-          List<Path> files = stream
-              .filter((path) -> Files.isRegularFile(path))
-              .collect(Collectors.toList());
+          List<Path> files =
+            stream.filter((path) -> Files.isRegularFile(path)).collect(Collectors.toList());
 
           for (Path file : files) {
             URL url = file.toUri().toURL();
@@ -291,13 +284,13 @@ public class CoprocessorValidator extends AbstractHBaseTool {
 
       if (config) {
         String[] masterCoprocessors =
-            getConf().getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+          getConf().getStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
         if (masterCoprocessors != null) {
           validateClasses(classLoader, masterCoprocessors, violations);
         }
 
         String[] regionCoprocessors =
-            getConf().getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+          getConf().getStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
         if (regionCoprocessors != null) {
           validateClasses(classLoader, regionCoprocessors, violations);
         }

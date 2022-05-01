@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for exceptions thrown by an HBase server. May contain extra info about
- * the state of the server when the exception was thrown.
+ * Base class for exceptions thrown by an HBase server. May contain extra info about the state of
+ * the server when the exception was thrown.
  */
 @InterfaceAudience.Public
 public class HBaseServerException extends HBaseIOException {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
@@ -49,12 +48,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
- * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}.
- *
- * Snapshot v2 layout format
- *  - Single Manifest file containing all the information of regions
- *  - In the online-snapshot case each region will write a "region manifest"
- *      /snapshotName/manifest.regionName
+ * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}. Snapshot v2 layout format - Single Manifest
+ * file containing all the information of regions - In the online-snapshot case each region will
+ * write a "region manifest" /snapshotName/manifest.regionName
  */
 @InterfaceAudience.Private
 public final class SnapshotManifestV2 {
@@ -64,16 +60,17 @@ public final class SnapshotManifestV2 {
 
   public static final String SNAPSHOT_MANIFEST_PREFIX = "region-manifest.";
 
-  private SnapshotManifestV2() {}
+  private SnapshotManifestV2() {
+  }
 
   static class ManifestBuilder implements SnapshotManifest.RegionVisitor<
-                    SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {
+    SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {
     private final Configuration conf;
     private final Path snapshotDir;
     private final FileSystem rootFs;
 
     public ManifestBuilder(final Configuration conf, final FileSystem rootFs,
-        final Path snapshotDir) {
+      final Path snapshotDir) {
       this.snapshotDir = snapshotDir;
       this.conf = conf;
       this.rootFs = rootFs;
@@ -93,8 +90,8 @@ public final class SnapshotManifestV2 {
       FileSystem workingDirFs = snapshotDir.getFileSystem(this.conf);
       if (workingDirFs.exists(snapshotDir)) {
         SnapshotRegionManifest manifest = region.build();
-        try (FSDataOutputStream stream = workingDirFs.create(
-            getRegionManifestPath(snapshotDir, manifest))) {
+        try (FSDataOutputStream stream =
+          workingDirFs.create(getRegionManifestPath(snapshotDir, manifest))) {
           manifest.writeTo(stream);
         }
       } else {
@@ -103,26 +100,26 @@ public final class SnapshotManifestV2 {
     }
 
     @Override
-    public SnapshotRegionManifest.FamilyFiles.Builder familyOpen(
-        final SnapshotRegionManifest.Builder region, final byte[] familyName) {
+    public SnapshotRegionManifest.FamilyFiles.Builder
+      familyOpen(final SnapshotRegionManifest.Builder region, final byte[] familyName) {
       SnapshotRegionManifest.FamilyFiles.Builder family =
-          SnapshotRegionManifest.FamilyFiles.newBuilder();
+        SnapshotRegionManifest.FamilyFiles.newBuilder();
       family.setFamilyName(UnsafeByteOperations.unsafeWrap(familyName));
       return family;
     }
 
     @Override
     public void familyClose(final SnapshotRegionManifest.Builder region,
-        final SnapshotRegionManifest.FamilyFiles.Builder family) {
+      final SnapshotRegionManifest.FamilyFiles.Builder family) {
       region.addFamilyFiles(family.build());
     }
 
     @Override
     public void storeFile(final SnapshotRegionManifest.Builder region,
-        final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile)
-        throws IOException {
+      final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile)
+      throws IOException {
       SnapshotRegionManifest.StoreFile.Builder sfManifest =
-            SnapshotRegionManifest.StoreFile.newBuilder();
+        SnapshotRegionManifest.StoreFile.newBuilder();
       sfManifest.setName(storeFile.getPath().getName());
       if (storeFile.isReference()) {
         sfManifest.setReference(storeFile.getReference().convert());
@@ -137,8 +134,8 @@ public final class SnapshotManifestV2 {
   }
 
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
-      final Executor executor, final FileSystem fs, final Path snapshotDir,
-      final SnapshotDescription desc, final int manifestSizeLimit) throws IOException {
+    final Executor executor, final FileSystem fs, final Path snapshotDir,
+    final SnapshotDescription desc, final int manifestSizeLimit) throws IOException {
     FileStatus[] manifestFiles = CommonFSUtils.listStatus(fs, snapshotDir, new PathFilter() {
       @Override
       public boolean accept(Path path) {
@@ -150,7 +147,7 @@ public final class SnapshotManifestV2 {
 
     final ExecutorCompletionService<SnapshotRegionManifest> completionService =
       new ExecutorCompletionService<>(executor);
-    for (final FileStatus st: manifestFiles) {
+    for (final FileStatus st : manifestFiles) {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
@@ -173,8 +170,8 @@ public final class SnapshotManifestV2 {
     } catch (ExecutionException e) {
       Throwable t = e.getCause();
 
-      if(t instanceof InvalidProtocolBufferException) {
-        throw (InvalidProtocolBufferException)t;
+      if (t instanceof InvalidProtocolBufferException) {
+        throw (InvalidProtocolBufferException) t;
       } else {
         throw new IOException("ExecutionException", e.getCause());
       }
@@ -183,12 +180,12 @@ public final class SnapshotManifestV2 {
   }
 
   static void deleteRegionManifest(final FileSystem fs, final Path snapshotDir,
-      final SnapshotRegionManifest manifest) throws IOException {
+    final SnapshotRegionManifest manifest) throws IOException {
     fs.delete(getRegionManifestPath(snapshotDir, manifest), true);
   }
 
   private static Path getRegionManifestPath(final Path snapshotDir,
-      final SnapshotRegionManifest manifest) {
+    final SnapshotRegionManifest manifest) {
     String regionName = SnapshotManifest.getRegionNameFromManifest(manifest);
     return new Path(snapshotDir, SNAPSHOT_MANIFEST_PREFIX + regionName);
   }

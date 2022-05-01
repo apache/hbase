@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.DataInput;
@@ -27,7 +26,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -61,9 +59,8 @@ public class KeyValueUtil {
 
   /**
    * Returns number of bytes this cell's key part would have been used if serialized as in
-   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type.
-   * @param cell
-   * @return the key length
+   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type. n * @return the
+   * key length
    */
   public static int keyLength(final Cell cell) {
     return keyLength(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength());
@@ -82,14 +79,13 @@ public class KeyValueUtil {
   }
 
   public static int totalLengthWithMvccVersion(final Iterable<? extends KeyValue> kvs,
-      final boolean includeMvccVersion) {
+    final boolean includeMvccVersion) {
     int length = 0;
     for (KeyValue kv : IterableUtils.emptyIfNull(kvs)) {
       length += lengthWithMvccVersion(kv, includeMvccVersion);
     }
     return length;
   }
-
 
   /**************** copy the cell to create a new keyvalue *********************/
 
@@ -101,9 +97,8 @@ public class KeyValueUtil {
   }
 
   /**
-   * The position will be set to the beginning of the new ByteBuffer
-   * @param cell
-   * @return the Bytebuffer containing the key part of the cell
+   * The position will be set to the beginning of the new ByteBuffer n * @return the Bytebuffer
+   * containing the key part of the cell
    */
   public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
@@ -113,9 +108,8 @@ public class KeyValueUtil {
   }
 
   /**
-   * Copies the key to a new KeyValue
-   * @param cell
-   * @return the KeyValue that consists only the key part of the incoming cell
+   * Copies the key to a new KeyValue n * @return the KeyValue that consists only the key part of
+   * the incoming cell
    */
   public static KeyValue toNewKeyCell(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
@@ -128,20 +122,19 @@ public class KeyValueUtil {
   }
 
   public static byte[] copyToNewByteArray(final Cell cell) {
-    //Cell#getSerializedSize returns the serialized size of the Source cell, which may
-    //not serialize all fields. We are constructing a KeyValue backing array here,
-    //which does include all fields, and must allocate accordingly.
-    //TODO we could probably use Cell#getSerializedSize safely, the errors were
-    //caused by cells corrupted by use-after-free bugs
-    int v1Length = length(cell.getRowLength(), cell.getFamilyLength(),
-      cell.getQualifierLength(), cell.getValueLength(), cell.getTagsLength(), true);
+    // Cell#getSerializedSize returns the serialized size of the Source cell, which may
+    // not serialize all fields. We are constructing a KeyValue backing array here,
+    // which does include all fields, and must allocate accordingly.
+    // TODO we could probably use Cell#getSerializedSize safely, the errors were
+    // caused by cells corrupted by use-after-free bugs
+    int v1Length = length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
+      cell.getValueLength(), cell.getTagsLength(), true);
     byte[] backingBytes = new byte[v1Length];
     appendToByteArray(cell, backingBytes, 0, true);
     return backingBytes;
   }
 
-  public static int appendKeyTo(final Cell cell, final byte[] output,
-      final int offset) {
+  public static int appendKeyTo(final Cell cell, final byte[] output, final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
     nextOffset = CellUtil.copyRowTo(cell, output, nextOffset);
@@ -196,7 +189,7 @@ public class KeyValueUtil {
   }
 
   public static void appendToByteBuffer(final ByteBuffer bb, final KeyValue kv,
-      final boolean includeMvccVersion) {
+    final boolean includeMvccVersion) {
     // keep pushing the limit out. assume enough capacity
     bb.limit(bb.position() + kv.getLength());
     bb.put(kv.getBuffer(), kv.getOffset(), kv.getLength());
@@ -207,18 +200,14 @@ public class KeyValueUtil {
     }
   }
 
-
   /**************** iterating *******************************/
 
   /**
    * Creates a new KeyValue object positioned in the supplied ByteBuffer and sets the ByteBuffer's
-   * position to the start of the next KeyValue. Does not allocate a new array or copy data.
-   * @param bb
-   * @param includesMvccVersion
-   * @param includesTags
+   * position to the start of the next KeyValue. Does not allocate a new array or copy data. nnn
    */
   public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion,
-      boolean includesTags) {
+    boolean includesTags) {
     if (bb.isDirect()) {
       throw new IllegalArgumentException("only supports heap buffers");
     }
@@ -245,71 +234,46 @@ public class KeyValueUtil {
     return keyValue;
   }
 
-
   /*************** next/previous **********************************/
 
   /**
-   * Decrement the timestamp.  For tests (currently wasteful)
-   *
-   * Remember timestamps are sorted reverse chronologically.
-   * @param in
-   * @return previous key
+   * Decrement the timestamp. For tests (currently wasteful) Remember timestamps are sorted reverse
+   * chronologically. n * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
     return createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
       CellUtil.cloneQualifier(in), in.getTimestamp() - 1);
   }
 
-
   /**
-   * Create a KeyValue for the specified row, family and qualifier that would be
-   * larger than or equal to all other possible KeyValues that have the same
-   * row, family, qualifier. Used for reseeking. Should NEVER be returned to a client.
-   *
-   * @param row
-   *          row key
-   * @param roffset
-   *         row offset
-   * @param rlength
-   *         row length
-   * @param family
-   *         family name
-   * @param foffset
-   *         family offset
-   * @param flength
-   *         family length
-   * @param qualifier
-   *        column qualifier
-   * @param qoffset
-   *        qualifier offset
-   * @param qlength
-   *        qualifier length
+   * Create a KeyValue for the specified row, family and qualifier that would be larger than or
+   * equal to all other possible KeyValues that have the same row, family, qualifier. Used for
+   * reseeking. Should NEVER be returned to a client. n * row key n * row offset n * row length n *
+   * family name n * family offset n * family length n * column qualifier n * qualifier offset n *
+   * qualifier length
    * @return Last possible key on passed row, family, qualifier.
    */
   public static KeyValue createLastOnRow(final byte[] row, final int roffset, final int rlength,
-      final byte[] family, final int foffset, final int flength, final byte[] qualifier,
-      final int qoffset, final int qlength) {
+    final byte[] family, final int foffset, final int flength, final byte[] qualifier,
+    final int qoffset, final int qlength) {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-        qlength, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+      qlength, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
   }
 
   /**
-   * Create a KeyValue that is smaller than all other possible KeyValues
-   * for the given row. That is any (valid) KeyValue on 'row' would sort
-   * _after_ the result.
-   *
+   * Create a KeyValue that is smaller than all other possible KeyValues for the given row. That is
+   * any (valid) KeyValue on 'row' would sort _after_ the result.
    * @param row - row key (arbitrary byte array)
    * @return First possible KeyValue on passed <code>row</code>
    */
-  public static KeyValue createFirstOnRow(final byte [] row, int roffset, short rlength) {
-    return new KeyValue(row, roffset, rlength,
-        null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  public static KeyValue createFirstOnRow(final byte[] row, int roffset, short rlength) {
+    return new KeyValue(row, roffset, rlength, null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP,
+      Type.Maximum, null, 0, 0);
   }
 
   /**
-   * Creates a KeyValue that is last on the specified row id. That is,
-   * every other possible KeyValue for the given row would compareTo()
-   * less than the result of this call.
+   * Creates a KeyValue that is last on the specified row id. That is, every other possible KeyValue
+   * for the given row would compareTo() less than the result of this call.
    * @param row row key
    * @return Last possible KeyValue on passed <code>row</code>
    */
@@ -318,131 +282,112 @@ public class KeyValueUtil {
   }
 
   /**
-   * Create a KeyValue that is smaller than all other possible KeyValues
-   * for the given row. That is any (valid) KeyValue on 'row' would sort
-   * _after_ the result.
-   *
+   * Create a KeyValue that is smaller than all other possible KeyValues for the given row. That is
+   * any (valid) KeyValue on 'row' would sort _after_ the result.
    * @param row - row key (arbitrary byte array)
    * @return First possible KeyValue on passed <code>row</code>
    */
-  public static KeyValue createFirstOnRow(final byte [] row) {
+  public static KeyValue createFirstOnRow(final byte[] row) {
     return createFirstOnRow(row, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
-   * Creates a KeyValue that is smaller than all other KeyValues that
-   * are older than the passed timestamp.
+   * Creates a KeyValue that is smaller than all other KeyValues that are older than the passed
+   * timestamp.
    * @param row - row key (arbitrary byte array)
-   * @param ts - timestamp
+   * @param ts  - timestamp
    * @return First possible key on passed <code>row</code> and timestamp.
    */
-  public static KeyValue createFirstOnRow(final byte [] row,
-      final long ts) {
+  public static KeyValue createFirstOnRow(final byte[] row, final long ts) {
     return new KeyValue(row, null, null, ts, Type.Maximum);
   }
 
   /**
-   * Create a KeyValue for the specified row, family and qualifier that would be
-   * smaller than all other possible KeyValues that have the same row,family,qualifier.
-   * Used for seeking.
-   * @param row - row key (arbitrary byte array)
-   * @param family - family name
+   * Create a KeyValue for the specified row, family and qualifier that would be smaller than all
+   * other possible KeyValues that have the same row,family,qualifier. Used for seeking.
+   * @param row       - row key (arbitrary byte array)
+   * @param family    - family name
    * @param qualifier - column qualifier
    * @return First possible key on passed <code>row</code>, and column.
    */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] family,
-      final byte [] qualifier) {
+  public static KeyValue createFirstOnRow(final byte[] row, final byte[] family,
+    final byte[] qualifier) {
     return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
 
   /**
    * @param row - row key (arbitrary byte array)
-   * @param f - family name
-   * @param q - column qualifier
-   * @param ts - timestamp
+   * @param f   - family name
+   * @param q   - column qualifier
+   * @param ts  - timestamp
    * @return First possible key on passed <code>row</code>, column and timestamp
    */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] f,
-      final byte [] q, final long ts) {
+  public static KeyValue createFirstOnRow(final byte[] row, final byte[] f, final byte[] q,
+    final long ts) {
     return new KeyValue(row, f, q, ts, Type.Maximum);
   }
 
   /**
-   * Create a KeyValue for the specified row, family and qualifier that would be
-   * smaller than all other possible KeyValues that have the same row,
-   * family, qualifier.
-   * Used for seeking.
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * Create a KeyValue for the specified row, family and qualifier that would be smaller than all
+   * other possible KeyValues that have the same row, family, qualifier. Used for seeking.
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return First possible key on passed Row, Family, Qualifier.
    */
-  public static KeyValue createFirstOnRow(final byte [] row,
-      final int roffset, final int rlength, final byte [] family,
-      final int foffset, final int flength, final byte [] qualifier,
-      final int qoffset, final int qlength) {
-    return new KeyValue(row, roffset, rlength, family,
-        foffset, flength, qualifier, qoffset, qlength,
-        HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  public static KeyValue createFirstOnRow(final byte[] row, final int roffset, final int rlength,
+    final byte[] family, final int foffset, final int flength, final byte[] qualifier,
+    final int qoffset, final int qlength) {
+    return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
+      qlength, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
   }
 
   /**
-   * Create a KeyValue for the specified row, family and qualifier that would be
-   * smaller than all other possible KeyValues that have the same row,
-   * family, qualifier.
-   * Used for seeking.
-   *
-   * @param buffer the buffer to use for the new <code>KeyValue</code> object
-   * @param row the value key
-   * @param family family name
+   * Create a KeyValue for the specified row, family and qualifier that would be smaller than all
+   * other possible KeyValues that have the same row, family, qualifier. Used for seeking.
+   * @param buffer    the buffer to use for the new <code>KeyValue</code> object
+   * @param row       the value key
+   * @param family    family name
    * @param qualifier column qualifier
-   *
    * @return First possible key on passed Row, Family, Qualifier.
-   *
    * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
-   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   *                                  than the provided buffer or than
+   *                                  <code>Integer.MAX_VALUE</code>
    */
-  public static KeyValue createFirstOnRow(byte [] buffer, final byte [] row,
-      final byte [] family, final byte [] qualifier)
-          throws IllegalArgumentException {
-    return createFirstOnRow(buffer, 0, row, 0, row.length,
-        family, 0, family.length,
-        qualifier, 0, qualifier.length);
+  public static KeyValue createFirstOnRow(byte[] buffer, final byte[] row, final byte[] family,
+    final byte[] qualifier) throws IllegalArgumentException {
+    return createFirstOnRow(buffer, 0, row, 0, row.length, family, 0, family.length, qualifier, 0,
+      qualifier.length);
   }
 
   /**
-   * Create a KeyValue for the specified row, family and qualifier that would be
-   * smaller than all other possible KeyValues that have the same row,
-   * family, qualifier.
-   * Used for seeking.
-   *
-   * @param buffer the buffer to use for the new <code>KeyValue</code> object
-   * @param boffset buffer offset
-   * @param row the value key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * Create a KeyValue for the specified row, family and qualifier that would be smaller than all
+   * other possible KeyValues that have the same row, family, qualifier. Used for seeking.
+   * @param buffer    the buffer to use for the new <code>KeyValue</code> object
+   * @param boffset   buffer offset
+   * @param row       the value key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return First possible key on passed Row, Family, Qualifier.
-   *
    * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
-   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   *                                  than the provided buffer or than
+   *                                  <code>Integer.MAX_VALUE</code>
    */
   public static KeyValue createFirstOnRow(byte[] buffer, final int boffset, final byte[] row,
-      final int roffset, final int rlength, final byte[] family, final int foffset,
-      final int flength, final byte[] qualifier, final int qoffset, final int qlength)
-      throws IllegalArgumentException {
+    final int roffset, final int rlength, final byte[] family, final int foffset, final int flength,
+    final byte[] qualifier, final int qoffset, final int qlength) throws IllegalArgumentException {
 
     long lLength = KeyValue.getKeyValueDataStructureSize(rlength, flength, qlength, 0);
 
@@ -451,24 +396,23 @@ public class KeyValueUtil {
     }
     int iLength = (int) lLength;
     if (buffer.length - boffset < iLength) {
-      throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < "
-          + iLength);
+      throw new IllegalArgumentException(
+        "Buffer size " + (buffer.length - boffset) + " < " + iLength);
     }
 
     int len = KeyValue.writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset,
-        flength, qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
-        null, 0, 0, null);
+      flength, qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
+      null, 0, 0, null);
     return new KeyValue(buffer, boffset, len);
   }
 
   /*************** misc **********************************/
   /**
-   * @param cell
-   * @return <code>cell</code> if it is an object of class {@link KeyValue} else we will return a
-   *         new {@link KeyValue} instance made from <code>cell</code> Note: Even if the cell is an
-   *         object of any of the subclass of {@link KeyValue}, we will create a new
-   *         {@link KeyValue} object wrapping same buffer. This API is used only with MR based tools
-   *         which expect the type to be exactly KeyValue. That is the reason for doing this way.
+   * n * @return <code>cell</code> if it is an object of class {@link KeyValue} else we will return
+   * a new {@link KeyValue} instance made from <code>cell</code> Note: Even if the cell is an object
+   * of any of the subclass of {@link KeyValue}, we will create a new {@link KeyValue} object
+   * wrapping same buffer. This API is used only with MR based tools which expect the type to be
+   * exactly KeyValue. That is the reason for doing this way.
    * @deprecated without any replacement.
    */
   @Deprecated
@@ -498,15 +442,10 @@ public class KeyValueUtil {
     });
     return new ArrayList<>(lazyList);
   }
+
   /**
-   * Write out a KeyValue in the manner in which we used to when KeyValue was a
-   * Writable.
-   *
-   * @param kv
-   * @param out
-   * @return Length written on stream
-   * @throws IOException
-   * @see #create(DataInput) for the inverse function
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable. nn
+   * * @return Length written on stream n * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
     // This is how the old Writables write used to serialize KVs. Need to figure
@@ -534,7 +473,7 @@ public class KeyValueUtil {
     // check the key
     if (pos + Bytes.SIZEOF_INT > endOffset) {
       String msg =
-          "Overflow when reading key length at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading key length at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -542,29 +481,29 @@ public class KeyValueUtil {
     pos += Bytes.SIZEOF_INT;
     if (keyLen <= 0 || pos + keyLen > endOffset) {
       String msg =
-          "Invalid key length in KeyValue. keyLength=" + keyLen + bytesToHex(buf, offset, length);
+        "Invalid key length in KeyValue. keyLength=" + keyLen + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     // check the value
     if (pos + Bytes.SIZEOF_INT > endOffset) {
       String msg =
-          "Overflow when reading value length at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading value length at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     int valLen = Bytes.toInt(buf, pos, Bytes.SIZEOF_INT);
     pos += Bytes.SIZEOF_INT;
     if (valLen < 0 || pos + valLen > endOffset) {
-      String msg = "Invalid value length in KeyValue, valueLength=" + valLen +
-          bytesToHex(buf, offset, length);
+      String msg =
+        "Invalid value length in KeyValue, valueLength=" + valLen + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     // check the row
     if (pos + Bytes.SIZEOF_SHORT > endOffset) {
       String msg =
-          "Overflow when reading row length at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading row length at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -572,33 +511,33 @@ public class KeyValueUtil {
     pos += Bytes.SIZEOF_SHORT;
     if (rowLen < 0 || pos + rowLen > endOffset) {
       String msg =
-          "Invalid row length in KeyValue, rowLength=" + rowLen + bytesToHex(buf, offset, length);
+        "Invalid row length in KeyValue, rowLength=" + rowLen + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     pos += rowLen;
     // check the family
     if (pos + Bytes.SIZEOF_BYTE > endOffset) {
-      String msg = "Overflow when reading family length at position=" + pos +
-          bytesToHex(buf, offset, length);
+      String msg =
+        "Overflow when reading family length at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     int familyLen = buf[pos];
     pos += Bytes.SIZEOF_BYTE;
     if (familyLen < 0 || pos + familyLen > endOffset) {
-      String msg = "Invalid family length in KeyValue, familyLength=" + familyLen +
-          bytesToHex(buf, offset, length);
+      String msg = "Invalid family length in KeyValue, familyLength=" + familyLen
+        + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     pos += familyLen;
     // check the qualifier
     int qualifierLen = keyLen - Bytes.SIZEOF_SHORT - rowLen - Bytes.SIZEOF_BYTE - familyLen
-        - Bytes.SIZEOF_LONG - Bytes.SIZEOF_BYTE;
+      - Bytes.SIZEOF_LONG - Bytes.SIZEOF_BYTE;
     if (qualifierLen < 0 || pos + qualifierLen > endOffset) {
-      String msg = "Invalid qualifier length in KeyValue, qualifierLen=" + qualifierLen +
-              bytesToHex(buf, offset, length);
+      String msg = "Invalid qualifier length in KeyValue, qualifierLen=" + qualifierLen
+        + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -606,14 +545,14 @@ public class KeyValueUtil {
     // check the timestamp
     if (pos + Bytes.SIZEOF_LONG > endOffset) {
       String msg =
-          "Overflow when reading timestamp at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading timestamp at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     long timestamp = Bytes.toLong(buf, pos, Bytes.SIZEOF_LONG);
     if (timestamp < 0) {
       String msg =
-          "Timestamp cannot be negative, ts=" + timestamp + bytesToHex(buf, offset, length);
+        "Timestamp cannot be negative, ts=" + timestamp + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -621,7 +560,7 @@ public class KeyValueUtil {
     // check the type
     if (pos + Bytes.SIZEOF_BYTE > endOffset) {
       String msg =
-          "Overflow when reading type at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading type at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -635,7 +574,7 @@ public class KeyValueUtil {
     // check the value
     if (pos + valLen > endOffset) {
       String msg =
-          "Overflow when reading value part at position=" + pos + bytesToHex(buf, offset, length);
+        "Overflow when reading value part at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -650,17 +589,17 @@ public class KeyValueUtil {
     }
     if (pos != endOffset) {
       String msg = "Some redundant bytes in KeyValue's buffer, startOffset=" + pos + ", endOffset="
-          + endOffset + bytesToHex(buf, offset, length);
+        + endOffset + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
   }
 
   private static int checkKeyValueTagBytes(byte[] buf, int offset, int length, int pos,
-      int endOffset) {
+    int endOffset) {
     if (pos + Bytes.SIZEOF_SHORT > endOffset) {
-      String msg = "Overflow when reading tags length at position=" + pos +
-          bytesToHex(buf, offset, length);
+      String msg =
+        "Overflow when reading tags length at position=" + pos + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
@@ -668,15 +607,15 @@ public class KeyValueUtil {
     pos += Bytes.SIZEOF_SHORT;
     if (tagsLen < 0 || pos + tagsLen > endOffset) {
       String msg = "Invalid tags length in KeyValue at position=" + (pos - Bytes.SIZEOF_SHORT)
-          + bytesToHex(buf, offset, length);
+        + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
     }
     int tagsEndOffset = pos + tagsLen;
     for (; pos < tagsEndOffset;) {
       if (pos + Tag.TAG_LENGTH_SIZE > endOffset) {
-        String msg = "Overflow when reading tag length at position=" + pos +
-            bytesToHex(buf, offset, length);
+        String msg =
+          "Overflow when reading tag length at position=" + pos + bytesToHex(buf, offset, length);
         LOG.warn(msg);
         throw new IllegalArgumentException(msg);
       }
@@ -684,9 +623,8 @@ public class KeyValueUtil {
       pos += Tag.TAG_LENGTH_SIZE;
       // tagLen contains one byte tag type, so must be not less than 1.
       if (tagLen < 1 || pos + tagLen > endOffset) {
-        String msg =
-            "Invalid tag length at position=" + (pos - Tag.TAG_LENGTH_SIZE) + ", tagLength="
-                + tagLen + bytesToHex(buf, offset, length);
+        String msg = "Invalid tag length at position=" + (pos - Tag.TAG_LENGTH_SIZE)
+          + ", tagLength=" + tagLen + bytesToHex(buf, offset, length);
         LOG.warn(msg);
         throw new IllegalArgumentException(msg);
       }
@@ -698,14 +636,13 @@ public class KeyValueUtil {
   /**
    * Create a KeyValue reading from the raw InputStream. Named
    * <code>createKeyValueFromInputStream</code> so doesn't clash with {@link #create(DataInput)}
-   * @param in inputStream to read.
+   * @param in       inputStream to read.
    * @param withTags whether the keyvalue should include tags are not
    * @return Created KeyValue OR if we find a length of zero, we will return null which can be
-   *         useful marking a stream as done.
-   * @throws IOException
+   *         useful marking a stream as done. n
    */
   public static KeyValue createKeyValueFromInputStream(InputStream in, boolean withTags)
-      throws IOException {
+    throws IOException {
     byte[] intBytes = new byte[Bytes.SIZEOF_INT];
     int bytesRead = 0;
     while (bytesRead < intBytes.length) {
@@ -720,34 +657,30 @@ public class KeyValueUtil {
     }
     byte[] bytes = new byte[Bytes.toInt(intBytes)];
     IOUtils.readFully(in, bytes, 0, bytes.length);
-    return withTags ? new KeyValue(bytes, 0, bytes.length)
-        : new NoTagsKeyValue(bytes, 0, bytes.length);
+    return withTags
+      ? new KeyValue(bytes, 0, bytes.length)
+      : new NoTagsKeyValue(bytes, 0, bytes.length);
   }
 
   /**
-   * @param b
-   * @return A KeyValue made of a byte array that holds the key-only part.
-   *         Needed to convert hfile index members to KeyValues.
+   * n * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert
+   * hfile index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b) {
     return createKeyValueFromKey(b, 0, b.length);
   }
 
   /**
-   * @param bb
-   * @return A KeyValue made of a byte buffer that holds the key-only part.
-   *         Needed to convert hfile index members to KeyValues.
+   * n * @return A KeyValue made of a byte buffer that holds the key-only part. Needed to convert
+   * hfile index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final ByteBuffer bb) {
     return createKeyValueFromKey(bb.array(), bb.arrayOffset(), bb.limit());
   }
 
   /**
-   * @param b
-   * @param o
-   * @param l
-   * @return A KeyValue made of a byte array that holds the key-only part.
-   *         Needed to convert hfile index members to KeyValues.
+   * nnn * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert
+   * hfile index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b, final int o, final int l) {
     byte[] newb = new byte[l + KeyValue.ROW_OFFSET];
@@ -758,32 +691,24 @@ public class KeyValueUtil {
   }
 
   /**
-   * @param in
-   *          Where to read bytes from. Creates a byte array to hold the
-   *          KeyValue backing bytes copied from the steam.
-   * @return KeyValue created by deserializing from <code>in</code> OR if we
-   *         find a length of zero, we will return null which can be useful
-   *         marking a stream as done.
-   * @throws IOException
+   * n * Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes copied
+   * from the steam.
+   * @return KeyValue created by deserializing from <code>in</code> OR if we find a length of zero,
+   *         we will return null which can be useful marking a stream as done. n
    */
   public static KeyValue create(final DataInput in) throws IOException {
     return create(in.readInt(), in);
   }
 
   /**
-   * Create a KeyValue reading <code>length</code> from <code>in</code>
-   *
-   * @param length
-   * @param in
-   * @return Created KeyValue OR if we find a length of zero, we will return
-   *         null which can be useful marking a stream as done.
-   * @throws IOException
+   * Create a KeyValue reading <code>length</code> from <code>in</code> nn * @return Created
+   * KeyValue OR if we find a length of zero, we will return null which can be useful marking a
+   * stream as done. n
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
 
     if (length <= 0) {
-      if (length == 0)
-        return null;
+      if (length == 0) return null;
       throw new IOException("Failed read " + length + " bytes, stream corrupt?");
     }
 
@@ -806,9 +731,9 @@ public class KeyValueUtil {
   }
 
   public static int oswrite(final Cell cell, final OutputStream out, final boolean withTags)
-      throws IOException {
+    throws IOException {
     if (cell instanceof ExtendedCell) {
-      return ((ExtendedCell)cell).write(out, withTags);
+      return ((ExtendedCell) cell).write(out, withTags);
     } else {
       short rlen = cell.getRowLength();
       byte flen = cell.getFamilyLength();

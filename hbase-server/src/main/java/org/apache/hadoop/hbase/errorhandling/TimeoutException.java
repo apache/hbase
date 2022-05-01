@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,14 +34,14 @@ public class TimeoutException extends Exception {
 
   /**
    * Exception indicating that an operation attempt has timed out
-   * @param start time the operation started (ms since epoch)
-   * @param end time the timeout was triggered (ms since epoch)
-   * @param expected expected amount of time for the operation to complete (ms)
-   *                 (ideally, expected &lt;= end-start)
+   * @param start    time the operation started (ms since epoch)
+   * @param end      time the timeout was triggered (ms since epoch)
+   * @param expected expected amount of time for the operation to complete (ms) (ideally, expected
+   *                 &lt;= end-start)
    */
   public TimeoutException(String sourceName, long start, long end, long expected) {
-    super("Timeout elapsed! Source:" + sourceName + " Start:" + start + ", End:" + end
-        + ", diff:" + (end - start) + ", max:" + expected + " ms");
+    super("Timeout elapsed! Source:" + sourceName + " Start:" + start + ", End:" + end + ", diff:"
+      + (end - start) + ", max:" + expected + " ms");
     this.sourceName = sourceName;
     this.start = start;
     this.end = end;

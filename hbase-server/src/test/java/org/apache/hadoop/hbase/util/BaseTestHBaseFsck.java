@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,19 +66,13 @@ import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
-import org.apache.zookeeper.KeeperException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is the base class for  HBaseFsck's ability to detect reasons for inconsistent tables.
- *
- * Actual tests are in :
- * TestHBaseFsckTwoRS
- * TestHBaseFsckOneRS
- * TestHBaseFsckMOB
- * TestHBaseFsckReplicas
+ * This is the base class for HBaseFsck's ability to detect reasons for inconsistent tables. Actual
+ * tests are in : TestHBaseFsckTwoRS TestHBaseFsckOneRS TestHBaseFsckMOB TestHBaseFsckReplicas
  */
 public class BaseTestHBaseFsck {
   static final int POOL_SIZE = 7;
@@ -98,12 +91,12 @@ public class BaseTestHBaseFsck {
 
   // for the instance, reset every test run
   protected Table tbl;
-  protected final static byte[][] SPLITS = new byte[][] { Bytes.toBytes("A"),
-    Bytes.toBytes("B"), Bytes.toBytes("C") };
+  protected final static byte[][] SPLITS =
+    new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
   // one row per region.
-  protected final static byte[][] ROWKEYS= new byte[][] {
-    Bytes.toBytes("00"), Bytes.toBytes("50"), Bytes.toBytes("A0"), Bytes.toBytes("A5"),
-    Bytes.toBytes("B0"), Bytes.toBytes("B5"), Bytes.toBytes("C0"), Bytes.toBytes("C5") };
+  protected final static byte[][] ROWKEYS = new byte[][] { Bytes.toBytes("00"), Bytes.toBytes("50"),
+    Bytes.toBytes("A0"), Bytes.toBytes("A5"), Bytes.toBytes("B0"), Bytes.toBytes("B5"),
+    Bytes.toBytes("C0"), Bytes.toBytes("C5") };
 
   /**
    * Debugging method to dump the contents of meta.
@@ -117,62 +110,64 @@ public class BaseTestHBaseFsck {
   }
 
   /**
-   * This method is used to undeploy a region -- close it and attempt to
-   * remove its state from the Master.
+   * This method is used to undeploy a region -- close it and attempt to remove its state from the
+   * Master.
    */
-  protected void undeployRegion(Connection conn, ServerName sn,
-      RegionInfo hri) throws IOException, InterruptedException {
+  protected void undeployRegion(Connection conn, ServerName sn, RegionInfo hri)
+    throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(conn, sn, hri);
       if (!hri.isMetaRegion()) {
         admin.offline(hri.getRegionName());
       }
     } catch (IOException ioe) {
-      LOG.warn("Got exception when attempting to offline region "
-          + Bytes.toString(hri.getRegionName()), ioe);
+      LOG.warn(
+        "Got exception when attempting to offline region " + Bytes.toString(hri.getRegionName()),
+        ioe);
     }
-  }
-  /**
-   * Delete a region from assignments, meta, or completely from hdfs.
-   * @param unassign if true unassign region if assigned
-   * @param metaRow  if true remove region's row from META
-   * @param hdfs if true remove region's dir in HDFS
-   */
-  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
-      byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
-      boolean hdfs) throws IOException, InterruptedException {
-    deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false,
-        RegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
    * Delete a region from assignments, meta, or completely from hdfs.
    * @param unassign if true unassign region if assigned
    * @param metaRow  if true remove region's row from META
-   * @param hdfs if true remove region's dir in HDFS
-   * @param regionInfoOnly if true remove a region dir's .regioninfo file
-   * @param replicaId replica id
+   * @param hdfs     if true remove region's dir in HDFS
    */
-  protected void deleteRegion(Configuration conf, final TableDescriptor htd,
-      byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
-      boolean hdfs, boolean regionInfoOnly, int replicaId)
-          throws IOException, InterruptedException {
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd, byte[] startKey,
+    byte[] endKey, boolean unassign, boolean metaRow, boolean hdfs)
+    throws IOException, InterruptedException {
+    deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false,
+      RegionInfo.DEFAULT_REPLICA_ID);
+  }
+
+  /**
+   * Delete a region from assignments, meta, or completely from hdfs.
+   * @param unassign       if true unassign region if assigned
+   * @param metaRow        if true remove region's row from META
+   * @param hdfs           if true remove region's dir in HDFS
+   * @param regionInfoOnly if true remove a region dir's .regioninfo file
+   * @param replicaId      replica id
+   */
+  protected void deleteRegion(Configuration conf, final TableDescriptor htd, byte[] startKey,
+    byte[] endKey, boolean unassign, boolean metaRow, boolean hdfs, boolean regionInfoOnly,
+    int replicaId) throws IOException, InterruptedException {
     LOG.info("** Before delete:");
     dumpMeta(htd.getTableName());
 
     List<HRegionLocation> locations;
-    try(RegionLocator rl = connection.getRegionLocator(tbl.getName())) {
+    try (RegionLocator rl = connection.getRegionLocator(tbl.getName())) {
       locations = rl.getAllRegionLocations();
     }
 
     for (HRegionLocation location : locations) {
       RegionInfo hri = location.getRegion();
       ServerName hsa = location.getServerName();
-      if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
-          && Bytes.compareTo(hri.getEndKey(), endKey) == 0
-          && hri.getReplicaId() == replicaId) {
+      if (
+        Bytes.compareTo(hri.getStartKey(), startKey) == 0
+          && Bytes.compareTo(hri.getEndKey(), endKey) == 0 && hri.getReplicaId() == replicaId
+      ) {
 
-        LOG.info("RegionName: " +hri.getRegionNameAsString());
+        LOG.info("RegionName: " + hri.getRegionNameAsString());
         byte[] deleteRow = hri.getRegionName();
 
         if (unassign) {
@@ -184,8 +179,8 @@ public class BaseTestHBaseFsck {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
           Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
-              hri.getEncodedName());
+          Path p =
+            new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), hri.getEncodedName());
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
         }
@@ -194,8 +189,8 @@ public class BaseTestHBaseFsck {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
           Path rootDir = CommonFSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()),
-              hri.getEncodedName());
+          Path p =
+            new Path(CommonFSUtils.getTableDir(rootDir, htd.getTableName()), hri.getEncodedName());
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
           LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -217,28 +212,19 @@ public class BaseTestHBaseFsck {
   }
 
   /**
-   * Setup a clean table before we start mucking with it.
-   *
-   * It will set tbl which needs to be closed after test
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
+   * Setup a clean table before we start mucking with it. It will set tbl which needs to be closed
+   * after test nnn
    */
   void setupTable(TableName tablename) throws Exception {
     setupTableWithRegionReplica(tablename, 1);
   }
 
   /**
-   * Setup a clean table with a certain region_replica count
-   *
-   * It will set tbl which needs to be closed after test
-   *
-   * @throws Exception
+   * Setup a clean table with a certain region_replica count It will set tbl which needs to be
+   * closed after test n
    */
   void setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tablename);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tablename);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(FAM).build();
     tableDescriptorBuilder.setRegionReplication(replicaCount);
@@ -258,18 +244,12 @@ public class BaseTestHBaseFsck {
 
   /**
    * Setup a clean table with a mob-enabled column.
-   *
-   * @param tablename The name of a table to be created.
-   * @throws Exception
+   * @param tablename The name of a table to be created. n
    */
   void setupMobTable(TableName tablename) throws Exception {
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tablename);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tablename);
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(FAM)
-        .setMobEnabled(true)
-        .setMobThreshold(0).build();
+      ColumnFamilyDescriptorBuilder.newBuilder(FAM).setMobEnabled(true).setMobThreshold(0).build();
     // If a table has no CF's it doesn't get checked
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     createTable(TEST_UTIL, tableDescriptorBuilder.build(), SPLITS);
@@ -288,7 +268,7 @@ public class BaseTestHBaseFsck {
    * Counts the number of rows to verify data loss or non-dataloss.
    */
   int countRows() throws IOException {
-     return TEST_UTIL.countRows(tbl);
+    return TEST_UTIL.countRows(tbl);
   }
 
   /**
@@ -333,7 +313,7 @@ public class BaseTestHBaseFsck {
    * Returns the HSI a region info is on.
    */
   ServerName findDeployedHSI(Map<ServerName, List<String>> mm, RegionInfo hri) {
-    for (Map.Entry<ServerName,List <String>> e : mm.entrySet()) {
+    for (Map.Entry<ServerName, List<String>> e : mm.entrySet()) {
       if (e.getValue().contains(hri.getRegionNameAsString())) {
         return e.getKey();
       }
@@ -352,14 +332,10 @@ public class BaseTestHBaseFsck {
 
   /**
    * We don't have an easy way to verify that a flush completed, so we loop until we find a
-   * legitimate hfile and return it.
-   * @param fs
-   * @param table
-   * @return Path of a flushed hfile.
-   * @throws IOException
+   * legitimate hfile and return it. nn * @return Path of a flushed hfile. n
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
+    Path tableDir = CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
     Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
     Path famDir = new Path(regionDir, FAM_STR);
 
@@ -379,10 +355,9 @@ public class BaseTestHBaseFsck {
 
   /**
    * Gets flushed mob files.
-   * @param fs The current file system.
+   * @param fs    The current file system.
    * @param table The current table name.
-   * @return Path of a flushed hfile.
-   * @throws IOException
+   * @return Path of a flushed hfile. n
    */
   Path getFlushedMobFile(FileSystem fs, TableName table) throws IOException {
     Path famDir = MobUtils.getMobFamilyPath(conf, table, FAM_STR);
@@ -410,19 +385,16 @@ public class BaseTestHBaseFsck {
     MobFileName mobFileName = MobFileName.create(oldFileName);
     String startKey = mobFileName.getStartKey();
     String date = mobFileName.getDate();
-    return MobFileName.create(startKey, date,
-                              TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""), "abcdef")
+    return MobFileName
+      .create(startKey, date, TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""), "abcdef")
       .getFileName();
   }
 
-
-
-
   /**
    * Test that use this should have a timeout, because this method could potentially wait forever.
-  */
-  protected void doQuarantineTest(TableName table, HBaseFsck hbck, int check,
-                                  int corrupt, int fail, int quar, int missing) throws Exception {
+   */
+  protected void doQuarantineTest(TableName table, HBaseFsck hbck, int check, int corrupt, int fail,
+    int quar, int missing) throws Exception {
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
@@ -431,8 +403,8 @@ public class BaseTestHBaseFsck {
       // Mess it up by leaving a hole in the assignment, meta, and hdfs data
       admin.disableTable(table);
 
-      String[] args = {"-sidelineCorruptHFiles", "-repairHoles", "-ignorePreCheckPermission",
-          table.getNameAsString()};
+      String[] args = { "-sidelineCorruptHFiles", "-repairHoles", "-ignorePreCheckPermission",
+        table.getNameAsString() };
       HBaseFsck res = hbck.exec(hbfsckExecutorService, args);
 
       HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
@@ -456,7 +428,6 @@ public class BaseTestHBaseFsck {
       cleanupTable(table);
     }
   }
-
 
   static class MockErrorReporter implements HbckErrorReporter {
     static int calledCount = 0;
@@ -487,14 +458,14 @@ public class BaseTestHBaseFsck {
     }
 
     @Override
-    public void reportError(ERROR_CODE errorCode,
-        String message, HbckTableInfo table, HbckRegionInfo info) {
+    public void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table,
+      HbckRegionInfo info) {
       calledCount++;
     }
 
     @Override
-    public void reportError(ERROR_CODE errorCode, String message,
-        HbckTableInfo table, HbckRegionInfo info1, HbckRegionInfo info2) {
+    public void reportError(ERROR_CODE errorCode, String message, HbckTableInfo table,
+      HbckRegionInfo info1, HbckRegionInfo info2) {
       calledCount++;
     }
 
@@ -536,11 +507,10 @@ public class BaseTestHBaseFsck {
     }
   }
 
-
   protected void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
-                                  boolean regionInfoOnly) throws IOException, InterruptedException {
+    boolean regionInfoOnly) throws IOException, InterruptedException {
     HRegionLocation metaLocation = connection.getRegionLocator(TableName.META_TABLE_NAME)
-        .getRegionLocation(HConstants.EMPTY_START_ROW);
+      .getRegionLocation(HConstants.EMPTY_START_ROW);
     ServerName hsa = metaLocation.getServerName();
     RegionInfo hri = metaLocation.getRegion();
     if (unassign) {
@@ -554,8 +524,8 @@ public class BaseTestHBaseFsck {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
-      Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
-          hri.getEncodedName());
+      Path p =
+        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
       Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
       fs.delete(hriPath, true);
     }
@@ -564,8 +534,8 @@ public class BaseTestHBaseFsck {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
       Path rootDir = CommonFSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
-      Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
-          hri.getEncodedName());
+      Path p =
+        new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(), hri.getEncodedName());
       HBaseFsck.debugLsr(conf, p);
       boolean success = fs.delete(p, true);
       LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -587,9 +557,8 @@ public class BaseTestHBaseFsck {
 
     @Override
     public void postCompletedCreateTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableDescriptor desc,
-        final RegionInfo[] regions) throws IOException {
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableDescriptor desc,
+      final RegionInfo[] regions) throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedCreateTableAction()
       if (tableCreationLatch != null) {
@@ -599,8 +568,8 @@ public class BaseTestHBaseFsck {
 
     @Override
     public void postCompletedDeleteTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final TableName tableName) throws IOException {
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableName tableName)
+      throws IOException {
       // the AccessController test, some times calls only and directly the
       // postCompletedDeleteTableAction()
       if (tableDeletionLatch != null) {
@@ -610,11 +579,11 @@ public class BaseTestHBaseFsck {
   }
 
   public static void createTable(HBaseTestingUtil testUtil, TableDescriptor tableDescriptor,
-      byte[][] splitKeys) throws Exception {
+    byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
-        .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
+    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncCoprocessor.class);
     coproc.tableCreationLatch = new CountDownLatch(1);
     if (splitKeys != null) {
       admin.createTable(tableDescriptor, splitKeys);
@@ -626,12 +595,11 @@ public class BaseTestHBaseFsck {
     testUtil.waitUntilAllRegionsAssigned(tableDescriptor.getTableName());
   }
 
-  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName)
-    throws Exception {
+  public static void deleteTable(HBaseTestingUtil testUtil, TableName tableName) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
-    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncCoprocessor.class);
+    MasterSyncCoprocessor coproc = testUtil.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncCoprocessor.class);
     coproc.tableDeletionLatch = new CountDownLatch(1);
     try {
       admin.disableTable(tableName);

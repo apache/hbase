@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class MasterFifoRpcSchedulerFactory extends FifoRpcSchedulerFactory {
     int totalHandlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
       HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
     int rsReportHandlerCount = Math.max(1, conf
-        .getInt(MasterFifoRpcScheduler.MASTER_SERVER_REPORT_HANDLER_COUNT, totalHandlerCount / 2));
+      .getInt(MasterFifoRpcScheduler.MASTER_SERVER_REPORT_HANDLER_COUNT, totalHandlerCount / 2));
     int callHandlerCount = Math.max(1, totalHandlerCount - rsReportHandlerCount);
     return new MasterFifoRpcScheduler(conf, callHandlerCount, rsReportHandlerCount);
   }

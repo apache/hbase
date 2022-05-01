@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -42,7 +43,7 @@ public class TestResultSizeEstimation {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResultSizeEstimation.class);
+    HBaseClassTestRule.forClass(TestResultSizeEstimation.class);
 
   final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -70,11 +71,11 @@ public class TestResultSizeEstimation {
 
   @Test
   public void testResultSizeEstimation() throws Exception {
-    byte [] ROW1 = Bytes.toBytes("testRow1");
-    byte [] ROW2 = Bytes.toBytes("testRow2");
-    byte [] FAMILY = Bytes.toBytes("testFamily");
-    byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-    byte [] VALUE = Bytes.toBytes("testValue");
+    byte[] ROW1 = Bytes.toBytes("testRow1");
+    byte[] ROW2 = Bytes.toBytes("testRow2");
+    byte[] FAMILY = Bytes.toBytes("testFamily");
+    byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+    byte[] VALUE = Bytes.toBytes("testValue");
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { FAMILY };
@@ -90,7 +91,7 @@ public class TestResultSizeEstimation {
     s.setMaxResultSize(SCANNER_DATA_LIMIT);
     ResultScanner rs = table.getScanner(s);
     int count = 0;
-    while(rs.next() != null) {
+    while (rs.next() != null) {
       count++;
     }
     assertEquals("Result size estimation did not work properly", 2, count);
@@ -100,29 +101,29 @@ public class TestResultSizeEstimation {
 
   @Test
   public void testResultSizeEstimationWithTags() throws Exception {
-    byte [] ROW1 = Bytes.toBytes("testRow1");
-    byte [] ROW2 = Bytes.toBytes("testRow2");
-    byte [] FAMILY = Bytes.toBytes("testFamily");
-    byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-    byte [] VALUE = Bytes.toBytes("testValue");
+    byte[] ROW1 = Bytes.toBytes("testRow1");
+    byte[] ROW2 = Bytes.toBytes("testRow2");
+    byte[] FAMILY = Bytes.toBytes("testFamily");
+    byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+    byte[] VALUE = Bytes.toBytes("testValue");
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     byte[][] FAMILIES = new byte[][] { FAMILY };
     Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
-      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) }));
+      new Tag[] { new ArrayBackedTag((byte) 1, new byte[TAG_DATA_SIZE]) }));
     table.put(p);
     p = new Put(ROW2);
     p.add(new KeyValue(ROW2, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
-      new Tag[] { new ArrayBackedTag((byte)1, new byte[TAG_DATA_SIZE]) }));
+      new Tag[] { new ArrayBackedTag((byte) 1, new byte[TAG_DATA_SIZE]) }));
     table.put(p);
 
     Scan s = new Scan();
     s.setMaxResultSize(SCANNER_DATA_LIMIT);
     ResultScanner rs = table.getScanner(s);
     int count = 0;
-    while(rs.next() != null) {
+    while (rs.next() != null) {
       count++;
     }
     assertEquals("Result size estimation did not work properly", 2, count);

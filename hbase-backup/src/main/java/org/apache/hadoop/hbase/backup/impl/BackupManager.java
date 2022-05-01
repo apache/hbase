@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +59,7 @@ import org.slf4j.LoggerFactory;
 public class BackupManager implements Closeable {
   // in seconds
   public final static String BACKUP_EXCLUSIVE_OPERATION_TIMEOUT_SECONDS_KEY =
-      "hbase.backup.exclusive.op.timeout.seconds";
+    "hbase.backup.exclusive.op.timeout.seconds";
   // In seconds
   private final static int DEFAULT_BACKUP_EXCLUSIVE_OPERATION_TIMEOUT = 3600;
   private static final Logger LOG = LoggerFactory.getLogger(BackupManager.class);
@@ -77,10 +76,12 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   public BackupManager(Connection conn, Configuration conf) throws IOException {
-    if (!conf.getBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY,
-      BackupRestoreConstants.BACKUP_ENABLE_DEFAULT)) {
+    if (
+      !conf.getBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY,
+        BackupRestoreConstants.BACKUP_ENABLE_DEFAULT)
+    ) {
       throw new BackupException("HBase backup is not enabled. Check your "
-          + BackupRestoreConstants.BACKUP_ENABLE_KEY + " setting.");
+        + BackupRestoreConstants.BACKUP_ENABLE_KEY + " setting.");
     }
     this.conf = conf;
     this.conn = conn;
@@ -120,12 +121,13 @@ public class BackupManager implements Closeable {
     }
 
     plugins = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
-    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, (plugins == null ? "" : plugins + ",") +
-      BackupHFileCleaner.class.getName());
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+      (plugins == null ? "" : plugins + ",") + BackupHFileCleaner.class.getName());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added log cleaner: {}. Added master procedure manager: {}."
-        +"Added master procedure manager: {}", cleanerClass, masterProcedureClass,
-        BackupHFileCleaner.class.getName());
+      LOG.debug(
+        "Added log cleaner: {}. Added master procedure manager: {}."
+          + "Added master procedure manager: {}",
+        cleanerClass, masterProcedureClass, BackupHFileCleaner.class.getName());
     }
   }
 
@@ -163,8 +165,7 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get configuration
-   * @return configuration
+   * Get configuration n
    */
   Configuration getConf() {
     return conf;
@@ -186,17 +187,15 @@ public class BackupManager implements Closeable {
 
   /**
    * Creates a backup info based on input backup request.
-   * @param backupId backup id
-   * @param type type
-   * @param tableList table list
+   * @param backupId      backup id
+   * @param type          type
+   * @param tableList     table list
    * @param targetRootDir root dir
-   * @param workers number of parallel workers
-   * @param bandwidth bandwidth per worker in MB per sec
-   * @return BackupInfo
-   * @throws BackupException exception
+   * @param workers       number of parallel workers
+   * @param bandwidth     bandwidth per worker in MB per sec n * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-      String targetRootDir, int workers, long bandwidth) throws BackupException {
+    String targetRootDir, int workers, long bandwidth) throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -292,8 +291,8 @@ public class BackupManager implements Closeable {
       BackupImage.Builder builder = BackupImage.newBuilder();
 
       BackupImage image = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
-          .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
-          .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
+        .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
+        .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
 
       // Only direct ancestors for a backup are required and not entire history of backup for this
       // table resulting in verifying all of the previous backups which is unnecessary and backup
@@ -320,21 +319,21 @@ public class BackupManager implements Closeable {
         if (BackupManifest.canCoverImage(ancestors, image)) {
           LOG.debug("Met the backup boundary of the current table set:");
           for (BackupImage image1 : ancestors) {
-            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(),  image1.getRootDir());
+            LOG.debug("  BackupID={}, BackupDir={}", image1.getBackupId(), image1.getRootDir());
           }
         } else {
           Path logBackupPath =
-              HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
-          LOG.debug("Current backup has an incremental backup ancestor, "
-              + "touching its image manifest in {}"
-              + " to construct the dependency.", logBackupPath.toString());
+            HBackupFileSystem.getBackupPath(backup.getBackupRootDir(), backup.getBackupId());
+          LOG.debug(
+            "Current backup has an incremental backup ancestor, "
+              + "touching its image manifest in {}" + " to construct the dependency.",
+            logBackupPath.toString());
           BackupManifest lastIncrImgManifest = new BackupManifest(conf, logBackupPath);
           BackupImage lastIncrImage = lastIncrImgManifest.getBackupImage();
           ancestors.add(lastIncrImage);
 
-          LOG.debug(
-            "Last dependent incremental backup image: {BackupID={}" +
-                "BackupDir={}}", lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
+          LOG.debug("Last dependent incremental backup image: {BackupID={}" + "BackupDir={}}",
+            lastIncrImage.getBackupId(), lastIncrImage.getRootDir());
         }
       }
     }
@@ -345,12 +344,12 @@ public class BackupManager implements Closeable {
   /**
    * Get the direct ancestors of this backup for one table involved.
    * @param backupInfo backup info
-   * @param table table
+   * @param table      table
    * @return backupImages on the dependency list
    * @throws IOException exception
    */
   public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo, TableName table)
-      throws IOException {
+    throws IOException {
     ArrayList<BackupImage> ancestors = getAncestors(backupInfo);
     ArrayList<BackupImage> tableAncestors = new ArrayList<>();
     for (BackupImage image : ancestors) {
@@ -399,11 +398,13 @@ public class BackupManager implements Closeable {
             // Restore the interrupted status
             Thread.currentThread().interrupt();
           }
-          if (lastWarningOutputTime == 0
-              || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000) {
+          if (
+            lastWarningOutputTime == 0
+              || (EnvironmentEdgeManager.currentTime() - lastWarningOutputTime) > 60000
+          ) {
             lastWarningOutputTime = EnvironmentEdgeManager.currentTime();
             LOG.warn("Waiting to acquire backup exclusive lock for {}s",
-                +(lastWarningOutputTime - startTime) / 1000);
+              +(lastWarningOutputTime - startTime) / 1000);
           }
         } else {
           throw e;
@@ -480,8 +481,8 @@ public class BackupManager implements Closeable {
    * @param tables tables
    * @throws IOException exception
    */
-  public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      Map<String, Long> newTimestamps) throws IOException {
+  public void writeRegionServerLogTimestamp(Set<TableName> tables, Map<String, Long> newTimestamps)
+    throws IOException {
     systemTable.writeRegionServerLogTimestamp(tables, newTimestamps, backupInfo.getBackupRootDir());
   }
 

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -40,8 +37,8 @@ import org.slf4j.LoggerFactory;
  * passed-in WALEdit, i.e, ignore specified columns when writing, or add a KeyValue. On the other
  * side, it checks whether the ignored column is still in WAL when Restoreed at region reconstruct.
  */
-public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoprocessor,
-    WALObserver, RegionObserver {
+public class SampleRegionWALCoprocessor
+  implements WALCoprocessor, RegionCoprocessor, WALObserver, RegionObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(SampleRegionWALCoprocessor.class);
 
@@ -62,11 +59,11 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
   private boolean postWALRollCalled = false;
 
   /**
-   * Set values: with a table name, a column name which will be ignored, and
-   * a column name which will be added to WAL.
+   * Set values: with a table name, a column name which will be ignored, and a column name which
+   * will be added to WAL.
    */
-  public void setTestValues(byte[] tableName, byte[] row, byte[] igf, byte[] igq,
-      byte[] chf, byte[] chq, byte[] addf, byte[] addq) {
+  public void setTestValues(byte[] tableName, byte[] row, byte[] igf, byte[] igq, byte[] chf,
+    byte[] chq, byte[] addf, byte[] addq) {
     this.row = row;
     this.tableName = tableName;
     this.ignoredFamily = igf;
@@ -83,7 +80,8 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
     postWALRollCalled = false;
   }
 
-  @Override public Optional<WALObserver> getWALObserver() {
+  @Override
+  public Optional<WALObserver> getWALObserver() {
     return Optional.of(this);
   }
 
@@ -94,13 +92,13 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
 
   @Override
   public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
   }
 
   @Override
-  public void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  public void preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env, RegionInfo info,
+    WALKey logKey, WALEdit logEdit) throws IOException {
     // check table name matches or not.
     if (!Bytes.equals(info.getTable().toBytes(), this.tableName)) {
       return;
@@ -115,16 +113,14 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
       byte[] family = CellUtil.cloneFamily(cell);
       byte[] qulifier = CellUtil.cloneQualifier(cell);
 
-      if (Arrays.equals(family, ignoredFamily) &&
-          Arrays.equals(qulifier, ignoredQualifier)) {
+      if (Arrays.equals(family, ignoredFamily) && Arrays.equals(qulifier, ignoredQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be ignored.");
         deletedCell = cell;
       }
-      if (Arrays.equals(family, changedFamily) &&
-          Arrays.equals(qulifier, changedQualifier)) {
+      if (Arrays.equals(family, changedFamily) && Arrays.equals(qulifier, changedQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be changed.");
         cell.getValueArray()[cell.getValueOffset()] =
-            (byte) (cell.getValueArray()[cell.getValueOffset()] + 1);
+          (byte) (cell.getValueArray()[cell.getValueOffset()] + 1);
       }
     }
     if (null != row) {
@@ -137,8 +133,7 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
   }
 
   /**
-   * Triggered before  {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is
-   * Restoreed.
+   * Triggered before {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is Restoreed.
    */
   @Override
   public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
@@ -147,24 +142,23 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
   }
 
   @Override
-  public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException {
+  public void preWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx, Path oldPath,
+    Path newPath) throws IOException {
     preWALRollCalled = true;
   }
 
   @Override
-  public void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
-      Path oldPath, Path newPath) throws IOException {
+  public void postWALRoll(ObserverContext<? extends WALCoprocessorEnvironment> ctx, Path oldPath,
+    Path newPath) throws IOException {
     postWALRollCalled = true;
   }
 
   /**
-   * Triggered after {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is
-   * Restoreed.
+   * Triggered after {@link org.apache.hadoop.hbase.regionserver.HRegion} when WAL is Restoreed.
    */
   @Override
   public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
-      RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    RegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALRestoreCalled = true;
   }
 
@@ -177,14 +171,12 @@ public class SampleRegionWALCoprocessor implements WALCoprocessor, RegionCoproce
   }
 
   public boolean isPreWALRestoreCalled() {
-    LOG.debug(SampleRegionWALCoprocessor.class.getName() +
-      ".isPreWALRestoreCalled is called.");
+    LOG.debug(SampleRegionWALCoprocessor.class.getName() + ".isPreWALRestoreCalled is called.");
     return preWALRestoreCalled;
   }
 
   public boolean isPostWALRestoreCalled() {
-    LOG.debug(SampleRegionWALCoprocessor.class.getName() +
-      ".isPostWALRestoreCalled is called.");
+    LOG.debug(SampleRegionWALCoprocessor.class.getName() + ".isPostWALRestoreCalled is called.");
     return postWALRestoreCalled;
   }
 

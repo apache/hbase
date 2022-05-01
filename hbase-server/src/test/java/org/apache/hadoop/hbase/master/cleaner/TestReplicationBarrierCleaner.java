@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -111,7 +111,7 @@ public class TestReplicationBarrierCleaner {
   }
 
   private ReplicationPeerManager create(ReplicationQueueStorage queueStorage,
-      List<String> firstPeerIds, @SuppressWarnings("unchecked") List<String>... peerIds) {
+    List<String> firstPeerIds, @SuppressWarnings("unchecked") List<String>... peerIds) {
     ReplicationPeerManager peerManager = mock(ReplicationPeerManager.class);
     if (queueStorage != null) {
       when(peerManager.getQueueStorage()).thenReturn(queueStorage);
@@ -126,7 +126,7 @@ public class TestReplicationBarrierCleaner {
   }
 
   private ReplicationQueueStorage create(Long lastPushedSeqId, Long... lastPushedSeqIds)
-      throws ReplicationException {
+    throws ReplicationException {
     ReplicationQueueStorage queueStorage = mock(ReplicationQueueStorage.class);
     if (lastPushedSeqIds.length == 0) {
       when(queueStorage.getLastSequenceId(anyString(), anyString())).thenReturn(lastPushedSeqId);

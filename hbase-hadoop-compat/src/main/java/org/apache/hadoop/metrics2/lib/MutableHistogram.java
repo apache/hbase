@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.lib;
 
 import org.apache.commons.lang3.StringUtils;
@@ -51,7 +50,8 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
     histogram.update(val);
   }
 
-  @Override public long getCount() {
+  @Override
+  public long getCount() {
     return histogram.getCount();
   }
 
@@ -65,7 +65,7 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   }
 
   public static void snapshot(String name, String desc, Histogram histogram,
-                              MetricsRecordBuilder metricsRecordBuilder, boolean all) {
+    MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     // Get a reference to the old histogram.
     Snapshot snapshot = histogram.snapshot();
     if (snapshot != null) {
@@ -74,29 +74,29 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
   }
 
   protected static void updateSnapshotMetrics(String name, String desc, Histogram histogram,
-      Snapshot snapshot, MetricsRecordBuilder metricsRecordBuilder) {
+    Snapshot snapshot, MetricsRecordBuilder metricsRecordBuilder) {
     metricsRecordBuilder.addCounter(Interns.info(name + NUM_OPS_METRIC_NAME, desc),
-        histogram.getCount());
+      histogram.getCount());
     metricsRecordBuilder.addGauge(Interns.info(name + MIN_METRIC_NAME, desc), snapshot.getMin());
     metricsRecordBuilder.addGauge(Interns.info(name + MAX_METRIC_NAME, desc), snapshot.getMax());
     metricsRecordBuilder.addGauge(Interns.info(name + MEAN_METRIC_NAME, desc), snapshot.getMean());
 
     metricsRecordBuilder.addGauge(Interns.info(name + TWENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get25thPercentile());
+      snapshot.get25thPercentile());
     metricsRecordBuilder.addGauge(Interns.info(name + MEDIAN_METRIC_NAME, desc),
-        snapshot.getMedian());
+      snapshot.getMedian());
     metricsRecordBuilder.addGauge(Interns.info(name + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get75thPercentile());
+      snapshot.get75thPercentile());
     metricsRecordBuilder.addGauge(Interns.info(name + NINETIETH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get90thPercentile());
+      snapshot.get90thPercentile());
     metricsRecordBuilder.addGauge(Interns.info(name + NINETY_FIFTH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get95thPercentile());
+      snapshot.get95thPercentile());
     metricsRecordBuilder.addGauge(Interns.info(name + NINETY_EIGHTH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get98thPercentile());
+      snapshot.get98thPercentile());
     metricsRecordBuilder.addGauge(Interns.info(name + NINETY_NINETH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get99thPercentile());
+      snapshot.get99thPercentile());
     metricsRecordBuilder.addGauge(
-        Interns.info(name + NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME, desc),
-        snapshot.get999thPercentile());
+      Interns.info(name + NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME, desc),
+      snapshot.get999thPercentile());
   }
 }

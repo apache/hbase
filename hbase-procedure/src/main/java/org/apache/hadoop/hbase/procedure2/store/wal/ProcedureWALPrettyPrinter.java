@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,13 +67,11 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
 
   /**
    * Reads a log file and outputs its contents.
-   *
-   * @param conf   HBase configuration relevant to this log file
-   * @param p       path of the log file to be read
-   * @throws IOException  IOException
+   * @param conf HBase configuration relevant to this log file
+   * @param p    path of the log file to be read
+   * @throws IOException IOException
    */
-  public void processFile(final Configuration conf, final Path p)
-      throws IOException {
+  public void processFile(final Configuration conf, final Path p) throws IOException {
 
     FileSystem fs = p.getFileSystem(conf);
     if (!fs.exists(p)) {
@@ -121,8 +119,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
       }
     } catch (IOException e) {
       out.println("got an exception while reading the procedure WAL " + e.getMessage());
-    }
-    finally {
+    } finally {
       log.close();
     }
   }
@@ -150,13 +147,9 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
   }
 
   /**
-   * Pass one or more log file names and formatting options and it will dump out
-   * a text version of the contents on <code>stdout</code>.
-   *
-   * @param args
-   *          Command line arguments
-   * @throws IOException
-   *           Thrown upon file system errors etc.
+   * Pass one or more log file names and formatting options and it will dump out a text version of
+   * the contents on <code>stdout</code>. n * Command line arguments n * Thrown upon file system
+   * errors etc.
    */
   @Override
   public int run(final String[] args) throws IOException {
@@ -176,19 +169,19 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
       if (files.isEmpty() || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
-        return(-1);
+        return (-1);
       }
     } catch (ParseException e) {
       LOG.error("Failed to parse commandLine arguments", e);
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("ProcedureWALPrettyPrinter ", options, true);
-      return(-1);
+      return (-1);
     }
     // get configuration, file system, and process the given files
     for (Path file : files) {
       processFile(getConf(), file);
     }
-    return(0);
+    return (0);
   }
 
   public static void main(String[] args) throws Exception {

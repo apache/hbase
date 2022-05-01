@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,17 +66,15 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
     WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = server.getConfiguration();
-    this.statsPeriodInSecond =
-      this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
   }
 
   @Override
   public void startReplicationService() throws IOException {
     this.replicationSink = new ReplicationSink(this.conf);
-    this.server.getChoreService().scheduleChore(
-        new ReplicationStatisticsChore("ReplicationSinkStatistics", server,
-            (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
+    this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
+      "ReplicationSinkStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
 
   @Override

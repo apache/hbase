@@ -139,47 +139,58 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     sourceInitializing = rms.getMetricsRegistry().getGaugeInt(sourceInitializingKey, 0);
   }
 
-  @Override public void setLastShippedAge(long age) {
+  @Override
+  public void setLastShippedAge(long age) {
     ageOfLastShippedOpHist.add(age);
   }
 
-  @Override public void incrSizeOfLogQueue(int size) {
+  @Override
+  public void incrSizeOfLogQueue(int size) {
     sizeOfLogQueueGauge.incr(size);
   }
 
-  @Override public void decrSizeOfLogQueue(int size) {
+  @Override
+  public void decrSizeOfLogQueue(int size) {
     sizeOfLogQueueGauge.decr(size);
   }
 
-  @Override public void incrLogReadInEdits(long size) {
+  @Override
+  public void incrLogReadInEdits(long size) {
     logReadInEditsCounter.incr(size);
   }
 
-  @Override public void incrLogEditsFiltered(long size) {
+  @Override
+  public void incrLogEditsFiltered(long size) {
     walEditsFilteredCounter.incr(size);
   }
 
-  @Override public void incrBatchesShipped(int batches) {
+  @Override
+  public void incrBatchesShipped(int batches) {
     shippedBatchesCounter.incr(batches);
   }
 
-  @Override public void incrFailedBatches() {
+  @Override
+  public void incrFailedBatches() {
     failedBatchesCounter.incr();
   }
 
-  @Override public void incrOpsShipped(long ops) {
+  @Override
+  public void incrOpsShipped(long ops) {
     shippedOpsCounter.incr(ops);
   }
 
-  @Override public void incrShippedBytes(long size) {
+  @Override
+  public void incrShippedBytes(long size) {
     shippedBytesCounter.incr(size);
   }
 
-  @Override public void incrLogReadInBytes(long size) {
+  @Override
+  public void incrLogReadInBytes(long size) {
     logReadInBytesCounter.incr(size);
   }
 
-  @Override public void clear() {
+  @Override
+  public void clear() {
     rms.removeMetric(ageOfLastShippedOpKey);
 
     rms.removeMetric(sizeOfLogQueueKey);
@@ -230,7 +241,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override
   public int getSizeOfLogQueue() {
-    return (int)sizeOfLogQueueGauge.value();
+    return (int) sizeOfLogQueueGauge.value();
   }
 
   @Override
@@ -274,13 +285,16 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   }
 
   @Override
-  public void incrFailedRecoveryQueue() {/*no op*/}
+  public void incrFailedRecoveryQueue() {
+    /* no op */}
 
-  @Override public void setOldestWalAge(long age) {
+  @Override
+  public void setOldestWalAge(long age) {
     oldestWalAge.set(age);
   }
 
-  @Override public long getOldestWalAge() {
+  @Override
+  public long getOldestWalAge() {
     return oldestWalAge.value();
   }
 
@@ -294,7 +308,8 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     return sourceInitializing.value();
   }
 
-  @Override public void decrSourceInitializing() {
+  @Override
+  public void decrSourceInitializing() {
     sourceInitializing.decr(1);
   }
 
@@ -353,15 +368,18 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     return rms.getMetricsName();
   }
 
-  @Override public long getWALEditsRead() {
+  @Override
+  public long getWALEditsRead() {
     return this.logReadInEditsCounter.value();
   }
 
-  @Override public long getShippedOps() {
+  @Override
+  public long getShippedOps() {
     return this.shippedOpsCounter.value();
   }
 
-  @Override public long getEditsFiltered() {
+  @Override
+  public long getEditsFiltered() {
     return this.walEditsFilteredCounter.value();
   }
 }

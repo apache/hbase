@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
@@ -35,7 +33,8 @@ public class RandomQueueBalancer implements QueueBalancer {
   private final int queueSize;
   private final List<BlockingQueue<CallRunner>> queues;
 
-  public RandomQueueBalancer(Configuration conf, String executorName, List<BlockingQueue<CallRunner>> queues) {
+  public RandomQueueBalancer(Configuration conf, String executorName,
+    List<BlockingQueue<CallRunner>> queues) {
     this.queueSize = queues.size();
     this.queues = queues;
   }

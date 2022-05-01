@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static junit.framework.TestCase.assertEquals;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
@@ -37,13 +39,14 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 public class TestHBaseClassTestRule {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(
-      TestHBaseClassTestRule.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestHBaseClassTestRule.class);
 
   // Test input classes of various kinds.
   private static class NonParameterizedClass {
     void dummy() {
     }
+
     int dummy(int a) {
       return 0;
     }
@@ -62,6 +65,7 @@ public class TestHBaseClassTestRule {
     private static List<Object> parameters() {
       return Arrays.asList(1, 2, 3, 4);
     }
+
     int dummy(int a) {
       return 0;
     }
@@ -73,6 +77,7 @@ public class TestHBaseClassTestRule {
     public static List<Object> parameters() {
       return Arrays.asList(1, 2, 3, 4, 5);
     }
+
     int dummy(int a) {
       return 0;
     }
@@ -82,7 +87,7 @@ public class TestHBaseClassTestRule {
   private static class ValidParameterizedClass2 {
     @Parameters
     public static Object[] parameters() {
-      return new Integer[] {1, 2, 3, 4, 5, 6};
+      return new Integer[] { 1, 2, 3, 4, 5, 6 };
     }
   }
 
@@ -101,7 +106,6 @@ public class TestHBaseClassTestRule {
       return Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
   }
-
 
   @RunWith(Parameterized.class)
   private static class ExtendedParameterizedClass1 extends ValidParameterizedClass1 {
@@ -124,22 +128,22 @@ public class TestHBaseClassTestRule {
   public void testNumParameters() {
     // Invalid cases, expected to return 1.
     assertEquals(HBaseClassTestRule.getNumParameters(NonParameterizedClass.class), 1);
-    assertEquals(HBaseClassTestRule.getNumParameters(
-        ParameterizedClassWithNoParametersMethod.class), 1);
+    assertEquals(
+      HBaseClassTestRule.getNumParameters(ParameterizedClassWithNoParametersMethod.class), 1);
     assertEquals(HBaseClassTestRule.getNumParameters(InValidParameterizedClass.class), 1);
     // Valid parameterized classes.
     assertEquals(HBaseClassTestRule.getNumParameters(ValidParameterizedClass1.class),
-        ValidParameterizedClass1.parameters().size());
+      ValidParameterizedClass1.parameters().size());
     assertEquals(HBaseClassTestRule.getNumParameters(ValidParameterizedClass2.class),
-        ValidParameterizedClass2.parameters().length);
+      ValidParameterizedClass2.parameters().length);
     assertEquals(HBaseClassTestRule.getNumParameters(ValidParameterizedClass3.class),
-        Iterables.size(ValidParameterizedClass3.parameters()));
+      Iterables.size(ValidParameterizedClass3.parameters()));
     assertEquals(HBaseClassTestRule.getNumParameters(ValidParameterizedClass4.class),
-        ValidParameterizedClass4.parameters().size());
+      ValidParameterizedClass4.parameters().size());
     // Testing inheritance.
     assertEquals(HBaseClassTestRule.getNumParameters(ExtendedParameterizedClass1.class),
-        ValidParameterizedClass1.parameters().size());
+      ValidParameterizedClass1.parameters().size());
     assertEquals(HBaseClassTestRule.getNumParameters(ExtendedParameterizedClass2.class),
-        ExtendedParameterizedClass2.parameters().size());
+      ExtendedParameterizedClass2.parameters().size());
   }
 }

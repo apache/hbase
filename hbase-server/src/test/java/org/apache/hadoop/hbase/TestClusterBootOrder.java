@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the boot order indifference between regionserver and master
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestClusterBootOrder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClusterBootOrder.class);
+    HBaseClassTestRule.forClass(TestClusterBootOrder.class);
 
   private static final long SLEEP_INTERVAL = 1000;
   private static final long SLEEP_TIME = 4000;
@@ -52,7 +52,7 @@ public class TestClusterBootOrder {
     testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
     testUtil.startMiniZKCluster(1);
-    testUtil.createRootDir(); //manually setup hbase dir to point to minidfscluster
+    testUtil.createRootDir(); // manually setup hbase dir to point to minidfscluster
     cluster = new LocalHBaseCluster(testUtil.getConfiguration(), 0, 0);
   }
 
@@ -68,8 +68,8 @@ public class TestClusterBootOrder {
     rs = cluster.addRegionServer();
     rs.start();
 
-    for (int i=0; i * SLEEP_INTERVAL < SLEEP_TIME ;i++) {
-      //we cannot block on wait for rs at this point , since master is not up.
+    for (int i = 0; i * SLEEP_INTERVAL < SLEEP_TIME; i++) {
+      // we cannot block on wait for rs at this point , since master is not up.
       Thread.sleep(SLEEP_INTERVAL);
       assertTrue(rs.isAlive());
     }
@@ -79,7 +79,7 @@ public class TestClusterBootOrder {
     master = cluster.addMaster();
     master.start();
 
-    for (int i=0; i * SLEEP_INTERVAL < SLEEP_TIME ;i++) {
+    for (int i = 0; i * SLEEP_INTERVAL < SLEEP_TIME; i++) {
       Thread.sleep(SLEEP_INTERVAL);
       assertTrue(master.isAlive());
     }
@@ -100,8 +100,8 @@ public class TestClusterBootOrder {
   }
 
   /**
-   * Tests launching the cluster by first starting regionserver, and then the master
-   * to ensure that it does not matter which is started first.
+   * Tests launching the cluster by first starting regionserver, and then the master to ensure that
+   * it does not matter which is started first.
    */
   @Test
   public void testBootRegionServerFirst() throws Exception {
@@ -111,8 +111,8 @@ public class TestClusterBootOrder {
   }
 
   /**
-   * Tests launching the cluster by first starting master, and then the regionserver
-   * to ensure that it does not matter which is started first.
+   * Tests launching the cluster by first starting master, and then the regionserver to ensure that
+   * it does not matter which is started first.
    */
   @Test
   public void testBootMasterFirst() throws Exception {

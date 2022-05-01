@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,13 +26,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Provides the globally barriered procedure framework and environment for
- * master oriented operations. {@link org.apache.hadoop.hbase.master.HMaster}
- * interacts with the loaded procedure manager through this class.
+ * Provides the globally barriered procedure framework and environment for master oriented
+ * operations. {@link org.apache.hadoop.hbase.master.HMaster} interacts with the loaded procedure
+ * manager through this class.
  */
 @InterfaceAudience.Private
-public class MasterProcedureManagerHost extends
-    ProcedureManagerHost<MasterProcedureManager> {
+public class MasterProcedureManagerHost extends ProcedureManagerHost<MasterProcedureManager> {
 
   private Hashtable<String, MasterProcedureManager> procedureMgrMap = new Hashtable<>();
 
@@ -45,7 +44,7 @@ public class MasterProcedureManagerHost extends
   }
 
   public void initialize(MasterServices master, final MetricsMaster metricsMaster)
-      throws KeeperException, IOException, UnsupportedOperationException {
+    throws KeeperException, IOException, UnsupportedOperationException {
     for (MasterProcedureManager mpm : getProcedureManagers()) {
       mpm.initialize(master, metricsMaster);
     }

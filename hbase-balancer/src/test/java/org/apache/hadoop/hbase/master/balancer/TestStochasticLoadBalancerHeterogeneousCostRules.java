@@ -42,7 +42,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends Stochastic
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCostRules.class);
   @Rule
   public TestName name = new TestName();
 
@@ -64,10 +64,8 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends Stochastic
   @Before
   public void before() throws IOException {
     // New rules file name per test.
-    this.rulesFilename = HTU
-      .getDataTestDir(
-        this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME)
-      .toString();
+    this.rulesFilename =
+      HTU.getDataTestDir(this.name.getMethodName() + "." + DEFAULT_RULES_FILE_NAME).toString();
     // Set the created rules filename into the configuration.
     HTU.getConfiguration().set(
       HeterogeneousRegionCountCostFunction.HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE,
@@ -99,8 +97,7 @@ public class TestStochasticLoadBalancerHeterogeneousCostRules extends Stochastic
     this.costFunction.loadRules();
     assertEquals(0, this.costFunction.getNumberOfRulesLoaded());
 
-    createRulesFile(this.rulesFilename, Arrays.asList("srv[1-2] 10",
-      "bad_rules format", "a"));
+    createRulesFile(this.rulesFilename, Arrays.asList("srv[1-2] 10", "bad_rules format", "a"));
     this.costFunction = new HeterogeneousRegionCountCostFunction(HTU.getConfiguration());
     this.costFunction.loadRules();
     assertEquals(1, this.costFunction.getNumberOfRulesLoaded());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,11 +45,11 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCellCodecWithTags {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellCodecWithTags.class);
+    HBaseClassTestRule.forClass(TestCellCodecWithTags.class);
 
   @Test
   public void testCellWithTag() throws IOException {
@@ -59,17 +59,17 @@ public class TestCellCodecWithTags {
     Codec codec = new CellCodecWithTags();
     Codec.Encoder encoder = codec.getEncoder(dos);
     final Cell cell1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"), new Tag[] {
-          new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring1")),
-          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring2")) });
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"),
+      new Tag[] { new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring1")),
+        new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring2")) });
     final Cell cell2 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("2"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"), new Tag[] { new ArrayBackedTag((byte) 1,
-            Bytes.toBytes("teststring3")), });
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"),
+      new Tag[] { new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring3")), });
     final Cell cell3 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("3"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"), new Tag[] {
-          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring4")),
-          new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring5")),
-          new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring6")) });
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"),
+      new Tag[] { new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring4")),
+        new ArrayBackedTag((byte) 2, Bytes.toBytes("teststring5")),
+        new ArrayBackedTag((byte) 1, Bytes.toBytes("teststring6")) });
 
     encoder.write(cell1);
     encoder.write(cell2);
@@ -83,8 +83,7 @@ public class TestCellCodecWithTags {
     assertTrue(decoder.advance());
     Cell c = decoder.current();
     assertTrue(CellUtil.equals(c, cell1));
-    List<Tag> tags =
-        PrivateCellUtil.getTags(c);
+    List<Tag> tags = PrivateCellUtil.getTags(c);
     assertEquals(2, tags.size());
     Tag tag = tags.get(0);
     assertEquals(1, tag.getType());

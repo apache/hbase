@@ -1,12 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.rsgroup;
 
@@ -53,8 +60,10 @@ public final class RSGroupUtil {
     boolean isDefaultGroup = RSGroupInfo.DEFAULT_GROUP.equals(groupName);
     for (TableDescriptor td : master.getTableDescriptors().getAll().values()) {
       // no config means in default group
-      if (RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), td.getTableName())
-        .map(g -> g.getName().equals(groupName)).orElse(isDefaultGroup)) {
+      if (
+        RSGroupUtil.getRSGroupInfo(master, master.getRSGroupInfoManager(), td.getTableName())
+          .map(g -> g.getName().equals(groupName)).orElse(isDefaultGroup)
+      ) {
         tables.add(td.getTableName());
       }
     }
@@ -66,7 +75,7 @@ public final class RSGroupUtil {
    * from the {@link NamespaceDescriptor}. If still not present, return empty.
    */
   public static Optional<RSGroupInfo> getRSGroupInfo(MasterServices master,
-      RSGroupInfoManager manager, TableName tableName) throws IOException {
+    RSGroupInfoManager manager, TableName tableName) throws IOException {
     TableDescriptor td = master.getTableDescriptors().get(tableName);
     if (td == null) {
       return Optional.empty();
@@ -98,8 +107,8 @@ public final class RSGroupUtil {
     ClusterSchema clusterSchema = master.getClusterSchema();
     if (clusterSchema == null) {
       if (TableName.isMetaTableName(tableName)) {
-        LOG.info("Can not get the namespace rs group config for meta table, since the" +
-            " meta table is not online yet, will use default group to assign meta first");
+        LOG.info("Can not get the namespace rs group config for meta table, since the"
+          + " meta table is not online yet, will use default group to assign meta first");
       } else {
         LOG.warn("ClusterSchema is null, can only use default rsgroup, should not happen?");
       }
@@ -132,7 +141,7 @@ public final class RSGroupUtil {
       };
     }
     tds.stream().filter(filter).map(TableDescriptor::getTableName)
-        .forEach(newRsGroupInfo::addTable);
+      .forEach(newRsGroupInfo::addTable);
     return newRsGroupInfo;
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -74,7 +73,7 @@ public interface MetricsMasterSource extends BaseSource {
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =
-          "Timestamp when Master has finished initializing";
+    "Timestamp when Master has finished initializing";
   String AVERAGE_LOAD_DESC = "AverageLoad";
   String LIVE_REGION_SERVERS_DESC = "Names of live RegionServers";
   String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
@@ -95,26 +94,21 @@ public interface MetricsMasterSource extends BaseSource {
 
   /**
    * Increment the number of requests the cluster has seen.
-   *
    * @param inc Ammount to increment the total by.
    */
   void incRequests(final long inc);
 
   /**
    * Increment the number of read requests the cluster has seen.
-   *
    * @param inc Ammount to increment the total by.
    */
   void incReadRequests(final long inc);
 
-
   /**
    * Increment the number of write requests the cluster has seen.
-   *
    * @param inc Ammount to increment the total by.
    */
   void incWriteRequests(final long inc);
-
 
   /**
    * @return {@link OperationMetrics} containing common metrics for server crash operation

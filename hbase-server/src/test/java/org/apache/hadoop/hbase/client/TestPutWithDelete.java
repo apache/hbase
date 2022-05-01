@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestPutWithDelete {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPutWithDelete.class);
+    HBaseClassTestRule.forClass(TestPutWithDelete.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -82,19 +82,19 @@ public class TestPutWithDelete {
       Get get = new Get(rowKey);
       Result result = table.get(get);
       assertTrue("Column A value should be a",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a"));
       assertTrue("Column B value should be b",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b"));
       assertTrue("Column C value should be c",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("C"))).equals("c"));
       assertTrue("Column D value should be d",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d"));
       // put the same row again with C column deleted
       put = new Put(rowKey);
       put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a1"));
       put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b1"));
       KeyValue marker = new KeyValue(rowKey, family, Bytes.toBytes("C"),
-          HConstants.LATEST_TIMESTAMP, KeyValue.Type.DeleteColumn);
+        HConstants.LATEST_TIMESTAMP, KeyValue.Type.DeleteColumn);
       put.addColumn(family, Bytes.toBytes("D"), Bytes.toBytes("d1"));
       put.add(marker);
       table.put(put);
@@ -102,17 +102,14 @@ public class TestPutWithDelete {
       get = new Get(rowKey);
       result = table.get(get);
       assertTrue("Column A value should be a1",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a1"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("A"))).equals("a1"));
       assertTrue("Column B value should be b1",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b1"));
-      assertTrue("Column C should not exist",
-          result.getValue(family, Bytes.toBytes("C")) == null);
+        Bytes.toString(result.getValue(family, Bytes.toBytes("B"))).equals("b1"));
+      assertTrue("Column C should not exist", result.getValue(family, Bytes.toBytes("C")) == null);
       assertTrue("Column D value should be d1",
-          Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d1"));
+        Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d1"));
     } finally {
       table.close();
     }
   }
 }
-
-

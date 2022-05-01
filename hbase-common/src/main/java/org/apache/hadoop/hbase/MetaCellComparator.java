@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,16 +27,14 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
- * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
- * {@link KeyValue}s.
+ * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MetaCellComparator extends CellComparatorImpl {
 
   /**
-   * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table
-   * {@link KeyValue}s.
+   * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
    */
   public static final MetaCellComparator META_COMPARATOR = new MetaCellComparator();
 
@@ -77,7 +73,7 @@ public class MetaCellComparator extends CellComparatorImpl {
   }
 
   private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
-      int rlength) {
+    int rlength) {
     int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
     int rightDelimiter = Bytes.searchDelimiterIndex(right, roffset, rlength, HConstants.DELIMITER);
     // Compare up to the delimiter
@@ -99,12 +95,10 @@ public class MetaCellComparator extends CellComparatorImpl {
     // Move past delimiter
     leftDelimiter++;
     rightDelimiter++;
-    int leftFarDelimiter = Bytes
-      .searchDelimiterIndexInReverse(left, leftDelimiter, llength - (leftDelimiter - loffset),
-        HConstants.DELIMITER);
-    int rightFarDelimiter = Bytes
-      .searchDelimiterIndexInReverse(right, rightDelimiter, rlength - (rightDelimiter - roffset),
-        HConstants.DELIMITER);
+    int leftFarDelimiter = Bytes.searchDelimiterIndexInReverse(left, leftDelimiter,
+      llength - (leftDelimiter - loffset), HConstants.DELIMITER);
+    int rightFarDelimiter = Bytes.searchDelimiterIndexInReverse(right, rightDelimiter,
+      rlength - (rightDelimiter - roffset), HConstants.DELIMITER);
     // Now compare middlesection of row.
     lpart = (leftFarDelimiter < 0 ? llength + loffset : leftFarDelimiter) - leftDelimiter;
     rpart = (rightFarDelimiter < 0 ? rlength + roffset : rightFarDelimiter) - rightDelimiter;

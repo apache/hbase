@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,18 +32,17 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for the page filter
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestPageFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPageFilter.class);
+    HBaseClassTestRule.forClass(TestPageFilter.class);
 
   static final int ROW_LIMIT = 3;
 
   /**
-   * test page size filter
-   * @throws Exception
+   * test page size filter n
    */
   @Test
   public void testPageSize() throws Exception {
@@ -52,8 +51,7 @@ public class TestPageFilter {
   }
 
   /**
-   * Test filter serialization
-   * @throws Exception
+   * Test filter serialization n
    */
   @Test
   public void testSerialization() throws Exception {
@@ -76,14 +74,14 @@ public class TestPageFilter {
     for (int i = 0; i < (pageSize * 2); i++) {
       boolean filterOut = f.filterRow();
 
-      if(filterOut) {
+      if (filterOut) {
         break;
       } else {
         count++;
       }
 
       // If at last row, should tell us to skip all remaining
-      if(count == pageSize) {
+      if (count == pageSize) {
         assertTrue(f.filterAllRemaining());
       } else {
         assertFalse(f.filterAllRemaining());
@@ -94,4 +92,3 @@ public class TestPageFilter {
   }
 
 }
-

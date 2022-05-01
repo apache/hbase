@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
+
 import java.util.Arrays;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
@@ -36,26 +37,16 @@ class MutableRegionInfo implements RegionInfo {
   private static final int MAX_REPLICA_ID = 0xFFFF;
 
   /**
-   * The new format for a region name contains its encodedName at the end.
-   * The encoded name also serves as the directory name for the region
-   * in the filesystem.
-   *
-   * New region name format:
-   *    &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>.
-   * where,
-   *    &lt;encodedName> is a hex version of the MD5 hash of
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   *
-   * The old region name format:
-   *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   * For region names in the old format, the encoded name is a 32-bit
-   * JenkinsHash integer value (in its decimal notation, string form).
-   *<p>
-   * **NOTE**
-   *
-   * The first hbase:meta region, and regions created by an older
-   * version of HBase (0.20 or prior) will continue to use the
-   * old region name format.
+   * The new format for a region name contains its encodedName at the end. The encoded name also
+   * serves as the directory name for the region in the filesystem. New region name format:
+   * &lt;tablename>,,&lt;startkey>,&lt;regionIdTimestamp>.&lt;encodedName>. where, &lt;encodedName>
+   * is a hex version of the MD5 hash of &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp> The old
+   * region name format: &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp> For region names in the
+   * old format, the encoded name is a 32-bit JenkinsHash integer value (in its decimal notation,
+   * string form).
+   * <p>
+   * **NOTE** The first hbase:meta region, and regions created by an older version of HBase (0.20 or
+   * prior) will continue to use the old region name format.
    */
 
   // This flag is in the parent of a split while the parent is still referenced by daughter
@@ -76,8 +67,8 @@ class MutableRegionInfo implements RegionInfo {
   private final TableName tableName;
 
   private static int generateHashCode(final TableName tableName, final byte[] startKey,
-      final byte[] endKey, final long regionId,
-      final int replicaId, boolean offLine, byte[] regionName) {
+    final byte[] endKey, final long regionId, final int replicaId, boolean offLine,
+    byte[] regionName) {
     int result = Arrays.hashCode(regionName);
     result = (int) (result ^ regionId);
     result ^= Arrays.hashCode(checkStartKey(startKey));
@@ -89,11 +80,11 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   private static byte[] checkStartKey(byte[] startKey) {
-    return startKey == null? HConstants.EMPTY_START_ROW: startKey;
+    return startKey == null ? HConstants.EMPTY_START_ROW : startKey;
   }
 
   private static byte[] checkEndKey(byte[] endKey) {
-    return endKey == null? HConstants.EMPTY_END_ROW: endKey;
+    return endKey == null ? HConstants.EMPTY_END_ROW : endKey;
   }
 
   private static TableName checkTableName(TableName tableName) {
@@ -119,7 +110,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   MutableRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
-      final boolean split, final long regionId, final int replicaId, boolean offLine) {
+    final boolean split, final long regionId, final int replicaId, boolean offLine) {
     this.tableName = checkTableName(tableName);
     this.startKey = checkStartKey(startKey);
     this.endKey = checkEndKey(endKey);
@@ -145,10 +136,9 @@ class MutableRegionInfo implements RegionInfo {
 
   /** @return the regionId */
   @Override
-  public long getRegionId(){
+  public long getRegionId() {
     return regionId;
   }
-
 
   /**
    * @return the regionName as an array of bytes.
@@ -191,8 +181,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * Get current table name of the region
-   * @return TableName
+   * Get current table name of the region n
    */
   @Override
   public TableName getTable() {
@@ -200,25 +189,22 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * Returns true if the given inclusive range of rows is fully contained
-   * by this region. For example, if the region is foo,a,g and this is
-   * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
-   * ["b","z"] it will return false.
+   * Returns true if the given inclusive range of rows is fully contained by this region. For
+   * example, if the region is foo,a,g and this is passed ["b","c"] or ["a","c"] it will return
+   * true, but if this is passed ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
   @Override
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
     CellComparator cellComparator = CellComparatorImpl.getCellComparator(tableName);
     if (cellComparator.compareRows(rangeStartKey, rangeEndKey) > 0) {
-      throw new IllegalArgumentException(
-      "Invalid range: " + Bytes.toStringBinary(rangeStartKey) +
-      " > " + Bytes.toStringBinary(rangeEndKey));
+      throw new IllegalArgumentException("Invalid range: " + Bytes.toStringBinary(rangeStartKey)
+        + " > " + Bytes.toStringBinary(rangeEndKey));
     }
 
     boolean firstKeyInRange = cellComparator.compareRows(rangeStartKey, startKey) >= 0;
-    boolean lastKeyInRange =
-      cellComparator.compareRows(rangeEndKey, endKey) < 0 ||
-      Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
+    boolean lastKeyInRange = cellComparator.compareRows(rangeEndKey, endKey) < 0
+      || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
 
@@ -228,9 +214,9 @@ class MutableRegionInfo implements RegionInfo {
   @Override
   public boolean containsRow(byte[] row) {
     CellComparator cellComparator = CellComparatorImpl.getCellComparator(tableName);
-    return cellComparator.compareRows(row, startKey) >= 0 &&
-      (cellComparator.compareRows(row, endKey) < 0 ||
-       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
+    return cellComparator.compareRows(row, startKey) >= 0
+      && (cellComparator.compareRows(row, endKey) < 0
+        || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
   /** @return true if this region is a meta region */
@@ -248,8 +234,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * @param split set split status
-   * @return MutableRegionInfo
+   * @param split set split status n
    */
   public MutableRegionInfo setSplit(boolean split) {
     this.split = split;
@@ -268,10 +253,9 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * The parent of a region split is offline while split daughters hold
-   * references to the parent. Offlined regions are closed.
-   * @param offLine Set online/offline status.
-   * @return MutableRegionInfo
+   * The parent of a region split is offline while split daughters hold references to the parent.
+   * Offlined regions are closed.
+   * @param offLine Set online/offline status. n
    */
   public MutableRegionInfo setOffline(boolean offLine) {
     this.offLine = offLine;
@@ -309,14 +293,11 @@ class MutableRegionInfo implements RegionInfo {
    */
   @Override
   public String toString() {
-    return "{ENCODED => " + getEncodedName() + ", " +
-      HConstants.NAME + " => '" + Bytes.toStringBinary(this.regionName)
-      + "', STARTKEY => '" +
-      Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
-      Bytes.toStringBinary(this.endKey) + "'" +
-      (isOffline()? ", OFFLINE => true": "") +
-      (isSplit()? ", SPLIT => true": "") +
-      ((replicaId > 0)? ", REPLICA_ID => " + replicaId : "") + "}";
+    return "{ENCODED => " + getEncodedName() + ", " + HConstants.NAME + " => '"
+      + Bytes.toStringBinary(this.regionName) + "', STARTKEY => '"
+      + Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" + Bytes.toStringBinary(this.endKey)
+      + "'" + (isOffline() ? ", OFFLINE => true" : "") + (isSplit() ? ", SPLIT => true" : "")
+      + ((replicaId > 0) ? ", REPLICA_ID => " + replicaId : "") + "}";
   }
 
   /**
@@ -333,7 +314,7 @@ class MutableRegionInfo implements RegionInfo {
     if (!(o instanceof RegionInfo)) {
       return false;
     }
-    return compareTo((RegionInfo)o) == 0;
+    return compareTo((RegionInfo) o) == 0;
   }
 
   /**

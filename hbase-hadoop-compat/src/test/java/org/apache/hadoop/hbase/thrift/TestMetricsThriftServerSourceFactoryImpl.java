@@ -32,32 +32,32 @@ import org.junit.experimental.categories.Category;
 /**
  * Test for hadoop 2's version of MetricsThriftServerSourceFactory.
  */
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsThriftServerSourceFactoryImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactoryImpl.class);
+    HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactoryImpl.class);
 
   @Test
   public void testCompatabilityRegistered() {
-    assertNotNull(CompatibilitySingletonFactory.getInstance(
-            MetricsThriftServerSourceFactory.class));
-    assertTrue(CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class)
-            instanceof MetricsThriftServerSourceFactoryImpl);
+    assertNotNull(
+      CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class));
+    assertTrue(CompatibilitySingletonFactory.getInstance(
+      MetricsThriftServerSourceFactory.class) instanceof MetricsThriftServerSourceFactoryImpl);
   }
 
   @Test
   public void testCreateThriftOneSource() {
-    //Make sure that the factory gives back a singleton.
+    // Make sure that the factory gives back a singleton.
     assertSame(new MetricsThriftServerSourceFactoryImpl().createThriftOneSource(),
-        new MetricsThriftServerSourceFactoryImpl().createThriftOneSource());
+      new MetricsThriftServerSourceFactoryImpl().createThriftOneSource());
 
   }
 
   @Test
   public void testCreateThriftTwoSource() {
-    //Make sure that the factory gives back a singleton.
+    // Make sure that the factory gives back a singleton.
     assertSame(new MetricsThriftServerSourceFactoryImpl().createThriftTwoSource(),
-        new MetricsThriftServerSourceFactoryImpl().createThriftTwoSource());
+      new MetricsThriftServerSourceFactoryImpl().createThriftTwoSource());
   }
 }

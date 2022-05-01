@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,11 +42,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureExecution {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureExecution.class);
+    HBaseClassTestRule.forClass(TestProcedureExecution.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureExecution.class);
 
@@ -204,7 +204,8 @@ public class TestProcedureExecution {
   public static class TestFaultyRollback extends SequentialProcedure<Void> {
     private int retries = 0;
 
-    public TestFaultyRollback() { }
+    public TestFaultyRollback() {
+    }
 
     @Override
     protected Procedure<Void>[] execute(Void env) {

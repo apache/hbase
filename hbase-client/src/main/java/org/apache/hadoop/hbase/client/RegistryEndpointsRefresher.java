@@ -80,8 +80,8 @@ final class RegistryEndpointsRefresher {
           }
           // if refreshNow is true, then we will wait until minTimeBetweenRefreshesMs elapsed,
           // otherwise wait until periodicRefreshMs elapsed
-          long waitTime = getRefreshIntervalMs(firstRefresh) -
-            (EnvironmentEdgeManager.currentTime() - lastRefreshTime);
+          long waitTime = getRefreshIntervalMs(firstRefresh)
+            - (EnvironmentEdgeManager.currentTime() - lastRefreshTime);
           if (waitTime <= 0) {
             // we are going to refresh, reset this flag
             firstRefresh = false;

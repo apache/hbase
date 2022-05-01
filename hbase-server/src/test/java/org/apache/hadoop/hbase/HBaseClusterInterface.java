@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -346,7 +346,7 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
   /**
    * Get the ServerName of region server serving the specified region
    * @param regionName Name of the region in bytes
-   * @param tn Table name that has the region.
+   * @param tn         Table name that has the region.
    * @return ServerName that hosts the region or null
    */
   public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)

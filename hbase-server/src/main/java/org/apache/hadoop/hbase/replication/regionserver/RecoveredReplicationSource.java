@@ -36,8 +36,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class that handles the recovered source of a replication stream, which is transfered from
- * another dead region server. This will be closed when all logs are pushed to peer cluster.
+ * Class that handles the recovered source of a replication stream, which is transfered from another
+ * dead region server. This will be closed when all logs are pushed to peer cluster.
  */
 @InterfaceAudience.Private
 public class RecoveredReplicationSource extends ReplicationSource {
@@ -48,9 +48,9 @@ public class RecoveredReplicationSource extends ReplicationSource {
 
   @Override
   public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
-      ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-      String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
-      MetricsSource metrics) throws IOException {
+    ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
+    String peerClusterZnode, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    MetricsSource metrics) throws IOException {
     super.init(conf, fs, manager, queueStorage, replicationPeer, server, peerClusterZnode,
       clusterId, walFileLengthProvider, metrics);
     this.actualPeerId = this.replicationQueueInfo.getPeerId();
@@ -86,11 +86,10 @@ public class RecoveredReplicationSource extends ReplicationSource {
         LOG.info("NB dead servers : " + deadRegionServers.size());
         final Path walDir = CommonFSUtils.getWALRootDir(conf);
         for (ServerName curDeadServerName : deadRegionServers) {
-          final Path deadRsDirectory =
-              new Path(walDir, AbstractFSWALProvider.getWALDirectoryName(curDeadServerName
-                  .getServerName()));
-          Path[] locs = new Path[] { new Path(deadRsDirectory, path.getName()), new Path(
-              deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
+          final Path deadRsDirectory = new Path(walDir,
+            AbstractFSWALProvider.getWALDirectoryName(curDeadServerName.getServerName()));
+          Path[] locs = new Path[] { new Path(deadRsDirectory, path.getName()),
+            new Path(deadRsDirectory.suffix(AbstractFSWALProvider.SPLITTING_EXT), path.getName()) };
           for (Path possibleLogLocation : locs) {
             LOG.info("Possible location " + possibleLogLocation.toUri().toString());
             if (manager.getFs().exists(possibleLogLocation)) {

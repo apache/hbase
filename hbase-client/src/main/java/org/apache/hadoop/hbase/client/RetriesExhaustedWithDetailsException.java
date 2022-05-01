@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -27,25 +26,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This subclass of {@link org.apache.hadoop.hbase.client.RetriesExhaustedException}
- * is thrown when we have more information about which rows were causing which
- * exceptions on what servers.  You can call {@link #mayHaveClusterIssues()}
- * and if the result is false, you have input error problems, otherwise you
- * may have cluster issues.  You can iterate over the causes, rows and last
- * known server addresses via {@link #getNumExceptions()} and
- * {@link #getCause(int)}, {@link #getRow(int)} and {@link #getHostnamePort(int)}.
+ * This subclass of {@link org.apache.hadoop.hbase.client.RetriesExhaustedException} is thrown when
+ * we have more information about which rows were causing which exceptions on what servers. You can
+ * call {@link #mayHaveClusterIssues()} and if the result is false, you have input error problems,
+ * otherwise you may have cluster issues. You can iterate over the causes, rows and last known
+ * server addresses via {@link #getNumExceptions()} and {@link #getCause(int)}, {@link #getRow(int)}
+ * and {@link #getHostnamePort(int)}.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
-public class RetriesExhaustedWithDetailsException
-extends RetriesExhaustedException {
+public class RetriesExhaustedWithDetailsException extends RetriesExhaustedException {
   List<Throwable> exceptions;
   List<Row> actions;
   List<String> hostnameAndPort;
@@ -58,12 +54,10 @@ extends RetriesExhaustedException {
     super(msg, e);
   }
 
-  public RetriesExhaustedWithDetailsException(List<Throwable> exceptions,
-                                              List<Row> actions,
-                                              List<String> hostnameAndPort) {
-    super("Failed " + exceptions.size() + " action" +
-        pluralize(exceptions) + ": " +
-        getDesc(exceptions, actions, hostnameAndPort));
+  public RetriesExhaustedWithDetailsException(List<Throwable> exceptions, List<Row> actions,
+    List<String> hostnameAndPort) {
+    super("Failed " + exceptions.size() + " action" + pluralize(exceptions) + ": "
+      + getDesc(exceptions, actions, hostnameAndPort));
 
     this.exceptions = exceptions;
     this.actions = actions;
@@ -102,7 +96,6 @@ extends RetriesExhaustedException {
     return res;
   }
 
-
   public static String pluralize(Collection<?> c) {
     return pluralize(c.size());
   }
@@ -111,9 +104,8 @@ extends RetriesExhaustedException {
     return c > 1 ? "s" : "";
   }
 
-  public static String getDesc(List<Throwable> exceptions,
-                               List<? extends Row> actions,
-                               List<String> hostnamePort) {
+  public static String getDesc(List<Throwable> exceptions, List<? extends Row> actions,
+    List<String> hostnamePort) {
     String s = getDesc(classifyExs(exceptions));
     StringBuilder addrs = new StringBuilder(s);
     addrs.append("servers with issues: ");
@@ -147,14 +139,12 @@ extends RetriesExhaustedException {
     return errorWriter.toString();
   }
 
-
   public static Map<String, Integer> classifyExs(List<Throwable> ths) {
     Map<String, Integer> cls = new HashMap<>();
     for (Throwable t : ths) {
       if (t == null) continue;
       String name = "";
-      if (t instanceof DoNotRetryIOException ||
-          t instanceof RegionTooBusyException) {
+      if (t instanceof DoNotRetryIOException || t instanceof RegionTooBusyException) {
         // If RegionTooBusyException, print message since it has Region name in it.
         // RegionTooBusyException message was edited to remove variance. Has regionname, server,
         // and why the exception; no longer has duration it waited on lock nor current memsize.
@@ -172,8 +162,8 @@ extends RetriesExhaustedException {
     return cls;
   }
 
-  public static String getDesc(Map<String,Integer> classificaton) {
-    StringBuilder classificatons =new StringBuilder(11);
+  public static String getDesc(Map<String, Integer> classificaton) {
+    StringBuilder classificatons = new StringBuilder(11);
     for (Map.Entry<String, Integer> e : classificaton.entrySet()) {
       classificatons.append(e.getKey());
       classificatons.append(": ");

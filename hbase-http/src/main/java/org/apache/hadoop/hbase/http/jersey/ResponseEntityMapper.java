@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.http.jersey;
 
 import java.io.IOException;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.javax.ws.rs.container.ContainerRequestContext;
 import org.apache.hbase.thirdparty.javax.ws.rs.container.ContainerResponseContext;
@@ -34,10 +35,8 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.Response.Status;
 public class ResponseEntityMapper implements ContainerResponseFilter {
 
   @Override
-  public void filter(
-    ContainerRequestContext requestContext,
-    ContainerResponseContext responseContext
-  ) throws IOException {
+  public void filter(ContainerRequestContext requestContext,
+    ContainerResponseContext responseContext) throws IOException {
     /*
      * Follows very loosely the top-level document specification described in by JSON API. Only
      * handles 200 response codes; leaves room for errors and other response types.

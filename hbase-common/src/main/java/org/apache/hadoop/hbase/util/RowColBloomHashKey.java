@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -83,6 +83,6 @@ public class RowColBloomHashKey extends CellHashKey {
     // For ROW_COL blooms we use bytes
     // <RK length> (2 bytes) , <RK>, 0 (one byte CF length), <CQ>, <TS> (8 btes), <TYPE> ( 1 byte)
     return KeyValue.ROW_LENGTH_SIZE + this.t.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
-        + this.t.getQualifierLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
+      + this.t.getQualifierLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 }

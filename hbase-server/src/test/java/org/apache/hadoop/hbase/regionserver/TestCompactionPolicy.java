@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -54,8 +53,8 @@ public class TestCompactionPolicy {
 
   protected Configuration conf;
   protected HStore store;
-  private static final String DIR = TEST_UTIL.getDataTestDir(
-    TestCompactionPolicy.class.getSimpleName()).toString();
+  private static final String DIR =
+    TEST_UTIL.getDataTestDir(TestCompactionPolicy.class.getSimpleName()).toString();
   protected static Path TEST_FILE;
   protected static final int minFiles = 3;
   protected static final int maxFiles = 5;
@@ -106,8 +105,8 @@ public class TestCompactionPolicy {
 
     hlog = new FSHLog(fs, basedir, logName, conf);
     hlog.init();
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     region = HRegion.createHRegion(info, basedir, conf, tableDescriptor, hlog);
     region.close();
     Path tableDir = CommonFSUtils.getTableDir(basedir, tableDescriptor.getTableName());
@@ -168,11 +167,11 @@ public class TestCompactionPolicy {
   }
 
   List<HStoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
-      throws IOException {
+    throws IOException {
     List<HStoreFile> ret = Lists.newArrayList();
     for (int i = 0; i < sizes.size(); i++) {
-      ret.add(new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference,
-          i));
+      ret.add(
+        new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes.get(i), ageInDisk.get(i), isReference, i));
     }
     return ret;
   }
@@ -190,17 +189,17 @@ public class TestCompactionPolicy {
   }
 
   void compactEquals(List<HStoreFile> candidates, boolean forcemajor, long... expected)
-      throws IOException {
+    throws IOException {
     compactEquals(candidates, forcemajor, false, expected);
   }
 
   void compactEquals(List<HStoreFile> candidates, boolean forcemajor, boolean isOffPeak,
-      long... expected) throws IOException {
+    long... expected) throws IOException {
     store.forceMajor = forcemajor;
     // Test Default compactions
     CompactionRequestImpl result =
-        ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy()).selectCompaction(
-          candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
+      ((RatioBasedCompactionPolicy) store.storeEngine.getCompactionPolicy())
+        .selectCompaction(candidates, new ArrayList<>(), false, isOffPeak, forcemajor);
     List<HStoreFile> actual = new ArrayList<>(result.getFiles());
     if (isOffPeak && !forcemajor) {
       Assert.assertTrue(result.isOffPeak());

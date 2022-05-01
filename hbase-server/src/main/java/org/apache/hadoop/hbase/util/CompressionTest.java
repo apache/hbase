@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,36 +19,35 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.Locale;
-
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Compression validation test.  Checks compression is working.  Be sure to run
- * on every node in your cluster.
+ * Compression validation test. Checks compression is working. Be sure to run on every node in your
+ * cluster.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
@@ -77,23 +75,22 @@ public class CompressionTest {
     }
   }
 
-  private final static Boolean[] compressionTestResults
-      = new Boolean[Compression.Algorithm.values().length];
+  private final static Boolean[] compressionTestResults =
+    new Boolean[Compression.Algorithm.values().length];
   static {
-    for (int i = 0 ; i < compressionTestResults.length ; ++i) {
+    for (int i = 0; i < compressionTestResults.length; ++i) {
       compressionTestResults[i] = null;
     }
   }
 
-  public static void testCompression(Compression.Algorithm algo)
-      throws IOException {
+  public static void testCompression(Compression.Algorithm algo) throws IOException {
     if (compressionTestResults[algo.ordinal()] != null) {
       if (compressionTestResults[algo.ordinal()]) {
-        return ; // already passed test, dont do it again.
+        return; // already passed test, dont do it again.
       } else {
         // failed.
-        throw new DoNotRetryIOException("Compression algorithm '" + algo.getName() + "'" +
-        " previously failed test.");
+        throw new DoNotRetryIOException(
+          "Compression algorithm '" + algo.getName() + "'" + " previously failed test.");
       }
     }
 
@@ -111,34 +108,24 @@ public class CompressionTest {
 
   public static void usage() {
 
-    System.err.println(
-      "Usage: CompressionTest <path> " +
-      StringUtils.join( Compression.Algorithm.values(), "|").toLowerCase(Locale.ROOT) +
-      "\n" +
-      "For example:\n" +
-      "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");
+    System.err.println("Usage: CompressionTest <path> "
+      + StringUtils.join(Compression.Algorithm.values(), "|").toLowerCase(Locale.ROOT) + "\n"
+      + "For example:\n" + "  hbase " + CompressionTest.class + " file:///tmp/testfile gz\n");
     System.exit(1);
   }
 
-  public static void doSmokeTest(FileSystem fs, Path path, String codec)
-  throws Exception {
+  public static void doSmokeTest(FileSystem fs, Path path, String codec) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    HFileContext context = new HFileContextBuilder()
-                           .withCompression(HFileWriterImpl.compressionByName(codec)).build();
-    HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
-        .withPath(fs, path)
-        .withFileContext(context)
-        .create();
+    HFileContext context =
+      new HFileContextBuilder().withCompression(HFileWriterImpl.compressionByName(codec)).build();
+    HFile.Writer writer =
+      HFile.getWriterFactoryNoCache(conf).withPath(fs, path).withFileContext(context).create();
     // Write any-old Cell...
-    final byte [] rowKey = Bytes.toBytes("compressiontestkey");
-    Cell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(rowKey)
-      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
-      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(Bytes.toBytes("compressiontestval"))
-      .build();
+    final byte[] rowKey = Bytes.toBytes("compressiontestkey");
+    Cell c = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(rowKey)
+      .setFamily(HConstants.EMPTY_BYTE_ARRAY).setQualifier(HConstants.EMPTY_BYTE_ARRAY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+      .setValue(Bytes.toBytes("compressiontestval")).build();
     writer.append(c);
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();

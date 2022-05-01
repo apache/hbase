@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,15 +21,13 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when a snapshot could not be created due to a server-side error when
- * taking the snapshot.
+ * Thrown when a snapshot could not be created due to a server-side error when taking the snapshot.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 public class SnapshotCreationException extends HBaseSnapshotException {
   /**
    * Used internally by the RPC engine to pass the exception back to the client.
-   *
    * @param message error message to pass back
    */
   public SnapshotCreationException(String message) {
@@ -38,8 +36,7 @@ public class SnapshotCreationException extends HBaseSnapshotException {
 
   /**
    * Failure to create the specified snapshot.
-   *
-   * @param message reason why the snapshot couldn't be completed
+   * @param message             reason why the snapshot couldn't be completed
    * @param snapshotDescription description of the snapshot attempted
    */
   public SnapshotCreationException(String message, SnapshotDescription snapshotDescription) {
@@ -48,13 +45,12 @@ public class SnapshotCreationException extends HBaseSnapshotException {
 
   /**
    * Failure to create the specified snapshot due to an external cause.
-   *
-   * @param message reason why the snapshot couldn't be completed
-   * @param cause the root cause of the failure
+   * @param message             reason why the snapshot couldn't be completed
+   * @param cause               the root cause of the failure
    * @param snapshotDescription description of the snapshot attempted
    */
   public SnapshotCreationException(String message, Throwable cause,
-      SnapshotDescription snapshotDescription) {
+    SnapshotDescription snapshotDescription) {
     super(message, cause, snapshotDescription);
   }
 }

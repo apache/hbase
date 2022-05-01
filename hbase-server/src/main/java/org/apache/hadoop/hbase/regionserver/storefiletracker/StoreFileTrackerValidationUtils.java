@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,8 +41,8 @@ public final class StoreFileTrackerValidationUtils {
     Class<? extends StoreFileTracker> tracker = StoreFileTrackerFactory.getTrackerClass(mergedConf);
     if (MigrationStoreFileTracker.class.isAssignableFrom(tracker)) {
       throw new DoNotRetryIOException(
-        "Should not use " + Trackers.MIGRATION + " as store file tracker for new family " +
-          family.getNameAsString() + " of table " + table.getTableName());
+        "Should not use " + Trackers.MIGRATION + " as store file tracker for new family "
+          + family.getNameAsString() + " of table " + table.getTableName());
     }
   }
 
@@ -51,7 +51,7 @@ public final class StoreFileTrackerValidationUtils {
    * <p/>
    * For now, only make sure that we do not use {@link Trackers#MIGRATION} for newly created tables.
    * @throws IOException when there are check errors, the upper layer should fail the
-   *           {@code CreateTableProcedure}.
+   *                     {@code CreateTableProcedure}.
    */
   public static void checkForCreateTable(Configuration conf, TableDescriptor table)
     throws IOException {
@@ -92,7 +92,7 @@ public final class StoreFileTrackerValidationUtils {
    * </li>
    * </ul>
    * @throws IOException when there are check errors, the upper layer should fail the
-   *           {@code ModifyTableProcedure}.
+   *                     {@code ModifyTableProcedure}.
    */
   public static void checkForModifyTable(Configuration conf, TableDescriptor oldTable,
     TableDescriptor newTable, boolean isTableDisabled) throws IOException {
@@ -120,18 +120,18 @@ public final class StoreFileTrackerValidationUtils {
           Class<? extends StoreFileTracker> newSrcTracker =
             MigrationStoreFileTracker.getSrcTrackerClass(newConf);
           if (!oldSrcTracker.equals(newSrcTracker)) {
-            throw new DoNotRetryIOException("The src tracker has been changed from " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(oldSrcTracker) + " to " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker) + " for family " +
-              newFamily.getNameAsString() + " of table " + newTable.getTableName());
+            throw new DoNotRetryIOException("The src tracker has been changed from "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(oldSrcTracker) + " to "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker) + " for family "
+              + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
           Class<? extends StoreFileTracker> newDstTracker =
             MigrationStoreFileTracker.getDstTrackerClass(newConf);
           if (!oldDstTracker.equals(newDstTracker)) {
-            throw new DoNotRetryIOException("The dst tracker has been changed from " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(oldDstTracker) + " to " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(newDstTracker) + " for family " +
-              newFamily.getNameAsString() + " of table " + newTable.getTableName());
+            throw new DoNotRetryIOException("The dst tracker has been changed from "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(oldDstTracker) + " to "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(newDstTracker) + " for family "
+              + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
         } else {
           // do not allow changing from MIGRATION to its dst SFT implementation while the table is
@@ -140,16 +140,16 @@ public final class StoreFileTrackerValidationUtils {
           // details.
           if (isTableDisabled) {
             throw new TableNotEnabledException(
-              "Should not change store file tracker implementation from " +
-                StoreFileTrackerFactory.Trackers.MIGRATION.name() + " while table " +
-                newTable.getTableName() + " is disabled");
+              "Should not change store file tracker implementation from "
+                + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " while table "
+                + newTable.getTableName() + " is disabled");
           }
           // we can only change to the dst tracker
           if (!newTracker.equals(oldDstTracker)) {
-            throw new DoNotRetryIOException("Should migrate tracker to " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(oldDstTracker) + " but got " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(newTracker) + " for family " +
-              newFamily.getNameAsString() + " of table " + newTable.getTableName());
+            throw new DoNotRetryIOException("Should migrate tracker to "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(oldDstTracker) + " but got "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(newTracker) + " for family "
+              + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
         }
       } else {
@@ -158,9 +158,9 @@ public final class StoreFileTrackerValidationUtils {
           // tracker
           if (!MigrationStoreFileTracker.class.isAssignableFrom(newTracker)) {
             throw new DoNotRetryIOException(
-              "Should change to " + Trackers.MIGRATION + " first when migrating from " +
-                StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " for family " +
-                newFamily.getNameAsString() + " of table " + newTable.getTableName());
+              "Should change to " + Trackers.MIGRATION + " first when migrating from "
+                + StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " for family "
+                + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
           // here we do not check whether the table is disabled, as after changing to MIGRATION, we
           // still rely on the src SFT implementation to actually load the store files, so there
@@ -168,20 +168,20 @@ public final class StoreFileTrackerValidationUtils {
           Class<? extends StoreFileTracker> newSrcTracker =
             MigrationStoreFileTracker.getSrcTrackerClass(newConf);
           if (!oldTracker.equals(newSrcTracker)) {
-            throw new DoNotRetryIOException("Should use src tracker " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " first but got " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker) +
-              " when migrating from " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " for family " +
-              newFamily.getNameAsString() + " of table " + newTable.getTableName());
+            throw new DoNotRetryIOException("Should use src tracker "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " first but got "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker)
+              + " when migrating from "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(oldTracker) + " for family "
+              + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
           Class<? extends StoreFileTracker> newDstTracker =
             MigrationStoreFileTracker.getDstTrackerClass(newConf);
           // the src and dst tracker should not be the same
           if (newSrcTracker.equals(newDstTracker)) {
-            throw new DoNotRetryIOException("The src tracker and dst tracker are both " +
-              StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker) + " for family " +
-              newFamily.getNameAsString() + " of table " + newTable.getTableName());
+            throw new DoNotRetryIOException("The src tracker and dst tracker are both "
+              + StoreFileTrackerFactory.getStoreFileTrackerName(newSrcTracker) + " for family "
+              + newFamily.getNameAsString() + " of table " + newTable.getTableName());
           }
         }
       }
@@ -191,9 +191,9 @@ public final class StoreFileTrackerValidationUtils {
   /**
    * Makes sure restoring a snapshot does not break the current SFT setup follows
    * StoreUtils.createStoreConfiguration
-   * @param currentTableDesc Existing Table's TableDescriptor
+   * @param currentTableDesc  Existing Table's TableDescriptor
    * @param snapshotTableDesc Snapshot's TableDescriptor
-   * @param baseConf Current global configuration
+   * @param baseConf          Current global configuration
    * @throws RestoreSnapshotException if restore would break the current SFT setup
    */
   public static void validatePreRestoreSnapshot(TableDescriptor currentTableDesc,
@@ -216,9 +216,9 @@ public final class StoreFileTrackerValidationUtils {
         // restoration is not possible if there is an SFT mismatch
         if (currentSFT != snapSFT) {
           throw new RestoreSnapshotException(
-            "Restoring Snapshot is not possible because " + " the config for column family " +
-              cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: " +
-              currentSFT + " SFT from snapshot: " + snapSFT);
+            "Restoring Snapshot is not possible because " + " the config for column family "
+              + cfDesc.getNameAsString() + " has incompatible configuration. Current SFT: "
+              + currentSFT + " SFT from snapshot: " + snapSFT);
         }
       }
     }

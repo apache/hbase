@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DummyMetricsStochasticBalancer extends MetricsStochasticBalancer {
-  //We use a map to record those metrics that were updated to MetricsStochasticBalancer when running
+  // We use a map to record those metrics that were updated to MetricsStochasticBalancer when
+  // running
   // unit tests.
   private Map<String, Double> costsMap;
 
   public DummyMetricsStochasticBalancer() {
-    //noop
+    // noop
   }
 
   @Override
@@ -36,22 +37,22 @@ public class DummyMetricsStochasticBalancer extends MetricsStochasticBalancer {
 
   @Override
   public void balanceCluster(long time) {
-    //noop
+    // noop
   }
 
   @Override
   public void incrMiscInvocations() {
-    //noop
+    // noop
   }
 
   @Override
   public void balancerStatus(boolean status) {
-    //noop
+    // noop
   }
 
   @Override
   public void updateMetricsSize(int size) {
-    //noop
+    // noop
   }
 
   @Override
@@ -61,14 +62,14 @@ public class DummyMetricsStochasticBalancer extends MetricsStochasticBalancer {
     costsMap.put(key, value);
   }
 
-  public Map<String,Double> getDummyCostsMap(){
+  public Map<String, Double> getDummyCostsMap() {
     return this.costsMap;
   }
 
   /**
    * Clear all metrics in the cache map then prepare to run the next test
-   * */
-  public void clearDummyMetrics(){
+   */
+  public void clearDummyMetrics() {
     this.costsMap.clear();
   }
 

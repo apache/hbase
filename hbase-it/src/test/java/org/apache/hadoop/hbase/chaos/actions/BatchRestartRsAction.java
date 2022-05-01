@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.HashSet;
@@ -30,7 +29,7 @@ import org.slf4j.LoggerFactory;
  * Restarts a ratio of the running regionservers at the same time
  */
 public class BatchRestartRsAction extends RestartActionBaseAction {
-  float ratio; //ratio of regionservers to restart
+  float ratio; // ratio of regionservers to restart
   private static final Logger LOG = LoggerFactory.getLogger(BatchRestartRsAction.class);
 
   public BatchRestartRsAction(long sleepTime, float ratio) {
@@ -38,16 +37,17 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
     this.ratio = ratio;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
   @Override
   public void perform() throws Exception {
     getLogger().info(String.format("Performing action: Batch restarting %d%% of region servers",
-        (int)(ratio * 100)));
-    List<ServerName> selectedServers = PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(),
-        ratio);
+      (int) (ratio * 100)));
+    List<ServerName> selectedServers =
+      PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(), ratio);
 
     Set<ServerName> killedServers = new HashSet<>();
 
@@ -67,7 +67,7 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
     }
 
     getLogger().info("Killed " + killedServers.size() + " region servers. Reported num of rs:"
-        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+      + cluster.getClusterMetrics().getLiveServerMetrics().size());
 
     sleep(sleepTime);
 
@@ -77,11 +77,10 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
 
     }
     for (ServerName server : killedServers) {
-      cluster.waitForRegionServerToStart(server.getHostname(),
-          server.getPort(),
-          PolicyBasedChaosMonkey.TIMEOUT);
+      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(),
+        PolicyBasedChaosMonkey.TIMEOUT);
     }
-    getLogger().info("Started " + killedServers.size() +" region servers. Reported num of rs:"
-        + cluster.getClusterMetrics().getLiveServerMetrics().size());
+    getLogger().info("Started " + killedServers.size() + " region servers. Reported num of rs:"
+      + cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 }

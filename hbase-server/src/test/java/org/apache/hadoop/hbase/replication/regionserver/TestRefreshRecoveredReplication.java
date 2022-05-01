@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Testcase for HBASE-24871.
@@ -65,7 +63,7 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRefreshRecoveredReplication.class);
+    HBaseClassTestRule.forClass(TestRefreshRecoveredReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRefreshRecoveredReplication.class);
 
@@ -98,10 +96,9 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     setUpBase();
 
     tablename = TableName.valueOf(name.getMethodName());
-    TableDescriptor table = TableDescriptorBuilder.newBuilder(tablename)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .build();
+    TableDescriptor table =
+      TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(famName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
 
     UTIL1.getAdmin().createTable(table);
     UTIL2.getAdmin().createTable(table);
@@ -131,14 +128,15 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     List<RegionServerThread> rss = UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads();
     assertEquals(2, rss.size());
     Optional<RegionServerThread> server = rss.stream()
-        .filter(rst -> CollectionUtils.isNotEmpty(rst.getRegionServer().getRegions(tablename)))
-        .findAny();
+      .filter(rst -> CollectionUtils.isNotEmpty(rst.getRegionServer().getRegions(tablename)))
+      .findAny();
     Assert.assertTrue(server.isPresent());
-    HRegionServer otherServer = rss.get(0).getRegionServer() == server.get().getRegionServer()?
-      rss.get(1).getRegionServer(): rss.get(0).getRegionServer();
+    HRegionServer otherServer = rss.get(0).getRegionServer() == server.get().getRegionServer()
+      ? rss.get(1).getRegionServer()
+      : rss.get(0).getRegionServer();
     server.get().getRegionServer().abort("stopping for test");
     // waiting for recovered peer to appear.
-    Replication replication = (Replication)otherServer.getReplicationSourceService();
+    Replication replication = (Replication) otherServer.getReplicationSourceService();
     UTIL1.waitFor(60000, () -> !replication.getReplicationManager().getOldSources().isEmpty());
     // Wait on only one server being up.
     // Have to go back to source here because getLiveRegionServerThreads makes new array each time

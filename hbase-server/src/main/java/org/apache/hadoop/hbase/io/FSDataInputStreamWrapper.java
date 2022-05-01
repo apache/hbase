@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
- * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums,
- * as well as closing streams. Initialization is not thread-safe, but normal operation is;
- * see method comments.
+ * Wrapper for input stream(s) that takes care of the interaction of FS and HBase checksums, as well
+ * as closing streams. Initialization is not thread-safe, but normal operation is; see method
+ * comments.
  */
 @InterfaceAudience.Private
 public class FSDataInputStreamWrapper implements Closeable {
@@ -50,25 +50,23 @@ public class FSDataInputStreamWrapper implements Closeable {
   private final boolean dropBehind;
   private final long readahead;
 
-  /** Two stream handles, one with and one without FS-level checksum.
-   * HDFS checksum setting is on FS level, not single read level, so you have to keep two
-   * FS objects and two handles open to interleave different reads freely, which is very sad.
-   * This is what we do:
-   * 1) First, we need to read the trailer of HFile to determine checksum parameters.
-   *  We always use FS checksum to do that, so ctor opens {@link #stream}.
-   * 2.1) After that, if HBase checksum is not used, we'd just always use {@link #stream};
-   * 2.2) If HBase checksum can be used, we'll open {@link #streamNoFsChecksum},
-   *  and close {@link #stream}. User MUST call prepareForBlockReader for that to happen;
-   *  if they don't, (2.1) will be the default.
-   * 3) The users can call {@link #shouldUseHBaseChecksum()}, and pass its result to
-   *  {@link #getStream(boolean)} to get stream (if Java had out/pointer params we could
-   *  return both in one call). This stream is guaranteed to be set.
-   * 4) The first time HBase checksum fails, one would call {@link #fallbackToFsChecksum(int)}.
-   * That will take lock, and open {@link #stream}. While this is going on, others will
-   * continue to use the old stream; if they also want to fall back, they'll also call
-   * {@link #fallbackToFsChecksum(int)}, and block until {@link #stream} is set.
-   * 5) After some number of checksumOk() calls, we will go back to using HBase checksum.
-   * We will have 2 handles; however we presume checksums fail so rarely that we don't care.
+  /**
+   * Two stream handles, one with and one without FS-level checksum. HDFS checksum setting is on FS
+   * level, not single read level, so you have to keep two FS objects and two handles open to
+   * interleave different reads freely, which is very sad. This is what we do: 1) First, we need to
+   * read the trailer of HFile to determine checksum parameters. We always use FS checksum to do
+   * that, so ctor opens {@link #stream}. 2.1) After that, if HBase checksum is not used, we'd just
+   * always use {@link #stream}; 2.2) If HBase checksum can be used, we'll open
+   * {@link #streamNoFsChecksum}, and close {@link #stream}. User MUST call prepareForBlockReader
+   * for that to happen; if they don't, (2.1) will be the default. 3) The users can call
+   * {@link #shouldUseHBaseChecksum()}, and pass its result to {@link #getStream(boolean)} to get
+   * stream (if Java had out/pointer params we could return both in one call). This stream is
+   * guaranteed to be set. 4) The first time HBase checksum fails, one would call
+   * {@link #fallbackToFsChecksum(int)}. That will take lock, and open {@link #stream}. While this
+   * is going on, others will continue to use the old stream; if they also want to fall back,
+   * they'll also call {@link #fallbackToFsChecksum(int)}, and block until {@link #stream} is set.
+   * 5) After some number of checksumOk() calls, we will go back to using HBase checksum. We will
+   * have 2 handles; however we presume checksums fail so rarely that we don't care.
    */
   private volatile FSDataInputStream stream = null;
   private volatile FSDataInputStream streamNoFsChecksum = null;
@@ -103,17 +101,18 @@ public class FSDataInputStreamWrapper implements Closeable {
     this(fs, path, false, -1L);
   }
 
-  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind, long readahead) throws IOException {
+  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind, long readahead)
+    throws IOException {
     this(fs, null, path, dropBehind, readahead);
   }
 
-  public FSDataInputStreamWrapper(FileSystem fs, FileLink link,
-                                  boolean dropBehind, long readahead) throws IOException {
+  public FSDataInputStreamWrapper(FileSystem fs, FileLink link, boolean dropBehind, long readahead)
+    throws IOException {
     this(fs, link, null, dropBehind, readahead);
   }
 
   private FSDataInputStreamWrapper(FileSystem fs, FileLink link, Path path, boolean dropBehind,
-      long readahead) throws IOException {
+    long readahead) throws IOException {
     assert (path == null) != (link == null);
     this.path = path;
     this.link = link;
@@ -147,16 +146,16 @@ public class FSDataInputStreamWrapper implements Closeable {
   }
 
   /**
-   * Prepares the streams for block reader. NOT THREAD SAFE. Must be called once, after any
-   * reads finish and before any other reads start (what happens in reality is we read the
-   * tail, then call this based on what's in the tail, then read blocks).
+   * Prepares the streams for block reader. NOT THREAD SAFE. Must be called once, after any reads
+   * finish and before any other reads start (what happens in reality is we read the tail, then call
+   * this based on what's in the tail, then read blocks).
    * @param forceNoHBaseChecksum Force not using HBase checksum.
    */
   public void prepareForBlockReader(boolean forceNoHBaseChecksum) throws IOException {
     if (hfs == null) return;
     assert this.stream != null && !this.useHBaseChecksumConfigured;
     boolean useHBaseChecksum =
-        !forceNoHBaseChecksum && hfs.useHBaseChecksum() && (hfs.getNoChecksumFs() != hfs);
+      !forceNoHBaseChecksum && hfs.useHBaseChecksum() && (hfs.getNoChecksumFs() != hfs);
 
     if (useHBaseChecksum) {
       FileSystem fsNc = hfs.getNoChecksumFs();
@@ -196,8 +195,8 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   /**
    * Get the stream to use. Thread-safe.
-   * @param useHBaseChecksum must be the value that shouldUseHBaseChecksum has returned
-   *  at some point in the past, otherwise the result is undefined.
+   * @param useHBaseChecksum must be the value that shouldUseHBaseChecksum has returned at some
+   *                         point in the past, otherwise the result is undefined.
    */
   public FSDataInputStream getStream(boolean useHBaseChecksum) {
     return useHBaseChecksum ? this.streamNoFsChecksum : this.stream;
@@ -227,8 +226,10 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   /** Report that checksum was ok, so we may ponder going back to HBase checksum. */
   public void checksumOk() {
-    if (this.useHBaseChecksumConfigured && !this.useHBaseChecksum
-        && (this.hbaseChecksumOffCount.getAndDecrement() < 0)) {
+    if (
+      this.useHBaseChecksumConfigured && !this.useHBaseChecksum
+        && (this.hbaseChecksumOffCount.getAndDecrement() < 0)
+    ) {
       // The stream we need is already open (because we were using HBase checksum in the past).
       assert this.streamNoFsChecksum != null;
       this.useHBaseChecksum = true;
@@ -239,20 +240,20 @@ public class FSDataInputStreamWrapper implements Closeable {
     // If the underlying file system is HDFS, update read statistics upon close.
     if (stream instanceof HdfsDataInputStream) {
       /**
-       * Because HDFS ReadStatistics is calculated per input stream, it is not
-       * feasible to update the aggregated number in real time. Instead, the
-       * metrics are updated when an input stream is closed.
+       * Because HDFS ReadStatistics is calculated per input stream, it is not feasible to update
+       * the aggregated number in real time. Instead, the metrics are updated when an input stream
+       * is closed.
        */
-      HdfsDataInputStream hdfsDataInputStream = (HdfsDataInputStream)stream;
+      HdfsDataInputStream hdfsDataInputStream = (HdfsDataInputStream) stream;
       synchronized (readStatistics) {
-        readStatistics.totalBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalBytesRead();
-        readStatistics.totalLocalBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalLocalBytesRead();
-        readStatistics.totalShortCircuitBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalShortCircuitBytesRead();
-        readStatistics.totalZeroCopyBytesRead += hdfsDataInputStream.getReadStatistics().
-          getTotalZeroCopyBytesRead();
+        readStatistics.totalBytesRead +=
+          hdfsDataInputStream.getReadStatistics().getTotalBytesRead();
+        readStatistics.totalLocalBytesRead +=
+          hdfsDataInputStream.getReadStatistics().getTotalLocalBytesRead();
+        readStatistics.totalShortCircuitBytesRead +=
+          hdfsDataInputStream.getReadStatistics().getTotalShortCircuitBytesRead();
+        readStatistics.totalZeroCopyBytesRead +=
+          hdfsDataInputStream.getReadStatistics().getTotalZeroCopyBytesRead();
       }
     }
   }
@@ -290,7 +291,6 @@ public class FSDataInputStreamWrapper implements Closeable {
     updateInputStreamStatistics(this.streamNoFsChecksum);
     // we do not care about the close exception as it is for reading, no data loss issue.
     Closeables.closeQuietly(streamNoFsChecksum);
-
 
     updateInputStreamStatistics(stream);
     Closeables.closeQuietly(stream);
@@ -331,10 +331,10 @@ public class FSDataInputStreamWrapper implements Closeable {
       if (this.instanceOfCanUnbuffer) {
         try {
           this.unbuffer.unbuffer();
-        } catch (UnsupportedOperationException e){
+        } catch (UnsupportedOperationException e) {
           if (isLogTraceEnabled) {
             LOG.trace("Failed to invoke 'unbuffer' method in class " + streamClass
-                + " . So there may be the stream does not support unbuffering.", e);
+              + " . So there may be the stream does not support unbuffering.", e);
           }
         }
       } else {

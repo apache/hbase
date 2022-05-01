@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.crypto;
 
@@ -32,48 +33,51 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.Locale;
 import java.util.Properties;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A basic KeyProvider that can resolve keys from a protected KeyStore file
- * on the local filesystem. It is configured with a URI passed in as a String
- * to init(). The URI should have the form:
+ * A basic KeyProvider that can resolve keys from a protected KeyStore file on the local filesystem.
+ * It is configured with a URI passed in as a String to init(). The URI should have the form:
  * <p>
- * <pre>    scheme://path?option1=value1&amp;option2=value2</pre>
+ *
+ * <pre>
+ *     scheme://path?option1=value1&amp;option2=value2
+ * </pre>
  * <p>
- * <i>scheme</i> can be either "jks" or "jceks", specifying the file based
- * providers shipped with every JRE. The latter is the certificate store for
- * the SunJCE cryptography extension, or PKCS #12, and is capable of storing
- * SecretKeys.
+ * <i>scheme</i> can be either "jks" or "jceks", specifying the file based providers shipped with
+ * every JRE. The latter is the certificate store for the SunJCE cryptography extension, or PKCS
+ * #12, and is capable of storing SecretKeys.
  * <p>
  * <i>path</i> is the location of the keystore in the filesystem namespace.
  * <p>
  * Options can be specified as query parameters.
  * <p>
- * If the store was created with a password, the password can be specified
- * using the option 'password'.
+ * If the store was created with a password, the password can be specified using the option
+ * 'password'.
  * <p>
  * For example:
  * <p>
- * <pre>    jceks:///var/tmp/example.ks?password=foobar</pre>
+ *
+ * <pre>
+ *     jceks:///var/tmp/example.ks?password=foobar
+ * </pre>
  * <p>
- * It is assumed that all keys in the store are protected with the same
- * password.
+ * It is assumed that all keys in the store are protected with the same password.
  * <p>
- * Alternatively, a properties file can be specified containing passwords for
- * keys in the keystore.
- * <pre>    jceks:///var/tmp/example.ks?passwordFile=/var/tmp/example.pw</pre>
+ * Alternatively, a properties file can be specified containing passwords for keys in the keystore.
+ *
+ * <pre>
+ *     jceks:///var/tmp/example.ks?passwordFile=/var/tmp/example.pw
+ * </pre>
  * <p>
- * Subclasses for supporting KeyStores that are not file based can extend the
- * protected methods of this class to specify the appropriate
- * LoadStoreParameters.
+ * Subclasses for supporting KeyStores that are not file based can extend the protected methods of
+ * this class to specify the appropriate LoadStoreParameters.
  */
 @InterfaceAudience.Public
 public class KeyStoreKeyProvider implements KeyProvider {
 
   protected KeyStore store;
-  protected char[] password;         // can be null if no password
+  protected char[] password; // can be null if no password
   protected Properties passwordFile; // can be null if no file provided
 
   protected void processParameter(String name, String value) throws IOException {

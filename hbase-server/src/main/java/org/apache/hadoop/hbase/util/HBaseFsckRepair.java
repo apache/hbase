@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -51,27 +49,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class contains helper methods that repair parts of hbase's filesystem
- * contents.
+ * This class contains helper methods that repair parts of hbase's filesystem contents.
  */
 @InterfaceAudience.Private
 public class HBaseFsckRepair {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseFsckRepair.class);
 
   /**
-   * Fix multiple assignment by doing silent closes on each RS hosting the region
-   * and then force ZK unassigned node to OFFLINE to trigger assignment by
-   * master.
-   *
+   * Fix multiple assignment by doing silent closes on each RS hosting the region and then force ZK
+   * unassigned node to OFFLINE to trigger assignment by master.
    * @param connection HBase connection to the cluster
-   * @param region Region to undeploy
-   * @param servers list of Servers to undeploy from
+   * @param region     Region to undeploy
+   * @param servers    list of Servers to undeploy from
    */
   public static void fixMultiAssignment(Connection connection, RegionInfo region,
-      List<ServerName> servers)
-  throws IOException, KeeperException, InterruptedException {
+    List<ServerName> servers) throws IOException, KeeperException, InterruptedException {
     // Close region on the servers silently
-    for(ServerName server : servers) {
+    for (ServerName server : servers) {
       closeRegionSilentlyAndWait(connection, server, region);
     }
 
@@ -80,50 +74,41 @@ public class HBaseFsckRepair {
   }
 
   /**
-   * Fix unassigned by creating/transition the unassigned ZK node for this
-   * region to OFFLINE state with a special flag to tell the master that this is
-   * a forced operation by HBCK.
-   *
-   * This assumes that info is in META.
-   *
-   * @param admin
-   * @param region
-   * @throws IOException
-   * @throws KeeperException
+   * Fix unassigned by creating/transition the unassigned ZK node for this region to OFFLINE state
+   * with a special flag to tell the master that this is a forced operation by HBCK. This assumes
+   * that info is in META. nnnn
    */
   public static void fixUnassigned(Admin admin, RegionInfo region)
-      throws IOException, KeeperException, InterruptedException {
+    throws IOException, KeeperException, InterruptedException {
     // Force ZK node to OFFLINE so master assigns
     forceOfflineInZK(admin, region);
   }
 
   /**
-   * In 0.90, this forces an HRI offline by setting the RegionTransitionData
-   * in ZK to have HBCK_CODE_NAME as the server.  This is a special case in
-   * the AssignmentManager that attempts an assign call by the master.
-   *
-   * This doesn't seem to work properly in the updated version of 0.92+'s hbck
-   * so we use assign to force the region into transition.  This has the
-   * side-effect of requiring a RegionInfo that considers regionId (timestamp)
-   * in comparators that is addressed by HBASE-5563.
+   * In 0.90, this forces an HRI offline by setting the RegionTransitionData in ZK to have
+   * HBCK_CODE_NAME as the server. This is a special case in the AssignmentManager that attempts an
+   * assign call by the master. This doesn't seem to work properly in the updated version of 0.92+'s
+   * hbck so we use assign to force the region into transition. This has the side-effect of
+   * requiring a RegionInfo that considers regionId (timestamp) in comparators that is addressed by
+   * HBASE-5563.
    */
   private static void forceOfflineInZK(Admin admin, final RegionInfo region)
-  throws ZooKeeperConnectionException, KeeperException, IOException, InterruptedException {
+    throws ZooKeeperConnectionException, KeeperException, IOException, InterruptedException {
     admin.assign(region.getRegionName());
   }
 
   /*
    * Should we check all assignments or just not in RIT?
    */
-  public static void waitUntilAssigned(Admin admin,
-      RegionInfo region) throws IOException, InterruptedException {
+  public static void waitUntilAssigned(Admin admin, RegionInfo region)
+    throws IOException, InterruptedException {
     long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
     long expiration = timeout + EnvironmentEdgeManager.currentTime();
     while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
         boolean inTransition = false;
         for (RegionState rs : admin.getClusterMetrics(EnumSet.of(Option.REGIONS_IN_TRANSITION))
-                                   .getRegionStatesInTransition()) {
+          .getRegionStatesInTransition()) {
           if (RegionInfo.COMPARATOR.compare(rs.getRegion(), region) == 0) {
             inTransition = true;
             break;
@@ -134,16 +119,14 @@ public class HBaseFsckRepair {
           return;
         }
         // still in rit
-        LOG.info("Region still in transition, waiting for "
-            + "it to become assigned: " + region);
+        LOG.info("Region still in transition, waiting for " + "it to become assigned: " + region);
       } catch (IOException e) {
-        LOG.warn("Exception when waiting for region to become assigned,"
-            + " retrying", e);
+        LOG.warn("Exception when waiting for region to become assigned," + " retrying", e);
       }
       Thread.sleep(1000);
     }
-    throw new IOException("Region " + region + " failed to move out of " +
-        "transition within timeout " + timeout + "ms");
+    throw new IOException("Region " + region + " failed to move out of "
+      + "transition within timeout " + timeout + "ms");
   }
 
   /**
@@ -151,7 +134,7 @@ public class HBaseFsckRepair {
    * the region. This bypasses the active hmaster.
    */
   public static void closeRegionSilentlyAndWait(Connection connection, ServerName server,
-      RegionInfo region) throws IOException, InterruptedException {
+    RegionInfo region) throws IOException, InterruptedException {
     long timeout = connection.getConfiguration().getLong("hbase.hbck.close.timeout", 120000);
     // this is a bit ugly but it is only used in the old hbck and tests, so I think it is fine.
     try (AsyncClusterConnection asyncConn = ClusterConnectionFactory
@@ -163,8 +146,8 @@ public class HBaseFsckRepair {
   /**
    * Puts the specified RegionInfo into META with replica related columns
    */
-  public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf,
-      RegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
+  public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf, RegionInfo hri,
+    Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
     Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
@@ -188,8 +171,8 @@ public class HBaseFsckRepair {
   /**
    * Creates, flushes, and closes a new region.
    */
-  public static HRegion createHDFSRegionDir(Configuration conf,
-      RegionInfo hri, TableDescriptor htd) throws IOException {
+  public static HRegion createHDFSRegionDir(Configuration conf, RegionInfo hri, TableDescriptor htd)
+    throws IOException {
     // Create HRegion
     Path root = CommonFSUtils.getRootDir(conf);
     HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);

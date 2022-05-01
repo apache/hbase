@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -27,17 +24,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This queue allows a ThreadPoolExecutor to steal jobs from another ThreadPoolExecutor.
- * This queue also acts as the factory for creating the PriorityBlockingQueue to be used in the
- * steal-from ThreadPoolExecutor. The behavior of this queue is the same as a normal
- * PriorityBlockingQueue except the take/poll(long,TimeUnit) methods would also check whether there
- * are jobs in the steal-from queue if this q ueue is empty.
- *
- * Note the workers in ThreadPoolExecutor must be pre-started so that they can steal job from the
- * other queue, otherwise the worker will only be started after there are jobs submitted to main
- * queue.
+ * This queue allows a ThreadPoolExecutor to steal jobs from another ThreadPoolExecutor. This queue
+ * also acts as the factory for creating the PriorityBlockingQueue to be used in the steal-from
+ * ThreadPoolExecutor. The behavior of this queue is the same as a normal PriorityBlockingQueue
+ * except the take/poll(long,TimeUnit) methods would also check whether there are jobs in the
+ * steal-from queue if this q ueue is empty. Note the workers in ThreadPoolExecutor must be
+ * pre-started so that they can steal job from the other queue, otherwise the worker will only be
+ * started after there are jobs submitted to main queue.
  */
 @InterfaceAudience.Private
 public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
@@ -54,7 +50,7 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
   }
 
   public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity,
-      Comparator<? super T> comparator) {
+    Comparator<? super T> comparator) {
     super(initCapacity, comparator);
     this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity, comparator) {
 
@@ -92,7 +88,6 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
     }
   }
 
-
   @Override
   public T take() throws InterruptedException {
     lock.lockInterruptibly();
@@ -124,8 +119,7 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
           retVal = stealFromQueue.poll();
         }
         if (retVal == null) {
-          if (nanos <= 0)
-            return null;
+          if (nanos <= 0) return null;
           nanos = notEmpty.awaitNanos(nanos);
         } else {
           return retVal;
@@ -136,4 +130,3 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
     }
   }
 }
-

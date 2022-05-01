@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -28,14 +35,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
 final class TestHDFSAclHelper {
   private static final Logger LOG = LoggerFactory.getLogger(TestHDFSAclHelper.class);
 
@@ -45,13 +44,15 @@ final class TestHDFSAclHelper {
   }
 
   static void grantOnTable(HBaseTestingUtil util, String user, TableName tableName,
-                           Permission.Action... actions) throws Exception {
+    Permission.Action... actions) throws Exception {
     SecureTestUtil.grantOnTable(util, user, tableName, null, null, actions);
   }
 
   static void createNamespace(HBaseTestingUtil util, String namespace) throws IOException {
-    if (Arrays.stream(util.getAdmin().listNamespaceDescriptors())
-        .noneMatch(ns -> ns.getName().equals(namespace))) {
+    if (
+      Arrays.stream(util.getAdmin().listNamespaceDescriptors())
+        .noneMatch(ns -> ns.getName().equals(namespace))
+    ) {
       NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
       util.getAdmin().createNamespace(namespaceDescriptor);
     }
@@ -60,7 +61,7 @@ final class TestHDFSAclHelper {
   static Table createTable(HBaseTestingUtil util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName)
-        .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
+      .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
     SecureTestUtil.grantGlobal(util, user.getShortName(), Permission.Action.CREATE);
@@ -71,11 +72,11 @@ final class TestHDFSAclHelper {
   static Table createMobTable(HBaseTestingUtil util, TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).setMobEnabled(true)
-            .setMobThreshold(0).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).setMobEnabled(true)
-            .setMobThreshold(0).build())
-        .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).setMobEnabled(true)
+        .setMobThreshold(0).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).setMobEnabled(true)
+        .setMobThreshold(0).build())
+      .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
     User user = User.createUserForTesting(util.getConfiguration(), USER_OWNER, new String[] {});
     SecureTestUtil.grantGlobal(util, user.getShortName(), Permission.Action.CREATE);
@@ -84,7 +85,7 @@ final class TestHDFSAclHelper {
   }
 
   static TableDescriptor createUserScanSnapshotDisabledTable(HBaseTestingUtil util,
-      TableName tableName) throws Exception {
+    TableName tableName) throws Exception {
     createNamespace(util, tableName.getNamespaceAsString());
     TableDescriptor td = getTableDescriptorBuilder(util, tableName).build();
     byte[][] splits = new byte[][] { Bytes.toBytes("2"), Bytes.toBytes("4") };
@@ -98,10 +99,10 @@ final class TestHDFSAclHelper {
   }
 
   static TableDescriptorBuilder getTableDescriptorBuilder(HBaseTestingUtil util,
-      TableName tableName) {
+    TableName tableName) {
     return TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build());
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN1).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN2).build());
   }
 
   static void createTableAndPut(HBaseTestingUtil util, TableName tableNam) throws Exception {
@@ -140,28 +141,28 @@ final class TestHDFSAclHelper {
 
   /**
    * Check if user is able to read expected rows from the specific snapshot
-   * @param user the specific user
-   * @param snapshot the snapshot to be scanned
+   * @param user             the specific user
+   * @param snapshot         the snapshot to be scanned
    * @param expectedRowCount expected row count read from snapshot, -1 if expects
-   *          AccessControlException
-   * @throws IOException user scan snapshot error
+   *                         AccessControlException
+   * @throws IOException          user scan snapshot error
    * @throws InterruptedException user scan snapshot error
    */
   static void canUserScanSnapshot(HBaseTestingUtil util, User user, String snapshot,
-      int expectedRowCount) throws IOException, InterruptedException {
+    int expectedRowCount) throws IOException, InterruptedException {
     PrivilegedExceptionAction<Void> action =
-        getScanSnapshotAction(util.getConfiguration(), snapshot, expectedRowCount);
+      getScanSnapshotAction(util.getConfiguration(), snapshot, expectedRowCount);
     user.runAs(action);
   }
 
   static PrivilegedExceptionAction<Void> getScanSnapshotAction(Configuration conf,
-                                                               String snapshotName, long expectedRowCount) {
+    String snapshotName, long expectedRowCount) {
     return () -> {
       try {
         Path restoreDir = new Path(SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_TMP_DIR_DEFAULT);
         Scan scan = new Scan();
         TableSnapshotScanner scanner =
-            new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
+          new TableSnapshotScanner(conf, restoreDir, snapshotName, scan);
         int rowCount = 0;
         while (true) {
           Result result = scanner.next();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,15 +32,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedInt16 {
-  private static final Short[] VALUES = new Short[] {
-    1, 22, 333, 4444
-  };
+  private static final Short[] VALUES = new Short[] { 1, 22, 333, 4444 };
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestOrderedInt16.class);
+    HBaseClassTestRule.forClass(TestOrderedInt16.class);
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -67,8 +65,8 @@ public class TestOrderedInt16 {
       for (final Short val : VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val,
-            buffer.getPosition(), type.encodedLength(val));
+        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
+          type.encodedLength(val));
       }
     }
   }
@@ -90,8 +88,8 @@ public class TestOrderedInt16 {
       for (final Short val : VALUES) {
         buffer.setPosition(0);
         type.encodeShort(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val,
-            buffer.getPosition(), type.encodedLength(val));
+        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
+          type.encodedLength(val));
       }
     }
   }

@@ -54,14 +54,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 
-
 /**
- * Test of the HBCK-version of SCP.
- * The HBCKSCP is an SCP only it reads hbase:meta for list of Regions that were
- * on the server-to-process rather than consult Master in-memory-state.
+ * Test of the HBCK-version of SCP. The HBCKSCP is an SCP only it reads hbase:meta for list of
+ * Regions that were on the server-to-process rather than consult Master in-memory-state.
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestHBCKSCP extends TestSCPBase {
@@ -69,7 +68,7 @@ public class TestHBCKSCP extends TestSCPBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBCKSCP.class);
+    HBaseClassTestRule.forClass(TestHBCKSCP.class);
   @Rule
   public TestName name = new TestName();
 
@@ -102,7 +101,7 @@ public class TestHBCKSCP extends TestSCPBase {
     Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     // Assert region is OPEN.
     assertEquals(RegionState.State.OPEN.toString(),
-        Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
+      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     ServerName serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertEquals(rsServerName, serverName);
     // moveFrom adds to dead servers and adds it to processing list only we will
@@ -128,7 +127,7 @@ public class TestHBCKSCP extends TestSCPBase {
     // Assert region is OPEN on dead server still.
     r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
-        Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
+      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertEquals(rsServerName, serverName);
@@ -143,7 +142,7 @@ public class TestHBCKSCP extends TestSCPBase {
     // After SCP, assert region is OPEN on new server.
     r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
     assertEquals(RegionState.State.OPEN.toString(),
-        Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
+      Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     serverName = CatalogFamilyFormat.getServerName(r, 0);
     assertNotNull(cluster.getRegionServer(serverName));
     assertNotEquals(rsServerName, serverName);
@@ -152,10 +151,9 @@ public class TestHBCKSCP extends TestSCPBase {
   }
 
   protected long scheduleHBCKSCP(ServerName rsServerName, HMaster master) throws ServiceException {
-    MasterProtos.ScheduleServerCrashProcedureResponse response =
-        master.getMasterRpcServices().scheduleServerCrashProcedure(null,
-            MasterProtos.ScheduleServerCrashProcedureRequest.newBuilder().
-                addServerName(ProtobufUtil.toServerName(rsServerName)).build());
+    MasterProtos.ScheduleServerCrashProcedureResponse response = master.getMasterRpcServices()
+      .scheduleServerCrashProcedure(null, MasterProtos.ScheduleServerCrashProcedureRequest
+        .newBuilder().addServerName(ProtobufUtil.toServerName(rsServerName)).build());
     assertEquals(1, response.getPidCount());
     long pid = response.getPid(0);
     return pid;
@@ -167,7 +165,7 @@ public class TestHBCKSCP extends TestSCPBase {
   private boolean searchMeta(HMaster master, ServerName sn) throws IOException {
     List<Pair<RegionInfo, ServerName>> ps =
       MetaTableAccessor.getTableRegionsAndLocations(master.getConnection(), null);
-    for (Pair<RegionInfo, ServerName> p: ps) {
+    for (Pair<RegionInfo, ServerName> p : ps) {
       if (p.getSecond().equals(sn)) {
         return true;
       }

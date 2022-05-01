@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,11 +37,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestEncryption {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEncryption.class);
+    HBaseClassTestRule.forClass(TestEncryption.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEncryption.class);
 
@@ -51,7 +51,7 @@ public class TestEncryption {
     Bytes.secureRandom(key);
     byte[] iv = new byte[16];
     Bytes.secureRandom(iv);
-    for (int size: new int[] { 4, 8, 16, 32, 64, 128, 256, 512 }) {
+    for (int size : new int[] { 4, 8, 16, 32, 64, 128, 256, 512 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
   }
@@ -62,7 +62,7 @@ public class TestEncryption {
     Bytes.secureRandom(key);
     byte[] iv = new byte[16];
     Bytes.secureRandom(iv);
-    for (int size: new int[] { 256 * 1024, 512 * 1024, 1024 * 1024 }) {
+    for (int size : new int[] { 256 * 1024, 512 * 1024, 1024 * 1024 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
   }
@@ -73,7 +73,7 @@ public class TestEncryption {
     Bytes.secureRandom(key);
     byte[] iv = new byte[16];
     Bytes.secureRandom(iv);
-    for (int size: new int[] { 3, 7, 11, 23, 47, 79, 119, 175 }) {
+    for (int size : new int[] { 3, 7, 11, 23, 47, 79, 119, 175 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
   }
@@ -84,38 +84,37 @@ public class TestEncryption {
     Bytes.secureRandom(key);
     byte[] iv = new byte[16];
     Bytes.secureRandom(iv);
-    for (int size: new int[] { 4 * 1024, 8 * 1024, 64 * 1024, 128 * 1024 }) {
+    for (int size : new int[] { 4 * 1024, 8 * 1024, 64 * 1024, 128 * 1024 }) {
       checkTransformSymmetry(key, iv, getRandomBlock(size));
     }
   }
 
   @Test
   public void testIncrementIV() {
-    byte[] iv = new byte[] {1, 2, 3};
-    byte[] iv_neg = new byte[] {-3, -13, 25};
+    byte[] iv = new byte[] { 1, 2, 3 };
+    byte[] iv_neg = new byte[] { -3, -13, 25 };
     Encryption.incrementIv(iv);
-    assertTrue(Bytes.equals(iv, new byte[] {2, 2, 3}));
+    assertTrue(Bytes.equals(iv, new byte[] { 2, 2, 3 }));
 
     Encryption.incrementIv(iv, 255);
-    assertTrue(Bytes.equals(iv, new byte[] {1, 3, 3}));
+    assertTrue(Bytes.equals(iv, new byte[] { 1, 3, 3 }));
 
     Encryption.incrementIv(iv, 1024);
-    assertTrue(Bytes.equals(iv, new byte[] {1, 7, 3}));
+    assertTrue(Bytes.equals(iv, new byte[] { 1, 7, 3 }));
 
     Encryption.incrementIv(iv_neg);
-    assertTrue(Bytes.equals(iv_neg, new byte[] {-2, -13, 25}));
+    assertTrue(Bytes.equals(iv_neg, new byte[] { -2, -13, 25 }));
 
     Encryption.incrementIv(iv_neg, 5);
-    assertTrue(Bytes.equals(iv_neg, new byte[] {3, -12, 25}));
+    assertTrue(Bytes.equals(iv_neg, new byte[] { 3, -12, 25 }));
   }
 
   private void checkTransformSymmetry(byte[] keyBytes, byte[] iv, byte[] plaintext)
-      throws Exception {
+    throws Exception {
     LOG.info("checkTransformSymmetry: AES, plaintext length = " + plaintext.length);
 
     Configuration conf = HBaseConfiguration.create();
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher aes = Encryption.getCipher(conf, algorithm);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -136,10 +135,9 @@ public class TestEncryption {
     Encryption.decrypt(decOut, encIn, plaintext.length, d);
 
     byte[] result = decOut.toByteArray();
-    assertEquals("Decrypted result has different length than plaintext",
-      result.length, plaintext.length);
-    assertTrue("Transformation was not symmetric",
-      Bytes.equals(result, plaintext));
+    assertEquals("Decrypted result has different length than plaintext", result.length,
+      plaintext.length);
+    assertTrue("Transformation was not symmetric", Bytes.equals(result, plaintext));
   }
 
   private byte[] getRandomBlock(int size) {

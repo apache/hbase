@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +20,15 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 @InterfaceAudience.Private
 public class RpcServerFactory {
@@ -44,19 +44,18 @@ public class RpcServerFactory {
   }
 
   public static RpcServer createRpcServer(final Server server, final String name,
-      final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
-      Configuration conf, RpcScheduler scheduler) throws IOException {
+    final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return createRpcServer(server, name, services, bindAddress, conf, scheduler, true);
   }
 
   public static RpcServer createRpcServer(final Server server, final String name,
-      final List<BlockingServiceAndInterface> services,
-      final InetSocketAddress bindAddress, Configuration conf,
-      RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
-    String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        NettyRpcServer.class.getName());
+    final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+    String rpcServerClass =
+      conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY, NettyRpcServer.class.getName());
     StringBuilder servicesList = new StringBuilder();
-    for (BlockingServiceAndInterface s: services) {
+    for (BlockingServiceAndInterface s : services) {
       ServiceDescriptor sd = s.getBlockingService().getDescriptorForType();
       if (sd == null) continue; // Can be null for certain tests like TestTokenAuthentication
       if (servicesList.length() > 0) servicesList.append(", ");
@@ -64,8 +63,8 @@ public class RpcServerFactory {
     }
     LOG.info("Creating " + rpcServerClass + " hosting " + servicesList);
     return ReflectionUtils.instantiateWithCustomCtor(rpcServerClass,
-        new Class[] { Server.class, String.class, List.class,
-          InetSocketAddress.class, Configuration.class, RpcScheduler.class, boolean.class },
-        new Object[] { server, name, services, bindAddress, conf, scheduler, reservoirEnabled });
+      new Class[] { Server.class, String.class, List.class, InetSocketAddress.class,
+        Configuration.class, RpcScheduler.class, boolean.class },
+      new Object[] { server, name, services, bindAddress, conf, scheduler, reservoirEnabled });
   }
 }

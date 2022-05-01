@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,8 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Our extension of DataOutputStream which implements ByteBufferWriter
  */
 @InterfaceAudience.Private
-public class ByteBufferWriterDataOutputStream extends DataOutputStream
-    implements ByteBufferWriter {
+public class ByteBufferWriterDataOutputStream extends DataOutputStream implements ByteBufferWriter {
 
   public ByteBufferWriterDataOutputStream(OutputStream out) {
     super(out);

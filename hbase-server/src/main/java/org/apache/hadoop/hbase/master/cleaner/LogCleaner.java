@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
   public static final int DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE = 2;
 
   public static final String OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC =
-      "hbase.oldwals.cleaner.thread.timeout.msec";
+    "hbase.oldwals.cleaner.thread.timeout.msec";
   static final long DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC = 60 * 1000L;
 
   private final LinkedBlockingQueue<CleanerContext> pendingDelete;
@@ -65,12 +65,12 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
   private long cleanerThreadTimeoutMsec;
 
   /**
-   * @param period the period of time to sleep between each run
-   * @param stopper the stopper
-   * @param conf configuration to use
-   * @param fs handle to the FS
+   * @param period    the period of time to sleep between each run
+   * @param stopper   the stopper
+   * @param conf      configuration to use
+   * @param fs        handle to the FS
    * @param oldLogDir the path to the archived logs
-   * @param pool the thread pool used to scan directories
+   * @param pool      the thread pool used to scan directories
    */
   public LogCleaner(final int period, final Stoppable stopper, Configuration conf, FileSystem fs,
     Path oldLogDir, DirScanPool pool, Map<String, Object> params) {
@@ -85,23 +85,24 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
 
   @Override
   protected boolean validate(Path file) {
-    return AbstractFSWALProvider.validateWALFilename(file.getName()) ||
-      MasterProcedureUtil.validateProcedureWALFilename(file.getName()) ||
-      file.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
+    return AbstractFSWALProvider.validateWALFilename(file.getName())
+      || MasterProcedureUtil.validateProcedureWALFilename(file.getName())
+      || file.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
   }
 
   @Override
   public void onConfigurationChange(Configuration conf) {
     int newSize = conf.getInt(OLD_WALS_CLEANER_THREAD_SIZE, DEFAULT_OLD_WALS_CLEANER_THREAD_SIZE);
     if (newSize == oldWALsCleaner.size()) {
-      LOG.debug("Size from configuration is the same as previous which "
-          + "is {}, no need to update.", newSize);
+      LOG.debug(
+        "Size from configuration is the same as previous which " + "is {}, no need to update.",
+        newSize);
       return;
     }
     interruptOldWALsCleaner();
     oldWALsCleaner = createOldWalsCleaner(newSize);
     cleanerThreadTimeoutMsec = conf.getLong(OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC,
-        DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
+      DEFAULT_OLD_WALS_CLEANER_THREAD_TIMEOUT_MSEC);
   }
 
   @Override
@@ -118,8 +119,7 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
     }
 
     LOG.debug("Old WALs for delete: {}",
-      results.stream().map(cc -> cc.target.getPath().getName()).
-        collect(Collectors.joining(", ")));
+      results.stream().map(cc -> cc.target.getPath().getName()).collect(Collectors.joining(", ")));
     pendingDelete.addAll(results);
 
     int deletedFiles = 0;
@@ -183,8 +183,8 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
         }
       } catch (InterruptedException ite) {
         // It is most likely from configuration changing request
-        LOG.warn("Interrupted while cleaning old WALs, will "
-            + "try to clean it next round. Exiting.");
+        LOG.warn(
+          "Interrupted while cleaning old WALs, will " + "try to clean it next round. Exiting.");
         // Restore interrupt status
         Thread.currentThread().interrupt();
         return;
@@ -219,11 +219,10 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate>
 
     boolean getResult(long waitIfNotFinished) {
       try {
-        boolean completed = this.remainingResults.await(waitIfNotFinished,
-            TimeUnit.MILLISECONDS);
+        boolean completed = this.remainingResults.await(waitIfNotFinished, TimeUnit.MILLISECONDS);
         if (!completed) {
-          LOG.warn("Spent too much time [{}ms] deleting old WAL file: {}",
-              waitIfNotFinished, target);
+          LOG.warn("Spent too much time [{}ms] deleting old WAL file: {}", waitIfNotFinished,
+            target);
           return false;
         }
       } catch (InterruptedException e) {

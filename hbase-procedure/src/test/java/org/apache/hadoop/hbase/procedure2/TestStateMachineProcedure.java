@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,11 +38,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestStateMachineProcedure {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStateMachineProcedure.class);
+    HBaseClassTestRule.forClass(TestStateMachineProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStateMachineProcedure.class);
 
@@ -62,7 +62,7 @@ public class TestStateMachineProcedure {
 
       // we are going to serialize the exception in the test,
       // so the instance comparison will not match
-      return getMessage().equals(((Exception)other).getMessage());
+      return getMessage().equals(((Exception) other).getMessage());
     }
 
     @Override
@@ -179,10 +179,13 @@ public class TestStateMachineProcedure {
     assertEquals(TEST_FAILURE_EXCEPTION, cause);
   }
 
-  public enum TestSMProcedureState { STEP_1, STEP_2 }
+  public enum TestSMProcedureState {
+    STEP_1,
+    STEP_2
+  }
 
   public static class TestSMProcedure
-      extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
+    extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
     @Override
     protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("EXEC " + state + " " + this);
@@ -228,7 +231,7 @@ public class TestStateMachineProcedure {
   }
 
   public static class TestSMProcedureBadRollback
-          extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
+    extends StateMachineProcedure<TestProcEnv, TestSMProcedureState> {
     @Override
     protected Flow executeFromState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("EXEC " + state + " " + this);
@@ -245,6 +248,7 @@ public class TestStateMachineProcedure {
       }
       return Flow.HAS_MORE_STATE;
     }
+
     @Override
     protected void rollbackState(TestProcEnv env, TestSMProcedureState state) {
       LOG.info("ROLLBACK " + state + " " + this);
@@ -267,8 +271,7 @@ public class TestStateMachineProcedure {
     }
 
     @Override
-    protected void rollback(final TestProcEnv env)
-            throws IOException, InterruptedException {
+    protected void rollback(final TestProcEnv env) throws IOException, InterruptedException {
       if (isEofState()) {
         stateCount--;
       }
@@ -276,8 +279,8 @@ public class TestStateMachineProcedure {
         updateTimestamp();
         rollbackState(env, getCurrentState());
         throw new IOException();
-      } catch(IOException e) {
-        //do nothing for now
+      } catch (IOException e) {
+        // do nothing for now
       } finally {
         stateCount--;
         updateTimestamp();

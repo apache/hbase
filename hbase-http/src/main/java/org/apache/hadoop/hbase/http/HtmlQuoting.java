@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.http;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -38,17 +37,17 @@ public final class HtmlQuoting {
   /**
    * Does the given string need to be quoted?
    * @param data the string to check
-   * @param off the starting position
-   * @param len the number of bytes to check
+   * @param off  the starting position
+   * @param len  the number of bytes to check
    * @return does the string contain any of the active html characters?
    */
   public static boolean needsQuoting(byte[] data, int off, int len) {
-    if (off+len > data.length) {
-      throw new IllegalStateException("off+len=" + off+len + " should be lower"
-              + " than data length=" + data.length);
+    if (off + len > data.length) {
+      throw new IllegalStateException(
+        "off+len=" + off + len + " should be lower" + " than data length=" + data.length);
     }
-    for(int i=off; i< off+len; ++i) {
-      switch(data[i]) {
+    for (int i = off; i < off + len; ++i) {
+      switch (data[i]) {
         case '&':
         case '<':
         case '>':
@@ -72,20 +71,19 @@ public final class HtmlQuoting {
       return false;
     }
     byte[] bytes = Bytes.toBytes(str);
-    return needsQuoting(bytes, 0 , bytes.length);
+    return needsQuoting(bytes, 0, bytes.length);
   }
 
   /**
-   * Quote all of the active HTML characters in the given string as they
-   * are added to the buffer.
+   * Quote all of the active HTML characters in the given string as they are added to the buffer.
    * @param output the stream to write the output to
    * @param buffer the byte array to take the characters from
-   * @param off the index of the first byte to quote
-   * @param len the number of bytes to quote
+   * @param off    the index of the first byte to quote
+   * @param len    the number of bytes to quote
    */
   public static void quoteHtmlChars(OutputStream output, byte[] buffer, int off, int len)
-          throws IOException {
-    for(int i=off; i < off+len; i++) {
+    throws IOException {
+    for (int i = off; i < off + len; i++) {
       switch (buffer[i]) {
         case '&':
           output.write(ampBytes);
@@ -140,6 +138,7 @@ public final class HtmlQuoting {
   public static OutputStream quoteOutputStream(final OutputStream out) {
     return new OutputStream() {
       private byte[] data = new byte[1];
+
       @Override
       public void write(byte[] data, int off, int len) throws IOException {
         quoteHtmlChars(out, data, off, len);
@@ -198,12 +197,11 @@ public final class HtmlQuoting {
         buffer.append('"');
         next += 6;
       } else {
-        int end = item.indexOf(';', next)+1;
+        int end = item.indexOf(';', next) + 1;
         if (end == 0) {
           end = len;
         }
-        throw new IllegalArgumentException("Bad HTML quoting for " +
-                                           item.substring(next,end));
+        throw new IllegalArgumentException("Bad HTML quoting for " + item.substring(next, end));
       }
       posn = next;
       next = item.indexOf('&', posn);
@@ -216,15 +214,16 @@ public final class HtmlQuoting {
     if (args.length == 0) {
       throw new IllegalArgumentException("Please provide some arguments");
     }
-    for(String arg:args) {
+    for (String arg : args) {
       System.out.println("Original: " + arg);
       String quoted = quoteHtmlChars(arg);
-      System.out.println("Quoted: "+ quoted);
+      System.out.println("Quoted: " + quoted);
       String unquoted = unquoteHtmlChars(quoted);
       System.out.println("Unquoted: " + unquoted);
       System.out.println();
     }
   }
 
-  private HtmlQuoting() {}
+  private HtmlQuoting() {
+  }
 }

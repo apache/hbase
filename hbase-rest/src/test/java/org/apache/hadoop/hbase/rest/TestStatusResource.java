@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,20 +46,19 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestStatusResource {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStatusResource.class);
+    HBaseClassTestRule.forClass(TestStatusResource.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStatusResource.class);
 
   private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME + ",,1");
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-      new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;
@@ -73,11 +72,11 @@ public class TestStatusResource {
     assertNotNull(model.getDeadNodes());
     assertFalse(model.getLiveNodes().isEmpty());
     boolean foundMeta = false;
-    for (StorageClusterStatusModel.Node node: model.getLiveNodes()) {
+    for (StorageClusterStatusModel.Node node : model.getLiveNodes()) {
       assertNotNull(node.getName());
       assertTrue(node.getStartCode() > 0L);
       assertTrue(node.getRequests() >= 0);
-      for (StorageClusterStatusModel.Node.Region region: node.getRegions()) {
+      for (StorageClusterStatusModel.Node.Region region : node.getRegions()) {
         if (Bytes.equals(region.getName(), META_REGION_NAME)) {
           foundMeta = true;
         }
@@ -116,9 +115,8 @@ public class TestStatusResource {
     Response response = client.get("/status/cluster", Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    StorageClusterStatusModel model = (StorageClusterStatusModel)
-      context.createUnmarshaller().unmarshal(
-        new ByteArrayInputStream(response.getBody()));
+    StorageClusterStatusModel model = (StorageClusterStatusModel) context.createUnmarshaller()
+      .unmarshal(new ByteArrayInputStream(response.getBody()));
     validate(model);
   }
 

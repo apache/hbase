@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -35,12 +34,14 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- * Handle the master side of taking a snapshot of an online table, regardless of snapshot type.
- * Uses a {@link Procedure} to run the snapshot across all the involved region servers.
+ * Handle the master side of taking a snapshot of an online table, regardless of snapshot type. Uses
+ * a {@link Procedure} to run the snapshot across all the involved region servers.
  * @see ProcedureCoordinator
  */
 @InterfaceAudience.Private
@@ -50,7 +51,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   private final ProcedureCoordinator coordinator;
 
   public EnabledTableSnapshotHandler(SnapshotDescription snapshot, MasterServices master,
-      final SnapshotManager manager) throws IOException {
+    final SnapshotManager manager) throws IOException {
     super(snapshot, master, manager);
     this.coordinator = manager.getCoordinator();
   }
@@ -65,8 +66,8 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   // enforce a snapshot time constraints, but lets us be potentially a bit more robust.
 
   /**
-   * This method kicks off a snapshot procedure.  Other than that it hangs around for various
-   * phases to complete.
+   * This method kicks off a snapshot procedure. Other than that it hangs around for various phases
+   * to complete.
    */
   @Override
   protected void snapshotRegions(List<Pair<RegionInfo, ServerName>> regions) throws IOException {
@@ -83,14 +84,14 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
     Procedure proc = coordinator.startProcedure(this.monitor, this.snapshot.getName(),
       this.snapshot.toByteArray(), Lists.newArrayList(regionServers));
     if (proc == null) {
-      String msg = "Failed to submit distributed procedure for snapshot '"
-          + snapshot.getName() + "'";
+      String msg =
+        "Failed to submit distributed procedure for snapshot '" + snapshot.getName() + "'";
       LOG.error(msg);
       throw new HBaseSnapshotException(msg);
     }
 
     try {
-      // wait for the snapshot to complete.  A timer thread is kicked off that should cancel this
+      // wait for the snapshot to complete. A timer thread is kicked off that should cancel this
       // if it takes too long.
       proc.waitForCompleted();
       LOG.info("Done waiting - online snapshot for " + this.snapshot.getName());
@@ -98,8 +99,10 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       // Take the offline regions as disabled
       for (Pair<RegionInfo, ServerName> region : regions) {
         RegionInfo regionInfo = region.getFirst();
-        if (regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent()) &&
-            RegionReplicaUtil.isDefaultReplica(regionInfo)) {
+        if (
+          regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent())
+            && RegionReplicaUtil.isDefaultReplica(regionInfo)
+        ) {
           LOG.info("Take disabled snapshot of offline region=" + regionInfo);
           snapshotDisabledRegion(regionInfo);
         }
@@ -114,7 +117,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       }
     } catch (InterruptedException e) {
       ForeignException ee =
-          new ForeignException("Interrupted while waiting for snapshot to finish", e);
+        new ForeignException("Interrupted while waiting for snapshot to finish", e);
       monitor.receive(ee);
       Thread.currentThread().interrupt();
     } catch (ForeignException e) {
@@ -125,8 +128,7 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
   /**
    * Takes a snapshot of the mob region
    */
-  private void snapshotMobRegion(final RegionInfo regionInfo)
-      throws IOException {
+  private void snapshotMobRegion(final RegionInfo regionInfo) throws IOException {
     snapshotManifest.addMobRegion(regionInfo);
     monitor.rethrowException();
     status.setStatus("Completed referencing HFiles for the mob region of table: " + snapshotTable);

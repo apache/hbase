@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,7 +68,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.SingleThreadEventExecutor;
 
-
 /**
  * An asynchronous implementation of FSWAL.
  * <p>
@@ -131,8 +130,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWAL.class);
 
-  private static final Comparator<SyncFuture> SEQ_COMPARATOR = Comparator.comparingLong(
-      SyncFuture::getTxid).thenComparingInt(System::identityHashCode);
+  private static final Comparator<SyncFuture> SEQ_COMPARATOR =
+    Comparator.comparingLong(SyncFuture::getTxid).thenComparingInt(System::identityHashCode);
 
   public static final String WAL_BATCH_SIZE = "hbase.wal.batch.size";
   public static final long DEFAULT_WAL_BATCH_SIZE = 64L * 1024;
@@ -204,20 +203,20 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private final StreamSlowMonitor streamSlowMonitor;
 
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
+    Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists, String prefix,
+    String suffix, EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass)
+    throws FailedLogCloseException, IOException {
     this(fs, null, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-        eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, "monitorForSuffix"));
+      eventLoopGroup, channelClass, StreamSlowMonitor.create(conf, "monitorForSuffix"));
   }
 
   public AsyncFSWAL(FileSystem fs, Abortable abortable, Path rootDir, String logDir,
-      String archiveDir, Configuration conf, List<WALActionsListener> listeners,
-      boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
-      throws FailedLogCloseException, IOException {
+    String archiveDir, Configuration conf, List<WALActionsListener> listeners,
+    boolean failIfWALExists, String prefix, String suffix, EventLoopGroup eventLoopGroup,
+    Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
+    throws FailedLogCloseException, IOException {
     super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix);
+      suffix);
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
     this.streamSlowMonitor = monitor;
@@ -231,8 +230,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
           Queue<?> queue = (Queue<?>) field.get(consumeExecutor);
           hasConsumerTask = () -> queue.peek() == consumer;
         } catch (Exception e) {
-          LOG.warn("Can not get task queue of " + consumeExecutor +
-            ", this is not necessary, just give up", e);
+          LOG.warn("Can not get task queue of " + consumeExecutor
+            + ", this is not necessary, just give up", e);
           hasConsumerTask = () -> false;
         }
       } else {
@@ -240,11 +239,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
     } else {
       ThreadPoolExecutor threadPool =
-        new ThreadPoolExecutor(1, 1, 0L,
-          TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
-          new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-"+ rootDir.toString() +
-              "-prefix:" + (prefix == null ? "default" : prefix).replace("%", "%%"))
-            .setDaemon(true).build());
+        new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+          new ThreadFactoryBuilder().setNameFormat("AsyncFSWAL-%d-" + rootDir.toString()
+            + "-prefix:" + (prefix == null ? "default" : prefix).replace("%", "%%")).setDaemon(true)
+            .build());
       hasConsumerTask = () -> threadPool.getQueue().peek() == consumer;
       this.consumeExecutor = threadPool;
     }
@@ -394,8 +392,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     // If we haven't already requested a roll, check if we have exceeded logrollsize
     if (!isLogRollRequested() && writer.getLength() > logrollsize) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Requesting log roll because of file size threshold; length=" +
-          writer.getLength() + ", logrollsize=" + logrollsize);
+        LOG.debug("Requesting log roll because of file size threshold; length=" + writer.getLength()
+          + ", logrollsize=" + logrollsize);
       }
       requestLogRoll(SIZE);
     }
@@ -404,9 +402,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   // find all the sync futures between these two txids to see if we need to issue a hsync, if no
   // sync futures then just use the default one.
   private boolean isHsync(long beginTxid, long endTxid) {
-    SortedSet<SyncFuture> futures =
-      syncFutures.subSet(new SyncFuture().reset(beginTxid, false),
-          new SyncFuture().reset(endTxid + 1, false));
+    SortedSet<SyncFuture> futures = syncFutures.subSet(new SyncFuture().reset(beginTxid, false),
+      new SyncFuture().reset(endTxid + 1, false));
     if (futures.isEmpty()) {
       return useHsync;
     }
@@ -512,8 +509,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       if (appended) {
         // This is possible, when we fail to sync, we will add the unackedAppends back to
         // toWriteAppends, so here we may get an entry which is already in the unackedAppends.
-        if (addedToUnackedAppends || unackedAppends.isEmpty() ||
-          getLastTxid(unackedAppends) < entry.getTxid()) {
+        if (
+          addedToUnackedAppends || unackedAppends.isEmpty()
+            || getLastTxid(unackedAppends) < entry.getTxid()
+        ) {
           unackedAppends.addLast(entry);
           addedToUnackedAppends = true;
         }
@@ -525,8 +524,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         // There could be other ways to fix, such as changing the logic in the consume method, but
         // it will break the assumption and then (may) lead to a big refactoring. So here let's use
         // this way to fix first, can optimize later.
-        if (writer.getLength() - fileLengthAtLastSync >= batchSize &&
-          (addedToUnackedAppends || entry.getTxid() >= getLastTxid(unackedAppends))) {
+        if (
+          writer.getLength() - fileLengthAtLastSync >= batchSize
+            && (addedToUnackedAppends || entry.getTxid() >= getLastTxid(unackedAppends))
+        ) {
           break;
         }
       }
@@ -625,8 +626,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       consumeLock.unlock();
     }
     long nextCursor = waitingConsumePayloadsGatingSequence.get() + 1;
-    for (long cursorBound = waitingConsumePayloads.getCursor(); nextCursor <= cursorBound;
-      nextCursor++) {
+    for (long cursorBound = waitingConsumePayloads.getCursor(); nextCursor
+        <= cursorBound; nextCursor++) {
       if (!waitingConsumePayloads.isPublished(nextCursor)) {
         break;
       }
@@ -662,8 +663,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         // 3. we set consumerScheduled to false and also give up scheduling consumer task.
         if (waitingConsumePayloadsGatingSequence.get() == waitingConsumePayloads.getCursor()) {
           // we will give up consuming so if there are some unsynced data we need to issue a sync.
-          if (writer.getLength() > fileLengthAtLastSync && !syncFutures.isEmpty() &&
-            syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync) {
+          if (
+            writer.getLength() > fileLengthAtLastSync && !syncFutures.isEmpty()
+              && syncFutures.last().getTxid() > highestProcessedAppendTxidAtLastSync
+          ) {
             // no new data in the ringbuffer and we have at least one sync request
             sync(writer);
           }
@@ -796,7 +799,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
 
   @Override
   protected void doReplaceWriter(Path oldPath, Path newPath, AsyncWriter nextWriter)
-      throws IOException {
+    throws IOException {
     Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
     long oldFileLen = closeWriter(this.writer, oldPath);
@@ -830,11 +833,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     closeExecutor.shutdown();
     try {
       if (!closeExecutor.awaitTermination(waitOnShutdownInSeconds, TimeUnit.SECONDS)) {
-        LOG.error("We have waited " + waitOnShutdownInSeconds + " seconds but" +
-          " the close of async writer doesn't complete." +
-          "Please check the status of underlying filesystem" +
-          " or increase the wait time by the config \"" + ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS +
-          "\"");
+        LOG.error("We have waited " + waitOnShutdownInSeconds + " seconds but"
+          + " the close of async writer doesn't complete."
+          + "Please check the status of underlying filesystem"
+          + " or increase the wait time by the config \"" + ASYNC_WAL_WAIT_ON_SHUTDOWN_IN_SECONDS
+          + "\"");
       }
     } catch (InterruptedException e) {
       LOG.error("The wait for close of async writer is interrupted");
@@ -843,8 +846,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     IOException error = new IOException("WAL has been closed");
     long nextCursor = waitingConsumePayloadsGatingSequence.get() + 1;
     // drain all the pending sync requests
-    for (long cursorBound = waitingConsumePayloads.getCursor(); nextCursor <= cursorBound;
-      nextCursor++) {
+    for (long cursorBound = waitingConsumePayloads.getCursor(); nextCursor
+        <= cursorBound; nextCursor++) {
       if (!waitingConsumePayloads.isPublished(nextCursor)) {
         break;
       }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,19 +77,18 @@ public class DemoClient {
     }
 
     final DemoClient client = new DemoClient();
-    Subject.doAs(getSubject(),
-      new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          client.run();
-          return null;
-        }
-      });
+    Subject.doAs(getSubject(), new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        client.run();
+        return null;
+      }
+    });
   }
 
-  private static boolean isBoolean(String s){
-    return Boolean.TRUE.toString().equalsIgnoreCase(s) ||
-            Boolean.FALSE.toString().equalsIgnoreCase(s);
+  private static boolean isBoolean(String s) {
+    return Boolean.TRUE.toString().equalsIgnoreCase(s)
+      || Boolean.FALSE.toString().equalsIgnoreCase(s);
   }
 
   DemoClient() {
@@ -107,15 +105,15 @@ public class DemoClient {
       Map<String, String> saslProperties = new HashMap<>();
       saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
       /*
-       * The Thrift server the DemoClient is trying to connect to
-       * must have a matching principal, and support authentication.
-       *
-       * The HBase cluster must be secure, allow proxy user.
+       * The Thrift server the DemoClient is trying to connect to must have a matching principal,
+       * and support authentication. The HBase cluster must be secure, allow proxy user.
        */
-      transport = new TSaslClientTransport("GSSAPI", null,
-              serverPrincipal, // Thrift server user name, should be an authorized proxy user.
-              host, // Thrift server domain
-              saslProperties, null, transport);
+      transport = new TSaslClientTransport("GSSAPI", null, serverPrincipal, // Thrift server user
+                                                                            // name, should be an
+                                                                            // authorized proxy
+                                                                            // user.
+        host, // Thrift server domain
+        saslProperties, null, transport);
     }
 
     transport.open();
@@ -169,11 +167,11 @@ public class DemoClient {
     Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(demoTable);
 
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: "
-          + col2.maxVersions);
+      System.out.println(
+        "  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
     }
 
-    if (client.isTableEnabled(disabledTable)){
+    if (client.isTableEnabled(disabledTable)) {
       System.out.println("disabling table: " + ClientUtils.utf8(disabledTable.array()));
       client.disableTable(disabledTable);
     }
@@ -181,39 +179,37 @@ public class DemoClient {
     System.out.println("list tables with enabled statuses : ");
     Map<ByteBuffer, Boolean> statusMap = client.getTableNamesWithIsTableEnabled();
     for (Map.Entry<ByteBuffer, Boolean> entry : statusMap.entrySet()) {
-      System.out.println(" Table: " + ClientUtils.utf8(entry.getKey().array()) +
-                          ", is enabled: " + entry.getValue());
+      System.out.println(" Table: " + ClientUtils.utf8(entry.getKey().array()) + ", is enabled: "
+        + entry.getValue());
     }
 
     Map<ByteBuffer, ByteBuffer> dummyAttributes = null;
     boolean writeToWal = false;
 
     // Test UTF-8 handling
-    byte[] invalid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-',
-                      (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1};
-    byte[] valid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-',
-                    (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83,
-                    (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3,
-                    (byte) 0x83, (byte) 0xAB};
+    byte[] invalid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xfc, (byte) 0xa1,
+      (byte) 0xa1, (byte) 0xa1, (byte) 0xa1 };
+    byte[] valid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xE7, (byte) 0x94,
+      (byte) 0x9F, (byte) 0xE3, (byte) 0x83, (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC,
+      (byte) 0xE3, (byte) 0x83, (byte) 0xAB };
 
     ArrayList<Mutation> mutations;
     // non-utf8 is fine for data
     mutations = new ArrayList<>(1);
-    mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
-            ByteBuffer.wrap(invalid), writeToWal));
-    client.mutateRow(demoTable, ByteBuffer.wrap(bytes("foo")),
-            mutations, dummyAttributes);
+    mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid),
+      writeToWal));
+    client.mutateRow(demoTable, ByteBuffer.wrap(bytes("foo")), mutations, dummyAttributes);
 
     // this row name is valid utf8
     mutations = new ArrayList<>(1);
-    mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
-            ByteBuffer.wrap(valid), writeToWal));
+    mutations.add(
+      new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid), writeToWal));
     client.mutateRow(demoTable, ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
     // non-utf8 is now allowed in row names because HBase stores values as binary
     mutations = new ArrayList<>(1);
-    mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
-            ByteBuffer.wrap(invalid), writeToWal));
+    mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid),
+      writeToWal));
     client.mutateRow(demoTable, ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
     // Run a scanner on the rows we just created
@@ -221,8 +217,8 @@ public class DemoClient {
     columnNames.add(ByteBuffer.wrap(bytes("entry:")));
 
     System.out.println("Starting scanner...");
-    int scanner = client.scannerOpen(demoTable, ByteBuffer.wrap(bytes("")), columnNames,
-            dummyAttributes);
+    int scanner =
+      client.scannerOpen(demoTable, ByteBuffer.wrap(bytes("")), columnNames, dummyAttributes);
 
     while (true) {
       List<TRowResult> entry = client.scannerGet(scanner);
@@ -244,7 +240,7 @@ public class DemoClient {
 
       mutations = new ArrayList<>(1);
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")),
-              ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
+        ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
       client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
       client.deleteAllRow(demoTable, ByteBuffer.wrap(row), dummyAttributes);
@@ -258,9 +254,9 @@ public class DemoClient {
 
       mutations = new ArrayList<>(2);
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")),
-              ByteBuffer.wrap(bytes("0")), writeToWal));
+        ByteBuffer.wrap(bytes("0")), writeToWal));
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
-              ByteBuffer.wrap(bytes("FOO")), writeToWal));
+        ByteBuffer.wrap(bytes("FOO")), writeToWal));
       client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
@@ -279,9 +275,9 @@ public class DemoClient {
 
       mutations = new ArrayList<>();
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")),
-              ByteBuffer.wrap(bytes(Integer.toString(i))), writeToWal));
+        ByteBuffer.wrap(bytes(Integer.toString(i))), writeToWal));
       mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")),
-              ByteBuffer.wrap(bytes(Integer.toString(i * i))), writeToWal));
+        ByteBuffer.wrap(bytes(Integer.toString(i * i))), writeToWal));
       client.mutateRow(demoTable, ByteBuffer.wrap(row), mutations, dummyAttributes);
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
@@ -295,7 +291,7 @@ public class DemoClient {
       mutations.clear();
       m = new Mutation();
       m.column = ByteBuffer.wrap(bytes("entry:num"));
-      m.value= ByteBuffer.wrap(bytes("-999"));
+      m.value = ByteBuffer.wrap(bytes("-999"));
       mutations.add(m);
       m = new Mutation();
       m.column = ByteBuffer.wrap(bytes("entry:sqr"));
@@ -305,7 +301,7 @@ public class DemoClient {
       printRow(client.getRow(demoTable, ByteBuffer.wrap(row), dummyAttributes));
 
       List<TCell> versions = client.getVer(demoTable, ByteBuffer.wrap(row),
-              ByteBuffer.wrap(bytes("entry:num")), 10, dummyAttributes);
+        ByteBuffer.wrap(bytes("entry:num")), 10, dummyAttributes);
       printVersions(ByteBuffer.wrap(row), versions);
 
       if (versions.isEmpty()) {
@@ -314,7 +310,7 @@ public class DemoClient {
       }
 
       List<TCell> result = client.get(demoTable, ByteBuffer.wrap(row),
-              ByteBuffer.wrap(bytes("entry:foo")), dummyAttributes);
+        ByteBuffer.wrap(bytes("entry:foo")), dummyAttributes);
 
       if (!result.isEmpty()) {
         System.out.println("FATAL: shouldn't get here");
@@ -336,7 +332,7 @@ public class DemoClient {
 
     System.out.println("Starting scanner...");
     scanner = client.scannerOpenWithStop(demoTable, ByteBuffer.wrap(bytes("00020")),
-            ByteBuffer.wrap(bytes("00040")), columnNames, dummyAttributes);
+      ByteBuffer.wrap(bytes("00040")), columnNames, dummyAttributes);
 
     while (true) {
       List<TRowResult> entry = client.scannerGet(scanner);

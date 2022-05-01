@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -145,8 +145,9 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
     Predicate<ServerMetrics> filter) {
     ServerManager sm = services.getServerManager();
-    return sm != null ? sm.getOnlineServersListWithPredicator(servers, filter) :
-      Collections.emptyList();
+    return sm != null
+      ? sm.getOnlineServersListWithPredicator(servers, filter)
+      : Collections.emptyList();
   }
 
   @Override
@@ -191,7 +192,7 @@ public class MasterClusterInfoProvider implements ClusterInfoProvider {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   NamedQueueRecorder getNamedQueueRecorder() {
     return namedQueueRecorder;
   }

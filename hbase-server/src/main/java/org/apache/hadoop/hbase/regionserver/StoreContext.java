@@ -174,8 +174,8 @@ public final class StoreContext implements HeapSize {
       return this;
     }
 
-    public Builder withCompactedFilesSupplier(Supplier<Collection<HStoreFile>>
-        compactedFilesSupplier) {
+    public Builder
+      withCompactedFilesSupplier(Supplier<Collection<HStoreFile>> compactedFilesSupplier) {
       this.compactedFilesSupplier = compactedFilesSupplier;
       return this;
     }

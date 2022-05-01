@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,12 +59,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestMetaCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaCache.class);
+    HBaseClassTestRule.forClass(TestMetaCache.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
@@ -117,7 +117,7 @@ public class TestMetaCache {
     ((FakeRSRpcServices) badRS.getRSRpcServices())
       .setExceptionInjector(new RoundRobinExceptionInjector());
     setupConnection(1);
-    try (Table table = conn.getTable(TABLE_NAME)){
+    try (Table table = conn.getTable(TABLE_NAME)) {
       byte[] row = Bytes.toBytes("row1");
 
       Put put = new Put(row);
@@ -235,22 +235,22 @@ public class TestMetaCache {
     }
 
     @Override
-    public GetResponse get(final RpcController controller,
-                           final ClientProtos.GetRequest request) throws ServiceException {
+    public GetResponse get(final RpcController controller, final ClientProtos.GetRequest request)
+      throws ServiceException {
       exceptions.throwOnGet(this, request);
       return super.get(controller, request);
     }
 
     @Override
     public ClientProtos.MutateResponse mutate(final RpcController controller,
-        final ClientProtos.MutateRequest request) throws ServiceException {
+      final ClientProtos.MutateRequest request) throws ServiceException {
       exceptions.throwOnMutate(this, request);
       return super.mutate(controller, request);
     }
 
     @Override
     public ClientProtos.ScanResponse scan(final RpcController controller,
-        final ClientProtos.ScanRequest request) throws ServiceException {
+      final ClientProtos.ScanRequest request) throws ServiceException {
       exceptions.throwOnScan(this, request);
       return super.scan(controller, request);
     }
@@ -258,28 +258,27 @@ public class TestMetaCache {
 
   public static abstract class ExceptionInjector {
     protected boolean isTestTable(FakeRSRpcServices rpcServices,
-                                  HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
+      HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       try {
-        return TABLE_NAME.equals(
-            rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
+        return TABLE_NAME
+          .equals(rpcServices.getRegion(regionSpec).getTableDescriptor().getTableName());
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
     }
 
     public abstract void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
-        throws ServiceException;
+      throws ServiceException;
 
-    public abstract void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
-        throws ServiceException;
+    public abstract void throwOnMutate(FakeRSRpcServices rpcServices,
+      ClientProtos.MutateRequest request) throws ServiceException;
 
-    public abstract void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
-        throws ServiceException;
+    public abstract void throwOnScan(FakeRSRpcServices rpcServices,
+      ClientProtos.ScanRequest request) throws ServiceException;
   }
 
   /**
-   * Rotates through the possible cache clearing and non-cache clearing exceptions
-   * for requests.
+   * Rotates through the possible cache clearing and non-cache clearing exceptions for requests.
    */
   public static class RoundRobinExceptionInjector extends ExceptionInjector {
     private int numReqs = -1;
@@ -288,19 +287,19 @@ public class TestMetaCache {
 
     @Override
     public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
-        throws ServiceException {
+      throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
     @Override
     public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
-        throws ServiceException {
+      throws ServiceException {
       throwSomeExceptions(rpcServices, request.getRegion());
     }
 
     @Override
     public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
       if (!request.hasScannerId()) {
         // only handle initial scan requests
         throwSomeExceptions(rpcServices, request.getRegion());
@@ -308,13 +307,11 @@ public class TestMetaCache {
     }
 
     /**
-     * Throw some exceptions. Mostly throw exceptions which do not clear meta cache.
-     * Periodically throw NotSevingRegionException which clears the meta cache.
-     * @throws ServiceException
+     * Throw some exceptions. Mostly throw exceptions which do not clear meta cache. Periodically
+     * throw NotSevingRegionException which clears the meta cache. n
      */
     private void throwSomeExceptions(FakeRSRpcServices rpcServices,
-                                     HBaseProtos.RegionSpecifier regionSpec)
-        throws ServiceException {
+      HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
       if (!isTestTable(rpcServices, regionSpec)) {
         return;
       }
@@ -322,7 +319,7 @@ public class TestMetaCache {
       numReqs++;
       // Succeed every 5 request, throw cache clearing exceptions twice every 5 requests and throw
       // meta cache preserving exceptions otherwise.
-      if (numReqs % 5 ==0) {
+      if (numReqs % 5 == 0) {
         return;
       } else if (numReqs % 5 == 1 || numReqs % 5 == 2) {
         throw new ServiceException(new NotServingRegionException());
@@ -332,8 +329,8 @@ public class TestMetaCache {
       // But, we don't really care here if we throw MultiActionTooLargeException while doing
       // single Gets.
       expCount++;
-      Throwable t = metaCachePreservingExceptions.get(
-          expCount % metaCachePreservingExceptions.size());
+      Throwable t =
+        metaCachePreservingExceptions.get(expCount % metaCachePreservingExceptions.size());
       throw new ServiceException(t);
     }
   }
@@ -344,7 +341,7 @@ public class TestMetaCache {
   public static class CallQueueTooBigExceptionInjector extends ExceptionInjector {
     @Override
     public void throwOnGet(FakeRSRpcServices rpcServices, ClientProtos.GetRequest request)
-        throws ServiceException {
+      throws ServiceException {
       if (isTestTable(rpcServices, request.getRegion())) {
         throw new ServiceException(new CallQueueTooBigException());
       }
@@ -352,12 +349,12 @@ public class TestMetaCache {
 
     @Override
     public void throwOnMutate(FakeRSRpcServices rpcServices, ClientProtos.MutateRequest request)
-        throws ServiceException {
+      throws ServiceException {
     }
 
     @Override
     public void throwOnScan(FakeRSRpcServices rpcServices, ClientProtos.ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
     }
   }
 }

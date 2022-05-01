@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,12 +55,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestNamespace {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespace.class);
+    HBaseClassTestRule.forClass(TestNamespace.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespace.class);
   private static HMaster master;
@@ -79,7 +79,7 @@ public class TestNamespace {
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     admin = TEST_UTIL.getAdmin();
     cluster = TEST_UTIL.getHBaseCluster();
-    master = ((SingleProcessHBaseCluster)cluster).getMaster();
+    master = ((SingleProcessHBaseCluster) cluster).getMaster();
     LOG.info("Done initializing cluster");
   }
 
@@ -103,9 +103,9 @@ public class TestNamespace {
 
   @Test
   public void verifyReservedNS() throws IOException {
-    //verify existence of reserved namespaces
+    // verify existence of reserved namespaces
     NamespaceDescriptor ns =
-        admin.getNamespaceDescriptor(NamespaceDescriptor.DEFAULT_NAMESPACE.getName());
+      admin.getNamespaceDescriptor(NamespaceDescriptor.DEFAULT_NAMESPACE.getName());
     assertNotNull(ns);
     assertEquals(ns.getName(), NamespaceDescriptor.DEFAULT_NAMESPACE.getName());
 
@@ -116,7 +116,7 @@ public class TestNamespace {
     assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
 
-    //verify existence of system tables
+    // verify existence of system tables
     Set<TableName> systemTables = Sets.newHashSet(TableName.META_TABLE_NAME);
     List<TableDescriptor> descs = admin.listTableDescriptorsByNamespace(
       Bytes.toBytes(NamespaceDescriptor.SYSTEM_NAMESPACE.getName()));
@@ -124,10 +124,10 @@ public class TestNamespace {
     for (TableDescriptor desc : descs) {
       assertTrue(systemTables.contains(desc.getTableName()));
     }
-    //verify system tables aren't listed
+    // verify system tables aren't listed
     assertEquals(0, admin.listTableDescriptors().size());
 
-    //Try creating default and system namespaces.
+    // Try creating default and system namespaces.
     boolean exceptionCaught = false;
     try {
       admin.createNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
@@ -176,11 +176,11 @@ public class TestNamespace {
     String nsName = prefix + "_" + name.getMethodName();
     LOG.info(name.getMethodName());
 
-    //create namespace and verify
+    // create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     assertEquals(3, admin.listNamespaces().length);
     assertEquals(3, admin.listNamespaceDescriptors().length);
-    //remove namespace and verify
+    // remove namespace and verify
     admin.deleteNamespace(nsName);
     assertEquals(2, admin.listNamespaces().length);
     assertEquals(2, admin.listNamespaceDescriptors().length);
@@ -193,16 +193,14 @@ public class TestNamespace {
 
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final TableName tableNameFoo = TableName.valueOf(nsName + ":" + name.getMethodName());
-    //create namespace and verify
+    // create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     TEST_UTIL.createTable(tableName, Bytes.toBytes(nsName));
-    TEST_UTIL.createTable(tableNameFoo,Bytes.toBytes(nsName));
+    TEST_UTIL.createTable(tableNameFoo, Bytes.toBytes(nsName));
     assertEquals(2, admin.listTableDescriptors().size());
-    assertNotNull(admin
-        .getDescriptor(tableName));
-    assertNotNull(admin
-        .getDescriptor(tableNameFoo));
-    //remove namespace and verify
+    assertNotNull(admin.getDescriptor(tableName));
+    assertNotNull(admin.getDescriptor(tableNameFoo));
+    // remove namespace and verify
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
     assertEquals(1, admin.listTableDescriptors().size());
@@ -224,18 +222,17 @@ public class TestNamespace {
       fail("Expected no namespace exists exception");
     } catch (NamespaceNotFoundException ex) {
     }
-    //create table and in new namespace
+    // create table and in new namespace
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     admin.createTable(tableDescriptor);
     TEST_UTIL.waitTableAvailable(tableDescriptor.getTableName().getName(), 10000);
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     assertTrue(fs.exists(
-        new Path(master.getMasterFileSystem().getRootDir(),
-            new Path(HConstants.BASE_NAMESPACE_DIR,
-                new Path(nsName, tableDescriptor.getTableName().getQualifierAsString())))));
+      new Path(master.getMasterFileSystem().getRootDir(), new Path(HConstants.BASE_NAMESPACE_DIR,
+        new Path(nsName, tableDescriptor.getTableName().getQualifierAsString())))));
     assertEquals(1, admin.listTableDescriptors().size());
 
-    //verify non-empty namespace can't be removed
+    // verify non-empty namespace can't be removed
     try {
       admin.deleteNamespace(nsName);
       fail("Expected non-empty namespace constraint exception");
@@ -243,17 +240,17 @@ public class TestNamespace {
       LOG.info("Caught expected exception: " + ex);
     }
 
-    //sanity check try to write and read from table
+    // sanity check try to write and read from table
     Table table = TEST_UTIL.getConnection().getTable(tableDescriptor.getTableName());
     Put p = new Put(Bytes.toBytes("row1"));
     p.addColumn(Bytes.toBytes("my_cf"), Bytes.toBytes("my_col"), Bytes.toBytes("value1"));
     table.put(p);
-    //flush and read from disk to make sure directory changes are working
+    // flush and read from disk to make sure directory changes are working
     admin.flush(tableDescriptor.getTableName());
     Get g = new Get(Bytes.toBytes("row1"));
     assertTrue(table.exists(g));
 
-    //normal case of removing namespace
+    // normal case of removing namespace
     TEST_UTIL.deleteTable(tableDescriptor.getTableName());
     admin.deleteNamespace(nsName);
   }
@@ -275,8 +272,7 @@ public class TestNamespace {
   @Test
   public void createTableInSystemNamespace() throws Exception {
     final TableName tableName = TableName.valueOf("hbase:" + name.getMethodName());
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tableName);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf1")).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -390,10 +386,11 @@ public class TestNamespace {
 
   }
 
-  private static <V, E> void runWithExpectedException(Callable<V> callable, Class<E> exceptionClass) {
+  private static <V, E> void runWithExpectedException(Callable<V> callable,
+    Class<E> exceptionClass) {
     try {
       callable.call();
-    } catch(Exception ex) {
+    } catch (Exception ex) {
       Assert.assertEquals(exceptionClass, ex.getClass());
       return;
     }

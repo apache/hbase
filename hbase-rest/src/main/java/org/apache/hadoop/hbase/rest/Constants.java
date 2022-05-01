@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,7 +28,7 @@ public interface Constants {
 
   String VERSION_STRING = "0.0.3";
 
-  int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
+  int DEFAULT_MAX_AGE = 60 * 60 * 4; // 4 hours
 
   int DEFAULT_LISTEN_PORT = 8080;
 
@@ -83,11 +82,13 @@ public interface Constants {
   String SCAN_FILTER = "filter";
   String SCAN_REVERSED = "reversed";
   String SCAN_CACHE_BLOCKS = "cacheblocks";
-  String CUSTOM_FILTERS = "hbase.rest.custom.filters"; 
+  String CUSTOM_FILTERS = "hbase.rest.custom.filters";
 
   String ROW_KEYS_PARAM_NAME = "row";
-  /** If this query parameter is present when processing row or scanner resources,
-      it disables server side block caching */
+  /**
+   * If this query parameter is present when processing row or scanner resources, it disables server
+   * side block caching
+   */
   String NOCACHE_PARAM_NAME = "nocache";
 
   /** Configuration parameter to set rest client connection timeout */

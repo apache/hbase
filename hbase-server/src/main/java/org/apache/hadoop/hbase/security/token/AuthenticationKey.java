@@ -15,25 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
-
-import javax.crypto.SecretKey;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
-
-import org.apache.yetus.audience.InterfaceAudience;
+import javax.crypto.SecretKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Represents a secret key used for signing and verifying authentication tokens
- * by {@link AuthenticationTokenSecretManager}.
+ * Represents a secret key used for signing and verifying authentication tokens by
+ * {@link AuthenticationTokenSecretManager}.
  */
 @InterfaceAudience.Private
 public class AuthenticationKey implements Writable {
@@ -80,21 +77,18 @@ public class AuthenticationKey implements Writable {
     if (obj == null || !(obj instanceof AuthenticationKey)) {
       return false;
     }
-    AuthenticationKey other = (AuthenticationKey)obj;
-    return id == other.getKeyId() &&
-        expirationDate == other.getExpiration() &&
-        (secret == null ? other.getKey() == null :
-            other.getKey() != null &&
-                Bytes.equals(secret.getEncoded(), other.getKey().getEncoded()));       
+    AuthenticationKey other = (AuthenticationKey) obj;
+    return id == other.getKeyId() && expirationDate == other.getExpiration()
+      && (secret == null
+        ? other.getKey() == null
+        : other.getKey() != null && Bytes.equals(secret.getEncoded(), other.getKey().getEncoded()));
   }
 
   @Override
   public String toString() {
     StringBuilder buf = new StringBuilder();
-    buf.append("AuthenticationKey[")
-       .append("id=").append(id)
-       .append(", expiration=").append(Instant.ofEpochMilli(this.expirationDate))
-      .append(", obj=").append(super.toString())
+    buf.append("AuthenticationKey[").append("id=").append(id).append(", expiration=")
+      .append(Instant.ofEpochMilli(this.expirationDate)).append(", obj=").append(super.toString())
       .append("]");
     return buf.toString();
   }

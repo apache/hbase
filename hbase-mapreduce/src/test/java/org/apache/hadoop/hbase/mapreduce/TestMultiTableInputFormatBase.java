@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,21 +67,20 @@ import org.mockito.stubbing.Answer;
 /**
  * Tests of MultiTableInputFormatBase.
  */
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestMultiTableInputFormatBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiTableInputFormatBase.class);
+    HBaseClassTestRule.forClass(TestMultiTableInputFormatBase.class);
 
-  @Rule public final TestName name = new TestName();
+  @Rule
+  public final TestName name = new TestName();
 
   /**
-   * Test getSplits only puts up one Connection.
-   * In past it has put up many Connections. Each Connection setup comes with a fresh new cache
-   * so we have to do fresh hit on hbase:meta. Should only do one Connection when doing getSplits
-   * even if a MultiTableInputFormat.
-   * @throws IOException
+   * Test getSplits only puts up one Connection. In past it has put up many Connections. Each
+   * Connection setup comes with a fresh new cache so we have to do fresh hit on hbase:meta. Should
+   * only do one Connection when doing getSplits even if a MultiTableInputFormat. n
    */
   @Test
   public void testMRSplitsConnectionCount() throws IOException {
@@ -89,8 +88,7 @@ public class TestMultiTableInputFormatBase {
     MultiTableInputFormatBase mtif = new MultiTableInputFormatBase() {
       @Override
       public RecordReader<ImmutableBytesWritable, Result> createRecordReader(InputSplit split,
-          TaskAttemptContext context)
-      throws IOException, InterruptedException {
+        TaskAttemptContext context) throws IOException, InterruptedException {
         return super.createRecordReader(split, context);
       }
     };
@@ -125,7 +123,7 @@ public class TestMultiTableInputFormatBase {
     private final Configuration configuration;
     static final AtomicInteger creations = new AtomicInteger(0);
 
-    MRSplitsConnection (Configuration conf, ExecutorService pool, User user) throws IOException {
+    MRSplitsConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
       this.configuration = conf;
       creations.incrementAndGet();
     }
@@ -158,33 +156,27 @@ public class TestMultiTableInputFormatBase {
     @Override
     public RegionLocator getRegionLocator(final TableName tableName) throws IOException {
       // Make up array of start keys. We start off w/ empty byte array.
-      final byte [][] startKeys = new byte [][] {HConstants.EMPTY_BYTE_ARRAY,
-          Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"),
-          Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
-          Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
-          Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
-          Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"),
-          Bytes.toBytes("qqq"), Bytes.toBytes("rrr"), Bytes.toBytes("sss"),
-          Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
-          Bytes.toBytes("zzz")};
+      final byte[][] startKeys = new byte[][] { HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("aaaa"),
+        Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
+        Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"), Bytes.toBytes("iii"),
+        Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"), Bytes.toBytes("ooo"),
+        Bytes.toBytes("ppp"), Bytes.toBytes("qqq"), Bytes.toBytes("rrr"), Bytes.toBytes("sss"),
+        Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("zzz") };
       // Make an array of end keys. We end with the empty byte array.
-      final byte [][] endKeys = new byte[][] {
-          Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"),
-          Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
-          Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
-          Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
-          Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"),
-          Bytes.toBytes("qqq"), Bytes.toBytes("rrr"), Bytes.toBytes("sss"),
-          Bytes.toBytes("ttt"), Bytes.toBytes("uuu"), Bytes.toBytes("vvv"),
-          Bytes.toBytes("zzz"),
-          HConstants.EMPTY_BYTE_ARRAY};
+      final byte[][] endKeys =
+        new byte[][] { Bytes.toBytes("aaaa"), Bytes.toBytes("bbb"), Bytes.toBytes("ccc"),
+          Bytes.toBytes("ddd"), Bytes.toBytes("eee"), Bytes.toBytes("fff"), Bytes.toBytes("ggg"),
+          Bytes.toBytes("hhh"), Bytes.toBytes("iii"), Bytes.toBytes("lll"), Bytes.toBytes("mmm"),
+          Bytes.toBytes("nnn"), Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+          Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"), Bytes.toBytes("uuu"),
+          Bytes.toBytes("vvv"), Bytes.toBytes("zzz"), HConstants.EMPTY_BYTE_ARRAY };
       // Now make a map of start keys to HRegionLocations. Let the server namber derive from
       // the start key.
-      final Map<byte [], HRegionLocation> map =
-          new TreeMap<byte [], HRegionLocation>(Bytes.BYTES_COMPARATOR);
-      for (byte [] startKey: startKeys) {
-        HRegionLocation hrl = new HRegionLocation(
-            RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).build(),
+      final Map<byte[], HRegionLocation> map =
+        new TreeMap<byte[], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+      for (byte[] startKey : startKeys) {
+        HRegionLocation hrl =
+          new HRegionLocation(RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).build(),
             ServerName.valueOf(Bytes.toString(startKey), 0, 0));
         map.put(startKey, hrl);
       }
@@ -192,19 +184,20 @@ public class TestMultiTableInputFormatBase {
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>(map.values());
       // Now make a RegionLocator mock backed by the abpve map and list of locations.
       RegionLocator mockedRegionLocator = Mockito.mock(RegionLocator.class);
-      Mockito.when(mockedRegionLocator.getRegionLocation(Mockito.any(byte [].class),
-            Mockito.anyBoolean())).
-          thenAnswer(new Answer<HRegionLocation>() {
-            @Override
-            public HRegionLocation answer(InvocationOnMock invocationOnMock) throws Throwable {
-              Object [] args = invocationOnMock.getArguments();
-              byte [] key = (byte [])args[0];
-              return map.get(key);
-            }
-          });
+      Mockito
+        .when(
+          mockedRegionLocator.getRegionLocation(Mockito.any(byte[].class), Mockito.anyBoolean()))
+        .thenAnswer(new Answer<HRegionLocation>() {
+          @Override
+          public HRegionLocation answer(InvocationOnMock invocationOnMock) throws Throwable {
+            Object[] args = invocationOnMock.getArguments();
+            byte[] key = (byte[]) args[0];
+            return map.get(key);
+          }
+        });
       Mockito.when(mockedRegionLocator.getAllRegionLocations()).thenReturn(locations);
-      Mockito.when(mockedRegionLocator.getStartEndKeys()).
-          thenReturn(new Pair<byte [][], byte[][]>(startKeys, endKeys));
+      Mockito.when(mockedRegionLocator.getStartEndKeys())
+        .thenReturn(new Pair<byte[][], byte[][]>(startKeys, endKeys));
       Mockito.when(mockedRegionLocator.getName()).thenReturn(tableName);
       return mockedRegionLocator;
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -42,12 +43,12 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RPCTests.class, SmallTests.class})
+@Category({ RPCTests.class, SmallTests.class })
 public class TestFifoRpcScheduler {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFifoRpcScheduler.class);
+    HBaseClassTestRule.forClass(TestFifoRpcScheduler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFifoRpcScheduler.class);
 
@@ -68,7 +69,7 @@ public class TestFifoRpcScheduler {
   }
 
   private ThreadPoolExecutor disableHandlers(RpcScheduler scheduler) {
-    ThreadPoolExecutor rpcExecutor=null;
+    ThreadPoolExecutor rpcExecutor = null;
 
     try {
       Field ExecutorField = scheduler.getClass().getDeclaredField("executor");
@@ -86,11 +87,11 @@ public class TestFifoRpcScheduler {
       Thread.sleep(2000);
 
     } catch (NoSuchFieldException e) {
-      LOG.error("No such field exception:"+e);
+      LOG.error("No such field exception:" + e);
     } catch (IllegalAccessException e) {
-      LOG.error("Illegal access exception:"+e);
+      LOG.error("Illegal access exception:" + e);
     } catch (InterruptedException e) {
-      LOG.error("Interrupted exception:"+e);
+      LOG.error("Interrupted exception:" + e);
     }
 
     return rpcExecutor;
@@ -100,8 +101,7 @@ public class TestFifoRpcScheduler {
   public void testCallQueueInfo() throws IOException, InterruptedException {
 
     ThreadPoolExecutor rpcExecutor;
-    RpcScheduler scheduler = new FifoRpcScheduler(
-            conf, 1);
+    RpcScheduler scheduler = new FifoRpcScheduler(conf, 1);
 
     scheduler.init(CONTEXT);
 
@@ -111,24 +111,23 @@ public class TestFifoRpcScheduler {
     int totalCallMethods = 30;
     int unableToDispatch = 0;
 
-    for (int i = totalCallMethods; i>0; i--) {
+    for (int i = totalCallMethods; i > 0; i--) {
       CallRunner task = createMockTask();
       task.setStatus(new MonitoredRPCHandlerImpl());
 
-      if(!scheduler.dispatch(task)) {
+      if (!scheduler.dispatch(task)) {
         unableToDispatch++;
       }
 
       Thread.sleep(10);
     }
 
-
     CallQueueInfo callQueueInfo = scheduler.getCallQueueInfo();
     int executionCount = callExecutionCount.get();
     int callQueueSize = 0;
 
-    for (String callQueueName:callQueueInfo.getCallQueueNames()) {
-      for (String calledMethod: callQueueInfo.getCalledMethodNames(callQueueName)) {
+    for (String callQueueName : callQueueInfo.getCallQueueNames()) {
+      for (String calledMethod : callQueueInfo.getCalledMethodNames(callQueueName)) {
         callQueueSize += callQueueInfo.getCallMethodCount(callQueueName, calledMethod);
       }
     }
@@ -144,7 +143,8 @@ public class TestFifoRpcScheduler {
     when(task.getRpcCall()).thenReturn(call);
 
     doAnswer(new Answer<Void>() {
-      @Override public Void answer (InvocationOnMock invocation) throws Throwable {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
         callExecutionCount.incrementAndGet();
         Thread.sleep(1000);
         return null;

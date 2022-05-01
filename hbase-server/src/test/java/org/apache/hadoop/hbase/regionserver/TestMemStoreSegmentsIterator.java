@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestMemStoreSegmentsIterator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
+    HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
 
   protected static String TABLE = "test_mscsi";
   protected static String FAMILY = "f";
@@ -86,8 +86,8 @@ public class TestMemStoreSegmentsIterator {
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(TABLE)).build();
     Path rootPath = hbaseUtility.getDataTestDir(ROOT_SUB_PATH);
     this.wal = HBaseTestingUtil.createWal(conf, rootPath, info);
-    this.region = HRegion.createHRegion(info, rootPath, conf,
-      tableDescriptorBuilder.build(), this.wal, true);
+    this.region =
+      HRegion.createHRegion(info, rootPath, conf, tableDescriptorBuilder.build(), this.wal, true);
     this.store = new HStore(this.region, columnFamilyDescriptor, conf, false);
     this.comparator = CellComparator.getInstance();
     this.compactionKVMax = HConstants.COMPACTION_KV_MAX_DEFAULT;
@@ -97,7 +97,7 @@ public class TestMemStoreSegmentsIterator {
   public void testMemStoreCompactorSegmentsIteratorNext() throws IOException {
     List<ImmutableSegment> segments = Arrays.asList(createTestImmutableSegment());
     MemStoreCompactorSegmentsIterator iterator = new MemStoreCompactorSegmentsIterator(segments,
-        this.comparator, this.compactionKVMax, this.store);
+      this.comparator, this.compactionKVMax, this.store);
     verifyNext(iterator);
     closeTestSegments(segments);
   }
@@ -106,7 +106,7 @@ public class TestMemStoreSegmentsIterator {
   public void testMemStoreMergerSegmentsIteratorNext() throws IOException {
     List<ImmutableSegment> segments = Arrays.asList(createTestImmutableSegment());
     MemStoreMergerSegmentsIterator iterator =
-        new MemStoreMergerSegmentsIterator(segments, this.comparator, this.compactionKVMax);
+      new MemStoreMergerSegmentsIterator(segments, this.comparator, this.compactionKVMax);
     verifyNext(iterator);
     closeTestSegments(segments);
   }

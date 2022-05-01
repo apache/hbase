@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,11 +24,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A scan result cache for batched scan, i.e,
@@ -142,8 +141,9 @@ public class BatchScanResultCache implements ScanResultCache {
         numberOfCompleteRows++;
       }
       // check if we have a row change
-      if (!partialResults.isEmpty() &&
-          !Bytes.equals(partialResults.peek().getRow(), result.getRow())) {
+      if (
+        !partialResults.isEmpty() && !Bytes.equals(partialResults.peek().getRow(), result.getRow())
+      ) {
         regroupedResults.add(createCompletedResult());
       }
       Result regroupedResult = regroupResults(result);

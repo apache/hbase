@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,15 +44,14 @@ import org.junit.experimental.categories.Category;
 /**
  * Test metrics incremented on region server operations.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestClusterId {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClusterId.class);
+    HBaseClassTestRule.forClass(TestClusterId.class);
 
-  private final HBaseTestingUtil TEST_UTIL =
-      new HBaseTestingUtil();
+  private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private JVMClusterUtil.RegionServerThread rst;
 
@@ -64,27 +63,27 @@ public class TestClusterId {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    if(rst != null && rst.getRegionServer() != null) {
+    if (rst != null && rst.getRegionServer() != null) {
       rst.getRegionServer().stop("end of test");
       rst.join();
     }
   }
 
   @Test
-  public void testClusterId() throws Exception  {
+  public void testClusterId() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    //start region server, needs to be separate
-    //so we get an unset clusterId
+    // start region server, needs to be separate
+    // so we get an unset clusterId
     rst = JVMClusterUtil.createRegionServerThread(conf, HRegionServer.class, 0);
     rst.start();
-    //Make sure RS is in blocking state
+    // Make sure RS is in blocking state
     Thread.sleep(10000);
 
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(1).numRegionServers(0).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(1).numRegionServers(0).build();
     TEST_UTIL.startMiniHBaseCluster(option);
 
     rst.waitForServerOnline();
@@ -117,4 +116,3 @@ public class TestClusterId {
   }
 
 }
-

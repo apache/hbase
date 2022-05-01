@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -80,7 +80,7 @@ public class TestRegionReplicationForFlushMarker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicationForFlushMarker.class);
+    HBaseClassTestRule.forClass(TestRegionReplicationForFlushMarker.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
@@ -105,7 +105,7 @@ public class TestRegionReplicationForFlushMarker {
     conf.setBoolean(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, false);
     conf.setInt(RegionReplicationFlushRequester.MIN_INTERVAL_SECS, 3);
     HTU.startMiniCluster(StartTestingClusterOption.builder().rsClass(RSForTest.class)
-        .numRegionServers(NB_SERVERS).build());
+      .numRegionServers(NB_SERVERS).build());
 
   }
 
@@ -162,9 +162,8 @@ public class TestRegionReplicationForFlushMarker {
 
   private HRegionForTest[] createTable() throws Exception {
     TableDescriptor tableDescriptor =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-            .build();
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     HTU.getAdmin().createTable(tableDescriptor);
     final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
     for (int i = 0; i < NB_SERVERS; i++) {
@@ -188,13 +187,13 @@ public class TestRegionReplicationForFlushMarker {
     final AtomicInteger prepareFlushCounter = new AtomicInteger(0);
 
     public HRegionForTest(HRegionFileSystem fs, WAL wal, Configuration confParam,
-        TableDescriptor htd, RegionServerServices rsServices) {
+      TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 
     @SuppressWarnings("deprecation")
     public HRegionForTest(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
@@ -209,8 +208,8 @@ public class TestRegionReplicationForFlushMarker {
 
     @Override
     protected PrepareFlushResult internalPrepareFlushCache(WAL wal, long myseqid,
-        Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
-        FlushLifeCycleTracker tracker) throws IOException {
+      Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
+      FlushLifeCycleTracker tracker) throws IOException {
       if (!startTest) {
         return super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
           writeFlushWalMarker, tracker);
@@ -229,9 +228,10 @@ public class TestRegionReplicationForFlushMarker {
          * First flush is {@link FlushAction#START_FLUSH} marker and the second flush is
          * {@link FlushAction#CANNOT_FLUSH} marker because the memstore is empty.
          */
-        if (this.prepareFlushCounter.get() == 2
-            && result.getResult() != null
-            && result.getResult().getResult() == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY) {
+        if (
+          this.prepareFlushCounter.get() == 2 && result.getResult() != null
+            && result.getResult().getResult() == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY
+        ) {
 
           cyclicBarrier.await();
         }
@@ -252,7 +252,7 @@ public class TestRegionReplicationForFlushMarker {
 
     @Override
     public ReplicateWALEntryResponse replicateToReplica(RpcController rpcController,
-        ReplicateWALEntryRequest replicateWALEntryRequest) throws ServiceException {
+      ReplicateWALEntryRequest replicateWALEntryRequest) throws ServiceException {
 
       if (!startTest) {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
@@ -271,8 +271,10 @@ public class TestRegionReplicationForFlushMarker {
         throw new ServiceException(e);
       }
 
-      if (!region.getRegionInfo().getTable().equals(tableName)
-          || region.getRegionInfo().getReplicaId() != 1) {
+      if (
+        !region.getRegionInfo().getTable().equals(tableName)
+          || region.getRegionInfo().getReplicaId() != 1
+      ) {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
       }
 
@@ -288,7 +290,7 @@ public class TestRegionReplicationForFlushMarker {
   }
 
   public static final class RSForTest
-      extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public RSForTest(Configuration conf) throws IOException, InterruptedException {
       super(conf);

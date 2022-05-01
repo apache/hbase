@@ -89,8 +89,8 @@ public class Report {
    * @return True if an 'empty' lastReport -- no problems found.
    */
   public boolean isEmpty() {
-    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty() &&
-      this.emptyRegionInfo.isEmpty();
+    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty()
+      && this.emptyRegionInfo.isEmpty();
   }
 
   @Override

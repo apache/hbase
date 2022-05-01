@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,13 +60,14 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected PeerModificationState nextStateAfterRefresh() {
-    return peerConfig.isSerial() ? PeerModificationState.SERIAL_PEER_REOPEN_REGIONS
+    return peerConfig.isSerial()
+      ? PeerModificationState.SERIAL_PEER_REOPEN_REGIONS
       : super.nextStateAfterRefresh();
   }
 
   @Override
   protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     setLastPushedSequenceId(env, peerConfig);
   }
 
@@ -90,7 +91,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException, InterruptedException {
+    throws IOException, ReplicationException, InterruptedException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
@@ -109,7 +110,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void postPeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     LOG.info("Successfully added {} peer {}, config {}", enabled ? "ENABLED" : "DISABLED", peerId,
       peerConfig);
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();

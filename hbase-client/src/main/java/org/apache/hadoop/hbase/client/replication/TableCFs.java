@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +18,13 @@
 package org.apache.hadoop.hbase.client.replication;
 
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Used by {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()}.
- * The cfs is a map of &lt;ColumnFamily, ReplicationScope>.
+ * Used by {@link org.apache.hadoop.hbase.client.Admin#listReplicatedTableCFs()}. The cfs is a map
+ * of &lt;ColumnFamily, ReplicationScope>.
  */
 @InterfaceAudience.Public
 public class TableCFs {

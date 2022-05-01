@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -82,20 +83,18 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   public Cell getKey() {
     if (current.keyBuffer.hasArray()) {
       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
-          current.keyBuffer.arrayOffset() + current.keyBuffer.position(),
-          current.keyLength);
+        current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
     } else {
       byte[] key = new byte[current.keyLength];
-      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer,
-          current.keyBuffer.position(), 0, current.keyLength);
+      ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,
+        current.keyLength);
       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);
     }
   }
 
   @Override
   public ByteBuffer getValueShallowCopy() {
-    currentBuffer.asSubByteBuffer(current.valueOffset, current.valueLength,
-        tmpPair);
+    currentBuffer.asSubByteBuffer(current.valueOffset, current.valueLength, tmpPair);
     ByteBuffer dup = tmpPair.getFirst().duplicate();
     dup.position(tmpPair.getSecond());
     dup.limit(tmpPair.getSecond() + current.valueLength);
@@ -183,8 +182,8 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
           if (!previous.isValid()) {
             // The caller (seekBefore) has to ensure that we are not at the
             // first key in the block.
-            throw new IllegalStateException("Cannot seekBefore if "
-                + "positioned at the first key in the block: key="
+            throw new IllegalStateException(
+              "Cannot seekBefore if " + "positioned at the first key in the block: key="
                 + Bytes.toStringBinary(seekCell.getRowArray()));
           }
           moveToPrevious();
@@ -253,11 +252,9 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     current.valueLength = (int) (Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
     currentBuffer.skip(Bytes.SIZEOF_LONG);
     // key part
-    currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength,
-        tmpPair);
+    currentBuffer.asSubByteBuffer(currentBuffer.position(), current.keyLength, tmpPair);
     ByteBuffer key = tmpPair.getFirst().duplicate();
-    key.position(tmpPair.getSecond()).limit(
-        tmpPair.getSecond() + current.keyLength);
+    key.position(tmpPair.getSecond()).limit(tmpPair.getSecond() + current.keyLength);
     current.keyBuffer = key;
     currentBuffer.skip(current.keyLength);
     // value part
@@ -272,8 +269,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
       current.memstoreTS = 0;
     }
     current.nextKvOffset = currentBuffer.position();
-    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(),
-        current.keyLength);
+    current.currentKey.setKey(current.keyBuffer, tmpPair.getSecond(), current.keyLength);
   }
 
   protected void decodeTags() {
@@ -285,8 +281,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
 
   private class SeekerState {
     /**
-     * The size of a (key length, value length) tuple that prefixes each entry
-     * in a data block.
+     * The size of a (key length, value length) tuple that prefixes each entry in a data block.
      */
     public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
 
@@ -321,8 +316,7 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
     protected void copyFromNext(SeekerState nextState) {
       keyBuffer = nextState.keyBuffer;
       currentKey.setKey(nextState.keyBuffer,
-          nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT,
-          nextState.keyLength);
+        nextState.currentKey.getRowPosition() - Bytes.SIZEOF_SHORT, nextState.keyLength);
 
       startOffset = nextState.startOffset;
       valueOffset = nextState.valueOffset;
@@ -361,10 +355,10 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         if (tagsLength > 0) {
           // TODO : getRow len here.
           ret = new SizeCachedKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
+            currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         } else {
           ret = new SizeCachedNoTagsKeyValue(currentBuffer.array(),
-              currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
+            currentBuffer.arrayOffset() + startOffset, cellBufSize, seqId, keyLength);
         }
       } else {
         currentBuffer.asSubByteBuffer(startOffset, cellBufSize, tmpPair);
@@ -372,17 +366,17 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
         if (buf.isDirect()) {
           // TODO : getRow len here.
           ret = tagsLength > 0
-              ? new SizeCachedByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
-                  keyLength)
-              : new SizeCachedNoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
-                  keyLength);
+            ? new SizeCachedByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+              keyLength)
+            : new SizeCachedNoTagsByteBufferKeyValue(buf, tmpPair.getSecond(), cellBufSize, seqId,
+              keyLength);
         } else {
           if (tagsLength > 0) {
-            ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
+            ret = new SizeCachedKeyValue(buf.array(), buf.arrayOffset() + tmpPair.getSecond(),
+              cellBufSize, seqId, keyLength);
           } else {
-            ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset()
-                + tmpPair.getSecond(), cellBufSize, seqId, keyLength);
+            ret = new SizeCachedNoTagsKeyValue(buf.array(), buf.arrayOffset() + tmpPair.getSecond(),
+              cellBufSize, seqId, keyLength);
           }
         }
       }

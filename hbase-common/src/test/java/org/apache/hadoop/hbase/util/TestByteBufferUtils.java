@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,13 +59,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestByteBufferUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestByteBufferUtils.class);
+    HBaseClassTestRule.forClass(TestByteBufferUtils.class);
 
   private static final String UNSAFE_AVAIL_NAME = "UNSAFE_AVAIL";
   private static final String UNSAFE_UNALIGNED_NAME = "UNSAFE_UNALIGNED";
@@ -166,8 +166,8 @@ public class TestByteBufferUtils {
     }
 
     testNumbers = Collections.unmodifiableSet(a);
-    System.err.println("Testing variable-length long serialization using: "
-        + testNumbers + " (count: " + testNumbers.size() + ")");
+    System.err.println("Testing variable-length long serialization using: " + testNumbers
+      + " (count: " + testNumbers.size() + ")");
     assertEquals(1753, testNumbers.size());
     assertEquals(Long.MIN_VALUE, a.first().longValue());
     assertEquals(Long.MAX_VALUE, a.last().longValue());
@@ -191,8 +191,7 @@ public class TestByteBufferUtils {
       baos.reset();
       ByteBuffer b = ByteBuffer.allocate(MAX_VLONG_LENGTH);
       ByteBufferUtils.writeVLong(b, l);
-      String bufStr = Bytes.toStringBinary(b.array(),
-          b.arrayOffset(), b.position());
+      String bufStr = Bytes.toStringBinary(b.array(), b.arrayOffset(), b.position());
       WritableUtils.writeVLong(dos, l);
       String baosStr = Bytes.toStringBinary(baos.toByteArray());
       assertEquals(baosStr, bufStr);
@@ -207,12 +206,10 @@ public class TestByteBufferUtils {
     final int arrayOffset = 7;
     final int initialPosition = 10;
     final int endPadding = 5;
-    byte[] arrayWrapper =
-        new byte[arrayOffset + initialPosition + array.length + endPadding];
-    System.arraycopy(array, 0, arrayWrapper,
-        arrayOffset + initialPosition, array.length);
-    ByteBuffer buffer = ByteBuffer.wrap(arrayWrapper, arrayOffset,
-        initialPosition + array.length).slice();
+    byte[] arrayWrapper = new byte[arrayOffset + initialPosition + array.length + endPadding];
+    System.arraycopy(array, 0, arrayWrapper, arrayOffset + initialPosition, array.length);
+    ByteBuffer buffer =
+      ByteBuffer.wrap(arrayWrapper, arrayOffset, initialPosition + array.length).slice();
     assertEquals(initialPosition + array.length, buffer.limit());
     assertEquals(0, buffer.position());
     buffer.position(initialPosition);
@@ -236,8 +233,7 @@ public class TestByteBufferUtils {
 
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
-    ByteBufferUtils.copyBufferToStream(bos, buffer, array.length / 2,
-        array.length / 2);
+    ByteBufferUtils.copyBufferToStream(bos, buffer, array.length / 2, array.length / 2);
 
     byte[] returnedArray = bos.toByteArray();
     for (int i = 0; i < array.length / 2; ++i) {
@@ -257,8 +253,7 @@ public class TestByteBufferUtils {
     DataInputStream dis = new DataInputStream(bis);
 
     ByteBufferUtils.copyFromStreamToBuffer(buffer, dis, array.length / 2);
-    ByteBufferUtils.copyFromStreamToBuffer(buffer, dis,
-        array.length - array.length / 2);
+    ByteBufferUtils.copyFromStreamToBuffer(buffer, dis, array.length - array.length / 2);
     for (int i = 0; i < array.length; ++i) {
       assertEquals(array[i], buffer.get(i));
     }
@@ -273,11 +268,10 @@ public class TestByteBufferUtils {
     ByteBuffer dstBuffer = ByteBuffer.allocate(array.length);
     srcBuffer.put(array);
 
-    ByteBufferUtils.copyFromBufferToBuffer(srcBuffer, dstBuffer,
-        array.length / 2, array.length / 4);
+    ByteBufferUtils.copyFromBufferToBuffer(srcBuffer, dstBuffer, array.length / 2,
+      array.length / 4);
     for (int i = 0; i < array.length / 4; ++i) {
-      assertEquals(srcBuffer.get(i + array.length / 2),
-          dstBuffer.get(i));
+      assertEquals(srcBuffer.get(i + array.length / 2), dstBuffer.get(i));
     }
   }
 
@@ -367,8 +361,7 @@ public class TestByteBufferUtils {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     ByteBufferUtils.putCompressedInt(bos, value);
 
-    ByteArrayInputStream bis = new ByteArrayInputStream(
-        bos.toByteArray());
+    ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
     parsedValue = ByteBufferUtils.readCompressedInt(bis);
 
     assertEquals(value, parsedValue);
@@ -392,13 +385,13 @@ public class TestByteBufferUtils {
   }
 
   @Test
-  public void testToBytes(){
+  public void testToBytes() {
     ByteBuffer buffer = ByteBuffer.allocate(5);
-    buffer.put(new byte[]{0,1,2,3,4});
+    buffer.put(new byte[] { 0, 1, 2, 3, 4 });
     assertEquals(5, buffer.position());
     assertEquals(5, buffer.limit());
     byte[] copy = ByteBufferUtils.toBytes(buffer, 2);
-    assertArrayEquals(new byte[]{2,3,4}, copy);
+    assertArrayEquals(new byte[] { 2, 3, 4 }, copy);
     assertEquals(5, buffer.position());
     assertEquals(5, buffer.limit());
   }
@@ -435,8 +428,8 @@ public class TestByteBufferUtils {
     assertEquals(i, buffer.getInt());
   }
 
-  private void testCopyFromSrcToDestWithThreads(Object input, Object output,
-    List<Integer> lengthes, List<Integer> offsets) throws InterruptedException {
+  private void testCopyFromSrcToDestWithThreads(Object input, Object output, List<Integer> lengthes,
+    List<Integer> offsets) throws InterruptedException {
     assertTrue((input instanceof ByteBuffer) || (input instanceof byte[]));
     assertTrue((output instanceof ByteBuffer) || (output instanceof byte[]));
     assertEquals(lengthes.size(), offsets.size());
@@ -453,16 +446,16 @@ public class TestByteBufferUtils {
         try {
           latch.await();
           if (input instanceof ByteBuffer && output instanceof byte[]) {
-            ByteBufferUtils.copyFromBufferToArray((byte[]) output,
-                (ByteBuffer) input, offset, offset, length);
+            ByteBufferUtils.copyFromBufferToArray((byte[]) output, (ByteBuffer) input, offset,
+              offset, length);
           }
           if (input instanceof byte[] && output instanceof ByteBuffer) {
-            ByteBufferUtils.copyFromArrayToBuffer((ByteBuffer) output,
-                offset, (byte[]) input, offset, length);
+            ByteBufferUtils.copyFromArrayToBuffer((ByteBuffer) output, offset, (byte[]) input,
+              offset, length);
           }
           if (input instanceof ByteBuffer && output instanceof ByteBuffer) {
-            ByteBufferUtils.copyFromBufferToBuffer((ByteBuffer) input,
-                (ByteBuffer) output, offset, offset, length);
+            ByteBufferUtils.copyFromBufferToBuffer((ByteBuffer) input, (ByteBuffer) output, offset,
+              offset, length);
           }
         } catch (InterruptedException ex) {
           throw new RuntimeException(ex);
@@ -480,23 +473,20 @@ public class TestByteBufferUtils {
     if (output instanceof ByteBuffer) {
       assertEquals(oldOutputPos, ((ByteBuffer) output).position());
     }
-    String inputString = (input instanceof ByteBuffer) ?
-      Bytes.toString(Bytes.toBytes((ByteBuffer) input)) : Bytes.toString((byte[]) input);
-    String outputString = (output instanceof ByteBuffer) ?
-      Bytes.toString(Bytes.toBytes((ByteBuffer) output)) : Bytes.toString((byte[]) output);
+    String inputString = (input instanceof ByteBuffer)
+      ? Bytes.toString(Bytes.toBytes((ByteBuffer) input))
+      : Bytes.toString((byte[]) input);
+    String outputString = (output instanceof ByteBuffer)
+      ? Bytes.toString(Bytes.toBytes((ByteBuffer) output))
+      : Bytes.toString((byte[]) output);
     assertEquals(inputString, outputString);
   }
 
   @Test
   public void testCopyFromSrcToDestWithThreads() throws InterruptedException {
-    List<byte[]> words = Arrays.asList(
-      Bytes.toBytes("with"),
-      Bytes.toBytes("great"),
-      Bytes.toBytes("power"),
-      Bytes.toBytes("comes"),
-      Bytes.toBytes("great"),
-      Bytes.toBytes("responsibility")
-    );
+    List<byte[]> words =
+      Arrays.asList(Bytes.toBytes("with"), Bytes.toBytes("great"), Bytes.toBytes("power"),
+        Bytes.toBytes("comes"), Bytes.toBytes("great"), Bytes.toBytes("responsibility"));
     List<Integer> lengthes = words.stream().map(v -> v.length).collect(Collectors.toList());
     List<Integer> offsets = new ArrayList<>(words.size());
     for (int i = 0; i != words.size(); ++i) {
@@ -511,30 +501,26 @@ public class TestByteBufferUtils {
     }
 
     // test copyFromBufferToArray
-    for (ByteBuffer input : Arrays.asList(
-            ByteBuffer.allocateDirect(totalSize),
-            ByteBuffer.allocate(totalSize))) {
+    for (ByteBuffer input : Arrays.asList(ByteBuffer.allocateDirect(totalSize),
+      ByteBuffer.allocate(totalSize))) {
       words.forEach(input::put);
       byte[] output = new byte[totalSize];
       testCopyFromSrcToDestWithThreads(input, output, lengthes, offsets);
     }
 
     // test copyFromArrayToBuffer
-    for (ByteBuffer output : Arrays.asList(
-            ByteBuffer.allocateDirect(totalSize),
-            ByteBuffer.allocate(totalSize))) {
+    for (ByteBuffer output : Arrays.asList(ByteBuffer.allocateDirect(totalSize),
+      ByteBuffer.allocate(totalSize))) {
       byte[] input = fullContent;
       testCopyFromSrcToDestWithThreads(input, output, lengthes, offsets);
     }
 
     // test copyFromBufferToBuffer
-    for (ByteBuffer input : Arrays.asList(
-            ByteBuffer.allocateDirect(totalSize),
-            ByteBuffer.allocate(totalSize))) {
+    for (ByteBuffer input : Arrays.asList(ByteBuffer.allocateDirect(totalSize),
+      ByteBuffer.allocate(totalSize))) {
       words.forEach(input::put);
-      for (ByteBuffer output : Arrays.asList(
-            ByteBuffer.allocateDirect(totalSize),
-            ByteBuffer.allocate(totalSize))) {
+      for (ByteBuffer output : Arrays.asList(ByteBuffer.allocateDirect(totalSize),
+        ByteBuffer.allocate(totalSize))) {
         testCopyFromSrcToDestWithThreads(input, output, lengthes, offsets);
       }
     }
@@ -572,6 +558,7 @@ public class TestByteBufferUtils {
     assertTrue(bb1.position() == bb2.position());
     assertTrue(bb1.limit() == bb2.limit());
   }
+
   @Test
   public void testCompareTo() {
     ByteBuffer bb1 = ByteBuffer.allocate(135);
@@ -588,9 +575,9 @@ public class TestByteBufferUtils {
     assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()) > 0);
     // Assert reverse comparing BB and bytearray works.
     ByteBuffer bb3 = ByteBuffer.allocate(135);
-    fillBB(bb3, (byte)0);
+    fillBB(bb3, (byte) 0);
     byte[] b3 = new byte[135];
-    fillArray(b3, (byte)1);
+    fillArray(b3, (byte) 1);
     int result = ByteBufferUtils.compareTo(b3, 0, b3.length, bb3, 0, bb3.remaining());
     assertTrue(result > 0);
     result = ByteBufferUtils.compareTo(bb3, 0, bb3.remaining(), b3, 0, b3.length);
@@ -611,24 +598,20 @@ public class TestByteBufferUtils {
     ByteBuffer bb = ByteBuffer.wrap(a);
 
     assertTrue(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0,
-        HConstants.EMPTY_BYTE_BUFFER, 0, 0));
+      HConstants.EMPTY_BYTE_BUFFER, 0, 0));
 
-    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, bb,
-        0, a.length));
+    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, bb, 0, a.length));
 
-    assertFalse(ByteBufferUtils.equals(bb, 0, 0, HConstants.EMPTY_BYTE_BUFFER,
-        0, a.length));
+    assertFalse(ByteBufferUtils.equals(bb, 0, 0, HConstants.EMPTY_BYTE_BUFFER, 0, a.length));
 
     assertTrue(ByteBufferUtils.equals(bb, 0, a.length, bb, 0, a.length));
 
     assertTrue(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0,
-        HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+      HConstants.EMPTY_BYTE_ARRAY, 0, 0));
 
-    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, a,
-        0, a.length));
+    assertFalse(ByteBufferUtils.equals(HConstants.EMPTY_BYTE_BUFFER, 0, 0, a, 0, a.length));
 
-    assertFalse(ByteBufferUtils.equals(bb, 0, a.length,
-        HConstants.EMPTY_BYTE_ARRAY, 0, 0));
+    assertFalse(ByteBufferUtils.equals(bb, 0, a.length, HConstants.EMPTY_BYTE_ARRAY, 0, 0));
 
     assertTrue(ByteBufferUtils.equals(bb, 0, a.length, a, 0, a.length));
   }

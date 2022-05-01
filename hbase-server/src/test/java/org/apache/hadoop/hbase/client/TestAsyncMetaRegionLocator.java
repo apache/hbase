@@ -26,6 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
+
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
@@ -69,10 +70,7 @@ public class TestAsyncMetaRegionLocator {
 
   private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
   private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-    .setMiniClusterOption(StartTestingClusterOption.builder()
-      .numWorkers(3)
-      .build())
-    .build();
+    .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build()).build();
   private static final ConnectionRule connectionRule =
     ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
 
@@ -99,9 +97,7 @@ public class TestAsyncMetaRegionLocator {
 
   @ClassRule
   public static final TestRule classRule = RuleChain.outerRule(otelClassRule)
-    .around(miniClusterRule)
-    .around(connectionRule)
-    .around(new Setup());
+    .around(miniClusterRule).around(connectionRule).around(new Setup());
 
   private static HBaseTestingUtil TEST_UTIL;
   private static AsyncMetaRegionLocator LOCATOR;
@@ -120,11 +116,8 @@ public class TestAsyncMetaRegionLocator {
           }
 
           @Override
-          public RegionLocations getRegionLocations(
-            TableName tableName,
-            int replicaId,
-            boolean reload
-          ) throws Exception {
+          public RegionLocations getRegionLocations(TableName tableName, int replicaId,
+            boolean reload) throws Exception {
             return LOCATOR.getRegionLocations(replicaId, reload).get();
           }
         });
@@ -135,8 +128,8 @@ public class TestAsyncMetaRegionLocator {
 
     final Configuration conf = TEST_UTIL.getConfiguration();
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName("test"), hasEnded());
-    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      otelClassRule::getSpans, hasItem(parentSpanMatcher)));
+    Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5),
+      new MatcherPredicate<>(otelClassRule::getSpans, hasItem(parentSpanMatcher)));
     final List<SpanData> spans = otelClassRule.getSpans();
     if (logger.isDebugEnabled()) {
       StringTraceRenderer renderer = new StringTraceRenderer(spans);
@@ -144,27 +137,20 @@ public class TestAsyncMetaRegionLocator {
     }
 
     assertThat(spans, hasItem(parentSpanMatcher));
-    final SpanData parentSpan = spans.stream()
-      .filter(parentSpanMatcher::matches)
-      .findAny()
-      .orElseThrow(AssertionError::new);
+    final SpanData parentSpan =
+      spans.stream().filter(parentSpanMatcher::matches).findAny().orElseThrow(AssertionError::new);
 
-    final Matcher<SpanData> registryGetMetaRegionLocationsMatcher = allOf(
-      hasName(endsWith("ConnectionRegistry.getMetaRegionLocations")),
-      hasParentSpanId(parentSpan),
-      hasKind(SpanKind.INTERNAL),
-      hasEnded());
+    final Matcher<SpanData> registryGetMetaRegionLocationsMatcher =
+      allOf(hasName(endsWith("ConnectionRegistry.getMetaRegionLocations")),
+        hasParentSpanId(parentSpan), hasKind(SpanKind.INTERNAL), hasEnded());
     assertThat(spans, hasItem(registryGetMetaRegionLocationsMatcher));
-    final SpanData registry_getMetaRegionLocationsSpan = spans.stream()
-      .filter(registryGetMetaRegionLocationsMatcher::matches)
-      .findAny()
-      .orElseThrow(AssertionError::new);
+    final SpanData registry_getMetaRegionLocationsSpan =
+      spans.stream().filter(registryGetMetaRegionLocationsMatcher::matches).findAny()
+        .orElseThrow(AssertionError::new);
 
-    final Matcher<SpanData> clientGetMetaRegionLocationsMatcher = allOf(
-      hasName(endsWith("ClientMetaService/GetMetaRegionLocations")),
-      hasParentSpanId(registry_getMetaRegionLocationsSpan),
-      hasKind(SpanKind.CLIENT),
-      hasEnded());
+    final Matcher<SpanData> clientGetMetaRegionLocationsMatcher =
+      allOf(hasName(endsWith("ClientMetaService/GetMetaRegionLocations")),
+        hasParentSpanId(registry_getMetaRegionLocationsSpan), hasKind(SpanKind.CLIENT), hasEnded());
     assertThat(spans, hasItem(clientGetMetaRegionLocationsMatcher));
   }
 }

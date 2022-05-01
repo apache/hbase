@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +44,10 @@ import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
- * By using this class as the super class of a set of tests you will have a HBase testing
- * cluster available that is very suitable for writing tests for scanning and filtering against.
+ * By using this class as the super class of a set of tests you will have a HBase testing cluster
+ * available that is very suitable for writing tests for scanning and filtering against.
  */
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class FilterTestingCluster {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Admin admin = null;
@@ -77,7 +75,7 @@ public class FilterTestingCluster {
 
   private static void deleteTables() {
     if (admin != null) {
-      for (TableName tableName: createdTables){
+      for (TableName tableName : createdTables) {
         try {
           if (admin.tableExists(tableName)) {
             admin.disableTable(tableName);
