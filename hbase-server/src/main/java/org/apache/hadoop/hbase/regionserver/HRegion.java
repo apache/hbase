@@ -3610,17 +3610,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         @Override
         public boolean visit(int index) throws IOException {
           Mutation m = getMutation(index);
-          // we use durability of the original mutation for the mutation passed by CP.
-          if (region.getEffectiveDurability(m.getDurability()) == Durability.SKIP_WAL) {
-            region.recordMutationWithoutWal(m.getFamilyCellMap());
-            return true;
-          }
-
           // the batch may contain multiple nonce keys (replay case). If so, write WALEdit for each.
           // Given how nonce keys are originally written, these should be contiguous.
           // They don't have to be, it will still work, just write more WALEdits than needed.
           long nonceGroup = getNonceGroup(index);
           long nonce = getNonce(index);
+          // we use durability of the original mutation for the mutation passed by CP.
+          if (region.getEffectiveDurability(m.getDurability()) == Durability.SKIP_WAL) {
+            region.recordMutationWithoutWal(m.getFamilyCellMap());
+            miniBatchOp.addSkipWALMutation(new NonceKey(nonceGroup, nonce), familyCellMaps[index]);
+            return true;
+          }
+
           if (
             curWALEditForNonce == null
               || curWALEditForNonce.getFirst().getNonceGroup() != nonceGroup
@@ -3645,27 +3646,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
       });
       return walEdits;
-    }
-
-    /**
-     * Get the cells of {@link Mutation} in miniBatchOp which {@link Mutation#getDurability} is
-     * {@link Durability#SKIP_WAL}
-     */
-    public List<Map<byte[], List<Cell>>> getSkipWALCells(NonceKey nonceKey,
-      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
-      final ArrayList<Map<byte[], List<Cell>>> cells = new ArrayList<Map<byte[], List<Cell>>>();
-      visitBatchOperations(true, nextIndexToProcess + miniBatchOp.size(), (int index) -> {
-        Mutation mutation = getMutation(index);
-        if (
-          region.getEffectiveDurability(mutation.getDurability()) == Durability.SKIP_WAL
-            && getNonceGroup(index) == nonceKey.getNonceGroup()
-            && getNonce(index) == nonceKey.getNonce()
-        ) {
-          cells.add(familyCellMaps[index]);
-        }
-        return true;
-      });
-      return cells;
     }
 
     /**
@@ -8051,7 +8031,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private WALEdit getWALEditForReplicateRegionReplica(BatchOperation<?> batchOp,
     MiniBatchOperationInProgress<Mutation> miniBatchOp,
     NonceKey nonceKey, WALEdit walEdit) throws IOException {
-    List<Map<byte[], List<Cell>>> columnFamilyToCellsList = batchOp.getSkipWALCells(nonceKey, miniBatchOp);
+    List<Map<byte[], List<Cell>>> columnFamilyToCellsList = miniBatchOp.getSkipMutations(nonceKey);
     if(columnFamilyToCellsList == null || columnFamilyToCellsList.isEmpty()) {
       return walEdit;
     }
@@ -8062,7 +8042,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     WALEdit newWALEdit = new WALEdit(walEdit);
     for (Map<byte[], List<Cell>> columnFamilyToCells : columnFamilyToCellsList) {
-      newWALEdit.add(columnFamilyToCells);
+      if (columnFamilyToCells != null) {
+        newWALEdit.add(columnFamilyToCells);
+      }
     }
     return newWALEdit;
 

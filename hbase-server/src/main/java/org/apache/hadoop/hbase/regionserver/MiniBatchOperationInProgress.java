@@ -17,8 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -48,6 +55,7 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfDeletes = 0;
   private int numOfIncrements = 0;
   private int numOfAppends = 0;
+  private Map<NonceKey, List<Map<byte[], List<Cell>>>> nonceKeyToSkipWALMutations = null;
 
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
     WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive,
@@ -181,5 +189,26 @@ public class MiniBatchOperationInProgress<T> {
 
   public void incrementNumOfAppends() {
     this.numOfAppends += 1;
+  }
+
+  public void addSkipWALMutation(NonceKey nonceKey, Map<byte[], List<Cell>> columnFamilyToCells) {
+    if (columnFamilyToCells == null) {
+      return;
+    }
+    if (this.nonceKeyToSkipWALMutations == null) {
+      this.nonceKeyToSkipWALMutations = new HashMap<>();
+    }
+    List<Map<byte[], List<Cell>>> skipWALMuations =
+      this.nonceKeyToSkipWALMutations.computeIfAbsent(nonceKey, (key) -> new ArrayList<>());
+    skipWALMuations.add(columnFamilyToCells);
+
+  }
+
+  public List<Map<byte[], List<Cell>>> getSkipMutations(NonceKey nonceKey) {
+    if (this.nonceKeyToSkipWALMutations == null) {
+      return Collections.emptyList();
+    }
+    return this.nonceKeyToSkipWALMutations.getOrDefault(nonceKey, Collections.emptyList());
+
   }
 }
