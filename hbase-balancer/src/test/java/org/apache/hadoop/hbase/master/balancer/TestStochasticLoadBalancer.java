@@ -260,8 +260,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       if (isByTable) {
         metricRecordKey = "table1#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
       } else {
-        metricRecordKey = HConstants.ENSEMBLE_TABLE_NAME + "#"
-          + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
+        metricRecordKey =
+          HConstants.ENSEMBLE_TABLE_NAME + "#" + StochasticLoadBalancer.OVERALL_COST_FUNCTION_NAME;
       }
       double curOverallCost = loadBalancer.computeCost(clusterState, Double.MAX_VALUE);
       double curOverallCostInMetrics =
