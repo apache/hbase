@@ -3372,8 +3372,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * Write mini-batch operations to MemStore
      */
     public abstract WriteEntry writeMiniBatchOperationsToMemStore(
-        final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
-        long now) throws IOException;
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
+      long now) throws IOException;
 
     protected void writeMiniBatchOperationsToMemStore(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, final long writeNumber)
@@ -3627,7 +3627,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               || curWALEditForNonce.getFirst().getNonce() != nonce
           ) {
             curWALEditForNonce = new Pair<>(new NonceKey(nonceGroup, nonce),
-                createWALEdit(miniBatchOp));
+              createWALEdit(miniBatchOp));
             walEdits.add(curWALEditForNonce);
           }
           WALEdit walEdit = curWALEditForNonce.getSecond();
