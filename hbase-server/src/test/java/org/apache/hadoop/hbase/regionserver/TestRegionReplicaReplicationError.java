@@ -73,7 +73,7 @@ public class TestRegionReplicaReplicationError {
   public static final class ErrorReplayRSRpcServices extends RSRpcServices {
 
     private final ConcurrentHashMap<HRegion, AtomicInteger> regionToCounter =
-        new ConcurrentHashMap<HRegion, AtomicInteger>();
+      new ConcurrentHashMap<HRegion, AtomicInteger>();
 
     public ErrorReplayRSRpcServices(HRegionServer rs) throws IOException {
       super(rs);
