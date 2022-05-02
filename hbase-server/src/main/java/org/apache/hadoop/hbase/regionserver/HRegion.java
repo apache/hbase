@@ -4195,7 +4195,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       });
       final ServerCall<?> rpcCall = RpcServer.getCurrentServerCallWithCellScanner().orElse(null);
       mvccWriteEntry.attachCompletionAction(() -> {
-            sink.add(walKey, walEdit, rpcCall);
+        sink.add(walKey, walEdit, rpcCall);
       });
     }
 
