@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The presentation logic for the filter display mode.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEMPTS_PAUSE_MS_KEY;
@@ -28,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -48,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Full table backup implementation
- *
  */
 @InterfaceAudience.Private
 public class FullTableBackupClient extends TableBackupClient {
@@ -58,7 +55,7 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   public FullTableBackupClient(final Connection conn, final String backupId, BackupRequest request)
-      throws IOException {
+    throws IOException {
     super(conn, backupId, request);
   }
 
@@ -117,7 +114,7 @@ public class FullTableBackupClient extends TableBackupClient {
         LOG.error("Exporting Snapshot " + args[1] + " failed with return code: " + res + ".");
 
         throw new IOException("Failed of exporting snapshot " + args[1] + " to " + args[3]
-            + " with reason code " + res);
+          + " with reason code " + res);
       }
 
       conf.unset(JOB_NAME_CONF_KEY);
@@ -127,7 +124,6 @@ public class FullTableBackupClient extends TableBackupClient {
 
   /**
    * Backup request execution.
-   *
    * @throws IOException if the execution of the backup fails
    */
   @Override
@@ -163,9 +159,8 @@ public class FullTableBackupClient extends TableBackupClient {
       // SNAPSHOT_TABLES:
       backupInfo.setPhase(BackupPhase.SNAPSHOT);
       for (TableName tableName : tableList) {
-        String snapshotName =
-            "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime()) + "_"
-                + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
+        String snapshotName = "snapshot_" + Long.toString(EnvironmentEdgeManager.currentTime())
+          + "_" + tableName.getNamespaceAsString() + "_" + tableName.getQualifierAsString();
 
         snapshotTable(admin, tableName, snapshotName);
         backupInfo.setSnapshotName(tableName, snapshotName);
@@ -187,12 +182,11 @@ public class FullTableBackupClient extends TableBackupClient {
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
-          backupManager.readLogTimestampMap();
+        backupManager.readLogTimestampMap();
 
       backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils
-              .getRSLogTimestampMins(newTableSetTimestampMap));
+        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
 
       // backup complete
@@ -205,11 +199,9 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   protected void snapshotTable(Admin admin, TableName tableName, String snapshotName)
-      throws IOException {
-    int maxAttempts =
-        conf.getInt(BACKUP_MAX_ATTEMPTS_KEY, DEFAULT_BACKUP_MAX_ATTEMPTS);
-    int pause =
-        conf.getInt(BACKUP_ATTEMPTS_PAUSE_MS_KEY, DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS);
+    throws IOException {
+    int maxAttempts = conf.getInt(BACKUP_MAX_ATTEMPTS_KEY, DEFAULT_BACKUP_MAX_ATTEMPTS);
+    int pause = conf.getInt(BACKUP_ATTEMPTS_PAUSE_MS_KEY, DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS);
     int attempts = 0;
 
     while (attempts++ < maxAttempts) {
@@ -218,7 +210,7 @@ public class FullTableBackupClient extends TableBackupClient {
         return;
       } catch (IOException ee) {
         LOG.warn("Snapshot attempt " + attempts + " failed for table " + tableName
-            + ", sleeping for " + pause + "ms", ee);
+          + ", sleeping for " + pause + "ms", ee);
         if (attempts < maxAttempts) {
           try {
             Thread.sleep(pause);
@@ -229,6 +221,6 @@ public class FullTableBackupClient extends TableBackupClient {
         }
       }
     }
-    throw new IOException("Failed to snapshot table "+ tableName);
+    throw new IOException("Failed to snapshot table " + tableName);
   }
 }

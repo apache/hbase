@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -39,7 +40,7 @@ public class TestSpaceQuotaRemoval {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceQuotaRemoval.class);
+    HBaseClassTestRule.forClass(TestSpaceQuotaRemoval.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -128,7 +129,7 @@ public class TestSpaceQuotaRemoval {
   private void setQuotaAndThenRemove(SpaceViolationPolicy policy) throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     // Do puts until we violate space policy
     final TableName tn = helper.writeUntilViolationAndVerifyViolation(policy, put);
@@ -148,11 +149,11 @@ public class TestSpaceQuotaRemoval {
 
     SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
 
-    //Create a namespace
+    // Create a namespace
     String ns1 = "nsnew";
     NamespaceDescriptor nsd = helper.createNamespace(ns1);
 
-    //Create 2nd namespace with name similar to ns1
+    // Create 2nd namespace with name similar to ns1
     String ns2 = ns1 + "test";
     NamespaceDescriptor nsd2 = helper.createNamespace(ns2);
 
@@ -179,11 +180,11 @@ public class TestSpaceQuotaRemoval {
   public void testSetNamespaceSizeQuotaAndThenRemove() throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-            Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     SpaceViolationPolicy policy = SpaceViolationPolicy.NO_INSERTS;
 
-    //Create namespace
+    // Create namespace
     NamespaceDescriptor nsd = helper.createNamespace();
     String ns = nsd.getName();
 
@@ -198,10 +199,10 @@ public class TestSpaceQuotaRemoval {
   }
 
   private void setQuotaAndThenRemoveInOneAmongTwoTables(SpaceViolationPolicy policy)
-      throws Exception {
+    throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     // Do puts until we violate space policy on table tn1
     final TableName tn1 = helper.writeUntilViolationAndVerifyViolation(policy, put);
@@ -219,10 +220,10 @@ public class TestSpaceQuotaRemoval {
   }
 
   private void setQuotaNextDisableThenIncreaseFinallyEnable(SpaceViolationPolicy policy)
-      throws Exception {
+    throws Exception {
     Put put = new Put(Bytes.toBytes("to_reject"));
     put.addColumn(Bytes.toBytes(SpaceQuotaHelperForTests.F1), Bytes.toBytes("to"),
-        Bytes.toBytes("reject"));
+      Bytes.toBytes("reject"));
 
     // Do puts until we violate space policy
     final TableName tn = helper.writeUntilViolationAndVerifyViolation(policy, put);

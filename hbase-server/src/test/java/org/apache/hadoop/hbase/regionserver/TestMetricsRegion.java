@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,13 +27,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMetricsRegion {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsRegion.class);
-
+    HBaseClassTestRule.forClass(TestMetricsRegion.class);
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -43,8 +42,8 @@ public class TestMetricsRegion {
     MetricsRegionAggregateSource agg = mr.getSource().getAggregateSource();
 
     HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount",
-      101, agg);
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeCount", 101,
+      agg);
     HELPER.assertGauge(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_storeFileCount",
       102, agg);
@@ -61,35 +60,37 @@ public class TestMetricsRegion {
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_numReferenceFiles",
       2, agg);
     HELPER.assertGauge(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_memstoreSize",
-      103, agg);
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_memstoreSize", 103,
+      agg);
     HELPER.assertCounter(
       "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_cpRequestCount",
       108, agg);
+    HELPER
+      .assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_"
+        + "filteredReadRequestCount", 107, agg);
     HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_" +
-        "filteredReadRequestCount",
-      107, agg);
-    HELPER.assertCounter(
-      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid",
-      0, agg);
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001_metric_replicaid", 0,
+      agg);
     mr.close();
 
     // test region with replica id > 0
     mr = new MetricsRegion(new MetricsRegionWrapperStub(1), new Configuration());
     agg = mr.getSource().getAggregateSource();
-    HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
-      + "_metric_storeCount", 101, agg);
+    HELPER.assertGauge(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_storeCount",
+      101, agg);
     HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
       + "_metric_storeFileCount", 102, agg);
-    HELPER.assertGauge("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
-      + "_metric_memstoreSize", 103, agg);
+    HELPER.assertGauge(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_memstoreSize",
+      103, agg);
     HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
       + "_metric_cpRequestCount", 108, agg);
     HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
       + "_metric_filteredReadRequestCount", 107, agg);
-    HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
-      + "_metric_replicaid", 1, agg);
+    HELPER.assertCounter(
+      "namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001" + "_metric_replicaid", 1,
+      agg);
     HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"
       + "_metric_compactionsQueuedCount", 4, agg);
     HELPER.assertCounter("namespace_TestNS_table_MetricsRegionWrapperStub_region_DEADBEEF001"

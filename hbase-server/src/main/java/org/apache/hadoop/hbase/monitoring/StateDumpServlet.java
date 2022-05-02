@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,15 +20,13 @@ package org.apache.hadoop.hbase.monitoring;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
-
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public abstract class StateDumpServlet extends HttpServlet {
@@ -42,11 +39,11 @@ public abstract class StateDumpServlet extends HttpServlet {
     out.println("Hadoop " + org.apache.hadoop.util.VersionInfo.getVersion());
     out.println("Source code repository " + org.apache.hadoop.util.VersionInfo.getUrl()
       + " revision=" + org.apache.hadoop.util.VersionInfo.getRevision());
-    out.println("Compiled by " + org.apache.hadoop.util.VersionInfo.getUser() +
-        " on " + org.apache.hadoop.util.VersionInfo.getDate());
+    out.println("Compiled by " + org.apache.hadoop.util.VersionInfo.getUser() + " on "
+      + org.apache.hadoop.util.VersionInfo.getDate());
   }
 
-  protected boolean isShowQueueDump(Configuration conf){
+  protected boolean isShowQueueDump(Configuration conf) {
     return conf.getBoolean("hbase.regionserver.servlet.show.queuedump", true);
   }
 
@@ -58,8 +55,7 @@ public abstract class StateDumpServlet extends HttpServlet {
     return Long.parseLong(param);
   }
 
-  protected void dumpExecutors(ExecutorService service, PrintWriter out)
-      throws IOException {
+  protected void dumpExecutors(ExecutorService service, PrintWriter out) throws IOException {
     if (service == null) {
       out.println("ExecutorService is not initialized");
       return;

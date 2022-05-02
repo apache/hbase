@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,7 @@ public class TestRegionReplicasAreDistributed {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicasAreDistributed.class);
+    HBaseClassTestRule.forClass(TestRegionReplicasAreDistributed.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicasAreDistributed.class);
 
@@ -72,7 +72,7 @@ public class TestRegionReplicasAreDistributed {
     HTU.startMiniCluster(NB_SERVERS);
     Thread.sleep(3000);
     final TableName tableName =
-        TableName.valueOf(TestRegionReplicasAreDistributed.class.getSimpleName());
+      TableName.valueOf(TestRegionReplicasAreDistributed.class.getSimpleName());
 
     // Create table then get the single region for our new table.
     createTableDirectlyFromHTD(tableName);
@@ -133,7 +133,7 @@ public class TestRegionReplicasAreDistributed {
 
   private boolean checkAndAssertRegionDistribution(boolean checkfourth) throws Exception {
     Collection<RegionInfo> onlineRegions =
-        new ArrayList<RegionInfo>(getRS().getOnlineRegionsLocalContext().size());
+      new ArrayList<RegionInfo>(getRS().getOnlineRegionsLocalContext().size());
     for (HRegion region : getRS().getOnlineRegionsLocalContext()) {
       onlineRegions.add(region.getRegionInfo());
     }
@@ -142,7 +142,7 @@ public class TestRegionReplicasAreDistributed {
       this.serverVsOnlineRegions.put(getRS().getServerName(), onlineRegions);
     } else {
       Collection<RegionInfo> existingRegions =
-          new ArrayList<RegionInfo>(this.serverVsOnlineRegions.get(getRS().getServerName()));
+        new ArrayList<RegionInfo>(this.serverVsOnlineRegions.get(getRS().getServerName()));
       LOG.info("Count is " + existingRegions.size() + " " + onlineRegions.size());
       for (RegionInfo existingRegion : existingRegions) {
         if (!onlineRegions.contains(existingRegion)) {
@@ -151,7 +151,7 @@ public class TestRegionReplicasAreDistributed {
       }
     }
     Collection<RegionInfo> onlineRegions2 =
-        new ArrayList<RegionInfo>(getSecondaryRS().getOnlineRegionsLocalContext().size());
+      new ArrayList<RegionInfo>(getSecondaryRS().getOnlineRegionsLocalContext().size());
     for (HRegion region : getSecondaryRS().getOnlineRegionsLocalContext()) {
       onlineRegions2.add(region.getRegionInfo());
     }
@@ -160,7 +160,7 @@ public class TestRegionReplicasAreDistributed {
       this.serverVsOnlineRegions2.put(getSecondaryRS().getServerName(), onlineRegions2);
     } else {
       Collection<RegionInfo> existingRegions = new ArrayList<RegionInfo>(
-          this.serverVsOnlineRegions2.get(getSecondaryRS().getServerName()));
+        this.serverVsOnlineRegions2.get(getSecondaryRS().getServerName()));
       LOG.info("Count is " + existingRegions.size() + " " + onlineRegions2.size());
       for (RegionInfo existingRegion : existingRegions) {
         if (!onlineRegions2.contains(existingRegion)) {
@@ -169,7 +169,7 @@ public class TestRegionReplicasAreDistributed {
       }
     }
     Collection<RegionInfo> onlineRegions3 =
-        new ArrayList<RegionInfo>(getTertiaryRS().getOnlineRegionsLocalContext().size());
+      new ArrayList<RegionInfo>(getTertiaryRS().getOnlineRegionsLocalContext().size());
     for (HRegion region : getTertiaryRS().getOnlineRegionsLocalContext()) {
       onlineRegions3.add(region.getRegionInfo());
     }
@@ -177,8 +177,8 @@ public class TestRegionReplicasAreDistributed {
       this.serverVsOnlineRegions3 = new HashMap<ServerName, Collection<RegionInfo>>();
       this.serverVsOnlineRegions3.put(getTertiaryRS().getServerName(), onlineRegions3);
     } else {
-      Collection<RegionInfo> existingRegions = new ArrayList<RegionInfo>(
-          this.serverVsOnlineRegions3.get(getTertiaryRS().getServerName()));
+      Collection<RegionInfo> existingRegions =
+        new ArrayList<RegionInfo>(this.serverVsOnlineRegions3.get(getTertiaryRS().getServerName()));
       LOG.info("Count is " + existingRegions.size() + " " + onlineRegions3.size());
       for (RegionInfo existingRegion : existingRegions) {
         if (!onlineRegions3.contains(existingRegion)) {

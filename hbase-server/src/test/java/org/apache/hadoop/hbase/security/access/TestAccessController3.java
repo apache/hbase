@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,29 +57,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Performs checks for reference counting w.r.t. AuthManager which is used by
- * AccessController.
- *
- * NOTE: Only one test in  here. In AMv2, there is problem deleting because
- * we are missing auth. For now disabled. See the cleanup method.
+ * Performs checks for reference counting w.r.t. AuthManager which is used by AccessController.
+ * NOTE: Only one test in here. In AMv2, there is problem deleting because we are missing auth. For
+ * now disabled. See the cleanup method.
  */
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestAccessController3 extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAccessController3.class);
+    HBaseClassTestRule.forClass(TestAccessController3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
-  /** The systemUserConnection created here is tied to the system user. In case, you are planning
-   * to create AccessTestAction, DON'T use this systemUserConnection as the 'doAs' user
-   * gets  eclipsed by the system user. */
+  /**
+   * The systemUserConnection created here is tied to the system user. In case, you are planning to
+   * create AccessTestAction, DON'T use this systemUserConnection as the 'doAs' user gets eclipsed
+   * by the system user.
+   */
   private static Connection systemUserConnection;
-
 
   // user with all permissions
   private static User SUPERUSER;
@@ -162,8 +161,7 @@ public class TestAccessController3 extends SecureTestUtil {
     CP_ENV = cpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost;
     do {
-      rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-          .getRegionServerCoprocessorHost();
+      rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
     } while (rsHost == null);
     RSCP_ENV = rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
@@ -181,13 +179,13 @@ public class TestAccessController3 extends SecureTestUtil {
     USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
 
     USER_GROUP_ADMIN =
-        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+      User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
     USER_GROUP_CREATE =
-        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+      User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
-        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+      User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
-        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+      User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
     // Grant table creation permission to USER_OWNER
     grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);
@@ -199,8 +197,8 @@ public class TestAccessController3 extends SecureTestUtil {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     assertEquals(1, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size());
-    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().get(0).
-      getRegionServer();
+    HRegionServer rs =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().get(0).getRegionServer();
     // Strange place for an assert.
     assertFalse("RegionServer should have ABORTED (FaultyAccessController)", rs.isAborted());
     cleanUp();
@@ -208,9 +206,11 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TEST_TABLE)
-      .setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build()).build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TEST_TABLE)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(TEST_FAMILY).setMaxVersions(100).build())
+        .build();
     createTable(TEST_UTIL, USER_OWNER, tableDescriptor, new byte[][] { Bytes.toBytes("s") });
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
@@ -219,31 +219,21 @@ public class TestAccessController3 extends SecureTestUtil {
 
     // Set up initial grants
 
-    grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(),
-      Permission.Action.ADMIN,
-      Permission.Action.CREATE,
-      Permission.Action.READ,
-      Permission.Action.WRITE);
+    grantGlobal(TEST_UTIL, USER_ADMIN.getShortName(), Permission.Action.ADMIN,
+      Permission.Action.CREATE, Permission.Action.READ, Permission.Action.WRITE);
 
-    grantOnTable(TEST_UTIL, USER_RW.getShortName(),
-      TEST_TABLE, TEST_FAMILY, null,
-      Permission.Action.READ,
-      Permission.Action.WRITE);
+    grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+      Permission.Action.READ, Permission.Action.WRITE);
 
     // USER_CREATE is USER_RW plus CREATE permissions
-    grantOnTable(TEST_UTIL, USER_CREATE.getShortName(),
-      TEST_TABLE, null, null,
-      Permission.Action.CREATE,
-      Permission.Action.READ,
-      Permission.Action.WRITE);
+    grantOnTable(TEST_UTIL, USER_CREATE.getShortName(), TEST_TABLE, null, null,
+      Permission.Action.CREATE, Permission.Action.READ, Permission.Action.WRITE);
 
-    grantOnTable(TEST_UTIL, USER_RO.getShortName(),
-      TEST_TABLE, TEST_FAMILY, null,
+    grantOnTable(TEST_UTIL, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
       Permission.Action.READ);
 
-    grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(),
-      TEST_TABLE, TEST_FAMILY,
-      null, Permission.Action.ADMIN, Permission.Action.CREATE);
+    grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+      Permission.Action.ADMIN, Permission.Action.CREATE);
 
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
@@ -252,8 +242,8 @@ public class TestAccessController3 extends SecureTestUtil {
 
     assertEquals(5, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     try {
-      assertEquals(5, AccessControlClient.getUserPermissions(systemUserConnection,
-          TEST_TABLE.toString()).size());
+      assertEquals(5,
+        AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString()).size());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
     }

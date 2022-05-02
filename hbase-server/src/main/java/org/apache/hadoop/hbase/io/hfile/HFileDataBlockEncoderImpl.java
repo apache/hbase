@@ -1,24 +1,24 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -31,8 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Do different kinds of data block encoding according to column family
- * options.
+ * Do different kinds of data block encoding according to column family options.
  */
 @InterfaceAudience.Private
 public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
@@ -46,8 +45,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     this.encoding = encoding != null ? encoding : DataBlockEncoding.NONE;
   }
 
-  public static HFileDataBlockEncoder createFromFileInfo(
-      HFileInfo fileInfo) throws IOException {
+  public static HFileDataBlockEncoder createFromFileInfo(HFileInfo fileInfo) throws IOException {
     DataBlockEncoding encoding = DataBlockEncoding.NONE;
     byte[] dataBlockEncodingType = fileInfo.get(DATA_BLOCK_ENCODING);
     if (dataBlockEncodingType != null) {
@@ -55,8 +53,8 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       try {
         encoding = DataBlockEncoding.valueOf(dataBlockEncodingStr);
       } catch (IllegalArgumentException ex) {
-        throw new IOException("Invalid data block encoding type in file info: "
-          + dataBlockEncodingStr, ex);
+        throw new IOException(
+          "Invalid data block encoding type in file info: " + dataBlockEncodingStr, ex);
       }
     }
 
@@ -93,7 +91,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
-      throws IOException {
+    throws IOException {
     this.encoding.getEncoder().encode(cell, encodingCtx, out);
   }
 
@@ -102,7 +100,6 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     return encoding != DataBlockEncoding.NONE;
   }
 
-
   @Override
   public String toString() {
     return getClass().getSimpleName() + "(encoding=" + encoding + ")";
@@ -110,7 +107,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
-      byte[] dummyHeader, HFileContext fileContext) {
+    byte[] dummyHeader, HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
       return encoder.newDataBlockEncodingContext(conf, encoding, dummyHeader, fileContext);
@@ -120,7 +117,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf,
-      HFileContext fileContext) {
+    HFileContext fileContext) {
     DataBlockEncoder encoder = encoding.getEncoder();
     if (encoder != null) {
       return encoder.newDataBlockDecodingContext(conf, fileContext);
@@ -130,7 +127,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
-      throws IOException {
+    throws IOException {
     if (this.encoding != null && this.encoding != DataBlockEncoding.NONE) {
       this.encoding.getEncoder().startBlockEncoding(encodingCtx, out);
     }
@@ -138,7 +135,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
 
   @Override
   public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
-      byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException {
+    byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException {
     this.encoding.getEncoder().endBlockEncoding(encodingCtx, out, uncompressedBytesWithHeader);
   }
 }

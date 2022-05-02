@@ -60,7 +60,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * all checks passes then the procedure can not be rolled back any more.
    */
   protected abstract void prePeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException, InterruptedException;
+    throws IOException, ReplicationException, InterruptedException;
 
   protected abstract void updatePeerStorage(MasterProcedureEnv env) throws ReplicationException;
 
@@ -74,7 +74,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * update the peer storage.
    */
   protected abstract void postPeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException;
+    throws IOException, ReplicationException;
 
   protected void releaseLatch(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(latch, this);
@@ -105,7 +105,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
   }
 
   protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     throw new UnsupportedOperationException();
   }
 
@@ -143,8 +143,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
       if (!peerConfig.needToReplicate(tn)) {
         continue;
       }
-      if (oldPeerConfig != null && oldPeerConfig.isSerial() &&
-        oldPeerConfig.needToReplicate(tn)) {
+      if (oldPeerConfig != null && oldPeerConfig.isSerial() && oldPeerConfig.needToReplicate(tn)) {
         continue;
       }
       if (needReopen(tsm, tn)) {
@@ -155,14 +154,14 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, PeerModificationState state)
-      throws ProcedureSuspendedException, InterruptedException {
+    throws ProcedureSuspendedException, InterruptedException {
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
           prePeerModification(env);
         } catch (IOException e) {
-          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, " +
-            "mark the procedure as failure and give up", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
+            + "mark the procedure as failure and give up", getClass().getName(), peerId, e);
           setFailure("master-" + getPeerOperationType().name().toLowerCase() + "-peer", e);
           releaseLatch(env);
           return Flow.NO_MORE_STATE;
@@ -209,7 +208,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               getClass().getName(), peerId, backoff / 1000, e));
         }
         resetRetry();
-        setNextState(enablePeerBeforeFinish() ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
+        setNextState(enablePeerBeforeFinish()
+          ? PeerModificationState.SERIAL_PEER_SET_PEER_ENABLED
           : PeerModificationState.POST_PEER_MODIFICATION);
         return Flow.HAS_MORE_STATE;
       case SERIAL_PEER_SET_PEER_ENABLED:
@@ -236,8 +236,8 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
               "{} failed to call postPeerModification for peer {},  sleep {} secs",
               getClass().getName(), peerId, backoff / 1000, e));
         } catch (IOException e) {
-          LOG.warn("{} failed to call post CP hook for peer {}, " +
-            "ignore since the procedure has already done", getClass().getName(), peerId, e);
+          LOG.warn("{} failed to call post CP hook for peer {}, "
+            + "ignore since the procedure has already done", getClass().getName(), peerId, e);
         }
         releaseLatch(env);
         return Flow.NO_MORE_STATE;

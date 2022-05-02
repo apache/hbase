@@ -851,9 +851,11 @@
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.21.0</spotless.version>
+    <spotless.version>2.22.2</spotless.version>
+    <maven-site.version>3.11.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
+    <brotli4j.version>1.7.1</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
@@ -1217,6 +1219,11 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-compression-aircompressor</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-compression-brotli</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -1781,6 +1788,10 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <!--
+              The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
+              careful when you want to change this value. See HBASE-26947 for more details.
+            -->
             <reuseForks>false</reuseForks>
             <reportsDirectory>${surefire.reportsDirectory}</reportsDirectory>
             <tempDir>${surefire.tempDir}</tempDir>
@@ -1825,6 +1836,10 @@
               <configuration>
                 <skip>${surefire.skipSecondPart}</skip>
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
+                <!--
+                  The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
+                  careful when you want to change this value. See HBASE-26947 for more details.
+                -->
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
                 <groups>${surefire.secondPartGroups}</groups>
@@ -2331,6 +2346,10 @@
                     <bannedImport>org.apache.log4j.**</bannedImport>
                     <bannedImport>org.apache.logging.log4j.**</bannedImport>
                   </bannedImports>
+                  <exclusions>
+                    <!-- Exclude this one as it is a log4j2 appender implementation -->
+                    <exclusion>org.apache.hadoop.hbase.logging.HBaseTestAppender</exclusion>
+                  </exclusions>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>false</includeTestCode>
@@ -2510,6 +2529,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
+        <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
           <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
@@ -2681,10 +2701,25 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
-          <!-- optional: limit format enforcement to just the files changed from this point -->
-          <ratchetFrom>620e5c6d0af57ddb67e18bb97725e1d87ffb5fe5</ratchetFrom>
           <!-- define a language-specific format -->
           <java>
+            <excludes>
+              <exclude>**/generated/*</exclude>
+              <exclude>**/package-info.java</exclude>
+            </excludes>
+            <!--
+              e.g., remove the following lines:
+              "* @param paramName"
+              "* @throws ExceptionType"
+              "* @return returnType"'
+              Multiline to allow anchors on newlines
+            -->
+            <replaceRegex>
+              <name>Remove unhelpful javadoc stubs</name>
+              <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
+              <!-- spotless manve plugin does not allow empty here, so use \n -->
+              <replacement>\n</replacement>
+            </replaceRegex>
             <!-- apply a specific flavor -->
             <eclipse>
               <file>${session.executionRootDirectory}/dev-support/hbase_eclipse_formatter.xml</file>
@@ -2692,19 +2727,40 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
             <!-- make sure every file has the following copyright header.
               optionally, Spotless can set copyright years by digging
               through git history (see "license" section below) -->
             <licenseHeader>
               <file>${session.executionRootDirectory}/dev-support/license-header</file>
             </licenseHeader>
+            <removeUnusedImports/>
           </java>
           <pom>
             <sortPom>
               <expandEmptyElements>false</expandEmptyElements>
             </sortPom>
           </pom>
-          <removeUnusedImports/>
+          <formats>
+            <!-- you can define as many formats as you want, each is independent -->
+            <format>
+              <!-- define the files to apply to -->
+              <includes>
+                <include>**/*.xml</include>
+                <include>**/*.sh</include>
+                <include>**/*.py</include>
+                <include>**/Jenkinsfile*</include>
+                <include>**/*.md</include>
+                <include>*.md</include>
+                <include>**/*.txt</include>
+                <include>*.txt</include>
+              </includes>
+              <!-- define the steps to apply to those files -->
+              <trimTrailingWhitespace/>
+              <endWithNewline/>
+            </format>
+          </formats>
         </configuration>
       </plugin>
     </plugins>
@@ -3036,7 +3092,16 @@
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
-        <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
+        <argLine>-Dio.netty.tryReflectionSetAccessible=true
+          --illegal-access=permit
+          --add-modules jdk.unsupported
+          --add-opens java.base/java.nio=ALL-UNNAMED
+          --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+          --add-opens java.base/java.lang=ALL-UNNAMED
+          --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+          --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+          ${hbase-surefire.argLine}</argLine>
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
         <hadoop-three.version>3.2.0</hadoop-three.version>
         <!--

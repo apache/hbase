@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +34,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestStealJobQueue {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStealJobQueue.class);
+    HBaseClassTestRule.forClass(TestStealJobQueue.class);
 
   StealJobQueue<Integer> stealJobQueue;
   BlockingQueue<Integer> stealFromQueue;
@@ -51,7 +51,6 @@ public class TestStealJobQueue {
 
   }
 
-
   @Test
   public void testTake() throws InterruptedException {
     stealJobQueue.offer(3);
@@ -61,7 +60,7 @@ public class TestStealJobQueue {
     assertEquals(3, stealJobQueue.take().intValue());
     assertEquals(4, stealJobQueue.take().intValue());
     assertEquals("always take from the main queue before trying to steal", 15,
-            stealJobQueue.take().intValue());
+      stealJobQueue.take().intValue());
     assertEquals(10, stealJobQueue.take().intValue());
     assertTrue(stealFromQueue.isEmpty());
     assertTrue(stealJobQueue.isEmpty());
@@ -85,9 +84,8 @@ public class TestStealJobQueue {
     stealFromQueue.offer(3);
     consumer.join(1000);
     assertEquals(3, taken.get());
-    consumer.interrupt(); //Ensure the consumer thread will stop.
+    consumer.interrupt(); // Ensure the consumer thread will stop.
   }
-
 
   @Test
   public void testOfferInStealJobQueueShouldUnblock() throws InterruptedException {
@@ -107,9 +105,8 @@ public class TestStealJobQueue {
     stealJobQueue.offer(3);
     consumer.join(1000);
     assertEquals(3, taken.get());
-    consumer.interrupt(); //Ensure the consumer thread will stop.
+    consumer.interrupt(); // Ensure the consumer thread will stop.
   }
-
 
   @Test
   public void testPoll() throws InterruptedException {
@@ -120,7 +117,7 @@ public class TestStealJobQueue {
     assertEquals(3, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertEquals(4, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertEquals("always take from the main queue before trying to steal", 15,
-            stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
+      stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertEquals(10, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertTrue(stealFromQueue.isEmpty());
     assertTrue(stealJobQueue.isEmpty());
@@ -145,10 +142,9 @@ public class TestStealJobQueue {
     stealFromQueue.put(3);
     consumer.join(1000);
     assertEquals(3, taken.get());
-    consumer.interrupt(); //Ensure the consumer thread will stop.
+    consumer.interrupt(); // Ensure the consumer thread will stop.
 
   }
-
 
   @Test
   public void testAddInStealJobQueueShouldUnblockPoll() throws InterruptedException {
@@ -168,14 +164,13 @@ public class TestStealJobQueue {
     stealJobQueue.add(3);
     consumer.join(1000);
     assertEquals(3, taken.get());
-    consumer.interrupt(); //Ensure the consumer thread will stop.
+    consumer.interrupt(); // Ensure the consumer thread will stop.
   }
-
 
   @Test
   public void testInteractWithThreadPool() throws InterruptedException {
     StealJobQueue<Runnable> stealTasksQueue =
-        new StealJobQueue<>((r1, r2) -> ((TestTask) r1).compareTo((TestTask) r2));
+      new StealJobQueue<>((r1, r2) -> ((TestTask) r1).compareTo((TestTask) r2));
     final CountDownLatch stealJobCountDown = new CountDownLatch(3);
     final CountDownLatch stealFromCountDown = new CountDownLatch(3);
     ThreadPoolExecutor stealPool = new ThreadPoolExecutor(3, 3, 1, TimeUnit.DAYS, stealTasksQueue) {
@@ -187,17 +182,17 @@ public class TestStealJobQueue {
 
     };
 
-    //This is necessary otherwise no worker will be running and stealing job
+    // This is necessary otherwise no worker will be running and stealing job
     stealPool.prestartAllCoreThreads();
 
-    ThreadPoolExecutor stealFromPool = new ThreadPoolExecutor(3, 3, 1, TimeUnit.DAYS,
-            stealTasksQueue.getStealFromQueue()) {
-      @Override
-      protected void afterExecute(Runnable r, Throwable t) {
-        super.afterExecute(r, t);
-        stealFromCountDown.countDown();
-      }
-    };
+    ThreadPoolExecutor stealFromPool =
+      new ThreadPoolExecutor(3, 3, 1, TimeUnit.DAYS, stealTasksQueue.getStealFromQueue()) {
+        @Override
+        protected void afterExecute(Runnable r, Throwable t) {
+          super.afterExecute(r, t);
+          stealFromCountDown.countDown();
+        }
+      };
 
     for (int i = 0; i < 4; i++) {
       TestTask task = new TestTask();

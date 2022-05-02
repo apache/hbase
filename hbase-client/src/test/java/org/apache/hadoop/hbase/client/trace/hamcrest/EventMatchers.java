@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client.trace.hamcrest;
 
 import static org.hamcrest.Matchers.equalTo;
+
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.sdk.trace.data.EventData;
 import org.hamcrest.FeatureMatcher;
@@ -28,12 +29,14 @@ import org.hamcrest.Matcher;
  */
 public final class EventMatchers {
 
-  private EventMatchers() { }
+  private EventMatchers() {
+  }
 
   public static Matcher<EventData> hasAttributes(Matcher<Attributes> matcher) {
-    return new FeatureMatcher<EventData, Attributes>(
-      matcher, "EventData having attributes that ", "attributes") {
-      @Override protected Attributes featureValueOf(EventData actual) {
+    return new FeatureMatcher<EventData, Attributes>(matcher, "EventData having attributes that ",
+      "attributes") {
+      @Override
+      protected Attributes featureValueOf(EventData actual) {
         return actual.getAttributes();
       }
     };
@@ -45,7 +48,8 @@ public final class EventMatchers {
 
   public static Matcher<EventData> hasName(Matcher<String> matcher) {
     return new FeatureMatcher<EventData, String>(matcher, "EventData with a name that ", "name") {
-      @Override protected String featureValueOf(EventData actual) {
+      @Override
+      protected String featureValueOf(EventData actual) {
         return actual.getName();
       }
     };

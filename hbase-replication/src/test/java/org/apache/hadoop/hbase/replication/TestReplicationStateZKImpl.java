@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationStateZKImpl.class);
+    HBaseClassTestRule.forClass(TestReplicationStateZKImpl.class);
 
   private static Configuration conf;
   private static HBaseZKTestingUtil utility;
@@ -64,13 +64,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   }
 
   private static String initPeerClusterState(String baseZKNode)
-      throws IOException, KeeperException {
+    throws IOException, KeeperException {
     // Add a dummy region server and set up the cluster id
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
     ZKWatcher zkw1 = new ZKWatcher(testConf, "test1", null);
-    String fakeRs = ZNodePaths.joinZNode(zkw1.getZNodePaths().rsZNode,
-            "hostname1.example.org:1234");
+    String fakeRs =
+      ZNodePaths.joinZNode(zkw1.getZNodePaths().rsZNode, "hostname1.example.org:1234");
     ZKUtil.createWithParents(zkw1, fakeRs);
     ZKClusterId.setClusterId(zkw1, new ClusterId());
     return ZKConfig.getZooKeeperClusterKey(testConf);

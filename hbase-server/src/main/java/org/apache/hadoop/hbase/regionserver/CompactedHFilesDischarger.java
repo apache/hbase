@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
@@ -29,8 +28,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A chore service that periodically cleans up the compacted files when there are no active readers
- * using those compacted files and also helps in clearing the block cache of these compacted
- * file entries.
+ * using those compacted files and also helps in clearing the block cache of these compacted file
+ * entries.
  */
 @InterfaceAudience.Private
 public class CompactedHFilesDischarger extends ScheduledChore {
@@ -40,34 +39,35 @@ public class CompactedHFilesDischarger extends ScheduledChore {
   private boolean useExecutor = true;
 
   /**
-   * @param period the period of time to sleep between each run
-   * @param stopper the stopper
+   * @param period               the period of time to sleep between each run
+   * @param stopper              the stopper
    * @param regionServerServices the region server that starts this chore
    */
   public CompactedHFilesDischarger(final int period, final Stoppable stopper,
-      final RegionServerServices regionServerServices) {
+    final RegionServerServices regionServerServices) {
     // Need to add the config classes
     super("CompactedHFilesCleaner", stopper, period);
     this.regionServerServices = regionServerServices;
   }
 
   /**
-   * @param period the period of time to sleep between each run
-   * @param stopper the stopper
+   * @param period               the period of time to sleep between each run
+   * @param stopper              the stopper
    * @param regionServerServices the region server that starts this chore
-   * @param useExecutor true if to use the region server's executor service, false otherwise
+   * @param useExecutor          true if to use the region server's executor service, false
+   *                             otherwise
    */
   public CompactedHFilesDischarger(final int period, final Stoppable stopper,
-      final RegionServerServices regionServerServices, boolean useExecutor) {
+    final RegionServerServices regionServerServices, boolean useExecutor) {
     // Need to add the config classes
     this(period, stopper, regionServerServices);
     this.useExecutor = useExecutor;
   }
 
   /**
-   * CompactedHFilesDischarger runs asynchronously by default using the hosting
-   * RegionServer's Executor. In tests it can be useful to force a synchronous
-   * cleanup. Use this method to set no-executor before you call run.
+   * CompactedHFilesDischarger runs asynchronously by default using the hosting RegionServer's
+   * Executor. In tests it can be useful to force a synchronous cleanup. Use this method to set
+   * no-executor before you call run.
    * @return The old setting for <code>useExecutor</code>
    */
   boolean setUseExecutor(final boolean useExecutor) {
@@ -91,7 +91,7 @@ public class CompactedHFilesDischarger extends ScheduledChore {
         try {
           if (useExecutor && regionServerServices != null) {
             CompactedHFilesDischargeHandler handler = new CompactedHFilesDischargeHandler(
-                (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER, store);
+              (Server) regionServerServices, EventType.RS_COMPACTED_FILES_DISCHARGER, store);
             regionServerServices.getExecutorService().submit(handler);
           } else {
             // call synchronously if the RegionServerServices are not
@@ -100,17 +100,17 @@ public class CompactedHFilesDischarger extends ScheduledChore {
           }
           if (LOG.isTraceEnabled()) {
             LOG.trace("Completed archiving the compacted files for the region "
-                + region.getRegionInfo() + " under the store " + store.getColumnFamilyName());
+              + region.getRegionInfo() + " under the store " + store.getColumnFamilyName());
           }
         } catch (Exception e) {
           LOG.error("Exception while trying to close and archive the compacted store "
-              + "files of the store  " + store.getColumnFamilyName() + " in the" + " region "
-              + region.getRegionInfo(), e);
+            + "files of the store  " + store.getColumnFamilyName() + " in the" + " region "
+            + region.getRegionInfo(), e);
         }
       }
       if (LOG.isTraceEnabled()) {
-        LOG.trace(
-            "Completed the compacted hfiles cleaner for the region " + region.getRegionInfo());
+        LOG
+          .trace("Completed the compacted hfiles cleaner for the region " + region.getRegionInfo());
       }
     }
   }

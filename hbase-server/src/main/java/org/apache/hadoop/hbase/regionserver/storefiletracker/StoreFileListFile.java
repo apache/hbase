@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,8 +101,8 @@ class StoreFileListFile {
     try (FSDataInputStream in = fs.open(path)) {
       int length = in.readInt();
       if (length <= 0 || length > MAX_FILE_SIZE) {
-        throw new IOException("Invalid file length " + length +
-          ", either less than 0 or greater then max allowed size " + MAX_FILE_SIZE);
+        throw new IOException("Invalid file length " + length
+          + ", either less than 0 or greater then max allowed size " + MAX_FILE_SIZE);
       }
       data = new byte[length];
       in.readFully(data);
@@ -191,8 +191,8 @@ class StoreFileListFile {
       // should not have more than 2 files, if not, it means that the track files are broken, just
       // throw exception out and fail the region open.
       if (files.size() > 2) {
-        throw new DoNotRetryIOException("Should only have at most 2 track files for sequence id " +
-          entry.getKey() + ", but got " + files.size() + " files: " + files);
+        throw new DoNotRetryIOException("Should only have at most 2 track files for sequence id "
+          + entry.getKey() + ", but got " + files.size() + " files: " + files);
       }
       boolean loaded = false;
       for (int i = 0; i < files.size(); i++) {
@@ -200,8 +200,8 @@ class StoreFileListFile {
           lists[i] = load(files.get(i));
           loaded = true;
         } catch (EOFException e) {
-          // this is normal case, so use info and do not log stacktrace
-          LOG.info("Failed to load track file {}: {}", trackFiles[i], e.toString());
+          // this is normal case, so just log at debug
+          LOG.debug("EOF loading track file {}, ignoring the exception", trackFiles[i], e);
         }
       }
       if (loaded) {
@@ -258,7 +258,7 @@ class StoreFileListFile {
     } catch (IOException e) {
       // we will create new file with overwrite = true, so not a big deal here, only for speed up
       // loading as we do not need to read this file when loading
-      LOG.debug("failed to delete old track file {}, not a big deal, just ignore", e);
+      LOG.debug("Failed to delete old track file {}, ignoring the exception", e);
     }
   }
 }

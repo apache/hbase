@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,8 +64,8 @@ class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     tracker.setPartialFlag(true);
   }
 
-  public ProcedureWALFile(FileSystem fs, Path logFile, ProcedureWALHeader header,
-      long startPos, long timestamp) {
+  public ProcedureWALFile(FileSystem fs, Path logFile, ProcedureWALHeader header, long startPos,
+    long timestamp) {
     this.fs = fs;
     this.header = header;
     this.logFile = logFile;
@@ -101,7 +101,7 @@ class ProcedureWALFile implements Comparable<ProcedureWALFile> {
     try {
       stream.seek(trailer.getTrackerPos());
       final ProcedureProtos.ProcedureStoreTracker trackerProtoBuf =
-          ProcedureProtos.ProcedureStoreTracker.parseDelimitedFrom(stream);
+        ProcedureProtos.ProcedureStoreTracker.parseDelimitedFrom(stream);
       tracker.resetToProto(trackerProtoBuf);
     } finally {
       stream.seek(startPos);
@@ -205,7 +205,7 @@ class ProcedureWALFile implements Comparable<ProcedureWALFile> {
       return false;
     }
 
-    return compareTo((ProcedureWALFile)o) == 0;
+    return compareTo((ProcedureWALFile) o) == 0;
   }
 
   @Override

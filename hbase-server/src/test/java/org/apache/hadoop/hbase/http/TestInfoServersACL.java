@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.http;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.net.HttpURLConnection;
@@ -79,7 +80,7 @@ public class TestInfoServersACL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestInfoServersACL.class);
+    HBaseClassTestRule.forClass(TestInfoServersACL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestInfoServersACL.class);
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -113,12 +114,11 @@ public class TestInfoServersACL {
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL, USER_ADMIN_STR, USER_NONE_STR);
     UTIL.startMiniZKCluster();
 
-    HBaseKerberosUtils.setSecuredConfiguration(conf,
-        PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+    HBaseKerberosUtils.setSecuredConfiguration(conf, PRINCIPAL + "@" + KDC.getRealm(),
+      HTTP_PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSSLConfiguration(UTIL, TestInfoServersACL.class);
 
-    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        TokenProvider.class.getName());
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, TokenProvider.class.getName());
     UTIL.startMiniDFSCluster(1);
     Path rootdir = UTIL.getDataTestDirOnTestFS("TestInfoServersACL");
     CommonFSUtils.setRootDir(conf, rootdir);
@@ -137,7 +137,7 @@ public class TestInfoServersACL {
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     // only user admin will have acl access
     conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY, USER_ADMIN_STR);
-    //conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, "");
+    // conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, "");
 
     CLUSTER = new LocalHBaseCluster(conf, 1);
     CLUSTER.startup();
@@ -161,13 +161,14 @@ public class TestInfoServersACL {
 
   @Test
   public void testAuthorizedUser() throws Exception {
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
         String expectedContent = "Get Log Level";
-        Pair<Integer,String> pair = getLogLevelPage();
+        Pair<Integer, String> pair = getLogLevelPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedContent));
@@ -178,11 +179,12 @@ public class TestInfoServersACL {
 
   @Test
   public void testUnauthorizedUser() throws Exception {
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getLogLevelPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getLogLevelPage();
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
         return null;
       }
@@ -192,12 +194,13 @@ public class TestInfoServersACL {
   @Test
   public void testTableActionsAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Actions:";
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getTablePage(TableName.META_TABLE_NAME);
+        Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -205,14 +208,16 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getTablePage(TableName.META_TABLE_NAME);
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getTablePage(TableName.META_TABLE_NAME);
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
-        assertFalse("should not find=" + expectedAuthorizedContent + ", content=" +
-            pair.getSecond(), pair.getSecond().contains(expectedAuthorizedContent));
+        assertFalse(
+          "should not find=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
+          pair.getSecond().contains(expectedAuthorizedContent));
         return null;
       }
     });
@@ -221,12 +226,13 @@ public class TestInfoServersACL {
   @Test
   public void testLogsAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Directory: /logs/";
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getLogsPage();
+        Pair<Integer, String> pair = getLogsPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -234,11 +240,12 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getLogsPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getLogsPage();
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
         return null;
       }
@@ -248,12 +255,13 @@ public class TestInfoServersACL {
   @Test
   public void testDumpActionsAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Master status for";
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getMasterDumpPage();
+        Pair<Integer, String> pair = getMasterDumpPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -261,11 +269,12 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getMasterDumpPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getMasterDumpPage();
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
         return null;
       }
@@ -275,12 +284,13 @@ public class TestInfoServersACL {
   @Test
   public void testStackActionsAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Process Thread Dump";
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getStacksPage();
+        Pair<Integer, String> pair = getStacksPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -288,11 +298,12 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getStacksPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getStacksPage();
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
         return null;
       }
@@ -305,8 +316,8 @@ public class TestInfoServersACL {
     UTIL.waitFor(30000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        for (ObjectName name: ManagementFactory.getPlatformMBeanServer().
-          queryNames(new ObjectName("*:*"), null)) {
+        for (ObjectName name : ManagementFactory.getPlatformMBeanServer()
+          .queryNames(new ObjectName("*:*"), null)) {
           if (name.toString().contains(expectedAuthorizedContent)) {
             LOG.info("{}", name);
             return true;
@@ -315,12 +326,13 @@ public class TestInfoServersACL {
         return false;
       }
     });
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getJmxPage();
+        Pair<Integer, String> pair = getJmxPage();
         assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
         assertTrue("expected=" + expectedAuthorizedContent + ", content=" + pair.getSecond(),
           pair.getSecond().contains(expectedAuthorizedContent));
@@ -328,11 +340,12 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getJmxPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getJmxPage();
         assertEquals(HttpURLConnection.HTTP_FORBIDDEN, pair.getFirst().intValue());
         return null;
       }
@@ -344,12 +357,13 @@ public class TestInfoServersACL {
     // Looks like there's nothing exported to this, but leave it since
     // it's Hadoop2 only and will eventually be removed due to that.
     final String expectedAuthorizedContent = "";
-    UserGroupInformation admin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
     admin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
+      @Override
+      public Void run() throws Exception {
         // Check the expected content is present in the http response
-        Pair<Integer,String> pair = getMetricsPage();
+        Pair<Integer, String> pair = getMetricsPage();
         if (HttpURLConnection.HTTP_NOT_FOUND == pair.getFirst()) {
           // Not on hadoop 2
           return null;
@@ -361,11 +375,12 @@ public class TestInfoServersACL {
       }
     });
 
-    UserGroupInformation nonAdmin = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
     nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override public Void run() throws Exception {
-        Pair<Integer,String> pair = getMetricsPage();
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getMetricsPage();
         if (HttpURLConnection.HTTP_NOT_FOUND == pair.getFirst()) {
           // Not on hadoop 2
           return null;
@@ -380,38 +395,38 @@ public class TestInfoServersACL {
     return "http://localhost:" + CLUSTER.getActiveMaster().getInfoServer().getPort();
   }
 
-  private Pair<Integer,String> getLogLevelPage() throws Exception {
+  private Pair<Integer, String> getLogLevelPage() throws Exception {
     // Build the url which we want to connect to
     URL url = new URL(getInfoServerHostAndPort() + "/logLevel");
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getTablePage(TableName tn) throws Exception {
+  private Pair<Integer, String> getTablePage(TableName tn) throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/table.jsp?name=" + tn.getNameAsString());
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getLogsPage() throws Exception {
+  private Pair<Integer, String> getLogsPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/logs/");
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getMasterDumpPage() throws Exception {
+  private Pair<Integer, String> getMasterDumpPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/dump");
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getStacksPage() throws Exception {
+  private Pair<Integer, String> getStacksPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/stacks");
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getJmxPage() throws Exception {
+  private Pair<Integer, String> getJmxPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/jmx");
     return getUrlContent(url);
   }
 
-  private Pair<Integer,String> getMetricsPage() throws Exception {
+  private Pair<Integer, String> getMetricsPage() throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/metrics");
     return getUrlContent(url);
   }
@@ -420,9 +435,9 @@ public class TestInfoServersACL {
    * Retrieves the content of the specified URL. The content will only be returned if the status
    * code for the operation was HTTP 200/OK.
    */
-  private Pair<Integer,String> getUrlContent(URL url) throws Exception {
-    try (CloseableHttpClient client = createHttpClient(
-        UserGroupInformation.getCurrentUser().getUserName())) {
+  private Pair<Integer, String> getUrlContent(URL url) throws Exception {
+    try (CloseableHttpClient client =
+      createHttpClient(UserGroupInformation.getCurrentUser().getUserName())) {
       CloseableHttpResponse resp = client.execute(new HttpGet(url.toURI()));
       int code = resp.getStatusLine().getStatusCode();
       if (code == HttpURLConnection.HTTP_OK) {
@@ -438,16 +453,16 @@ public class TestInfoServersACL {
     // jGSS Kerberos login constant
     Oid oid = new Oid("1.2.840.113554.1.2.2");
     GSSName gssClient = gssManager.createName(clientPrincipal, GSSName.NT_USER_NAME);
-    GSSCredential credential = gssManager.createCredential(
-        gssClient, GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+    GSSCredential credential = gssManager.createCredential(gssClient,
+      GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-    Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-        .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
+    Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+      .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
 
     BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
     credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
     return HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
-        .setDefaultCredentialsProvider(credentialsProvider).build();
+      .setDefaultCredentialsProvider(credentialsProvider).build();
   }
 }

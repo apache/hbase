@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,12 +54,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test class for the quota status RPCs in the master and regionserver.
  */
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestQuotaStatusRPCs {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaStatusRPCs.class);
+    HBaseClassTestRule.forClass(TestQuotaStatusRPCs.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestQuotaStatusRPCs.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -101,10 +101,10 @@ public class TestQuotaStatusRPCs {
     Waiter.waitFor(TEST_UTIL.getConfiguration(), 30 * 1000, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        Map<RegionInfo,Long> regionSizes = quotaManager.snapshotRegionSizes();
+        Map<RegionInfo, Long> regionSizes = quotaManager.snapshotRegionSizes();
         LOG.trace("Region sizes=" + regionSizes);
-        return numRegions == countRegionsForTable(tn, regionSizes) &&
-            tableSize <= getTableSize(tn, regionSizes);
+        return numRegions == countRegionsForTable(tn, regionSizes)
+          && tableSize <= getTableSize(tn, regionSizes);
       }
     });
 
@@ -122,8 +122,8 @@ public class TestQuotaStatusRPCs {
     final TableName tn = helper.createTableWithRegions(numRegions);
 
     // Define the quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(settings);
 
     // Write at least `tableSize` data
@@ -147,9 +147,7 @@ public class TestQuotaStatusRPCs {
       .getAdmin().getRegionServerSpaceQuotaSnapshots(rs.getServerName());
     SpaceQuotaSnapshot snapshot = snapshots.get(tn);
     assertNotNull("Did not find snapshot for " + tn, snapshot);
-    assertTrue(
-        "Observed table usage was " + snapshot.getUsage(),
-        snapshot.getUsage() >= tableSize);
+    assertTrue("Observed table usage was " + snapshot.getUsage(), snapshot.getUsage() >= tableSize);
     assertEquals(sizeLimit, snapshot.getLimit());
     SpaceQuotaStatus pbStatus = snapshot.getQuotaStatus();
     assertFalse(pbStatus.isInViolation());
@@ -163,8 +161,8 @@ public class TestQuotaStatusRPCs {
     final TableName tn = helper.createTableWithRegions(numRegions);
 
     // Define the quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(settings);
 
     // Write at least `tableSize` data
@@ -211,11 +209,11 @@ public class TestQuotaStatusRPCs {
     final TableName tn = helper.createTableWithRegions(numRegions);
 
     // Define the quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, sizeLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(settings);
-    QuotaSettings nsSettings = QuotaSettingsFactory.limitNamespaceSpace(
-        tn.getNamespaceAsString(), nsLimit, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings nsSettings = QuotaSettingsFactory.limitNamespaceSpace(tn.getNamespaceAsString(),
+      nsLimit, SpaceViolationPolicy.NO_INSERTS);
     TEST_UTIL.getAdmin().setQuota(nsSettings);
 
     // Write at least `tableSize` data
@@ -256,7 +254,7 @@ public class TestQuotaStatusRPCs {
     SpaceQuotaSnapshot snapshot =
       (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn);
     assertTrue("QuotaSnapshot for " + tn + " should be non-null and not in violation",
-        snapshot != null && !snapshot.getQuotaStatus().isInViolation());
+      snapshot != null && !snapshot.getQuotaStatus().isInViolation());
 
     try {
       helper.writeData(tn, tableSize * 2L);
@@ -292,7 +290,7 @@ public class TestQuotaStatusRPCs {
     });
   }
 
-  private int countRegionsForTable(TableName tn, Map<RegionInfo,Long> regionSizes) {
+  private int countRegionsForTable(TableName tn, Map<RegionInfo, Long> regionSizes) {
     int size = 0;
     for (RegionInfo regionInfo : regionSizes.keySet()) {
       if (tn.equals(regionInfo.getTable())) {
@@ -302,9 +300,9 @@ public class TestQuotaStatusRPCs {
     return size;
   }
 
-  private int getTableSize(TableName tn, Map<RegionInfo,Long> regionSizes) {
+  private int getTableSize(TableName tn, Map<RegionInfo, Long> regionSizes) {
     int tableSize = 0;
-    for (Entry<RegionInfo,Long> entry : regionSizes.entrySet()) {
+    for (Entry<RegionInfo, Long> entry : regionSizes.entrySet()) {
       RegionInfo regionInfo = entry.getKey();
       long regionSize = entry.getValue();
       if (tn.equals(regionInfo.getTable())) {

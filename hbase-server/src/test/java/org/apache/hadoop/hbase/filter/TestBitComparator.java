@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,28 +30,28 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for the bit comparator
  */
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestBitComparator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBitComparator.class);
+    HBaseClassTestRule.forClass(TestBitComparator.class);
 
-  private static byte[] zeros = new byte[]{0, 0, 0, 0, 0, 0};
+  private static byte[] zeros = new byte[] { 0, 0, 0, 0, 0, 0 };
   private static ByteBuffer zeros_bb = ByteBuffer.wrap(zeros);
-  private static byte[] ones = new byte[]{1, 1, 1, 1, 1, 1};
+  private static byte[] ones = new byte[] { 1, 1, 1, 1, 1, 1 };
   private static ByteBuffer ones_bb = ByteBuffer.wrap(ones);
-  private static byte[] data0 = new byte[]{0, 1, 2, 4, 8, 15};
-  private static byte[] data1 = new byte[]{15, 0, 0, 0, 0, 0};
+  private static byte[] data0 = new byte[] { 0, 1, 2, 4, 8, 15 };
+  private static byte[] data1 = new byte[] { 15, 0, 0, 0, 0, 0 };
   private static ByteBuffer data1_bb = ByteBuffer.wrap(data1);
-  private static byte[] data2 = new byte[]{0, 0, 0, 0, 0, 15};
+  private static byte[] data2 = new byte[] { 0, 0, 0, 0, 0, 15 };
   private static ByteBuffer data2_bb = ByteBuffer.wrap(data2);
-  private static byte[] data3 = new byte[]{15, 15, 15, 15, 15};
+  private static byte[] data3 = new byte[] { 15, 15, 15, 15, 15 };
 
   // data for testing compareTo method with offset and length parameters
-  private static byte[] data1_2 = new byte[]{15, 15, 0, 0, 0, 0, 0, 15};
+  private static byte[] data1_2 = new byte[] { 15, 15, 0, 0, 0, 0, 0, 15 };
   private static ByteBuffer data1_2_bb = ByteBuffer.wrap(data1_2);
-  private static byte[] data2_2 = new byte[]{15, 0, 0, 0, 0, 0, 15, 15};
+  private static byte[] data2_2 = new byte[] { 15, 0, 0, 0, 0, 0, 15, 15 };
   private static ByteBuffer data2_2_bb = ByteBuffer.wrap(data2_2);
 
   private final int Equal = 0;
@@ -105,13 +105,13 @@ public class TestBitComparator {
   }
 
   private void testOperation(byte[] data, byte[] comparatorBytes, BitComparator.BitwiseOp operator,
-      int expected) {
+    int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(expected, comparator.compareTo(data));
   }
 
   private void testOperation(ByteBuffer data, byte[] comparatorBytes,
-      BitComparator.BitwiseOp operator, int expected) {
+    BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(expected, comparator.compareTo(data, 0, data.capacity()));
   }
@@ -144,15 +144,14 @@ public class TestBitComparator {
   }
 
   private void testOperationWithOffset(byte[] data, byte[] comparatorBytes,
-      BitComparator.BitwiseOp operator, int expected) {
+    BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(expected, comparator.compareTo(data, 1, comparatorBytes.length));
   }
 
   private void testOperationWithOffset(ByteBuffer data, byte[] comparatorBytes,
-      BitComparator.BitwiseOp operator, int expected) {
+    BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(expected, comparator.compareTo(data, 1, comparatorBytes.length));
   }
 }
-

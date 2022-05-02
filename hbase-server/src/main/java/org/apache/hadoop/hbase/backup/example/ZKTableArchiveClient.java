@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.client.Connection;
@@ -54,7 +53,7 @@ public class ZKTableArchiveClient extends Configured {
    * If the table does not exist, the archiving the table's hfiles is still enabled as a future
    * table with that name may be created shortly.
    * @param table name of the table to start backing up
-   * @throws IOException if an unexpected exception occurs
+   * @throws IOException     if an unexpected exception occurs
    * @throws KeeperException if zookeeper can't be reached
    */
   public void enableHFileBackupAsync(final byte[] table) throws IOException, KeeperException {
@@ -69,7 +68,7 @@ public class ZKTableArchiveClient extends Configured {
    * Asynchronous operation - some extra HFiles may be retained, in the archive directory after
    * disable is called, dependent on the latency in zookeeper to the servers.
    * @param table name of the table stop backing up
-   * @throws IOException if an unexpected exception occurs
+   * @throws IOException     if an unexpected exception occurs
    * @throws KeeperException if zookeeper can't be reached
    */
   public void disableHFileBackup(String table) throws IOException, KeeperException {
@@ -84,7 +83,7 @@ public class ZKTableArchiveClient extends Configured {
    * Asynchronous operation - some extra HFiles may be retained, in the archive directory after
    * disable is called, dependent on the latency in zookeeper to the servers.
    * @param table name of the table stop backing up
-   * @throws IOException if an unexpected exception occurs
+   * @throws IOException     if an unexpected exception occurs
    * @throws KeeperException if zookeeper can't be reached
    */
   public void disableHFileBackup(final byte[] table) throws IOException, KeeperException {
@@ -98,7 +97,7 @@ public class ZKTableArchiveClient extends Configured {
    * <p>
    * Asynchronous operation - some extra HFiles may be retained, in the archive directory after
    * disable is called, dependent on the latency in zookeeper to the servers.
-   * @throws IOException if an unexpected exception occurs
+   * @throws IOException     if an unexpected exception occurs
    * @throws KeeperException if zookeeper can't be reached
    */
   public void disableHFileBackup() throws IOException, KeeperException {
@@ -109,7 +108,7 @@ public class ZKTableArchiveClient extends Configured {
    * Determine if archiving is enabled (but not necessarily fully propagated) for a table
    * @param table name of the table to check
    * @return <tt>true</tt> if it is, <tt>false</tt> otherwise
-   * @throws IOException if a connection to ZooKeeper cannot be established
+   * @throws IOException     if a connection to ZooKeeper cannot be established
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public boolean getArchivingEnabled(byte[] table) throws IOException, KeeperException {
@@ -125,7 +124,7 @@ public class ZKTableArchiveClient extends Configured {
    * Determine if archiving is enabled (but not necessarily fully propagated) for a table
    * @param table name of the table to check
    * @return <tt>true</tt> if it is, <tt>false</tt> otherwise
-   * @throws IOException if an unexpected network issue occurs
+   * @throws IOException     if an unexpected network issue occurs
    * @throws KeeperException if zookeeper can't be reached
    */
   public boolean getArchivingEnabled(String table) throws IOException, KeeperException {
@@ -136,20 +135,20 @@ public class ZKTableArchiveClient extends Configured {
    * @return A new {@link HFileArchiveManager} to manage which tables' hfiles should be archived
    *         rather than deleted.
    * @throws KeeperException if we can't reach zookeeper
-   * @throws IOException if an unexpected network issue occurs
+   * @throws IOException     if an unexpected network issue occurs
    */
-  private synchronized HFileArchiveManager createHFileArchiveManager() throws KeeperException,
-      IOException {
+  private synchronized HFileArchiveManager createHFileArchiveManager()
+    throws KeeperException, IOException {
     return new HFileArchiveManager(this.connection, this.getConf());
   }
 
   /**
-   * @param conf conf to read for the base archive node
+   * @param conf      conf to read for the base archive node
    * @param zooKeeper zookeeper to used for building the full path
    * @return get the znode for long-term archival of a table for
    */
   public static String getArchiveZNode(Configuration conf, ZKWatcher zooKeeper) {
-    return ZNodePaths.joinZNode(zooKeeper.getZNodePaths().baseZNode, conf.get(
-      ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY, TableHFileArchiveTracker.HFILE_ARCHIVE_ZNODE_PARENT));
+    return ZNodePaths.joinZNode(zooKeeper.getZNodePaths().baseZNode, conf
+      .get(ZOOKEEPER_ZNODE_HFILE_ARCHIVE_KEY, TableHFileArchiveTracker.HFILE_ARCHIVE_ZNODE_PARENT));
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.mapreduce.Job;
@@ -28,7 +27,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 public class HadoopShimsImpl implements HadoopShims {
   /**
    * Returns a TaskAttemptContext instance created from the given parameters.
-   * @param job an instance of o.a.h.mapreduce.Job
+   * @param job    an instance of o.a.h.mapreduce.Job
    * @param taskId an identifier for the task attempt id. Should be parsable by
    *               {@link TaskAttemptID#forName(String)}
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
@@ -36,7 +35,7 @@ public class HadoopShimsImpl implements HadoopShims {
   @Override
   @SuppressWarnings("unchecked")
   public <T, J> T createTestTaskAttemptContext(J job, String taskId) {
-    Job j = (Job)job;
-    return (T)new TaskAttemptContextImpl(j.getConfiguration(), TaskAttemptID.forName(taskId));
+    Job j = (Job) job;
+    return (T) new TaskAttemptContextImpl(j.getConfiguration(), TaskAttemptID.forName(taskId));
   }
 }

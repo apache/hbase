@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
-
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator
- * and performs the scan for simple merge operation meaning it is NOT based on SQM
+ * The MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator and performs the scan for
+ * simple merge operation meaning it is NOT based on SQM
  */
 @InterfaceAudience.Private
 public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
@@ -37,13 +34,13 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
   // heap of scanners, lazily initialized
   private KeyValueHeap heap = null;
   // remember the initial version of the scanners list
-  List<KeyValueScanner> scanners  = new ArrayList<KeyValueScanner>();
+  List<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
 
   private boolean closed = false;
 
   // C-tor
   public MemStoreMergerSegmentsIterator(List<ImmutableSegment> segments, CellComparator comparator,
-      int compactionKVMax) throws IOException {
+    int compactionKVMax) throws IOException {
     super(compactionKVMax);
     // create the list of scanners to traverse over all the data
     // no dirty reads here as these are immutable segments
@@ -64,8 +61,8 @@ public class MemStoreMergerSegmentsIterator extends MemStoreSegmentsIterator {
   }
 
   @Override
-  public Cell next()  {
-    try {                 // try to get next
+  public Cell next() {
+    try { // try to get next
       if (!closed && heap != null) {
         return heap.next();
       }

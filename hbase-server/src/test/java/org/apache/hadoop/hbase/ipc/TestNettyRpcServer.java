@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestNettyRpcServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNettyRpcServer.class);
+    HBaseClassTestRule.forClass(TestNettyRpcServer.class);
 
   @Rule
   public TestName name = new TestName();
@@ -66,9 +66,8 @@ public class TestNettyRpcServer {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
-    TEST_UTIL.getConfiguration().set(
-        RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        NettyRpcServer.class.getName());
+    TEST_UTIL.getConfiguration().set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
+      NettyRpcServer.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
@@ -100,11 +99,9 @@ public class TestNettyRpcServer {
         rowcnt++;
         int rownum = Bytes.toInt(r.getRow());
         assertTrue(r.containsColumn(FAMILY, PRIVATE_COL));
-        assertEquals("secret " + rownum,
-            Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
+        assertEquals("secret " + rownum, Bytes.toString(r.getValue(FAMILY, PRIVATE_COL)));
         assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
-        assertEquals("info " + rownum,
-            Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
+        assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
       }
       assertEquals("Expected 100 rows returned", 100, rowcnt);
     } finally {

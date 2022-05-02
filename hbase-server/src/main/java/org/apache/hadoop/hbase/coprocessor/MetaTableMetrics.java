@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
@@ -40,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
@@ -61,15 +60,14 @@ public class MetaTableMetrics implements RegionCoprocessor {
   private Set<String> metrics = ConcurrentHashMap.newKeySet();
 
   enum MetaTableOps {
-    GET, PUT, DELETE,
+    GET,
+    PUT,
+    DELETE,
   }
 
   private ImmutableMap<Class<? extends Row>, MetaTableOps> opsNameMap =
-      ImmutableMap.<Class<? extends Row>, MetaTableOps>builder()
-              .put(Put.class, MetaTableOps.PUT)
-              .put(Get.class, MetaTableOps.GET)
-              .put(Delete.class, MetaTableOps.DELETE)
-              .build();
+    ImmutableMap.<Class<? extends Row>, MetaTableOps> builder().put(Put.class, MetaTableOps.PUT)
+      .put(Get.class, MetaTableOps.GET).put(Delete.class, MetaTableOps.DELETE).build();
 
   class ExampleRegionObserverMeta implements RegionCoprocessor, RegionObserver {
 
@@ -80,23 +78,23 @@ public class MetaTableMetrics implements RegionCoprocessor {
 
     @Override
     public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get,
-        List<Cell> results) throws IOException {
+      List<Cell> results) throws IOException {
       registerAndMarkMetrics(e, get);
     }
 
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
-        Durability durability) throws IOException {
+      Durability durability) throws IOException {
       registerAndMarkMetrics(e, put);
     }
 
     @Override
     public void preDelete(ObserverContext<RegionCoprocessorEnvironment> e, Delete delete,
-        WALEdit edit, Durability durability) {
+      WALEdit edit, Durability durability) {
       registerAndMarkMetrics(e, delete);
     }
 
-    private void registerAndMarkMetrics(ObserverContext<RegionCoprocessorEnvironment> e, Row row){
+    private void registerAndMarkMetrics(ObserverContext<RegionCoprocessorEnvironment> e, Row row) {
       if (!active || !isMetaTableOp(e)) {
         return;
       }
@@ -122,7 +120,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
 
     /**
      * Get regionId from Ops such as: get, put, delete.
-     * @param op  such as get, put or delete.
+     * @param op such as get, put or delete.
      */
     private String getRegionIdFromOp(Row op) {
       final String tableRowKey = Bytes.toString(op.getRow());
@@ -134,8 +132,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
     }
 
     private boolean isMetaTableOp(ObserverContext<RegionCoprocessorEnvironment> e) {
-      return TableName.META_TABLE_NAME
-          .equals(e.getEnvironment().getRegionInfo().getTable());
+      return TableName.META_TABLE_NAME.equals(e.getEnvironment().getRegionInfo().getTable());
     }
 
     private void clientMetricRegisterAndMark() {
@@ -193,7 +190,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
       if (requestMeter.isEmpty()) {
         return;
       }
-      if(!registry.get(requestMeter).isPresent()){
+      if (!registry.get(requestMeter).isPresent()) {
         metrics.add(requestMeter);
       }
       registry.meter(requestMeter).mark();
@@ -266,10 +263,12 @@ public class MetaTableMetrics implements RegionCoprocessor {
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     observer = new ExampleRegionObserverMeta();
-    if (env instanceof RegionCoprocessorEnvironment
+    if (
+      env instanceof RegionCoprocessorEnvironment
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable() != null
         && ((RegionCoprocessorEnvironment) env).getRegionInfo().getTable()
-          .equals(TableName.META_TABLE_NAME)) {
+          .equals(TableName.META_TABLE_NAME)
+    ) {
       RegionCoprocessorEnvironment regionCoprocessorEnv = (RegionCoprocessorEnvironment) env;
       registry = regionCoprocessorEnv.getMetricRegistryForRegionServer();
       LossyCounting.LossyCountingListener<String> listener = key -> {
@@ -287,7 +286,7 @@ public class MetaTableMetrics implements RegionCoprocessor {
   @Override
   public void stop(CoprocessorEnvironment env) throws IOException {
     // since meta region can move around, clear stale metrics when stop.
-    for(String metric:metrics){
+    for (String metric : metrics) {
       registry.remove(metric);
     }
   }

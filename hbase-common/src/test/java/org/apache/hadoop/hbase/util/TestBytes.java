@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -50,11 +49,10 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestBytes {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBytes.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestBytes.class);
 
   private static void setUnsafe(boolean value) throws Exception {
     Field field = Bytes.class.getDeclaredField("UNSAFE_UNALIGNED");
@@ -73,26 +71,20 @@ public class TestBytes {
   }
 
   @Test
-  public void testShort() throws Exception  {
+  public void testShort() throws Exception {
     testShort(false);
   }
 
   @Test
-  public void testShortUnsafe() throws Exception  {
+  public void testShortUnsafe() throws Exception {
     testShort(true);
   }
 
-  private static void testShort(boolean unsafe) throws Exception  {
+  private static void testShort(boolean unsafe) throws Exception {
     setUnsafe(unsafe);
     try {
-      for (short n : Arrays.asList(
-              Short.MIN_VALUE,
-              (short) -100,
-              (short) -1,
-              (short) 0,
-              (short) 1,
-              (short) 300,
-              Short.MAX_VALUE)) {
+      for (short n : Arrays.asList(Short.MIN_VALUE, (short) -100, (short) -1, (short) 0, (short) 1,
+        (short) 300, Short.MAX_VALUE)) {
         byte[] bytes = Bytes.toBytes(n);
         assertEquals(Bytes.toShort(bytes, 0, bytes.length), n);
       }
@@ -103,7 +95,7 @@ public class TestBytes {
 
   @Test
   public void testNullHashCode() {
-    byte [] b = null;
+    byte[] b = null;
     Exception ee = null;
     try {
       Bytes.hashCode(b);
@@ -115,15 +107,15 @@ public class TestBytes {
 
   @Test
   public void testAdd() {
-    byte[] a = {0,0,0,0,0,0,0,0,0,0};
-    byte[] b = {1,1,1,1,1,1,1,1,1,1,1};
-    byte[] c = {2,2,2,2,2,2,2,2,2,2,2,2};
-    byte[] d = {3,3,3,3,3,3,3,3,3,3,3,3,3};
+    byte[] a = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    byte[] b = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    byte[] c = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+    byte[] d = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
     byte[] result1 = Bytes.add(a, b, c);
-    byte[] result2 = Bytes.add(new byte[][] {a, b, c});
+    byte[] result2 = Bytes.add(new byte[][] { a, b, c });
     assertEquals(0, Bytes.compareTo(result1, result2));
     byte[] result4 = Bytes.add(result1, d);
-    byte[] result5 = Bytes.add(new byte[][] {result1, d});
+    byte[] result5 = Bytes.add(new byte[][] { result1, d });
     assertEquals(0, Bytes.compareTo(result1, result2));
   }
 
@@ -138,7 +130,7 @@ public class TestBytes {
     }
     assertEquals(3, parts.length);
     assertTrue(Bytes.equals(parts[1], middle));
-    // Now divide into three parts.  Change highest so split is even.
+    // Now divide into three parts. Change highest so split is even.
     highest = Bytes.toBytes("DDD");
     parts = Bytes.split(lowest, highest, 2);
     for (byte[] part : parts) {
@@ -152,10 +144,10 @@ public class TestBytes {
   @Test
   public void testSplit2() {
     // More split tests.
-    byte [] lowest = Bytes.toBytes("http://A");
-    byte [] highest = Bytes.toBytes("http://z");
-    byte [] middle = Bytes.toBytes("http://]");
-    byte [][] parts = Bytes.split(lowest, highest, 1);
+    byte[] lowest = Bytes.toBytes("http://A");
+    byte[] highest = Bytes.toBytes("http://z");
+    byte[] middle = Bytes.toBytes("http://]");
+    byte[][] parts = Bytes.split(lowest, highest, 1);
     for (byte[] part : parts) {
       System.out.println(Bytes.toString(part));
     }
@@ -173,7 +165,7 @@ public class TestBytes {
     try {
       Bytes.split(high, low, 1);
       fail("Should not be able to split if low > high");
-    } catch(IllegalArgumentException iae) {
+    } catch (IllegalArgumentException iae) {
       // Correct
     }
 
@@ -193,7 +185,7 @@ public class TestBytes {
     try {
       Bytes.split(low, high, 0);
       fail("Should not be able to split 0 times");
-    } catch(IllegalArgumentException iae) {
+    } catch (IllegalArgumentException iae) {
       // Correct
     }
   }
@@ -235,7 +227,7 @@ public class TestBytes {
 
   @Test
   public void testToDouble() {
-    double [] doubles = {Double.MIN_VALUE, Double.MAX_VALUE};
+    double[] doubles = { Double.MIN_VALUE, Double.MAX_VALUE };
     for (double aDouble : doubles) {
       byte[] b = Bytes.toBytes(aDouble);
       assertEquals(aDouble, Bytes.toDouble(b), 0.0);
@@ -246,8 +238,8 @@ public class TestBytes {
 
   @Test
   public void testToBigDecimal() {
-    BigDecimal[] decimals = { new BigDecimal("-1"), new BigDecimal("123.123"),
-      new BigDecimal("123123123123") };
+    BigDecimal[] decimals =
+      { new BigDecimal("-1"), new BigDecimal("123.123"), new BigDecimal("123123123123") };
     for (BigDecimal decimal : decimals) {
       byte[] b = Bytes.toBytes(decimal);
       assertEquals(decimal, Bytes.toBigDecimal(b));
@@ -258,7 +250,7 @@ public class TestBytes {
 
   private byte[] bytesWithOffset(byte[] src) {
     // add one byte in front to test offset
-    byte [] result = new byte[src.length + 1];
+    byte[] result = new byte[src.length + 1];
     result[0] = (byte) 0xAA;
     System.arraycopy(src, 0, result, 1, src.length);
     return result;
@@ -348,16 +340,7 @@ public class TestBytes {
 
   @Test
   public void testBinarySearch() {
-    byte[][] arr = {
-        { 1 },
-        { 3 },
-        { 5 },
-        { 7 },
-        { 9 },
-        { 11 },
-        { 13 },
-        { 15 },
-    };
+    byte[][] arr = { { 1 }, { 3 }, { 5 }, { 7 }, { 9 }, { 11 }, { 13 }, { 15 }, };
     byte[] key1 = { 3, 1 };
     byte[] key2 = { 4, 9 };
     byte[] key2_2 = { 4 };
@@ -367,23 +350,18 @@ public class TestBytes {
 
     assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1));
     assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1));
-    assertEquals(-(2+1), Arrays.binarySearch(arr, key2_2,
-      Bytes.BYTES_COMPARATOR));
-    assertEquals(-(2+1), Bytes.binarySearch(arr, key2, 0, 1));
+    assertEquals(-(2 + 1), Arrays.binarySearch(arr, key2_2, Bytes.BYTES_COMPARATOR));
+    assertEquals(-(2 + 1), Bytes.binarySearch(arr, key2, 0, 1));
     assertEquals(4, Bytes.binarySearch(arr, key2, 1, 1));
     assertEquals(2, Bytes.binarySearch(arr, key3, 0, 1));
     assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1));
-    assertEquals(-1,
-      Bytes.binarySearch(arr, key4, 0, 1));
-    assertEquals(-2,
-      Bytes.binarySearch(arr, key5, 0, 1));
+    assertEquals(-1, Bytes.binarySearch(arr, key4, 0, 1));
+    assertEquals(-2, Bytes.binarySearch(arr, key5, 0, 1));
 
     // Search for values to the left and to the right of each item in the array.
     for (int i = 0; i < arr.length; ++i) {
-      assertEquals(-(i + 1), Bytes.binarySearch(arr,
-          new byte[] { (byte) (arr[i][0] - 1) }, 0, 1));
-      assertEquals(-(i + 2), Bytes.binarySearch(arr,
-          new byte[] { (byte) (arr[i][0] + 1) }, 0, 1));
+      assertEquals(-(i + 1), Bytes.binarySearch(arr, new byte[] { (byte) (arr[i][0] - 1) }, 0, 1));
+      assertEquals(-(i + 2), Bytes.binarySearch(arr, new byte[] { (byte) (arr[i][0] + 1) }, 0, 1));
     }
   }
 
@@ -394,18 +372,18 @@ public class TestBytes {
       Bytes.random(randomBytes);
       verifyReversibleForBytes(randomBytes);
     }
-    //  some specific cases
-    verifyReversibleForBytes(new  byte[] {});
-    verifyReversibleForBytes(new  byte[] {'\\', 'x', 'A', 'D'});
-    verifyReversibleForBytes(new  byte[] {'\\', 'x', 'A', 'D', '\\'});
+    // some specific cases
+    verifyReversibleForBytes(new byte[] {});
+    verifyReversibleForBytes(new byte[] { '\\', 'x', 'A', 'D' });
+    verifyReversibleForBytes(new byte[] { '\\', 'x', 'A', 'D', '\\' });
   }
 
   private void verifyReversibleForBytes(byte[] originalBytes) {
     String convertedString = Bytes.toStringBinary(originalBytes);
     byte[] convertedBytes = Bytes.toBytesBinary(convertedString);
     if (Bytes.compareTo(originalBytes, convertedBytes) != 0) {
-      fail("Not reversible for\nbyte[]: " + Arrays.toString(originalBytes) +
-          ",\nStringBinary: " + convertedString);
+      fail("Not reversible for\nbyte[]: " + Arrays.toString(originalBytes) + ",\nStringBinary: "
+        + convertedString);
     }
   }
 
@@ -445,8 +423,7 @@ public class TestBytes {
     if (value[0] > 0) {
       testValue = new byte[Bytes.SIZEOF_LONG];
     }
-    System.arraycopy(value, 0, testValue, testValue.length - value.length,
-        value.length);
+    System.arraycopy(value, 0, testValue, testValue.length - value.length, value.length);
 
     long incrementResult = Bytes.toLong(Bytes.incrementBytes(value, amount));
 
@@ -468,8 +445,8 @@ public class TestBytes {
       fail("Exception expected");
     } catch (IOException ex) {
       assertEquals(
-          "Trying to write 10 bytes (Too\\xE2\\x80\\x93Long) into a field of " +
-          "length 9", ex.getMessage());
+        "Trying to write 10 bytes (Too\\xE2\\x80\\x93Long) into a field of " + "length 9",
+        ex.getMessage());
     }
 
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
@@ -482,7 +459,7 @@ public class TestBytes {
   @Test
   public void testCopy() {
     byte[] bytes = Bytes.toBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    byte[] copy =  Bytes.copy(bytes);
+    byte[] copy = Bytes.copy(bytes);
     assertNotSame(bytes, copy);
     assertTrue(Bytes.equals(bytes, copy));
   }
@@ -503,19 +480,19 @@ public class TestBytes {
   }
 
   @Test
-  public void testUnsignedBinarySearch(){
-    byte[] bytes = new byte[] { 0,5,123,127,-128,-100,-1 };
-    Assert.assertEquals(1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)5));
-    Assert.assertEquals(3, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)127));
-    Assert.assertEquals(4, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-128));
-    Assert.assertEquals(5, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-100));
-    Assert.assertEquals(6, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-1));
-    Assert.assertEquals(-1-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)2));
-    Assert.assertEquals(-6-1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte)-5));
+  public void testUnsignedBinarySearch() {
+    byte[] bytes = new byte[] { 0, 5, 123, 127, -128, -100, -1 };
+    Assert.assertEquals(1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) 5));
+    Assert.assertEquals(3, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) 127));
+    Assert.assertEquals(4, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) -128));
+    Assert.assertEquals(5, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) -100));
+    Assert.assertEquals(6, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) -1));
+    Assert.assertEquals(-1 - 1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) 2));
+    Assert.assertEquals(-6 - 1, Bytes.unsignedBinarySearch(bytes, 0, bytes.length, (byte) -5));
   }
 
   @Test
-  public void testUnsignedIncrement(){
+  public void testUnsignedIncrement() {
     byte[] a = Bytes.toBytes(0);
     int a2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(a), 0);
     Assert.assertEquals(1, a2);
@@ -523,10 +500,10 @@ public class TestBytes {
     byte[] b = Bytes.toBytes(-1);
     byte[] actual = Bytes.unsignedCopyAndIncrement(b);
     Assert.assertNotSame(b, actual);
-    byte[] expected = new byte[]{1,0,0,0,0};
+    byte[] expected = new byte[] { 1, 0, 0, 0, 0 };
     assertArrayEquals(expected, actual);
 
-    byte[] c = Bytes.toBytes(255);//should wrap to the next significant byte
+    byte[] c = Bytes.toBytes(255);// should wrap to the next significant byte
     int c2 = Bytes.toInt(Bytes.unsignedCopyAndIncrement(c), 0);
     Assert.assertEquals(256, c2);
   }
@@ -613,4 +590,3 @@ public class TestBytes {
     }
   }
 }
-

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.util.Arrays;
 import java.util.List;
@@ -61,8 +62,11 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
         return conn.registry.getMetaRegionLocations()
           .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
       }
-      return ClientMetaTableAccessor
+      CompletableFuture<List<HRegionLocation>> future = ClientMetaTableAccessor
         .getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME), tableName);
+      addListener(future, (locs, error) -> locs
+        .forEach(loc -> conn.getLocator().getNonMetaRegionLocator().addLocationToCache(loc)));
+      return future;
     }, getClass().getSimpleName() + ".getAllRegionLocations");
   }
 

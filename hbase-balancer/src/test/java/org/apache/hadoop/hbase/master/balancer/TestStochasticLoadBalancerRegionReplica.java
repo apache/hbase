@@ -46,13 +46,12 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplica.class);
+    HBaseClassTestRule.forClass(TestStochasticLoadBalancerRegionReplica.class);
 
   @Test
   public void testReplicaCost() {
     Configuration conf = HBaseConfiguration.create();
-    CostFunction costFunction =
-        new RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction = new RegionReplicaHostCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BalancerClusterState cluster = mockCluster(mockCluster);
       costFunction.prepare(cluster);
@@ -65,8 +64,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
   @Test
   public void testReplicaCostForReplicas() {
     Configuration conf = HBaseConfiguration.create();
-    CostFunction costFunction =
-        new RegionReplicaHostCostFunction(conf);
+    CostFunction costFunction = new RegionReplicaHostCostFunction(conf);
 
     int[] servers = new int[] { 3, 3, 3, 3, 3 };
     TreeMap<ServerName, List<RegionInfo>> clusterState = mockClusterServers(servers);
@@ -80,7 +78,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
 
     // replicate the region from first server to the last server
     RegionInfo replica1 =
-        RegionReplicaUtil.getRegionInfoForReplica(clusterState.firstEntry().getValue().get(0), 1);
+      RegionReplicaUtil.getRegionInfoForReplica(clusterState.firstEntry().getValue().get(0), 1);
     clusterState.lastEntry().getValue().add(replica1);
 
     cluster = new BalancerClusterState(clusterState, null, null, null);
@@ -163,7 +161,7 @@ public class TestStochasticLoadBalancerRegionReplica extends StochasticBalancerT
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
     assertFalse(loadBalancer.needsBalance(HConstants.ENSEMBLE_TABLE_NAME,
-        new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
+      new BalancerClusterState(map, null, null, new ForTestRackManagerOne())));
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public class ReopenTableRegionsProcedure
-    extends AbstractStateMachineTableProcedure<ReopenTableRegionsState> {
+  extends AbstractStateMachineTableProcedure<ReopenTableRegionsState> {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReopenTableRegionsProcedure.class);
 
@@ -72,8 +72,7 @@ public class ReopenTableRegionsProcedure
     this.regionNames = Collections.emptyList();
   }
 
-  public ReopenTableRegionsProcedure(final TableName tableName,
-      final List<byte[]> regionNames) {
+  public ReopenTableRegionsProcedure(final TableName tableName, final List<byte[]> regionNames) {
     this.tableName = tableName;
     this.regionNames = regionNames;
   }
@@ -102,15 +101,15 @@ public class ReopenTableRegionsProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ReopenTableRegionsState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     switch (state) {
       case REOPEN_TABLE_REGIONS_GET_REGIONS:
         if (!isTableEnabled(env)) {
           LOG.info("Table {} is disabled, give up reopening its regions", tableName);
           return Flow.NO_MORE_STATE;
         }
-        List<HRegionLocation> tableRegions = env.getAssignmentManager()
-          .getRegionStates().getRegionsOfTableForReopen(tableName);
+        List<HRegionLocation> tableRegions =
+          env.getAssignmentManager().getRegionStates().getRegionsOfTableForReopen(tableName);
         regions = getRegionLocationsForReopen(tableRegions);
         setNextState(ReopenTableRegionsState.REOPEN_TABLE_REGIONS_REOPEN_REGIONS);
         return Flow.HAS_MORE_STATE;
@@ -155,8 +154,8 @@ public class ReopenTableRegionsProcedure
         }
         long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
         LOG.info(
-          "There are still {} region(s) which need to be reopened for table {} are in " +
-            "OPENING state, suspend {}secs and try again later",
+          "There are still {} region(s) which need to be reopened for table {} are in "
+            + "OPENING state, suspend {}secs and try again later",
           regions.size(), tableName, backoff / 1000);
         setTimeout(Math.toIntExact(backoff));
         setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
@@ -167,12 +166,13 @@ public class ReopenTableRegionsProcedure
     }
   }
 
-  private List<HRegionLocation> getRegionLocationsForReopen(
-      List<HRegionLocation> tableRegionsForReopen) {
+  private List<HRegionLocation>
+    getRegionLocationsForReopen(List<HRegionLocation> tableRegionsForReopen) {
 
     List<HRegionLocation> regionsToReopen = new ArrayList<>();
-    if (CollectionUtils.isNotEmpty(regionNames) &&
-      CollectionUtils.isNotEmpty(tableRegionsForReopen)) {
+    if (
+      CollectionUtils.isNotEmpty(regionNames) && CollectionUtils.isNotEmpty(tableRegionsForReopen)
+    ) {
       for (byte[] regionName : regionNames) {
         for (HRegionLocation hRegionLocation : tableRegionsForReopen) {
           if (Bytes.equals(regionName, hRegionLocation.getRegion().getRegionName())) {
@@ -199,7 +199,7 @@ public class ReopenTableRegionsProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, ReopenTableRegionsState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     throw new UnsupportedOperationException("unhandled state=" + state);
   }
 

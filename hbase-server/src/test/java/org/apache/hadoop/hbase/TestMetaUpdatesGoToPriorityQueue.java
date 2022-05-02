@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,9 +88,8 @@ public class TestMetaUpdatesGoToPriorityQueue {
     }
     MutateRowsRequest request = builder.build();
     AsyncTable<?> table = UTIL.getAsyncConnection().getTable(TableName.META_TABLE_NAME);
-    CompletableFuture<MutateRowsResponse> future =
-      table.<MultiRowMutationService, MutateRowsResponse> coprocessorService(
-        MultiRowMutationService::newStub,
+    CompletableFuture<MutateRowsResponse> future = table.<MultiRowMutationService,
+      MutateRowsResponse> coprocessorService(MultiRowMutationService::newStub,
         (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
     FutureUtils.get(future);
   }

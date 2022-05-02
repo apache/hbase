@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -250,8 +250,9 @@ public class TestReplicateToReplica {
   }
 
   private void replicate(Pair<List<WAL.Entry>, CompletableFuture<Void>> pair) throws IOException {
-    Pair<ReplicateWALEntryRequest, CellScanner> params = ReplicationProtobufUtil
-      .buildReplicateWALEntryRequest(pair.getFirst().toArray(new WAL.Entry[0]),
+    Pair<ReplicateWALEntryRequest,
+      CellScanner> params = ReplicationProtobufUtil.buildReplicateWALEntryRequest(
+        pair.getFirst().toArray(new WAL.Entry[0]),
         secondary.getRegionInfo().getEncodedNameAsBytes(), null, null, null);
     for (WALEntry entry : params.getFirst().getEntryList()) {
       secondary.replayWALEntry(entry, params.getSecond());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -144,22 +144,24 @@ public class RegionProcedureStore extends ProcedureStoreBase {
     for (Class<?> clazz : UNSUPPORTED_PROCEDURES) {
       List<Procedure<?>> procs = procsByType.get(clazz);
       if (procs != null) {
-        LOG.error("Unsupported procedure type {} found, please rollback your master to the old" +
-          " version to finish them, and then try to upgrade again." +
-          " See https://hbase.apache.org/book.html#upgrade2.2 for more details." +
-          " The full procedure list: {}", clazz, procs);
+        LOG.error("Unsupported procedure type {} found, please rollback your master to the old"
+          + " version to finish them, and then try to upgrade again."
+          + " See https://hbase.apache.org/book.html#upgrade2.2 for more details."
+          + " The full procedure list: {}", clazz, procs);
         throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
       }
     }
     // A special check for SCP, as we do not support RecoverMetaProcedure any more so we need to
     // make sure that no one will try to schedule it but SCP does have a state which will schedule
     // it.
-    if (procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-      .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)) {
-      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure," +
-        " which is not supported any more. Please rollback your master to the old version to" +
-        " finish them, and then try to upgrade again." +
-        " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
+    if (
+      procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
+        .map(p -> (ServerCrashProcedure) p).anyMatch(ServerCrashProcedure::isInRecoverMetaState)
+    ) {
+      LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure,"
+        + " which is not supported any more. Please rollback your master to the old version to"
+        + " finish them, and then try to upgrade again."
+        + " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
       throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
     }
   }
@@ -205,9 +207,9 @@ public class RegionProcedureStore extends ProcedureStoreBase {
           corruptedCount++;
         }
         if (corruptedCount > 0) {
-          throw new IOException("There are " + corruptedCount + " corrupted procedures when" +
-            " migrating from the old WAL based store to the new region based store, please" +
-            " fix them before upgrading again.");
+          throw new IOException("There are " + corruptedCount + " corrupted procedures when"
+            + " migrating from the old WAL based store to the new region based store, please"
+            + " fix them before upgrading again.");
         }
       }
     });

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -129,7 +129,7 @@ public class TestClientTimeouts {
    */
   public static class RandomTimeoutRpcClient extends BlockingRpcClient {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-        MetricsConnection metrics) {
+      MetricsConnection metrics) {
       super(conf, clusterId, localAddr, metrics);
     }
 
@@ -153,16 +153,16 @@ public class TestClientTimeouts {
    * Blocking rpc channel that goes via hbase rpc.
    */
   private static class RandomTimeoutBlockingRpcChannel
-      extends AbstractRpcClient.BlockingRpcChannelImplementation {
+    extends AbstractRpcClient.BlockingRpcChannelImplementation {
 
     RandomTimeoutBlockingRpcChannel(BlockingRpcClient rpcClient, ServerName sn, User ticket,
-        int rpcTimeout) {
+      int rpcTimeout) {
       super(rpcClient, Address.fromParts(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
     public Message callBlockingMethod(MethodDescriptor md, RpcController controller, Message param,
-        Message returnType) throws ServiceException {
+      Message returnType) throws ServiceException {
       invokations.getAndIncrement();
       if (ThreadLocalRandom.current().nextFloat() < CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, becuase that is the only exception type that
@@ -177,13 +177,13 @@ public class TestClientTimeouts {
   private static class RandomTimeoutRpcChannel extends AbstractRpcClient.RpcChannelImplementation {
 
     RandomTimeoutRpcChannel(AbstractRpcClient<?> rpcClient, ServerName sn, User ticket,
-        int rpcTimeout) {
+      int rpcTimeout) {
       super(rpcClient, Address.fromParts(sn.getHostname(), sn.getPort()), ticket, rpcTimeout);
     }
 
     @Override
     public void callMethod(MethodDescriptor md, RpcController controller, Message param,
-        Message returnType, RpcCallback<Message> done) {
+      Message returnType, RpcCallback<Message> done) {
       invokations.getAndIncrement();
       if (ThreadLocalRandom.current().nextFloat() < CHANCE_OF_TIMEOUT) {
         // throw a ServiceException, because that is the only exception type that

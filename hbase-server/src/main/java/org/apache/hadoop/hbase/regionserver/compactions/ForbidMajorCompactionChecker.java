@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.function.BiPredicate;
-
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ForbidMajorCompactionChecker
-    implements BiPredicate<SyncReplicationState, SyncReplicationState> {
+  implements BiPredicate<SyncReplicationState, SyncReplicationState> {
 
   private static final ForbidMajorCompactionChecker INST = new ForbidMajorCompactionChecker();
 
@@ -35,7 +34,7 @@ public class ForbidMajorCompactionChecker
   public boolean test(SyncReplicationState state, SyncReplicationState newState) {
     // Forbid major compaction when cluster transit sync replication state from S to DA
     return state == SyncReplicationState.STANDBY
-        || newState == SyncReplicationState.DOWNGRADE_ACTIVE;
+      || newState == SyncReplicationState.DOWNGRADE_ACTIVE;
   }
 
   public static ForbidMajorCompactionChecker get() {

@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.io.InputStream;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This is a stream that will only supply bytes from its delegate up to a certain limit.
- * When there is an attempt to set the position beyond that it will signal that the input
- * is finished.
+ * This is a stream that will only supply bytes from its delegate up to a certain limit. When there
+ * is an attempt to set the position beyond that it will signal that the input is finished.
  */
 @InterfaceAudience.Private
 public class BoundedDelegatingInputStream extends DelegatingInputStream {
@@ -61,9 +58,9 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
   }
 
   /**
-   * Call the delegate's {@code read(byte[], int, int)} method if the current position is less
-   * than the limit.
-   * @param b read buffer
+   * Call the delegate's {@code read(byte[], int, int)} method if the current position is less than
+   * the limit.
+   * @param b   read buffer
    * @param off Start offset
    * @param len The number of bytes to read
    * @return the number of bytes read or -1 if the end of stream or the limit has been reached.
@@ -74,7 +71,7 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
       return -1;
     }
     long readLen = Math.min(len, limit - pos);
-    int read = in.read(b, off, (int)readLen);
+    int read = in.read(b, off, (int) readLen);
     if (read < 0) {
       return -1;
     }
@@ -95,8 +92,8 @@ public class BoundedDelegatingInputStream extends DelegatingInputStream {
   }
 
   /**
-   * @return the remaining bytes within the bound if the current position is less than the
-   *   limit, or 0 otherwise.
+   * @return the remaining bytes within the bound if the current position is less than the limit, or
+   *         0 otherwise.
    */
   @Override
   public int available() throws IOException {

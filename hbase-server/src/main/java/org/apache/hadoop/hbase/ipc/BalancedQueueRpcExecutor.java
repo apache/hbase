@@ -37,15 +37,15 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
   private final QueueBalancer balancer;
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
-      final Abortable abortable) {
+    final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+    final Abortable abortable) {
     this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
-        maxQueueLength, priority, conf, abortable);
+      maxQueueLength, priority, conf, abortable);
   }
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
-      final Configuration conf, final Abortable abortable) {
+    final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+    final Configuration conf, final Abortable abortable) {
     super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
     initializeQueues(this.numCallQueues);
     this.balancer = getBalancer(name, conf, getQueues());

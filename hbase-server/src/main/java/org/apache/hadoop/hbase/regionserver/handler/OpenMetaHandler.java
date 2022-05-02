@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,9 +31,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class OpenMetaHandler extends OpenRegionHandler {
-  public OpenMetaHandler(final Server server,
-                         final RegionServerServices rsServices, RegionInfo regionInfo,
-                         final TableDescriptor htd, long masterSystemTime) {
+  public OpenMetaHandler(final Server server, final RegionServerServices rsServices,
+    RegionInfo regionInfo, final TableDescriptor htd, long masterSystemTime) {
     super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_META);
   }
 }

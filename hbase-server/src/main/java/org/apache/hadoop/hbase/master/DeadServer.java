@@ -34,13 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to hold dead servers list and utility querying dead server list.
- * Servers are added when they expire or when we find them in filesystem on startup.
- * When a server crash procedure is queued, it will populate the processing list and
- * then remove the server from processing list when done. Servers are removed from
- * dead server list when a new instance is started over the old on same hostname and
- * port or when new Master comes online tidying up after all initialization. Processing
- * list and deadserver list are not tied together (you don't have to be in deadservers
+ * Class to hold dead servers list and utility querying dead server list. Servers are added when
+ * they expire or when we find them in filesystem on startup. When a server crash procedure is
+ * queued, it will populate the processing list and then remove the server from processing list when
+ * done. Servers are removed from dead server list when a new instance is started over the old on
+ * same hostname and port or when new Master comes online tidying up after all initialization.
+ * Processing list and deadserver list are not tied together (you don't have to be in deadservers
  * list to be processing and vice versa).
  */
 @InterfaceAudience.Private
@@ -48,11 +47,10 @@ public class DeadServer {
   private static final Logger LOG = LoggerFactory.getLogger(DeadServer.class);
 
   /**
-   * Set of known dead servers.  On znode expiration, servers are added here.
-   * This is needed in case of a network partitioning where the server's lease
-   * expires, but the server is still running. After the network is healed,
-   * and it's server logs are recovered, it will be told to call server startup
-   * because by then, its regions have probably been reassigned.
+   * Set of known dead servers. On znode expiration, servers are added here. This is needed in case
+   * of a network partitioning where the server's lease expires, but the server is still running.
+   * After the network is healed, and it's server logs are recovered, it will be told to call server
+   * startup because by then, its regions have probably been reassigned.
    */
   private final Map<ServerName, Long> deadServers = new HashMap<>();
 
@@ -86,10 +84,9 @@ public class DeadServer {
   }
 
   /**
-   * Handles restart of a server. The new server instance has a different start code.
-   * The new start code should be greater than the old one. We don't check that here.
-   * Removes the old server from deadserver list.
-   *
+   * Handles restart of a server. The new server instance has a different start code. The new start
+   * code should be greater than the old one. We don't check that here. Removes the old server from
+   * deadserver list.
    * @param newServerName Servername as either <code>host:port</code> or
    *                      <code>host,port,startcode</code>.
    * @return true if this server was dead before and coming back alive again
@@ -112,14 +109,13 @@ public class DeadServer {
   }
 
   /**
-   * @param newServerName Server to match port and hostname against.
+   * @param newServerName      Server to match port and hostname against.
    * @param deadServerIterator Iterator primed so can call 'next' on it.
-   * @return True if <code>newServerName</code> and current primed
-   *   iterator ServerName have same host and port and we removed old server
-   *   from iterator and from processing list.
+   * @return True if <code>newServerName</code> and current primed iterator ServerName have same
+   *         host and port and we removed old server from iterator and from processing list.
    */
   private boolean cleanOldServerName(ServerName newServerName,
-      Iterator<ServerName> deadServerIterator) {
+    Iterator<ServerName> deadServerIterator) {
     ServerName sn = deadServerIterator.next();
     if (ServerName.isSameAddress(sn, newServerName)) {
       // Remove from dead servers list. Don't remove from the processing list --
@@ -151,10 +147,10 @@ public class DeadServer {
    * @return a sorted array list, by death time, lowest values first.
    */
   synchronized List<Pair<ServerName, Long>> copyDeadServersSince(long ts) {
-    List<Pair<ServerName, Long>> res =  new ArrayList<>(size());
+    List<Pair<ServerName, Long>> res = new ArrayList<>(size());
 
-    for (Map.Entry<ServerName, Long> entry:deadServers.entrySet()){
-      if (entry.getValue() >= ts){
+    for (Map.Entry<ServerName, Long> entry : deadServers.entrySet()) {
+      if (entry.getValue() >= ts) {
         res.add(new Pair<>(entry.getKey(), entry.getValue()));
       }
     }
@@ -162,13 +158,13 @@ public class DeadServer {
     Collections.sort(res, (o1, o2) -> o1.getSecond().compareTo(o2.getSecond()));
     return res;
   }
-  
+
   /**
    * Get the time when a server died
    * @param deadServerName the dead server name
-   * @return the date when the server died 
+   * @return the date when the server died
    */
-  public synchronized Date getTimeOfDeath(final ServerName deadServerName){
+  public synchronized Date getTimeOfDeath(final ServerName deadServerName) {
     Long time = deadServers.get(deadServerName);
     return time == null ? null : new Date(time);
   }

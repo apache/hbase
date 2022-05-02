@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -143,7 +143,7 @@ public class TestBulkLoadHFilesSplitRecovery {
    * not already exist.
    */
   private void setupTable(final Connection connection, TableName table, int cfs)
-      throws IOException {
+    throws IOException {
     try {
       LOG.info("Creating table " + table);
       try (Admin admin = connection.getAdmin()) {
@@ -156,13 +156,10 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   /**
    * Creates a table with given table name,specified number of column families<br>
-   * and splitkeys if the table does not already exist.
-   * @param table
-   * @param cfs
-   * @param SPLIT_KEYS
+   * and splitkeys if the table does not already exist. nnn
    */
   private void setupTableWithSplitkeys(TableName table, int cfs, byte[][] SPLIT_KEYS)
-      throws IOException {
+    throws IOException {
     try {
       LOG.info("Creating table " + table);
       util.createTable(createTableDesc(table, cfs), SPLIT_KEYS);
@@ -183,7 +180,7 @@ public class TestBulkLoadHFilesSplitRecovery {
    * Populate table with known values.
    */
   private void populateTable(final Connection connection, TableName table, int value)
-      throws Exception {
+    throws Exception {
     // create HFiles for different column families
     Path dir = buildBulkFiles(table, value);
     BulkLoadHFiles.create(util.getConfiguration()).bulkLoad(table, dir);
@@ -239,13 +236,13 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
-   * @throws IOException
+   * n
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
     TableDescriptor htd = util.getAdmin().getDescriptor(table);
     assertNotNull(htd);
     try (Table t = util.getConnection().getTable(table);
-        ResultScanner sr = t.getScanner(new Scan())) {
+      ResultScanner sr = t.getScanner(new Scan())) {
       int i = 0;
       for (Result r; (r = sr.next()) != null;) {
         r.getNoVersionMap().values().stream().flatMap(m -> m.values().stream())
@@ -266,9 +263,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   private static AsyncClusterConnection mockAndInjectError(AsyncClusterConnection conn) {
     AsyncClusterConnection errConn = spy(conn);
-    doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn)
-      .bulkLoad(any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(),
-        anyBoolean());
+    doReturn(failedFuture(new IOException("injecting bulk load error"))).when(errConn).bulkLoad(
+      any(), anyList(), any(), anyBoolean(), any(), any(), anyBoolean(), anyList(), anyBoolean());
     return errConn;
   }
 
@@ -286,8 +282,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
-          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
         AsyncClusterConnection c =
           attemptedCalls.incrementAndGet() == 1 ? mockAndInjectError(conn) : conn;
         super.bulkLoadPhase(c, tableName, queue, regionGroups, copyFiles, item2RegionMap);
@@ -314,10 +310,12 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
-          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
-        if (calls.get() < conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)) {
+        Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        if (
+          calls.get() < conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER)
+        ) {
           calls.incrementAndGet();
           super.bulkLoadPhase(mockAndInjectError(conn), tableName, queue, regionGroups, copyFiles,
             item2RegionMap);
@@ -350,8 +348,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
-          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
         int i = attemptedCalls.incrementAndGet();
         if (i == 1) {
           // On first attempt force a split.
@@ -389,8 +387,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected Pair<List<LoadQueueItem>, String> groupOrSplit(AsyncClusterConnection conn,
-          TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
-          List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
+        TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
+        List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
         Pair<List<LoadQueueItem>, String> lqis =
           super.groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
         if (lqis != null && lqis.getFirst() != null) {
@@ -411,9 +409,8 @@ public class TestBulkLoadHFilesSplitRecovery {
   public void testCorrectSplitPoint() throws Exception {
     final TableName table = TableName.valueOf(name.getMethodName());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000010"),
-        Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
-        Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"),
-        Bytes.toBytes("row_00000070") };
+      Bytes.toBytes("row_00000020"), Bytes.toBytes("row_00000030"), Bytes.toBytes("row_00000040"),
+      Bytes.toBytes("row_00000050"), Bytes.toBytes("row_00000060"), Bytes.toBytes("row_00000070") };
     setupTableWithSplitkeys(table, NUM_CFS, SPLIT_KEYS);
 
     final AtomicInteger bulkloadRpcTimes = new AtomicInteger();
@@ -421,8 +418,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
-          Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
         bulkloadRpcTimes.addAndGet(1);
         super.bulkLoadPhase(conn, tableName, queue, regionGroups, copyFiles, item2RegionMap);
       }
@@ -477,8 +474,8 @@ public class TestBulkLoadHFilesSplitRecovery {
 
       @Override
       protected Pair<List<LoadQueueItem>, String> groupOrSplit(AsyncClusterConnection conn,
-          TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
-          List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
+        TableName tableName, Multimap<ByteBuffer, LoadQueueItem> regionGroups, LoadQueueItem item,
+        List<Pair<byte[], byte[]>> startEndKeys) throws IOException {
         i++;
 
         if (i == 5) {
@@ -494,10 +491,10 @@ public class TestBulkLoadHFilesSplitRecovery {
   }
 
   /**
-   * We are testing a split after initial validation but before the atomic bulk load call.
-   * We cannot use presplitting to test this path, so we actually inject a
-   * split just before the atomic region load. However, we will pass null item2RegionMap
-   * and that should not affect the bulk load behavior.
+   * We are testing a split after initial validation but before the atomic bulk load call. We cannot
+   * use presplitting to test this path, so we actually inject a split just before the atomic region
+   * load. However, we will pass null item2RegionMap and that should not affect the bulk load
+   * behavior.
    */
   @Test
   public void testSplitWhileBulkLoadPhaseWithoutItemMap() throws Exception {
@@ -514,8 +511,8 @@ public class TestBulkLoadHFilesSplitRecovery {
       @Override
       protected void bulkLoadPhase(final AsyncClusterConnection conn, final TableName tableName,
         final Deque<LoadQueueItem> queue, final Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-        final boolean copyFiles,
-        final Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        final boolean copyFiles, final Map<LoadQueueItem, ByteBuffer> item2RegionMap)
+        throws IOException {
 
         int i = attemptedCalls.incrementAndGet();
         if (i == 1) {
@@ -541,12 +538,11 @@ public class TestBulkLoadHFilesSplitRecovery {
     assertExpectedTable(table, ROWCOUNT, 2);
   }
 
-
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
    */
   void assertExpectedTable(final Connection connection, TableName table, int count, int value)
-      throws IOException {
+    throws IOException {
     TableDescriptor htd = util.getAdmin().getDescriptor(table);
     assertNotNull(htd);
     try (Table t = connection.getTable(table); ResultScanner sr = t.getScanner(new Scan())) {

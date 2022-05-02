@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,32 +48,29 @@ public class CacheTestUtils {
   private static final boolean includesMemstoreTS = true;
 
   /**
-   * Just checks if heapsize grows when something is cached, and gets smaller
-   * when the same object is evicted
+   * Just checks if heapsize grows when something is cached, and gets smaller when the same object
+   * is evicted
    */
 
-  public static void testHeapSizeChanges(final BlockCache toBeTested,
-      final int blockSize) {
+  public static void testHeapSizeChanges(final BlockCache toBeTested, final int blockSize) {
     HFileBlockPair[] blocks = generateHFileBlocks(blockSize, 1);
     long heapSize = ((HeapSize) toBeTested).heapSize();
     toBeTested.cacheBlock(blocks[0].blockName, blocks[0].block);
 
-    /*When we cache something HeapSize should always increase */
+    /* When we cache something HeapSize should always increase */
     assertTrue(heapSize < ((HeapSize) toBeTested).heapSize());
 
     toBeTested.evictBlock(blocks[0].blockName);
 
-    /*Post eviction, heapsize should be the same */
+    /* Post eviction, heapsize should be the same */
     assertEquals(heapSize, ((HeapSize) toBeTested).heapSize());
   }
 
-  public static void testCacheMultiThreaded(final BlockCache toBeTested,
-      final int blockSize, final int numThreads, final int numQueries,
-      final double passingScore) throws Exception {
+  public static void testCacheMultiThreaded(final BlockCache toBeTested, final int blockSize,
+    final int numThreads, final int numQueries, final double passingScore) throws Exception {
 
     Configuration conf = new Configuration();
-    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(
-        conf);
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
 
     final AtomicInteger totalQueries = new AtomicInteger();
     final ConcurrentLinkedQueue<HFileBlockPair> blocksToTest = new ConcurrentLinkedQueue<>();
@@ -96,8 +92,7 @@ public class CacheTestUtils {
               return;
             }
             toBeTested.cacheBlock(ourBlock.blockName, ourBlock.block);
-            Cacheable retrievedBlock = toBeTested.getBlock(ourBlock.blockName,
-                false, false, true);
+            Cacheable retrievedBlock = toBeTested.getBlock(ourBlock.blockName, false, false, true);
             if (retrievedBlock != null) {
               assertEquals(ourBlock.block, retrievedBlock);
               toBeTested.evictBlock(ourBlock.blockName);
@@ -119,13 +114,12 @@ public class CacheTestUtils {
     }
     ctx.stop();
     if (hits.get() / ((double) hits.get() + (double) miss.get()) < passingScore) {
-      fail("Too many nulls returned. Hits: " + hits.get() + " Misses: "
-          + miss.get());
+      fail("Too many nulls returned. Hits: " + hits.get() + " Misses: " + miss.get());
     }
   }
 
-  public static void testCacheSimple(BlockCache toBeTested, int blockSize,
-      int numBlocks) throws Exception {
+  public static void testCacheSimple(BlockCache toBeTested, int blockSize, int numBlocks)
+    throws Exception {
 
     HFileBlockPair[] blocks = generateHFileBlocks(blockSize, numBlocks);
     // Confirm empty
@@ -169,7 +163,7 @@ public class CacheTestUtils {
   }
 
   public static void hammerSingleKey(final BlockCache toBeTested, int numThreads, int numQueries)
-      throws Exception {
+    throws Exception {
     final BlockCacheKey key = new BlockCacheKey("key", 0);
     final byte[] buf = new byte[5 * 1024];
     Arrays.fill(buf, (byte) 5);
@@ -186,7 +180,7 @@ public class CacheTestUtils {
         @Override
         public void doAnAction() throws Exception {
           ByteArrayCacheable returned =
-              (ByteArrayCacheable) toBeTested.getBlock(key, false, false, true);
+            (ByteArrayCacheable) toBeTested.getBlock(key, false, false, true);
           if (returned != null) {
             assertArrayEquals(buf, returned.buf);
           } else {
@@ -223,21 +217,21 @@ public class CacheTestUtils {
   public static class ByteArrayCacheable implements Cacheable {
 
     static final CacheableDeserializer<Cacheable> blockDeserializer =
-        new CacheableDeserializer<Cacheable>() {
-          @Override
-          public int getDeserializerIdentifier() {
-            return deserializerIdentifier;
-          }
+      new CacheableDeserializer<Cacheable>() {
+        @Override
+        public int getDeserializerIdentifier() {
+          return deserializerIdentifier;
+        }
 
-          @Override
-          public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
-            int len = b.getInt();
-            Thread.yield();
-            byte buf[] = new byte[len];
-            b.get(buf);
-            return new ByteArrayCacheable(buf);
-          }
-        };
+        @Override
+        public Cacheable deserialize(ByteBuff b, ByteBuffAllocator alloc) throws IOException {
+          int len = b.getInt();
+          Thread.yield();
+          byte buf[] = new byte[len];
+          b.get(buf);
+          return new ByteArrayCacheable(buf);
+        }
+      };
 
     final byte[] buf;
 
@@ -270,8 +264,8 @@ public class CacheTestUtils {
 
     private static final int deserializerIdentifier;
     static {
-      deserializerIdentifier = CacheableDeserializerIdManager
-          .registerDeserializer(blockDeserializer);
+      deserializerIdentifier =
+        CacheableDeserializerIdManager.registerDeserializer(blockDeserializer);
     }
 
     @Override
@@ -279,7 +273,6 @@ public class CacheTestUtils {
       return BlockType.DATA;
     }
   }
-
 
   public static HFileBlockPair[] generateHFileBlocks(int blockSize, int numBlocks) {
     HFileBlockPair[] returnedBlocks = new HFileBlockPair[numBlocks];
@@ -297,19 +290,15 @@ public class CacheTestUtils {
       cachedBuffer.putInt(uncompressedSizeWithoutHeader);
       cachedBuffer.putLong(prevBlockOffset);
       cachedBuffer.rewind();
-      HFileContext meta = new HFileContextBuilder()
-                          .withHBaseCheckSum(false)
-                          .withIncludesMvcc(includesMemstoreTS)
-                          .withIncludesTags(false)
-                          .withCompression(Compression.Algorithm.NONE)
-                          .withBytesPerCheckSum(0)
-                          .withChecksumType(ChecksumType.NULL)
-                          .build();
+      HFileContext meta =
+        new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
+          .withIncludesTags(false).withCompression(Compression.Algorithm.NONE)
+          .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL).build();
       HFileBlock generated =
-          new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
-              prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
-              onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
-              ByteBuffAllocator.HEAP);
+        new HFileBlock(BlockType.DATA, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
+          prevBlockOffset, ByteBuff.wrap(cachedBuffer), HFileBlock.DONT_FILL_HEADER, blockSize,
+          onDiskSizeWithoutHeader + HConstants.HFILEBLOCK_HEADER_SIZE, -1, meta,
+          ByteBuffAllocator.HEAP);
 
       String strKey;
       /* No conflicting keys */
@@ -339,7 +328,7 @@ public class CacheTestUtils {
   }
 
   public static void getBlockAndAssertEquals(BlockCache cache, BlockCacheKey key,
-      Cacheable blockToCache, ByteBuffer destBuffer, ByteBuffer expectedBuffer) {
+    Cacheable blockToCache, ByteBuffer destBuffer, ByteBuffer expectedBuffer) {
     destBuffer.clear();
     cache.cacheBlock(key, blockToCache);
     Cacheable actualBlock = cache.getBlock(key, false, false, false);

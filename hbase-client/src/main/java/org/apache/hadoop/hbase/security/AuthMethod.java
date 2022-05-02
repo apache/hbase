@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,15 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /** Authentication method */
 @InterfaceAudience.Private
@@ -39,7 +36,7 @@ public enum AuthMethod {
   public final UserGroupInformation.AuthenticationMethod authenticationMethod;
 
   AuthMethod(byte code, String mechanismName,
-             UserGroupInformation.AuthenticationMethod authMethod) {
+    UserGroupInformation.AuthenticationMethod authMethod) {
     this.code = code;
     this.mechanismName = mechanismName;
     this.authenticationMethod = authMethod;

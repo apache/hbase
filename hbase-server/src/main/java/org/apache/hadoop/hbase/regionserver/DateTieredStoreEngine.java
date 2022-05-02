@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,9 +33,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * HBASE-15400 This store engine allows us to store data in date tiered layout with exponential
- * sizing so that the more recent data has more granularity. Time-range scan will perform the
- * best with most recent data. When data reach maxAge, they are compacted in fixed-size time
- * windows for TTL and archiving. Please refer to design spec for more details.
+ * sizing so that the more recent data has more granularity. Time-range scan will perform the best
+ * with most recent data. When data reach maxAge, they are compacted in fixed-size time windows for
+ * TTL and archiving. Please refer to design spec for more details.
  * https://docs.google.com/document/d/1_AmlNb2N8Us1xICsTeGDLKIqL6T-oHoRLZ323MG_uy8/edit#heading=h.uk6y5pd3oqgx
  */
 @InterfaceAudience.Private
@@ -43,8 +43,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
   DateTieredCompactionPolicy, DateTieredCompactor, DefaultStoreFileManager> {
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
-    return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(),
-      filesCompacting);
+    return compactionPolicy.needsCompaction(storeFileManager.getStorefiles(), filesCompacting);
   }
 
   @Override
@@ -54,11 +53,10 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
 
   @Override
   protected void createComponents(Configuration conf, HStore store, CellComparator kvComparator)
-      throws IOException {
+    throws IOException {
     this.compactionPolicy = new DateTieredCompactionPolicy(conf, store);
-    this.storeFileManager =
-        new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf,
-            compactionPolicy.getConf());
+    this.storeFileManager = new DefaultStoreFileManager(kvComparator,
+      StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf, compactionPolicy.getConf());
     this.storeFlusher = new DefaultStoreFlusher(conf, store);
     this.compactor = new DateTieredCompactor(conf, store);
   }
@@ -73,7 +71,7 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
 
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
-        boolean mayUseOffPeak, boolean forceMajor) throws IOException {
+      boolean mayUseOffPeak, boolean forceMajor) throws IOException {
       request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
         isUserCompaction, mayUseOffPeak, forceMajor);
       return request != null;
@@ -83,19 +81,18 @@ public class DateTieredStoreEngine extends StoreEngine<DefaultStoreFlusher,
     public void forceSelect(CompactionRequestImpl request) {
       if (!(request instanceof DateTieredCompactionRequest)) {
         throw new IllegalArgumentException("DateTieredCompactionRequest is expected. Actual: "
-            + request.getClass().getCanonicalName());
+          + request.getClass().getCanonicalName());
       }
       super.forceSelect(request);
     }
 
     @Override
     public List<Path> compact(ThroughputController throughputController, User user)
-        throws IOException {
+      throws IOException {
       if (request instanceof DateTieredCompactionRequest) {
         DateTieredCompactionRequest compactionRequest = (DateTieredCompactionRequest) request;
         return compactor.compact(request, compactionRequest.getBoundaries(),
-          compactionRequest.getBoundariesPolicies(),
-          throughputController, user);
+          compactionRequest.getBoundariesPolicies(), throughputController, user);
       } else {
         throw new IllegalArgumentException("DateTieredCompactionRequest is expected. Actual: "
           + request.getClass().getCanonicalName());

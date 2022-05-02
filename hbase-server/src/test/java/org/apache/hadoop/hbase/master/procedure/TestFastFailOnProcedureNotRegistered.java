@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,18 +29,18 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestFastFailOnProcedureNotRegistered extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFastFailOnProcedureNotRegistered.class);
+    HBaseClassTestRule.forClass(TestFastFailOnProcedureNotRegistered.class);
 
-  @Test(expected=DoNotRetryIOException.class)
+  @Test(expected = DoNotRetryIOException.class)
   public void testFastFailOnProcedureNotRegistered() throws IOException {
     Admin admin = UTIL.getAdmin();
     Map<String, String> props = new HashMap<String, String>();
-    admin.execProcedure("fake1","fake2", props);
+    admin.execProcedure("fake1", "fake2", props);
   }
 
 }

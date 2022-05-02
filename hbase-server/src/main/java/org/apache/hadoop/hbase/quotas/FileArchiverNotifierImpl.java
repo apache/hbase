@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -78,7 +79,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
   private final WriteLock writeLock;
   private volatile long lastFullCompute = Long.MIN_VALUE;
   private List<String> currentSnapshots = Collections.emptyList();
-  private static final Map<String,Object> NAMESPACE_LOCKS = new HashMap<>();
+  private static final Map<String, Object> NAMESPACE_LOCKS = new HashMap<>();
 
   /**
    * An Exception thrown when SnapshotSize updates to hbase:quota fail to be written.
@@ -92,8 +93,8 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
     }
   }
 
-  public FileArchiverNotifierImpl(
-      Connection conn, Configuration conf, FileSystem fs, TableName tn) {
+  public FileArchiverNotifierImpl(Connection conn, Configuration conf, FileSystem fs,
+    TableName tn) {
     this.conn = conn;
     this.conf = conf;
     this.fs = fs;
@@ -128,13 +129,13 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       if (lastFullCompute != Long.MIN_VALUE && start - lastFullCompute < 0) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("A full computation was performed after this request was received."
-              + " Ignoring requested updates: " + fileSizes);
+            + " Ignoring requested updates: " + fileSizes);
         }
         return;
       }
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("currentSnapshots: " + currentSnapshots + " fileSize: "+ fileSizes);
+        LOG.trace("currentSnapshots: " + currentSnapshots + " fileSize: " + fileSizes);
       }
 
       // Write increment to quota table for the correct snapshot. Only do this if we have snapshots
@@ -151,19 +152,18 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
   /**
    * For each file in the map, this updates the first snapshot (lexicographic snapshot name) that
    * references this file. The result of this computation is serialized to the quota table.
-   *
    * @param snapshots A collection of HBase snapshots to group the files into
    * @param fileSizes A map of file names to their sizes
    */
-  void groupArchivedFiledBySnapshotAndRecordSize(
-      List<String> snapshots, Set<Entry<String, Long>> fileSizes) throws IOException {
+  void groupArchivedFiledBySnapshotAndRecordSize(List<String> snapshots,
+    Set<Entry<String, Long>> fileSizes) throws IOException {
     // Make a copy as we'll modify it.
-    final Map<String,Long> filesToUpdate = new HashMap<>(fileSizes.size());
-    for (Entry<String,Long> entry : fileSizes) {
+    final Map<String, Long> filesToUpdate = new HashMap<>(fileSizes.size());
+    for (Entry<String, Long> entry : fileSizes) {
       filesToUpdate.put(entry.getKey(), entry.getValue());
     }
     // Track the change in size to each snapshot
-    final Map<String,Long> snapshotSizeChanges = new HashMap<>();
+    final Map<String, Long> snapshotSizeChanges = new HashMap<>();
     for (String snapshot : snapshots) {
       // For each file in `filesToUpdate`, check if `snapshot` refers to it.
       // If `snapshot` does, remove it from `filesToUpdate` and add it to `snapshotSizeChanges`.
@@ -186,21 +186,19 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    * For the given snapshot, find all files which this {@code snapshotName} references. After a file
    * is found to be referenced by the snapshot, it is removed from {@code filesToUpdate} and
    * {@code snapshotSizeChanges} is updated in concert.
-   *
-   * @param snapshotName The snapshot to check
-   * @param filesToUpdate A mapping of archived files to their size
+   * @param snapshotName        The snapshot to check
+   * @param filesToUpdate       A mapping of archived files to their size
    * @param snapshotSizeChanges A mapping of snapshots and their change in size
    */
-  void bucketFilesToSnapshot(
-      String snapshotName, Map<String,Long> filesToUpdate, Map<String,Long> snapshotSizeChanges)
-          throws IOException {
+  void bucketFilesToSnapshot(String snapshotName, Map<String, Long> filesToUpdate,
+    Map<String, Long> snapshotSizeChanges) throws IOException {
     // A quick check to avoid doing work if the caller unnecessarily invoked this method.
     if (filesToUpdate.isEmpty()) {
       return;
     }
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotName, CommonFSUtils.getRootDir(conf));
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+      CommonFSUtils.getRootDir(conf));
     SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
     // For each region referenced by the snapshot
@@ -227,19 +225,18 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
   /**
    * Reads the current size for each snapshot to update, generates a new update based on that value,
    * and then writes the new update.
-   *
    * @param snapshotSizeChanges A map of snapshot name to size change
    */
-  void persistSnapshotSizeChanges(Map<String,Long> snapshotSizeChanges) throws IOException {
+  void persistSnapshotSizeChanges(Map<String, Long> snapshotSizeChanges) throws IOException {
     try (Table quotaTable = conn.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
       // Create a list (with a more typical ordering implied)
-      final List<Entry<String,Long>> snapshotSizeEntries = new ArrayList<>(
-          snapshotSizeChanges.entrySet());
+      final List<Entry<String, Long>> snapshotSizeEntries =
+        new ArrayList<>(snapshotSizeChanges.entrySet());
       // Create the Gets for each snapshot we need to update
       final List<Get> snapshotSizeGets = snapshotSizeEntries.stream()
-          .map((e) -> QuotaTableUtil.makeGetForSnapshotSize(tn, e.getKey()))
-          .collect(Collectors.toList());
-      final Iterator<Entry<String,Long>> iterator = snapshotSizeEntries.iterator();
+        .map((e) -> QuotaTableUtil.makeGetForSnapshotSize(tn, e.getKey()))
+        .collect(Collectors.toList());
+      final Iterator<Entry<String, Long>> iterator = snapshotSizeEntries.iterator();
       // A List to store each Put we'll create from the Get's we retrieve
       final List<Put> updates = new ArrayList<>(snapshotSizeEntries.size());
 
@@ -259,7 +256,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
         long totalSizeChange = 0;
         // Read the current size values (if they exist) to generate the new value
         for (Result result : existingSnapshotSizes) {
-          Entry<String,Long> entry = iterator.next();
+          Entry<String, Long> entry = iterator.next();
           String snapshot = entry.getKey();
           Long size = entry.getValue();
           // Track the total size change for the namespace this table belongs in
@@ -273,10 +270,10 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
 
         // Create an update for the summation of all snapshots in the namespace
         if (totalSizeChange != 0) {
-          long previousSize = getPreviousNamespaceSnapshotSize(
-              quotaTable, tn.getNamespaceAsString());
-          updates.add(QuotaTableUtil.createPutForNamespaceSnapshotSize(
-              tn.getNamespaceAsString(), previousSize + totalSizeChange));
+          long previousSize =
+            getPreviousNamespaceSnapshotSize(quotaTable, tn.getNamespaceAsString());
+          updates.add(QuotaTableUtil.createPutForNamespaceSnapshotSize(tn.getNamespaceAsString(),
+            previousSize + totalSizeChange));
         }
 
         // Send all of the quota table updates in one batch.
@@ -292,7 +289,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
         // Propagate a failure if any updates failed
         if (!failures.isEmpty()) {
           throw new QuotaSnapshotSizeSerializationException(
-              "Failed to write some snapshot size updates: " + failures);
+            "Failed to write some snapshot size updates: " + failures);
         }
       }
     } catch (InterruptedException e) {
@@ -303,21 +300,18 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
 
   /**
    * Fetches the current size of all snapshots in the given {@code namespace}.
-   *
    * @param quotaTable The HBase quota table
-   * @param namespace Namespace to fetch the sum of snapshot sizes for
+   * @param namespace  Namespace to fetch the sum of snapshot sizes for
    * @return The size of all snapshot sizes for the namespace in bytes.
    */
   long getPreviousNamespaceSnapshotSize(Table quotaTable, String namespace) throws IOException {
     // Update the size of each snapshot for all snapshots in a namespace.
-    Result r = quotaTable.get(
-        QuotaTableUtil.createGetNamespaceSnapshotSize(namespace));
+    Result r = quotaTable.get(QuotaTableUtil.createGetNamespaceSnapshotSize(namespace));
     return getSnapshotSizeFromResult(r);
   }
 
   /**
    * Extracts the size component from a serialized {@link SpaceQuotaSnapshot} protobuf.
-   *
    * @param r A Result containing one cell with a SpaceQuotaSnapshot protobuf
    * @return The size in bytes of the snapshot.
    */
@@ -331,8 +325,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
   }
 
   @Override
-  public long computeAndStoreSnapshotSizes(
-      Collection<String> currentSnapshots) throws IOException {
+  public long computeAndStoreSnapshotSizes(Collection<String> currentSnapshots) throws IOException {
     // Record what the current snapshots are
     this.currentSnapshots = new ArrayList<>(currentSnapshots);
     Collections.sort(this.currentSnapshots);
@@ -373,7 +366,6 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
 
   /**
    * Computes the size of each snapshot against the table referenced by {@code this}.
-   *
    * @param snapshots A sorted list of snapshots against {@code tn}.
    * @return A list of the size for each snapshot against {@code tn}.
    */
@@ -408,13 +400,13 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
 
       // Get the set of files from the manifest that this snapshot references which are not also
       // referenced by the originating table.
-      Set<StoreFileReference> unreferencedStoreFileNames = getStoreFilesFromSnapshot(
-          manifest, (sfn) -> !tableReferencedStoreFiles.contains(sfn)
-              && !snapshotReferencedFiles.contains(sfn));
+      Set<StoreFileReference> unreferencedStoreFileNames =
+        getStoreFilesFromSnapshot(manifest, (sfn) -> !tableReferencedStoreFiles.contains(sfn)
+          && !snapshotReferencedFiles.contains(sfn));
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Snapshot " + snapshotName + " solely references the files: "
-            + unreferencedStoreFileNames);
+          + unreferencedStoreFileNames);
       }
 
       // Compute the size of the store files for this snapshot
@@ -442,7 +434,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    */
   long getSizeOfStoreFiles(TableName tn, Set<StoreFileReference> storeFileNames) {
     return storeFileNames.stream()
-        .collect(Collectors.summingLong((sfr) -> getSizeOfStoreFile(tn, sfr)));
+      .collect(Collectors.summingLong((sfr) -> getSizeOfStoreFile(tn, sfr)));
   }
 
   /**
@@ -450,18 +442,15 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    */
   long getSizeOfStoreFile(TableName tn, StoreFileReference storeFileName) {
     String regionName = storeFileName.getRegionName();
-    return storeFileName.getFamilyToFilesMapping()
-        .entries().stream()
-        .collect(Collectors.summingLong((e) ->
-            getSizeOfStoreFile(tn, regionName, e.getKey(), e.getValue())));
+    return storeFileName.getFamilyToFilesMapping().entries().stream().collect(
+      Collectors.summingLong((e) -> getSizeOfStoreFile(tn, regionName, e.getKey(), e.getValue())));
   }
 
   /**
-   * Computes the size of the store file given its name, region and family name in
-   * the archive directory.
+   * Computes the size of the store file given its name, region and family name in the archive
+   * directory.
    */
-  long getSizeOfStoreFile(
-      TableName tn, String regionName, String family, String storeFile) {
+  long getSizeOfStoreFile(TableName tn, String regionName, String family, String storeFile) {
     Path familyArchivePath;
     try {
       familyArchivePath = HFileArchiveUtil.getStoreArchivePath(conf, tn, regionName, family);
@@ -474,8 +463,8 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       if (fs.exists(fileArchivePath)) {
         FileStatus[] status = fs.listStatus(fileArchivePath);
         if (1 != status.length) {
-          LOG.warn("Expected " + fileArchivePath +
-              " to be a file but was a directory, ignoring reference");
+          LOG.warn("Expected " + fileArchivePath
+            + " to be a file but was a directory, ignoring reference");
           return 0L;
         }
         return status[0].getLen();
@@ -492,13 +481,13 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    * Extracts the names of the store files referenced by this snapshot which satisfy the given
    * predicate (the predicate returns {@code true}).
    */
-  Set<StoreFileReference> getStoreFilesFromSnapshot(
-      SnapshotManifest manifest, Predicate<String> filter) {
+  Set<StoreFileReference> getStoreFilesFromSnapshot(SnapshotManifest manifest,
+    Predicate<String> filter) {
     Set<StoreFileReference> references = new HashSet<>();
     // For each region referenced by the snapshot
     for (SnapshotRegionManifest rm : manifest.getRegionManifests()) {
-      StoreFileReference regionReference = new StoreFileReference(
-          ProtobufUtil.toRegionInfo(rm.getRegionInfo()).getEncodedName());
+      StoreFileReference regionReference =
+        new StoreFileReference(ProtobufUtil.toRegionInfo(rm.getRegionInfo()).getEncodedName());
 
       // For each column family in this region
       for (FamilyFiles ff : rm.getFamilyFilesList()) {
@@ -524,20 +513,17 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
   /**
    * Writes the snapshot sizes to the provided {@code table}.
    */
-  void persistSnapshotSizes(
-      Table table, List<SnapshotWithSize> snapshotSizes) throws IOException {
+  void persistSnapshotSizes(Table table, List<SnapshotWithSize> snapshotSizes) throws IOException {
     // Convert each entry in the map to a Put and write them to the quota table
-    table.put(snapshotSizes
-        .stream()
-        .map(sws -> QuotaTableUtil.createPutForSnapshotSize(
-            tn, sws.getName(), sws.getSize()))
-        .collect(Collectors.toList()));
+    table.put(snapshotSizes.stream()
+      .map(sws -> QuotaTableUtil.createPutForSnapshotSize(tn, sws.getName(), sws.getSize()))
+      .collect(Collectors.toList()));
   }
 
   /**
    * A struct encapsulating the name of a snapshot and its "size" on the filesystem. This size is
-   * defined as the amount of filesystem space taken by the files the snapshot refers to which
-   * the originating table no longer refers to.
+   * defined as the amount of filesystem space taken by the files the snapshot refers to which the
+   * originating table no longer refers to.
    */
   static class SnapshotWithSize {
     private final String name;
@@ -579,7 +565,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
     public String toString() {
       StringBuilder sb = new StringBuilder(32);
       return sb.append("SnapshotWithSize:[").append(name).append(" ")
-          .append(StringUtils.byteDesc(size)).append("]").toString();
+        .append(StringUtils.byteDesc(size)).append("]").toString();
     }
   }
 
@@ -588,7 +574,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
    */
   static class StoreFileReference {
     private final String regionName;
-    private final Multimap<String,String> familyToFiles;
+    private final Multimap<String, String> familyToFiles;
 
     StoreFileReference(String regionName) {
       this.regionName = Objects.requireNonNull(regionName);
@@ -599,7 +585,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
       return regionName;
     }
 
-    Multimap<String,String> getFamilyToFilesMapping() {
+    Multimap<String, String> getFamilyToFilesMapping() {
       return familyToFiles;
     }
 
@@ -628,7 +614,7 @@ public class FileArchiverNotifierImpl implements FileArchiverNotifier {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       return sb.append("StoreFileReference[region=").append(regionName).append(", files=")
-          .append(familyToFiles).append("]").toString();
+        .append(familyToFiles).append("]").toString();
     }
   }
 }

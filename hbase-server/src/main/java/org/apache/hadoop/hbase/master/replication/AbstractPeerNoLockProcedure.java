@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public abstract class AbstractPeerNoLockProcedure<TState>
-    extends StateMachineProcedure<MasterProcedureEnv, TState> implements PeerProcedureInterface {
+  extends StateMachineProcedure<MasterProcedureEnv, TState> implements PeerProcedureInterface {
 
   protected String peerId;
 
@@ -63,7 +63,7 @@ public abstract class AbstractPeerNoLockProcedure<TState>
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, TState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     if (state == getInitialState()) {
       // actually the peer related operations has no rollback, but if we haven't done any
       // modifications on the peer storage yet, we can just return.
@@ -92,7 +92,7 @@ public abstract class AbstractPeerNoLockProcedure<TState>
   }
 
   protected final ProcedureSuspendedException suspend(Configuration conf,
-      LongConsumer backoffConsumer) throws ProcedureSuspendedException {
+    LongConsumer backoffConsumer) throws ProcedureSuspendedException {
     if (retryCounter == null) {
       retryCounter = ProcedureUtil.createRetryCounter(conf);
     }

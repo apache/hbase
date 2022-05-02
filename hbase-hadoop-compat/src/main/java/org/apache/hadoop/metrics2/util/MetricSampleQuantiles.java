@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.util;
 
 import java.io.IOException;
@@ -24,24 +23,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm
- * for streaming calculation of targeted high-percentile epsilon-approximate
- * quantiles.
- * 
- * This is a generalization of the earlier work by Greenwald and Khanna (GK),
- * which essentially allows different error bounds on the targeted quantiles,
- * which allows for far more efficient calculation of high-percentiles.
- * 
- * See: Cormode, Korn, Muthukrishnan, and Srivastava
- * "Effective Computation of Biased Quantiles over Data Streams" in ICDE 2005
- * 
- * Greenwald and Khanna,
- * "Space-efficient online computation of quantile summaries" in SIGMOD 2001
- * 
+ * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm for streaming
+ * calculation of targeted high-percentile epsilon-approximate quantiles. This is a generalization
+ * of the earlier work by Greenwald and Khanna (GK), which essentially allows different error bounds
+ * on the targeted quantiles, which allows for far more efficient calculation of high-percentiles.
+ * See: Cormode, Korn, Muthukrishnan, and Srivastava "Effective Computation of Biased Quantiles over
+ * Data Streams" in ICDE 2005 Greenwald and Khanna, "Space-efficient online computation of quantile
+ * summaries" in SIGMOD 2001
  */
 @InterfaceAudience.Private
 public class MetricSampleQuantiles {
@@ -57,9 +48,8 @@ public class MetricSampleQuantiles {
   private LinkedList<SampleItem> samples;
 
   /**
-   * Buffers incoming items to be inserted in batch. Items are inserted into 
-   * the buffer linearly. When the buffer fills, it is flushed into the samples
-   * array in its entirety.
+   * Buffers incoming items to be inserted in batch. Items are inserted into the buffer linearly.
+   * When the buffer fills, it is flushed into the samples array in its entirety.
    */
   private long[] buffer = new long[500];
   private int bufferCount = 0;
@@ -75,14 +65,9 @@ public class MetricSampleQuantiles {
   }
 
   /**
-   * Specifies the allowable error for this rank, depending on which quantiles
-   * are being targeted.
-   * 
-   * This is the f(r_i, n) function from the CKMS paper. It's basically how wide
-   * the range of this rank can be.
-   * 
-   * @param rank
-   *          the index in the list of samples
+   * Specifies the allowable error for this rank, depending on which quantiles are being targeted.
+   * This is the f(r_i, n) function from the CKMS paper. It's basically how wide the range of this
+   * rank can be. n * the index in the list of samples
    */
   private double allowableError(int rank) {
     int size = samples.size();
@@ -104,7 +89,6 @@ public class MetricSampleQuantiles {
 
   /**
    * Add a new value from the stream.
-   * 
    * @param v the value to insert
    */
   synchronized public void insert(long v) {
@@ -120,8 +104,8 @@ public class MetricSampleQuantiles {
   }
 
   /**
-   * Merges items from buffer into the samples array in one pass.
-   * This is more efficient than doing an insert on every item.
+   * Merges items from buffer into the samples array in one pass. This is more efficient than doing
+   * an insert on every item.
    */
   private void insertBatch() {
     if (bufferCount == 0) {
@@ -166,9 +150,8 @@ public class MetricSampleQuantiles {
   }
 
   /**
-   * Try to remove extraneous items from the set of sampled items. This checks
-   * if an item is unnecessary based on the desired error bounds, and merges it
-   * with the adjacent item if it is.
+   * Try to remove extraneous items from the set of sampled items. This checks if an item is
+   * unnecessary based on the desired error bounds, and merges it with the adjacent item if it is.
    */
   private void compress() {
     if (samples.size() < 2) {
@@ -196,7 +179,6 @@ public class MetricSampleQuantiles {
 
   /**
    * Get the estimated value at the specified quantile.
-   * 
    * @param quantile Queried quantile, e.g. 0.50 or 0.99.
    * @return Estimated value at that quantile.
    */
@@ -225,10 +207,7 @@ public class MetricSampleQuantiles {
 
   /**
    * Get a snapshot of the current values of all the tracked quantiles.
-   * 
-   * @return snapshot of the tracked quantiles
-   * @throws IOException
-   *           if no items have been added to the estimator
+   * @return snapshot of the tracked quantiles n * if no items have been added to the estimator
    */
   synchronized public Map<MetricQuantile, Long> snapshot() throws IOException {
     // flush the buffer first for best results
@@ -243,7 +222,6 @@ public class MetricSampleQuantiles {
 
   /**
    * Returns the number of items that the estimator has processed
-   * 
    * @return count total number of items processed
    */
   synchronized public long getCount() {
@@ -252,7 +230,6 @@ public class MetricSampleQuantiles {
 
   /**
    * Returns the number of samples kept by the estimator
-   * 
    * @return count current number of samples
    */
   synchronized public int getSampleCount() {
@@ -269,27 +246,24 @@ public class MetricSampleQuantiles {
   }
 
   /**
-   * Describes a measured value passed to the estimator, tracking additional
-   * metadata required by the CKMS algorithm.
+   * Describes a measured value passed to the estimator, tracking additional metadata required by
+   * the CKMS algorithm.
    */
   private static class SampleItem {
-    
+
     /**
      * Value of the sampled item (e.g. a measured latency value)
      */
     private final long value;
-    
+
     /**
-     * Difference between the lowest possible rank of the previous item, and 
-     * the lowest possible rank of this item.
-     * 
-     * The sum of the g of all previous items yields this item's lower bound. 
+     * Difference between the lowest possible rank of the previous item, and the lowest possible
+     * rank of this item. The sum of the g of all previous items yields this item's lower bound.
      */
     private int g;
-    
+
     /**
-     * Difference between the item's greatest possible rank and lowest possible
-     * rank.
+     * Difference between the item's greatest possible rank and lowest possible rank.
      */
     private final int delta;
 

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,51 +41,50 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 @InterfaceAudience.Private
-public class RegionServerCoprocessorHost extends
-    CoprocessorHost<RegionServerCoprocessor, RegionServerCoprocessorEnvironment> {
+public class RegionServerCoprocessorHost
+  extends CoprocessorHost<RegionServerCoprocessor, RegionServerCoprocessorEnvironment> {
 
   private static final Logger LOG = LoggerFactory.getLogger(RegionServerCoprocessorHost.class);
 
   private RegionServerServices rsServices;
 
-  public RegionServerCoprocessorHost(RegionServerServices rsServices,
-      Configuration conf) {
+  public RegionServerCoprocessorHost(RegionServerServices rsServices, Configuration conf) {
     super(rsServices);
     this.rsServices = rsServices;
     this.conf = conf;
     // Log the state of coprocessor loading here; should appear only once or
     // twice in the daemon log, depending on HBase version, because there is
     // only one RegionServerCoprocessorHost instance in the RS process
-    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
-      DEFAULT_COPROCESSORS_ENABLED);
-    boolean tableCoprocessorsEnabled = conf.getBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY,
-      DEFAULT_USER_COPROCESSORS_ENABLED);
+    boolean coprocessorsEnabled =
+      conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY, DEFAULT_COPROCESSORS_ENABLED);
+    boolean tableCoprocessorsEnabled =
+      conf.getBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, DEFAULT_USER_COPROCESSORS_ENABLED);
     LOG.info("System coprocessor loading is " + (coprocessorsEnabled ? "enabled" : "disabled"));
-    LOG.info("Table coprocessor loading is " +
-      ((coprocessorsEnabled && tableCoprocessorsEnabled) ? "enabled" : "disabled"));
+    LOG.info("Table coprocessor loading is "
+      + ((coprocessorsEnabled && tableCoprocessorsEnabled) ? "enabled" : "disabled"));
     loadSystemCoprocessors(conf, REGIONSERVER_COPROCESSOR_CONF_KEY);
   }
 
   @Override
-  public RegionServerEnvironment createEnvironment(
-      RegionServerCoprocessor instance, int priority, int sequence, Configuration conf) {
+  public RegionServerEnvironment createEnvironment(RegionServerCoprocessor instance, int priority,
+    int sequence, Configuration conf) {
     // If a CoreCoprocessor, return a 'richer' environment, one laden with RegionServerServices.
-    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)?
-      new RegionServerEnvironmentForCoreCoprocessors(instance, priority, sequence, conf,
-            this.rsServices):
-      new RegionServerEnvironment(instance, priority, sequence, conf, this.rsServices);
+    return instance.getClass().isAnnotationPresent(CoreCoprocessor.class)
+      ? new RegionServerEnvironmentForCoreCoprocessors(instance, priority, sequence, conf,
+        this.rsServices)
+      : new RegionServerEnvironment(instance, priority, sequence, conf, this.rsServices);
   }
 
   @Override
   public RegionServerCoprocessor checkAndGetInstance(Class<?> implClass)
-      throws InstantiationException, IllegalAccessException {
+    throws InstantiationException, IllegalAccessException {
     try {
       if (RegionServerCoprocessor.class.isAssignableFrom(implClass)) {
         return implClass.asSubclass(RegionServerCoprocessor.class).getDeclaredConstructor()
-            .newInstance();
+          .newInstance();
       } else {
         LOG.error("{} is not of type RegionServerCoprocessor. Check the configuration of {}",
-            implClass.getName(), CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+          implClass.getName(), CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
         return null;
       }
     } catch (NoSuchMethodException | InvocationTargetException e) {
@@ -95,10 +93,10 @@ public class RegionServerCoprocessorHost extends
   }
 
   private ObserverGetter<RegionServerCoprocessor, RegionServerObserver> rsObserverGetter =
-      RegionServerCoprocessor::getRegionServerObserver;
+    RegionServerCoprocessor::getRegionServerObserver;
 
-  abstract class RegionServerObserverOperation extends
-      ObserverOperationWithoutResult<RegionServerObserver> {
+  abstract class RegionServerObserverOperation
+    extends ObserverOperationWithoutResult<RegionServerObserver> {
     public RegionServerObserverOperation() {
       super(rsObserverGetter);
     }
@@ -150,8 +148,7 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void preReplicateLogEntries()
-      throws IOException {
+  public void preReplicateLogEntries() throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
       public void call(RegionServerObserver observer) throws IOException {
@@ -160,8 +157,7 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  public void postReplicateLogEntries()
-      throws IOException {
+  public void postReplicateLogEntries() throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
       @Override
       public void call(RegionServerObserver observer) throws IOException {
@@ -171,18 +167,18 @@ public class RegionServerCoprocessorHost extends
   }
 
   public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
-      throws IOException {
+    throws IOException {
     if (this.coprocEnvironments.isEmpty()) {
       return endpoint;
     }
     return execOperationWithResult(
-        new ObserverOperationWithResult<RegionServerObserver, ReplicationEndpoint>(
-            rsObserverGetter, endpoint) {
-      @Override
-      public ReplicationEndpoint call(RegionServerObserver observer) throws IOException {
-        return observer.postCreateReplicationEndPoint(this, getResult());
-      }
-    });
+      new ObserverOperationWithResult<RegionServerObserver, ReplicationEndpoint>(rsObserverGetter,
+        endpoint) {
+        @Override
+        public ReplicationEndpoint call(RegionServerObserver observer) throws IOException {
+          return observer.postCreateReplicationEndPoint(this, getResult());
+        }
+      });
   }
 
   public void preClearCompactionQueues() throws IOException {
@@ -222,18 +218,17 @@ public class RegionServerCoprocessorHost extends
   }
 
   /**
-   * Coprocessor environment extension providing access to region server
-   * related services.
+   * Coprocessor environment extension providing access to region server related services.
    */
   private static class RegionServerEnvironment extends BaseEnvironment<RegionServerCoprocessor>
-      implements RegionServerCoprocessorEnvironment {
+    implements RegionServerCoprocessorEnvironment {
     private final MetricRegistry metricRegistry;
     private final RegionServerServices services;
 
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BC_UNCONFIRMED_CAST",
-        justification="Intentional; FB has trouble detecting isAssignableFrom")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "BC_UNCONFIRMED_CAST",
+        justification = "Intentional; FB has trouble detecting isAssignableFrom")
     public RegionServerEnvironment(final RegionServerCoprocessor impl, final int priority,
-        final int seq, final Configuration conf, final RegionServerServices services) {
+      final int seq, final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
       // If coprocessor exposes any services, register them.
       for (Service service : impl.getServices()) {
@@ -241,7 +236,7 @@ public class RegionServerCoprocessorHost extends
       }
       this.services = services;
       this.metricRegistry =
-          MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
+        MetricsCoprocessor.createRegistryForRSCoprocessor(impl.getClass().getName());
     }
 
     @Override
@@ -281,19 +276,19 @@ public class RegionServerCoprocessorHost extends
    * Coprocessors only. Temporary hack until Core Coprocessors are integrated into Core.
    */
   private static class RegionServerEnvironmentForCoreCoprocessors extends RegionServerEnvironment
-      implements HasRegionServerServices {
+    implements HasRegionServerServices {
     final RegionServerServices regionServerServices;
 
     public RegionServerEnvironmentForCoreCoprocessors(final RegionServerCoprocessor impl,
-          final int priority, final int seq, final Configuration conf,
-          final RegionServerServices services) {
-       super(impl, priority, seq, conf, services);
-       this.regionServerServices = services;
+      final int priority, final int seq, final Configuration conf,
+      final RegionServerServices services) {
+      super(impl, priority, seq, conf, services);
+      this.regionServerServices = services;
     }
 
     /**
      * @return An instance of RegionServerServices, an object NOT for general user-space Coprocessor
-     * consumption.
+     *         consumption.
      */
     @Override
     public RegionServerServices getRegionServerServices() {

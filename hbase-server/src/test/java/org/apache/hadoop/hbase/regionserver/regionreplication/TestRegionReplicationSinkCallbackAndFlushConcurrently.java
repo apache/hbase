@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,7 +78,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicationSinkCallbackAndFlushConcurrently.class);
+    HBaseClassTestRule.forClass(TestRegionReplicationSinkCallbackAndFlushConcurrently.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
@@ -102,7 +102,7 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
     conf.setLong(RegionReplicationSink.META_EDIT_OPERATION_TIMEOUT_MS, 20 * 60 * 1000);
     conf.setBoolean(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, false);
     HTU.startMiniCluster(StartTestingClusterOption.builder().rsClass(RSForTest.class)
-        .numRegionServers(NB_SERVERS).build());
+      .numRegionServers(NB_SERVERS).build());
 
   }
 
@@ -121,13 +121,11 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   public void test() throws Exception {
     final HRegionForTest[] regions = this.createTable();
     final AtomicBoolean completedRef = new AtomicBoolean(false);
-    RegionReplicationSink regionReplicationSink =
-        regions[0].getRegionReplicationSink().get();
+    RegionReplicationSink regionReplicationSink = regions[0].getRegionReplicationSink().get();
     assertTrue(regionReplicationSink != null);
 
-    RegionReplicationSink spiedRegionReplicationSink = this.setUpSpiedRegionReplicationSink(
-      regionReplicationSink, regions[0],
-      completedRef);
+    RegionReplicationSink spiedRegionReplicationSink =
+      this.setUpSpiedRegionReplicationSink(regionReplicationSink, regions[0], completedRef);
 
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName(HRegionForTest.USER_THREAD_NAME);
@@ -150,8 +148,8 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   }
 
   private RegionReplicationSink setUpSpiedRegionReplicationSink(
-      final RegionReplicationSink regionReplicationSink, final HRegionForTest primaryRegion,
-      final AtomicBoolean completedRef) {
+    final RegionReplicationSink regionReplicationSink, final HRegionForTest primaryRegion,
+    final AtomicBoolean completedRef) {
     final AtomicInteger onCompleteCounter = new AtomicInteger(0);
     final AtomicInteger getStartFlushAllDescriptorCounter = new AtomicInteger(0);
     RegionReplicationSink spiedRegionReplicationSink = Mockito.spy(regionReplicationSink);
@@ -176,11 +174,13 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
       if (!startTest) {
         return invocationOnMock.callRealMethod();
       }
-      if (primaryRegion.prepareFlush
-          && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)) {
+      if (
+        primaryRegion.prepareFlush
+          && Thread.currentThread().getName().equals(HRegionForTest.USER_THREAD_NAME)
+      ) {
         int count = getStartFlushAllDescriptorCounter.incrementAndGet();
-        if(count == 1) {
-          //onComplete could execute
+        if (count == 1) {
+          // onComplete could execute
           primaryRegion.cyclicBarrier.await();
           return invocationOnMock.callRealMethod();
         }
@@ -193,9 +193,9 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   }
 
   private HRegionForTest[] createTable() throws Exception {
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
-        .setRegionReplication(NB_SERVERS).setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
-        .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     HTU.getAdmin().createTable(tableDescriptor);
     final HRegionForTest[] regions = new HRegionForTest[NB_SERVERS];
     for (int i = 0; i < NB_SERVERS; i++) {
@@ -219,13 +219,13 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
     volatile boolean prepareFlush = false;
 
     public HRegionForTest(HRegionFileSystem fs, WAL wal, Configuration confParam,
-        TableDescriptor htd, RegionServerServices rsServices) {
+      TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 
     @SuppressWarnings("deprecation")
     public HRegionForTest(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
@@ -235,27 +235,29 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
 
     @Override
     protected PrepareFlushResult internalPrepareFlushCache(WAL wal, long myseqid,
-        Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
-        FlushLifeCycleTracker tracker) throws IOException {
+      Collection<HStore> storesToFlush, MonitoredTask status, boolean writeFlushWalMarker,
+      FlushLifeCycleTracker tracker) throws IOException {
       if (!startTest) {
         return super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
           writeFlushWalMarker, tracker);
       }
 
-      if (this.getRegionInfo().getReplicaId() == 0
-          && Thread.currentThread().getName().equals(USER_THREAD_NAME)) {
+      if (
+        this.getRegionInfo().getReplicaId() == 0
+          && Thread.currentThread().getName().equals(USER_THREAD_NAME)
+      ) {
         this.prepareFlush = true;
       }
       try {
-        PrepareFlushResult result =
-            super.internalPrepareFlushCache(wal, myseqid, storesToFlush, status,
-          writeFlushWalMarker, tracker);
+        PrepareFlushResult result = super.internalPrepareFlushCache(wal, myseqid, storesToFlush,
+          status, writeFlushWalMarker, tracker);
 
         return result;
-      }
-      finally {
-        if (this.getRegionInfo().getReplicaId() == 0
-            && Thread.currentThread().getName().equals(USER_THREAD_NAME)) {
+      } finally {
+        if (
+          this.getRegionInfo().getReplicaId() == 0
+            && Thread.currentThread().getName().equals(USER_THREAD_NAME)
+        ) {
           this.prepareFlush = false;
         }
       }
@@ -272,7 +274,7 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
 
     @Override
     public ReplicateWALEntryResponse replicateToReplica(RpcController rpcController,
-        ReplicateWALEntryRequest replicateWALEntryRequest) throws ServiceException {
+      ReplicateWALEntryRequest replicateWALEntryRequest) throws ServiceException {
 
       if (!startTest) {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
@@ -291,8 +293,10 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
         throw new ServiceException(e);
       }
 
-      if (!region.getRegionInfo().getTable().equals(tableName)
-          || region.getRegionInfo().getReplicaId() != 1) {
+      if (
+        !region.getRegionInfo().getTable().equals(tableName)
+          || region.getRegionInfo().getReplicaId() != 1
+      ) {
         return super.replicateToReplica(rpcController, replicateWALEntryRequest);
       }
 
@@ -308,7 +312,7 @@ public class TestRegionReplicationSinkCallbackAndFlushConcurrently {
   }
 
   public static final class RSForTest
-      extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
+    extends SingleProcessHBaseCluster.MiniHBaseClusterRegionServer {
 
     public RSForTest(Configuration conf) throws IOException, InterruptedException {
       super(conf);

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -26,14 +24,14 @@ import org.apache.hbase.thirdparty.com.google.common.base.Objects;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-
 /**
- * Represents a coprocessor service method execution against a single region.  While coprocessor
- * service calls are performed against a region, this class implements {@link Row} in order to
- * make use of the AsyncProcess framework for batching multi-region calls per region server.
- *
- * <p><b>Note:</b> This class should not be instantiated directly.  Use
- * HTable#batchCoprocessorService instead.</p>
+ * Represents a coprocessor service method execution against a single region. While coprocessor
+ * service calls are performed against a region, this class implements {@link Row} in order to make
+ * use of the AsyncProcess framework for batching multi-region calls per region server.
+ * <p>
+ * <b>Note:</b> This class should not be instantiated directly. Use HTable#batchCoprocessorService
+ * instead.
+ * </p>
  */
 @InterfaceAudience.Private
 public class RegionCoprocessorServiceExec implements Row {
@@ -47,8 +45,8 @@ public class RegionCoprocessorServiceExec implements Row {
   private final MethodDescriptor method;
   private final Message request;
 
-  public RegionCoprocessorServiceExec(byte[] region, byte[] startKey,
-      MethodDescriptor method, Message request) {
+  public RegionCoprocessorServiceExec(byte[] region, byte[] startKey, MethodDescriptor method,
+    Message request) {
     this.region = region;
     this.startKey = startKey;
     this.method = method;
@@ -103,14 +101,9 @@ public class RegionCoprocessorServiceExec implements Row {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("region:")
-           .append(Bytes.toStringBinary(region))
-           .append(", startKey:")
-           .append(Bytes.toStringBinary(startKey))
-           .append(", method:")
-           .append(method.getFullName())
-           .append(", request:")
-           .append(request);
+    builder.append("region:").append(Bytes.toStringBinary(region)).append(", startKey:")
+      .append(Bytes.toStringBinary(startKey)).append(", method:").append(method.getFullName())
+      .append(", request:").append(request);
     return builder.toString();
   }
 }

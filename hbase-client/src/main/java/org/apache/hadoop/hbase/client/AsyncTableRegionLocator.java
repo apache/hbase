@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public interface AsyncTableRegionLocator {
    * Finds the region on which the given row is being served.
    * <p/>
    * Returns the location of the region to which the row belongs.
-   * @param row Row to find.
+   * @param row    Row to find.
    * @param reload true to reload information or false to use cached information
    */
   default CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, boolean reload) {
@@ -66,7 +66,7 @@ public interface AsyncTableRegionLocator {
    * <p/>
    * Returns the location of the region with the given <code>replicaId</code> to which the row
    * belongs.
-   * @param row Row to find.
+   * @param row       Row to find.
    * @param replicaId the replica id of the region
    */
   default CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId) {
@@ -78,9 +78,9 @@ public interface AsyncTableRegionLocator {
    * <p/>
    * Returns the location of the region with the given <code>replicaId</code> to which the row
    * belongs.
-   * @param row Row to find.
+   * @param row       Row to find.
    * @param replicaId the replica id of the region
-   * @param reload true to reload information or false to use cached information
+   * @param reload    true to reload information or false to use cached information
    */
   CompletableFuture<HRegionLocation> getRegionLocation(byte[] row, int replicaId, boolean reload);
 
@@ -95,7 +95,7 @@ public interface AsyncTableRegionLocator {
 
   /**
    * Find all the replicas for the region on which the given row is being served.
-   * @param row Row to find.
+   * @param row    Row to find.
    * @param reload true to reload information or false to use cached information
    * @return Locations for all the replicas of the row.
    */

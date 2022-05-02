@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.regionserver;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
@@ -53,7 +51,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class LogRollRegionServerProcedureManager extends RegionServerProcedureManager {
   private static final Logger LOG =
-      LoggerFactory.getLogger(LogRollRegionServerProcedureManager.class);
+    LoggerFactory.getLogger(LogRollRegionServerProcedureManager.class);
 
   /** Conf key for number of request threads to start backup on region servers */
   public static final String BACKUP_REQUEST_THREADS_KEY = "hbase.backup.region.pool.threads";
@@ -86,7 +84,7 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
   public void start() {
     if (!BackupManager.isBackupEnabled(rss.getConfiguration())) {
       LOG.warn("Backup is not enabled. Check your " + BackupRestoreConstants.BACKUP_ENABLE_KEY
-          + " setting");
+        + " setting");
       return;
     }
     this.memberRpcs.start(rss.getServerName().toString(), member);
@@ -122,7 +120,7 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
     // don't run a backup if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
       throw new IllegalStateException("Can't start backup procedure on RS: " + rss.getServerName()
-          + ", because stopping/stopped!");
+        + ", because stopping/stopped!");
     }
 
     LOG.info("Attempting to run a roll log procedure for backup.");
@@ -130,12 +128,12 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
     Configuration conf = rss.getConfiguration();
     long timeoutMillis = conf.getLong(BACKUP_TIMEOUT_MILLIS_KEY, BACKUP_TIMEOUT_MILLIS_DEFAULT);
     long wakeMillis =
-        conf.getLong(BACKUP_REQUEST_WAKE_MILLIS_KEY, BACKUP_REQUEST_WAKE_MILLIS_DEFAULT);
+      conf.getLong(BACKUP_REQUEST_WAKE_MILLIS_KEY, BACKUP_REQUEST_WAKE_MILLIS_DEFAULT);
 
     LogRollBackupSubprocedurePool taskManager =
-        new LogRollBackupSubprocedurePool(rss.getServerName().toString(), conf);
+      new LogRollBackupSubprocedurePool(rss.getServerName().toString(), conf);
     return new LogRollBackupSubprocedure(rss, member, errorDispatcher, wakeMillis, timeoutMillis,
-        taskManager, data);
+      taskManager, data);
   }
 
   /**
@@ -153,12 +151,12 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
     this.rss = rss;
     if (!BackupManager.isBackupEnabled(rss.getConfiguration())) {
       LOG.warn("Backup is not enabled. Check your " + BackupRestoreConstants.BACKUP_ENABLE_KEY
-          + " setting");
+        + " setting");
       return;
     }
     ProcedureCoordinationManager coordManager = new ZKProcedureCoordinationManager(rss);
     this.memberRpcs = coordManager
-            .getProcedureMemberRpcs(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE);
+      .getProcedureMemberRpcs(LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE);
 
     // read in the backup handler configuration properties
     Configuration conf = rss.getConfiguration();
@@ -166,7 +164,7 @@ public class LogRollRegionServerProcedureManager extends RegionServerProcedureMa
     int opThreads = conf.getInt(BACKUP_REQUEST_THREADS_KEY, BACKUP_REQUEST_THREADS_DEFAULT);
     // create the actual cohort member
     ThreadPoolExecutor pool =
-        ProcedureMember.defaultPool(rss.getServerName().toString(), opThreads, keepAlive);
+      ProcedureMember.defaultPool(rss.getServerName().toString(), opThreads, keepAlive);
     this.member = new ProcedureMember(memberRpcs, pool, new BackupSubprocedureBuilder());
   }
 

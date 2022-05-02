@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,7 +63,7 @@ public final class ReplicationUtils {
   }
 
   public static Configuration getPeerClusterConfiguration(ReplicationPeerConfig peerConfig,
-      Configuration baseConf) throws ReplicationException {
+    Configuration baseConf) throws ReplicationException {
     Configuration otherConf;
     try {
       otherConf = HBaseConfiguration.createClusterConf(baseConf, peerConfig.getClusterKey());
@@ -82,7 +82,7 @@ public final class ReplicationUtils {
   }
 
   public static void removeAllQueues(ReplicationQueueStorage queueStorage, String peerId)
-      throws ReplicationException {
+    throws ReplicationException {
     for (ServerName replicator : queueStorage.getListOfReplicators()) {
       List<String> queueIds = queueStorage.getAllQueues(replicator);
       for (String queueId : queueIds) {
@@ -110,7 +110,7 @@ public final class ReplicationUtils {
   }
 
   private static boolean isTableCFsEqual(Map<TableName, List<String>> tableCFs1,
-      Map<TableName, List<String>> tableCFs2) {
+    Map<TableName, List<String>> tableCFs2) {
     if (tableCFs1 == null) {
       return tableCFs2 == null;
     }
@@ -135,16 +135,16 @@ public final class ReplicationUtils {
   }
 
   public static boolean isNamespacesAndTableCFsEqual(ReplicationPeerConfig rpc1,
-      ReplicationPeerConfig rpc2) {
+    ReplicationPeerConfig rpc2) {
     if (rpc1.replicateAllUserTables() != rpc2.replicateAllUserTables()) {
       return false;
     }
     if (rpc1.replicateAllUserTables()) {
-      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces()) &&
-        isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
+      return isNamespacesEqual(rpc1.getExcludeNamespaces(), rpc2.getExcludeNamespaces())
+        && isTableCFsEqual(rpc1.getExcludeTableCFsMap(), rpc2.getExcludeTableCFsMap());
     } else {
-      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces()) &&
-        isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
+      return isNamespacesEqual(rpc1.getNamespaces(), rpc2.getNamespaces())
+        && isTableCFsEqual(rpc1.getTableCFsMap(), rpc2.getTableCFsMap());
     }
   }
 
@@ -158,7 +158,7 @@ public final class ReplicationUtils {
   }
 
   public static FileSystem getRemoteWALFileSystem(Configuration conf, String remoteWALDir)
-      throws IOException {
+    throws IOException {
     return new Path(remoteWALDir).getFileSystem(conf);
   }
 
@@ -184,14 +184,14 @@ public final class ReplicationUtils {
 
   /**
    * Do the sleeping logic
-   * @param msg Why we sleep
-   * @param sleepForRetries the base sleep time.
-   * @param sleepMultiplier by how many times the default sleeping time is augmented
+   * @param msg                  Why we sleep
+   * @param sleepForRetries      the base sleep time.
+   * @param sleepMultiplier      by how many times the default sleeping time is augmented
    * @param maxRetriesMultiplier the max retry multiplier
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
   public static boolean sleepForRetries(String msg, long sleepForRetries, int sleepMultiplier,
-      int maxRetriesMultiplier) {
+    int maxRetriesMultiplier) {
     try {
       LOG.trace("{}, sleeping {} times {}", msg, sleepForRetries, sleepMultiplier);
       Thread.sleep(sleepForRetries * sleepMultiplier);

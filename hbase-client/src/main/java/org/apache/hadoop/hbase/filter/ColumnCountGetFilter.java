@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * Simple filter that returns first N columns on row only.
- * This filter was written to test filters in Get and as soon as it gets
- * its quota of columns, {@link #filterAllRemaining()} returns true.  This
- * makes this filter unsuitable as a Scan filter.
+ * Simple filter that returns first N columns on row only. This filter was written to test filters
+ * in Get and as soon as it gets its quota of columns, {@link #filterAllRemaining()} returns true.
+ * This makes this filter unsuitable as a Scan filter.
  */
 @InterfaceAudience.Public
 public class ColumnCountGetFilter extends FilterBase {
@@ -74,9 +71,9 @@ public class ColumnCountGetFilter extends FilterBase {
     this.count = 0;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 1,
-                                "Expected 1 but got: %s", filterArguments.size());
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
+      filterArguments.size());
     int limit = ParseFilter.convertByteArrayToInt(filterArguments.get(0));
     return new ColumnCountGetFilter(limit);
   }
@@ -85,7 +82,7 @@ public class ColumnCountGetFilter extends FilterBase {
    * @return The filter serialized using pb
    */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     FilterProtos.ColumnCountGetFilter.Builder builder =
       FilterProtos.ColumnCountGetFilter.newBuilder();
     builder.setLimit(this.limit);
@@ -97,8 +94,8 @@ public class ColumnCountGetFilter extends FilterBase {
    * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
    * @see #toByteArray
    */
-  public static ColumnCountGetFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static ColumnCountGetFilter parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     FilterProtos.ColumnCountGetFilter proto;
     try {
       proto = FilterProtos.ColumnCountGetFilter.parseFrom(pbBytes);
@@ -110,15 +107,15 @@ public class ColumnCountGetFilter extends FilterBase {
 
   /**
    * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) return true;
     if (!(o instanceof ColumnCountGetFilter)) return false;
 
-    ColumnCountGetFilter other = (ColumnCountGetFilter)o;
+    ColumnCountGetFilter other = (ColumnCountGetFilter) o;
     return this.getLimit() == other.getLimit();
   }
 

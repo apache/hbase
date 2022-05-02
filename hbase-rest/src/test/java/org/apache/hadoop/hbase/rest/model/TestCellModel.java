@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestCellModel extends TestModelBase<CellModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellModel.class);
+    HBaseClassTestRule.forClass(TestCellModel.class);
 
   private static final long TIMESTAMP = 1245219839331L;
   private static final byte[] COLUMN = Bytes.toBytes("testcolumn");
@@ -45,11 +45,9 @@ public class TestCellModel extends TestModelBase<CellModel> {
 
   public TestCellModel() throws Exception {
     super(CellModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Cell " +
-          "column=\"dGVzdGNvbHVtbg==\" timestamp=\"1245219839331\">dGVzdHZhbHVl</Cell>";
-    AS_PB =
-      "Egp0ZXN0Y29sdW1uGOO6i+eeJCIJdGVzdHZhbHVl";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Cell "
+      + "column=\"dGVzdGNvbHVtbg==\" timestamp=\"1245219839331\">dGVzdHZhbHVl</Cell>";
+    AS_PB = "Egp0ZXN0Y29sdW1uGOO6i+eeJCIJdGVzdHZhbHVl";
 
     AS_JSON =
       "{\"column\":\"dGVzdGNvbHVtbg==\",\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVl\"}";
@@ -108,4 +106,3 @@ public class TestCellModel extends TestModelBase<CellModel> {
     assertTrue(StringUtils.contains(cellModel.toString(), expectedColumn));
   }
 }
-

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,11 +21,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * This is a very fast, non-cryptographic hash suitable for general hash-based
- * lookup.  See http://code.google.com/p/smhasher/wiki/MurmurHash3 for details.
- *
- * <p>MurmurHash3 is the successor to MurmurHash2. It comes in 3 variants, and
- * the 32-bit version targets low latency for hash table use.</p>
+ * This is a very fast, non-cryptographic hash suitable for general hash-based lookup. See
+ * http://code.google.com/p/smhasher/wiki/MurmurHash3 for details.
+ * <p>
+ * MurmurHash3 is the successor to MurmurHash2. It comes in 3 variants, and the 32-bit version
+ * targets low latency for hash table use.
+ * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
@@ -49,10 +49,8 @@ public class MurmurHash3 extends Hash {
 
     for (int i = 0; i < roundedEnd; i += 4) {
       // little endian load order
-      int k1 =
-          (hashKey.get(i) & 0xff) | ((hashKey.get(i + 1) & 0xff) << 8)
-              | ((hashKey.get(i + 2) & 0xff) << 16)
-              | (hashKey.get(i + 3) << 24);
+      int k1 = (hashKey.get(i) & 0xff) | ((hashKey.get(i + 1) & 0xff) << 8)
+        | ((hashKey.get(i + 2) & 0xff) << 16) | (hashKey.get(i + 3) << 24);
       k1 *= c1;
       k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
       k1 *= c2;
@@ -66,20 +64,20 @@ public class MurmurHash3 extends Hash {
     int k1 = 0;
 
     switch (length & 0x03) {
-    case 3:
-      k1 = (hashKey.get(roundedEnd + 2) & 0xff) << 16;
-      // FindBugs SF_SWITCH_FALLTHROUGH
-    case 2:
-      k1 |= (hashKey.get(roundedEnd + 1) & 0xff) << 8;
-      // FindBugs SF_SWITCH_FALLTHROUGH
-    case 1:
-      k1 |= (hashKey.get(roundedEnd) & 0xff);
-      k1 *= c1;
-      k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
-      k1 *= c2;
-      h1 ^= k1;
-    default:
-      // fall out
+      case 3:
+        k1 = (hashKey.get(roundedEnd + 2) & 0xff) << 16;
+        // FindBugs SF_SWITCH_FALLTHROUGH
+      case 2:
+        k1 |= (hashKey.get(roundedEnd + 1) & 0xff) << 8;
+        // FindBugs SF_SWITCH_FALLTHROUGH
+      case 1:
+        k1 |= (hashKey.get(roundedEnd) & 0xff);
+        k1 *= c1;
+        k1 = (k1 << 15) | (k1 >>> 17); // ROTL32(k1,15);
+        k1 *= c2;
+        h1 ^= k1;
+      default:
+        // fall out
     }
 
     // finalization

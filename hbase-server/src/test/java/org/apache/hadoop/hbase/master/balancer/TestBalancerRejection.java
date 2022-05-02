@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.mockito.Mockito.mock;
@@ -54,7 +53,7 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBalancerRejection.class);
 
-  static class MockCostFunction extends CostFunction{
+  static class MockCostFunction extends CostFunction {
     public static double mockCost;
 
     public MockCostFunction(Configuration c) {
@@ -72,44 +71,44 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
   }
 
   @Test
-  public void testBalancerRejections() throws Exception{
+  public void testBalancerRejections() throws Exception {
     try {
-      //enabled balancer rejection recording
+      // enabled balancer rejection recording
       conf.setBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED, true);
-      conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY, MockCostFunction.class.getName());
+      conf.set(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY,
+        MockCostFunction.class.getName());
       MasterServices services = mock(MasterServices.class);
       when(services.getConfiguration()).thenReturn(conf);
       MasterClusterInfoProvider provider = new MasterClusterInfoProvider(services);
       loadBalancer.setClusterInfoProvider(provider);
       loadBalancer.onConfigurationChange(conf);
-      //Simulate 2 servers with 5 regions.
+      // Simulate 2 servers with 5 regions.
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(new int[] { 5, 5 });
-      Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable = (Map) mockClusterServersWithTables(servers);
+      Map<TableName, Map<ServerName, List<RegionInfo>>> LoadOfAllTable =
+        (Map) mockClusterServersWithTables(servers);
 
-      //Reject case 1: Total cost < 0
+      // Reject case 1: Total cost < 0
       MockCostFunction.mockCost = -Double.MAX_VALUE;
-      //Since the Balancer was rejected, there should not be any plans
+      // Since the Balancer was rejected, there should not be any plans
       Assert.assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
 
-      //Reject case 2: Cost < minCostNeedBalance
+      // Reject case 2: Cost < minCostNeedBalance
       MockCostFunction.mockCost = 1;
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", Float.MAX_VALUE);
       loadBalancer.onConfigurationChange(conf);
       Assert.assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
 
-      //NamedQueue is an async Producer-consumer Pattern, waiting here until it completed
+      // NamedQueue is an async Producer-consumer Pattern, waiting here until it completed
       int maxWaitingCount = 10;
       while (maxWaitingCount-- > 0 && getBalancerRejectionLogEntries(provider).size() != 2) {
         Thread.sleep(1000);
       }
-      //There are two cases, should be 2 logEntries
+      // There are two cases, should be 2 logEntries
       List<LogEntry> logEntries = getBalancerRejectionLogEntries(provider);
       Assert.assertEquals(2, logEntries.size());
-      Assert.assertTrue(
-        logEntries.get(0).toJsonPrettyPrint().contains("minCostNeedBalance"));
-      Assert.assertTrue(
-        logEntries.get(1).toJsonPrettyPrint().contains("cost1*multiplier1"));
-    }finally {
+      Assert.assertTrue(logEntries.get(0).toJsonPrettyPrint().contains("minCostNeedBalance"));
+      Assert.assertTrue(logEntries.get(1).toJsonPrettyPrint().contains("cost1*multiplier1"));
+    } finally {
       conf.unset(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY);
       conf.unset(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED);
       loadBalancer.onConfigurationChange(conf);

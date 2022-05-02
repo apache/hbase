@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,9 +38,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * Computes size of each region for given table and given column families.
- * The value is used by MapReduce for better scheduling.
- * */
+ * Computes size of each region for given table and given column families. The value is used by
+ * MapReduce for better scheduling.
+ */
 @InterfaceAudience.Private
 public class RegionSizeCalculator {
 
@@ -48,7 +48,7 @@ public class RegionSizeCalculator {
 
   /**
    * Maps each region to its size in bytes.
-   * */
+   */
   private final Map<byte[], Long> sizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   static final String ENABLE_REGIONSIZECALCULATOR = "hbase.regionsizecalculator.enable";
@@ -56,13 +56,12 @@ public class RegionSizeCalculator {
 
   /**
    * Computes size of each region for table and given column families.
-   * */
+   */
   public RegionSizeCalculator(RegionLocator regionLocator, Admin admin) throws IOException {
     init(regionLocator, admin);
   }
 
-  private void init(RegionLocator regionLocator, Admin admin)
-      throws IOException {
+  private void init(RegionLocator regionLocator, Admin admin) throws IOException {
     if (!enabled(admin.getConfiguration())) {
       LOG.info("Region size calculation disabled.");
       return;
@@ -79,12 +78,12 @@ public class RegionSizeCalculator {
     Set<ServerName> tableServers = getRegionServersOfTable(regionLocator);
 
     for (ServerName tableServerName : tableServers) {
-      for (RegionMetrics regionLoad : admin.getRegionMetrics(
-        tableServerName,regionLocator.getName())) {
+      for (RegionMetrics regionLoad : admin.getRegionMetrics(tableServerName,
+        regionLocator.getName())) {
 
         byte[] regionId = regionLoad.getRegionName();
-        long regionSizeBytes
-          = ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
+        long regionSizeBytes =
+          ((long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE)) * MEGABYTE;
 
         sizeMap.put(regionId, regionSizeBytes);
 
@@ -96,8 +95,7 @@ public class RegionSizeCalculator {
     LOG.debug("Region sizes calculated");
   }
 
-  private Set<ServerName> getRegionServersOfTable(RegionLocator regionLocator)
-      throws IOException {
+  private Set<ServerName> getRegionServersOfTable(RegionLocator regionLocator) throws IOException {
 
     Set<ServerName> tableServers = Sets.newHashSet();
     for (HRegionLocation regionLocation : regionLocator.getAllRegionLocations()) {
@@ -112,7 +110,7 @@ public class RegionSizeCalculator {
 
   /**
    * Returns size of given region in bytes. Returns 0 if region was not found.
-   * */
+   */
   public long getRegionSize(byte[] regionId) {
     Long size = sizeMap.get(regionId);
     if (size == null) {

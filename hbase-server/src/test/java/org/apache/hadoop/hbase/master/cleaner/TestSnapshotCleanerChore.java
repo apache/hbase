@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -39,16 +37,15 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-
 /**
  * Tests for SnapshotsCleanerChore
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSnapshotCleanerChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-          HBaseClassTestRule.forClass(TestSnapshotCleanerChore.class);
+    HBaseClassTestRule.forClass(TestSnapshotCleanerChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotCleanerChore.class);
 
@@ -62,14 +59,13 @@ public class TestSnapshotCleanerChore {
     return conf;
   }
 
-
   @Test
   public void testSnapshotCleanerWithoutAnyCompletedSnapshot() throws IOException {
     snapshotManager = Mockito.mock(SnapshotManager.class);
     Stoppable stopper = new StoppableImplementation();
     Configuration conf = getSnapshotCleanerConf();
     SnapshotCleanerChore snapshotCleanerChore =
-            new SnapshotCleanerChore(stopper, conf, snapshotManager);
+      new SnapshotCleanerChore(stopper, conf, snapshotManager);
     try {
       snapshotCleanerChore.chore();
     } finally {
@@ -84,12 +80,12 @@ public class TestSnapshotCleanerChore {
     Stoppable stopper = new StoppableImplementation();
     Configuration conf = getSnapshotCleanerConf();
     SnapshotCleanerChore snapshotCleanerChore =
-            new SnapshotCleanerChore(stopper, conf, snapshotManager);
+      new SnapshotCleanerChore(stopper, conf, snapshotManager);
     List<SnapshotProtos.SnapshotDescription> snapshotDescriptionList = new ArrayList<>();
     snapshotDescriptionList.add(getSnapshotDescription(-2, "snapshot01", "table01",
-            EnvironmentEdgeManager.currentTime() - 100000));
-    snapshotDescriptionList.add(getSnapshotDescription(10, "snapshot02", "table02",
-            EnvironmentEdgeManager.currentTime()));
+      EnvironmentEdgeManager.currentTime() - 100000));
+    snapshotDescriptionList.add(
+      getSnapshotDescription(10, "snapshot02", "table02", EnvironmentEdgeManager.currentTime()));
     Mockito.when(snapshotManager.getCompletedSnapshots()).thenReturn(snapshotDescriptionList);
     try {
       LOG.info("2 Snapshots are completed but TTL is not expired for any of them");
@@ -106,16 +102,16 @@ public class TestSnapshotCleanerChore {
     Stoppable stopper = new StoppableImplementation();
     Configuration conf = getSnapshotCleanerConf();
     SnapshotCleanerChore snapshotCleanerChore =
-            new SnapshotCleanerChore(stopper, conf, snapshotManager);
+      new SnapshotCleanerChore(stopper, conf, snapshotManager);
     List<SnapshotProtos.SnapshotDescription> snapshotDescriptionList = new ArrayList<>();
     snapshotDescriptionList.add(getSnapshotDescription(10, "snapshot01", "table01", 1));
     snapshotDescriptionList.add(getSnapshotDescription(5, "snapshot02", "table02", 2));
-    snapshotDescriptionList.add(getSnapshotDescription(30, "snapshot01", "table01",
-            EnvironmentEdgeManager.currentTime()));
-    snapshotDescriptionList.add(getSnapshotDescription(0, "snapshot02", "table02",
-            EnvironmentEdgeManager.currentTime()));
-    snapshotDescriptionList.add(getSnapshotDescription(40, "snapshot03", "table03",
-            EnvironmentEdgeManager.currentTime()));
+    snapshotDescriptionList.add(
+      getSnapshotDescription(30, "snapshot01", "table01", EnvironmentEdgeManager.currentTime()));
+    snapshotDescriptionList.add(
+      getSnapshotDescription(0, "snapshot02", "table02", EnvironmentEdgeManager.currentTime()));
+    snapshotDescriptionList.add(
+      getSnapshotDescription(40, "snapshot03", "table03", EnvironmentEdgeManager.currentTime()));
     Mockito.when(snapshotManager.getCompletedSnapshots()).thenReturn(snapshotDescriptionList);
     try {
       LOG.info("5 Snapshots are completed. TTL is expired for 2 them. Going to delete them");
@@ -132,11 +128,11 @@ public class TestSnapshotCleanerChore {
     Stoppable stopper = new StoppableImplementation();
     Configuration conf = new HBaseTestingUtil().getConfiguration();
     SnapshotCleanerChore snapshotCleanerChore =
-            new SnapshotCleanerChore(stopper, conf, snapshotManager);
+      new SnapshotCleanerChore(stopper, conf, snapshotManager);
     Mockito.when(snapshotManager.getCompletedSnapshots()).thenThrow(IOException.class);
     try {
       LOG.info("While getting completed Snapshots, IOException would occur. Hence, No Snapshot"
-              + " should be deleted");
+        + " should be deleted");
       snapshotCleanerChore.chore();
     } finally {
       stopper.stop("Stopping Test Stopper");
@@ -154,7 +150,7 @@ public class TestSnapshotCleanerChore {
     snapshotDescriptionList.add(getSnapshotDescription(5, "snapshot02", "table02", 2));
     Mockito.when(snapshotManager.getCompletedSnapshots()).thenReturn(snapshotDescriptionList);
     SnapshotCleanerChore snapshotCleanerChore =
-            new SnapshotCleanerChore(stopper, conf, snapshotManager);
+      new SnapshotCleanerChore(stopper, conf, snapshotManager);
     try {
       LOG.info("Snapshot Chore is disabled. No cleanup performed for Expired Snapshots");
       snapshotCleanerChore.chore();
@@ -165,9 +161,9 @@ public class TestSnapshotCleanerChore {
   }
 
   private SnapshotProtos.SnapshotDescription getSnapshotDescription(final long ttl,
-          final String snapshotName, final String tableName, final long snapshotCreationTime) {
+    final String snapshotName, final String tableName, final long snapshotCreationTime) {
     SnapshotProtos.SnapshotDescription.Builder snapshotDescriptionBuilder =
-            SnapshotProtos.SnapshotDescription.newBuilder();
+      SnapshotProtos.SnapshotDescription.newBuilder();
     snapshotDescriptionBuilder.setTtl(ttl);
     snapshotDescriptionBuilder.setName(snapshotName);
     snapshotDescriptionBuilder.setTable(tableName);

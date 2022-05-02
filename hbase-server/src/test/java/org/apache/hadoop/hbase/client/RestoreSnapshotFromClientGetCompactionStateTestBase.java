@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,11 +23,11 @@ import java.io.IOException;
 import org.junit.Test;
 
 public class RestoreSnapshotFromClientGetCompactionStateTestBase
-    extends RestoreSnapshotFromClientTestBase {
+  extends RestoreSnapshotFromClientTestBase {
 
   @Test
   public void testGetCompactionStateAfterRestoringSnapshot()
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // Take a snapshot
     admin.snapshot(snapshotName1, tableName);
 

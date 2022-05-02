@@ -75,56 +75,43 @@ public class StringTraceRenderer {
   }
 
   private static List<Node> findRoots(final Map<String, Node> spansById) {
-    return spansById.values()
-      .stream()
+    return spansById.values().stream()
       .filter(node -> Objects.equals(node.spanData.getParentSpanId(), SpanId.getInvalid()))
       .collect(Collectors.toList());
   }
 
   public void render(final Consumer<String> writer) {
-    for (ListIterator<Node> iter = graphs.listIterator(); iter.hasNext(); ) {
+    for (ListIterator<Node> iter = graphs.listIterator(); iter.hasNext();) {
       final int idx = iter.nextIndex();
       final Node node = iter.next();
       render(writer, node, 0, idx == 0);
     }
   }
 
-  private static void render(
-    final Consumer<String> writer,
-    final Node node,
-    final int indent,
-    final boolean isFirst
-  ) {
+  private static void render(final Consumer<String> writer, final Node node, final int indent,
+    final boolean isFirst) {
     writer.accept(render(node.spanData, indent, isFirst));
     final List<Node> children = new ArrayList<>(node.children.values());
-    for (ListIterator<Node> iter = children.listIterator(); iter.hasNext(); ) {
+    for (ListIterator<Node> iter = children.listIterator(); iter.hasNext();) {
       final int idx = iter.nextIndex();
       final Node child = iter.next();
       render(writer, child, indent + 2, idx == 0);
     }
   }
 
-  private static String render(
-    final SpanData spanData,
-    final int indent,
-    final boolean isFirst
-  ) {
+  private static String render(final SpanData spanData, final int indent, final boolean isFirst) {
     final StringBuilder sb = new StringBuilder();
     for (int i = 0; i < indent; i++) {
       sb.append(' ');
     }
 
-    return sb.append(isFirst ? "└─ " : "├─ ")
-      .append(render(spanData))
-      .toString();
+    return sb.append(isFirst ? "└─ " : "├─ ").append(render(spanData)).toString();
   }
 
   private static String render(final SpanData spanData) {
     return new ToStringBuilder(spanData, ToStringStyle.NO_CLASS_NAME_STYLE)
-      .append("spanId", spanData.getSpanId())
-      .append("name", spanData.getName())
-      .append("hasEnded", spanData.hasEnded())
-      .toString();
+      .append("spanId", spanData.getSpanId()).append("name", spanData.getName())
+      .append("hasEnded", spanData.hasEnded()).toString();
   }
 
   private static class Node {

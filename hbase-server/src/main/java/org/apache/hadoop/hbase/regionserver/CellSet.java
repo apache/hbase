@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,25 +20,23 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NavigableSet;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@link java.util.Set} of {@link Cell}s, where an add will overwrite the entry if already
- * exists in the set.  The call to add returns true if no value in the backing map or false if
- * there was an entry with same key (though value may be different).
- * implementation is tolerant of concurrent get and set and won't throw
- * ConcurrentModificationException when iterating.
+ * A {@link java.util.Set} of {@link Cell}s, where an add will overwrite the entry if already exists
+ * in the set. The call to add returns true if no value in the backing map or false if there was an
+ * entry with same key (though value may be different). implementation is tolerant of concurrent get
+ * and set and won't throw ConcurrentModificationException when iterating.
  */
 @InterfaceAudience.Private
-public class CellSet implements NavigableSet<Cell>  {
+public class CellSet implements NavigableSet<Cell> {
 
   public static final int UNKNOWN_NUM_UNIQUES = -1;
   // Implemented on top of a {@link java.util.concurrent.ConcurrentSkipListMap}
@@ -96,8 +93,7 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   @Override
-  public NavigableSet<Cell> headSet(final Cell toElement,
-      boolean inclusive) {
+  public NavigableSet<Cell> headSet(final Cell toElement, boolean inclusive) {
     return new CellSet(this.delegatee.headMap(toElement, inclusive), UNKNOWN_NUM_UNIQUES);
   }
 
@@ -132,8 +128,8 @@ public class CellSet implements NavigableSet<Cell>  {
   }
 
   @Override
-  public NavigableSet<Cell> subSet(Cell fromElement,
-      boolean fromInclusive, Cell toElement, boolean toInclusive) {
+  public NavigableSet<Cell> subSet(Cell fromElement, boolean fromInclusive, Cell toElement,
+    boolean toInclusive) {
     throw new UnsupportedOperationException(HConstants.NOT_IMPLEMENTED);
   }
 
@@ -179,7 +175,7 @@ public class CellSet implements NavigableSet<Cell>  {
 
   @Override
   public boolean contains(Object o) {
-    //noinspection SuspiciousMethodCalls
+    // noinspection SuspiciousMethodCalls
     return this.delegatee.containsKey(o);
   }
 

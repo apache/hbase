@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,11 +44,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 /**
  * Tests for {@link TsvParser}.
  */
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestImportTsvParser {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestImportTsvParser.class);
+    HBaseClassTestRule.forClass(TestImportTsvParser.class);
 
   private void assertBytesEquals(byte[] a, byte[] b) {
     assertEquals(Bytes.toStringBinary(a), Bytes.toStringBinary(b));
@@ -58,11 +58,11 @@ public class TestImportTsvParser {
     ArrayList<String> parsedCols = new ArrayList<>();
     for (int i = 0; i < parsed.getColumnCount(); i++) {
       parsedCols.add(Bytes.toString(parsed.getLineBytes(), parsed.getColumnOffset(i),
-          parsed.getColumnLength(i)));
+        parsed.getColumnLength(i)));
     }
     if (!Iterables.elementsEqual(parsedCols, expected)) {
       fail("Expected: " + Joiner.on(",").join(expected) + "\n" + "Got:"
-          + Joiner.on(",").join(parsedCols));
+        + Joiner.on(",").join(parsedCols));
     }
   }
 
@@ -105,8 +105,8 @@ public class TestImportTsvParser {
     assertTrue(parser.hasTimestamp());
     assertEquals(2, parser.getTimestampKeyColumnIndex());
 
-    parser = new TsvParser("HBASE_ROW_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ATTRIBUTES_KEY",
-        "\t");
+    parser =
+      new TsvParser("HBASE_ROW_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ATTRIBUTES_KEY", "\t");
     assertNull(parser.getFamily(0));
     assertNull(parser.getQualifier(0));
     assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
@@ -118,8 +118,8 @@ public class TestImportTsvParser {
     assertEquals(2, parser.getTimestampKeyColumnIndex());
     assertEquals(4, parser.getAttributesKeyColumnIndex());
 
-    parser = new TsvParser("HBASE_ATTRIBUTES_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ROW_KEY",
-        "\t");
+    parser =
+      new TsvParser("HBASE_ATTRIBUTES_KEY,col1:scol1,HBASE_TS_KEY,col1:scol2,HBASE_ROW_KEY", "\t");
     assertNull(parser.getFamily(0));
     assertNull(parser.getQualifier(0));
     assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
@@ -293,7 +293,7 @@ public class TestImportTsvParser {
     assertEquals(6, parse.getAttributeKeyOffset());
     String[] attr = parse.getIndividualAttributes();
     int i = 0;
-    for (String str :  attr) {
+    for (String str : attr) {
       assertEquals(("key" + i + "=>" + "value" + i), str);
       i++;
     }
@@ -302,7 +302,7 @@ public class TestImportTsvParser {
   @Test
   public void testTsvParserWithCellVisibilityCol() throws BadTsvLineException {
     TsvParser parser = new TsvParser(
-        "HBASE_ROW_KEY,col_a,HBASE_TS_KEY,HBASE_ATTRIBUTES_KEY,HBASE_CELL_VISIBILITY", "\t");
+      "HBASE_ROW_KEY,col_a,HBASE_TS_KEY,HBASE_ATTRIBUTES_KEY,HBASE_CELL_VISIBILITY", "\t");
     assertEquals(0, parser.getRowKeyColumnIndex());
     assertEquals(4, parser.getCellVisibilityColumnIndex());
     byte[] line = Bytes.toBytes("rowkey\tval_a\t1234\tkey=>value\tPRIVATE&SECRET");

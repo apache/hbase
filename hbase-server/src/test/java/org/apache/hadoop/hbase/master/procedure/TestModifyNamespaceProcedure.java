@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestModifyNamespaceProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestModifyNamespaceProcedure.class);
+    HBaseClassTestRule.forClass(TestModifyNamespaceProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestModifyNamespaceProcedure.class);
 
@@ -81,12 +81,11 @@ public class TestModifyNamespaceProcedure {
   @After
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    for (TableDescriptor htd: UTIL.getAdmin().listTableDescriptors()) {
+    for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
   }
-
 
   @Test
   public void testModifyNamespace() throws Exception {
@@ -102,8 +101,7 @@ public class TestModifyNamespaceProcedure {
     createNamespaceForTesting(nsd);
 
     // Before modify
-    NamespaceDescriptor currentNsDescriptor =
-        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
+    NamespaceDescriptor currentNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(nsValue1before, currentNsDescriptor.getConfigurationValue(nsKey1));
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey2));
 
@@ -111,15 +109,14 @@ public class TestModifyNamespaceProcedure {
     nsd.setConfiguration(nsKey1, nsValue1after);
     nsd.setConfiguration(nsKey2, nsValue2);
 
-    long procId1 = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId1 =
+      procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
     // Verify the namespace is updated.
-    currentNsDescriptor =
-        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
+    currentNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(nsValue1after, nsd.getConfigurationValue(nsKey1));
     assertEquals(nsValue2, currentNsDescriptor.getConfigurationValue(nsKey2));
   }
@@ -139,8 +136,8 @@ public class TestModifyNamespaceProcedure {
 
     final NamespaceDescriptor nsd = NamespaceDescriptor.create(namespaceName).build();
 
-    long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+      procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
@@ -155,7 +152,7 @@ public class TestModifyNamespaceProcedure {
   @Test
   public void testModifyNamespaceWithInvalidRegionCount() throws Exception {
     final NamespaceDescriptor nsd =
-        NamespaceDescriptor.create("testModifyNamespaceWithInvalidRegionCount").build();
+      NamespaceDescriptor.create("testModifyNamespaceWithInvalidRegionCount").build();
     final String nsKey = "hbase.namespace.quota.maxregions";
     final String nsValue = "-1";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -165,8 +162,8 @@ public class TestModifyNamespaceProcedure {
     // Modify
     nsd.setConfiguration(nsKey, nsValue);
 
-    long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+      procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<?> result = procExec.getResult(procId);
@@ -178,7 +175,7 @@ public class TestModifyNamespaceProcedure {
   @Test
   public void testModifyNamespaceWithInvalidTableCount() throws Exception {
     final NamespaceDescriptor nsd =
-        NamespaceDescriptor.create("testModifyNamespaceWithInvalidTableCount").build();
+      NamespaceDescriptor.create("testModifyNamespaceWithInvalidTableCount").build();
     final String nsKey = "hbase.namespace.quota.maxtables";
     final String nsValue = "-1";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -188,8 +185,8 @@ public class TestModifyNamespaceProcedure {
     // Modify
     nsd.setConfiguration(nsKey, nsValue);
 
-    long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+      procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<?> result = procExec.getResult(procId);
@@ -201,7 +198,7 @@ public class TestModifyNamespaceProcedure {
   @Test
   public void testRecoveryAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
-        NamespaceDescriptor.create("testRecoveryAndDoubleExecution").build();
+      NamespaceDescriptor.create("testRecoveryAndDoubleExecution").build();
     final String nsKey = "foo";
     final String nsValue = "bar";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -214,23 +211,22 @@ public class TestModifyNamespaceProcedure {
     nsd.setConfiguration(nsKey, nsValue);
 
     // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
+    long procId =
+      procExec.submitProcedure(new ModifyNamespaceProcedure(procExec.getEnvironment(), nsd));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     // Validate
-    NamespaceDescriptor currentNsDescriptor =
-        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
+    NamespaceDescriptor currentNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertEquals(nsValue, currentNsDescriptor.getConfigurationValue(nsKey));
   }
 
   @Test
   public void testRollbackAndDoubleExecution() throws Exception {
     final NamespaceDescriptor nsd =
-        NamespaceDescriptor.create("testRollbackAndDoubleExecution").build();
+      NamespaceDescriptor.create("testRollbackAndDoubleExecution").build();
     final String nsKey = "foo";
     final String nsValue = "bar";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -248,8 +244,7 @@ public class TestModifyNamespaceProcedure {
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
     // Validate
-    NamespaceDescriptor currentNsDescriptor =
-        UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
+    NamespaceDescriptor currentNsDescriptor = UTIL.getAdmin().getNamespaceDescriptor(nsd.getName());
     assertNull(currentNsDescriptor.getConfigurationValue(nsKey));
   }
 
@@ -260,8 +255,8 @@ public class TestModifyNamespaceProcedure {
   private void createNamespaceForTesting(NamespaceDescriptor nsDescriptor) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    long procId = procExec.submitProcedure(
-      new CreateNamespaceProcedure(procExec.getEnvironment(), nsDescriptor));
+    long procId = procExec
+      .submitProcedure(new CreateNamespaceProcedure(procExec.getEnvironment(), nsDescriptor));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);

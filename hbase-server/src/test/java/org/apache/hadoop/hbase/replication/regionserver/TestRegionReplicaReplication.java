@@ -56,15 +56,14 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterrupt
  * Tests region replication by setting up region replicas and verifying async wal replication
  * replays the edits to the secondary region in various scenarios.
  */
-@Category({FlakeyTests.class, LargeTests.class})
+@Category({ FlakeyTests.class, LargeTests.class })
 public class TestRegionReplicaReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicaReplication.class);
+    HBaseClassTestRule.forClass(TestRegionReplicaReplication.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRegionReplicaReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaReplication.class);
 
   private static final int NB_SERVERS = 2;
 
@@ -100,8 +99,8 @@ public class TestRegionReplicaReplication {
   private void testRegionReplicaReplication(int regionReplication) throws Exception {
     // test region replica replication. Create a table with single region, write some data
     // ensure that data is replicated to the secondary region
-    TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
-        + regionReplication);
+    TableName tableName =
+      TableName.valueOf("testRegionReplicaReplicationWithReplicas_" + regionReplication);
     TableDescriptor htd = HTU
       .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
         ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
@@ -109,7 +108,7 @@ public class TestRegionReplicaReplication {
       .setRegionReplication(regionReplication).build();
     createOrEnableTableWithRetries(htd, true);
     TableName tableNameNoReplicas =
-        TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
+      TableName.valueOf("testRegionReplicaReplicationWithReplicas_NO_REPLICAS");
     HTU.deleteTableIfAny(tableNameNoReplicas);
     HTU.createTable(tableNameNoReplicas, HBaseTestingUtil.fam1);
 
@@ -128,17 +127,17 @@ public class TestRegionReplicaReplication {
     }
   }
 
-  private void verifyReplication(TableName tableName, int regionReplication,
-      final int startRow, final int endRow) throws Exception {
+  private void verifyReplication(TableName tableName, int regionReplication, final int startRow,
+    final int endRow) throws Exception {
     verifyReplication(tableName, regionReplication, startRow, endRow, true);
   }
 
-  private void verifyReplication(TableName tableName, int regionReplication,
-      final int startRow, final int endRow, final boolean present) throws Exception {
+  private void verifyReplication(TableName tableName, int regionReplication, final int startRow,
+    final int endRow, final boolean present) throws Exception {
     // find the regions
     final Region[] regions = new Region[regionReplication];
 
-    for (int i=0; i < NB_SERVERS; i++) {
+    for (int i = 0; i < NB_SERVERS; i++) {
       HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
       List<HRegion> onlineRegions = rs.getRegions(tableName);
       for (HRegion region : onlineRegions) {
@@ -159,7 +158,7 @@ public class TestRegionReplicaReplication {
           LOG.info("verifying replication for region replica:" + region.getRegionInfo());
           try {
             HTU.verifyNumericRows(region, HBaseTestingUtil.fam1, startRow, endRow, present);
-          } catch(Throwable ex) {
+          } catch (Throwable ex) {
             LOG.warn("Verification from secondary region is not complete yet", ex);
             // still wait
             return false;
@@ -233,8 +232,8 @@ public class TestRegionReplicaReplication {
       // load the data to the table
 
       for (int i = 0; i < 6000; i += 1000) {
-        LOG.info("Writing data from " + i + " to " + (i+1000));
-        HTU.loadNumericRows(table, HBaseTestingUtil.fam1, i, i+1000);
+        LOG.info("Writing data from " + i + " to " + (i + 1000));
+        HTU.loadNumericRows(table, HBaseTestingUtil.fam1, i, i + 1000);
         LOG.info("flushing table");
         HTU.flush(tableName);
         LOG.info("compacting table");

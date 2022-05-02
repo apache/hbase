@@ -21,24 +21,22 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Extends the basic {@link SimpleByteRange} implementation with position
- * support. {@code position} is considered transient, not fundamental to the
- * definition of the range, and does not participate in
- * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
- * {@link #equals(Object)}. {@code Position} is retained by copy operations.
+ * Extends the basic {@link SimpleByteRange} implementation with position support. {@code position}
+ * is considered transient, not fundamental to the definition of the range, and does not participate
+ * in {@link #compareTo(ByteRange)}, {@link #hashCode()}, or {@link #equals(Object)}.
+ * {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class AbstractPositionedByteRange extends AbstractByteRange implements
-    PositionedByteRange {
+public abstract class AbstractPositionedByteRange extends AbstractByteRange
+  implements PositionedByteRange {
   /**
-   * The current index into the range. Like {@link java.nio.ByteBuffer} position, it
-   * points to the next value that will be read/written in the array. It
-   * provides the appearance of being 0-indexed, even though its value is
-   * calculated according to offset.
+   * The current index into the range. Like {@link java.nio.ByteBuffer} position, it points to the
+   * next value that will be read/written in the array. It provides the appearance of being
+   * 0-indexed, even though its value is calculated according to offset.
    * <p>
-   * Position is considered transient and does not participate in
-   * {@link #equals(Object)} or {@link #hashCode()} comparisons.
+   * Position is considered transient and does not participate in {@link #equals(Object)} or
+   * {@link #hashCode()} comparisons.
    * </p>
    */
   protected int position = 0;
@@ -70,11 +68,8 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   }
 
   /**
-   * Update the beginning of this range. {@code offset + length} may not be
-   * greater than {@code bytes.length}. Resets {@code position} to 0.
-   *
-   * @param offset
-   *          the new start of this range.
+   * Update the beginning of this range. {@code offset + length} may not be greater than
+   * {@code bytes.length}. Resets {@code position} to 0. n * the new start of this range.
    * @return this.
    */
   @Override
@@ -85,12 +80,9 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   }
 
   /**
-   * Update the length of this range. {@code offset + length} should not be
-   * greater than {@code bytes.length}. If {@code position} is greater than the
-   * new {@code length}, sets {@code position} to {@code length}.
-   *
-   * @param length
-   *          The new length of this range.
+   * Update the length of this range. {@code offset + length} should not be greater than
+   * {@code bytes.length}. If {@code position} is greater than the new {@code length}, sets
+   * {@code position} to {@code length}. n * The new length of this range.
    * @return this.
    */
   @Override

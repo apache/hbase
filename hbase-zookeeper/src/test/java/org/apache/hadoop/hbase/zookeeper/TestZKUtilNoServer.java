@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ import org.mockito.Mockito;
 public class TestZKUtilNoServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKUtilNoServer.class);
+    HBaseClassTestRule.forClass(TestZKUtilNoServer.class);
 
   @Test
   public void testUnsecure() throws IOException {
@@ -101,7 +101,7 @@ public class TestZKUtilNoServer {
 
   @Test(expected = KeeperException.SystemErrorException.class)
   public void testInterruptedDuringAction()
-      throws IOException, KeeperException, InterruptedException {
+    throws IOException, KeeperException, InterruptedException {
     final RecoverableZooKeeper recoverableZk = Mockito.mock(RecoverableZooKeeper.class);
     ZKWatcher zkw = new ZKWatcher(HBaseConfiguration.create(), "unittest", null) {
       @Override
@@ -110,7 +110,7 @@ public class TestZKUtilNoServer {
       }
     };
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
-        .getChildren(zkw.getZNodePaths().baseZNode, null);
+      .getChildren(zkw.getZNodePaths().baseZNode, null);
     ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().baseZNode);
   }
 }

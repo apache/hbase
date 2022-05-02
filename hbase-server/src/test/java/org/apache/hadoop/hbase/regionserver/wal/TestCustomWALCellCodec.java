@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that we can create, load, setup our own custom codec
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestCustomWALCellCodec {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCustomWALCellCodec.class);
+    HBaseClassTestRule.forClass(TestCustomWALCellCodec.class);
 
   public static class CustomWALCellCodec extends WALCellCodec {
     public Configuration conf;
@@ -66,8 +66,7 @@ public class TestCustomWALCellCodec {
   }
 
   /**
-   * Test that a custom {@link WALCellCodec} will fail if provided an invalid
-   * code class.
+   * Test that a custom {@link WALCellCodec} will fail if provided an invalid code class.
    */
   @Test(expected = RuntimeException.class)
   public void testCreatePreparesCodecInvalidClass() throws Exception {

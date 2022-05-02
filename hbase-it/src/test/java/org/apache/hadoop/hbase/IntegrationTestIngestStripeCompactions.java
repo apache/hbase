@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
@@ -33,8 +32,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
 /**
- * A test class that does the same things as IntegrationTestIngest but with stripe
- * compactions. Can be used with ChaosMonkey in the same manner.
+ * A test class that does the same things as IntegrationTestIngest but with stripe compactions. Can
+ * be used with ChaosMonkey in the same manner.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestStripeCompactions extends IntegrationTestIngest {
@@ -46,8 +45,8 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
       .setValue(HStore.BLOCKING_STOREFILES_KEY, "100").build();
     ColumnFamilyDescriptor familyDescriptor =
       ColumnFamilyDescriptorBuilder.of(HFileTestUtil.DEFAULT_COLUMN_FAMILY);
-    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(),
-      tableDescriptor, familyDescriptor);
+    HBaseTestingUtil.createPreSplitLoadTestTable(util.getConfiguration(), tableDescriptor,
+      familyDescriptor);
   }
 
   public static void main(String[] args) throws Exception {

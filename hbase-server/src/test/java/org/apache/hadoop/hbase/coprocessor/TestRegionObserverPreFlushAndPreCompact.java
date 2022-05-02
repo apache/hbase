@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,18 +49,19 @@ import org.mockito.Mockito;
 /**
  * Test that we fail if a Coprocessor tries to return a null scanner out
  * {@link RegionObserver#preFlush(ObserverContext, Store, InternalScanner, FlushLifeCycleTracker)}
- * or {@link RegionObserver#preCompact(ObserverContext, Store, InternalScanner, ScanType,
- * CompactionLifeCycleTracker, CompactionRequest)}
+ * or
+ * {@link RegionObserver#preCompact(ObserverContext, Store, InternalScanner, ScanType, CompactionLifeCycleTracker, CompactionRequest)}
  * @see <a href=https://issues.apache.org/jira/browse/HBASE-19122>HBASE-19122</a>
  */
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestRegionObserverPreFlushAndPreCompact {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionObserverPreFlushAndPreCompact.class);
+    HBaseClassTestRule.forClass(TestRegionObserverPreFlushAndPreCompact.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
 
   /**
    * Coprocessor that returns null when preCompact or preFlush is called.
@@ -68,14 +69,14 @@ public class TestRegionObserverPreFlushAndPreCompact {
   public static class TestRegionObserver implements RegionObserver, RegionCoprocessor {
     @Override
     public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
+      InternalScanner scanner, FlushLifeCycleTracker tracker) throws IOException {
       return null;
     }
 
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-        InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-        CompactionRequest request) throws IOException {
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
       return null;
     }
 
@@ -89,7 +90,7 @@ public class TestRegionObserverPreFlushAndPreCompact {
    * Ensure we get expected exception when we try to return null from a preFlush call.
    * @throws IOException We expect it to throw {@link CoprocessorException}
    */
-  @Test (expected = CoprocessorException.class)
+  @Test(expected = CoprocessorException.class)
   public void testPreFlushReturningNull() throws IOException {
     RegionCoprocessorHost rch = getRegionCoprocessorHost();
     rch.preFlush(null, null, null);
@@ -99,7 +100,7 @@ public class TestRegionObserverPreFlushAndPreCompact {
    * Ensure we get expected exception when we try to return null from a preCompact call.
    * @throws IOException We expect it to throw {@link CoprocessorException}
    */
-  @Test (expected = CoprocessorException.class)
+  @Test(expected = CoprocessorException.class)
   public void testPreCompactReturningNull() throws IOException {
     RegionCoprocessorHost rch = getRegionCoprocessorHost();
     rch.preCompact(null, null, null, null, null, null);

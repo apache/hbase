@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -68,7 +68,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   long lastSentTime = -1L;
 
   public SimpleServerRpcConnection(SimpleRpcServer rpcServer, SocketChannel channel,
-      long lastContact) {
+    long lastContact) {
     super(rpcServer);
     this.channel = channel;
     this.lastContact = lastContact;
@@ -144,9 +144,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   /**
    * Read off the wire. If there is not enough data to read, update the connection state with what
    * we have and returns.
-   * @return Returns -1 if failure (and caller will close connection), else zero or more.
-   * @throws IOException
-   * @throws InterruptedException
+   * @return Returns -1 if failure (and caller will close connection), else zero or more. nn
    */
   public int readAndProcess() throws IOException, InterruptedException {
     // If we have not read the connection setup preamble, look to see if that is on the wire.
@@ -177,14 +175,14 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       }
       if (dataLength < 0) { // A data length of zero is legal.
         throw new DoNotRetryIOException(
-            "Unexpected data length " + dataLength + "!! from " + getHostAddress());
+          "Unexpected data length " + dataLength + "!! from " + getHostAddress());
       }
 
       if (dataLength > this.rpcServer.maxRequestSize) {
-        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress() +
-            " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \"" +
-            SimpleRpcServer.MAX_REQUEST_SIZE +
-            "\" on server to override this limit (not recommended)";
+        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress()
+          + " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \""
+          + SimpleRpcServer.MAX_REQUEST_SIZE
+          + "\" on server to override this limit (not recommended)";
         SimpleRpcServer.LOG.warn(msg);
 
         if (connectionHeaderRead && connectionPreambleRead) {
@@ -211,14 +209,16 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
           // Notify the client about the offending request
           SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
-              null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
-              this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
+            null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
+            this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
           RequestTooBigException reqTooBigEx = new RequestTooBigException(msg);
           this.rpcServer.metrics.exception(reqTooBigEx);
           // Make sure the client recognizes the underlying exception
           // Otherwise, throw a DoNotRetryIOException.
-          if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
-            RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
+          if (
+            VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
+              RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)
+          ) {
             reqTooBig.setResponse(null, null, reqTooBigEx, msg);
           } else {
             reqTooBig.setResponse(null, null, new DoNotRetryIOException(msg), msg);
@@ -327,11 +327,11 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
-      RequestHeader header, Message param, CellScanner cellScanner, long size,
-      InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
+    RequestHeader header, Message param, CellScanner cellScanner, long size,
+    InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
-        remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
-        this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
+      remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
+      this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
   }
 
   @Override

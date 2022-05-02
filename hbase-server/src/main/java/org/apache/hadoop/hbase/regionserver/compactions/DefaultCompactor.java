@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,8 +51,8 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
       public StoreFileWriter createWriter(InternalScanner scanner, FileDetails fd,
         boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
         throws IOException {
-        return DefaultCompactor.this
-          .createWriter(fd, shouldDropBehind, major, writerCreationTracker);
+        return DefaultCompactor.this.createWriter(fd, shouldDropBehind, major,
+          writerCreationTracker);
       }
     };
 
@@ -60,13 +60,13 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
   public List<Path> compact(final CompactionRequestImpl request,
-      ThroughputController throughputController, User user) throws IOException {
+    ThroughputController throughputController, User user) throws IOException {
     return compact(request, defaultScannerFactory, writerFactory, throughputController, user);
   }
 
   @Override
   protected List<Path> commitWriter(StoreFileWriter writer, FileDetails fd,
-      CompactionRequestImpl request) throws IOException {
+    CompactionRequestImpl request) throws IOException {
     List<Path> newFiles = Lists.newArrayList(writer.getPath());
     writer.appendMetadata(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     writer.close();

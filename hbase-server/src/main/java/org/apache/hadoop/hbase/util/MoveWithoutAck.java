@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
+import java.util.List;
+import java.util.concurrent.Callable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -26,12 +26,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.concurrent.Callable;
-
 /**
- * Move Regions without Acknowledging.Usefule in case of RS shutdown as we might want to shut the
- * RS down anyways and not abort on a stuck region. Improves movement performance
+ * Move Regions without Acknowledging.Usefule in case of RS shutdown as we might want to shut the RS
+ * down anyways and not abort on a stuck region. Improves movement performance
  */
 @InterfaceAudience.Private
 class MoveWithoutAck implements Callable<Boolean> {

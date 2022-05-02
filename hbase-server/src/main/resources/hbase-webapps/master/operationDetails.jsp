@@ -49,7 +49,7 @@
 
 
 <div class="container-fluid content">
-  <div class="row">
+  <div class="row top_header">
     <div class="page-header">
     <h2>Operations Details</h2>
     <p>HBase uses some fixed-size ring buffers to maintain rolling window history of specific server-side operation details.

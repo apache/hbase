@@ -26,6 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
@@ -53,7 +54,7 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScanAll.class);
 
   @Parameter(0)
   public String tableType;
@@ -94,32 +95,23 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
   @Override
   protected void assertTraceContinuity() {
     final String parentSpanName = testName.getMethodName();
-    final Matcher<SpanData> parentSpanMatcher = allOf(
-      hasName(parentSpanName),
-      hasStatusWithCode(StatusCode.OK),
-      hasEnded());
+    final Matcher<SpanData> parentSpanMatcher =
+      allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans = otelClassRule.getSpans()
-      .stream()
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    final List<SpanData> spans =
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream()
-      .filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId)
-      .findAny()
-      .orElseThrow(AssertionError::new);
+    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
-    final Matcher<SpanData> scanOperationSpanMatcher = allOf(
-      hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-      hasParentSpanId(parentSpanId),
-      hasStatusWithCode(StatusCode.OK),
-      hasEnded());
+    final Matcher<SpanData> scanOperationSpanMatcher =
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
   }
 
@@ -129,27 +121,20 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans = otelClassRule.getSpans()
-      .stream()
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    final List<SpanData> spans =
+      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
       StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream()
-      .filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId)
-      .findAny()
-      .orElseThrow(AssertionError::new);
+    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
 
-    final Matcher<SpanData> scanOperationSpanMatcher = allOf(
-      hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-      hasParentSpanId(parentSpanId),
-      hasStatusWithCode(StatusCode.ERROR),
-      hasExceptionWithType(exceptionTypeNameMatcher),
-      hasEnded());
+    final Matcher<SpanData> scanOperationSpanMatcher =
+      allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
+        hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
   }
 }

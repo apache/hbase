@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -25,9 +24,8 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Class that transitions metrics from MetricsZooKeeper into the metrics subsystem.
- *
- * Implements BaseSource through BaseSourceImpl, following the pattern.
+ * Class that transitions metrics from MetricsZooKeeper into the metrics subsystem. Implements
+ * BaseSource through BaseSourceImpl, following the pattern.
  */
 @InterfaceAudience.Private
 public class MetricsZooKeeperSourceImpl extends BaseSourceImpl implements MetricsZooKeeperSource {
@@ -52,37 +50,37 @@ public class MetricsZooKeeperSourceImpl extends BaseSourceImpl implements Metric
   }
 
   public MetricsZooKeeperSourceImpl(String metricsName, String metricsDescription,
-      String metricsContext, String metricsJmxContext) {
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
-    //Create and store the metrics that will be used.
-    authFailedFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_AUTHFAILED, EXCEPTION_AUTHFAILED_DESC, 0L);
-    connectionLossFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_CONNECTIONLOSS, EXCEPTION_CONNECTIONLOSS_DESC, 0L);
-    dataInconsistencyFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_DATAINCONSISTENCY, EXCEPTION_DATAINCONSISTENCY_DESC, 0L);
-    invalidACLFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_INVALIDACL, EXCEPTION_INVALIDACL_DESC, 0L);
-    noAuthFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_NOAUTH, EXCEPTION_NOAUTH_DESC, 0L);
-    operationTimeOutFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_OPERATIONTIMEOUT, EXCEPTION_OPERATIONTIMEOUT_DESC, 0L);
-    runtimeInconsistencyFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_RUNTIMEINCONSISTENCY, EXCEPTION_RUNTIMEINCONSISTENCY_DESC, 0L);
-    sessionExpiredFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_SESSIONEXPIRED, EXCEPTION_SESSIONEXPIRED_DESC, 0L);
-    systemErrorFailedOpCount = this.getMetricsRegistry().newGauge(
-            EXCEPTION_SYSTEMERROR, EXCEPTION_SYSTEMERROR_DESC, 0L);
-    totalFailedZKCalls = this.getMetricsRegistry().newGauge(
-            TOTAL_FAILED_ZK_CALLS, TOTAL_FAILED_ZK_CALLS_DESC, 0L);
+    // Create and store the metrics that will be used.
+    authFailedFailedOpCount =
+      this.getMetricsRegistry().newGauge(EXCEPTION_AUTHFAILED, EXCEPTION_AUTHFAILED_DESC, 0L);
+    connectionLossFailedOpCount = this.getMetricsRegistry().newGauge(EXCEPTION_CONNECTIONLOSS,
+      EXCEPTION_CONNECTIONLOSS_DESC, 0L);
+    dataInconsistencyFailedOpCount = this.getMetricsRegistry().newGauge(EXCEPTION_DATAINCONSISTENCY,
+      EXCEPTION_DATAINCONSISTENCY_DESC, 0L);
+    invalidACLFailedOpCount =
+      this.getMetricsRegistry().newGauge(EXCEPTION_INVALIDACL, EXCEPTION_INVALIDACL_DESC, 0L);
+    noAuthFailedOpCount =
+      this.getMetricsRegistry().newGauge(EXCEPTION_NOAUTH, EXCEPTION_NOAUTH_DESC, 0L);
+    operationTimeOutFailedOpCount = this.getMetricsRegistry().newGauge(EXCEPTION_OPERATIONTIMEOUT,
+      EXCEPTION_OPERATIONTIMEOUT_DESC, 0L);
+    runtimeInconsistencyFailedOpCount = this.getMetricsRegistry()
+      .newGauge(EXCEPTION_RUNTIMEINCONSISTENCY, EXCEPTION_RUNTIMEINCONSISTENCY_DESC, 0L);
+    sessionExpiredFailedOpCount = this.getMetricsRegistry().newGauge(EXCEPTION_SESSIONEXPIRED,
+      EXCEPTION_SESSIONEXPIRED_DESC, 0L);
+    systemErrorFailedOpCount =
+      this.getMetricsRegistry().newGauge(EXCEPTION_SYSTEMERROR, EXCEPTION_SYSTEMERROR_DESC, 0L);
+    totalFailedZKCalls =
+      this.getMetricsRegistry().newGauge(TOTAL_FAILED_ZK_CALLS, TOTAL_FAILED_ZK_CALLS_DESC, 0L);
 
-    readOpLatency = this.getMetricsRegistry().newHistogram(
-            READ_OPERATION_LATENCY_NAME, READ_OPERATION_LATENCY_DESC);
-    writeOpLatency = this.getMetricsRegistry().newHistogram(
-            WRITE_OPERATION_LATENCY_NAME, WRITE_OPERATION_LATENCY_DESC);
-    syncOpLatency = this.getMetricsRegistry().newHistogram(
-            SYNC_OPERATION_LATENCY_NAME, SYNC_OPERATION_LATENCY_DESC);
+    readOpLatency = this.getMetricsRegistry().newHistogram(READ_OPERATION_LATENCY_NAME,
+      READ_OPERATION_LATENCY_DESC);
+    writeOpLatency = this.getMetricsRegistry().newHistogram(WRITE_OPERATION_LATENCY_NAME,
+      WRITE_OPERATION_LATENCY_DESC);
+    syncOpLatency = this.getMetricsRegistry().newHistogram(SYNC_OPERATION_LATENCY_NAME,
+      SYNC_OPERATION_LATENCY_DESC);
   }
 
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
@@ -91,7 +89,7 @@ public class MetricsZooKeeperSourceImpl extends BaseSourceImpl implements Metric
   }
 
   private void clearZKExceptionMetrics() {
-    //Reset the exception metrics.
+    // Reset the exception metrics.
     clearMetricIfNotNull(authFailedFailedOpCount);
     clearMetricIfNotNull(connectionLossFailedOpCount);
     clearMetricIfNotNull(dataInconsistencyFailedOpCount);

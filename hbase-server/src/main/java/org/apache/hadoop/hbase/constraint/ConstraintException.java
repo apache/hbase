@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Exception that a user defined constraint throws on failure of a
- *  {@link org.apache.hadoop.hbase.client.Put}.
- * <p>Does <b>NOT</b> attempt the
- *  {@link org.apache.hadoop.hbase.client.Put} multiple times, 
- *  since the constraint <b>should</b> fail every time for
- *  the same {@link org.apache.hadoop.hbase.client.Put} (it should be
- * idempotent).
+ * {@link org.apache.hadoop.hbase.client.Put}.
+ * <p>
+ * Does <b>NOT</b> attempt the {@link org.apache.hadoop.hbase.client.Put} multiple times, since the
+ * constraint <b>should</b> fail every time for the same {@link org.apache.hadoop.hbase.client.Put}
+ * (it should be idempotent).
  */
 @InterfaceAudience.Private
 public class ConstraintException extends org.apache.hadoop.hbase.DoNotRetryIOException {
@@ -36,12 +35,10 @@ public class ConstraintException extends org.apache.hadoop.hbase.DoNotRetryIOExc
     super();
   }
 
-  public ConstraintException(String msg)
-  {
+  public ConstraintException(String msg) {
     super(msg);
   }
-  
-  
+
   public ConstraintException(String msg, Throwable cause) {
     super(msg, cause);
   }

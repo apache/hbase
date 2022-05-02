@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,9 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Simple MR input format for HFiles.
- * This code was borrowed from Apache Crunch project.
- * Updated to the recent version of HBase.
+ * Simple MR input format for HFiles. This code was borrowed from Apache Crunch project. Updated to
+ * the recent version of HBase.
  */
 @InterfaceAudience.Private
 public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
@@ -51,9 +50,9 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
   private static final Logger LOG = LoggerFactory.getLogger(HFileInputFormat.class);
 
   /**
-   * File filter that removes all "hidden" files. This might be something worth removing from
-   * a more general purpose utility; it accounts for the presence of metadata files created
-   * in the way we're doing exports.
+   * File filter that removes all "hidden" files. This might be something worth removing from a more
+   * general purpose utility; it accounts for the presence of metadata files created in the way
+   * we're doing exports.
    */
   static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
     @Override
@@ -81,7 +80,7 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       FileSplit fileSplit = (FileSplit) split;
       conf = context.getConfiguration();
       Path path = fileSplit.getPath();
@@ -94,7 +93,6 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
       this.scanner = in.getScanner(conf, false, false);
 
     }
-
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
@@ -161,8 +159,8 @@ public class HFileInputFormat extends FileInputFormat<NullWritable, Cell> {
   }
 
   @Override
-  public RecordReader<NullWritable, Cell> createRecordReader(InputSplit split, TaskAttemptContext context)
-      throws IOException, InterruptedException {
+  public RecordReader<NullWritable, Cell> createRecordReader(InputSplit split,
+    TaskAttemptContext context) throws IOException, InterruptedException {
     return new HFileRecordReader();
   }
 

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestRegionPlansWithThrottle {
 
   @ClassRule
@@ -87,8 +86,8 @@ public class TestRegionPlansWithThrottle {
     List<RegionPlan> plans = new ArrayList<>();
     List<RegionInfo> regionInfos = UTIL.getAdmin().getRegions(tableName);
     for (RegionInfo regionInfo : regionInfos) {
-      plans.add(
-        new RegionPlan(regionInfo, UTIL.getHBaseCluster().getRegionServer(0).getServerName(),
+      plans
+        .add(new RegionPlan(regionInfo, UTIL.getHBaseCluster().getRegionServer(0).getServerName(),
           UTIL.getHBaseCluster().getRegionServer(1).getServerName()));
     }
     List<RegionPlan> successPlans = hMaster.executeRegionPlansWithThrottling(plans);

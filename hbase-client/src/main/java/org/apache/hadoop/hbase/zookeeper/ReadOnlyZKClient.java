@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public final class ReadOnlyZKClient implements Closeable {
   private static final int DEFAULT_RECOVERY_RETRY = 30;
 
   public static final String RECOVERY_RETRY_INTERVAL_MILLIS =
-      "zookeeper.recovery.retry.intervalmill";
+    "zookeeper.recovery.retry.intervalmill";
 
   private static final int DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS = 1000;
 
@@ -134,11 +134,11 @@ public final class ReadOnlyZKClient implements Closeable {
     this.sessionTimeoutMs = conf.getInt(ZK_SESSION_TIMEOUT, DEFAULT_ZK_SESSION_TIMEOUT);
     this.maxRetries = conf.getInt(RECOVERY_RETRY, DEFAULT_RECOVERY_RETRY);
     this.retryIntervalMs =
-        conf.getInt(RECOVERY_RETRY_INTERVAL_MILLIS, DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS);
+      conf.getInt(RECOVERY_RETRY_INTERVAL_MILLIS, DEFAULT_RECOVERY_RETRY_INTERVAL_MILLIS);
     this.keepAliveTimeMs = conf.getInt(KEEPALIVE_MILLIS, DEFAULT_KEEPALIVE_MILLIS);
     LOG.debug(
-      "Connect {} to {} with session timeout={}ms, retries {}, " +
-        "retry interval {}ms, keepAlive={}ms",
+      "Connect {} to {} with session timeout={}ms, retries {}, "
+        + "retry interval {}ms, keepAlive={}ms",
       getId(), connectString, sessionTimeoutMs, maxRetries, retryIntervalMs, keepAliveTimeMs);
     Threads.setDaemonThreadRunning(new Thread(this::run),
       "ReadOnlyZKClient-" + connectString + "@" + getId());
@@ -260,8 +260,8 @@ public final class ReadOnlyZKClient implements Closeable {
 
       @Override
       protected void doExec(ZooKeeper zk) {
-        zk.getData(path, false,
-            (rc, path, ctx, data, stat) -> onComplete(zk, rc, data, true), null);
+        zk.getData(path, false, (rc, path, ctx, data, stat) -> onComplete(zk, rc, data, true),
+          null);
       }
     });
     return future;
@@ -311,7 +311,8 @@ public final class ReadOnlyZKClient implements Closeable {
   private ZooKeeper getZk() throws IOException {
     // may be closed when session expired
     if (zookeeper == null || !zookeeper.getState().isAlive()) {
-      zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {});
+      zookeeper = new ZooKeeper(connectString, sessionTimeoutMs, e -> {
+      });
     }
     return zookeeper;
   }

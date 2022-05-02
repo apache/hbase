@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Apply a {@link Constraint} (in traditional database terminology) to a Table. Any number of
@@ -68,7 +68,7 @@ public interface Constraint extends Configurable {
    * to fail.
    * @param p {@link Put} to check
    * @throws org.apache.hadoop.hbase.constraint.ConstraintException when the {@link Put} does not
-   *           match the constraint.
+   *                                                                match the constraint.
    */
   void check(Put p) throws ConstraintException;
 

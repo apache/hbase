@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityLabels {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsWithCustomVisLabService.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsWithCustomVisLabService.class);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -48,9 +48,9 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
     conf = TEST_UTIL.getConfiguration();
     VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
+      ScanLabelGenerator.class);
     conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS,
-        ExpAsStringVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
+      ExpAsStringVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -60,7 +60,8 @@ public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityL
     addLabels();
   }
 
-  // Extending this test from super as we don't verify predefined labels in ExpAsStringVisibilityLabelServiceImpl
+  // Extending this test from super as we don't verify predefined labels in
+  // ExpAsStringVisibilityLabelServiceImpl
   @Override
   @Test
   public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {

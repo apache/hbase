@@ -35,8 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Overrides commands to make use of coprocessor where possible. Only supports actions taken
- * against Master and Region Server hosts.
+ * Overrides commands to make use of coprocessor where possible. Only supports actions taken against
+ * Master and Region Server hosts.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("unused") // no way to test this without a distributed cluster.
@@ -59,13 +59,11 @@ public class CoprocClusterManager extends HBaseClusterManager {
 
     try (final AsyncConnection conn = ConnectionFactory.createAsyncConnection(getConf()).join()) {
       final AsyncAdmin admin = conn.getAdmin();
-      final ShellExecRequest req = ShellExecRequest.newBuilder()
-        .setCommand(command)
-        .setAwaitResponse(false)
-        .build();
+      final ShellExecRequest req =
+        ShellExecRequest.newBuilder().setCommand(command).setAwaitResponse(false).build();
 
       final ShellExecResponse resp;
-      switch(service) {
+      switch (service) {
         case HBASE_MASTER:
           // What happens if the intended action was killing a backup master? Right now we have
           // no `RestartBackupMasterAction` so it's probably fine.
@@ -80,8 +78,8 @@ public class CoprocClusterManager extends HBaseClusterManager {
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Executed remote command: {}, exit code:{} , output:{}", command, resp.getExitCode(),
-          resp.getStdout());
+        LOG.debug("Executed remote command: {}, exit code:{} , output:{}", command,
+          resp.getExitCode(), resp.getStdout());
       } else {
         LOG.info("Executed remote command: {}, exit code:{}", command, resp.getExitCode());
       }
@@ -96,32 +94,25 @@ public class CoprocClusterManager extends HBaseClusterManager {
     return Collections.unmodifiableSet(set);
   }
 
-  private static ShellExecResponse masterExec(final AsyncAdmin admin,
-    final ShellExecRequest req) {
+  private static ShellExecResponse masterExec(final AsyncAdmin admin, final ShellExecRequest req) {
     // TODO: Admin API provides no means of sending exec to a backup master.
-    return admin.<ShellExecService.Stub, ShellExecResponse>coprocessorService(
+    return admin.<ShellExecService.Stub, ShellExecResponse> coprocessorService(
       ShellExecService::newStub,
-      (stub, controller, callback) -> stub.shellExec(controller, req, callback))
-      .join();
+      (stub, controller, callback) -> stub.shellExec(controller, req, callback)).join();
   }
 
   private static ShellExecResponse regionServerExec(final AsyncAdmin admin,
     final ShellExecRequest req, final ServerName targetHost) {
-    return admin.<ShellExecService.Stub, ShellExecResponse>coprocessorService(
+    return admin.<ShellExecService.Stub, ShellExecResponse> coprocessorService(
       ShellExecService::newStub,
-      (stub, controller, callback) -> stub.shellExec(controller, req, callback),
-      targetHost)
-      .join();
+      (stub, controller, callback) -> stub.shellExec(controller, req, callback), targetHost).join();
   }
 
-  private static ServerName resolveRegionServerName(final AsyncAdmin admin,
-    final String hostname) {
+  private static ServerName resolveRegionServerName(final AsyncAdmin admin, final String hostname) {
     return admin.getRegionServers()
-      .thenApply(names -> names.stream()
-        .filter(sn -> Objects.equals(sn.getHostname(), hostname))
-        .findAny())
-      .join()
-      .orElseThrow(() -> serverNotFound(hostname));
+      .thenApply(
+        names -> names.stream().filter(sn -> Objects.equals(sn.getHostname(), hostname)).findAny())
+      .join().orElseThrow(() -> serverNotFound(hostname));
   }
 
   private static RuntimeException serverNotFound(final String hostname) {

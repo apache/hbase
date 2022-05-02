@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,16 +44,14 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor {
-  public static final String ORIGINAL_VALUE_KEY =
-      "hbase.examples.coprocessor.value.rewrite.orig";
+  public static final String ORIGINAL_VALUE_KEY = "hbase.examples.coprocessor.value.rewrite.orig";
   public static final String REPLACED_VALUE_KEY =
-      "hbase.examples.coprocessor.value.rewrite.replaced";
+    "hbase.examples.coprocessor.value.rewrite.replaced";
 
   private byte[] sourceValue = null;
   private byte[] replacedValue = null;
   private Bytes.ByteArrayComparator comparator;
   private CellBuilder cellBuilder;
-
 
   @Override
   public Optional<RegionObserver> getRegionObserver() {
@@ -61,8 +60,7 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
   }
 
   @Override
-  public void start(
-      @SuppressWarnings("rawtypes") CoprocessorEnvironment env) throws IOException {
+  public void start(@SuppressWarnings("rawtypes") CoprocessorEnvironment env) throws IOException {
     RegionCoprocessorEnvironment renv = (RegionCoprocessorEnvironment) env;
     sourceValue = Bytes.toBytes(renv.getConfiguration().get(ORIGINAL_VALUE_KEY));
     replacedValue = Bytes.toBytes(renv.getConfiguration().get(REPLACED_VALUE_KEY));
@@ -71,10 +69,9 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
   }
 
   @Override
-  public InternalScanner preCompact(
-      ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      final InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
-      CompactionRequest request) {
+  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+    final InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) {
     InternalScanner modifyingScanner = new InternalScanner() {
       @Override
       public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
@@ -82,8 +79,7 @@ public class ValueRewritingObserver implements RegionObserver, RegionCoprocessor
         for (int i = 0; i < result.size(); i++) {
           Cell c = result.get(i);
           // Replace the Cell if the value is the one we're replacing
-          if (CellUtil.isPut(c) &&
-              comparator.compare(CellUtil.cloneValue(c), sourceValue) == 0) {
+          if (CellUtil.isPut(c) && comparator.compare(CellUtil.cloneValue(c), sourceValue) == 0) {
             try {
               cellBuilder.setRow(CellUtil.copyRow(c));
               cellBuilder.setFamily(CellUtil.cloneFamily(c));

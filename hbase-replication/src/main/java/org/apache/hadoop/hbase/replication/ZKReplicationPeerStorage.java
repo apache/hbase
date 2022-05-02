@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
  */
 @InterfaceAudience.Private
 public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
-    implements ReplicationPeerStorage {
+  implements ReplicationPeerStorage {
 
   public static final String PEERS_ZNODE = "zookeeper.znode.replication.peers";
   public static final String PEERS_ZNODE_DEFAULT = "peers";
@@ -94,7 +94,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void addPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled,
-      SyncReplicationState syncReplicationState) throws ReplicationException {
+    SyncReplicationState syncReplicationState) throws ReplicationException {
     List<ZKUtilOp> multiOps = Arrays.asList(
       ZKUtilOp.createAndFailSilent(getPeerNode(peerId),
         ReplicationPeerConfigUtil.toByteArray(peerConfig)),
@@ -108,8 +108,8 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
       ZKUtil.multiOrSequential(zookeeper, multiOps, false);
     } catch (KeeperException e) {
       throw new ReplicationException(
-        "Could not add peer with id=" + peerId + ", peerConfig=>" + peerConfig + ", state=" +
-          (enabled ? "ENABLED" : "DISABLED") + ", syncReplicationState=" + syncReplicationState,
+        "Could not add peer with id=" + peerId + ", peerConfig=>" + peerConfig + ", state="
+          + (enabled ? "ENABLED" : "DISABLED") + ", syncReplicationState=" + syncReplicationState,
         e);
     }
   }
@@ -135,7 +135,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void updatePeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       ZKUtil.setData(this.zookeeper, getPeerNode(peerId),
         ReplicationPeerConfigUtil.toByteArray(peerConfig));
@@ -187,7 +187,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public void setPeerNewSyncReplicationState(String peerId, SyncReplicationState state)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       ZKUtil.createSetData(zookeeper, getNewSyncReplicationStateNode(peerId),
         SyncReplicationState.toByteArray(state));
@@ -213,7 +213,7 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
   }
 
   private SyncReplicationState getSyncReplicationState(String peerId, String path)
-      throws ReplicationException {
+    throws ReplicationException {
     try {
       byte[] data = ZKUtil.getData(zookeeper, path);
       if (data == null || data.length == 0) {
@@ -235,13 +235,13 @@ public class ZKReplicationPeerStorage extends ZKReplicationStorageBase
 
   @Override
   public SyncReplicationState getPeerNewSyncReplicationState(String peerId)
-      throws ReplicationException {
+    throws ReplicationException {
     return getSyncReplicationState(peerId, getNewSyncReplicationStateNode(peerId));
   }
 
   @Override
   public SyncReplicationState getPeerSyncReplicationState(String peerId)
-      throws ReplicationException {
+    throws ReplicationException {
     return getSyncReplicationState(peerId, getSyncReplicationStateNode(peerId));
   }
 }

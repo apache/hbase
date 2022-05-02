@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -86,17 +85,16 @@ public class ThriftTable implements Table {
   private final int scannerCaching;
 
   public ThriftTable(TableName tableName, THBaseService.Client client, TTransport tTransport,
-      Configuration conf) {
+    Configuration conf) {
     this.tableName = tableName;
     this.tableNameInBytes = ByteBuffer.wrap(tableName.toBytes());
     this.conf = conf;
     this.tTransport = tTransport;
     this.client = client;
-    this.scannerCaching = conf.getInt(HBASE_THRIFT_CLIENT_SCANNER_CACHING,
-        HBASE_THRIFT_CLIENT_SCANNER_CACHING_DEFAULT);
+    this.scannerCaching =
+      conf.getInt(HBASE_THRIFT_CLIENT_SCANNER_CACHING, HBASE_THRIFT_CLIENT_SCANNER_CACHING_DEFAULT);
     this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-
+      HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
 
   }
 
@@ -113,8 +111,8 @@ public class ThriftTable implements Table {
   @Override
   public TableDescriptor getDescriptor() throws IOException {
     try {
-      TTableDescriptor tableDescriptor = client
-          .getTableDescriptor(ThriftUtilities.tableNameFromHBase(tableName));
+      TTableDescriptor tableDescriptor =
+        client.getTableDescriptor(ThriftUtilities.tableNameFromHBase(tableName));
       return ThriftUtilities.tableDescriptorFromThrift(tableDescriptor);
     } catch (TException e) {
       throw new IOException(e);
@@ -126,7 +124,7 @@ public class ThriftTable implements Table {
     TGet tGet = ThriftUtilities.getFromHBase(get);
     try {
       return client.exists(tableNameInBytes, tGet);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -134,31 +132,29 @@ public class ThriftTable implements Table {
   @Override
   public boolean[] exists(List<Get> gets) throws IOException {
     List<TGet> tGets = new ArrayList<>();
-    for (Get get: gets) {
+    for (Get get : gets) {
       tGets.add(ThriftUtilities.getFromHBase(get));
     }
     try {
       List<Boolean> results = client.existsAll(tableNameInBytes, tGets);
       return Booleans.toArray(results);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
 
   @Override
-  public void batch(List<? extends Row> actions, Object[] results)
-      throws IOException {
+  public void batch(List<? extends Row> actions, Object[] results) throws IOException {
     throw new IOException("Batch not supported in ThriftTable, use put(List<Put> puts), "
-        + "get(List<Get> gets) or delete(List<Delete> deletes) respectively");
-
+      + "get(List<Get> gets) or delete(List<Delete> deletes) respectively");
 
   }
 
   @Override
   public <R> void batchCallback(List<? extends Row> actions, Object[] results,
-      Batch.Callback<R> callback) throws IOException {
+    Batch.Callback<R> callback) throws IOException {
     throw new IOException("BatchCallback not supported in ThriftTable, use put(List<Put> puts), "
-        + "get(List<Get> gets) or delete(List<Delete> deletes) respectively");
+      + "get(List<Get> gets) or delete(List<Delete> deletes) respectively");
   }
 
   @Override
@@ -167,7 +163,7 @@ public class ThriftTable implements Table {
     try {
       TResult tResult = client.get(tableNameInBytes, tGet);
       return ThriftUtilities.resultFromThrift(tResult);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -178,20 +174,18 @@ public class ThriftTable implements Table {
     try {
       List<TResult> results = client.getMultiple(tableNameInBytes, tGets);
       return ThriftUtilities.resultsFromThrift(results);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
 
   /**
-   * A scanner to perform scan from thrift server
-   * getScannerResults is used in this scanner
+   * A scanner to perform scan from thrift server getScannerResults is used in this scanner
    */
   private class Scanner implements ResultScanner {
     protected TScan scan;
     protected Result lastResult = null;
     protected final Queue<Result> cache = new ArrayDeque<>();;
-
 
     public Scanner(Scan scan) throws IOException {
       if (scan.getBatch() > 0) {
@@ -199,7 +193,7 @@ public class ThriftTable implements Table {
       }
       if (scan.getCaching() <= 0) {
         scan.setCaching(scannerCaching);
-      } else if (scan.getCaching() == 1 && scan.isReversed()){
+      } else if (scan.getCaching() == 1 && scan.isReversed()) {
         // for reverse scan, we need to pass the last row to the next scanner
         // we need caching number bigger than 1
         scan.setCaching(scan.getCaching() + 1);
@@ -207,14 +201,13 @@ public class ThriftTable implements Table {
       this.scan = ThriftUtilities.scanFromHBase(scan);
     }
 
-
     @Override
     public Result next() throws IOException {
       if (cache.size() == 0) {
         setupNextScanner();
         try {
-          List<TResult> tResults = client
-              .getScannerResults(tableNameInBytes, scan, scan.getCaching());
+          List<TResult> tResults =
+            client.getScannerResults(tableNameInBytes, scan, scan.getCaching());
           Result[] results = ThriftUtilities.resultsFromThrift(tResults);
           boolean firstKey = true;
           for (Result result : results) {
@@ -241,7 +234,7 @@ public class ThriftTable implements Table {
       if (cache.size() > 0) {
         return cache.poll();
       } else {
-        //scan finished
+        // scan finished
         return null;
       }
     }
@@ -261,18 +254,17 @@ public class ThriftTable implements Table {
     }
 
     private void setupNextScanner() {
-      //if lastResult is null null, it means it is not the fist scan
-      if (lastResult!= null) {
+      // if lastResult is null null, it means it is not the fist scan
+      if (lastResult != null) {
         byte[] lastRow = lastResult.getRow();
         if (scan.isReversed()) {
-          //for reverse scan, we can't find the closet row before this row
+          // for reverse scan, we can't find the closet row before this row
           scan.setStartRow(lastRow);
         } else {
           scan.setStartRow(createClosestRowAfter(lastRow));
         }
       }
     }
-
 
     /**
      * Create the closest row after the specified row
@@ -309,7 +301,7 @@ public class ThriftTable implements Table {
     TPut tPut = ThriftUtilities.putFromHBase(put);
     try {
       client.put(tableNameInBytes, tPut);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -319,7 +311,7 @@ public class ThriftTable implements Table {
     List<TPut> tPuts = ThriftUtilities.putsFromHBase(puts);
     try {
       client.putMultiple(tableNameInBytes, tPuts);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -329,7 +321,7 @@ public class ThriftTable implements Table {
     TDelete tDelete = ThriftUtilities.deleteFromHBase(delete);
     try {
       client.deleteSingle(tableNameInBytes, tDelete);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -339,7 +331,7 @@ public class ThriftTable implements Table {
     List<TDelete> tDeletes = ThriftUtilities.deletesFromHBase(deletes);
     try {
       client.deleteMultiple(tableNameInBytes, tDeletes);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -359,8 +351,8 @@ public class ThriftTable implements Table {
 
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
-          " an empty byte array, or just do not call this method if you want a null qualifier");
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using"
+        + " an empty byte array, or just do not call this method if you want a null qualifier");
       return this;
     }
 
@@ -384,8 +376,8 @@ public class ThriftTable implements Table {
     }
 
     private void preCheck() {
-      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by" +
-          " calling ifNotExists/ifEquals/ifMatches before executing the request");
+      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by"
+        + " calling ifNotExists/ifEquals/ifMatches before executing the request");
     }
 
     @Override
@@ -412,7 +404,7 @@ public class ThriftTable implements Table {
   }
 
   private boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOperator op,
-      byte[] value, RowMutations mutation) throws IOException {
+    byte[] value, RowMutations mutation) throws IOException {
     try {
       ByteBuffer valueBuffer = value == null ? null : ByteBuffer.wrap(value);
       return client.checkAndMutate(tableNameInBytes, ByteBuffer.wrap(row), ByteBuffer.wrap(family),
@@ -449,7 +441,7 @@ public class ThriftTable implements Table {
     try {
       client.mutateRow(tableNameInBytes, tRowMutations);
       return Result.EMPTY_RESULT;
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -460,7 +452,7 @@ public class ThriftTable implements Table {
     try {
       TResult tResult = client.append(tableNameInBytes, tAppend);
       return ThriftUtilities.resultFromThrift(tResult);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }
@@ -471,7 +463,7 @@ public class ThriftTable implements Table {
     try {
       TResult tResult = client.increment(tableNameInBytes, tIncrement);
       return ThriftUtilities.resultFromThrift(tResult);
-    }  catch (TException e) {
+    } catch (TException e) {
       throw new IOException(e);
     }
   }

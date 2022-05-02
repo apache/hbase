@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,21 +21,20 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface to Map of online regions.  In the  Map, the key is the region's
- * encoded name and the value is an {@link Region} instance.
+ * Interface to Map of online regions. In the Map, the key is the region's encoded name and the
+ * value is an {@link Region} instance.
  */
 @InterfaceAudience.Private
 public interface MutableOnlineRegions extends OnlineRegions {
 
   /**
-   * Add to online regions.
-   * @param r
+   * Add to online regions. n
    */
   void addRegion(final HRegion r);
 
   /**
    * Removes the given Region from the list of onlineRegions.
-   * @param r Region to remove.
+   * @param r           Region to remove.
    * @param destination Destination, if any, null otherwise.
    * @return True if we removed a region from online list.
    */

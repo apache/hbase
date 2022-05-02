@@ -74,7 +74,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVerifyReplication.class);
+    HBaseClassTestRule.forClass(TestVerifyReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVerifyReplication.class);
 
@@ -95,9 +95,11 @@ public class TestVerifyReplication extends TestReplicationBase {
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
 
-    TableDescriptor peerTable = TableDescriptorBuilder.newBuilder(peerTableName).setColumnFamily(
-                    ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100)
-                            .build()).build();
+    TableDescriptor peerTable =
+      TableDescriptorBuilder.newBuilder(peerTableName)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100).build())
+        .build();
 
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
@@ -107,7 +109,7 @@ public class TestVerifyReplication extends TestReplicationBase {
   }
 
   static void runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     Job job = new VerifyReplication().createSubmittableJob(new Configuration(CONF1), args);
     if (job == null) {
       fail("Job wasn't created, see the log");
@@ -167,9 +169,9 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     try {
       ColumnFamilyDescriptor fam = ColumnFamilyDescriptorBuilder.newBuilder(familyname)
-          .setMaxVersions(100).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build();
+        .setMaxVersions(100).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build();
       TableDescriptor table =
-          TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(fam).build();
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(fam).build();
 
       Connection connection1 = ConnectionFactory.createConnection(CONF1);
       Connection connection2 = ConnectionFactory.createConnection(CONF2);
@@ -239,7 +241,7 @@ public class TestVerifyReplication extends TestReplicationBase {
   }
 
   static void checkRestoreTmpDir(Configuration conf, String restoreTmpDir, int expectedCount)
-      throws IOException {
+    throws IOException {
     FileSystem fs = FileSystem.get(conf);
     FileStatus[] subDirectories = fs.listStatus(new Path(restoreTmpDir));
     assertNotNull(subDirectories);
@@ -248,7 +250,6 @@ public class TestVerifyReplication extends TestReplicationBase {
       assertTrue(subDirectories[i].isDirectory());
     }
   }
-
 
   @Test
   public void testVerifyRepJobWithQuorumAddress() throws Exception {
@@ -374,7 +375,7 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     // with a peerTableName along with quorum address (a cluster key)
     String[] args = new String[] { "--peerTableName=" + peerTableName.getNameAsString(),
-        UTIL2.getClusterKey(), tableName.getNameAsString() };
+      UTIL2.getClusterKey(), tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
 
     UTIL2.deleteTableData(peerTableName);
@@ -391,23 +392,23 @@ public class TestVerifyReplication extends TestReplicationBase {
     FileSystem fs = rootDir.getFileSystem(CONF1);
     String sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
-            Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
+      Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
 
     // Take target snapshot
     Path peerRootDir = CommonFSUtils.getRootDir(CONF2);
     FileSystem peerFs = peerRootDir.getFileSystem(CONF2);
     String peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), peerTableName,
-            Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
+      Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
 
     String peerFSAddress = peerFs.getUri().toString();
     String tmpPath1 = UTIL1.getRandomDir().toString();
     String tmpPath2 = "/tmp" + EnvironmentEdgeManager.currentTime();
 
     String[] args = new String[] { "--peerTableName=" + peerTableName.getNameAsString(),
-      "--sourceSnapshotName=" + sourceSnapshotName,
-      "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
-      "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
+      "--sourceSnapshotName=" + sourceSnapshotName, "--sourceSnapshotTmpDir=" + tmpPath1,
+      "--peerSnapshotName=" + peerSnapshotName, "--peerSnapshotTmpDir=" + tmpPath2,
+      "--peerFSAddress=" + peerFSAddress,
       "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, NB_ROWS_IN_BATCH, 0);
@@ -421,7 +422,7 @@ public class TestVerifyReplication extends TestReplicationBase {
       put = new Put(result.getRow());
       Cell firstVal = result.rawCells()[0];
       put.addColumn(CellUtil.cloneFamily(firstVal), CellUtil.cloneQualifier(firstVal),
-              Bytes.toBytes("diff data"));
+        Bytes.toBytes("diff data"));
       htable3.put(put);
     }
     Delete delete = new Delete(put.getRow());
@@ -429,16 +430,16 @@ public class TestVerifyReplication extends TestReplicationBase {
 
     sourceSnapshotName = "sourceSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL1.getAdmin(), tableName,
-            Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
+      Bytes.toString(noRepfamName), sourceSnapshotName, rootDir, fs, true);
 
     peerSnapshotName = "peerSnapshot-" + EnvironmentEdgeManager.currentTime();
     SnapshotTestingUtils.createSnapshotAndValidate(UTIL2.getAdmin(), peerTableName,
-            Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
+      Bytes.toString(noRepfamName), peerSnapshotName, peerRootDir, peerFs, true);
 
     args = new String[] { "--peerTableName=" + peerTableName.getNameAsString(),
-      "--sourceSnapshotName=" + sourceSnapshotName,
-      "--sourceSnapshotTmpDir=" + tmpPath1, "--peerSnapshotName=" + peerSnapshotName,
-      "--peerSnapshotTmpDir=" + tmpPath2, "--peerFSAddress=" + peerFSAddress,
+      "--sourceSnapshotName=" + sourceSnapshotName, "--sourceSnapshotTmpDir=" + tmpPath1,
+      "--peerSnapshotName=" + peerSnapshotName, "--peerSnapshotTmpDir=" + tmpPath2,
+      "--peerFSAddress=" + peerFSAddress,
       "--peerHBaseRootAddress=" + CommonFSUtils.getRootDir(CONF2), UTIL2.getClusterKey(),
       tableName.getNameAsString() };
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);

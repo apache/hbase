@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,18 +29,19 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
 /**
- * A remote procedure which is used to send split WAL request to region server.
- * It will return null if the task succeeded or return a DoNotRetryIOException.
- * {@link SplitWALProcedure} will help handle the situation that encounters
- * DoNotRetryIOException. Otherwise it will retry until success.
+ * A remote procedure which is used to send split WAL request to region server. It will return null
+ * if the task succeeded or return a DoNotRetryIOException. {@link SplitWALProcedure} will help
+ * handle the situation that encounters DoNotRetryIOException. Otherwise it will retry until
+ * success.
  */
 @InterfaceAudience.Private
 public class SplitWALRemoteProcedure extends ServerRemoteProcedure
-    implements ServerProcedureInterface {
+  implements ServerProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(SplitWALRemoteProcedure.class);
   private String walPath;
   private ServerName crashedServer;
@@ -68,16 +68,16 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     MasterProcedureProtos.SplitWALRemoteData.Builder builder =
-        MasterProcedureProtos.SplitWALRemoteData.newBuilder();
+      MasterProcedureProtos.SplitWALRemoteData.newBuilder();
     builder.setWalPath(walPath).setWorker(ProtobufUtil.toServerName(targetServer))
-        .setCrashedServer(ProtobufUtil.toServerName(crashedServer));
+      .setCrashedServer(ProtobufUtil.toServerName(crashedServer));
     serializer.serialize(builder.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     MasterProcedureProtos.SplitWALRemoteData data =
-        serializer.deserialize(MasterProcedureProtos.SplitWALRemoteData.class);
+      serializer.deserialize(MasterProcedureProtos.SplitWALRemoteData.class);
     walPath = data.getWalPath();
     targetServer = ProtobufUtil.toServerName(data.getWorker());
     crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
@@ -85,11 +85,10 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
 
   @Override
   public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(MasterProcedureEnv env,
-      ServerName serverName) {
-    return Optional
-        .of(new RSProcedureDispatcher.ServerOperation(this, getProcId(), SplitWALCallable.class,
-            MasterProcedureProtos.SplitWALParameter.newBuilder().setWalPath(walPath).build()
-                .toByteArray()));
+    ServerName serverName) {
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
+      SplitWALCallable.class, MasterProcedureProtos.SplitWALParameter.newBuilder()
+        .setWalPath(walPath).build().toByteArray()));
   }
 
   @Override
@@ -132,7 +131,8 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     return ServerOperationType.SPLIT_WAL_REMOTE;
   }
 
-  @Override protected void toStringClassDetails(StringBuilder builder) {
+  @Override
+  protected void toStringClassDetails(StringBuilder builder) {
     builder.append(getProcName());
     if (this.targetServer != null) {
       builder.append(", worker=");
@@ -140,7 +140,8 @@ public class SplitWALRemoteProcedure extends ServerRemoteProcedure
     }
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + SplitWALProcedure.getWALNameFromStrPath(getWAL());
   }
 }

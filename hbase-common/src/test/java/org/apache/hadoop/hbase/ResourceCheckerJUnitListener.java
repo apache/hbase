@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.ArrayList;
@@ -74,13 +73,12 @@ public class ResourceCheckerJUnitListener extends RunListener {
     public int getMax() {
       return 500;
     }
-    
+
     @Override
     public List<String> getStringsToLog() {
       return stringsToLog;
     }
   }
-
 
   static class OpenFileDescriptorResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
@@ -139,13 +137,11 @@ public class ResourceCheckerJUnitListener extends RunListener {
     }
   }
 
-
   /**
    * To be implemented by sub classes if they want to add specific ResourceAnalyzer.
    */
   protected void addResourceAnalyzer(ResourceChecker rc) {
   }
-
 
   private void start(String testName) {
     ResourceChecker rc = new ResourceChecker(testName);
@@ -171,14 +167,12 @@ public class ResourceCheckerJUnitListener extends RunListener {
 
   /**
    * Get the test name from the JUnit Description
-   *
    * @return the string for the short test name
    */
-  private String descriptionToShortTestName(
-      org.junit.runner.Description description) {
+  private String descriptionToShortTestName(org.junit.runner.Description description) {
     final int toRemove = "org.apache.hadoop.hbase.".length();
-    return description.getTestClass().getName().substring(toRemove) +
-        "#" + description.getMethodName();
+    return description.getTestClass().getName().substring(toRemove) + "#"
+      + description.getMethodName();
   }
 
   @Override

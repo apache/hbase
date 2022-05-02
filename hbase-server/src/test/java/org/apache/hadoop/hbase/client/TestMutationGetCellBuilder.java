@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestMutationGetCellBuilder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMutationGetCellBuilder.class);
+    HBaseClassTestRule.forClass(TestMutationGetCellBuilder.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -72,9 +72,9 @@ public class TestMutationGetCellBuilder {
       TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
       // put one row
       Put put = new Put(rowKey);
-      CellBuilder cellBuilder = put.getCellBuilder().setQualifier(qualifier)
-              .setFamily(family).setValue(Bytes.toBytes("bar")).setTimestamp(now);
-      //setRow is useless
+      CellBuilder cellBuilder = put.getCellBuilder().setQualifier(qualifier).setFamily(family)
+        .setValue(Bytes.toBytes("bar")).setTimestamp(now);
+      // setRow is useless
       cellBuilder.setRow(uselessRowKey);
       put.add(cellBuilder.build());
       byte[] cloneRow = CellUtil.cloneRow(cellBuilder.build());
@@ -87,25 +87,21 @@ public class TestMutationGetCellBuilder {
       Result result = table.get(get);
       assertTrue("row key must be same", Arrays.equals(result.getRow(), rowKey));
       assertTrue("Column foo value should be bar",
-          Bytes.toString(result.getValue(family, qualifier)).equals("bar"));
+        Bytes.toString(result.getValue(family, qualifier)).equals("bar"));
 
-      //Delete that row
+      // Delete that row
       Delete delete = new Delete(rowKey);
-      cellBuilder = delete.getCellBuilder().setQualifier(qualifier)
-              .setFamily(family);
-      //if this row has been deleted,then can check setType is useless.
+      cellBuilder = delete.getCellBuilder().setQualifier(qualifier).setFamily(family);
+      // if this row has been deleted,then can check setType is useless.
       cellBuilder.setType(Cell.Type.Put);
       delete.add(cellBuilder.build());
       table.delete(delete);
 
-      //check this row whether exist
+      // check this row whether exist
       get = new Get(rowKey);
       get.setTimestamp(now);
       result = table.get(get);
-      assertTrue("Column foo should not exist",
-              result.getValue(family, qualifier) == null);
+      assertTrue("Column foo should not exist", result.getValue(family, qualifier) == null);
     }
   }
 }
-
-

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,15 +23,15 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Class that implements cache metrics.
  */
 @InterfaceAudience.Private
 public class CacheStats {
 
-  /** Sliding window statistics. The number of metric periods to include in
-   * sliding window hit ratio calculations.
+  /**
+   * Sliding window statistics. The number of metric periods to include in sliding window hit ratio
+   * calculations.
    */
   static final int DEFAULT_WINDOW_PERIODS = 5;
 
@@ -43,10 +42,9 @@ public class CacheStats {
   private final LongAdder primaryHitCount = new LongAdder();
 
   /**
-   * The number of getBlock requests that were cache hits, but only from
-   * requests that were set to use the block cache.  This is because all reads
-   * attempt to read from the block cache even if they will not put new blocks
-   * into the block cache.  See HBASE-2253 for more information.
+   * The number of getBlock requests that were cache hits, but only from requests that were set to
+   * use the block cache. This is because all reads attempt to read from the block cache even if
+   * they will not put new blocks into the block cache. See HBASE-2253 for more information.
    */
   private final LongAdder hitCachingCount = new LongAdder();
 
@@ -56,8 +54,8 @@ public class CacheStats {
   /** The number of getBlock requests for primary replica that were cache misses */
   private final LongAdder primaryMissCount = new LongAdder();
   /**
-   * The number of getBlock requests that were cache misses, but only from
-   * requests that were set to use the block cache.
+   * The number of getBlock requests that were cache misses, but only from requests that were set to
+   * use the block cache.
    */
   private final LongAdder missCachingCount = new LongAdder();
 
@@ -129,24 +127,21 @@ public class CacheStats {
   public CacheStats(final String name, int numPeriodsInWindow) {
     this.numPeriodsInWindow = numPeriodsInWindow;
     this.hitCounts = new long[numPeriodsInWindow];
-    this.hitCachingCounts =  new long[numPeriodsInWindow];
-    this.requestCounts =  new long[numPeriodsInWindow];
-    this.requestCachingCounts =  new long[numPeriodsInWindow];
+    this.hitCachingCounts = new long[numPeriodsInWindow];
+    this.requestCounts = new long[numPeriodsInWindow];
+    this.requestCachingCounts = new long[numPeriodsInWindow];
     this.ageAtEviction = new FastLongHistogram();
   }
 
   @Override
   public String toString() {
     AgeSnapshot snapshot = getAgeAtEvictionSnapshot();
-    return "hitCount=" + getHitCount() + ", hitCachingCount=" + getHitCachingCount() +
-      ", missCount=" + getMissCount() + ", missCachingCount=" + getMissCachingCount() +
-      ", evictionCount=" + getEvictionCount() +
-      ", evictedBlockCount=" + getEvictedCount() +
-      ", primaryMissCount=" + getPrimaryMissCount() +
-      ", primaryHitCount=" + getPrimaryHitCount() +
-      ", evictedAgeMean=" + snapshot.getMean();
+    return "hitCount=" + getHitCount() + ", hitCachingCount=" + getHitCachingCount()
+      + ", missCount=" + getMissCount() + ", missCachingCount=" + getMissCachingCount()
+      + ", evictionCount=" + getEvictionCount() + ", evictedBlockCount=" + getEvictedCount()
+      + ", primaryMissCount=" + getPrimaryMissCount() + ", primaryHitCount=" + getPrimaryHitCount()
+      + ", evictedAgeMean=" + snapshot.getMean();
   }
-
 
   public void miss(boolean caching, boolean primary, BlockType type) {
     missCount.increment();
@@ -198,7 +193,6 @@ public class CacheStats {
     hitCount.increment();
     if (primary) primaryHitCount.increment();
     if (caching) hitCachingCount.increment();
-
 
     if (type == null) {
       return;
@@ -259,7 +253,6 @@ public class CacheStats {
   public long failInsert() {
     return failedInserts.incrementAndGet();
   }
-
 
   // All of the counts of misses and hits.
   public long getDataMissCount() {
@@ -443,13 +436,11 @@ public class CacheStats {
   public void rollMetricsPeriod() {
     hitCounts[windowIndex] = getHitCount() - lastHitCount;
     lastHitCount = getHitCount();
-    hitCachingCounts[windowIndex] =
-      getHitCachingCount() - lastHitCachingCount;
+    hitCachingCounts[windowIndex] = getHitCachingCount() - lastHitCachingCount;
     lastHitCachingCount = getHitCachingCount();
     requestCounts[windowIndex] = getRequestCount() - lastRequestCount;
     lastRequestCount = getRequestCount();
-    requestCachingCounts[windowIndex] =
-      getRequestCachingCount() - lastRequestCachingCount;
+    requestCachingCounts[windowIndex] = getRequestCachingCount() - lastRequestCachingCount;
     lastRequestCachingCount = getRequestCachingCount();
     windowIndex = (windowIndex + 1) % numPeriodsInWindow;
   }
@@ -471,14 +462,14 @@ public class CacheStats {
   }
 
   public double getHitRatioPastNPeriods() {
-    double ratio = ((double)getSumHitCountsPastNPeriods() /
-        (double)getSumRequestCountsPastNPeriods());
+    double ratio =
+      ((double) getSumHitCountsPastNPeriods() / (double) getSumRequestCountsPastNPeriods());
     return Double.isNaN(ratio) ? 0 : ratio;
   }
 
   public double getHitCachingRatioPastNPeriods() {
-    double ratio = ((double)getSumHitCachingCountsPastNPeriods() /
-        (double)getSumRequestCachingCountsPastNPeriods());
+    double ratio = ((double) getSumHitCachingCountsPastNPeriods()
+      / (double) getSumRequestCachingCountsPastNPeriods());
     return Double.isNaN(ratio) ? 0 : ratio;
   }
 

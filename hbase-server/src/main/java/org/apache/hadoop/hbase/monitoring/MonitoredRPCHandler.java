@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,22 +22,31 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
- * A MonitoredTask implementation optimized for use with RPC Handlers 
- * handling frequent, short duration tasks. String concatenations and object 
- * allocations are avoided in methods that will be hit by every RPC call.
+ * A MonitoredTask implementation optimized for use with RPC Handlers handling frequent, short
+ * duration tasks. String concatenations and object allocations are avoided in methods that will be
+ * hit by every RPC call.
  */
 @InterfaceAudience.Private
 public interface MonitoredRPCHandler extends MonitoredTask {
   String getRPC();
+
   String getRPC(boolean withParams);
+
   long getRPCPacketLength();
+
   String getClient();
+
   long getRPCStartTime();
+
   long getRPCQueueTime();
+
   boolean isRPCRunning();
+
   boolean isOperationRunning();
 
   void setRPC(String methodName, Object[] params, long queueTime);
+
   void setRPCPacket(Message param);
+
   void setConnection(String clientAddress, int remotePort);
 }

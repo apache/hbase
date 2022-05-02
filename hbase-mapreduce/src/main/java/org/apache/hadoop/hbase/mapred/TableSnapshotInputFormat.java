@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.DataInput;
@@ -40,7 +39,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. Further
  * documentation available on {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}.
- *
  * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
  */
 @InterfaceAudience.Public
@@ -59,9 +57,9 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
     }
 
     public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
-        List<String> locations, Scan scan, Path restoreDir) {
+      List<String> locations, Scan scan, Path restoreDir) {
       this.delegate =
-          new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
+        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override
@@ -85,13 +83,12 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
     }
   }
 
-  static class TableSnapshotRecordReader
-    implements RecordReader<ImmutableBytesWritable, Result> {
+  static class TableSnapshotRecordReader implements RecordReader<ImmutableBytesWritable, Result> {
 
     private TableSnapshotInputFormatImpl.RecordReader delegate;
 
     public TableSnapshotRecordReader(TableSnapshotRegionSplit split, JobConf job)
-        throws IOException {
+      throws IOException {
       delegate = new TableSnapshotInputFormatImpl.RecordReader();
       delegate.initialize(split.delegate, job);
     }
@@ -145,38 +142,41 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
   }
 
   @Override
-  public RecordReader<ImmutableBytesWritable, Result>
-  getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
+  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(InputSplit split, JobConf job,
+    Reporter reporter) throws IOException {
     return new TableSnapshotRecordReader((TableSnapshotRegionSplit) split, job);
   }
 
   /**
    * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
-   * @param job the job to configure
+   * @param job          the job to configure
    * @param snapshotName the name of the snapshot to read from
-   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restoreDir can be deleted.
+   * @param restoreDir   a temporary directory to restore the snapshot into. Current user should
+   *                     have write permissions to this directory, and this should not be a
+   *                     subdirectory of rootdir. After the job is finished, restoreDir can be
+   *                     deleted.
    * @throws IOException if an error occurs
    */
   public static void setInput(JobConf job, String snapshotName, Path restoreDir)
-      throws IOException {
+    throws IOException {
     TableSnapshotInputFormatImpl.setInput(job, snapshotName, restoreDir);
   }
 
   /**
    * Configures the job to use TableSnapshotInputFormat to read from a snapshot.
-   * @param job the job to configure
-   * @param snapshotName the name of the snapshot to read from
-   * @param restoreDir a temporary directory to restore the snapshot into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restoreDir can be deleted.
-   * @param splitAlgo split algorithm to generate splits from region
+   * @param job                the job to configure
+   * @param snapshotName       the name of the snapshot to read from
+   * @param restoreDir         a temporary directory to restore the snapshot into. Current user
+   *                           should have write permissions to this directory, and this should not
+   *                           be a subdirectory of rootdir. After the job is finished, restoreDir
+   *                           can be deleted.
+   * @param splitAlgo          split algorithm to generate splits from region
    * @param numSplitsPerRegion how many input splits to generate per one region
    * @throws IOException if an error occurs
    */
   public static void setInput(JobConf job, String snapshotName, Path restoreDir,
-                              RegionSplitter.SplitAlgorithm splitAlgo, int numSplitsPerRegion) throws IOException {
-    TableSnapshotInputFormatImpl.setInput(job, snapshotName, restoreDir, splitAlgo, numSplitsPerRegion);
+    RegionSplitter.SplitAlgorithm splitAlgo, int numSplitsPerRegion) throws IOException {
+    TableSnapshotInputFormatImpl.setInput(job, snapshotName, restoreDir, splitAlgo,
+      numSplitsPerRegion);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +41,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestBufferedDataBlockEncoder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBufferedDataBlockEncoder.class);
+    HBaseClassTestRule.forClass(TestBufferedDataBlockEncoder.class);
 
   byte[] row1 = Bytes.toBytes("row1");
   byte[] row2 = Bytes.toBytes("row2");
@@ -63,8 +63,8 @@ public class TestBufferedDataBlockEncoder {
 
   @Test
   public void testEnsureSpaceForKey() {
-    BufferedDataBlockEncoder.SeekerState state = new BufferedDataBlockEncoder.SeekerState(
-        new ObjectIntPair<>(), false);
+    BufferedDataBlockEncoder.SeekerState state =
+      new BufferedDataBlockEncoder.SeekerState(new ObjectIntPair<>(), false);
     for (int i = 1; i <= 65536; ++i) {
       state.keyLength = i;
       state.ensureSpaceForKey();
@@ -94,27 +94,25 @@ public class TestBufferedDataBlockEncoder {
   @Test
   public void testKVCodecWithTagsForDecodedCellsWithNoTags() throws Exception {
     KeyValue kv1 = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("1"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"));
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("1"));
     // kv1.getKey() return a copy of the Key bytes which starts from RK_length. Means from offsets,
     // we need to reduce the KL and VL parts.
     OnheapDecodedCell c1 = new OnheapDecodedCell(kv1.getKey(), kv1.getRowLength(),
-        kv1.getFamilyOffset() - KeyValue.ROW_OFFSET, kv1.getFamilyLength(),
-        kv1.getQualifierOffset() - KeyValue.ROW_OFFSET, kv1.getQualifierLength(),
-        kv1.getTimestamp(), kv1.getTypeByte(), kv1.getValueArray(), kv1.getValueOffset(),
-        kv1.getValueLength(), kv1.getSequenceId(), kv1.getTagsArray(), kv1.getTagsOffset(),
-        kv1.getTagsLength());
+      kv1.getFamilyOffset() - KeyValue.ROW_OFFSET, kv1.getFamilyLength(),
+      kv1.getQualifierOffset() - KeyValue.ROW_OFFSET, kv1.getQualifierLength(), kv1.getTimestamp(),
+      kv1.getTypeByte(), kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength(),
+      kv1.getSequenceId(), kv1.getTagsArray(), kv1.getTagsOffset(), kv1.getTagsLength());
     KeyValue kv2 = new KeyValue(Bytes.toBytes("r2"), Bytes.toBytes("f"), Bytes.toBytes("2"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"));
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("2"));
     OnheapDecodedCell c2 = new OnheapDecodedCell(kv2.getKey(), kv2.getRowLength(),
-        kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),
-        kv2.getQualifierOffset() - KeyValue.ROW_OFFSET, kv2.getQualifierLength(),
-        kv2.getTimestamp(), kv2.getTypeByte(), kv2.getValueArray(), kv2.getValueOffset(),
-        kv2.getValueLength(), kv2.getSequenceId(), kv2.getTagsArray(), kv2.getTagsOffset(),
-        kv2.getTagsLength());
+      kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),
+      kv2.getQualifierOffset() - KeyValue.ROW_OFFSET, kv2.getQualifierLength(), kv2.getTimestamp(),
+      kv2.getTypeByte(), kv2.getValueArray(), kv2.getValueOffset(), kv2.getValueLength(),
+      kv2.getSequenceId(), kv2.getTagsArray(), kv2.getTagsOffset(), kv2.getTagsLength());
     KeyValue kv3 = new KeyValue(Bytes.toBytes("r3"), Bytes.toBytes("cf"), Bytes.toBytes("qual"),
-        HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"));
-    BufferedDataBlockEncoder.OffheapDecodedExtendedCell
-        c3 = new BufferedDataBlockEncoder.OffheapDecodedExtendedCell(ByteBuffer.wrap(kv2.getKey()),
+      HConstants.LATEST_TIMESTAMP, Bytes.toBytes("3"));
+    BufferedDataBlockEncoder.OffheapDecodedExtendedCell c3 =
+      new BufferedDataBlockEncoder.OffheapDecodedExtendedCell(ByteBuffer.wrap(kv2.getKey()),
         kv2.getRowLength(), kv2.getFamilyOffset() - KeyValue.ROW_OFFSET, kv2.getFamilyLength(),
         kv2.getQualifierOffset() - KeyValue.ROW_OFFSET, kv2.getQualifierLength(),
         kv2.getTimestamp(), kv2.getTypeByte(), ByteBuffer.wrap(kv2.getValueArray()),

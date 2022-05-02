@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInboundHandlerAdapter;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
-
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Decoder for rpc request.
@@ -50,7 +50,7 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   public void channelActive(ChannelHandlerContext ctx) throws Exception {
     allChannels.add(ctx.channel());
     NettyRpcServer.LOG.trace("Connection {}; # active connections={}",
-        ctx.channel().remoteAddress(), (allChannels.size() - 1));
+      ctx.channel().remoteAddress(), (allChannels.size() - 1));
     super.channelActive(ctx);
   }
 
@@ -66,7 +66,7 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     allChannels.remove(ctx.channel());
     NettyRpcServer.LOG.trace("Disconnection {}; # active connections={}",
-        ctx.channel().remoteAddress(), (allChannels.size() - 1));
+      ctx.channel().remoteAddress(), (allChannels.size() - 1));
     super.channelInactive(ctx);
   }
 
@@ -74,7 +74,7 @@ class NettyRpcServerRequestDecoder extends ChannelInboundHandlerAdapter {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
     allChannels.remove(ctx.channel());
     NettyRpcServer.LOG.trace("Connection {}; caught unexpected downstream exception.",
-        ctx.channel().remoteAddress(), e);
+      ctx.channel().remoteAddress(), e);
     ctx.channel().close();
   }
 }

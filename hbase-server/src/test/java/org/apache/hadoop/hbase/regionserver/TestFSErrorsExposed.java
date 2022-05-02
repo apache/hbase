@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,15 +61,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test cases that ensure that file system level errors are bubbled up
- * appropriately to clients, rather than swallowed.
+ * Test cases that ensure that file system level errors are bubbled up appropriately to clients,
+ * rather than swallowed.
  */
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestFSErrorsExposed {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSErrorsExposed.class);
+    HBaseClassTestRule.forClass(TestFSErrorsExposed.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSErrorsExposed.class);
 
@@ -79,29 +79,24 @@ public class TestFSErrorsExposed {
   public TestName name = new TestName();
 
   /**
-   * Injects errors into the pread calls of an on-disk file, and makes
-   * sure those bubble up to the HFile scanner
+   * Injects errors into the pread calls of an on-disk file, and makes sure those bubble up to the
+   * HFile scanner
    */
   @Test
   public void testHFileScannerThrowsErrors() throws IOException {
-    Path hfilePath = new Path(new Path(
-        util.getDataTestDir("internalScannerExposesErrors"),
-        "regionname"), "familyname");
-    HFileSystem hfs = (HFileSystem)util.getTestFileSystem();
+    Path hfilePath = new Path(
+      new Path(util.getDataTestDir("internalScannerExposesErrors"), "regionname"), "familyname");
+    HFileSystem hfs = (HFileSystem) util.getTestFileSystem();
     FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
     FileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     HFileContext meta = new HFileContextBuilder().withBlockSize(2 * 1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(
-        util.getConfiguration(), cacheConf, hfs)
-            .withOutputDir(hfilePath)
-            .withFileContext(meta)
-            .build();
-    TestHStoreFile.writeStoreFile(
-        writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
+    StoreFileWriter writer = new StoreFileWriter.Builder(util.getConfiguration(), cacheConf, hfs)
+      .withOutputDir(hfilePath).withFileContext(meta).build();
+    TestHStoreFile.writeStoreFile(writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
-        BloomType.NONE, true);
+      BloomType.NONE, true);
     sf.initReader();
     StoreFileReader reader = sf.getReader();
     HFileScanner scanner = reader.getScanner(false, true);
@@ -116,7 +111,7 @@ public class TestFSErrorsExposed {
     faultyfs.startFaults();
 
     try {
-      int scanned=0;
+      int scanned = 0;
       while (scanner.next()) {
         scanned++;
       }
@@ -129,34 +124,29 @@ public class TestFSErrorsExposed {
   }
 
   /**
-   * Injects errors into the pread calls of an on-disk file, and makes
-   * sure those bubble up to the StoreFileScanner
+   * Injects errors into the pread calls of an on-disk file, and makes sure those bubble up to the
+   * StoreFileScanner
    */
   @Test
   public void testStoreFileScannerThrowsErrors() throws IOException {
-    Path hfilePath = new Path(new Path(
-        util.getDataTestDir("internalScannerExposesErrors"),
-        "regionname"), "familyname");
-    HFileSystem hfs = (HFileSystem)util.getTestFileSystem();
+    Path hfilePath = new Path(
+      new Path(util.getDataTestDir("internalScannerExposesErrors"), "regionname"), "familyname");
+    HFileSystem hfs = (HFileSystem) util.getTestFileSystem();
     FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
     HFileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     HFileContext meta = new HFileContextBuilder().withBlockSize(2 * 1024).build();
-    StoreFileWriter writer = new StoreFileWriter.Builder(
-        util.getConfiguration(), cacheConf, hfs)
-            .withOutputDir(hfilePath)
-            .withFileContext(meta)
-            .build();
-    TestHStoreFile.writeStoreFile(
-        writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
+    StoreFileWriter writer = new StoreFileWriter.Builder(util.getConfiguration(), cacheConf, hfs)
+      .withOutputDir(hfilePath).withFileContext(meta).build();
+    TestHStoreFile.writeStoreFile(writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
     HStoreFile sf = new HStoreFile(fs, writer.getPath(), util.getConfiguration(), cacheConf,
-        BloomType.NONE, true);
+      BloomType.NONE, true);
 
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
-        Collections.singletonList(sf), false, true, false, false,
-        // 0 is passed as readpoint because this test operates on HStoreFile directly
-        0);
+      Collections.singletonList(sf), false, true, false, false,
+      // 0 is passed as readpoint because this test operates on HStoreFile directly
+      0);
     KeyValueScanner scanner = scanners.get(0);
 
     FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
@@ -168,7 +158,7 @@ public class TestFSErrorsExposed {
     faultyfs.startFaults();
 
     try {
-      int scanned=0;
+      int scanned = 0;
       while (scanner.next() != null) {
         scanned++;
       }
@@ -181,14 +171,13 @@ public class TestFSErrorsExposed {
   }
 
   /**
-   * Cluster test which starts a region server with a region, then
-   * removes the data from HDFS underneath it, and ensures that
-   * errors are bubbled to the client.
+   * Cluster test which starts a region server with a region, then removes the data from HDFS
+   * underneath it, and ensures that errors are bubbled to the client.
    */
   @Test
   public void testFullSystemBubblesFSErrors() throws Exception {
     // We won't have an error if the datanode is not there if we use short circuit
-    //  it's a known 'feature'.
+    // it's a known 'feature'.
     Assume.assumeTrue(!util.isReadShortCircuitOn());
 
     try {
@@ -245,7 +234,7 @@ public class TestFSErrorsExposed {
     }
 
     @Override
-    public FSDataInputStream open(Path p, int bufferSize) throws IOException  {
+    public FSDataInputStream open(Path p, int bufferSize) throws IOException {
       FSDataInputStream orig = fs.open(p, bufferSize);
       FaultyInputStream faulty = new FaultyInputStream(orig);
       inStreams.add(new SoftReference<>(faulty));
@@ -256,7 +245,7 @@ public class TestFSErrorsExposed {
      * Starts to simulate faults on all streams opened so far
      */
     public void startFaults() {
-      for (SoftReference<FaultyInputStream> is: inStreams) {
+      for (SoftReference<FaultyInputStream> is : inStreams) {
         is.get().startFaults();
       }
     }
@@ -274,10 +263,9 @@ public class TestFSErrorsExposed {
     }
 
     @Override
-    public int read(long position, byte[] buffer, int offset, int length)
-      throws IOException {
+    public int read(long position, byte[] buffer, int offset, int length) throws IOException {
       injectFault();
-      return ((PositionedReadable)in).read(position, buffer, offset, length);
+      return ((PositionedReadable) in).read(position, buffer, offset, length);
     }
 
     private void injectFault() throws IOException {

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.io.InputStream;
 import java.security.Key;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -29,8 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Decryptor {
 
   /**
-   * Set the secret key
-   * @param key
+   * Set the secret key n
    */
   public void setKey(Key key);
 
@@ -47,14 +45,12 @@ public interface Decryptor {
   public int getBlockSize();
 
   /**
-   * Set the initialization vector
-   * @param iv
+   * Set the initialization vector n
    */
   public void setIv(byte[] iv);
 
   /**
-   * Create a stream for decryption
-   * @param in
+   * Create a stream for decryption n
    */
   public InputStream createDecryptionStream(InputStream in);
 

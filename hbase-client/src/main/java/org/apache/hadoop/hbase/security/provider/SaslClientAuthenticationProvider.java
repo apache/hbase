@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.security.provider;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
-
 import javax.security.sasl.SaslClient;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityInfo;
@@ -38,10 +36,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformati
 /**
  * Encapsulation of client-side logic to authenticate to HBase via some means over SASL.
  * Implementations should not directly implement this interface, but instead extend
- * {@link AbstractSaslClientAuthenticationProvider}.
- *
- * Implementations of this interface must make an implementation of {@code hashCode()}
- * which returns the same value across multiple instances of the provider implementation.
+ * {@link AbstractSaslClientAuthenticationProvider}. Implementations of this interface must make an
+ * implementation of {@code hashCode()} which returns the same value across multiple instances of
+ * the provider implementation.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
@@ -51,8 +48,8 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
    * Creates the SASL client instance for this auth'n method.
    */
   SaslClient createClient(Configuration conf, InetAddress serverAddr, SecurityInfo securityInfo,
-      Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
-      Map<String, String> saslProps) throws IOException;
+    Token<? extends TokenIdentifier> token, boolean fallbackAllowed, Map<String, String> saslProps)
+    throws IOException;
 
   /**
    * Constructs a {@link UserInformation} from the given {@link UserGroupInformation}
@@ -60,18 +57,15 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
   UserInformation getUserInfo(User user);
 
   /**
-   * Returns the "real" user, the user who has the credentials being authenticated by the
-   * remote service, in the form of an {@link UserGroupInformation} object.
-   *
-   * It is common in the Hadoop "world" to have distinct notions of a "real" user and a "proxy"
-   * user. A "real" user is the user which actually has the credentials (often, a Kerberos ticket),
-   * but some code may be running as some other user who has no credentials. This method gives
-   * the authentication provider a chance to acknowledge this is happening and ensure that any
-   * RPCs are executed with the real user's credentials, because executing them as the proxy user
-   * would result in failure because no credentials exist to authenticate the RPC.
-   *
-   * Not all implementations will need to implement this method. By default, the provided User's
-   * UGI is returned directly.
+   * Returns the "real" user, the user who has the credentials being authenticated by the remote
+   * service, in the form of an {@link UserGroupInformation} object. It is common in the Hadoop
+   * "world" to have distinct notions of a "real" user and a "proxy" user. A "real" user is the user
+   * which actually has the credentials (often, a Kerberos ticket), but some code may be running as
+   * some other user who has no credentials. This method gives the authentication provider a chance
+   * to acknowledge this is happening and ensure that any RPCs are executed with the real user's
+   * credentials, because executing them as the proxy user would result in failure because no
+   * credentials exist to authenticate the RPC. Not all implementations will need to implement this
+   * method. By default, the provided User's UGI is returned directly.
    */
   default UserGroupInformation getRealUser(User ugi) {
     return ugi.getUGI();
@@ -86,8 +80,9 @@ public interface SaslClientAuthenticationProvider extends SaslAuthenticationProv
   }
 
   /**
-   * Executes any necessary logic to re-login the client. Not all implementations will have
-   * any logic that needs to be executed.
+   * Executes any necessary logic to re-login the client. Not all implementations will have any
+   * logic that needs to be executed.
    */
-  default void relogin() throws IOException {}
+  default void relogin() throws IOException {
+  }
 }

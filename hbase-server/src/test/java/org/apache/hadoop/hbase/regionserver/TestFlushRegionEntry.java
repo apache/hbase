@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -42,7 +43,7 @@ public class TestFlushRegionEntry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFlushRegionEntry.class);
+    HBaseClassTestRule.forClass(TestFlushRegionEntry.class);
 
   @Rule
   public TestName name = new TestName();
@@ -62,7 +63,7 @@ public class TestFlushRegionEntry {
   @Test
   public void testFlushRegionEntryEquality() {
     RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setRegionId(1).setReplicaId(0).build();
+      .setRegionId(1).setReplicaId(0).build();
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 

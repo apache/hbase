@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,16 +53,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 
 /**
- * Tests that a regionserver that dies after reporting for duty gets removed
- * from list of online regions. See HBASE-9593.
+ * Tests that a regionserver that dies after reporting for duty gets removed from list of online
+ * regions. See HBASE-9593.
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 @Ignore("See HBASE-19515")
 public class TestRSKilledWhenInitializing {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSKilledWhenInitializing.class);
+    HBaseClassTestRule.forClass(TestRSKilledWhenInitializing.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSKilledWhenInitializing.class);
 
@@ -80,12 +80,11 @@ public class TestRSKilledWhenInitializing {
 
   /**
    * Test verifies whether a region server is removed from online servers list in master if it went
-   * down after registering with master. Test will TIMEOUT if an error!!!!
-   * @throws Exception
+   * down after registering with master. Test will TIMEOUT if an error!!!! n
    */
   @Test
   public void testRSTerminationAfterRegisteringToMasterBeforeCreatingEphemeralNode()
-  throws Exception {
+    throws Exception {
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
@@ -95,7 +94,7 @@ public class TestRSKilledWhenInitializing {
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.createRootDir();
     final LocalHBaseCluster cluster = new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS,
-        HMaster.class, RegisterAndDieRegionServer.class);
+      HMaster.class, RegisterAndDieRegionServer.class);
     final MasterThread master = startMaster(cluster.getMasters().get(0));
     try {
       // Master is up waiting on RegionServers to check in. Now start RegionServers.
@@ -128,10 +127,11 @@ public class TestRSKilledWhenInitializing {
       // Find non-meta region (namespace?) and assign to the killed server. That'll trigger cleanup.
       Map<RegionInfo, ServerName> assignments = null;
       do {
-        assignments = master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
+        assignments =
+          master.getMaster().getAssignmentManager().getRegionStates().getRegionAssignments();
       } while (assignments == null || assignments.size() < 2);
       RegionInfo hri = null;
-      for (Map.Entry<RegionInfo, ServerName> e: assignments.entrySet()) {
+      for (Map.Entry<RegionInfo, ServerName> e : assignments.entrySet()) {
         if (e.getKey().isMetaRegion()) continue;
         hri = e.getKey();
         break;
@@ -142,7 +142,7 @@ public class TestRSKilledWhenInitializing {
         master.getMaster().getServerManager().getOnlineServersList().size());
       LOG.info("Move " + hri.getEncodedName() + " to " + killedRS.get());
       master.getMaster().move(hri.getEncodedNameAsBytes(),
-          Bytes.toBytes(killedRS.get().toString()));
+        Bytes.toBytes(killedRS.get().toString()));
 
       // TODO: This test could do more to verify fix. It could create a table
       // and do round-robin assign. It should fail if zombie RS. HBASE-19515.
@@ -163,8 +163,8 @@ public class TestRSKilledWhenInitializing {
   }
 
   /**
-   * Start Master. Get as far as the state where Master is waiting on
-   * RegionServers to check in, then return.
+   * Start Master. Get as far as the state where Master is waiting on RegionServers to check in,
+   * then return.
    */
   private MasterThread startMaster(MasterThread master) {
     master.start();
@@ -203,8 +203,7 @@ public class TestRSKilledWhenInitializing {
     }
 
     @Override
-    protected void handleReportForDutyResponse(RegionServerStartupResponse c)
-    throws IOException {
+    protected void handleReportForDutyResponse(RegionServerStartupResponse c) throws IOException {
       if (killedRS.compareAndSet(null, getServerName())) {
         // Make sure Master is up so it will see the removal of the ephemeral znode for this RS.
         while (!masterActive.get()) {

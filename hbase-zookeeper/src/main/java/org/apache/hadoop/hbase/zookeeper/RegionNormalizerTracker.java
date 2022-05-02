@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
@@ -45,13 +44,13 @@ public class RegionNormalizerTracker extends ZKNodeTracker {
    * Return true if region normalizer is on, false otherwise
    */
   public boolean isNormalizerOn() {
-    byte [] upData = super.getData(false);
+    byte[] upData = super.getData(false);
     try {
       // if data in ZK is null, use default of on.
       return upData == null || parseFrom(upData).getNormalizerOn();
     } catch (DeserializationException dex) {
-      LOG.error("ZK state for RegionNormalizer could not be parsed "
-        + Bytes.toStringBinary(upData));
+      LOG
+        .error("ZK state for RegionNormalizer could not be parsed " + Bytes.toStringBinary(upData));
       // return false to be safe.
       return false;
     }
@@ -63,23 +62,23 @@ public class RegionNormalizerTracker extends ZKNodeTracker {
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public void setNormalizerOn(boolean normalizerOn) throws KeeperException {
-    byte [] upData = toByteArray(normalizerOn);
+    byte[] upData = toByteArray(normalizerOn);
     try {
       ZKUtil.setData(watcher, watcher.getZNodePaths().regionNormalizerZNode, upData);
-    } catch(KeeperException.NoNodeException nne) {
+    } catch (KeeperException.NoNodeException nne) {
       ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().regionNormalizerZNode, upData);
     }
     super.nodeDataChanged(watcher.getZNodePaths().regionNormalizerZNode);
   }
 
-  private byte [] toByteArray(boolean isNormalizerOn) {
+  private byte[] toByteArray(boolean isNormalizerOn) {
     RegionNormalizerProtos.RegionNormalizerState.Builder builder =
       RegionNormalizerProtos.RegionNormalizerState.newBuilder();
     builder.setNormalizerOn(isNormalizerOn);
     return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }
 
-  private RegionNormalizerProtos.RegionNormalizerState parseFrom(byte [] pbBytes)
+  private RegionNormalizerProtos.RegionNormalizerState parseFrom(byte[] pbBytes)
     throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(pbBytes);
     RegionNormalizerProtos.RegionNormalizerState.Builder builder =

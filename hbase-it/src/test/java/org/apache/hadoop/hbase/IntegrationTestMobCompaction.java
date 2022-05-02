@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
@@ -56,19 +55,19 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * An integration test to detect regressions in HBASE-22749. Test creates
- * MOB-enabled table, and runs in parallel, the following tasks: loads data,
- * runs MOB compactions, runs MOB cleaning chore. The failure injections into MOB
- * compaction cycle is implemented via specific sub-class of DefaultMobStoreCompactor -
- * FaultyMobStoreCompactor. The probability of failure is controlled by command-line
- * argument 'failprob'.
+ * An integration test to detect regressions in HBASE-22749. Test creates MOB-enabled table, and
+ * runs in parallel, the following tasks: loads data, runs MOB compactions, runs MOB cleaning chore.
+ * The failure injections into MOB compaction cycle is implemented via specific sub-class of
+ * DefaultMobStoreCompactor - FaultyMobStoreCompactor. The probability of failure is controlled by
+ * command-line argument 'failprob'.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-22749">HBASE-22749</a>
- * <p>
- *   Sample usage:
- * <pre>
+ *      <p>
+ *      Sample usage:
+ *
+ *      <pre>
  * hbase org.apache.hadoop.hbase.IntegrationTestMobCompaction -Dservers=10 -Drows=1000000
  * -Dfailprob=0.2
- * </pre>
+ *      </pre>
  */
 @SuppressWarnings("deprecation")
 
@@ -93,7 +92,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
   protected static byte[] qualifier = Bytes.toBytes("q1");
   protected static long mobLen = 10;
   protected static byte[] mobVal = Bytes
-      .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
+    .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private static Configuration conf;
   private static TableDescriptor tableDescriptor;
@@ -111,8 +110,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     conf = util.getConfiguration();
     // Initialize with test-specific configuration values
     initConf(conf);
-    regionServerCount =
-        conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
+    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
     LOG.info("Initializing cluster with {} region servers.", regionServerCount);
     util.initializeCluster(regionServerCount);
     admin = util.getAdmin();
@@ -134,7 +132,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
   @After
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
-    if(util.isDistributedCluster()) {
+    if (util.isDistributedCluster()) {
       deleteTablesIfAny();
       // TODO
     }
@@ -157,18 +155,15 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     }
   }
 
-
-
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
-    LOG.debug("Initializing/checking cluster has {} servers",regionServerCount);
+    LOG.debug("Initializing/checking cluster has {} servers", regionServerCount);
     util.initializeCluster(regionServerCount);
     LOG.debug("Done initializing/checking cluster");
   }
 
   /**
-   *
    * @return status of CLI execution
    */
   @Override
@@ -197,27 +192,23 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
       "Total number of data rows to load. Default: '" + DEFAULT_ROWS_COUNT + "'");
     addOptWithArg(FAILURE_PROB_KEY,
       "Probability of a failure of a region MOB compaction request. Default: '"
-      + DEFAULT_FAILURE_PROB + "'");
+        + DEFAULT_FAILURE_PROB + "'");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
     super.processOptions(cmd);
 
-    regionServerCount =
-        Integer.parseInt(cmd.getOptionValue(REGIONSERVER_COUNT_KEY,
-          Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
+    regionServerCount = Integer.parseInt(
+      cmd.getOptionValue(REGIONSERVER_COUNT_KEY, Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
     rowsToLoad =
-        Long.parseLong(cmd.getOptionValue(ROWS_COUNT_KEY,
-          Long.toString(DEFAULT_ROWS_COUNT)));
-    failureProb = Double.parseDouble(cmd.getOptionValue(FAILURE_PROB_KEY,
-      Double.toString(DEFAULT_FAILURE_PROB)));
+      Long.parseLong(cmd.getOptionValue(ROWS_COUNT_KEY, Long.toString(DEFAULT_ROWS_COUNT)));
+    failureProb = Double
+      .parseDouble(cmd.getOptionValue(FAILURE_PROB_KEY, Double.toString(DEFAULT_FAILURE_PROB)));
 
-    LOG.info(MoreObjects.toStringHelper("Parsed Options")
-      .add(REGIONSERVER_COUNT_KEY, regionServerCount)
-      .add(ROWS_COUNT_KEY, rowsToLoad)
-      .add(FAILURE_PROB_KEY, failureProb)
-      .toString());
+    LOG.info(
+      MoreObjects.toStringHelper("Parsed Options").add(REGIONSERVER_COUNT_KEY, regionServerCount)
+        .add(ROWS_COUNT_KEY, rowsToLoad).add(FAILURE_PROB_KEY, failureProb).toString());
   }
 
   private static void initConf(Configuration conf) {
@@ -231,13 +222,11 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
     conf.setDouble("hbase.mob.compaction.fault.probability", failureProb);
-    conf.set(MobStoreEngine.MOB_COMPACTOR_CLASS_KEY,
-      FaultyMobStoreCompactor.class.getName());
+    conf.set(MobStoreEngine.MOB_COMPACTOR_CLASS_KEY, FaultyMobStoreCompactor.class.getName());
     conf.setBoolean("hbase.table.sanity.checks", false);
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, 20000);
 
   }
-
 
   class MajorCompaction implements Runnable {
 
@@ -361,8 +350,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   }
 
-  private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
-      throws IOException {
+  private long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
+    throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
     FileStatus[] stat = fs.listStatus(dir);
@@ -376,10 +365,10 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   public void printStats(long loaded) {
     LOG.info("MOB Stress Test: loaded=" + loaded + " compactions="
-        + FaultyMobStoreCompactor.totalCompactions.get() + " major="
-        + FaultyMobStoreCompactor.totalMajorCompactions.get() + " mob="
-        + FaultyMobStoreCompactor.mobCounter.get() + " injected failures="
-        + FaultyMobStoreCompactor.totalFailures.get());
+      + FaultyMobStoreCompactor.totalCompactions.get() + " major="
+      + FaultyMobStoreCompactor.totalMajorCompactions.get() + " mob="
+      + FaultyMobStoreCompactor.mobCounter.get() + " injected failures="
+      + FaultyMobStoreCompactor.totalFailures.get());
   }
 
   private void scanTable() {

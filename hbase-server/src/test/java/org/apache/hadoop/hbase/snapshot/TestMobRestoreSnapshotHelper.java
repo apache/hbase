@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobRestoreSnapshotHelper.class);
+    HBaseClassTestRule.forClass(TestMobRestoreSnapshotHelper.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -55,7 +55,7 @@ public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
 
   @Override
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
-      throws IOException {
+    throws IOException {
     byte[] column = Bytes.toBytes("A");
     Table table = MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName, column);
     TEST_UTIL.loadTable(table, column);

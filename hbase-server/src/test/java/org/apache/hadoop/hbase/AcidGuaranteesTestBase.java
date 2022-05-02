@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,13 +70,13 @@ public abstract class AcidGuaranteesTestBase {
   public void setUp() throws Exception {
     MemoryCompactionPolicy policy = getMemoryCompactionPolicy();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-        .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, policy.name());
+      .setValue(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, policy.name());
     if (policy == MemoryCompactionPolicy.EAGER) {
       builder.setValue(MemStoreLAB.USEMSLAB_KEY, "false");
       builder.setValue(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, "0.9");
     }
     Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
-        .forEachOrdered(builder::setColumnFamily);
+      .forEachOrdered(builder::setColumnFamily);
     UTIL.getAdmin().createTable(builder.build());
     tool.setConf(UTIL.getConfiguration());
   }
@@ -87,12 +87,12 @@ public abstract class AcidGuaranteesTestBase {
   }
 
   private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-      int numUniqueRows) throws Exception {
+    int numUniqueRows) throws Exception {
     runTestAtomicity(millisToRun, numWriters, numGetters, numScanners, numUniqueRows, false);
   }
 
   private void runTestAtomicity(long millisToRun, int numWriters, int numGetters, int numScanners,
-      int numUniqueRows, boolean useMob) throws Exception {
+    int numUniqueRows, boolean useMob) throws Exception {
     List<String> args = Lists.newArrayList("-millis", String.valueOf(millisToRun), "-numWriters",
       String.valueOf(numWriters), "-numGetters", String.valueOf(numGetters), "-numScanners",
       String.valueOf(numScanners), "-numUniqueRows", String.valueOf(numUniqueRows), "-crazyFlush");

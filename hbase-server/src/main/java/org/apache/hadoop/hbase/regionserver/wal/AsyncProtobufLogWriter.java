@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
@@ -55,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
  */
 @InterfaceAudience.Private
 public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
-    implements AsyncFSWALProvider.AsyncWriter {
+  implements AsyncFSWALProvider.AsyncWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncProtobufLogWriter.class);
 
@@ -69,8 +70,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
    */
   private volatile long finalSyncedLength = -1;
 
-  private static final class OutputStreamWrapper extends OutputStream
-      implements ByteBufferWriter {
+  private static final class OutputStreamWrapper extends OutputStream implements ByteBufferWriter {
 
     private final AsyncFSOutput out;
 
@@ -114,7 +114,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   private long waitTimeout;
 
   public AsyncProtobufLogWriter(EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) {
+    Class<? extends Channel> channelClass) {
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
     // Reuse WAL_ROLL_WAIT_TIMEOUT here to avoid an infinite wait if somehow a wait on a future
@@ -129,7 +129,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   /*
    * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
-   *   IOException: Got unknown writer class: AsyncProtobufLogWriter
+   * IOException: Got unknown writer class: AsyncProtobufLogWriter
    */
   @Override
   protected String getWriterClassName() {
@@ -140,9 +140,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   public void append(Entry entry) {
     int buffered = output.buffered();
     try {
-      entry.getKey().
-        getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
-          .writeDelimitedTo(asyncOutputWrapper);
+      entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
+        .writeDelimitedTo(asyncOutputWrapper);
     } catch (IOException e) {
       throw new AssertionError("should not happen", e);
     }
@@ -174,9 +173,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       output.recoverAndClose(null);
     }
     /**
-     * We have to call {@link AsyncFSOutput#getSyncedLength()}
-     * after {@link AsyncFSOutput#close()} to get the final length
-     * synced to underlying filesystem because {@link AsyncFSOutput#close()}
+     * We have to call {@link AsyncFSOutput#getSyncedLength()} after {@link AsyncFSOutput#close()}
+     * to get the final length synced to underlying filesystem because {@link AsyncFSOutput#close()}
      * may also flush some data to underlying filesystem.
      */
     this.finalSyncedLength = this.output.getSyncedLength();
@@ -189,10 +187,10 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize, StreamSlowMonitor monitor) throws IOException,
-      StreamLacksCapabilityException {
+    short replication, long blockSize, StreamSlowMonitor monitor)
+    throws IOException, StreamLacksCapabilityException {
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-        blockSize, eventLoopGroup, channelClass, monitor);
+      blockSize, eventLoopGroup, channelClass, monitor);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
@@ -206,7 +204,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       }
     }
   }
-  
+
   private long writeWALMetadata(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
@@ -270,16 +268,16 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-   /**
-    * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close}
-    * is a sync point, if output is null, then finalSyncedLength must set,
-    * so we can return finalSyncedLength, else we return output.getSyncedLength
-    */
+    /**
+     * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close} is a sync point,
+     * if output is null, then finalSyncedLength must set, so we can return finalSyncedLength, else
+     * we return output.getSyncedLength
+     */
     AsyncFSOutput outputToUse = this.output;
-    if(outputToUse == null) {
-        long finalSyncedLengthToUse = this.finalSyncedLength;
-        assert finalSyncedLengthToUse >= 0;
-        return finalSyncedLengthToUse;
+    if (outputToUse == null) {
+      long finalSyncedLengthToUse = this.finalSyncedLength;
+      assert finalSyncedLengthToUse >= 0;
+      return finalSyncedLengthToUse;
     }
     return outputToUse.getSyncedLength();
   }

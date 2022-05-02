@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -40,12 +39,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestBlockCacheReporting {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlockCacheReporting.class);
+    HBaseClassTestRule.forClass(TestBlockCacheReporting.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockCacheReporting.class);
   private Configuration conf;
@@ -67,7 +66,7 @@ public class TestBlockCacheReporting {
       bc.getBlock(bckd, true, false, true);
       bc.getBlock(bcki, true, false, true);
     }
-    assertEquals(2 * count /*Data and Index blocks*/, bc.getStats().getHitCount());
+    assertEquals(2 * count /* Data and Index blocks */, bc.getStats().getHitCount());
     BlockCacheKey bckd = new BlockCacheKey("f", 0);
     BlockCacheKey bcki = new BlockCacheKey("f", 0 + count);
     bc.evictBlock(bckd);
@@ -84,7 +83,7 @@ public class TestBlockCacheReporting {
     logPerBlock(blockCache);
     final int count = 3;
     addDataAndHits(blockCache, count);
-    // The below has no asserts.  It is just exercising toString and toJSON code.
+    // The below has no asserts. It is just exercising toString and toJSON code.
     LOG.info(Objects.toString(blockCache.getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
     LOG.info(Objects.toString(cbsbf));
@@ -100,9 +99,9 @@ public class TestBlockCacheReporting {
     BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
     logPerBlock(blockCache);
     addDataAndHits(blockCache, 3);
-    // The below has no asserts.  It is just exercising toString and toJSON code.
+    // The below has no asserts. It is just exercising toString and toJSON code.
     LOG.info("count=" + blockCache.getBlockCount() + ", currentSize=" + blockCache.getCurrentSize()
-        + ", freeSize=" + blockCache.getFreeSize());
+      + ", freeSize=" + blockCache.getFreeSize());
     LOG.info(Objects.toString(blockCache.getStats()));
     BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(blockCache);
     LOG.info(Objects.toString(cbsbf));
@@ -113,22 +112,22 @@ public class TestBlockCacheReporting {
 
   private void bucketCacheReport(final BlockCache bc) {
     LOG.info(bc.getClass().getSimpleName() + ": " + bc.getStats());
-    BlockCache [] bcs = bc.getBlockCaches();
+    BlockCache[] bcs = bc.getBlockCaches();
     if (bcs != null) {
-      for (BlockCache sbc: bc.getBlockCaches()) {
+      for (BlockCache sbc : bc.getBlockCaches()) {
         LOG.info(bc.getClass().getSimpleName() + ": " + sbc.getStats());
       }
     }
   }
 
   private void logPerFile(final BlockCacheUtil.CachedBlocksByFile cbsbf) throws IOException {
-    for (Map.Entry<String, NavigableSet<CachedBlock>> e:
-        cbsbf.getCachedBlockStatsByFile().entrySet()) {
+    for (Map.Entry<String, NavigableSet<CachedBlock>> e : cbsbf.getCachedBlockStatsByFile()
+      .entrySet()) {
       int count = 0;
       long size = 0;
       int countData = 0;
       long sizeData = 0;
-      for (CachedBlock cb: e.getValue()) {
+      for (CachedBlock cb : e.getValue()) {
         count++;
         size += cb.getSize();
         BlockType bt = cb.getBlockType();
@@ -137,9 +136,9 @@ public class TestBlockCacheReporting {
           sizeData += cb.getSize();
         }
       }
-      LOG.info("filename=" + e.getKey() + ", count=" + count + ", countData=" + countData +
-          ", size=" + size + ", sizeData=" + sizeData);
-      //LOG.info(BlockCacheUtil.toJSON(e.getKey(), e.getValue()));
+      LOG.info("filename=" + e.getKey() + ", count=" + count + ", countData=" + countData
+        + ", size=" + size + ", sizeData=" + sizeData);
+      // LOG.info(BlockCacheUtil.toJSON(e.getKey(), e.getValue()));
     }
   }
 
@@ -147,7 +146,7 @@ public class TestBlockCacheReporting {
     BlockCacheUtil.CachedBlocksByFile cbsbf = new BlockCacheUtil.CachedBlocksByFile();
     for (CachedBlock cb : bc) {
       LOG.info(cb.toString());
-      //LOG.info(BlockCacheUtil.toJSON(bc));
+      // LOG.info(BlockCacheUtil.toJSON(bc));
       cbsbf.update(cb);
     }
     return cbsbf;

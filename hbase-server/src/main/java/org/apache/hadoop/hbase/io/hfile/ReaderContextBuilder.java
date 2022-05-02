@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +40,8 @@ public class ReaderContextBuilder {
   private boolean primaryReplicaReader = true;
   private ReaderType type = ReaderType.PREAD;
 
-  public ReaderContextBuilder() {}
+  public ReaderContextBuilder() {
+  }
 
   public ReaderContextBuilder withFilePath(Path filePath) {
     this.filePath = filePath;
@@ -82,11 +83,9 @@ public class ReaderContextBuilder {
   }
 
   public ReaderContextBuilder withFileSystemAndPath(FileSystem fs, Path filePath)
-      throws IOException {
-    this.withFileSystem(fs)
-        .withFilePath(filePath)
-        .withFileSize(fs.getFileStatus(filePath).getLen())
-        .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, filePath));
+    throws IOException {
+    this.withFileSystem(fs).withFilePath(filePath).withFileSize(fs.getFileStatus(filePath).getLen())
+      .withInputStreamWrapper(new FSDataInputStreamWrapper(fs, filePath));
     return this;
   }
 

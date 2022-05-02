@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,6 +57,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @Category({ RegionServerTests.class, MediumTests.class })
@@ -64,7 +65,7 @@ public class TestFIFOCompactionPolicy {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFIFOCompactionPolicy.class);
+    HBaseClassTestRule.forClass(TestFIFOCompactionPolicy.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -92,16 +93,15 @@ public class TestFIFOCompactionPolicy {
   private HStore prepareData() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          FIFOCompactionPolicy.class.getName())
-        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-          DisabledRegionSplitPolicy.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
-        .build();
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        FIFOCompactionPolicy.class.getName())
+      .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, DisabledRegionSplitPolicy.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+      .build();
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     TimeOffsetEnvironmentEdge edge =
-        (TimeOffsetEnvironmentEdge) EnvironmentEdgeManager.getDelegate();
+      (TimeOffsetEnvironmentEdge) EnvironmentEdgeManager.getDelegate();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
@@ -159,11 +159,10 @@ public class TestFIFOCompactionPolicy {
     error.expectMessage("Default TTL is not supported");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-TTL");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          FIFOCompactionPolicy.class.getName())
-        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-          DisabledRegionSplitPolicy.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        FIFOCompactionPolicy.class.getName())
+      .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, DisabledRegionSplitPolicy.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 
@@ -173,13 +172,12 @@ public class TestFIFOCompactionPolicy {
     error.expectMessage("MIN_VERSION > 0 is not supported for FIFO compaction");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-MinVersion");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          FIFOCompactionPolicy.class.getName())
-        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-          DisabledRegionSplitPolicy.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1)
-            .setMinVersions(1).build())
-        .build();
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        FIFOCompactionPolicy.class.getName())
+      .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, DisabledRegionSplitPolicy.class.getName())
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).setMinVersions(1).build())
+      .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 
@@ -190,13 +188,12 @@ public class TestFIFOCompactionPolicy {
     error.expectMessage("is below recommended minimum of 1000 for column family");
     TableName tableName = TableName.valueOf(getClass().getSimpleName() + "-BlockingStoreFiles");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          FIFOCompactionPolicy.class.getName())
-        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-          DisabledRegionSplitPolicy.class.getName())
-        .setValue(HStore.BLOCKING_STOREFILES_KEY, "10")
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
-        .build();
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        FIFOCompactionPolicy.class.getName())
+      .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, DisabledRegionSplitPolicy.class.getName())
+      .setValue(HStore.BLOCKING_STOREFILES_KEY, "10")
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+      .build();
     TEST_UTIL.getAdmin().createTable(desc);
   }
 
@@ -207,16 +204,15 @@ public class TestFIFOCompactionPolicy {
   public void testFIFOCompactionPolicyExpiredEmptyHFiles() throws Exception {
     TableName tableName = TableName.valueOf("testFIFOCompactionPolicyExpiredEmptyHFiles");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          FIFOCompactionPolicy.class.getName())
-        .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-          DisabledRegionSplitPolicy.class.getName())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
-        .build();
+      .setValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+        FIFOCompactionPolicy.class.getName())
+      .setValue(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, DisabledRegionSplitPolicy.class.getName())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setTimeToLive(1).build())
+      .build();
     Table table = TEST_UTIL.createTable(desc, null);
     long ts = EnvironmentEdgeManager.currentTime() - 10 * 1000;
     Put put =
-        new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
+      new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, ts, Bytes.toBytes("value0"));
     table.put(put);
     TEST_UTIL.getAdmin().flush(tableName); // HFile-0
     put = new Put(Bytes.toBytes("row2")).addColumn(family, qualifier, ts, Bytes.toBytes("value1"));
@@ -229,7 +225,7 @@ public class TestFIFOCompactionPolicy {
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
     TEST_UTIL.waitFor(testWaitTimeoutMs,
-        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+      (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
 
     Assert.assertEquals(1, store.getStorefilesCount());
     HStoreFile sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());
@@ -242,7 +238,7 @@ public class TestFIFOCompactionPolicy {
 
     TEST_UTIL.getAdmin().majorCompact(tableName);
     TEST_UTIL.waitFor(testWaitTimeoutMs,
-        (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
+      (Waiter.Predicate<Exception>) () -> store.getStorefilesCount() == 1);
 
     Assert.assertEquals(1, store.getStorefilesCount());
     sf = Preconditions.checkNotNull(store.getStorefiles().iterator().next());

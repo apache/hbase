@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The mob file name.
- * It consists of a md5 of a start key, a date, uuid and encoded region name.
- * It looks like md5(start) + date + uuid+ "_" + encoded region name.
+ * The mob file name. It consists of a md5 of a start key, a date, uuid and encoded region name. It
+ * looks like md5(start) + date + uuid+ "_" + encoded region name.
  * <ol>
  * <li>characters 0-31: md5 hex string of a start key. Since the length of the start key is not
  * fixed, have to use the md5 instead which has a fix length.</li>
@@ -32,15 +30,14 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  * of cells in this file</li>
  * <li>the remaining characters: the uuid.</li>
  * </ol>
- * Using md5 hex string of start key as the prefix of file name makes files with the same start
- * key unique, they're different from the ones with other start keys
- * The cells come from different regions might be in the same mob file by region split,
- * this is allowed.
- * Has the latest timestamp of cells in the file name in order to clean the expired mob files by
- * TTL easily. If this timestamp is older than the TTL, it's regarded as expired.
+ * Using md5 hex string of start key as the prefix of file name makes files with the same start key
+ * unique, they're different from the ones with other start keys The cells come from different
+ * regions might be in the same mob file by region split, this is allowed. Has the latest timestamp
+ * of cells in the file name in order to clean the expired mob files by TTL easily. If this
+ * timestamp is older than the TTL, it's regarded as expired.
  */
 @InterfaceAudience.Private
-public final class MobFileName{
+public final class MobFileName {
   private final String date;
   private final String startKey;
   private final String uuid;
@@ -54,12 +51,8 @@ public final class MobFileName{
   public static final String REGION_SEP = "_";
 
   /**
-   * @param startKey
-   *          The start key.
-   * @param date
-   *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid
-   *          The uuid
+   * n * The start key. n * The string of the latest timestamp of cells in this file, the format is
+   * yyyymmdd. n * The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(byte[] startKey, String date, String uuid, String regionName) {
@@ -71,12 +64,8 @@ public final class MobFileName{
   }
 
   /**
-   * @param startKey
-   *          The md5 hex string of the start key.
-   * @param date
-   *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid
-   *          The uuid
+   * n * The md5 hex string of the start key. n * The string of the latest timestamp of cells in
+   * this file, the format is yyyymmdd. n * The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(String startKey, String date, String uuid, String regionName) {
@@ -88,13 +77,9 @@ public final class MobFileName{
   }
 
   /**
-   * Creates an instance of MobFileName
-   *
-   * @param startKey
-   *          The md5 hex string of the start key.
-   * @param date
-   *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid The uuid.
+   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
+   * the latest timestamp of cells in this file, the format is yyyymmdd.
+   * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
    */
@@ -103,13 +88,9 @@ public final class MobFileName{
   }
 
   /**
-   * Creates an instance of MobFileName
-   *
-   * @param startKey
-   *          The md5 hex string of the start key.
-   * @param date
-   *          The string of the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid The uuid.
+   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
+   * the latest timestamp of cells in this file, the format is yyyymmdd.
+   * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
    */
@@ -129,7 +110,7 @@ public final class MobFileName{
     String startKey = fileName.substring(0, STARTKEY_END_INDEX);
     String date = fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
     String uuid = fileName.substring(DATE_END_INDEX, UUID_END_INDEX);
-    String regionName = fileName.substring(UUID_END_INDEX+1);
+    String regionName = fileName.substring(UUID_END_INDEX + 1);
     return new MobFileName(startKey, date, uuid, regionName);
   }
 
@@ -139,8 +120,7 @@ public final class MobFileName{
 
   /**
    * get startKey from MobFileName.
-   * @param fileName file name.
-   * @return startKey
+   * @param fileName file name. n
    */
   public static String getStartKeyFromName(final String fileName) {
     return fileName.substring(0, STARTKEY_END_INDEX);
@@ -148,8 +128,7 @@ public final class MobFileName{
 
   /**
    * get date from MobFileName.
-   * @param fileName file name.
-   * @return date
+   * @param fileName file name. n
    */
   public static String getDateFromName(final String fileName) {
     return fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);
@@ -170,6 +149,7 @@ public final class MobFileName{
   public String getRegionName() {
     return regionName;
   }
+
   /**
    * Gets the date string. Its format is yyyymmdd.
    * @return The date string.

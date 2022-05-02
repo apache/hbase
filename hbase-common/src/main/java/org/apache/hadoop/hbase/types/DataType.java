@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,64 +23,56 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>
- * {@code DataType} is the base class for all HBase data types. Data
- * type implementations are designed to be serialized to and deserialized from
- * byte[]. Serialized representations can retain the natural sort ordering of
- * the source object, when a suitable encoding is supported by the underlying
- * implementation. This is a desirable feature for use in rowkeys and column
- * qualifiers.
+ * {@code DataType} is the base class for all HBase data types. Data type implementations are
+ * designed to be serialized to and deserialized from byte[]. Serialized representations can retain
+ * the natural sort ordering of the source object, when a suitable encoding is supported by the
+ * underlying implementation. This is a desirable feature for use in rowkeys and column qualifiers.
  * </p>
  * <p>
- * {@code DataType}s are different from Hadoop 
- * {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable}s in two
- * significant ways. First, {@code DataType} describes how to serialize a
- * value, it does not encapsulate a serialized value. Second, {@code DataType}
- * implementations provide hints to consumers about relationships between the
- * POJOs they represent and richness of the encoded representation.
+ * {@code DataType}s are different from Hadoop
+ * {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable}s in two significant ways. First,
+ * {@code DataType} describes how to serialize a value, it does not encapsulate a serialized value.
+ * Second, {@code DataType} implementations provide hints to consumers about relationships between
+ * the POJOs they represent and richness of the encoded representation.
  * </p>
  * <p>
- * Data type instances are designed to be stateless, thread-safe, and reused.
- * Implementations should provide {@code static final} instances corresponding
- * to each variation on configurable parameters. This is to encourage and
- * simplify instance reuse. For instance, order-preserving types should provide
- * static ASCENDING and DESCENDING instances. It is also encouraged for
- * implementations operating on Java primitive types to provide primitive
- * implementations of the {@code encode} and {@code decode} methods. This
- * advice is a performance consideration to clients reading and writing values
- * in tight loops.
+ * Data type instances are designed to be stateless, thread-safe, and reused. Implementations should
+ * provide {@code static final} instances corresponding to each variation on configurable
+ * parameters. This is to encourage and simplify instance reuse. For instance, order-preserving
+ * types should provide static ASCENDING and DESCENDING instances. It is also encouraged for
+ * implementations operating on Java primitive types to provide primitive implementations of the
+ * {@code encode} and {@code decode} methods. This advice is a performance consideration to clients
+ * reading and writing values in tight loops.
  * </p>
  */
 @InterfaceAudience.Public
 public interface DataType<T> {
 
   /**
-   * Indicates whether this instance writes encoded {@code byte[]}'s
-   * which preserve the natural sort order of the unencoded value.
-   * @return {@code true} when natural order is preserved,
-   *         {@code false} otherwise.
+   * Indicates whether this instance writes encoded {@code byte[]}'s which preserve the natural sort
+   * order of the unencoded value.
+   * @return {@code true} when natural order is preserved, {@code false} otherwise.
    */
   boolean isOrderPreserving();
 
   /**
-   * Retrieve the sort {@link Order} imposed by this data type, or null when
-   * natural ordering is not preserved. Value is either ascending or
-   * descending. Default is assumed to be {@link Order#ASCENDING}.
+   * Retrieve the sort {@link Order} imposed by this data type, or null when natural ordering is not
+   * preserved. Value is either ascending or descending. Default is assumed to be
+   * {@link Order#ASCENDING}.
    */
   Order getOrder();
 
   /**
-   * Indicates whether this instance supports encoding null values. This
-   * depends on the implementation details of the encoding format. All
-   * {@code DataType}s that support null should treat null as comparing
-   * less than any non-null value for default sort ordering purposes.
+   * Indicates whether this instance supports encoding null values. This depends on the
+   * implementation details of the encoding format. All {@code DataType}s that support null should
+   * treat null as comparing less than any non-null value for default sort ordering purposes.
    * @return {@code true} when null is supported, {@code false} otherwise.
    */
   boolean isNullable();
 
   /**
-   * Indicates whether this instance is able to skip over it's encoded value.
-   * {@code DataType}s that are not skippable can only be used as the
-   * right-most field of a {@link Struct}.
+   * Indicates whether this instance is able to skip over it's encoded value. {@code DataType}s that
+   * are not skippable can only be used as the right-most field of a {@link Struct}.
    */
   boolean isSkippable();
 
@@ -92,8 +84,8 @@ public interface DataType<T> {
   int encodedLength(T val);
 
   /**
-   * Inform consumers over what type this {@code DataType} operates. Useful
-   * when working with bare {@code DataType} instances.
+   * Inform consumers over what type this {@code DataType} operates. Useful when working with bare
+   * {@code DataType} instances.
    */
   Class<T> encodedClass();
 

@@ -49,7 +49,7 @@ public class ProfileOutputServlet extends DefaultServlet {
     // running which gets replaced by final output. If final output is not ready yet, the file size
     // will be <100 bytes (in all modes).
     if (requestedFile.length() < 100) {
-      LOG.info(requestedFile  + " is incomplete. Sending auto-refresh header.");
+      LOG.info(requestedFile + " is incomplete. Sending auto-refresh header.");
       String refreshUrl = req.getRequestURI();
       // Rebuild the query string (if we have one)
       if (req.getQueryString() != null) {
@@ -57,8 +57,8 @@ public class ProfileOutputServlet extends DefaultServlet {
       }
       ProfileServlet.setResponseHeader(resp);
       resp.setHeader("Refresh", REFRESH_PERIOD + ";" + refreshUrl);
-      resp.getWriter().write("This page will be auto-refreshed every " + REFRESH_PERIOD +
-        " seconds until the output file is ready. Redirecting to " + refreshUrl);
+      resp.getWriter().write("This page will be auto-refreshed every " + REFRESH_PERIOD
+        + " seconds until the output file is ready. Redirecting to " + refreshUrl);
     } else {
       super.doGet(req, resp);
     }

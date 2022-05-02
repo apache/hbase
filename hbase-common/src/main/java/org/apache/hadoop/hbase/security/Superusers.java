@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Keeps lists of superusers and super groups loaded from HBase configuration,
- * checks if certain user is regarded as superuser.
+ * Keeps lists of superusers and super groups loaded from HBase configuration, checks if certain
+ * user is regarded as superuser.
  */
 @InterfaceAudience.Private
 public final class Superusers {
@@ -45,13 +42,14 @@ public final class Superusers {
   private static Set<String> superGroups;
   private static User systemUser;
 
-  private Superusers(){}
+  private Superusers() {
+  }
 
   /**
-   * Should be called only once to pre-load list of super users and super
-   * groups from Configuration. This operation is idempotent.
+   * Should be called only once to pre-load list of super users and super groups from Configuration.
+   * This operation is idempotent.
    * @param conf configuration to load users from
-   * @throws IOException if unable to initialize lists of superusers or super groups
+   * @throws IOException           if unable to initialize lists of superusers or super groups
    * @throws IllegalStateException if current user is null
    */
   public static void initialize(Configuration conf) throws IOException {
@@ -80,18 +78,18 @@ public final class Superusers {
   }
 
   /**
-   * @return true if current user is a super user (whether as user running process,
-   * declared as individual superuser or member of supergroup), false otherwise.
+   * @return true if current user is a super user (whether as user running process, declared as
+   *         individual superuser or member of supergroup), false otherwise.
    * @param user to check
-   * @throws IllegalStateException if lists of superusers/super groups
-   *   haven't been initialized properly
+   * @throws IllegalStateException if lists of superusers/super groups haven't been initialized
+   *                               properly
    */
   public static boolean isSuperUser(User user) {
     if (superUsers == null) {
-      throw new IllegalStateException("Super users/super groups lists"
-        + " have not been initialized properly.");
+      throw new IllegalStateException(
+        "Super users/super groups lists" + " have not been initialized properly.");
     }
-    if (user == null){
+    if (user == null) {
       throw new IllegalArgumentException("Null user passed for super user check");
     }
     if (superUsers.contains(user.getShortName())) {

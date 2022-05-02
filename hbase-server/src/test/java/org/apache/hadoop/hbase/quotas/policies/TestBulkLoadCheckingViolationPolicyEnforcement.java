@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,7 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBulkLoadCheckingViolationPolicyEnforcement.class);
+    HBaseClassTestRule.forClass(TestBulkLoadCheckingViolationPolicyEnforcement.class);
 
   FileSystem fs;
   RegionServerServices rss;
@@ -74,7 +74,8 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     }
 
     // Quota is not in violation now
-    SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, length * 6);
+    SpaceQuotaSnapshot snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, length * 6);
 
     policy.initialize(rss, tableName, snapshot);
 
@@ -92,7 +93,8 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     paths.add(path);
 
     // Quota is not in violation now
-    SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, Long.MAX_VALUE);
+    SpaceQuotaSnapshot snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, Long.MAX_VALUE);
 
     policy.initialize(rss, tableName, snapshot);
 
@@ -116,7 +118,8 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     }
 
     // Quota is not in violation now
-    SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, 1024L);
+    SpaceQuotaSnapshot snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, 1024L);
 
     policy.initialize(rss, tableName, snapshot);
 
@@ -139,7 +142,8 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     }
 
     // Quota is not in violation now, but 5*1024 files would push us to violation
-    SpaceQuotaSnapshot snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, 5000L);
+    SpaceQuotaSnapshot snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, 5000L);
 
     policy.initialize(rss, tableName, snapshot);
 

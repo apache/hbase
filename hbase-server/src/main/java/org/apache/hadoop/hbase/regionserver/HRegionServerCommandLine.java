@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class responsible for parsing the command line and starting the
- * RegionServer.
+ * Class responsible for parsing the command line and starting the RegionServer.
  */
 @InterfaceAudience.Private
 public class HRegionServerCommandLine extends ServerCommandLine {
@@ -36,8 +34,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private final Class<? extends HRegionServer> regionServerClass;
 
-  private static final String USAGE =
-    "Usage: HRegionServer [-D conf.param=value] start";
+  private static final String USAGE = "Usage: HRegionServer [-D conf.param=value] start";
 
   public HRegionServerCommandLine(Class<? extends HRegionServer> clazz) {
     this.regionServerClass = clazz;
@@ -54,8 +51,8 @@ public class HRegionServerCommandLine extends ServerCommandLine {
       // If 'local', don't start a region server here. Defer to
       // LocalHBaseCluster. It manages 'local' clusters.
       if (LocalHBaseCluster.isLocal(conf)) {
-        LOG.warn("Not starting a distinct region server because "
-            + HConstants.CLUSTER_DISTRIBUTED + " is false");
+        LOG.warn("Not starting a distinct region server because " + HConstants.CLUSTER_DISTRIBUTED
+          + " is false");
       } else {
         logProcessInfo(getConf());
         HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
@@ -84,10 +81,8 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     if ("start".equals(cmd)) {
       return start();
     } else if ("stop".equals(cmd)) {
-      System.err.println(
-        "To shutdown the regionserver run " +
-        "hbase-daemon.sh stop regionserver or send a kill signal to " +
-        "the regionserver pid");
+      System.err.println("To shutdown the regionserver run "
+        + "hbase-daemon.sh stop regionserver or send a kill signal to " + "the regionserver pid");
       return 1;
     } else {
       usage("Unknown command: " + args[0]);

@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**

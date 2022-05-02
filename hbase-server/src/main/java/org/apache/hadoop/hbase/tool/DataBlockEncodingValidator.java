@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.tool;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -44,7 +42,6 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
 
   /**
    * Check DataBlockEncodings of column families are compatible.
-   *
    * @return number of column families with incompatible DataBlockEncoding
    * @throws IOException if a remote or network exception occurs
    */
@@ -54,7 +51,7 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
     LOG.info("Validating Data Block Encodings");
 
     try (Connection connection = ConnectionFactory.createConnection(getConf());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       List<TableDescriptor> tableDescriptors = admin.listTableDescriptors();
       String encoding = "";
 
@@ -68,7 +65,7 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
           } catch (IllegalArgumentException e) {
             incompatibilities++;
             LOG.warn("Incompatible DataBlockEncoding for table: {}, cf: {}, encoding: {}",
-                td.getTableName().getNameAsString(), cfd.getNameAsString(), encoding);
+              td.getTableName().getNameAsString(), cfd.getNameAsString(), encoding);
           }
         }
       }
@@ -76,8 +73,8 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
 
     if (incompatibilities > 0) {
       LOG.warn("There are {} column families with incompatible Data Block Encodings. Do not "
-          + "upgrade until these encodings are converted to a supported one. "
-          + "Check https://s.apache.org/prefixtree for instructions.", incompatibilities);
+        + "upgrade until these encodings are converted to a supported one. "
+        + "Check https://s.apache.org/prefixtree for instructions.", incompatibilities);
     } else {
       LOG.info("The used Data Block Encodings are compatible with HBase 2.0.");
     }
@@ -87,8 +84,8 @@ public class DataBlockEncodingValidator extends AbstractHBaseTool {
 
   @Override
   protected void printUsage() {
-    String header = "hbase " + PreUpgradeValidator.TOOL_NAME + " " +
-        PreUpgradeValidator.VALIDATE_DBE_NAME;
+    String header =
+      "hbase " + PreUpgradeValidator.TOOL_NAME + " " + PreUpgradeValidator.VALIDATE_DBE_NAME;
     printUsage(header, null, "");
   }
 

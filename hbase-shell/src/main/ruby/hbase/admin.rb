@@ -27,6 +27,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
 java_import org.apache.hadoop.hbase.HConstants
 
@@ -960,24 +961,26 @@ module Hbase
                     servers: cluster_metrics.getLiveServerMetrics.size))
         cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
           sl = cluster_metrics.getLiveServerMetrics.get(server_name)
-          r_sink_string   = '      SINK:'
-          r_source_string = '       SOURCE:'
+          r_sink_string   = '        SINK:'
+          r_source_string = '        SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
+
           if r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimestampStarted()
           # If we have applied no operations since we've started replication,
           # assume that we're not acting as a sink and don't print the normal information
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
-            r_sink_string << ", Waiting for OPs... "
+            r_sink_string << "\n            TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ",\n            Waiting for OPs... "
           else
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
-            r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
-            r_sink_string << ", TimeStampsOfLastAppliedOp=" +
-               (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()
+            r_sink_string << "\n            TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ",\n            AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
+            r_sink_string << ",\n            TimeStampsOfLastAppliedOp=" +
+               r_load_sink.getTimestampsOfLastAppliedOp().to_s
           end
 
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
+
           puts(format('    %<host>s:', host: server_name.getHostname))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
@@ -1047,19 +1050,20 @@ module Hbase
 
     def build_source_string(r_load_source_map, r_source_string)
       r_load_source_map.each do |peer, sources|
-        r_source_string << ' PeerID=' + peer
+        r_source_string << "\n            PeerID=" + peer
         sources.each do |source_load|
           build_queue_title(source_load, r_source_string)
           build_running_source_stats(source_load, r_source_string)
+          r_source_string << "\n"
         end
       end
     end
 
     def build_queue_title(source_load, r_source_string)
       r_source_string << if source_load.isRecovered
-                           "\n         Recovered Queue: "
+                           ",\n            Queue(Recovered)="
                          else
-                           "\n         Normal Queue: "
+                           ",\n            Queue(Normal)="
                          end
       r_source_string << source_load.getQueueId
     end
@@ -1068,45 +1072,43 @@ module Hbase
       if source_load.isRunning
         build_shipped_stats(source_load, r_source_string)
         build_load_general_stats(source_load, r_source_string)
-        r_source_string << ', Replication Lag=' +
+        r_source_string << ",\n            ReplicationLag=" +
                            source_load.getReplicationLag.to_s
       else
-        r_source_string << "\n           "
+        r_source_string << ",\n            IsRunning=false, "
         r_source_string << 'No Reader/Shipper threads runnning yet.'
       end
     end
 
     def build_shipped_stats(source_load, r_source_string)
       r_source_string << if source_load.getTimestampOfLastShippedOp.zero?
-                           "\n           " \
+                           ",\n            TimeStampOfLastShippedOp=0, " \
                            'No Ops shipped since last restart'
                          else
-                           "\n           AgeOfLastShippedOp=" +
+                           ",\n            AgeOfLastShippedOp=" +
                            source_load.getAgeOfLastShippedOp.to_s +
-                           ', TimeStampOfLastShippedOp=' +
-                           java.util.Date.new(source_load
-                             .getTimestampOfLastShippedOp).toString
+                           ",\n            TimeStampOfLastShippedOp=" +
+                           source_load.getTimestampOfLastShippedOp.to_s
                          end
     end
 
     def build_load_general_stats(source_load, r_source_string)
-      r_source_string << ', SizeOfLogQueue=' +
+      r_source_string << ",\n            SizeOfLogQueue=" +
                          source_load.getSizeOfLogQueue.to_s
-      r_source_string << ', EditsReadFromLogQueue=' +
+      r_source_string << ",\n            EditsReadFromLogQueue=" +
                          source_load.getEditsRead.to_s
-      r_source_string << ', OpsShippedToTarget=' +
+      r_source_string << ",\n            OpsShippedToTarget=" +
                          source_load.getOPsShipped.to_s
       build_edits_for_source(source_load, r_source_string)
     end
 
     def build_edits_for_source(source_load, r_source_string)
       if source_load.hasEditsSinceRestart
-        r_source_string << ', TimeStampOfNextToReplicate=' +
-                           java.util.Date.new(source_load
-                             .getTimeStampOfNextToReplicate).toString
+        r_source_string << ",\n            TimeStampOfNextToReplicate=" +
+                           source_load.getTimeStampOfNextToReplicate.to_s
       else
-        r_source_string << ', No edits for this source'
-        r_source_string << ' since it started'
+        r_source_string << ",\n            HasEditsSinceRestart=false, "
+        r_source_string << 'No edits for this source since it started'
       end
     end
 

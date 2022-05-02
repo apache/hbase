@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.thrift.Constants.INFOPORT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -59,44 +60,41 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
 /**
- * Start the HBase Thrift server on a random port through the command-line
- * interface and talk to it from client side.
+ * Start the HBase Thrift server on a random port through the command-line interface and talk to it
+ * from client side.
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThriftServerCmdLine.class);
+    HBaseClassTestRule.forClass(TestThriftServerCmdLine.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestThriftServerCmdLine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftServerCmdLine.class);
 
   protected final ImplType implType;
   protected boolean specifyFramed;
   protected boolean specifyBindIP;
   protected boolean specifyCompact;
 
-  protected static final HBaseTestingUtil TEST_UTIL =
-      new HBaseTestingUtil();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Parameters
   public static Collection<Object[]> getParameters() {
     Collection<Object[]> parameters = new ArrayList<>();
     for (ImplType implType : ImplType.values()) {
-      for (boolean specifyFramed : new boolean[] {false, true}) {
-        for (boolean specifyBindIP : new boolean[] {false, true}) {
+      for (boolean specifyFramed : new boolean[] { false, true }) {
+        for (boolean specifyBindIP : new boolean[] { false, true }) {
           if (specifyBindIP && !implType.canSpecifyBindIP) {
             continue;
           }
-          for (boolean specifyCompact : new boolean[] {false, true}) {
-            parameters.add(new Object[] {
-              implType, specifyFramed, specifyBindIP, specifyCompact
-            });
+          for (boolean specifyCompact : new boolean[] { false, true }) {
+            parameters.add(new Object[] { implType, specifyFramed, specifyBindIP, specifyCompact });
           }
         }
       }
@@ -104,8 +102,8 @@ public class TestThriftServerCmdLine {
     return parameters;
   }
 
-  public TestThriftServerCmdLine(ImplType implType, boolean specifyFramed,
-      boolean specifyBindIP, boolean specifyCompact) {
+  public TestThriftServerCmdLine(ImplType implType, boolean specifyFramed, boolean specifyBindIP,
+    boolean specifyCompact) {
     this.implType = implType;
     this.specifyFramed = specifyFramed;
     this.specifyBindIP = specifyBindIP;
@@ -114,18 +112,16 @@ public class TestThriftServerCmdLine {
   }
 
   private String getParametersString() {
-    return "implType=" + implType + ", " +
-        "specifyFramed=" + specifyFramed + ", " +
-        "specifyBindIP=" + specifyBindIP + ", " +
-        "specifyCompact=" + specifyCompact;
+    return "implType=" + implType + ", " + "specifyFramed=" + specifyFramed + ", "
+      + "specifyBindIP=" + specifyBindIP + ", " + "specifyCompact=" + specifyCompact;
   }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
     TEST_UTIL.startMiniCluster();
-    //ensure that server time increments every time we do an operation, otherwise
-    //successive puts having the same timestamp will override each other
+    // ensure that server time increments every time we do an operation, otherwise
+    // successive puts having the same timestamp will override each other
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
@@ -136,7 +132,7 @@ public class TestThriftServerCmdLine {
   }
 
   static ThriftServerRunner startCmdLineThread(Supplier<ThriftServer> supplier,
-      final String[] args) {
+    final String[] args) {
     LOG.info("Starting HBase Thrift server with command line: " + Joiner.on(" ").join(args));
     ThriftServerRunner tsr = new ThriftServerRunner(supplier.get(), args);
     tsr.setName(ThriftServer.class.getSimpleName() + "-cmdline");
@@ -153,31 +149,32 @@ public class TestThriftServerCmdLine {
   }
 
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier)
-      throws Exception {
+    throws Exception {
     return createBoundServer(thriftServerSupplier, false, false);
   }
 
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
-      boolean protocolPortClash, boolean infoPortClash) throws Exception {
-    return createBoundServer(thriftServerSupplier, null, false, false,
-      false, protocolPortClash, infoPortClash);
+    boolean protocolPortClash, boolean infoPortClash) throws Exception {
+    return createBoundServer(thriftServerSupplier, null, false, false, false, protocolPortClash,
+      infoPortClash);
   }
 
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
-      ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP)
-      throws Exception {
+    ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP)
+    throws Exception {
     return createBoundServer(thriftServerSupplier, implType, specifyFramed, specifyCompact,
       specifyBindIP, false, false);
   }
 
   /**
    * @param protocolPortClash This param is just so we can manufacture a port clash so we can test
-   *   the code does the right thing when this happens during actual test runs. Ugly but works.
+   *                          the code does the right thing when this happens during actual test
+   *                          runs. Ugly but works.
    * @see TestBindExceptionHandling#testProtocolPortClash()
    */
   static ThriftServerRunner createBoundServer(Supplier<ThriftServer> thriftServerSupplier,
-      ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP,
-      boolean protocolPortClash, boolean infoPortClash) throws Exception {
+    ImplType implType, boolean specifyFramed, boolean specifyCompact, boolean specifyBindIP,
+    boolean protocolPortClash, boolean infoPortClash) throws Exception {
     if (protocolPortClash && infoPortClash) {
       throw new RuntimeException("Can't set both at same time");
     }
@@ -230,8 +227,8 @@ public class TestThriftServerCmdLine {
 
       tsr = startCmdLineThread(thriftServerSupplier, args.toArray(new String[args.size()]));
       // wait up to 10s for the server to start
-      for (int ii = 0; ii < 100 && (tsr.getThriftServer().tserver == null &&
-          tsr.getRunException() == null); ii++) {
+      for (int ii = 0; ii < 100
+        && (tsr.getThriftServer().tserver == null && tsr.getRunException() == null); ii++) {
         Threads.sleep(100);
       }
       if (isBindException(tsr.getRunException())) {
@@ -271,8 +268,9 @@ public class TestThriftServerCmdLine {
     if (cmdLineException instanceof BindException) {
       return true;
     }
-    if (cmdLineException.getCause() != null &&
-        cmdLineException.getCause() instanceof BindException) {
+    if (
+      cmdLineException.getCause() != null && cmdLineException.getCause() instanceof BindException
+    ) {
       return true;
     }
     return false;
@@ -281,9 +279,9 @@ public class TestThriftServerCmdLine {
   @Test
   public void testRunThriftServer() throws Exception {
     // Add retries in case we see stuff like connection reset
-    Exception clientSideException =  null;
+    Exception clientSideException = null;
     for (int i = 0; i < 10; i++) {
-      clientSideException =  null;
+      clientSideException = null;
       ThriftServerRunner thriftServerRunner = createBoundServer(getThriftServerSupplier(),
         this.implType, this.specifyFramed, this.specifyCompact, this.specifyBindIP);
       try {
@@ -330,7 +328,7 @@ public class TestThriftServerCmdLine {
       }
 
       Hbase.Client client = new Hbase.Client(prot);
-      if (!tableCreated){
+      if (!tableCreated) {
         TestThriftServer.createTestTables(client);
         tableCreated = true;
       }
@@ -341,4 +339,3 @@ public class TestThriftServerCmdLine {
     }
   }
 }
-

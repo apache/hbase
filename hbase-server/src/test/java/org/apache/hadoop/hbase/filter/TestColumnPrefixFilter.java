@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,15 +52,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestColumnPrefixFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnPrefixFilter.class);
+    HBaseClassTestRule.forClass(TestColumnPrefixFilter.class);
 
-  private final static HBaseTestingUtil TEST_UTIL = new
-      HBaseTestingUtil();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -71,10 +70,7 @@ public class TestColumnPrefixFilter {
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family))
-        .setMaxVersions(3)
-        .build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
@@ -94,16 +90,15 @@ public class TestColumnPrefixFilter {
 
       String valueString = "ValueString";
 
-      for (String row: rows) {
+      for (String row : rows) {
         Put p = new Put(Bytes.toBytes(row));
         p.setDurability(Durability.SKIP_WAL);
-        for (String column: columns) {
+        for (String column : columns) {
           for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-                valueString);
+            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
             p.add(kv);
             kvList.add(kv);
-            for (String s: prefixMap.keySet()) {
+            for (String s : prefixMap.keySet()) {
               if (column.startsWith(s)) {
                 prefixMap.get(s).add(kv);
               }
@@ -116,7 +111,7 @@ public class TestColumnPrefixFilter {
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
       scan.readAllVersions();
-      for (String s: prefixMap.keySet()) {
+      for (String s : prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 
         scan.setFilter(filter);
@@ -140,10 +135,7 @@ public class TestColumnPrefixFilter {
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family))
-        .setMaxVersions(3)
-        .build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
@@ -163,16 +155,15 @@ public class TestColumnPrefixFilter {
 
       String valueString = "ValueString";
 
-      for (String row: rows) {
+      for (String row : rows) {
         Put p = new Put(Bytes.toBytes(row));
         p.setDurability(Durability.SKIP_WAL);
-        for (String column: columns) {
+        for (String column : columns) {
           for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-                valueString);
+            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
             p.add(kv);
             kvList.add(kv);
-            for (String s: prefixMap.keySet()) {
+            for (String s : prefixMap.keySet()) {
               if (column.startsWith(s)) {
                 prefixMap.get(s).add(kv);
               }
@@ -185,10 +176,10 @@ public class TestColumnPrefixFilter {
       ColumnPrefixFilter filter;
       Scan scan = new Scan();
       scan.readAllVersions();
-      for (String s: prefixMap.keySet()) {
+      for (String s : prefixMap.keySet()) {
         filter = new ColumnPrefixFilter(Bytes.toBytes(s));
 
-        //this is how this test differs from the one above
+        // this is how this test differs from the one above
         FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);
         filterList.addFilter(filter);
         scan.setFilter(filterList);
@@ -209,7 +200,7 @@ public class TestColumnPrefixFilter {
   List<String> generateRandomWords(int numberOfWords, String suffix) {
     Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {
-      int lengthOfWords = (int) (Math.random()*2) + 1;
+      int lengthOfWords = (int) (Math.random() * 2) + 1;
       char[] wordChar = new char[lengthOfWords];
       for (int j = 0; j < wordChar.length; j++) {
         wordChar[j] = (char) (Math.random() * 26 + 97);
@@ -227,4 +218,3 @@ public class TestColumnPrefixFilter {
   }
 
 }
-

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -139,15 +138,14 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   }
 
   private void init() {
-    options.addOption("v", "verbose", false,
-        "Verbose output; emits file and meta data delimiters");
+    options.addOption("v", "verbose", false, "Verbose output; emits file and meta data delimiters");
     options.addOption("p", "printkv", false, "Print key/value pairs");
     options.addOption("e", "printkey", false, "Print keys");
     options.addOption("m", "printmeta", false, "Print meta data of file");
     options.addOption("b", "printblocks", false, "Print block index meta data");
     options.addOption("h", "printblockheaders", false, "Print block headers for each block.");
     options.addOption("k", "checkrow", false,
-        "Enable row order check; looks for out-of-order keys");
+      "Enable row order check; looks for out-of-order keys");
     options.addOption("a", "checkfamily", false, "Enable family check");
     options.addOption("w", "seekToRow", true,
       "Seek to this row and print all the kvs for this row only");
@@ -158,8 +156,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     OptionGroup files = new OptionGroup();
     files.addOption(new Option("f", "file", true,
       "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34"));
-    files.addOption(new Option("r", "region", true,
-      "Region to scan. Pass region name; e.g. 'hbase:meta,,1'"));
+    files.addOption(
+      new Option("r", "region", true, "Region to scan. Pass region name; e.g. 'hbase:meta,,1'"));
     options.addOptionGroup(files);
   }
 
@@ -168,8 +166,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     this.err = err;
   }
 
-  public boolean parseOptions(String args[]) throws ParseException,
-      IOException {
+  public boolean parseOptions(String args[]) throws ParseException, IOException {
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("hfile", options, true);
@@ -212,24 +209,19 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = RegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
-      if (verbose)
-        out.println("region dir -> " + regionDir);
-      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
-          regionDir);
-      if (verbose)
-        out.println("Number of region files found -> "
-            + regionFiles.size());
+      if (verbose) out.println("region dir -> " + regionDir);
+      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()), regionDir);
+      if (verbose) out.println("Number of region files found -> " + regionFiles.size());
       if (verbose) {
         int i = 1;
         for (Path p : regionFiles) {
-          if (verbose)
-            out.println("Found file[" + i++ + "] -> " + p);
+          if (verbose) out.println("Found file[" + i++ + "] -> " + p);
         }
       }
       files.addAll(regionFiles);
     }
 
-    if(checkMobIntegrity) {
+    if (checkMobIntegrity) {
       if (verbose) {
         System.out.println("checkMobIntegrity is enabled");
       }
@@ -242,8 +234,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   }
 
   /**
-   * Runs the command-line pretty-printer, and returns the desired command
-   * exit code (zero for success, non-zero for failure).
+   * Runs the command-line pretty-printer, and returns the desired command exit code (zero for
+   * success, non-zero for failure).
    */
   @Override
   public int run(String[] args) {
@@ -352,10 +344,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
        */
       FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, file);
       long fileSize = fs.getFileStatus(file).getLen();
-      FixedFileTrailer trailer =
-        FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-      long offset = trailer.getFirstDataBlockOffset(),
-        max = trailer.getLastDataBlockOffset();
+      FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+      long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
       HFileBlock block;
       while (offset <= max) {
         block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
@@ -374,8 +364,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     return 0;
   }
 
-  private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
-      HFileScanner scanner,  byte[] row) throws IOException {
+  private void scanKeysValues(Path file, KeyValueStatsCollector fileStats, HFileScanner scanner,
+    byte[] row) throws IOException {
     Cell pCell = null;
     FileSystem fs = FileSystem.get(getConf());
     Set<String> foundMobFiles = new LinkedHashSet<>(FOUND_MOB_FILES_CACHE_CAPACITY);
@@ -398,9 +388,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       if (printKey) {
         out.print("K: " + cell);
         if (printValue) {
-          out.print(" V: "
-              + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
-                  cell.getValueLength()));
+          out.print(" V: " + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+            cell.getValueLength()));
           int i = 0;
           List<Tag> tags = PrivateCellUtil.getTags(cell);
           for (Tag tag : tags) {
@@ -412,37 +401,35 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       // check if rows are in order
       if (checkRow && pCell != null) {
         if (CellComparator.getInstance().compareRows(pCell, cell) > 0) {
-          err.println("WARNING, previous row is greater then"
-              + " current row\n\tfilename -> " + file + "\n\tprevious -> "
-              + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
-              + CellUtil.getCellKeyAsString(cell));
+          err.println("WARNING, previous row is greater then" + " current row\n\tfilename -> "
+            + file + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
+            + CellUtil.getCellKeyAsString(cell));
         }
       }
       // check if families are consistent
       if (checkFamily) {
-        String fam = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(),
-            cell.getFamilyLength());
+        String fam =
+          Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
         if (!file.toString().contains(fam)) {
-          err.println("WARNING, filename does not match kv family,"
-              + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
-              + CellUtil.getCellKeyAsString(cell));
+          err.println("WARNING, filename does not match kv family," + "\n\tfilename -> " + file
+            + "\n\tkeyvalue -> " + CellUtil.getCellKeyAsString(cell));
         }
         if (pCell != null && CellComparator.getInstance().compareFamilies(pCell, cell) != 0) {
-          err.println("WARNING, previous kv has different family"
-              + " compared to current key\n\tfilename -> " + file
-              + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell)
-              + "\n\tcurrent  -> " + CellUtil.getCellKeyAsString(cell));
+          err.println(
+            "WARNING, previous kv has different family" + " compared to current key\n\tfilename -> "
+              + file + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
+              + CellUtil.getCellKeyAsString(cell));
         }
       }
       // check if mob files are missing.
       if (checkMobIntegrity && MobUtils.isMobReferenceCell(cell)) {
         Optional<TableName> tn = MobUtils.getTableName(cell);
-        if (! tn.isPresent()) {
-          System.err.println("ERROR, wrong tag format in mob reference cell "
-            + CellUtil.getCellKeyAsString(cell));
+        if (!tn.isPresent()) {
+          System.err.println(
+            "ERROR, wrong tag format in mob reference cell " + CellUtil.getCellKeyAsString(cell));
         } else if (!MobUtils.hasValidMobRefCellValue(cell)) {
-          System.err.println("ERROR, wrong value format in mob reference cell "
-            + CellUtil.getCellKeyAsString(cell));
+          System.err.println(
+            "ERROR, wrong value format in mob reference cell " + CellUtil.getCellKeyAsString(cell));
         } else {
           String mobFileName = MobUtils.getMobFileName(cell);
           boolean exist = mobFileExists(fs, tn.get(), mobFileName,
@@ -515,42 +502,44 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   }
 
   /**
-   * Format a string of the form "k1=v1, k2=v2, ..." into separate lines
-   * with a four-space indentation.
+   * Format a string of the form "k1=v1, k2=v2, ..." into separate lines with a four-space
+   * indentation.
    */
   private static String asSeparateLines(String keyValueStr) {
-    return keyValueStr.replaceAll(", ([a-zA-Z]+=)",
-                                  ",\n" + FOUR_SPACES + "$1");
+    return keyValueStr.replaceAll(", ([a-zA-Z]+=)", ",\n" + FOUR_SPACES + "$1");
   }
 
-  private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo)
-      throws IOException {
-    out.println("Block index size as per heapsize: "
-        + reader.indexSize());
+  private void printMeta(HFile.Reader reader, Map<byte[], byte[]> fileInfo) throws IOException {
+    out.println("Block index size as per heapsize: " + reader.indexSize());
     out.println(asSeparateLines(reader.toString()));
-    out.println("Trailer:\n    "
-        + asSeparateLines(reader.getTrailer().toString()));
+    out.println("Trailer:\n    " + asSeparateLines(reader.getTrailer().toString()));
     out.println("Fileinfo:");
     for (Map.Entry<byte[], byte[]> e : fileInfo.entrySet()) {
       out.print(FOUR_SPACES + Bytes.toString(e.getKey()) + " = ");
-      if (Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
+      if (
+        Bytes.equals(e.getKey(), HStoreFile.MAX_SEQ_ID_KEY)
           || Bytes.equals(e.getKey(), HStoreFile.DELETE_FAMILY_COUNT)
           || Bytes.equals(e.getKey(), HStoreFile.EARLIEST_PUT_TS)
           || Bytes.equals(e.getKey(), HFileWriterImpl.MAX_MEMSTORE_TS_KEY)
           || Bytes.equals(e.getKey(), HFileInfo.CREATE_TIME_TS)
-          || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)) {
+          || Bytes.equals(e.getKey(), HStoreFile.BULKLOAD_TIME_KEY)
+      ) {
         out.println(Bytes.toLong(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HStoreFile.TIMERANGE_KEY)) {
         TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(e.getValue());
         out.println(timeRangeTracker.getMin() + "...." + timeRangeTracker.getMax());
-      } else if (Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
+      } else if (
+        Bytes.equals(e.getKey(), HFileInfo.AVG_KEY_LEN)
           || Bytes.equals(e.getKey(), HFileInfo.AVG_VALUE_LEN)
           || Bytes.equals(e.getKey(), HFileWriterImpl.KEY_VALUE_VERSION)
-          || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)) {
+          || Bytes.equals(e.getKey(), HFileInfo.MAX_TAGS_LEN)
+      ) {
         out.println(Bytes.toInt(e.getValue()));
-      } else if (Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
+      } else if (
+        Bytes.equals(e.getKey(), HStoreFile.MAJOR_COMPACTION_KEY)
           || Bytes.equals(e.getKey(), HFileInfo.TAGS_COMPRESSED)
-          || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)) {
+          || Bytes.equals(e.getKey(), HStoreFile.EXCLUDE_FROM_MINOR_COMPACTION_KEY)
+      ) {
         out.println(Bytes.toBoolean(e.getValue()));
       } else if (Bytes.equals(e.getKey(), HFileInfo.LASTKEY)) {
         out.println(new KeyValue.KeyOnlyKeyValue(e.getValue()).toString());
@@ -562,19 +551,18 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     try {
       out.println("Mid-key: " + reader.midKey().map(CellUtil::getCellKeyAsString));
     } catch (Exception e) {
-      out.println ("Unable to retrieve the midkey");
+      out.println("Unable to retrieve the midkey");
     }
 
     // Printing general bloom information
     DataInput bloomMeta = reader.getGeneralBloomFilterMetadata();
     BloomFilter bloomFilter = null;
-    if (bloomMeta != null)
-      bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+    if (bloomMeta != null) bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
 
     out.println("Bloom filter:");
     if (bloomFilter != null) {
-      out.println(FOUR_SPACES + bloomFilter.toString().replaceAll(
-          BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
+      out.println(FOUR_SPACES
+        + bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
     } else {
       out.println(FOUR_SPACES + "Not present");
     }
@@ -582,14 +570,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     // Printing delete bloom information
     bloomMeta = reader.getDeleteBloomFilterMetadata();
     bloomFilter = null;
-    if (bloomMeta != null)
-      bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+    if (bloomMeta != null) bloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
 
     out.println("Delete Family Bloom filter:");
     if (bloomFilter != null) {
       out.println(FOUR_SPACES
-          + bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP,
-              "\n" + FOUR_SPACES));
+        + bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
     } else {
       out.println(FOUR_SPACES + "Not present");
     }
@@ -598,15 +584,15 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private static class KeyValueStatsCollector {
     private final MetricRegistry metricsRegistry = new MetricRegistry();
     private final ByteArrayOutputStream metricsOutput = new ByteArrayOutputStream();
-    private final SimpleReporter simpleReporter = SimpleReporter.forRegistry(metricsRegistry).
-        outputTo(new PrintStream(metricsOutput)).filter(MetricFilter.ALL).build();
+    private final SimpleReporter simpleReporter = SimpleReporter.forRegistry(metricsRegistry)
+      .outputTo(new PrintStream(metricsOutput)).filter(MetricFilter.ALL).build();
 
     Histogram keyLen = metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Key length"));
     Histogram valLen = metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Val length"));
-    Histogram rowSizeBytes = metricsRegistry.histogram(
-      name(HFilePrettyPrinter.class, "Row size (bytes)"));
-    Histogram rowSizeCols = metricsRegistry.histogram(
-      name(HFilePrettyPrinter.class, "Row size (columns)"));
+    Histogram rowSizeBytes =
+      metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Row size (bytes)"));
+    Histogram rowSizeCols =
+      metricsRegistry.histogram(name(HFilePrettyPrinter.class, "Row size (columns)"));
 
     long curRowBytes = 0;
     long curRowCols = 0;
@@ -619,8 +605,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     public void collect(Cell cell) {
       valLen.update(cell.getValueLength());
-      if (prevCell != null &&
-          CellComparator.getInstance().compareRows(prevCell, cell) != 0) {
+      if (prevCell != null && CellComparator.getInstance().compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }
@@ -652,27 +637,23 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     @Override
     public String toString() {
-      if (prevCell == null)
-        return "no data available for statistics";
+      if (prevCell == null) return "no data available for statistics";
 
       // Dump the metrics to the output stream
       simpleReporter.stop();
       simpleReporter.report();
 
-      return
-              metricsOutput.toString() +
-                      "Key of biggest row: " + Bytes.toStringBinary(biggestRow);
+      return metricsOutput.toString() + "Key of biggest row: " + Bytes.toStringBinary(biggestRow);
     }
   }
 
   /**
-   * Almost identical to ConsoleReporter, but extending ScheduledReporter,
-   * as extending ConsoleReporter in this version of dropwizard is now too much trouble.
+   * Almost identical to ConsoleReporter, but extending ScheduledReporter, as extending
+   * ConsoleReporter in this version of dropwizard is now too much trouble.
    */
   private static class SimpleReporter extends ScheduledReporter {
     /**
      * Returns a new {@link Builder} for {@link ConsoleReporter}.
-     *
      * @param registry the registry to report
      * @return a {@link Builder} instance for a {@link ConsoleReporter}
      */
@@ -681,9 +662,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     }
 
     /**
-     * A builder for {@link SimpleReporter} instances. Defaults to using the default locale and
-     * time zone, writing to {@code System.out}, converting rates to events/second, converting
-     * durations to milliseconds, and not filtering metrics.
+     * A builder for {@link SimpleReporter} instances. Defaults to using the default locale and time
+     * zone, writing to {@code System.out}, converting rates to events/second, converting durations
+     * to milliseconds, and not filtering metrics.
      */
     public static class Builder {
       private final MetricRegistry registry;
@@ -706,7 +687,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
       /**
        * Write to the given {@link PrintStream}.
-       *
        * @param output a {@link PrintStream} instance.
        * @return {@code this}
        */
@@ -717,7 +697,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
       /**
        * Only report metrics which match the given filter.
-       *
        * @param filter a {@link MetricFilter}
        * @return {@code this}
        */
@@ -728,17 +707,11 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
       /**
        * Builds a {@link ConsoleReporter} with the given properties.
-       *
        * @return a {@link ConsoleReporter}
        */
       public SimpleReporter build() {
-        return new SimpleReporter(registry,
-            output,
-            locale,
-            timeZone,
-            rateUnit,
-            durationUnit,
-            filter);
+        return new SimpleReporter(registry, output, locale, timeZone, rateUnit, durationUnit,
+          filter);
       }
     }
 
@@ -746,29 +719,20 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     private final Locale locale;
     private final DateFormat dateFormat;
 
-    private SimpleReporter(MetricRegistry registry,
-                            PrintStream output,
-                            Locale locale,
-                            TimeZone timeZone,
-                            TimeUnit rateUnit,
-                            TimeUnit durationUnit,
-                            MetricFilter filter) {
+    private SimpleReporter(MetricRegistry registry, PrintStream output, Locale locale,
+      TimeZone timeZone, TimeUnit rateUnit, TimeUnit durationUnit, MetricFilter filter) {
       super(registry, "simple-reporter", filter, rateUnit, durationUnit);
       this.output = output;
       this.locale = locale;
 
-      this.dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT,
-          DateFormat.MEDIUM,
-          locale);
+      this.dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM, locale);
       dateFormat.setTimeZone(timeZone);
     }
 
     @Override
-    public void report(SortedMap<String, Gauge> gauges,
-                       SortedMap<String, Counter> counters,
-                       SortedMap<String, Histogram> histograms,
-                       SortedMap<String, Meter> meters,
-                       SortedMap<String, Timer> timers) {
+    public void report(SortedMap<String, Gauge> gauges, SortedMap<String, Counter> counters,
+      SortedMap<String, Histogram> histograms, SortedMap<String, Meter> meters,
+      SortedMap<String, Timer> timers) {
       // we know we only have histograms
       if (!histograms.isEmpty()) {
         for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {

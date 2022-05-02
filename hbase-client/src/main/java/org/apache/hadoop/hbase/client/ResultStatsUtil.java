@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,16 +26,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ResultStatsUtil {
   private ResultStatsUtil() {
-    //private ctor for util class
+    // private ctor for util class
   }
 
   /**
    * Update the statistics for the specified region.
-   *
-   * @param tracker tracker to update
-   * @param server server from which the result was obtained
+   * @param tracker    tracker to update
+   * @param server     server from which the result was obtained
    * @param regionName full region name for the statistics
-   * @param stats statistics to update for the specified region
+   * @param stats      statistics to update for the specified region
    */
   public static void updateStats(StatisticTrackable tracker, ServerName server, byte[] regionName,
     RegionLoadStats stats) {

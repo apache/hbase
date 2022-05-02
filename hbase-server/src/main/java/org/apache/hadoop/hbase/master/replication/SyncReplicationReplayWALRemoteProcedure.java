@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface;
@@ -43,7 +42,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
  */
 @InterfaceAudience.Private
 public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedure
-    implements PeerProcedureInterface {
+  implements PeerProcedureInterface {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(SyncReplicationReplayWALRemoteProcedure.class);
@@ -56,7 +55,7 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   }
 
   public SyncReplicationReplayWALRemoteProcedure(String peerId, List<String> wals,
-      ServerName targetServer) {
+    ServerName targetServer) {
     this.peerId = peerId;
     this.wals = wals;
     this.targetServer = targetServer;
@@ -65,12 +64,11 @@ public class SyncReplicationReplayWALRemoteProcedure extends ServerRemoteProcedu
   @Override
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     ReplaySyncReplicationWALParameter.Builder builder =
-        ReplaySyncReplicationWALParameter.newBuilder();
+      ReplaySyncReplicationWALParameter.newBuilder();
     builder.setPeerId(peerId);
     wals.stream().forEach(builder::addWal);
-    return Optional
-        .of(new ServerOperation(this, getProcId(), ReplaySyncReplicationWALCallable.class,
-            builder.build().toByteArray()));
+    return Optional.of(new ServerOperation(this, getProcId(),
+      ReplaySyncReplicationWALCallable.class, builder.build().toByteArray()));
   }
 
   protected void complete(MasterProcedureEnv env, Throwable error) {

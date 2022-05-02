@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,34 +29,33 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanceModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespacesInstanceModel.class);
+    HBaseClassTestRule.forClass(TestNamespacesInstanceModel.class);
 
-  public static final Map<String,String> NAMESPACE_PROPERTIES = new HashMap<>();
+  public static final Map<String, String> NAMESPACE_PROPERTIES = new HashMap<>();
   public static final String NAMESPACE_NAME = "namespaceName";
 
   public TestNamespacesInstanceModel() throws Exception {
     super(NamespacesInstanceModel.class);
 
-    NAMESPACE_PROPERTIES.put("KEY_1","VALUE_1");
-    NAMESPACE_PROPERTIES.put("KEY_2","VALUE_2");
-    NAMESPACE_PROPERTIES.put("NAME","testNamespace");
+    NAMESPACE_PROPERTIES.put("KEY_1", "VALUE_1");
+    NAMESPACE_PROPERTIES.put("KEY_2", "VALUE_2");
+    NAMESPACE_PROPERTIES.put("NAME", "testNamespace");
 
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-      "<NamespaceProperties><properties><entry><key>NAME</key><value>testNamespace" +
-      "</value></entry><entry><key>KEY_2</key><value>VALUE_2" +
-      "</value></entry><entry><key>KEY_1</key><value>VALUE_1</value></entry>" +
-      "</properties></NamespaceProperties>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+      + "<NamespaceProperties><properties><entry><key>NAME</key><value>testNamespace"
+      + "</value></entry><entry><key>KEY_2</key><value>VALUE_2"
+      + "</value></entry><entry><key>KEY_1</key><value>VALUE_1</value></entry>"
+      + "</properties></NamespaceProperties>";
 
     AS_PB = "ChUKBE5BTUUSDXRlc3ROYW1lc3BhY2UKEAoFS0VZXzESB1ZBTFVFXzEKEAoFS0VZXzISB1ZBTFVFXzI=";
 
-    AS_JSON = "{\"properties\":{\"NAME\":\"testNamespace\"," +
-      "\"KEY_1\":\"VALUE_1\",\"KEY_2\":\"VALUE_2\"}}";
+    AS_JSON = "{\"properties\":{\"NAME\":\"testNamespace\","
+      + "\"KEY_1\":\"VALUE_1\",\"KEY_2\":\"VALUE_2\"}}";
   }
 
   @Override
@@ -64,9 +63,9 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     return buildTestModel(NAMESPACE_NAME, NAMESPACE_PROPERTIES);
   }
 
-  public NamespacesInstanceModel buildTestModel(String namespace, Map<String,String> properties) {
+  public NamespacesInstanceModel buildTestModel(String namespace, Map<String, String> properties) {
     NamespacesInstanceModel model = new NamespacesInstanceModel();
-    for(String key: properties.keySet()){
+    for (String key : properties.keySet()) {
       model.addProperty(key, properties.get(key));
     }
     return model;
@@ -78,12 +77,12 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
   }
 
   public void checkModel(NamespacesInstanceModel model, String namespace,
-      Map<String,String> properties) {
-    Map<String,String> modProperties = model.getProperties();
+    Map<String, String> properties) {
+    Map<String, String> modProperties = model.getProperties();
     assertEquals(properties.size(), modProperties.size());
     // Namespace name comes from REST URI, not properties.
     assertNotSame(namespace, model.getNamespaceName());
-    for(String property: properties.keySet()){
+    for (String property : properties.keySet()) {
       assertEquals(properties.get(property), modProperties.get(property));
     }
   }

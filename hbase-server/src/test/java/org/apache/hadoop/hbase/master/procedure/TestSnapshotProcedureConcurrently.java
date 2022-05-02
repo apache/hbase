@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
@@ -55,24 +54,26 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
   @Test
   public void testRunningTwoSnapshotProcedureOnSameTable() throws Exception {
     String newSnapshotName = SNAPSHOT_NAME + "_2";
-    SnapshotProtos.SnapshotDescription snapshotProto2 = SnapshotProtos.SnapshotDescription
-      .newBuilder(snapshotProto).setName(newSnapshotName).build();
+    SnapshotProtos.SnapshotDescription snapshotProto2 =
+      SnapshotProtos.SnapshotDescription.newBuilder(snapshotProto).setName(newSnapshotName).build();
 
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     MasterProcedureEnv env = procExec.getEnvironment();
 
     SnapshotProcedure sp1 = new SnapshotProcedure(env, snapshotProto);
     SnapshotProcedure sp2 = new SnapshotProcedure(env, snapshotProto2);
-    SnapshotProcedure spySp1 = getDelayedOnSpecificStateSnapshotProcedure(sp1,
-      procExec.getEnvironment(), MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
-    SnapshotProcedure spySp2 = getDelayedOnSpecificStateSnapshotProcedure(sp2,
-      procExec.getEnvironment(), MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
+    SnapshotProcedure spySp1 =
+      getDelayedOnSpecificStateSnapshotProcedure(sp1, procExec.getEnvironment(),
+        MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
+    SnapshotProcedure spySp2 =
+      getDelayedOnSpecificStateSnapshotProcedure(sp2, procExec.getEnvironment(),
+        MasterProcedureProtos.SnapshotState.SNAPSHOT_SNAPSHOT_ONLINE_REGIONS);
 
     long procId1 = procExec.submitProcedure(spySp1);
     long procId2 = procExec.submitProcedure(spySp2);
-    TEST_UTIL.waitFor(2000, () -> env.getMasterServices().getProcedures()
-      .stream().map(Procedure::getProcId).collect(Collectors.toList())
-      .containsAll(Arrays.asList(procId1, procId2)));
+    TEST_UTIL.waitFor(2000,
+      () -> env.getMasterServices().getProcedures().stream().map(Procedure::getProcId)
+        .collect(Collectors.toList()).containsAll(Arrays.asList(procId1, procId2)));
 
     assertFalse(procExec.isFinished(procId1));
     assertFalse(procExec.isFinished(procId2));
@@ -108,14 +109,14 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
     Thread.sleep(1000);
 
     SnapshotManager sm = master.getSnapshotManager();
-    TEST_UTIL.waitFor(2000, 50, () -> !sm.isTakingSnapshot(TABLE_NAME)
-      && sm.isTableTakingAnySnapshot(TABLE_NAME));
+    TEST_UTIL.waitFor(2000, 50,
+      () -> !sm.isTakingSnapshot(TABLE_NAME) && sm.isTableTakingAnySnapshot(TABLE_NAME));
 
     TEST_UTIL.getConfiguration().setBoolean("hbase.snapshot.zk.coordinated", true);
     SnapshotDescription snapshotOnSameTable =
       new SnapshotDescription(newSnapshotName, TABLE_NAME, SnapshotType.SKIPFLUSH);
-    SnapshotProtos.SnapshotDescription snapshotOnSameTableProto = ProtobufUtil
-      .createHBaseProtosSnapshotDesc(snapshotOnSameTable);
+    SnapshotProtos.SnapshotDescription snapshotOnSameTableProto =
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotOnSameTable);
     Thread second = new Thread("zk-snapshot") {
       @Override
       public void run() {
@@ -130,8 +131,8 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
     second.start();
 
     TEST_UTIL.waitFor(2000, () -> sm.isTakingSnapshot(TABLE_NAME));
-    TEST_UTIL.waitFor(60000, () -> sm.isSnapshotDone(snapshotOnSameTableProto)
-      && !sm.isTakingAnySnapshot());
+    TEST_UTIL.waitFor(60000,
+      () -> sm.isSnapshotDone(snapshotOnSameTableProto) && !sm.isTakingAnySnapshot());
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotOnSameTableProto, TABLE_NAME, CF);
   }

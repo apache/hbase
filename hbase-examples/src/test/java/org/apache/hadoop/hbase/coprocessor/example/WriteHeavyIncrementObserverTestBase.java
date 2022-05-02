@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,7 +59,7 @@ public class WriteHeavyIncrementObserverTestBase {
     UTIL.getConfiguration().setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 64 * 1024L);
     UTIL.getConfiguration().setLong("hbase.hregion.memstore.flush.size.limit", 1024L);
     UTIL.getConfiguration().setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
-        0.014);
+      0.014);
     UTIL.startMiniCluster(3);
   }
 

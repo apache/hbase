@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
@@ -27,7 +26,6 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -47,8 +45,8 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
 
   protected boolean isMultiPut = false;
 
-  public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName) throws IOException {
+  public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf, TableName tableName)
+    throws IOException {
     super(dataGen, conf, tableName, "W");
   }
 
@@ -123,7 +121,8 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           }
           if (isMultiPut) {
             if (verbose) {
-              LOG.debug("Preparing put for key = [" + Bytes.toString(rowKey) + "], " + columnCount + " columns");
+              LOG.debug("Preparing put for key = [" + Bytes.toString(rowKey) + "], " + columnCount
+                + " columns");
             }
             insert(table, put, rowKeyBase);
             numCols.addAndGet(columnCount);
@@ -148,7 +147,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
         failedKeySet.add(keyBase);
         String exceptionInfo;
         if (e instanceof RetriesExhaustedWithDetailsException) {
-          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException)e;
+          RetriesExhaustedWithDetailsException aggEx = (RetriesExhaustedWithDetailsException) e;
           exceptionInfo = aggEx.getExhaustiveDescription();
         } else {
           StringWriter stackWriter = new StringWriter();
@@ -157,11 +156,12 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
           pw.flush();
           exceptionInfo = StringUtils.stringifyException(e);
         }
-        LOG.error("Failed to insert: " + keyBase + " after " +
-          (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: " +
-            getRegionDebugInfoSafe(table, put.getRow()) + "; errors: " + exceptionInfo);
+        LOG.error("Failed to insert: " + keyBase + " after "
+          + (EnvironmentEdgeManager.currentTime() - start) + "ms; region information: "
+          + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: " + exceptionInfo);
       }
     }
+
     protected void closeHTable() {
       try {
         if (table != null) {
@@ -178,7 +178,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
     super.waitForFinish();
     System.out.println("Failed to write keys: " + failedKeySet.size());
     for (Long key : failedKeySet) {
-       System.out.println("Failed to write key: " + key);
+      System.out.println("Failed to write key: " + key);
     }
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.Closeable;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This is the notification interface for Procedures that encapsulates message passing from
- * members to a coordinator.  Each of these calls should send a message to the coordinator.
+ * This is the notification interface for Procedures that encapsulates message passing from members
+ * to a coordinator. Each of these calls should send a message to the coordinator.
  */
 @InterfaceAudience.Private
 public interface ProcedureMemberRpcs extends Closeable {
@@ -36,25 +35,23 @@ public interface ProcedureMemberRpcs extends Closeable {
   void start(final String memberName, final ProcedureMember member);
 
   /**
-   * Each subprocedure is being executed on a member.  This is the identifier for the member.
+   * Each subprocedure is being executed on a member. This is the identifier for the member.
    * @return the member name
    */
   String getMemberName();
 
   /**
    * Notify the coordinator that we aborted the specified {@link Subprocedure}
-   *
-   * @param sub the {@link Subprocedure} we are aborting
+   * @param sub   the {@link Subprocedure} we are aborting
    * @param cause the reason why the member's subprocedure aborted
    * @throws IOException thrown when the rpcs can't reach the other members of the procedure (and
-   *  thus can't recover).
+   *                     thus can't recover).
    */
   void sendMemberAborted(Subprocedure sub, ForeignException cause) throws IOException;
 
   /**
-   * Notify the coordinator that the specified {@link Subprocedure} has acquired the locally required
-   * barrier condition.
-   *
+   * Notify the coordinator that the specified {@link Subprocedure} has acquired the locally
+   * required barrier condition.
    * @param sub the specified {@link Subprocedure}
    * @throws IOException if we can't reach the coordinator
    */
@@ -63,8 +60,7 @@ public interface ProcedureMemberRpcs extends Closeable {
   /**
    * Notify the coordinator that the specified {@link Subprocedure} has completed the work that
    * needed to be done under the global barrier.
-   *
-   * @param sub the specified {@link Subprocedure}
+   * @param sub  the specified {@link Subprocedure}
    * @param data the data the member returns to the coordinator along with the notification
    * @throws IOException if we can't reach the coordinator
    */

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,12 +42,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
@@ -57,49 +55,39 @@ public class TableMapReduceUtil {
   private static final Logger LOG = LoggerFactory.getLogger(TableMapReduceUtil.class);
 
   /**
-   * Use this before submitting a TableMap job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table  The table name to read from.
-   * @param columns  The columns to scan.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
-   * @param outputValueClass  The class of the output value.
-   * @param job  The current job configuration to adjust.
+   * Use this before submitting a TableMap job. It will appropriately set up the JobConf.
+   * @param table            The table name to read from.
+   * @param columns          The columns to scan.
+   * @param mapper           The mapper class to use.
+   * @param outputKeyClass   The class of the output key.
+   * @param outputValueClass The class of the output value.
+   * @param job              The current job configuration to adjust.
    */
-  public static void initTableMapJob(String table, String columns,
-    Class<? extends TableMap> mapper,
-    Class<?> outputKeyClass,
-    Class<?> outputValueClass, JobConf job) {
-    initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job,
-      true, TableInputFormat.class);
+  public static void initTableMapJob(String table, String columns, Class<? extends TableMap> mapper,
+    Class<?> outputKeyClass, Class<?> outputValueClass, JobConf job) {
+    initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job, true,
+      TableInputFormat.class);
   }
 
-  public static void initTableMapJob(String table, String columns,
-    Class<? extends TableMap> mapper,
-    Class<?> outputKeyClass,
-    Class<?> outputValueClass, JobConf job, boolean addDependencyJars) {
+  public static void initTableMapJob(String table, String columns, Class<? extends TableMap> mapper,
+    Class<?> outputKeyClass, Class<?> outputValueClass, JobConf job, boolean addDependencyJars) {
     initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job,
       addDependencyJars, TableInputFormat.class);
   }
 
   /**
-   * Use this before submitting a TableMap job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table  The table name to read from.
-   * @param columns  The columns to scan.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
+   * Use this before submitting a TableMap job. It will appropriately set up the JobConf.
+   * @param table             The table name to read from.
+   * @param columns           The columns to scan.
+   * @param mapper            The mapper class to use.
+   * @param outputKeyClass    The class of the output key.
    * @param outputValueClass  The class of the output value.
-   * @param job  The current job configuration to adjust.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
+   * @param job               The current job configuration to adjust.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
    */
-  public static void initTableMapJob(String table, String columns,
-    Class<? extends TableMap> mapper,
-    Class<?> outputKeyClass,
-    Class<?> outputValueClass, JobConf job, boolean addDependencyJars,
+  public static void initTableMapJob(String table, String columns, Class<? extends TableMap> mapper,
+    Class<?> outputKeyClass, Class<?> outputValueClass, JobConf job, boolean addDependencyJars,
     Class<? extends InputFormat> inputFormat) {
 
     job.setInputFormat(inputFormat);
@@ -107,7 +95,7 @@ public class TableMapReduceUtil {
     job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
     job.setStrings("io.serializations", job.get("io.serializations"),
-        MutationSerialization.class.getName(), ResultSerialization.class.getName());
+      MutationSerialization.class.getName(), ResultSerialization.class.getName());
     FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
     if (addDependencyJars) {
@@ -120,28 +108,26 @@ public class TableMapReduceUtil {
     try {
       initCredentials(job);
     } catch (IOException ioe) {
-      // just spit out the stack trace?  really?
+      // just spit out the stack trace? really?
       LOG.error("IOException encountered while initializing credentials", ioe);
     }
   }
 
   /**
    * Sets up the job for reading from one or more multiple table snapshots, with one or more scans
-   * per snapshot.
-   * It bypasses hbase servers and read directly from snapshot files.
-   *
+   * per snapshot. It bypasses hbase servers and read directly from snapshot files.
    * @param snapshotScans     map of snapshot name to scans on that snapshot.
    * @param mapper            The mapper class to use.
    * @param outputKeyClass    The class of the output key.
    * @param outputValueClass  The class of the output value.
-   * @param job               The current job to adjust.  Make sure the passed job is
-   *                          carrying all necessary HBase configuration.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *                          job classes via the distributed cache (tmpjars).
+   * @param job               The current job to adjust. Make sure the passed job is carrying all
+   *                          necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
    */
   public static void initMultiTableSnapshotMapperJob(Map<String, Collection<Scan>> snapshotScans,
-      Class<? extends TableMap> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
-      JobConf job, boolean addDependencyJars, Path tmpRestoreDir) throws IOException {
+    Class<? extends TableMap> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+    JobConf job, boolean addDependencyJars, Path tmpRestoreDir) throws IOException {
     MultiTableSnapshotInputFormat.setInput(job, snapshotScans, tmpRestoreDir);
 
     job.setInputFormat(MultiTableSnapshotInputFormat.class);
@@ -160,30 +146,27 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
-   * and read directly from snapshot files.
-   *
-   * @param snapshotName The name of the snapshot (of a table) to read from.
-   * @param columns  The columns to scan.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers and read directly
+   * from snapshot files.
+   * @param snapshotName      The name of the snapshot (of a table) to read from.
+   * @param columns           The columns to scan.
+   * @param mapper            The mapper class to use.
+   * @param outputKeyClass    The class of the output key.
    * @param outputValueClass  The class of the output value.
-   * @param job  The current job to adjust.  Make sure the passed job is
-   * carrying all necessary HBase configuration.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
-   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restore directory can be deleted.
+   * @param job               The current job to adjust. Make sure the passed job is carrying all
+   *                          necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
+   * @param tmpRestoreDir     a temporary directory to copy the snapshot files into. Current user
+   *                          should have write permissions to this directory, and this should not
+   *                          be a subdirectory of rootdir. After the job is finished, restore
+   *                          directory can be deleted.
    * @throws IOException When setting up the details fails.
    * @see TableSnapshotInputFormat
    */
   public static void initTableSnapshotMapJob(String snapshotName, String columns,
-      Class<? extends TableMap> mapper,
-      Class<?> outputKeyClass,
-      Class<?> outputValueClass, JobConf job,
-      boolean addDependencyJars, Path tmpRestoreDir)
-  throws IOException {
+    Class<? extends TableMap> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+    JobConf job, boolean addDependencyJars, Path tmpRestoreDir) throws IOException {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapJob(snapshotName, columns, mapper, outputKeyClass, outputValueClass, job,
       addDependencyJars, TableSnapshotInputFormat.class);
@@ -191,97 +174,81 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
-   * and read directly from snapshot files.
-   *
-   * @param snapshotName The name of the snapshot (of a table) to read from.
-   * @param columns  The columns to scan.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
-   * @param outputValueClass  The class of the output value.
-   * @param jobConf  The current job to adjust.  Make sure the passed job is
-   * carrying all necessary HBase configuration.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
-   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
-   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
-   * After the job is finished, restore directory can be deleted.
-   * @param splitAlgo algorithm to split
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers and read directly
+   * from snapshot files.
+   * @param snapshotName       The name of the snapshot (of a table) to read from.
+   * @param columns            The columns to scan.
+   * @param mapper             The mapper class to use.
+   * @param outputKeyClass     The class of the output key.
+   * @param outputValueClass   The class of the output value.
+   * @param jobConf            The current job to adjust. Make sure the passed job is carrying all
+   *                           necessary HBase configuration.
+   * @param addDependencyJars  upload HBase jars and jars for any of the configured job classes via
+   *                           the distributed cache (tmpjars).
+   * @param tmpRestoreDir      a temporary directory to copy the snapshot files into. Current user
+   *                           should have write permissions to this directory, and this should not
+   *                           be a subdirectory of rootdir. After the job is finished, restore
+   *                           directory can be deleted.
+   * @param splitAlgo          algorithm to split
    * @param numSplitsPerRegion how many input splits to generate per one region
    * @throws IOException When setting up the details fails.
    * @see TableSnapshotInputFormat
    */
   public static void initTableSnapshotMapJob(String snapshotName, String columns,
-                                             Class<? extends TableMap> mapper,
-                                             Class<?> outputKeyClass,
-                                             Class<?> outputValueClass, JobConf jobConf,
-                                             boolean addDependencyJars, Path tmpRestoreDir,
-                                             RegionSplitter.SplitAlgorithm splitAlgo,
-                                             int numSplitsPerRegion)
-          throws IOException {
+    Class<? extends TableMap> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+    JobConf jobConf, boolean addDependencyJars, Path tmpRestoreDir,
+    RegionSplitter.SplitAlgorithm splitAlgo, int numSplitsPerRegion) throws IOException {
     TableSnapshotInputFormat.setInput(jobConf, snapshotName, tmpRestoreDir, splitAlgo,
-            numSplitsPerRegion);
+      numSplitsPerRegion);
     initTableMapJob(snapshotName, columns, mapper, outputKeyClass, outputValueClass, jobConf,
-            addDependencyJars, TableSnapshotInputFormat.class);
+      addDependencyJars, TableSnapshotInputFormat.class);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.resetCacheConfig(jobConf);
   }
 
-
   /**
-   * Use this before submitting a TableReduce job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table  The output table.
-   * @param reducer  The reducer class to use.
-   * @param job  The current job configuration to adjust.
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table   The output table.
+   * @param reducer The reducer class to use.
+   * @param job     The current job configuration to adjust.
    * @throws IOException When determining the region count fails.
    */
-  public static void initTableReduceJob(String table,
-    Class<? extends TableReduce> reducer, JobConf job)
-  throws IOException {
+  public static void initTableReduceJob(String table, Class<? extends TableReduce> reducer,
+    JobConf job) throws IOException {
     initTableReduceJob(table, reducer, job, null);
   }
 
   /**
-   * Use this before submitting a TableReduce job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table  The output table.
-   * @param reducer  The reducer class to use.
-   * @param job  The current job configuration to adjust.
-   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
-   * default partitioner.
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table       The output table.
+   * @param reducer     The reducer class to use.
+   * @param job         The current job configuration to adjust.
+   * @param partitioner Partitioner to use. Pass <code>null</code> to use default partitioner.
    * @throws IOException When determining the region count fails.
    */
-  public static void initTableReduceJob(String table,
-    Class<? extends TableReduce> reducer, JobConf job, Class partitioner)
-  throws IOException {
+  public static void initTableReduceJob(String table, Class<? extends TableReduce> reducer,
+    JobConf job, Class partitioner) throws IOException {
     initTableReduceJob(table, reducer, job, partitioner, true);
   }
 
   /**
-   * Use this before submitting a TableReduce job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table  The output table.
-   * @param reducer  The reducer class to use.
-   * @param job  The current job configuration to adjust.
-   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
-   * default partitioner.
-   * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
+   * Use this before submitting a TableReduce job. It will appropriately set up the JobConf.
+   * @param table             The output table.
+   * @param reducer           The reducer class to use.
+   * @param job               The current job configuration to adjust.
+   * @param partitioner       Partitioner to use. Pass <code>null</code> to use default partitioner.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured job classes via
+   *                          the distributed cache (tmpjars).
    * @throws IOException When determining the region count fails.
    */
-  public static void initTableReduceJob(String table,
-    Class<? extends TableReduce> reducer, JobConf job, Class partitioner,
-    boolean addDependencyJars) throws IOException {
+  public static void initTableReduceJob(String table, Class<? extends TableReduce> reducer,
+    JobConf job, Class partitioner, boolean addDependencyJars) throws IOException {
     job.setOutputFormat(TableOutputFormat.class);
     job.setReducerClass(reducer);
     job.set(TableOutputFormat.OUTPUT_TABLE, table);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Put.class);
     job.setStrings("io.serializations", job.get("io.serializations"),
-        MutationSerialization.class.getName(), ResultSerialization.class.getName());
+      MutationSerialization.class.getName(), ResultSerialization.class.getName());
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
       int regions = getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
@@ -322,11 +289,10 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Ensures that the given number of reduce tasks for the given job
-   * configuration does not exceed the number of regions for the given table.
-   *
-   * @param table  The table to get the region count for.
-   * @param job  The current job configuration to adjust.
+   * Ensures that the given number of reduce tasks for the given job configuration does not exceed
+   * the number of regions for the given table.
+   * @param table The table to get the region count for.
+   * @param job   The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
   // Used by tests.
@@ -338,11 +304,10 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Ensures that the given number of map tasks for the given job
-   * configuration does not exceed the number of regions for the given table.
-   *
-   * @param table  The table to get the region count for.
-   * @param job  The current job configuration to adjust.
+   * Ensures that the given number of map tasks for the given job configuration does not exceed the
+   * number of regions for the given table.
+   * @param table The table to get the region count for.
+   * @param job   The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
   // Used by tests.
@@ -354,11 +319,10 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets the number of reduce tasks for the given job configuration to the
-   * number of regions the given table has.
-   *
-   * @param table  The table to get the region count for.
-   * @param job  The current job configuration to adjust.
+   * Sets the number of reduce tasks for the given job configuration to the number of regions the
+   * given table has.
+   * @param table The table to get the region count for.
+   * @param job   The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
   public static void setNumReduceTasks(String table, JobConf job) throws IOException {
@@ -366,11 +330,10 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets the number of map tasks for the given job configuration to the
-   * number of regions the given table has.
-   *
-   * @param table  The table to get the region count for.
-   * @param job  The current job configuration to adjust.
+   * Sets the number of map tasks for the given job configuration to the number of regions the given
+   * table has.
+   * @param table The table to get the region count for.
+   * @param job   The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
   public static void setNumMapTasks(String table, JobConf job) throws IOException {
@@ -378,13 +341,11 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets the number of rows to return and cache with each scanner iteration.
-   * Higher caching values will enable faster mapreduce jobs at the expense of
-   * requiring more heap to contain the cached rows.
-   *
-   * @param job The current job configuration to adjust.
-   * @param batchSize The number of rows to return in batch with each scanner
-   * iteration.
+   * Sets the number of rows to return and cache with each scanner iteration. Higher caching values
+   * will enable faster mapreduce jobs at the expense of requiring more heap to contain the cached
+   * rows.
+   * @param job       The current job configuration to adjust.
+   * @param batchSize The number of rows to return in batch with each scanner iteration.
    */
   public static void setScannerCaching(JobConf job, int batchSize) {
     job.setInt("hbase.client.scanner.caching", batchSize);
@@ -395,18 +356,13 @@ public class TableMapReduceUtil {
    */
   public static void addDependencyJars(JobConf job) throws IOException {
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addHBaseDependencyJars(job);
-    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(
-      job,
-      job.getMapOutputKeyClass(),
-      job.getMapOutputValueClass(),
-      job.getOutputKeyClass(),
-      job.getOutputValueClass(),
-      job.getPartitionerClass(),
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(job,
+      job.getMapOutputKeyClass(), job.getMapOutputValueClass(), job.getOutputKeyClass(),
+      job.getOutputValueClass(), job.getPartitionerClass(),
       job.getClass("mapred.input.format.class", TextInputFormat.class, InputFormat.class),
       job.getClass("mapred.output.format.class", TextOutputFormat.class, OutputFormat.class),
       job.getCombinerClass());
   }
-
 
   private static int getRegionCount(Configuration conf, TableName tableName) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf);

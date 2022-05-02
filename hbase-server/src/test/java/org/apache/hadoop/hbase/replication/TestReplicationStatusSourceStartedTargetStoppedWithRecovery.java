@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
-    extends TestReplicationBase {
+  extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

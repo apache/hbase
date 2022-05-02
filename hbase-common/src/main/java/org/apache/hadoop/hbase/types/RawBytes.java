@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,10 +23,9 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@code DataType} for interacting with variable-length values
- * encoded using {@link Bytes#putBytes(byte[], int, byte[], int, int)}.
- * Intended to make it easier to transition away from direct use of
- * {@link Bytes}.
+ * An {@code DataType} for interacting with variable-length values encoded using
+ * {@link Bytes#putBytes(byte[], int, byte[], int, int)}. Intended to make it easier to transition
+ * away from direct use of {@link Bytes}.
  * @see Bytes#putBytes(byte[], int, byte[], int, int)
  * @see RawBytesTerminated
  * @see RawBytesFixedLength
@@ -58,7 +57,6 @@ public class RawBytes implements DataType<byte[]> {
 
   /**
    * Creates a new {@link DataType} with variable-length values.
-   *
    * @param order the {@link Order} to use
    */
   public RawBytes(Order order) {
@@ -114,8 +112,7 @@ public class RawBytes implements DataType<byte[]> {
 
   /**
    * Read a {@code byte[]} from the buffer {@code src}.
-   *
-   * @param src the {@link PositionedByteRange} to read the {@code byte[]} from
+   * @param src    the {@link PositionedByteRange} to read the {@code byte[]} from
    * @param length the length to read from the buffer
    * @return the {@code byte[]} read from the buffer
    */
@@ -127,9 +124,8 @@ public class RawBytes implements DataType<byte[]> {
 
   /**
    * Write {@code val} into {@code dst}, respecting {@code voff} and {@code vlen}.
-   *
-   * @param dst the {@link PositionedByteRange} to write to
-   * @param val the value to write to {@code dst}
+   * @param dst  the {@link PositionedByteRange} to write to
+   * @param val  the value to write to {@code dst}
    * @param voff the offset in {@code dst} where to write {@code val} to
    * @param vlen the length of {@code val}
    * @return number of bytes written

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -36,7 +34,9 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+
 /**
  * Handles opening of a region on a region server.
  * <p>
@@ -55,15 +55,14 @@ public class OpenRegionHandler extends EventHandler {
   private final TableDescriptor htd;
   private final long masterSystemTime;
 
-  public OpenRegionHandler(final Server server,
-      final RegionServerServices rsServices, RegionInfo regionInfo,
-      TableDescriptor htd, long masterSystemTime) {
+  public OpenRegionHandler(final Server server, final RegionServerServices rsServices,
+    RegionInfo regionInfo, TableDescriptor htd, long masterSystemTime) {
     this(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_REGION);
   }
 
-  protected OpenRegionHandler(final Server server,
-                              final RegionServerServices rsServices, final RegionInfo regionInfo,
-                              final TableDescriptor htd, long masterSystemTime, EventType eventType) {
+  protected OpenRegionHandler(final Server server, final RegionServerServices rsServices,
+    final RegionInfo regionInfo, final TableDescriptor htd, long masterSystemTime,
+    EventType eventType) {
     super(server, eventType);
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
@@ -93,28 +92,30 @@ public class OpenRegionHandler extends EventHandler {
 
       // Check that this region is not already online
       if (this.rsServices.getRegion(encodedName) != null) {
-        LOG.error("Region " + encodedName +
-            " was already online when we started processing the opening. " +
-            "Marking this new attempt as failed");
+        LOG.error(
+          "Region " + encodedName + " was already online when we started processing the opening. "
+            + "Marking this new attempt as failed");
         return;
       }
 
       // Check that we're still supposed to open the region.
-      // If fails, just return.  Someone stole the region from under us.
-      if (!isRegionStillOpening()){
+      // If fails, just return. Someone stole the region from under us.
+      if (!isRegionStillOpening()) {
         LOG.error("Region " + encodedName + " opening cancelled");
         return;
       }
 
-      // Open region.  After a successful open, failures in subsequent
+      // Open region. After a successful open, failures in subsequent
       // processing needs to do a close as part of cleanup.
       region = openRegion();
       if (region == null) {
         return;
       }
 
-      if (!updateMeta(region, masterSystemTime) || this.server.isStopped() ||
-          this.rsServices.isStopping()) {
+      if (
+        !updateMeta(region, masterSystemTime) || this.server.isStopped()
+          || this.rsServices.isStopping()
+      ) {
         return;
       }
 
@@ -126,30 +127,30 @@ public class OpenRegionHandler extends EventHandler {
       this.rsServices.addRegion(region);
       openSuccessful = true;
 
-      // Done!  Successful region open
+      // Done! Successful region open
       LOG.debug("Opened " + regionName + " on " + this.server.getServerName());
     } finally {
       // Do all clean up here
       if (!openSuccessful) {
         doCleanUpOnFailedOpen(region);
       }
-      final Boolean current = this.rsServices.getRegionsInTransitionInRS().
-          remove(this.regionInfo.getEncodedNameAsBytes());
+      final Boolean current = this.rsServices.getRegionsInTransitionInRS()
+        .remove(this.regionInfo.getEncodedNameAsBytes());
 
       // Let's check if we have met a race condition on open cancellation....
       // A better solution would be to not have any race condition.
       // this.rsServices.getRegionsInTransitionInRS().remove(
-      //  this.regionInfo.getEncodedNameAsBytes(), Boolean.TRUE);
+      // this.regionInfo.getEncodedNameAsBytes(), Boolean.TRUE);
       // would help.
       if (openSuccessful) {
         if (current == null) { // Should NEVER happen, but let's be paranoid.
           LOG.error("Bad state: we've just opened a region that was NOT in transition. Region="
-              + regionName);
+            + regionName);
         } else if (Boolean.FALSE.equals(current)) { // Can happen, if we're
                                                     // really unlucky.
           LOG.error("Race condition: we've finished to open a region, while a close was requested "
-              + " on region=" + regionName + ". It can be a critical error, as a region that"
-              + " should be closed is now opened. Closing it now");
+            + " on region=" + regionName + ". It can be a critical error, as a region that"
+            + " should be closed is now opened. Closing it now");
           cleanupFailedOpen(region);
         }
       }
@@ -168,27 +169,28 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   /**
-   * Update ZK or META.  This can take a while if for example the
-   * hbase:meta is not available -- if server hosting hbase:meta crashed and we are
-   * waiting on it to come back -- so run in a thread and keep updating znode
-   * state meantime so master doesn't timeout our region-in-transition.
+   * Update ZK or META. This can take a while if for example the hbase:meta is not available -- if
+   * server hosting hbase:meta crashed and we are waiting on it to come back -- so run in a thread
+   * and keep updating znode state meantime so master doesn't timeout our region-in-transition.
    * Caller must cleanup region if this fails.
    */
   private boolean updateMeta(final HRegion r, long masterSystemTime) {
     if (this.server.isStopped() || this.rsServices.isStopping()) {
       return false;
     }
-    // Object we do wait/notify on.  Make it boolean.  If set, we're done.
+    // Object we do wait/notify on. Make it boolean. If set, we're done.
     // Else, wait.
     final AtomicBoolean signaller = new AtomicBoolean(false);
-    PostOpenDeployTasksThread t = new PostOpenDeployTasksThread(r,
-      this.server, this.rsServices, signaller, masterSystemTime);
+    PostOpenDeployTasksThread t =
+      new PostOpenDeployTasksThread(r, this.server, this.rsServices, signaller, masterSystemTime);
     t.start();
     // Post open deploy task:
-    //   meta => update meta location in ZK
-    //   other region => update meta
-    while (!signaller.get() && t.isAlive() && !this.server.isStopped() &&
-        !this.rsServices.isStopping() && isRegionStillOpening()) {
+    // meta => update meta location in ZK
+    // other region => update meta
+    while (
+      !signaller.get() && t.isAlive() && !this.server.isStopped() && !this.rsServices.isStopping()
+        && isRegionStillOpening()
+    ) {
       synchronized (signaller) {
         try {
           // Wait for 10 seconds, so that server shutdown
@@ -199,8 +201,8 @@ public class OpenRegionHandler extends EventHandler {
         }
       }
     }
-    // Is thread still alive?  We may have left above loop because server is
-    // stopping or we timed out the edit.  Is so, interrupt it.
+    // Is thread still alive? We may have left above loop because server is
+    // stopping or we timed out the edit. Is so, interrupt it.
     if (t.isAlive()) {
       if (!signaller.get()) {
         // Thread still running; interrupt
@@ -210,20 +212,19 @@ public class OpenRegionHandler extends EventHandler {
       try {
         t.join();
       } catch (InterruptedException ie) {
-        LOG.warn("Interrupted joining " +
-          r.getRegionInfo().getRegionNameAsString(), ie);
+        LOG.warn("Interrupted joining " + r.getRegionInfo().getRegionNameAsString(), ie);
         Thread.currentThread().interrupt();
       }
     }
 
-    // Was there an exception opening the region?  This should trigger on
-    // InterruptedException too.  If so, we failed.
+    // Was there an exception opening the region? This should trigger on
+    // InterruptedException too. If so, we failed.
     return (!Thread.interrupted() && t.getException() == null);
   }
 
   /**
-   * Thread to run region post open tasks. Call {@link #getException()} after the thread finishes
-   * to check for exceptions running
+   * Thread to run region post open tasks. Call {@link #getException()} after the thread finishes to
+   * check for exceptions running
    * {@link RegionServerServices#postOpenDeployTasks(PostOpenDeployContext)}
    */
   static class PostOpenDeployTasksThread extends Thread {
@@ -235,7 +236,7 @@ public class OpenRegionHandler extends EventHandler {
     private final long masterSystemTime;
 
     PostOpenDeployTasksThread(final HRegion region, final Server server,
-        final RegionServerServices services, final AtomicBoolean signaller, long masterSystemTime) {
+      final RegionServerServices services, final AtomicBoolean signaller, long masterSystemTime) {
       super("PostOpenDeployTasks:" + region.getRegionInfo().getEncodedName());
       this.setDaemon(true);
       this.server = server;
@@ -251,8 +252,8 @@ public class OpenRegionHandler extends EventHandler {
         this.services.postOpenDeployTasks(
           new PostOpenDeployContext(region, Procedure.NO_PROC_ID, masterSystemTime));
       } catch (Throwable e) {
-        String msg = "Exception running postOpenDeployTasks; region=" +
-          this.region.getRegionInfo().getEncodedName();
+        String msg = "Exception running postOpenDeployTasks; region="
+          + this.region.getRegionInfo().getEncodedName();
         this.exception = e;
         if (e instanceof IOException && isRegionStillOpening(region.getRegionInfo(), services)) {
           server.abort(msg, e);
@@ -281,28 +282,25 @@ public class OpenRegionHandler extends EventHandler {
   private HRegion openRegion() {
     HRegion region = null;
     try {
-      // Instantiate the region.  This also periodically tickles OPENING
+      // Instantiate the region. This also periodically tickles OPENING
       // state so master doesn't timeout this region in transition.
-      region = HRegion.openHRegion(this.regionInfo, this.htd,
-        this.rsServices.getWAL(this.regionInfo),
-        this.server.getConfiguration(),
-        this.rsServices,
-        new CancelableProgressable() {
-          @Override
-          public boolean progress() {
-            if (!isRegionStillOpening()) {
-              LOG.warn("Open region aborted since it isn't opening any more");
-              return false;
+      region =
+        HRegion.openHRegion(this.regionInfo, this.htd, this.rsServices.getWAL(this.regionInfo),
+          this.server.getConfiguration(), this.rsServices, new CancelableProgressable() {
+            @Override
+            public boolean progress() {
+              if (!isRegionStillOpening()) {
+                LOG.warn("Open region aborted since it isn't opening any more");
+                return false;
+              }
+              return true;
             }
-            return true;
-          }
-        });
+          });
     } catch (Throwable t) {
       // We failed open. Our caller will see the 'null' return value
       // and transition the node back to FAILED_OPEN. If that fails,
       // we rely on the Timeout Monitor in the master to reassign.
-      LOG.error(
-          "Failed open of region=" + this.regionInfo.getRegionNameAsString(), t);
+      LOG.error("Failed open of region=" + this.regionInfo.getRegionNameAsString(), t);
     }
     return region;
   }
@@ -314,8 +312,8 @@ public class OpenRegionHandler extends EventHandler {
     }
   }
 
-  private static boolean isRegionStillOpening(
-      RegionInfo regionInfo, RegionServerServices rsServices) {
+  private static boolean isRegionStillOpening(RegionInfo regionInfo,
+    RegionServerServices rsServices) {
     byte[] encodedName = regionInfo.getEncodedNameAsBytes();
     Boolean action = rsServices.getRegionsInTransitionInRS().get(encodedName);
     return Boolean.TRUE.equals(action); // true means opening for RIT

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,32 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
- * methods can go here, helping to reduce boiler plate in an ever-expanding filter
- * library.
- *
- * If you could instantiate FilterBase, it would end up being a "null" filter -
- * that is one that never filters anything.
+ * Abstract base class to help you implement new Filters. Common "ignore" or NOOP type methods can
+ * go here, helping to reduce boiler plate in an ever-expanding filter library. If you could
+ * instantiate FilterBase, it would end up being a "null" filter - that is one that never filters
+ * anything.
  */
 @InterfaceAudience.Private // TODO add filter limited private level
 public abstract class FilterBase extends Filter {
 
   /**
-   * Filters that are purely stateless and do nothing in their reset() methods can inherit
-   * this null/empty implementation.
-   *
-   * {@inheritDoc}
+   * Filters that are purely stateless and do nothing in their reset() methods can inherit this
+   * null/empty implementation. {@inheritDoc}
    */
   @Override
   public void reset() throws IOException {
@@ -53,10 +46,8 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Filters that never filter all remaining can inherit this implementation that
-   * never stops the filter early.
-   *
-   * {@inheritDoc}
+   * Filters that never filter all remaining can inherit this implementation that never stops the
+   * filter early. {@inheritDoc}
    */
   @Override
   public boolean filterAllRemaining() throws IOException {
@@ -64,9 +55,7 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * By default no transformation takes place
-   *
-   * {@inheritDoc}
+   * By default no transformation takes place {@inheritDoc}
    */
   @Override
   public Cell transformCell(Cell v) throws IOException {
@@ -74,20 +63,16 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Filters that never filter by modifying the returned List of Cells can
-   * inherit this implementation that does nothing.
-   *
-   * {@inheritDoc}
+   * Filters that never filter by modifying the returned List of Cells can inherit this
+   * implementation that does nothing. {@inheritDoc}
    */
   @Override
   public void filterRowCells(List<Cell> ignored) throws IOException {
   }
 
   /**
-   * Fitlers that never filter by modifying the returned List of Cells can
-   * inherit this implementation that does nothing.
-   *
-   * {@inheritDoc}
+   * Fitlers that never filter by modifying the returned List of Cells can inherit this
+   * implementation that does nothing. {@inheritDoc}
    */
   @Override
   public boolean hasFilterRow() {
@@ -96,9 +81,7 @@ public abstract class FilterBase extends Filter {
 
   /**
    * Filters that never filter by rows based on previously gathered state from
-   * {@link #filterCell(Cell)} can inherit this implementation that
-   * never filters a row.
-   *
+   * {@link #filterCell(Cell)} can inherit this implementation that never filters a row.
    * {@inheritDoc}
    */
   @Override
@@ -107,10 +90,8 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Filters that are not sure which key must be next seeked to, can inherit
-   * this implementation that, by default, returns a null Cell.
-   *
-   * {@inheritDoc}
+   * Filters that are not sure which key must be next seeked to, can inherit this implementation
+   * that, by default, returns a null Cell. {@inheritDoc}
    */
   @Override
   public Cell getNextCellHint(Cell currentCell) throws IOException {
@@ -118,10 +99,8 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * By default, we require all scan's column families to be present. Our
-   * subclasses may be more precise.
-   *
-   * {@inheritDoc}
+   * By default, we require all scan's column families to be present. Our subclasses may be more
+   * precise. {@inheritDoc}
    */
   @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
@@ -134,7 +113,7 @@ public abstract class FilterBase extends Filter {
    * @param filterArguments the filter's arguments
    * @return constructed filter object
    */
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     throw new IllegalArgumentException("This method has not been implemented");
   }
 
@@ -155,11 +134,9 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Default implementation so that writers of custom filters aren't forced to implement.
-   *
-   * @param other
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Default implementation so that writers of custom filters aren't forced to implement. n
+   * * @return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter other) {

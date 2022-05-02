@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 
 usage="Usage: considerAsDead.sh --hostname serverName"
 
@@ -50,12 +50,12 @@ do
     rs_parts=(${rs//,/ })
     hostname=${rs_parts[0]}
     echo $deadhost
-    echo $hostname   
+    echo $hostname
     if [ "$deadhost" == "$hostname" ]; then
 		znode="$zkrs/$rs"
 		echo "ZNode Deleting:" $znode
 		$bin/hbase zkcli delete $znode > /dev/null 2>&1
 		sleep 1
-		ssh $HBASE_SSH_OPTS $hostname $remote_cmd 2>&1 | sed "s/^/$hostname: /"	
-    fi   
+		ssh $HBASE_SSH_OPTS $hostname $remote_cmd 2>&1 | sed "s/^/$hostname: /"
+    fi
 done

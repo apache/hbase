@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,44 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.nio.HBaseReferenceCounted;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Cacheable is an interface that allows for an object to be cached. If using an
- * on heap cache, just use heapsize. If using an off heap cache, Cacheable
- * provides methods for serialization of the object.
- *
- * Some objects cannot be moved off heap, those objects will return a
- * getSerializedLength() of 0.
- *
+ * Cacheable is an interface that allows for an object to be cached. If using an on heap cache, just
+ * use heapsize. If using an off heap cache, Cacheable provides methods for serialization of the
+ * object. Some objects cannot be moved off heap, those objects will return a getSerializedLength()
+ * of 0.
  */
 @InterfaceAudience.Private
 public interface Cacheable extends HeapSize, HBaseReferenceCounted {
   /**
-   * Returns the length of the ByteBuffer required to serialized the object. If the
-   * object cannot be serialized, it should return 0.
-   *
+   * Returns the length of the ByteBuffer required to serialized the object. If the object cannot be
+   * serialized, it should return 0.
    * @return int length in bytes of the serialized form or 0 if the object cannot be cached.
    */
   int getSerializedLength();
 
   /**
    * Serializes its data into destination.
-   * @param destination Where to serialize to
+   * @param destination              Where to serialize to
    * @param includeNextBlockMetadata Whether to include nextBlockMetadata in the Cache block.
    */
   void serialize(ByteBuffer destination, boolean includeNextBlockMetadata);
 
   /**
    * Returns CacheableDeserializer instance which reconstructs original object from ByteBuffer.
-   *
    * @return CacheableDeserialzer instance.
    */
   CacheableDeserializer<Cacheable> getDeserializer();

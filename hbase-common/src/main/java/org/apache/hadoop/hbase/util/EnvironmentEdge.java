@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,16 +20,14 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Has some basic interaction with the environment. Alternate implementations
- * can be used where required (eg in tests).
- *
+ * Has some basic interaction with the environment. Alternate implementations can be used where
+ * required (eg in tests).
  * @see EnvironmentEdgeManager
  */
 @InterfaceAudience.Private
 public interface EnvironmentEdge {
   /**
    * Returns the currentTime.
-   *
    * @return Current time.
    */
   long currentTime();

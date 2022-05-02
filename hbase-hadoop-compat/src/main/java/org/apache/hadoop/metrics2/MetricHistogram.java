@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Metrics Histogram interface.  Implementing classes will expose computed
- * quartile values through the metrics system.
+ * Metrics Histogram interface. Implementing classes will expose computed quartile values through
+ * the metrics system.
  */
 @InterfaceAudience.Private
 public interface MetricHistogram {
 
-  //Strings used to create metrics names.
+  // Strings used to create metrics names.
   String NUM_OPS_METRIC_NAME = "_num_ops";
   String MIN_METRIC_NAME = "_min";
   String MAX_METRIC_NAME = "_max";

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when the size of the rpc request received by the server is too large.
- *
- * On receiving such an exception, the client does not retry the offending rpc.
+ * Thrown when the size of the rpc request received by the server is too large. On receiving such an
+ * exception, the client does not retry the offending rpc.
  * @since 1.3.0
  */
 @InterfaceAudience.Public

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureExecutor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureExecutor.class);
+    HBaseClassTestRule.forClass(TestProcedureExecutor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureExecutor.class);
 
@@ -155,8 +155,8 @@ public class TestProcedureExecutor {
       if (procExecutor.getWorkerThreadCount() == expectedThreads) {
         break;
       }
-      LOG.debug("waiting for thread count=" + expectedThreads +
-        " current=" + procExecutor.getWorkerThreadCount());
+      LOG.debug("waiting for thread count=" + expectedThreads + " current="
+        + procExecutor.getWorkerThreadCount());
       Threads.sleepWithoutInterrupt(250);
     }
     return procExecutor.getWorkerThreadCount();
@@ -189,5 +189,6 @@ public class TestProcedureExecutor {
     }
   }
 
-  private static class TestProcEnv { }
+  private static class TestProcEnv {
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestThreads {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThreads.class);
+    HBaseClassTestRule.forClass(TestThreads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThreads.class);
 
@@ -72,14 +72,13 @@ public class TestThreads {
     sleeper.interrupt();
     sleeper.join();
 
-    assertTrue("sleepWithoutInterrupt did not preserve the thread's " +
-        "interrupted status", wasInterrupted.get());
+    assertTrue("sleepWithoutInterrupt did not preserve the thread's " + "interrupted status",
+      wasInterrupted.get());
 
     long timeElapsed = EnvironmentEdgeManager.currentTime() - startTime;
     // We expect to wait at least SLEEP_TIME_MS, but we can wait more if there is a GC.
-    assertTrue("Elapsed time " + timeElapsed + " ms is out of the expected " +
-        " sleep time of " + SLEEP_TIME_MS, SLEEP_TIME_MS - timeElapsed < TOLERANCE_MS);
-    LOG.debug("Target sleep time: " + SLEEP_TIME_MS + ", time elapsed: " +
-        timeElapsed);
+    assertTrue("Elapsed time " + timeElapsed + " ms is out of the expected " + " sleep time of "
+      + SLEEP_TIME_MS, SLEEP_TIME_MS - timeElapsed < TOLERANCE_MS);
+    LOG.debug("Target sleep time: " + SLEEP_TIME_MS + ", time elapsed: " + timeElapsed);
   }
 }

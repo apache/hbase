@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
@@ -23,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
@@ -36,12 +36,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Bytes;
 
 /**
- * Generate list of key values which are very useful to test data block encoding
- * and compression.
+ * Generate list of key values which are very useful to test data block encoding and compression.
  */
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="RV_ABSOLUTE_VALUE_OF_RANDOM_INT",
-    justification="Should probably fix")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "RV_ABSOLUTE_VALUE_OF_RANDOM_INT",
+    justification = "Should probably fix")
 @InterfaceAudience.Private
 public class RedundantKVGenerator {
   // row settings
@@ -70,51 +68,31 @@ public class RedundantKVGenerator {
    * Default constructor, assumes all parameters from class constants.
    */
   public RedundantKVGenerator() {
-    this(new Random(42L),
-        DEFAULT_NUMBER_OF_ROW_PREFIXES,
-        DEFAULT_AVERAGE_PREFIX_LENGTH,
-        DEFAULT_PREFIX_LENGTH_VARIANCE,
-        DEFAULT_AVERAGE_SUFFIX_LENGTH,
-        DEFAULT_SUFFIX_LENGTH_VARIANCE,
-        DEFAULT_NUMBER_OF_ROW,
+    this(new Random(42L), DEFAULT_NUMBER_OF_ROW_PREFIXES, DEFAULT_AVERAGE_PREFIX_LENGTH,
+      DEFAULT_PREFIX_LENGTH_VARIANCE, DEFAULT_AVERAGE_SUFFIX_LENGTH, DEFAULT_SUFFIX_LENGTH_VARIANCE,
+      DEFAULT_NUMBER_OF_ROW,
 
-        DEFAULT_CHANCE_FOR_SAME_QUALIFIER,
-        DEFAULT_CHANCE_FOR_SIMILIAR_QUALIFIER,
-        DEFAULT_AVERAGE_QUALIFIER_LENGTH,
-        DEFAULT_QUALIFIER_LENGTH_VARIANCE,
+      DEFAULT_CHANCE_FOR_SAME_QUALIFIER, DEFAULT_CHANCE_FOR_SIMILIAR_QUALIFIER,
+      DEFAULT_AVERAGE_QUALIFIER_LENGTH, DEFAULT_QUALIFIER_LENGTH_VARIANCE,
 
-        DEFAULT_COLUMN_FAMILY_LENGTH,
-        DEFAULT_VALUE_LENGTH,
-        DEFAULT_CHANCE_FOR_ZERO_VALUE,
+      DEFAULT_COLUMN_FAMILY_LENGTH, DEFAULT_VALUE_LENGTH, DEFAULT_CHANCE_FOR_ZERO_VALUE,
 
-        DEFAULT_BASE_TIMESTAMP_DIVIDE,
-        DEFAULT_TIMESTAMP_DIFF_SIZE
-    );
+      DEFAULT_BASE_TIMESTAMP_DIVIDE, DEFAULT_TIMESTAMP_DIFF_SIZE);
   }
 
   /**
    * Various configuration options for generating key values
    * @param randomizer pick things by random
    */
-  public RedundantKVGenerator(Random randomizer,
-      int numberOfRowPrefixes,
-      int averagePrefixLength,
-      int prefixLengthVariance,
-      int averageSuffixLength,
-      int suffixLengthVariance,
-      int numberOfRows,
+  public RedundantKVGenerator(Random randomizer, int numberOfRowPrefixes, int averagePrefixLength,
+    int prefixLengthVariance, int averageSuffixLength, int suffixLengthVariance, int numberOfRows,
 
-      float chanceForSameQualifier,
-      float chanceForSimiliarQualifier,
-      int averageQualifierLength,
-      int qualifierLengthVariance,
+    float chanceForSameQualifier, float chanceForSimiliarQualifier, int averageQualifierLength,
+    int qualifierLengthVariance,
 
-      int columnFamilyLength,
-      int valueLength,
-      float chanceForZeroValue,
+    int columnFamilyLength, int valueLength, float chanceForZeroValue,
 
-      int baseTimestampDivide,
-      int timestampDiffSize) {
+    int baseTimestampDivide, int timestampDiffSize) {
     this.randomizer = randomizer;
 
     this.commonPrefix = DEFAULT_COMMON_PREFIX;
@@ -142,7 +120,7 @@ public class RedundantKVGenerator {
   private Random randomizer;
 
   // row settings
-  private byte[] commonPrefix; //global prefix before rowPrefixes
+  private byte[] commonPrefix; // global prefix before rowPrefixes
   private int numberOfRowPrefixes;
   private int averagePrefixLength;
   private int prefixLengthVariance;
@@ -172,8 +150,7 @@ public class RedundantKVGenerator {
     prefixes.add(new byte[0]);
     for (int i = 1; i < numberOfRowPrefixes; ++i) {
       int prefixLength = averagePrefixLength;
-      prefixLength += randomizer.nextInt(2 * prefixLengthVariance + 1) -
-          prefixLengthVariance;
+      prefixLength += randomizer.nextInt(2 * prefixLengthVariance + 1) - prefixLengthVariance;
       byte[] newPrefix = new byte[prefixLength];
       randomizer.nextBytes(newPrefix);
       prefixes.add(newPrefix);
@@ -183,11 +160,9 @@ public class RedundantKVGenerator {
     List<byte[]> rows = new ArrayList<>();
     for (int i = 0; i < numberOfRows; ++i) {
       int suffixLength = averageSuffixLength;
-      suffixLength += randomizer.nextInt(2 * suffixLengthVariance + 1) -
-          suffixLengthVariance;
+      suffixLength += randomizer.nextInt(2 * suffixLengthVariance + 1) - suffixLengthVariance;
       int randomPrefix = randomizer.nextInt(prefixes.size());
-      byte[] row = new byte[prefixes.get(randomPrefix).length +
-                            suffixLength];
+      byte[] row = new byte[prefixes.get(randomPrefix).length + suffixLength];
       byte[] rowWithCommonPrefix = Bytes.concat(commonPrefix, row);
       rows.add(rowWithCommonPrefix);
     }
@@ -215,7 +190,7 @@ public class RedundantKVGenerator {
     List<byte[]> rows = generateRows();
     Map<Integer, List<byte[]>> rowsToQualifier = new HashMap<>();
 
-    if(family==null){
+    if (family == null) {
       family = new byte[columnFamilyLength];
       randomizer.nextBytes(family);
     }
@@ -226,7 +201,7 @@ public class RedundantKVGenerator {
 
     for (int i = 0; i < howMany; ++i) {
       long timestamp = baseTimestamp;
-      if(timestampDiffSize > 0){
+      if (timestampDiffSize > 0) {
         timestamp += randomizer.nextInt(timestampDiffSize);
       }
       Integer rowId = randomizer.nextInt(rows.size());
@@ -236,11 +211,13 @@ public class RedundantKVGenerator {
       // occasionally completely different
       byte[] qualifier;
       float qualifierChance = randomizer.nextFloat();
-      if (!rowsToQualifier.containsKey(rowId)
-          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier) {
+      if (
+        !rowsToQualifier.containsKey(rowId)
+          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier
+      ) {
         int qualifierLength = averageQualifierLength;
-        qualifierLength += randomizer.nextInt(2 * qualifierLengthVariance + 1)
-            - qualifierLengthVariance;
+        qualifierLength +=
+          randomizer.nextInt(2 * qualifierLengthVariance + 1) - qualifierLengthVariance;
         qualifier = new byte[qualifierLength];
         randomizer.nextBytes(qualifier);
 
@@ -252,8 +229,8 @@ public class RedundantKVGenerator {
       } else if (qualifierChance > chanceForSameQualifier) {
         // similar qualifier
         List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
-        byte[] originalQualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers
-            .size()));
+        byte[] originalQualifier =
+          previousQualifiers.get(randomizer.nextInt(previousQualifiers.size()));
 
         qualifier = new byte[originalQualifier.length];
         int commonPrefix = randomizer.nextInt(qualifier.length);
@@ -277,7 +254,7 @@ public class RedundantKVGenerator {
 
       if (useTags) {
         result.add(new KeyValue(row, family, qualifier, timestamp, value,
-            new Tag[] { new ArrayBackedTag((byte) 1, "value1") }));
+          new Tag[] { new ArrayBackedTag((byte) 1, "value1") }));
       } else {
         result.add(new KeyValue(row, family, qualifier, timestamp, value));
       }
@@ -309,7 +286,7 @@ public class RedundantKVGenerator {
 
     for (int i = 0; i < howMany; ++i) {
       long timestamp = baseTimestamp;
-      if(timestampDiffSize > 0){
+      if (timestampDiffSize > 0) {
         timestamp += randomizer.nextInt(timestampDiffSize);
       }
       Integer rowId = randomizer.nextInt(rows.size());
@@ -319,11 +296,13 @@ public class RedundantKVGenerator {
       // occasionally completely different
       byte[] qualifier;
       float qualifierChance = randomizer.nextFloat();
-      if (!rowsToQualifier.containsKey(rowId)
-          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier) {
+      if (
+        !rowsToQualifier.containsKey(rowId)
+          || qualifierChance > chanceForSameQualifier + chanceForSimilarQualifier
+      ) {
         int qualifierLength = averageQualifierLength;
-        qualifierLength += randomizer.nextInt(2 * qualifierLengthVariance + 1)
-            - qualifierLengthVariance;
+        qualifierLength +=
+          randomizer.nextInt(2 * qualifierLengthVariance + 1) - qualifierLengthVariance;
         qualifier = new byte[qualifierLength];
         randomizer.nextBytes(qualifier);
 
@@ -335,8 +314,8 @@ public class RedundantKVGenerator {
       } else if (qualifierChance > chanceForSameQualifier) {
         // similar qualifier
         List<byte[]> previousQualifiers = rowsToQualifier.get(rowId);
-        byte[] originalQualifier = previousQualifiers.get(randomizer.nextInt(previousQualifiers
-            .size()));
+        byte[] originalQualifier =
+          previousQualifiers.get(randomizer.nextInt(previousQualifiers.size()));
 
         qualifier = new byte[originalQualifier.length];
         int commonPrefix = randomizer.nextInt(qualifier.length);
@@ -359,12 +338,12 @@ public class RedundantKVGenerator {
       }
       if (useTags) {
         KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value,
-            new Tag[] { new ArrayBackedTag((byte) 1, "value1") });
+          new Tag[] { new ArrayBackedTag((byte) 1, "value1") });
         ByteBuffer offheapKVBB = ByteBuffer.allocateDirect(keyValue.getLength());
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
         ByteBufferKeyValue offheapKV =
-            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
+          new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       } else {
         KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, value);
@@ -372,7 +351,7 @@ public class RedundantKVGenerator {
         ByteBufferUtils.copyFromArrayToBuffer(offheapKVBB, keyValue.getBuffer(),
           keyValue.getOffset(), keyValue.getLength());
         ByteBufferKeyValue offheapKV =
-            new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
+          new ExtendedOffheapKeyValue(offheapKVBB, 0, keyValue.getLength(), 0);
         result.add(offheapKV);
       }
     }
@@ -444,7 +423,7 @@ public class RedundantKVGenerator {
    * @return buffer with content from key values
    */
   public static ByteBuffer convertKvToByteBuffer(List<KeyValue> keyValues,
-      boolean includesMemstoreTS) {
+    boolean includesMemstoreTS) {
     int totalSize = 0;
     for (KeyValue kv : keyValues) {
       totalSize += kv.getLength();

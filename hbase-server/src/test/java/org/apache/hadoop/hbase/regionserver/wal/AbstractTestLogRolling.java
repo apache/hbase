@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +60,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test log deletion as logs are rolled.
  */
-public abstract class AbstractTestLogRolling  {
+public abstract class AbstractTestLogRolling {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
   protected HRegionServer server;
   protected String tableName;
@@ -71,9 +70,10 @@ public abstract class AbstractTestLogRolling  {
   protected Admin admin;
   protected SingleProcessHBaseCluster cluster;
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  @Rule public final TestName name = new TestName();
+  @Rule
+  public final TestName name = new TestName();
 
-  public AbstractTestLogRolling()  {
+  public AbstractTestLogRolling() {
     this.server = null;
     this.tableName = null;
 
@@ -133,7 +133,7 @@ public abstract class AbstractTestLogRolling  {
   }
 
   @After
-  public void tearDown() throws Exception  {
+  public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -145,7 +145,7 @@ public abstract class AbstractTestLogRolling  {
     Table table = createTestTable(this.tableName);
 
     server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-    for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
+    for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       doPut(table, i);
       if (i % 32 == 0) {
         // After every 32 writes sleep to let the log roller run
@@ -198,7 +198,8 @@ public abstract class AbstractTestLogRolling  {
     startAndWriteData();
     RegionInfo region = server.getRegions(TableName.valueOf(tableName)).get(0).getRegionInfo();
     final WAL log = server.getWAL(region);
-    LOG.info("after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) + " log files");
+    LOG.info(
+      "after writing there are " + AbstractFSWALProvider.getNumRolledLogFiles(log) + " log files");
     assertLogFileSize(log);
 
     // flush all regions
@@ -236,14 +237,13 @@ public abstract class AbstractTestLogRolling  {
     get.addFamily(HConstants.CATALOG_FAMILY);
     Result result = table.get(get);
     assertTrue(result.size() == 1);
-    assertTrue(Bytes.equals(value,
-                result.getValue(HConstants.CATALOG_FAMILY, null)));
+    assertTrue(Bytes.equals(value, result.getValue(HConstants.CATALOG_FAMILY, null)));
     LOG.info("Validated row " + row);
   }
 
   /**
-   * Tests that logs are deleted when some region has a compaction
-   * record in WAL and no other records. See HBASE-8597.
+   * Tests that logs are deleted when some region has a compaction record in WAL and no other
+   * records. See HBASE-8597.
    */
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
@@ -309,7 +309,7 @@ public abstract class AbstractTestLogRolling  {
   protected Table createTestTable(String tableName) throws IOException {
     // Create the test table and open it
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(getName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     admin.createTable(desc);
     return TEST_UTIL.getConnection().getTable(desc.getTableName());
   }

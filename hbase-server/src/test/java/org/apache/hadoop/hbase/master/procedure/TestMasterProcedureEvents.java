@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,12 +50,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterProcedureEvents {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterProcedureEvents.class);
+    HBaseClassTestRule.forClass(TestMasterProcedureEvents.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
 
@@ -91,7 +90,7 @@ public class TestMasterProcedureEvents {
 
   @After
   public void tearDown() throws Exception {
-    for (TableDescriptor htd: UTIL.getAdmin().listTableDescriptors()) {
+    for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       UTIL.deleteTable(htd.getTableName());
     }
@@ -118,7 +117,7 @@ public class TestMasterProcedureEvents {
   }
 
   private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent<?> event,
-      final Procedure<MasterProcedureEnv> proc) throws Exception {
+    final Procedure<MasterProcedureEnv> proc) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureScheduler();
 
@@ -136,7 +135,8 @@ public class TestMasterProcedureEvents {
 
     // wait until the event is in the queue (proc executed and got into suspended state)
     LOG.debug("wait procedure suspended on " + event);
-    while (event.getSuspendedProcedures().size() < 1) Thread.sleep(25);
+    while (event.getSuspendedProcedures().size() < 1)
+      Thread.sleep(25);
 
     // check that the proc is in the event queue
     LOG.debug("checking " + event + " size=" + event.getSuspendedProcedures().size());
@@ -155,8 +155,8 @@ public class TestMasterProcedureEvents {
     // check that nothing is in the event queue and the event is not suspended
     assertEquals(true, event.isReady());
     assertEquals(0, event.getSuspendedProcedures().size());
-    LOG.debug("completed execution of " + proc +
-      " pollCalls=" + (procSched.getPollCalls() - startPollCalls) +
-      " nullPollCalls=" + (procSched.getNullPollCalls() - startNullPollCalls));
+    LOG.debug(
+      "completed execution of " + proc + " pollCalls=" + (procSched.getPollCalls() - startPollCalls)
+        + " nullPollCalls=" + (procSched.getNullPollCalls() - startNullPollCalls));
   }
 }

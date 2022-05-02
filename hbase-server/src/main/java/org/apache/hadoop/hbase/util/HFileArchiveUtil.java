@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,8 +38,8 @@ public final class HFileArchiveUtil {
 
   /**
    * Get the directory to archive a store directory
-   * @param conf {@link Configuration} to read for the archive directory name
-   * @param tableName table name under which the store currently lives
+   * @param conf       {@link Configuration} to read for the archive directory name
+   * @param tableName  table name under which the store currently lives
    * @param regionName region encoded name under which the store currently lives
    * @param familyName name of the family in the store
    * @return {@link Path} to the directory to archive the given store or <tt>null</tt> if it should
@@ -54,10 +54,10 @@ public final class HFileArchiveUtil {
 
   /**
    * Get the directory to archive a store directory
-   * @param conf {@link Configuration} to read for the archive directory name.
-   * @param region parent region information under which the store currently lives
+   * @param conf     {@link Configuration} to read for the archive directory name.
+   * @param region   parent region information under which the store currently lives
    * @param tabledir directory for the table under which the store currently lives
-   * @param family name of the family in the store
+   * @param family   name of the family in the store
    * @return {@link Path} to the directory to archive the given store or <tt>null</tt> if it should
    *         not be archived
    */
@@ -68,7 +68,7 @@ public final class HFileArchiveUtil {
 
   /**
    * Gets the directory to archive a store directory.
-   * @param conf {@link Configuration} to read for the archive directory name.
+   * @param conf   {@link Configuration} to read for the archive directory name.
    * @param region parent region information under which the store currently lives
    * @param family name of the family in the store
    * @return {@link Path} to the directory to archive the given store or <tt>null</tt> if it should
@@ -87,8 +87,8 @@ public final class HFileArchiveUtil {
    * HDFS. This is mostly useful for archiving recovered edits, when
    * <b>hbase.region.archive.recovered.edits</b> is enabled.
    * @param rootDir {@link Path} the root dir under which archive path should be created.
-   * @param region parent region information under which the store currently lives
-   * @param family name of the family in the store
+   * @param region  parent region information under which the store currently lives
+   * @param family  name of the family in the store
    * @return {@link Path} to the WAL FS directory to archive the given store or <tt>null</tt> if it
    *         should not be archived
    */
@@ -121,8 +121,8 @@ public final class HFileArchiveUtil {
 
   /**
    * Get the archive directory for a given region under the specified table
-   * @param rootDir {@link Path} to the root directory where hbase files are stored (for building
-   *          the archive path)
+   * @param rootDir   {@link Path} to the root directory where hbase files are stored (for building
+   *                  the archive path)
    * @param tableName name of the table to archive. Cannot be null.
    * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
    *         should not be archived
@@ -140,8 +140,8 @@ public final class HFileArchiveUtil {
    * Get the path to the table's archive directory.
    * <p>
    * Generally of the form: /hbase/.archive/[tablename]
-   * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
-   *          the archive path)
+   * @param rootdir   {@link Path} to the root directory where hbase files are stored (for building
+   *                  the archive path)
    * @param tableName Name of the table to be archived. Cannot be null.
    * @return {@link Path} to the archive directory for the table
    */
@@ -153,7 +153,7 @@ public final class HFileArchiveUtil {
    * Get the path to the table archive directory based on the configured archive directory.
    * <p>
    * Assumed that the table should already be archived.
-   * @param conf {@link Configuration} to read the archive directory property. Can be null
+   * @param conf      {@link Configuration} to read the archive directory property. Can be null
    * @param tableName Name of the table to be archived. Cannot be null.
    * @return {@link Path} to the archive directory for the table
    */
@@ -166,7 +166,7 @@ public final class HFileArchiveUtil {
    * Get the full path to the archive directory on the configured
    * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param conf to look for archive directory name and root directory. Cannot be null. Notes for
-   *          testing: requires a FileSystem root directory to be specified.
+   *             testing: requires a FileSystem root directory to be specified.
    * @return the full {@link Path} to the archive directory, as defined by the configuration
    * @throws IOException if an unexpected error occurs
    */
@@ -178,7 +178,7 @@ public final class HFileArchiveUtil {
    * Get the full path to the archive directory on the configured
    * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
-   *          the archive path)
+   *                the archive path)
    * @return the full {@link Path} to the archive directory, as defined by the configuration
    */
   private static Path getArchivePath(final Path rootdir) {

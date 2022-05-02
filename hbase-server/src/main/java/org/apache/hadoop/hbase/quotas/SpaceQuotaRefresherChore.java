@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,31 +44,30 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(SpaceQuotaRefresherChore.class);
 
   static final String POLICY_REFRESHER_CHORE_PERIOD_KEY =
-      "hbase.regionserver.quotas.policy.refresher.chore.period";
+    "hbase.regionserver.quotas.policy.refresher.chore.period";
   static final int POLICY_REFRESHER_CHORE_PERIOD_DEFAULT = 1000 * 60 * 1; // 1 minute in millis
 
   static final String POLICY_REFRESHER_CHORE_DELAY_KEY =
-      "hbase.regionserver.quotas.policy.refresher.chore.delay";
+    "hbase.regionserver.quotas.policy.refresher.chore.delay";
   static final long POLICY_REFRESHER_CHORE_DELAY_DEFAULT = 1000L * 15L; // 15 seconds in millis
 
   static final String POLICY_REFRESHER_CHORE_TIMEUNIT_KEY =
-      "hbase.regionserver.quotas.policy.refresher.chore.timeunit";
+    "hbase.regionserver.quotas.policy.refresher.chore.timeunit";
   static final String POLICY_REFRESHER_CHORE_TIMEUNIT_DEFAULT = TimeUnit.MILLISECONDS.name();
 
   static final String POLICY_REFRESHER_CHORE_REPORT_PERCENT_KEY =
-      "hbase.regionserver.quotas.policy.refresher.report.percent";
-  static final double POLICY_REFRESHER_CHORE_REPORT_PERCENT_DEFAULT= 0.95;
+    "hbase.regionserver.quotas.policy.refresher.report.percent";
+  static final double POLICY_REFRESHER_CHORE_REPORT_PERCENT_DEFAULT = 0.95;
 
   private final RegionServerSpaceQuotaManager manager;
   private final Connection conn;
   private boolean quotaTablePresent = false;
 
   public SpaceQuotaRefresherChore(RegionServerSpaceQuotaManager manager, Connection conn) {
-    super(SpaceQuotaRefresherChore.class.getSimpleName(),
-        manager.getRegionServerServices(),
-        getPeriod(manager.getRegionServerServices().getConfiguration()),
-        getInitialDelay(manager.getRegionServerServices().getConfiguration()),
-        getTimeUnit(manager.getRegionServerServices().getConfiguration()));
+    super(SpaceQuotaRefresherChore.class.getSimpleName(), manager.getRegionServerServices(),
+      getPeriod(manager.getRegionServerServices().getConfiguration()),
+      getInitialDelay(manager.getRegionServerServices().getConfiguration()),
+      getTimeUnit(manager.getRegionServerServices().getConfiguration()));
     this.manager = manager;
     this.conn = conn;
   }
@@ -86,13 +86,12 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
         LOG.trace("Reading current quota snapshots from hbase:quota.");
       }
       // Get the snapshots that the quota manager is currently aware of
-      final Map<TableName, SpaceQuotaSnapshot> currentSnapshots =
-          getManager().copyQuotaSnapshots();
+      final Map<TableName, SpaceQuotaSnapshot> currentSnapshots = getManager().copyQuotaSnapshots();
       // Read the new snapshots from the quota table
       final Map<TableName, SpaceQuotaSnapshot> newSnapshots = fetchSnapshotsFromQuotaTable();
       if (LOG.isTraceEnabled()) {
-        LOG.trace(currentSnapshots.size() + " table quota snapshots are collected, "
-            + "read " + newSnapshots.size() + " from the quota table.");
+        LOG.trace(currentSnapshots.size() + " table quota snapshots are collected, " + "read "
+          + newSnapshots.size() + " from the quota table.");
       }
       // Iterate over each new quota snapshot
       for (Entry<TableName, SpaceQuotaSnapshot> entry : newSnapshots.entrySet()) {
@@ -121,7 +120,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
           } else if (currInViolation && newInViolation) {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Switching quota violation policy on " + tableName + " from "
-                  + currentSnapshot + " to " + newSnapshot);
+                + currentSnapshot + " to " + newSnapshot);
             }
             getManager().enforceViolationPolicy(tableName, newSnapshot);
           }
@@ -147,14 +146,13 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
       // Update the snapshots in the manager
       getManager().updateQuotaSnapshot(newSnapshots);
     } catch (IOException e) {
-      LOG.warn(
-          "Caught exception while refreshing enforced quota violation policies, will retry.", e);
+      LOG.warn("Caught exception while refreshing enforced quota violation policies, will retry.",
+        e);
     }
   }
 
   /**
    * Checks if hbase:quota exists in hbase:meta
-   *
    * @return true if hbase:quota table is in meta, else returns false.
    * @throws IOException throws IOException
    */
@@ -165,9 +163,8 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   }
 
   /**
-   * Checks if the given <code>snapshot</code> is in violation, allowing the snapshot to be null.
-   * If the snapshot is null, this is interpreted as no snapshot which implies not in violation.
-   *
+   * Checks if the given <code>snapshot</code> is in violation, allowing the snapshot to be null. If
+   * the snapshot is null, this is interpreted as no snapshot which implies not in violation.
    * @param snapshot The snapshot to operate on.
    * @return true if the snapshot is in violation, false otherwise.
    */
@@ -180,13 +177,12 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   /**
    * Reads all quota snapshots from the quota table.
-   *
    * @return The current "view" of space use by each table.
    */
   public Map<TableName, SpaceQuotaSnapshot> fetchSnapshotsFromQuotaTable() throws IOException {
     try (Table quotaTable = getConnection().getTable(QuotaUtil.QUOTA_TABLE_NAME);
-        ResultScanner scanner = quotaTable.getScanner(QuotaTableUtil.makeQuotaSnapshotScan())) {
-      Map<TableName,SpaceQuotaSnapshot> snapshots = new HashMap<>();
+      ResultScanner scanner = quotaTable.getScanner(QuotaTableUtil.makeQuotaSnapshotScan())) {
+      Map<TableName, SpaceQuotaSnapshot> snapshots = new HashMap<>();
       for (Result result : scanner) {
         try {
           extractQuotaSnapshot(result, snapshots);
@@ -203,7 +199,7 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
   /**
    * Wrapper around {@link QuotaTableUtil#extractQuotaSnapshot(Result, Map)} for testing.
    */
-  void extractQuotaSnapshot(Result result, Map<TableName,SpaceQuotaSnapshot> snapshots) {
+  void extractQuotaSnapshot(Result result, Map<TableName, SpaceQuotaSnapshot> snapshots) {
     QuotaTableUtil.extractQuotaSnapshot(result, snapshots);
   }
 
@@ -217,48 +213,42 @@ public class SpaceQuotaRefresherChore extends ScheduledChore {
 
   /**
    * Extracts the period for the chore from the configuration.
-   *
    * @param conf The configuration object.
    * @return The configured chore period or the default value.
    */
   static int getPeriod(Configuration conf) {
-    return conf.getInt(POLICY_REFRESHER_CHORE_PERIOD_KEY,
-        POLICY_REFRESHER_CHORE_PERIOD_DEFAULT);
+    return conf.getInt(POLICY_REFRESHER_CHORE_PERIOD_KEY, POLICY_REFRESHER_CHORE_PERIOD_DEFAULT);
   }
 
   /**
    * Extracts the initial delay for the chore from the configuration.
-   *
    * @param conf The configuration object.
    * @return The configured chore initial delay or the default value.
    */
   static long getInitialDelay(Configuration conf) {
-    return conf.getLong(POLICY_REFRESHER_CHORE_DELAY_KEY,
-        POLICY_REFRESHER_CHORE_DELAY_DEFAULT);
+    return conf.getLong(POLICY_REFRESHER_CHORE_DELAY_KEY, POLICY_REFRESHER_CHORE_DELAY_DEFAULT);
   }
 
   /**
    * Extracts the time unit for the chore period and initial delay from the configuration. The
-   * configuration value for {@link #POLICY_REFRESHER_CHORE_TIMEUNIT_KEY} must correspond to
-   * a {@link TimeUnit} value.
-   *
+   * configuration value for {@link #POLICY_REFRESHER_CHORE_TIMEUNIT_KEY} must correspond to a
+   * {@link TimeUnit} value.
    * @param conf The configuration object.
    * @return The configured time unit for the chore period and initial delay or the default value.
    */
   static TimeUnit getTimeUnit(Configuration conf) {
-    return TimeUnit.valueOf(conf.get(POLICY_REFRESHER_CHORE_TIMEUNIT_KEY,
-        POLICY_REFRESHER_CHORE_TIMEUNIT_DEFAULT));
+    return TimeUnit.valueOf(
+      conf.get(POLICY_REFRESHER_CHORE_TIMEUNIT_KEY, POLICY_REFRESHER_CHORE_TIMEUNIT_DEFAULT));
   }
 
   /**
    * Extracts the percent of Regions for a table to have been reported to enable quota violation
    * state change.
-   *
    * @param conf The configuration object.
    * @return The percent of regions reported to use.
    */
   static Double getRegionReportPercent(Configuration conf) {
     return conf.getDouble(POLICY_REFRESHER_CHORE_REPORT_PERCENT_KEY,
-        POLICY_REFRESHER_CHORE_REPORT_PERCENT_DEFAULT);
+      POLICY_REFRESHER_CHORE_REPORT_PERCENT_DEFAULT);
   }
 }

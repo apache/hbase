@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,8 +36,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class TimeRange {
   public static final long INITIAL_MIN_TIMESTAMP = 0L;
   public static final long INITIAL_MAX_TIMESTAMP = Long.MAX_VALUE;
-  private static final TimeRange ALL_TIME = new TimeRange(INITIAL_MIN_TIMESTAMP,
-    INITIAL_MAX_TIMESTAMP);
+  private static final TimeRange ALL_TIME =
+    new TimeRange(INITIAL_MIN_TIMESTAMP, INITIAL_MAX_TIMESTAMP);
 
   public static TimeRange allTime() {
     return ALL_TIME;
@@ -101,8 +100,8 @@ public final class TimeRange {
 
   private static void check(long minStamp, long maxStamp) {
     if (minStamp < 0 || maxStamp < 0) {
-      throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
-        + ", maxStamp:" + maxStamp);
+      throw new IllegalArgumentException(
+        "Timestamp cannot be negative. minStamp:" + minStamp + ", maxStamp:" + maxStamp);
     }
     if (maxStamp < minStamp) {
       throw new IllegalArgumentException("maxStamp is smaller than minStamp");
@@ -180,9 +179,8 @@ public final class TimeRange {
 
   /**
    * Compare the timestamp to timerange.
-   * @return -1 if timestamp is less than timerange,
-   * 0 if timestamp is within timerange,
-   * 1 if timestamp is greater than timerange
+   * @return -1 if timestamp is less than timerange, 0 if timestamp is within timerange, 1 if
+   *         timestamp is greater than timerange
    */
   public int compare(long timestamp) {
     assert timestamp >= 0;
@@ -192,7 +190,7 @@ public final class TimeRange {
     if (timestamp < minStamp) {
       return -1;
     }
-    return timestamp >= maxStamp? 1: 0;
+    return timestamp >= maxStamp ? 1 : 0;
   }
 
   @Override

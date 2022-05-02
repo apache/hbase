@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j;
 
 import java.io.BufferedWriter;
@@ -222,7 +221,7 @@ public class FileAppender extends WriterAppender {
    * <b>Do not use this method directly. To configure a FileAppender or one of its subclasses, set
    * its properties one by one and then call activateOptions.</b>
    * @param fileName The path to the log file.
-   * @param append If true will append to fileName. Otherwise will truncate fileName.
+   * @param append   If true will append to fileName. Otherwise will truncate fileName.
    */
   public synchronized void setFile(String fileName, boolean append, boolean bufferedIO,
     int bufferSize) throws IOException {

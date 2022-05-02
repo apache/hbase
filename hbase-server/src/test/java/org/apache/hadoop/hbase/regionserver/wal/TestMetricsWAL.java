@@ -38,14 +38,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestMetricsWAL {
   @Rule
   public TestName name = new TestName();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsWAL.class);
+    HBaseClassTestRule.forClass(TestMetricsWAL.class);
 
   @Test
   public void testLogRollRequested() throws Exception {
@@ -128,10 +128,10 @@ public class TestMetricsWAL {
     for (int i = 0; i < numThreads; i++) {
       TableName tableName = TableName.valueOf("tab_" + i);
       long tableAppendCount =
-          registry.getCounter(tableName + "." + MetricsWALSource.APPEND_COUNT, -1).value();
+        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_COUNT, -1).value();
       assertEquals(numIters, tableAppendCount);
       long tableAppendSize =
-          registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
+        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
       assertEquals(i * numIters, tableAppendSize);
     }
   }

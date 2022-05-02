@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,20 +17,18 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import org.apache.yetus.audience.InterfaceAudience;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Marker annotation that denotes Coprocessors that are core to HBase.
- * A Core Coprocessor is a CP that realizes a core HBase feature. Features are sometimes
- * implemented first as a Coprocessor to prove viability. The idea is that once proven, they then
- * migrate to core. Meantime, HBase Core Coprocessors get this annotation. No other Coprocessors
- * can carry this annotation.
+ * Marker annotation that denotes Coprocessors that are core to HBase. A Core Coprocessor is a CP
+ * that realizes a core HBase feature. Features are sometimes implemented first as a Coprocessor to
+ * prove viability. The idea is that once proven, they then migrate to core. Meantime, HBase Core
+ * Coprocessors get this annotation. No other Coprocessors can carry this annotation.
  */
 // Core Coprocessors are generally naughty making use of HBase internals doing accesses no
 // Coprocessor should be up to so we mark these special Coprocessors with this annotation and on
@@ -42,4 +39,5 @@ import java.lang.annotation.Target;
 @InterfaceAudience.Private
 @Retention(RetentionPolicy.RUNTIME)
 // This Annotation is not @Documented because I don't want users figuring out its mechanics.
-public @interface CoreCoprocessor {}
+public @interface CoreCoprocessor {
+}

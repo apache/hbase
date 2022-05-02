@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -26,12 +27,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncTimeRangeTracker.class);
+    HBaseClassTestRule.forClass(TestSyncTimeRangeTracker.class);
 
   private static final int NUM_KEYS = 10000000;
   private static final int NUM_OF_THREADS = 20;
@@ -47,16 +48,16 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
   }
 
   /**
-   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive
-   * at right range.  Here we do ten threads each incrementing over 100k at an offset
-   * of the thread index; max is 10 * 10k and min is 0.
+   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive at right range.
+   * Here we do ten threads each incrementing over 100k at an offset of the thread index; max is 10
+   * * 10k and min is 0.
    */
   @Test
   public void testArriveAtRightAnswer() throws InterruptedException {
     final TimeRangeTracker trr = getTimeRangeTracker();
     final int threadCount = 10;
     final int calls = 1000 * 1000;
-    Thread [] threads = new Thread[threadCount];
+    Thread[] threads = new Thread[threadCount];
     for (int i = 0; i < threads.length; i++) {
       Thread t = new Thread("" + i) {
         @Override
@@ -128,6 +129,7 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
 
     private TimeRangeTracker trt;
     private RandomTestData data;
+
     public TrtUpdateRunnable(final TimeRangeTracker trt, final RandomTestData data) {
       this.trt = trt;
       this.data = data;
@@ -142,15 +144,15 @@ public class TestSyncTimeRangeTracker extends TestSimpleTimeRangeTracker {
   }
 
   /**
-   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive
-   * at right range.  The data chosen is going to ensure that there are lots collisions, i.e,
-   * some other threads may already update the value while one tries to update min/max value.
+   * Run a bunch of threads against a single TimeRangeTracker and ensure we arrive at right range.
+   * The data chosen is going to ensure that there are lots collisions, i.e, some other threads may
+   * already update the value while one tries to update min/max value.
    */
   @Test
   public void testConcurrentIncludeTimestampCorrectness() {
     RandomTestData[] testData = new RandomTestData[NUM_OF_THREADS];
     long min = Long.MAX_VALUE, max = 0;
-    for (int i = 0; i < NUM_OF_THREADS; i ++) {
+    for (int i = 0; i < NUM_OF_THREADS; i++) {
       testData[i] = new RandomTestData();
       if (testData[i].getMin() < min) {
         min = testData[i].getMin();

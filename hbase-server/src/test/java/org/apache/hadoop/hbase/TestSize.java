@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,12 +27,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestSize {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSize.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestSize.class);
 
   @Test
   public void testConversion() {
@@ -71,16 +70,11 @@ public class TestSize {
 
   @Test
   public void testEqual() {
-    assertEquals(new Size(1024D, Size.Unit.TERABYTE),
-      new Size(1D, Size.Unit.PETABYTE));
-    assertEquals(new Size(1024D, Size.Unit.GIGABYTE),
-      new Size(1D, Size.Unit.TERABYTE));
-    assertEquals(new Size(1024D, Size.Unit.MEGABYTE),
-      new Size(1D, Size.Unit.GIGABYTE));
-    assertEquals(new Size(1024D, Size.Unit.KILOBYTE),
-      new Size(1D, Size.Unit.MEGABYTE));
-    assertEquals(new Size(1024D, Size.Unit.BYTE),
-      new Size(1D, Size.Unit.KILOBYTE));
+    assertEquals(new Size(1024D, Size.Unit.TERABYTE), new Size(1D, Size.Unit.PETABYTE));
+    assertEquals(new Size(1024D, Size.Unit.GIGABYTE), new Size(1D, Size.Unit.TERABYTE));
+    assertEquals(new Size(1024D, Size.Unit.MEGABYTE), new Size(1D, Size.Unit.GIGABYTE));
+    assertEquals(new Size(1024D, Size.Unit.KILOBYTE), new Size(1D, Size.Unit.MEGABYTE));
+    assertEquals(new Size(1024D, Size.Unit.BYTE), new Size(1D, Size.Unit.KILOBYTE));
   }
 
 }

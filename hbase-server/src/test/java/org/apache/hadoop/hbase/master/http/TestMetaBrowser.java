@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.servlet.http.HttpServletRequest;
@@ -53,12 +54,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
+
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 
 /**
  * Cluster-backed correctness tests for the functionality provided by {@link MetaBrowser}.
  */
-@Category({ MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMetaBrowser {
 
   @ClassRule
@@ -73,8 +75,8 @@ public class TestMetaBrowser {
     new ClearUserNamespacesAndTablesRule(connectionRule::getAsyncConnection);
 
   @Rule
-  public TestRule rule = RuleChain.outerRule(connectionRule)
-    .around(clearUserNamespacesAndTablesRule);
+  public TestRule rule =
+    RuleChain.outerRule(connectionRule).around(clearUserNamespacesAndTablesRule);
 
   @Rule
   public TestName testNameRule = new TestName();
@@ -94,9 +96,8 @@ public class TestMetaBrowser {
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
-    CompletableFuture.allOf(
-      createTable(a),
-      createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2)))
+    CompletableFuture
+      .allOf(createTable(a), createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2)))
       .join();
 
     final HttpServletRequest request = new MockRequestBuilder().build();
@@ -104,10 +105,10 @@ public class TestMetaBrowser {
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request).getResults()) {
       rows = IterableUtils.toList(results);
     }
-    assertThat(rows, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(a + ",,"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",80000000")))));
+    assertThat(rows,
+      contains(hasProperty("row", bytesAsStringBinary(startsWith(a + ",,"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(b + ",80000000")))));
   }
 
   @Test
@@ -115,19 +116,17 @@ public class TestMetaBrowser {
     final String tableName = testNameRule.getMethodName();
     createTable(TableName.valueOf(tableName), 8).join();
 
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(5)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(5).build();
     final List<RegionReplicaInfo> rows;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request).getResults()) {
       rows = IterableUtils.toList(results);
     }
-    assertThat(rows, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",,"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",20000000"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",40000000"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",60000000"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",80000000")))));
+    assertThat(rows,
+      contains(hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",,"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",20000000"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",40000000"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",60000000"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(tableName + ",80000000")))));
   }
 
   @Test
@@ -138,22 +137,18 @@ public class TestMetaBrowser {
 
     createNamespace(namespaceName)
       .thenCompose(_void1 -> CompletableFuture.allOf(
-        createTable(foo, 2).thenCompose(_void2 -> admin.disableTable(foo)),
-        createTable(bar, 2)))
+        createTable(foo, 2).thenCompose(_void2 -> admin.disableTable(foo)), createTable(bar, 2)))
       .join();
 
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setLimit(10_000)
-      .setRegionState(RegionState.State.OPEN)
-      .setTable(namespaceName)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setLimit(10_000)
+      .setRegionState(RegionState.State.OPEN).setTable(namespaceName).build();
     final List<RegionReplicaInfo> rows;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request).getResults()) {
       rows = IterableUtils.toList(results);
     }
-    assertThat(rows, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(bar.toString() + ",,"))),
-      hasProperty("row", bytesAsStringBinary(startsWith(bar.toString() + ",80000000")))));
+    assertThat(rows,
+      contains(hasProperty("row", bytesAsStringBinary(startsWith(bar.toString() + ",,"))),
+        hasProperty("row", bytesAsStringBinary(startsWith(bar.toString() + ",80000000")))));
   }
 
   @Test
@@ -162,20 +157,16 @@ public class TestMetaBrowser {
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
-    CompletableFuture.allOf(
-      createTable(a),
-      createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2)))
+    CompletableFuture
+      .allOf(createTable(a), createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2)))
       .join();
 
-    final HttpServletRequest request = new MockRequestBuilder()
-      .setTable(namespaceName)
-      .build();
+    final HttpServletRequest request = new MockRequestBuilder().setTable(namespaceName).build();
     final List<RegionReplicaInfo> rows;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request).getResults()) {
       rows = IterableUtils.toList(results);
     }
-    assertThat(rows, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
+    assertThat(rows, contains(hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
       hasProperty("row", bytesAsStringBinary(startsWith(b + ",80000000")))));
   }
 
@@ -185,36 +176,28 @@ public class TestMetaBrowser {
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
-    CompletableFuture.allOf(
-      createTableWithReplicas(a, 2),
-      createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2)))
-      .join();
+    CompletableFuture.allOf(createTableWithReplicas(a, 2),
+      createNamespace(namespaceName).thenCompose(_void -> createTable(b, 2))).join();
 
-    final HttpServletRequest request1 = new MockRequestBuilder()
-      .setLimit(2)
-      .build();
+    final HttpServletRequest request1 = new MockRequestBuilder().setLimit(2).build();
     final List<RegionReplicaInfo> rows1;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request1).getResults()) {
       rows1 = IterableUtils.toList(results);
     }
-    assertThat(rows1, contains(
-      allOf(
-        hasProperty("regionName", bytesAsStringBinary(startsWith(a + ",,"))),
-        hasProperty("replicaId", equalTo(0))),
-      allOf(
-        hasProperty("regionName", bytesAsStringBinary(startsWith(a + ",,"))),
-        hasProperty("replicaId", equalTo(1)))));
+    assertThat(rows1,
+      contains(
+        allOf(hasProperty("regionName", bytesAsStringBinary(startsWith(a + ",,"))),
+          hasProperty("replicaId", equalTo(0))),
+        allOf(hasProperty("regionName", bytesAsStringBinary(startsWith(a + ",,"))),
+          hasProperty("replicaId", equalTo(1)))));
 
-    final HttpServletRequest request2 = new MockRequestBuilder()
-      .setLimit(2)
-      .setStart(MetaBrowser.buildStartParamFrom(rows1.get(rows1.size() - 1).getRow()))
-      .build();
+    final HttpServletRequest request2 = new MockRequestBuilder().setLimit(2)
+      .setStart(MetaBrowser.buildStartParamFrom(rows1.get(rows1.size() - 1).getRow())).build();
     final List<RegionReplicaInfo> rows2;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request2).getResults()) {
       rows2 = IterableUtils.toList(results);
     }
-    assertThat(rows2, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
+    assertThat(rows2, contains(hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
       hasProperty("row", bytesAsStringBinary(startsWith(b + ",80000000")))));
   }
 
@@ -224,47 +207,36 @@ public class TestMetaBrowser {
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
-    CompletableFuture.allOf(
-      createTable(a),
-      createNamespace(namespaceName).thenCompose(_void -> createTable(b, 5)))
+    CompletableFuture
+      .allOf(createTable(a), createNamespace(namespaceName).thenCompose(_void -> createTable(b, 5)))
       .join();
 
-    final HttpServletRequest request1 = new MockRequestBuilder()
-      .setLimit(2)
-      .setTable(namespaceName)
-      .build();
+    final HttpServletRequest request1 =
+      new MockRequestBuilder().setLimit(2).setTable(namespaceName).build();
     final List<RegionReplicaInfo> rows1;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request1).getResults()) {
       rows1 = IterableUtils.toList(results);
     }
-    assertThat(rows1, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
+    assertThat(rows1, contains(hasProperty("row", bytesAsStringBinary(startsWith(b + ",,"))),
       hasProperty("row", bytesAsStringBinary(startsWith(b + ",33333333")))));
 
-    final HttpServletRequest request2 = new MockRequestBuilder()
-      .setLimit(2)
-      .setTable(namespaceName)
-      .setStart(MetaBrowser.buildStartParamFrom(rows1.get(rows1.size() - 1).getRow()))
-      .build();
+    final HttpServletRequest request2 = new MockRequestBuilder().setLimit(2).setTable(namespaceName)
+      .setStart(MetaBrowser.buildStartParamFrom(rows1.get(rows1.size() - 1).getRow())).build();
     final List<RegionReplicaInfo> rows2;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request2).getResults()) {
       rows2 = IterableUtils.toList(results);
     }
-    assertThat(rows2, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",66666666"))),
+    assertThat(rows2, contains(hasProperty("row", bytesAsStringBinary(startsWith(b + ",66666666"))),
       hasProperty("row", bytesAsStringBinary(startsWith(b + ",99999999")))));
 
-    final HttpServletRequest request3 = new MockRequestBuilder()
-      .setLimit(2)
-      .setTable(namespaceName)
-      .setStart(MetaBrowser.buildStartParamFrom(rows2.get(rows2.size() - 1).getRow()))
-      .build();
+    final HttpServletRequest request3 = new MockRequestBuilder().setLimit(2).setTable(namespaceName)
+      .setStart(MetaBrowser.buildStartParamFrom(rows2.get(rows2.size() - 1).getRow())).build();
     final List<RegionReplicaInfo> rows3;
     try (final MetaBrowser.Results results = new MetaBrowser(connection, request3).getResults()) {
       rows3 = IterableUtils.toList(results);
     }
-    assertThat(rows3, contains(
-      hasProperty("row", bytesAsStringBinary(startsWith(b + ",cccccccc")))));
+    assertThat(rows3,
+      contains(hasProperty("row", bytesAsStringBinary(startsWith(b + ",cccccccc")))));
   }
 
   private ColumnFamilyDescriptor columnFamilyDescriptor() {
@@ -272,16 +244,13 @@ public class TestMetaBrowser {
   }
 
   private TableDescriptor tableDescriptor(final TableName tableName) {
-    return TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(columnFamilyDescriptor())
+    return TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(columnFamilyDescriptor())
       .build();
   }
 
   private TableDescriptor tableDescriptor(final TableName tableName, final int replicaCount) {
-    return TableDescriptorBuilder.newBuilder(tableName)
-      .setRegionReplication(replicaCount)
-      .setColumnFamily(columnFamilyDescriptor())
-      .build();
+    return TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(replicaCount)
+      .setColumnFamily(columnFamilyDescriptor()).build();
   }
 
   private CompletableFuture<Void> createTable(final TableName tableName) {
@@ -289,8 +258,7 @@ public class TestMetaBrowser {
   }
 
   private CompletableFuture<Void> createTable(final TableName tableName, final int splitCount) {
-    return admin.createTable(
-      tableDescriptor(tableName),
+    return admin.createTable(tableDescriptor(tableName),
       new RegionSplitter.HexStringSplit().split(splitCount));
   }
 

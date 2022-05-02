@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Restore table implementation
- *
  */
 @InterfaceAudience.Private
 public class RestoreTablesClient {
@@ -76,7 +73,6 @@ public class RestoreTablesClient {
 
   /**
    * Validate target tables.
-   *
    * @param tTableArray target tables
    * @param isOverwrite overwrite existing table
    * @throws IOException exception
@@ -95,26 +91,25 @@ public class RestoreTablesClient {
           }
         } else {
           LOG.info("HBase table " + tableName
-              + " does not exist. It will be created during restore process");
+            + " does not exist. It will be created during restore process");
         }
       }
     }
 
     if (existTableList.size() > 0) {
       if (!isOverwrite) {
-        LOG.error("Existing table (" + existTableList
-            + ") found in the restore target, please add "
-            + "\"-o\" as overwrite option in the command if you mean"
-            + " to restore to these existing tables");
-        throw new IOException("Existing table found in target while no \"-o\" "
-            + "as overwrite option found");
+        LOG.error("Existing table (" + existTableList + ") found in the restore target, please add "
+          + "\"-o\" as overwrite option in the command if you mean"
+          + " to restore to these existing tables");
+        throw new IOException(
+          "Existing table found in target while no \"-o\" " + "as overwrite option found");
       } else {
         if (disabledTableList.size() > 0) {
           LOG.error("Found offline table in the restore target, "
-              + "please enable them before restore with \"-overwrite\" option");
+            + "please enable them before restore with \"-overwrite\" option");
           LOG.info("Offline table list in restore target: " + disabledTableList);
           throw new IOException(
-              "Found offline table in the target when restore with \"-overwrite\" option");
+            "Found offline table in the target when restore with \"-overwrite\" option");
         }
       }
     }
@@ -122,16 +117,15 @@ public class RestoreTablesClient {
 
   /**
    * Restore operation handle each backupImage in array.
-   *
-   * @param images array BackupImage
-   * @param sTable table to be restored
-   * @param tTable table to be restored to
+   * @param images           array BackupImage
+   * @param sTable           table to be restored
+   * @param tTable           table to be restored to
    * @param truncateIfExists truncate table
    * @throws IOException exception
    */
 
   private void restoreImages(BackupImage[] images, TableName sTable, TableName tTable,
-      boolean truncateIfExists) throws IOException {
+    boolean truncateIfExists) throws IOException {
     // First image MUST be image of a FULL backup
     BackupImage image = images[0];
     String rootDir = image.getRootDir();
@@ -144,7 +138,7 @@ public class RestoreTablesClient {
     BackupManifest manifest = HBackupFileSystem.getManifest(conf, backupRoot, backupId);
     if (manifest.getType() == BackupType.FULL) {
       LOG.info("Restoring '" + sTable + "' to '" + tTable + "' from full" + " backup image "
-          + tableBackupPath.toString());
+        + tableBackupPath.toString());
       conf.set(JOB_NAME_CONF_KEY, "Full_Restore-" + backupId + "-" + tTable);
       restoreTool.fullRestoreTable(conn, tableBackupPath, sTable, tTable, truncateIfExists,
         lastIncrBackupId);
@@ -164,7 +158,7 @@ public class RestoreTablesClient {
     for (int i = 1; i < images.length; i++) {
       BackupImage im = images[i];
       String fileBackupDir =
-         HBackupFileSystem.getTableBackupDir(im.getRootDir(), im.getBackupId(), sTable);
+        HBackupFileSystem.getTableBackupDir(im.getRootDir(), im.getBackupId(), sTable);
       List<Path> list = getFilesRecursively(fileBackupDir);
       dirList.addAll(list);
 
@@ -186,7 +180,7 @@ public class RestoreTablesClient {
   }
 
   private List<Path> getFilesRecursively(String fileBackupDir)
-      throws IllegalArgumentException, IOException {
+    throws IllegalArgumentException, IOException {
     FileSystem fs = FileSystem.get((new Path(fileBackupDir)).toUri(), new Configuration());
     List<Path> list = new ArrayList<>();
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(fileBackupDir), true);
@@ -202,12 +196,12 @@ public class RestoreTablesClient {
   /**
    * Restore operation. Stage 2: resolved Backup Image dependency
    * @param backupManifestMap : tableName, Manifest
-   * @param sTableArray The array of tables to be restored
-   * @param tTableArray The array of mapping tables to restore to
+   * @param sTableArray       The array of tables to be restored
+   * @param tTableArray       The array of mapping tables to restore to
    * @throws IOException exception
    */
   private void restore(HashMap<TableName, BackupManifest> backupManifestMap,
-      TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
+    TableName[] sTableArray, TableName[] tTableArray, boolean isOverwrite) throws IOException {
     TreeSet<BackupImage> restoreImageSet = new TreeSet<>();
 
     for (int i = 0; i < sTableArray.length; i++) {
@@ -229,8 +223,7 @@ public class RestoreTablesClient {
         LOG.info("Restore includes the following image(s):");
         for (BackupImage image : restoreImageSet) {
           LOG.info("Backup: " + image.getBackupId() + " "
-              + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(),
-                  table));
+            + HBackupFileSystem.getTableBackupDir(image.getRootDir(), image.getBackupId(), table));
         }
       }
     }

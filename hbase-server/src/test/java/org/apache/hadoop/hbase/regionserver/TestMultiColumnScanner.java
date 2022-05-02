@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -72,8 +71,7 @@ public abstract class TestMultiColumnScanner {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiColumnScanner.class);
 
-  private static final String TABLE_NAME =
-      TestMultiColumnScanner.class.getSimpleName();
+  private static final String TABLE_NAME = TestMultiColumnScanner.class.getSimpleName();
 
   static final int MAX_VERSIONS = 50;
 
@@ -81,8 +79,8 @@ public abstract class TestMultiColumnScanner {
   private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
 
   /**
-   * The size of the column qualifier set used. Increasing this parameter
-   * exponentially increases test time.
+   * The size of the column qualifier set used. Increasing this parameter exponentially increases
+   * test time.
    */
   private static final int NUM_COLUMNS = 8;
 
@@ -94,11 +92,11 @@ public abstract class TestMultiColumnScanner {
   private static final long BIG_LONG = 9111222333444555666L;
 
   /**
-   * Timestamps to test with. Cannot use {@link Long#MAX_VALUE} here, because
-   * it will be replaced by an timestamp auto-generated based on the time.
+   * Timestamps to test with. Cannot use {@link Long#MAX_VALUE} here, because it will be replaced by
+   * an timestamp auto-generated based on the time.
    */
-  private static final long[] TIMESTAMPS = new long[] { 1, 3, 5,
-      Integer.MAX_VALUE, BIG_LONG, Long.MAX_VALUE - 1 };
+  private static final long[] TIMESTAMPS =
+    new long[] { 1, 3, 5, Integer.MAX_VALUE, BIG_LONG, Long.MAX_VALUE - 1 };
 
   /** The probability that a column is skipped in a store file. */
   private static final double COLUMN_SKIP_IN_STORE_FILE_PROB = 0.7;
@@ -127,11 +125,11 @@ public abstract class TestMultiColumnScanner {
   }
 
   public static Collection<Object[]> generateParams(Compression.Algorithm algo,
-      boolean useDataBlockEncoding) {
+    boolean useDataBlockEncoding) {
     List<Object[]> parameters = new ArrayList<>();
     for (BloomType bloomType : BloomType.values()) {
       DataBlockEncoding dataBlockEncoding =
-          useDataBlockEncoding ? DataBlockEncoding.PREFIX : DataBlockEncoding.NONE;
+        useDataBlockEncoding ? DataBlockEncoding.PREFIX : DataBlockEncoding.NONE;
       parameters.add(new Object[] { algo, bloomType, dataBlockEncoding });
     }
     return parameters;
@@ -141,10 +139,10 @@ public abstract class TestMultiColumnScanner {
   public void testMultiColumnScanner() throws IOException {
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
     HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setCompressionType(comprAlgo)
-            .setBloomFilterType(bloomType).setMaxVersions(MAX_VERSIONS)
-            .setDataBlockEncoding(dataBlockEncoding).build(),
-        BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration()));
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setCompressionType(comprAlgo)
+        .setBloomFilterType(bloomType).setMaxVersions(MAX_VERSIONS)
+        .setDataBlockEncoding(dataBlockEncoding).build(),
+      BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration()));
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<>();
@@ -159,16 +157,14 @@ public abstract class TestMultiColumnScanner {
       for (String qual : qualifiers) {
         // This is where we decide to include or not include this column into
         // this store file, regardless of row and timestamp.
-        if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB)
-          continue;
+        if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB) continue;
 
         byte[] qualBytes = Bytes.toBytes(qual);
         for (String row : rows) {
           Put p = new Put(Bytes.toBytes(row));
           for (long ts : TIMESTAMPS) {
             String value = createValue(row, qual, ts);
-            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts,
-                value);
+            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts, value);
             assertEquals(kv.getTimestamp(), ts);
             p.add(kv);
             String keyAsString = kv.toString();
@@ -186,12 +182,10 @@ public abstract class TestMultiColumnScanner {
               d.addColumns(FAMILY_BYTES, qualBytes, ts);
               String rowAndQual = row + "_" + qual;
               Long whenDeleted = lastDelTimeMap.get(rowAndQual);
-              lastDelTimeMap.put(rowAndQual, whenDeleted == null ? ts
-                  : Math.max(ts, whenDeleted));
+              lastDelTimeMap.put(rowAndQual, whenDeleted == null ? ts : Math.max(ts, whenDeleted));
               deletedSomething = true;
             }
-          if (deletedSomething)
-            region.delete(d);
+          if (deletedSomething) region.delete(d);
         }
       }
       region.flush(true);
@@ -220,25 +214,27 @@ public abstract class TestMultiColumnScanner {
 
         int kvPos = 0;
         int numResults = 0;
-        String queryInfo = "columns queried: " + qualSet + " (columnBitMask="
-            + columnBitMask + "), maxVersions=" + maxVersions;
+        String queryInfo = "columns queried: " + qualSet + " (columnBitMask=" + columnBitMask
+          + "), maxVersions=" + maxVersions;
 
         while (scanner.next(results) || results.size() > 0) {
           for (Cell kv : results) {
-            while (kvPos < kvs.size()
-                && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions,
-                    lastDelTimeMap)) {
+            while (
+              kvPos < kvs.size()
+                && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions, lastDelTimeMap)
+            ) {
               ++kvPos;
             }
             String rowQual = getRowQualStr(kv);
             String deleteInfo = "";
             Long lastDelTS = lastDelTimeMap.get(rowQual);
             if (lastDelTS != null) {
-              deleteInfo = "; last timestamp when row/column " + rowQual
-                  + " was deleted: " + lastDelTS;
+              deleteInfo =
+                "; last timestamp when row/column " + rowQual + " was deleted: " + lastDelTS;
             }
-            assertTrue("Scanner returned additional key/value: " + kv + ", "
-                + queryInfo + deleteInfo + ";", kvPos < kvs.size());
+            assertTrue(
+              "Scanner returned additional key/value: " + kv + ", " + queryInfo + deleteInfo + ";",
+              kvPos < kvs.size());
             assertTrue("Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";",
               PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
             ++kvPos;
@@ -248,17 +244,16 @@ public abstract class TestMultiColumnScanner {
         }
         for (; kvPos < kvs.size(); ++kvPos) {
           KeyValue remainingKV = kvs.get(kvPos);
-          assertFalse("Matching column not returned by scanner: "
-              + remainingKV + ", " + queryInfo + ", results returned: "
-              + numResults, matchesQuery(remainingKV, qualSet, maxVersions,
-              lastDelTimeMap));
+          assertFalse(
+            "Matching column not returned by scanner: " + remainingKV + ", " + queryInfo
+              + ", results returned: " + numResults,
+            matchesQuery(remainingKV, qualSet, maxVersions, lastDelTimeMap));
         }
       }
     }
-    assertTrue("This test is supposed to delete at least some row/column " +
-        "pairs", lastDelTimeMap.size() > 0);
-    LOG.info("Number of row/col pairs deleted at least once: " +
-       lastDelTimeMap.size());
+    assertTrue("This test is supposed to delete at least some row/column " + "pairs",
+      lastDelTimeMap.size() > 0);
+    LOG.info("Number of row/col pairs deleted at least once: " + lastDelTimeMap.size());
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 
@@ -268,18 +263,16 @@ public abstract class TestMultiColumnScanner {
     return rowStr + "_" + qualStr;
   }
 
-  private static boolean matchesQuery(KeyValue kv, Set<String> qualSet,
-      int maxVersions, Map<String, Long> lastDelTimeMap) {
+  private static boolean matchesQuery(KeyValue kv, Set<String> qualSet, int maxVersions,
+    Map<String, Long> lastDelTimeMap) {
     Long lastDelTS = lastDelTimeMap.get(getRowQualStr(kv));
     long ts = kv.getTimestamp();
-    return qualSet.contains(qualStr(kv))
-        && ts >= TIMESTAMPS[TIMESTAMPS.length - maxVersions]
-        && (lastDelTS == null || ts > lastDelTS);
+    return qualSet.contains(qualStr(kv)) && ts >= TIMESTAMPS[TIMESTAMPS.length - maxVersions]
+      && (lastDelTS == null || ts > lastDelTS);
   }
 
   private static String qualStr(KeyValue kv) {
-    return Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(),
-        kv.getQualifierLength());
+    return Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
   }
 
   static String createValue(String row, String qual, long ts) {
@@ -304,4 +297,3 @@ public abstract class TestMultiColumnScanner {
     return lst;
   }
 }
-

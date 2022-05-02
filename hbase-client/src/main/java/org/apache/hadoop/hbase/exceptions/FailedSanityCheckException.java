@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,15 +35,14 @@ public class FailedSanityCheckException extends org.apache.hadoop.hbase.DoNotRet
   }
 
   /**
-   * @param message
+   * n
    */
   public FailedSanityCheckException(String message) {
     super(message);
   }
 
   /**
-   * @param message
-   * @param cause
+   * nn
    */
   public FailedSanityCheckException(String message, Throwable cause) {
     super(message, cause);

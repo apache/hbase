@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,13 +81,13 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
 
   @Override
   protected HRegionLocation getRegionLocation(TableName tableName, byte[] row, int replicaId)
-      throws IOException {
+    throws IOException {
     return get(CONN.getRegionLocator(tableName).getRegionLocation(row, replicaId));
   }
 
   @Override
   protected List<HRegionLocation> getRegionLocations(TableName tableName, byte[] row)
-      throws IOException {
+    throws IOException {
     return get(CONN.getRegionLocator(tableName).getRegionLocations(row));
   }
 

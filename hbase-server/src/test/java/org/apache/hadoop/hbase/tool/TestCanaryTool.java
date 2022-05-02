@@ -267,8 +267,8 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
     CanaryTool canary = new CanaryTool(executor, sink);
-    String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + "," +
-      tableNames[1].getNameAsString() + "=0";
+    String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + ","
+      + tableNames[1].getNameAsString() + "=0";
     String[] args = { "-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1",
       name.getMethodName() + "2" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));

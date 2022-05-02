@@ -618,11 +618,20 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regions.slop</name>
-    <value>0.001</value>
-    <description>Rebalance if any regionserver has average + (average * slop) regions.
-      The default value of this parameter is 0.001 in StochasticLoadBalancer (the default load
-      balancer), while the default is 0.2 in other load balancers (i.e.,
-      SimpleLoadBalancer).</description>
+    <value>0.2</value>
+    <description>The load balancer can trigger for several reasons. This value controls one of
+      those reasons. Run the balancer if any regionserver has a region count outside the range of
+      average +/- (average * slop) regions.
+      If the value of slop is negative, disable sloppiness checks. The balancer can still run for
+      other reasons, but sloppiness will not be one of them.
+      If the value of slop is 0, run the balancer if any server has a region count more than 1
+      from the average.
+      If the value of slop is 100, run the balancer if any server has a region count greater than
+      101 times the average.
+      The default value of this parameter is 0.2, which runs the balancer if any server has a region
+      count less than 80% of the average, or greater than 120% of the average.
+      Note that for the default StochasticLoadBalancer, this does not guarantee any balancing
+      actions will be taken, but only that the balancer will attempt to run.</description>
   </property>
   <property>
     <name>hbase.normalizer.period</name>
@@ -859,8 +868,8 @@ possible configurations would overwhelm and obscure the important.
       too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction
       each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
       set this value too high, all the other values will need to be adjusted accordingly. For most
-      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In 
-      previous versions of HBase, the parameter hbase.hstore.compaction.min was named 
+      cases, the default value is appropriate  (empty value here, results in 3 by code logic). In
+      previous versions of HBase, the parameter hbase.hstore.compaction.min was named
       hbase.hstore.compactionThreshold.</description>
   </property>
   <property>

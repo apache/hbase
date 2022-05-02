@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -56,18 +55,17 @@ public interface AsyncAdminBuilder {
   AsyncAdminBuilder setRetryPause(long timeout, TimeUnit unit);
 
   /**
-   * Set the base pause time for retrying when {@link HBaseServerException#isServerOverloaded()}.
-   * We use an exponential policy to generate sleep time from this base when retrying.
+   * Set the base pause time for retrying when {@link HBaseServerException#isServerOverloaded()}. We
+   * use an exponential policy to generate sleep time from this base when retrying.
    * <p/>
    * This value should be greater than the normal pause value which could be set with the above
    * {@link #setRetryPause(long, TimeUnit)} method, as usually
    * {@link HBaseServerException#isServerOverloaded()} means the server is overloaded. We just use
    * the normal pause value for {@link HBaseServerException#isServerOverloaded()} if here you
    * specify a smaller value.
-   *
    * @see #setRetryPause(long, TimeUnit)
    * @deprecated Since 2.5.0, will be removed in 4.0.0. Please use
-   *    {@link #setRetryPauseForServerOverloaded(long, TimeUnit)} instead.
+   *             {@link #setRetryPauseForServerOverloaded(long, TimeUnit)} instead.
    */
   @Deprecated
   default AsyncAdminBuilder setRetryPauseForCQTBE(long pause, TimeUnit unit) {
@@ -75,15 +73,14 @@ public interface AsyncAdminBuilder {
   }
 
   /**
-   * Set the base pause time for retrying when {@link HBaseServerException#isServerOverloaded()}.
-   * We use an exponential policy to generate sleep time when retrying.
+   * Set the base pause time for retrying when {@link HBaseServerException#isServerOverloaded()}. We
+   * use an exponential policy to generate sleep time when retrying.
    * <p/>
    * This value should be greater than the normal pause value which could be set with the above
    * {@link #setRetryPause(long, TimeUnit)} method, as usually
    * {@link HBaseServerException#isServerOverloaded()} means the server is overloaded. We just use
    * the normal pause value for {@link HBaseServerException#isServerOverloaded()} if here you
    * specify a smaller value.
-   *
    * @see #setRetryPause(long, TimeUnit)
    */
   AsyncAdminBuilder setRetryPauseForServerOverloaded(long pause, TimeUnit unit);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,11 +40,11 @@ public class TestSequenceIdAccounting {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSequenceIdAccounting.class);
+    HBaseClassTestRule.forClass(TestSequenceIdAccounting.class);
 
-  private static final byte [] ENCODED_REGION_NAME = Bytes.toBytes("r");
-  private static final byte [] FAMILY_NAME = Bytes.toBytes("cf");
-  private static final byte [] META_FAMILY = Bytes.toBytes("METAFAMILY");
+  private static final byte[] ENCODED_REGION_NAME = Bytes.toBytes("r");
+  private static final byte[] FAMILY_NAME = Bytes.toBytes("cf");
+  private static final byte[] META_FAMILY = Bytes.toBytes("METAFAMILY");
   private static final Set<byte[]> FAMILIES;
   private static final Set<byte[]> META_FAMILY_SET;
   static {
@@ -60,12 +60,12 @@ public class TestSequenceIdAccounting {
     sida.getOrCreateLowestSequenceIds(ENCODED_REGION_NAME);
     Map<byte[], Long> m = new HashMap<>();
     m.put(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
-    assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
+    assertEquals(HConstants.NO_SEQNUM, (long) sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
     sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long sequenceid = 1;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
     // Only one family so should return NO_SEQNUM still.
-    assertEquals(HConstants.NO_SEQNUM, (long)sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
+    assertEquals(HConstants.NO_SEQNUM, (long) sida.startCacheFlush(ENCODED_REGION_NAME, FAMILIES));
     sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
     long currentSequenceId = sequenceid;
     sida.update(ENCODED_REGION_NAME, FAMILIES, sequenceid, true);
@@ -73,7 +73,7 @@ public class TestSequenceIdAccounting {
     otherFamily.add(Bytes.toBytes("otherCf"));
     sida.update(ENCODED_REGION_NAME, FAMILIES, ++sequenceid, true);
     // Should return oldest sequence id in the region.
-    assertEquals(currentSequenceId, (long)sida.startCacheFlush(ENCODED_REGION_NAME, otherFamily));
+    assertEquals(currentSequenceId, (long) sida.startCacheFlush(ENCODED_REGION_NAME, otherFamily));
     sida.completeCacheFlush(ENCODED_REGION_NAME, HConstants.NO_SEQNUM);
   }
 

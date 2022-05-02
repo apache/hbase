@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class BalanceResponse {
 
   /**
-   * Used in HMaster to build a {@link BalanceResponse} for returning results of a balance invocation to callers
+   * Used in HMaster to build a {@link BalanceResponse} for returning results of a balance
+   * invocation to callers
    */
   @InterfaceAudience.Private
   public final static class Builder {
@@ -35,13 +35,13 @@ public final class BalanceResponse {
     private int movesCalculated;
     private int movesExecuted;
 
-    private Builder() {}
+    private Builder() {
+    }
 
     /**
      * Set true if the balancer ran, otherwise false. The balancer may not run in some
-     * circumstances, such as if a balance is already running or there are regions already
-     * in transition.
-     *
+     * circumstances, such as if a balance is already running or there are regions already in
+     * transition.
      * @param balancerRan true if balancer ran, false otherwise
      */
     public Builder setBalancerRan(boolean balancerRan) {
@@ -52,7 +52,6 @@ public final class BalanceResponse {
     /**
      * Set how many moves were calculated by the balancer. This will be zero if the cluster is
      * already balanced.
-     *
      * @param movesCalculated moves calculated by the balance run
      */
     public Builder setMovesCalculated(int movesCalculated) {
@@ -64,7 +63,6 @@ public final class BalanceResponse {
      * Set how many of the calculated moves were actually executed by the balancer. This should be
      * zero if the balancer is run with {@link BalanceRequest#isDryRun()}. It may also not equal
      * movesCalculated if the balancer ran out of time while executing the moves.
-     *
      * @param movesExecuted moves executed by the balance run
      */
     public Builder setMovesExecuted(int movesExecuted) {
@@ -98,9 +96,9 @@ public final class BalanceResponse {
   }
 
   /**
-   * Returns true if the balancer ran, otherwise false. The balancer may not run for a
-   * variety of reasons, such as: another balance is running, there are regions in
-   * transition, the cluster is in maintenance mode, etc.
+   * Returns true if the balancer ran, otherwise false. The balancer may not run for a variety of
+   * reasons, such as: another balance is running, there are regions in transition, the cluster is
+   * in maintenance mode, etc.
    */
   public boolean isBalancerRan() {
     return balancerRan;
@@ -115,10 +113,10 @@ public final class BalanceResponse {
   }
 
   /**
-   * The number of moves actually executed by the balancer if it ran. This will be
-   * zero if {@link #getMovesCalculated()} is zero or if {@link BalanceRequest#isDryRun()}
-   * was true. It may also not be equal to {@link #getMovesCalculated()} if the balancer
-   * was interrupted midway through executing the moves due to max run time.
+   * The number of moves actually executed by the balancer if it ran. This will be zero if
+   * {@link #getMovesCalculated()} is zero or if {@link BalanceRequest#isDryRun()} was true. It may
+   * also not be equal to {@link #getMovesCalculated()} if the balancer was interrupted midway
+   * through executing the moves due to max run time.
    */
   public int getMovesExecuted() {
     return movesExecuted;

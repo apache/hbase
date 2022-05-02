@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Procedures that handle servers -- e.g. server crash -- must implement this Interface.
- * It is used by the procedure runner to figure locking and what queuing.
+ * Procedures that handle servers -- e.g. server crash -- must implement this Interface. It is used
+ * by the procedure runner to figure locking and what queuing.
  */
 @InterfaceAudience.Private
 public interface ServerProcedureInterface {
@@ -53,7 +53,7 @@ public interface ServerProcedureInterface {
     CLAIM_REPLICATION_QUEUE_REMOTE,
 
     /**
-     *  send verify snapshot request to region server and handle the response
+     * send verify snapshot request to region server and handle the response
      */
     VERIFY_SNAPSHOT
   }
@@ -69,9 +69,9 @@ public interface ServerProcedureInterface {
   boolean hasMetaTableRegion();
 
   /**
-   * Given an operation type we can take decisions about what to do with pending operations.
-   * e.g. if we get a crash handler and we have some assignment operation pending
-   * we can abort those operations.
+   * Given an operation type we can take decisions about what to do with pending operations. e.g. if
+   * we get a crash handler and we have some assignment operation pending we can abort those
+   * operations.
    * @return the operation type that the procedure is executing.
    */
   ServerOperationType getServerOperationType();

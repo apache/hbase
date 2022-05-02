@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,11 +40,11 @@ import org.junit.experimental.categories.Category;
 /**
  * Test TestCoprocessorClassLoader. More tests are in TestClassLoading
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCoprocessorClassLoader {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
+    HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
 
   private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
@@ -56,8 +56,8 @@ public class TestCoprocessorClassLoader {
   public void testCleanupOldJars() throws Exception {
     String className = "TestCleanupOldJars";
     String folder = TEST_UTIL.getDataTestDir().toString();
-    File jarFile = ClassLoaderTestHelper.buildJar(
-      folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
+    File jarFile = ClassLoaderTestHelper.buildJar(folder, className, null,
+      ClassLoaderTestHelper.localDirPath(conf));
     File tmpJarFile = new File(jarFile.getParent(), "/tmp/" + className + ".test.jar");
 
     if (tmpJarFile.exists()) {
@@ -67,8 +67,7 @@ public class TestCoprocessorClassLoader {
     assertFalse("tmp jar file should not exist", tmpJarFile.exists());
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     CoprocessorClassLoader.getClassLoader(new Path(jarFile.getParent()), parent, "112", conf);
-    IOUtils.copyBytes(new FileInputStream(jarFile),
-      new FileOutputStream(tmpJarFile), conf, true);
+    IOUtils.copyBytes(new FileInputStream(jarFile), new FileOutputStream(tmpJarFile), conf, true);
     assertTrue("tmp jar file should be created", tmpJarFile.exists());
     Path path = new Path(jarFile.getAbsolutePath());
     CoprocessorClassLoader.parentDirLockSet.clear(); // So that clean up can be triggered
@@ -88,24 +87,23 @@ public class TestCoprocessorClassLoader {
   }
 
   /**
-   * Test to make sure the lib jar file extracted from a coprocessor jar have
-   * the right name.  Otherwise, some existing jar could be override if there are
-   * naming conflicts.
+   * Test to make sure the lib jar file extracted from a coprocessor jar have the right name.
+   * Otherwise, some existing jar could be override if there are naming conflicts.
    */
   private void checkingLibJarName(String jarName, String libPrefix) throws Exception {
     File tmpFolder = new File(ClassLoaderTestHelper.localDirPath(conf), "tmp");
     if (tmpFolder.exists()) { // Clean up the tmp folder
       File[] files = tmpFolder.listFiles();
       if (files != null) {
-        for (File f: files) {
+        for (File f : files) {
           f.delete();
         }
       }
     }
     String className = "CheckingLibJarName";
     String folder = TEST_UTIL.getDataTestDir().toString();
-    File innerJarFile = ClassLoaderTestHelper.buildJar(
-      folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
+    File innerJarFile = ClassLoaderTestHelper.buildJar(folder, className, null,
+      ClassLoaderTestHelper.localDirPath(conf));
     File targetJarFile = new File(innerJarFile.getParent(), jarName);
     ClassLoaderTestHelper.addJarFilesToJar(targetJarFile, libPrefix, innerJarFile);
     Path path = new Path(targetJarFile.getAbsolutePath());
@@ -115,7 +113,7 @@ public class TestCoprocessorClassLoader {
     String fileToLookFor = "." + className + ".jar";
     String[] files = tmpFolder.list();
     if (files != null) {
-      for (String f: files) {
+      for (String f : files) {
         if (f.endsWith(fileToLookFor) && f.contains(jarName)) {
           // Cool, found it;
           return;
@@ -138,8 +136,8 @@ public class TestCoprocessorClassLoader {
 
     // Directory
     Path testPath = new Path(localDirContainingJar);
-    CoprocessorClassLoader coprocessorClassLoader = CoprocessorClassLoader.getClassLoader(testPath,
-      parent, "113_1", conf);
+    CoprocessorClassLoader coprocessorClassLoader =
+      CoprocessorClassLoader.getClassLoader(testPath, parent, "113_1", conf);
     verifyCoprocessorClassLoader(coprocessorClassLoader, testClassName);
 
     // Wildcard - *.jar
@@ -156,12 +154,12 @@ public class TestCoprocessorClassLoader {
   /**
    * Verify the coprocessorClassLoader is not null and the expected class can be loaded successfully
    * @param coprocessorClassLoader the CoprocessorClassLoader to verify
-   * @param className the expected class to be loaded by the coprocessorClassLoader
+   * @param className              the expected class to be loaded by the coprocessorClassLoader
    * @throws ClassNotFoundException if the class, which should be loaded via the
-   *    coprocessorClassLoader, does not exist
+   *                                coprocessorClassLoader, does not exist
    */
   private void verifyCoprocessorClassLoader(CoprocessorClassLoader coprocessorClassLoader,
-      String className) throws ClassNotFoundException {
+    String className) throws ClassNotFoundException {
     assertNotNull("Classloader should be created and not null", coprocessorClassLoader);
     assertEquals(className, coprocessorClassLoader.loadClass(className).getName());
   }

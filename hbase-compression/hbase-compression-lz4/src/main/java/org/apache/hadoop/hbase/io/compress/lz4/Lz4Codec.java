@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress.lz4;
 
@@ -22,6 +23,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -74,7 +76,7 @@ public class Lz4Codec implements Configurable, CompressionCodec {
 
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
-      throws IOException {
+    throws IOException {
     return new BlockDecompressorStream(in, d, getBufferSize(conf));
   }
 
@@ -85,10 +87,10 @@ public class Lz4Codec implements Configurable, CompressionCodec {
 
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
-      throws IOException {
+    throws IOException {
     int bufferSize = getBufferSize(conf);
-    int compressionOverhead = (bufferSize / 6) + 32;
-    return new BlockCompressorStream(out, c, bufferSize, compressionOverhead);
+    return new BlockCompressorStream(out, c, bufferSize,
+      CompressionUtil.compressionOverhead(bufferSize));
   }
 
   @Override
@@ -109,10 +111,9 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   // Package private
 
   static int getBufferSize(Configuration conf) {
-    int size = conf.getInt(LZ4_BUFFER_SIZE_KEY,
+    return conf.getInt(LZ4_BUFFER_SIZE_KEY,
       conf.getInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT));
-    return size > 0 ? size : 256 * 1024; // Don't change this default
   }
 
 }

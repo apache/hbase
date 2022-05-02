@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,17 +45,16 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestSeekBeforeWithInlineBlocks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSeekBeforeWithInlineBlocks.class);
+    HBaseClassTestRule.forClass(TestSeekBeforeWithInlineBlocks.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekBeforeWithInlineBlocks.class);
 
-  private static final HBaseTestingUtil TEST_UTIL =
-      new HBaseTestingUtil();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final int NUM_KV = 10000;
 
@@ -73,9 +72,9 @@ public class TestSeekBeforeWithInlineBlocks {
   /**
    * Scanner.seekBefore() could fail because when seeking to a previous HFile data block, it needs
    * to know the size of that data block, which it calculates using current data block offset and
-   * the previous data block offset.  This fails to work when there are leaf-level index blocks in
-   * the scannable section of the HFile, i.e. starting in HFileV2.  This test will try seekBefore()
-   * on a flat (single-level) and multi-level (2,3) HFile and confirm this bug is now fixed.  This
+   * the previous data block offset. This fails to work when there are leaf-level index blocks in
+   * the scannable section of the HFile, i.e. starting in HFileV2. This test will try seekBefore()
+   * on a flat (single-level) and multi-level (2,3) HFile and confirm this bug is now fixed. This
    * bug also happens for inline Bloom blocks for the same reasons.
    */
   @Test
@@ -84,8 +83,8 @@ public class TestSeekBeforeWithInlineBlocks {
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
 
     // Try out different HFile versions to ensure reverse scan works on each version
-    for (int hfileVersion = HFile.MIN_FORMAT_VERSION_WITH_TAGS;
-            hfileVersion <= HFile.MAX_FORMAT_VERSION; hfileVersion++) {
+    for (int hfileVersion = HFile.MIN_FORMAT_VERSION_WITH_TAGS; hfileVersion
+        <= HFile.MAX_FORMAT_VERSION; hfileVersion++) {
 
       conf.setInt(HFile.FORMAT_VERSION_KEY, hfileVersion);
       fs = HFileSystem.get(conf);
@@ -107,9 +106,8 @@ public class TestSeekBeforeWithInlineBlocks {
 
           Cell[] cells = new Cell[NUM_KV];
 
-          Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
-            String.format("testMultiIndexLevelRandomHFileWithBlooms-%s-%s-%s",
-              hfileVersion, bloomType, testI));
+          Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), String.format(
+            "testMultiIndexLevelRandomHFileWithBlooms-%s-%s-%s", hfileVersion, bloomType, testI));
 
           // Disable caching to prevent it from hiding any bugs in block seeks/reads
           conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
@@ -117,16 +115,10 @@ public class TestSeekBeforeWithInlineBlocks {
 
           // Write the HFile
           {
-            HFileContext meta = new HFileContextBuilder()
-                                .withBlockSize(DATA_BLOCK_SIZE)
-                                .build();
+            HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
 
-            StoreFileWriter storeFileWriter =
-                new StoreFileWriter.Builder(conf, cacheConf, fs)
-              .withFilePath(hfilePath)
-              .withFileContext(meta)
-              .withBloomType(bloomType)
-              .build();
+            StoreFileWriter storeFileWriter = new StoreFileWriter.Builder(conf, cacheConf, fs)
+              .withFilePath(hfilePath).withFileContext(meta).withBloomType(bloomType).build();
 
             for (int i = 0; i < NUM_KV; i++) {
               byte[] row = RandomKeyValueUtil.randomOrderedKey(RAND, i);
@@ -154,12 +146,12 @@ public class TestSeekBeforeWithInlineBlocks {
             checkNoSeekBefore(cells, scanner, 0);
             for (int i = 1; i < NUM_KV; i++) {
               checkSeekBefore(cells, scanner, i);
-              checkCell(cells[i-1], scanner.getCell());
+              checkCell(cells[i - 1], scanner.getCell());
             }
             assertTrue(scanner.seekTo());
             for (int i = NUM_KV - 1; i >= 1; i--) {
               checkSeekBefore(cells, scanner, i);
-              checkCell(cells[i-1], scanner.getCell());
+              checkCell(cells[i - 1], scanner.getCell());
             }
             checkNoSeekBefore(cells, scanner, 0);
             scanner.close();
@@ -171,25 +163,20 @@ public class TestSeekBeforeWithInlineBlocks {
     }
   }
 
-  private void checkSeekBefore(Cell[] cells, HFileScanner scanner, int i)
-      throws IOException {
-    assertEquals("Failed to seek to the key before #" + i + " ("
-        + CellUtil.getCellKeyAsString(cells[i]) + ")", true,
-        scanner.seekBefore(cells[i]));
+  private void checkSeekBefore(Cell[] cells, HFileScanner scanner, int i) throws IOException {
+    assertEquals(
+      "Failed to seek to the key before #" + i + " (" + CellUtil.getCellKeyAsString(cells[i]) + ")",
+      true, scanner.seekBefore(cells[i]));
   }
 
-  private void checkNoSeekBefore(Cell[] cells, HFileScanner scanner, int i)
-      throws IOException {
+  private void checkNoSeekBefore(Cell[] cells, HFileScanner scanner, int i) throws IOException {
     assertEquals("Incorrectly succeeded in seeking to before first key ("
-        + CellUtil.getCellKeyAsString(cells[i]) + ")", false,
-        scanner.seekBefore(cells[i]));
+      + CellUtil.getCellKeyAsString(cells[i]) + ")", false, scanner.seekBefore(cells[i]));
   }
 
   /** Check a key/value pair after it was read by the reader */
   private void checkCell(Cell expected, Cell actual) {
-    assertTrue(String.format("Expected key %s, but was %s",
-      CellUtil.getCellKeyAsString(expected), CellUtil.getCellKeyAsString(actual)),
-      CellUtil.equals(expected, actual));
+    assertTrue(String.format("Expected key %s, but was %s", CellUtil.getCellKeyAsString(expected),
+      CellUtil.getCellKeyAsString(actual)), CellUtil.equals(expected, actual));
   }
 }
-

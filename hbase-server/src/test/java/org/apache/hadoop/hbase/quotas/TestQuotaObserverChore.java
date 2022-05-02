@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestQuotaObserverChore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaObserverChore.class);
+    HBaseClassTestRule.forClass(TestQuotaObserverChore.class);
 
   private Connection conn;
   private QuotaObserverChore chore;
@@ -65,26 +65,20 @@ public class TestQuotaObserverChore {
     final int numTable1Regions = 10;
     final int numTable2Regions = 15;
     final int numTable3Regions = 8;
-    Map<RegionInfo,Long> regionReports = new HashMap<>();
+    Map<RegionInfo, Long> regionReports = new HashMap<>();
     for (int i = 0; i < numTable1Regions; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
 
     for (int i = 0; i < numTable2Regions; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
 
     for (int i = 0; i < numTable3Regions; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
 
     TableQuotaSnapshotStore store = new TableQuotaSnapshotStore(conn, chore, regionReports);

@@ -220,4 +220,3 @@ if __name__ == '__main__':
   port = sys.argv[2]
   is_framed_transport = False
   demo_client(host, port, is_framed_transport)
-

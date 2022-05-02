@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestAsyncTableScanRenewLease {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncTableScanRenewLease.class);
+    HBaseClassTestRule.forClass(TestAsyncTableScanRenewLease.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -68,7 +68,7 @@ public class TestAsyncTableScanRenewLease {
     TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(IntStream.range(0, 10).mapToObj(
       i -> new Put(Bytes.toBytes(String.format("%02d", i))).addColumn(FAMILY, CQ, Bytes.toBytes(i)))
-        .collect(Collectors.toList())).get();
+      .collect(Collectors.toList())).get();
   }
 
   @AfterClass
