@@ -4146,8 +4146,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public WriteEntry writeMiniBatchOperationsToMemStore(
-        final MiniBatchOperationInProgress<Mutation> miniBatchOp, @Nullable WriteEntry writeEntry,
-        long now) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp, @Nullable WriteEntry writeEntry,
+      long now) throws IOException {
       boolean newWriteEntry = false;
       if (writeEntry == null) {
         writeEntry = region.mvcc.begin();
@@ -4514,8 +4514,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     @Override
     public WriteEntry writeMiniBatchOperationsToMemStore(
-        final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
-        long now) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp, final WriteEntry writeEntry,
+      long now) throws IOException {
       super.writeMiniBatchOperationsToMemStore(miniBatchOp, getOrigLogSeqNum());
       return writeEntry;
     }
@@ -7978,8 +7978,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     WALKeyImpl walKey =
         createWALKeyForWALAppend(walEdit.isReplay(), batchOp, now, nonceKey.getNonceGroup(),
           nonceKey.getNonce());
-    //don't call the coproc hook for writes to the WAL caused by
-    //system lifecycle events like flushes or compactions
+    // don't call the coproc hook for writes to the WAL caused by
+    // system lifecycle events like flushes or compactions
     if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {
       this.coprocessorHost.preWALAppend(walKey, walEdit);
     }
