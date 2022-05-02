@@ -4178,8 +4178,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * {@link RegionReplicationSink#add} to the mvccWriteEntry.
      */
     private void attachReplicateRegionReplicaToMVCCEntry(
-        final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry,
-        long now) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry,
+      long now) throws IOException {
       final RegionReplicationSink sink = this.region.getRegionReplicationSink().orElse(null);
       if (sink == null) {
         return;
@@ -7968,7 +7968,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @return writeEntry associated with this append
    */
   private WriteEntry doWALAppend(WALEdit walEdit, BatchOperation<?> batchOp, long now,
-      NonceKey nonceKey) throws IOException {
+    NonceKey nonceKey) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
         "WALEdit is null or empty!");
     Preconditions.checkArgument(
@@ -7976,8 +7976,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         "Invalid replay sequence Id for replay WALEdit!");
 
     WALKeyImpl walKey =
-        createWALKeyForWALAppend(walEdit.isReplay(), batchOp, now, nonceKey.getNonceGroup(),
-          nonceKey.getNonce());
+      createWALKeyForWALAppend(walEdit.isReplay(), batchOp, now, nonceKey.getNonceGroup(),
+        nonceKey.getNonce());
     // don't call the coproc hook for writes to the WAL caused by
     // system lifecycle events like flushes or compactions
     if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {

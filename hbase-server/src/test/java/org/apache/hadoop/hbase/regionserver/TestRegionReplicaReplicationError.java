@@ -95,7 +95,7 @@ public class TestRegionReplicaReplicationError {
       }
 
       AtomicInteger counter =
-          ConcurrentMapUtils.computeIfAbsent(regionToCounter, region, () -> new AtomicInteger(0));
+        ConcurrentMapUtils.computeIfAbsent(regionToCounter, region, () -> new AtomicInteger(0));
 
       // fail the first several request
       if (region.getRegionInfo().getReplicaId() == 1 && counter.addAndGet(entries.size()) < 100) {
