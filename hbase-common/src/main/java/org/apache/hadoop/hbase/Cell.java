@@ -66,7 +66,7 @@ public interface Cell extends HeapSize {
    * Short.MAX_VALUE which is 32,767 bytes.
    * @return The array containing the row bytes.
    */
-  byte[] getRowArray();
+  		byte[] getRowArray();
 
   /**
    * @return Array index of first row byte
