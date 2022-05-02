@@ -4179,7 +4179,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         /**
          * Here is for HBASE-26993,which make the new framework for region replication could work
          * for SKIP_WAL. If we get a mvcc writeEntry in this method, it means DURABILITY of the
-         * region may be {@link Durability#SKIP_WAL}, and there is no
+         * table may be {@link Durability#SKIP_WAL}, and there is no
          * {@link RegionReplicationSink#add} attached in {@link HRegion#doWALAppend},so here we
          * create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
          * {@link RegionReplicationSink#add} to the new mvcc writeEntry.
@@ -4196,7 +4196,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * Create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
-     * {@link RegionReplicationSink#add} to the mvccWriteEntry.
+     * {@link RegionReplicationSink#add} to the mvccWriteEntry,this is for the case that the table
+     * is {@link Durability#SKIP_WAL}.
      */
     private void attachReplicateRegionReplicaToMVCCEntry(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry,
