@@ -7951,7 +7951,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private WALKeyImpl createWALKeyForWALAppend(boolean isReplay, BatchOperation<?> batchOp, long now,
-      long nonceGroup, long nonce) {
+    long nonceGroup, long nonce) {
     WALKeyImpl walKey = isReplay ? new WALKeyImpl(this.getRegionInfo().getEncodedNameAsBytes(),
             this.htableDescriptor.getTableName(), SequenceId.NO_SEQUENCE_ID, now,
         batchOp.getClusterIds(), nonceGroup, nonce, mvcc)
