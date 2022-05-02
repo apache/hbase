@@ -3648,6 +3648,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     /**
+     * Get the cells of {@link Mutation} in miniBatchOp which {@link Mutation#getDurability} is
+     * {@link Durability#SKIP_WAL}
+     */
+    public List<Map<byte[], List<Cell>>> getSkipWALCells(NonceKey nonceKey,
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
+      final ArrayList<Map<byte[], List<Cell>>> cells = new ArrayList<Map<byte[], List<Cell>>>();
+      visitBatchOperations(true, nextIndexToProcess + miniBatchOp.size(), (int index) -> {
+        Mutation mutation = getMutation(index);
+        if (
+          region.getEffectiveDurability(mutation.getDurability()) == Durability.SKIP_WAL
+            && getNonceGroup(index) == nonceKey.getNonceGroup()
+            && getNonce(index) == nonceKey.getNonce()
+        ) {
+          cells.add(familyCellMaps[index]);
+        }
+        return true;
+      });
+      return cells;
+    }
+
+    /**
      * This method completes mini-batch operations by calling postBatchMutate() CP hook (if
      * required) and completing mvcc.
      */
@@ -4695,7 +4716,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         NonceKey nonceKey = nonceKeyWALEditPair.getFirst();
 
         if (walEdit != null && !walEdit.isEmpty()) {
-          writeEntry = doWALAppend(walEdit, batchOp, now, nonceKey);
+          writeEntry = doWALAppend(walEdit, batchOp, miniBatchOp, now, nonceKey);
         }
 
         // Complete mvcc for all but last writeEntry (for replay case)
@@ -7967,7 +7988,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * @return writeEntry associated with this append
    */
-  private WriteEntry doWALAppend(WALEdit walEdit, BatchOperation<?> batchOp, long now,
+  private WriteEntry doWALAppend(WALEdit walEdit, BatchOperation<?> batchOp,
+    MiniBatchOperationInProgress<Mutation> miniBatchOp, long now,
     NonceKey nonceKey) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(),
         "WALEdit is null or empty!");
@@ -7983,13 +8005,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.coprocessorHost != null && !walEdit.isMetaEdit()) {
       this.coprocessorHost.preWALAppend(walKey, walEdit);
     }
-    ServerCall<?> rpcCall = RpcServer.getCurrentServerCallWithCellScanner().orElse(null);
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
       WriteEntry writeEntry = walKey.getWriteEntry();
-      regionReplicationSink.ifPresent(sink -> writeEntry.attachCompletionAction(() -> {
-        sink.add(walKey, walEdit, rpcCall);
-      }));
+      this.attachReplicateRegionReplicaInWALAppend(batchOp, miniBatchOp, nonceKey, walKey, walEdit,
+        writeEntry);
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, batchOp.durability);
@@ -8001,6 +8021,49 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       throw ioe;
     }
+  }
+
+  /**
+   * Attach {@link RegionReplicationSink#add} to the mvcc writeEntry for replicating to region
+   * replica.
+   */
+  private void attachReplicateRegionReplicaInWALAppend(BatchOperation<?> batchOp,
+    MiniBatchOperationInProgress<Mutation> miniBatchOp,
+    NonceKey nonceKey, WALKeyImpl walKey, WALEdit walEdit, WriteEntry writeEntry)
+    throws IOException {
+    if (!regionReplicationSink.isPresent()) {
+      return;
+    }
+    final WALEdit walEditToUse =
+      getWALEditForReplicateRegionReplica(batchOp, miniBatchOp, nonceKey, walEdit);
+    final ServerCall<?> rpcCall = RpcServer.getCurrentServerCallWithCellScanner().orElse(null);
+    regionReplicationSink.ifPresent(sink -> writeEntry.attachCompletionAction(() -> {
+      sink.add(walKey, walEditToUse, rpcCall);
+    }));
+  }
+
+  /**
+   * Here is for HBASE-26993,which make the new framework for region replication could work for
+   * SKIP_WAL, we must add the {@link Mutation} which {@link Mutation#getDurability} is
+   * {@link Durability#SKIP_WAL} to the {@link WALEdit} used for replicating to region replica.
+   */
+  private WALEdit getWALEditForReplicateRegionReplica(BatchOperation<?> batchOp,
+    MiniBatchOperationInProgress<Mutation> miniBatchOp,
+    NonceKey nonceKey, WALEdit walEdit) throws IOException {
+    List<Map<byte[], List<Cell>>> columnFamilyToCellsList = batchOp.getSkipWALCells(nonceKey, miniBatchOp);
+    if(columnFamilyToCellsList == null || columnFamilyToCellsList.isEmpty()) {
+      return walEdit;
+    }
+
+    /**
+     * Create a new WALEdit for replicating to region replica,and add the {@link Mutation} which
+     * {@link Mutation#getDurability} is {@link Durability#SKIP_WAL}
+     */
+    WALEdit newWALEdit = new WALEdit(walEdit);
+    for (Map<byte[], List<Cell>> columnFamilyToCells : columnFamilyToCellsList) {
+      newWALEdit.add(columnFamilyToCells);
+    }
+    return newWALEdit;
 
   }
 

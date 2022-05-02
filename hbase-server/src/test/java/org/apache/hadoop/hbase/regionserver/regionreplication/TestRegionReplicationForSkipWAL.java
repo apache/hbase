@@ -67,10 +67,18 @@ public class TestRegionReplicationForSkipWAL {
 
   private static final byte[] QUAL2 = Bytes.toBytes("qualifier_test2");
 
+  private static final byte[] FAM3 = Bytes.toBytes("family_test3");
+
+  private static final byte[] QUAL3 = Bytes.toBytes("qualifier_test3");
+
+  private static final byte[] FAM4 = Bytes.toBytes("family_test4");
+
+  private static final byte[] QUAL4 = Bytes.toBytes("qualifier_test4");
+
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final int NB_SERVERS = 2;
 
-  private static TableName tableName = TableName.valueOf("TestRegionReplicationForSkipWAL");
+  private static final String strTableName = "TestRegionReplicationForSkipWAL";
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -92,21 +100,34 @@ public class TestRegionReplicationForSkipWAL {
    */
   @Test
   public void testReplicateToReplicaWhenSkipWAL() throws Exception {
-    final HRegion[] regions = this.createTable();
+    final HRegion[] skipWALRegions = this.createTable(true);
     byte[] rowKey1 = Bytes.toBytes(1);
     byte[] value1 = Bytes.toBytes(2);
 
     byte[] rowKey2 = Bytes.toBytes(2);
     byte[] value2 = Bytes.toBytes(3);
 
-    regions[0].batchMutate(new Mutation[] { new Put(rowKey1).addColumn(FAM1, QUAL1, value1),
-        new Put(rowKey2).addColumn(FAM2, QUAL2, value2), });
+    // Test the table is skipWAL
+    skipWALRegions[0].batchMutate(new Mutation[] { new Put(rowKey1).addColumn(FAM1, QUAL1, value1),
+      new Put(rowKey2).addColumn(FAM2, QUAL2, value2) });
 
-    try (Table table = HTU.getConnection().getTable(tableName)) {
-      HTU.waitFor(30000, () -> checkReplica(table, FAM1, QUAL1, rowKey1, value1)
-          && checkReplica(table, FAM2, QUAL2, rowKey2, value2));
+    try (Table skipWALTable = HTU.getConnection().getTable(getTableName(true))) {
+      HTU.waitFor(30000, () -> checkReplica(skipWALTable, FAM1, QUAL1, rowKey1, value1)
+        && checkReplica(skipWALTable, FAM2, QUAL2, rowKey2, value2));
     }
+
+    // Test the table is normal,but the Put is skipWAL
+    final HRegion[] normalRegions = this.createTable(false);
+    normalRegions[0].batchMutate(new Mutation[] { new Put(rowKey1).addColumn(FAM3, QUAL3, value1),
+      new Put(rowKey2).addColumn(FAM4, QUAL4, value2).setDurability(Durability.SKIP_WAL) });
+
+    try (Table normalTable = HTU.getConnection().getTable(getTableName(false))) {
+      HTU.waitFor(30000, () -> checkReplica(normalTable, FAM3, QUAL3, rowKey1, value1)
+        && checkReplica(normalTable, FAM4, QUAL4, rowKey2, value2));
+    }
+
   }
+
 
   private static boolean checkReplica(Table table, byte[] fam, byte[] qual, byte[] rowKey,
       byte[] expectValue) throws IOException {
@@ -116,13 +137,23 @@ public class TestRegionReplicationForSkipWAL {
     return value != null && value.length > 0 && Arrays.equals(expectValue, value);
   }
 
-  private HRegion[] createTable() throws Exception {
-    TableDescriptor tableDescriptor =
-        TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
+  private TableName getTableName(boolean skipWAL) {
+    return TableName.valueOf(strTableName + (skipWAL ? "_skipWAL" : ""));
+  }
+
+  private HRegion[] createTable(boolean skipWAL) throws Exception {
+    TableName tableName = getTableName(skipWAL);
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
             .setColumnFamilies(Arrays.asList(ColumnFamilyDescriptorBuilder.of(FAM1),
-              ColumnFamilyDescriptorBuilder.of(FAM2)))
-            .setDurability(Durability.SKIP_WAL)
-            .build();
+          ColumnFamilyDescriptorBuilder.of(FAM2), ColumnFamilyDescriptorBuilder.of(FAM3),
+          ColumnFamilyDescriptorBuilder.of(FAM4)));
+    if (skipWAL) {
+      builder.setDurability(Durability.SKIP_WAL);
+
+    }
+    TableDescriptor tableDescriptor = builder.build();
+
     HTU.getAdmin().createTable(tableDescriptor);
     final HRegion[] regions = new HRegion[NB_SERVERS];
     for (int i = 0; i < NB_SERVERS; i++) {

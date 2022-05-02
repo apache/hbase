@@ -177,6 +177,19 @@ public class WALEdit implements HeapSize {
     cells = new ArrayList<>(cellCount);
   }
 
+  /**
+   * Create a new WALEdit from a existing {@link WALEdit}.
+   */
+  public WALEdit(WALEdit walEdit) {
+    this.replay = walEdit.replay;
+    cells = new ArrayList<>(walEdit.cells);
+    if (walEdit.families != null) {
+      this.families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      this.families.addAll(walEdit.families);
+    }
+
+  }
+
   private Set<byte[]> getOrCreateFamilies() {
     if (this.families == null) {
       this.families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
