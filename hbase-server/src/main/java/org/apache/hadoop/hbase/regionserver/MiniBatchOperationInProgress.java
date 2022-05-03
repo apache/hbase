@@ -57,7 +57,8 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfAppends = 0;
   /**
    * Saving the {@link Mutation} which is {@link Durability#SKIP_WAL} in
-   * {@link HRegion.BatchOperation#buildWALEdits}.
+   * {@link HRegion.BatchOperation#buildWALEdits} for {@link HRegion#doMiniBatchMutate} to also
+   * replicate {@link Mutation} which is {@link Durability#SKIP_WAL} to region replica.
    */
   private Map<NonceKey, List<Map<byte[], List<Cell>>>> nonceKeyToSkipWALMutations = null;
 
