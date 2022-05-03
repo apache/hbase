@@ -2066,17 +2066,17 @@ public class HStore
 
   @Override
   public boolean needsCompaction() {
-    //For some system compacting, we set selectNow to false, and the files do not
-    //be selected until compaction runs, so we should limit the compaction count here
-    //to avoid the length of queue grows too big.
-    int filesNotCompacting = this.storeEngine.storeFileManager.getStorefileCount()
-      - filesCompacting.size();
-    int maxFilesToCompact = this.storeEngine.getCompactionPolicy().getConf()
-      .getMaxFilesToCompact();
+    // For some system compacting, we set selectNow to false, and the files do not
+    // be selected until compaction runs, so we should limit the compaction count here
+    // to avoid the length of queue grows too big.
+    int filesNotCompacting =
+      this.storeEngine.storeFileManager.getStorefileCount() - filesCompacting.size();
+    int maxFilesToCompact = this.storeEngine.getCompactionPolicy().getConf().getMaxFilesToCompact();
     int maxCompactionsShouldBeQueued = filesNotCompacting / maxFilesToCompact;
     maxCompactionsShouldBeQueued += filesNotCompacting % maxFilesToCompact == 0 ? 0 : 1;
     if (this.compactionsQueuedCount.sum() >= maxCompactionsShouldBeQueued) {
-      LOG.debug("this store has too many compactions in queue, filesNotCompacting:{}, "
+      LOG.debug(
+        "this store has too many compactions in queue, filesNotCompacting:{}, "
           + "compactionsQueuedCount:{}, maxCompactionsNeedQueued:{}",
         filesNotCompacting, this.compactionsQueuedCount.sum(), maxCompactionsShouldBeQueued);
       return false;
