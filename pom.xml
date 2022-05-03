@@ -2246,6 +2246,10 @@
                 <include>**/*.txt</include>
                 <include>*.txt</include>
               </includes>
+              <excludes>
+                <exclude>**/target/**</exclude>
+                <exclude>**/dependency-reduced-pom.xml</exclude>
+              </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
               <endWithNewline/>
