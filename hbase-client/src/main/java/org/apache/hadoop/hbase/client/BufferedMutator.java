@@ -177,7 +177,10 @@ public interface BufferedMutator extends Closeable {
    * The default value comes from the configuration parameter {@code hbase.client.write.buffer}.
    * @return The size of the write buffer in bytes.
    */
-  long getWriteBufferSize();
+  default long getWriteBufferSize() {
+    throw new UnsupportedOperationException(
+      "The BufferedMutator::getWriteBufferSize has not been implemented");
+  }
 
   /**
    * Set rpc timeout for this mutator instance
@@ -185,7 +188,10 @@ public interface BufferedMutator extends Closeable {
    *             {@link BufferedMutatorParams}.
    */
   @Deprecated
-  void setRpcTimeout(int timeout);
+  default void setRpcTimeout(int timeout) {
+    throw new UnsupportedOperationException(
+      "The BufferedMutator::setRpcTimeout has not been implemented");
+  }
 
   /**
    * Set operation timeout for this mutator instance
@@ -193,7 +199,10 @@ public interface BufferedMutator extends Closeable {
    *             {@link BufferedMutatorParams}.
    */
   @Deprecated
-  void setOperationTimeout(int timeout);
+  default void setOperationTimeout(int timeout) {
+    throw new UnsupportedOperationException(
+      "The BufferedMutator::setOperationTimeout has not been implemented");
+  }
 
   /**
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
