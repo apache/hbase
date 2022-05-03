@@ -300,4 +300,10 @@ public class TestRegionServerNoMaster {
       openRegion(HTU, getRS(), hri);
     }
   }
+
+  @Test
+  public void testInstallShutdownHook() {
+    // Test for HBASE-26977
+    Assert.assertTrue(HTU.getMiniHBaseCluster().getRegionServer(0).isShutdownHookInstalled());
+  }
 }
