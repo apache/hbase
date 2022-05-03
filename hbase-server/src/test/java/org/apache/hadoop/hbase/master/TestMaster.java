@@ -260,4 +260,10 @@ public class TestMaster {
     // Assert lock gets put in place again.
     assertTrue(fs.exists(hbckLockPath));
   }
+
+  @Test
+  public void testInstallShutdownHook() {
+    // Test for HBASE-26977
+    assertTrue(TEST_UTIL.getMiniHBaseCluster().getMaster().isShutdownHookInstalled());
+  }
 }
