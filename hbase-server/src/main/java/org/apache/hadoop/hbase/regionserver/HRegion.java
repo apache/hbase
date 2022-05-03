@@ -4157,11 +4157,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       super.writeMiniBatchOperationsToMemStore(miniBatchOp, writeEntry.getWriteNumber());
       if (newWriteEntry) {
         /**
-         * Here is for HBASE-26993,which make the new framework for region replication could work
-         * for SKIP_WAL. If we get a mvcc writeEntry in this method, it means DURABILITY of the
-         * table may be {@link Durability#SKIP_WAL}, and there is no
-         * {@link RegionReplicationSink#add} attached in {@link HRegion#doWALAppend},so here we
-         * create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
+         * Here is for HBASE-26993 case 2,all {@link Mutation}s are {@link Durability#SKIP_WAL}. In
+         * order to make the new framework for region replication could work for SKIP_WAL,because
+         * there is no {@link RegionReplicationSink#add} attached in {@link HRegion#doWALAppend},so
+         * here we create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
          * {@link RegionReplicationSink#add} to the new mvcc writeEntry.
          */
         attachReplicateRegionReplicaToMVCCEntry(miniBatchOp, writeEntry, now);
@@ -4176,8 +4175,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     /**
      * Create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
-     * {@link RegionReplicationSink#add} to the mvccWriteEntry,this is for the case that the table
-     * is {@link Durability#SKIP_WAL}.
+     * {@link RegionReplicationSink#add} to the mvccWriteEntry.
      */
     private void attachReplicateRegionReplicaToMVCCEntry(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry,
@@ -8024,9 +8022,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Here is for HBASE-26993,which make the new framework for region replication could work for
-   * SKIP_WAL, we must add the {@link Mutation} which {@link Mutation#getDurability} is
-   * {@link Durability#SKIP_WAL} to the {@link WALEdit} used for replicating to region replica.
+   * Here is for HBASE-26993 case 1,partial {@link Mutation}s are {@link Durability#SKIP_WAL}.In
+   * order to make the new framework for region replication could work for SKIP_WAL, we must add the
+   * {@link Mutation} which {@link Mutation#getDurability} is {@link Durability#SKIP_WAL} to the
+   * {@link WALEdit} used for replicating to region replica.
    */
   private WALEdit getWALEditForReplicateRegionReplica(BatchOperation<?> batchOp,
     MiniBatchOperationInProgress<Mutation> miniBatchOp,

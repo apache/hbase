@@ -55,6 +55,10 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfDeletes = 0;
   private int numOfIncrements = 0;
   private int numOfAppends = 0;
+  /**
+   * Saving the {@link Mutation} which is {@link Durability#SKIP_WAL} in
+   * {@link HRegion.BatchOperation#buildWALEdits}.
+   */
   private Map<NonceKey, List<Map<byte[], List<Cell>>>> nonceKeyToSkipWALMutations = null;
 
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
