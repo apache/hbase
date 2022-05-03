@@ -8030,6 +8030,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private WALEdit getWALEditForReplicateRegionReplica(BatchOperation<?> batchOp,
     MiniBatchOperationInProgress<Mutation> miniBatchOp,
     NonceKey nonceKey, WALEdit walEdit) throws IOException {
+    /**
+     * Here there is no need to consider there are SKIP_WAL {@link Mutation}s which are not covered
+     * by {@link HRegion#doWALAppend} because for primary region,only {@link MutationBatchOperation}
+     * is used and {@link NonceKey} is all the same for {@link Mutation}s in
+     * {@link MutationBatchOperation}.
+     */
     List<Map<byte[], List<Cell>>> columnFamilyToCellsList = miniBatchOp.getSkipMutations(nonceKey);
     if(columnFamilyToCellsList == null || columnFamilyToCellsList.isEmpty()) {
       return walEdit;
