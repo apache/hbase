@@ -76,6 +76,7 @@ public class TestTableRecordReader {
 
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, TIMEOUT);
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, TIMEOUT);
+    conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 500);
 
     // Check the timeout condition after every cell
     conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 1);
@@ -126,6 +127,35 @@ public class TestTableRecordReader {
         num++;
       }
       assertEquals(NUM_ROWS * NUM_FAMILIES * NUM_QUALIFIERS, num);
+    }
+  }
+
+  @Test
+  public void testRenewLease() throws InterruptedException {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    // Setting retries to 0 would typically cause the below code to fail, because
+    // the Thread.sleep is longer than the configured scanner lease timeout
+    // Enabling the RENEW_LEASE_PERIOD_MILLIS feature ensures the test will succeed
+    // because we'll be renewing the lease much more frequently than the time.
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    conf.setLong(TableRecordReaderImpl.RENEW_LEASE_PERIOD_MILLIS, TIMEOUT / 2);
+
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+      Table table = conn.getTable(TABLE_NAME)) {
+      org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
+        new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
+      Scan scan = new Scan().setCaching(2);
+      trr.setScan(scan);
+      trr.setHTable(table);
+      trr.initialize(null, null);
+      int num = 0;
+      while (trr.nextKeyValue()) {
+        Thread.sleep(TIMEOUT * 2);
+        num++;
+      }
+      assertEquals(NUM_ROWS, num);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 }

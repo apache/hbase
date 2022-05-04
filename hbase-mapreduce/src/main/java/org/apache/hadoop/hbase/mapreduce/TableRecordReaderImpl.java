@@ -19,7 +19,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,12 +43,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * Iterate over an HBase table data, return (ImmutableBytesWritable, Result) pairs.
  */
 @InterfaceAudience.Public
 public class TableRecordReaderImpl {
   public static final String LOG_PER_ROW_COUNT = "hbase.mapreduce.log.scanner.rowcount";
+
+  public static final String RENEW_LEASE_PERIOD_MILLIS =
+    "hbase.mapreduce.renew.scanner.lease.period.millis";
 
   private static final Logger LOG = LoggerFactory.getLogger(TableRecordReaderImpl.class);
 
@@ -66,12 +76,18 @@ public class TableRecordReaderImpl {
   private boolean logScannerActivity = false;
   private int logPerRowCount = 100;
 
+  private Duration renewLeasePeriod = null;
+
+  private Instant lastScannerRpcAt = null;
+
+  private ScheduledExecutorService renewTaskExecutor = null;
+
   /**
    * Restart from survivable exceptions by creating a new scanner.
    * @param firstRow The first row to start at.
    * @throws IOException When restarting fails.
    */
-  public void restart(byte[] firstRow) throws IOException {
+  public synchronized void restart(byte[] firstRow) throws IOException {
     // Update counter metrics based on current scan before reinitializing it
     if (currentScan != null) {
       updateCounters();
@@ -85,12 +101,57 @@ public class TableRecordReaderImpl {
       }
       this.scanner.close();
     }
+
     this.scanner = this.htable.getScanner(currentScan);
+
+    lastScannerRpcAt = Instant.now();
+    ensureRenewTaskSchedule();
+
     if (logScannerActivity) {
       LOG.info("Current scan=" + currentScan.toString());
       timestamp = EnvironmentEdgeManager.currentTime();
       rowcount = 0;
     }
+  }
+
+  private synchronized Result scannerNext() throws IOException {
+    long numRpcCallsBefore = scanner.getScanMetrics().countOfRPCcalls.get();
+    Result result = scanner.next();
+    long numRpcCallsAfter = scanner.getScanMetrics().countOfRPCcalls.get();
+
+    // we can avoid an unnecessary renewLease if a next call triggers an RPC
+    if (numRpcCallsAfter > numRpcCallsBefore) {
+      lastScannerRpcAt = Instant.now();
+    }
+
+    return result;
+  }
+
+  private synchronized void maybeRenewLease() {
+    if (scanner != null && Instant.now().isAfter(lastScannerRpcAt.plus(renewLeasePeriod))) {
+      try {
+        scanner.renewLease();
+        lastScannerRpcAt = Instant.now();
+      } catch (Exception e) {
+        LOG.warn("Failed to renew lease, scanner lease may timeout", e);
+      }
+    }
+  }
+
+  private void ensureRenewTaskSchedule() {
+    if (renewTaskExecutor != null && !renewTaskExecutor.isShutdown()) {
+      return;
+    }
+
+    if (renewLeasePeriod.toMillis() <= 0) {
+      return;
+    }
+
+    renewTaskExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+      .setDaemon(true).setNameFormat("TableRecordReader-RenewLease-%d").build());
+
+    renewTaskExecutor.scheduleAtFixedRate(this::maybeRenewLease, renewLeasePeriod.toMillis() / 2,
+      renewLeasePeriod.toMillis() / 2, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -122,6 +183,7 @@ public class TableRecordReaderImpl {
     logScannerActivity = conf.getBoolean(
       "hbase.client.log.scanner.activity" /* ScannerCallable.LOG_SCANNER_ACTIVITY */, false);
     logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
+    renewLeasePeriod = Duration.ofMillis(conf.getLong(RENEW_LEASE_PERIOD_MILLIS, 0));
     this.htable = htable;
   }
 
@@ -150,6 +212,10 @@ public class TableRecordReaderImpl {
   public void close() {
     if (this.scanner != null) {
       this.scanner.close();
+    }
+    if (renewTaskExecutor != null) {
+      renewTaskExecutor.shutdownNow();
+      renewTaskExecutor = null;
     }
     try {
       this.htable.close();
@@ -192,7 +258,7 @@ public class TableRecordReaderImpl {
     }
     try {
       try {
-        value = this.scanner.next();
+        value = scannerNext();
         if (value != null && value.isStale()) {
           numStale++;
         }
@@ -224,9 +290,9 @@ public class TableRecordReaderImpl {
           restart(scan.getStartRow());
         } else {
           restart(lastSuccessfulRow);
-          scanner.next(); // skip presumed already mapped row
+          scannerNext(); // skip presumed already mapped row
         }
-        value = scanner.next();
+        value = scannerNext();
         if (value != null && value.isStale()) {
           numStale++;
         }
