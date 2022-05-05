@@ -80,6 +80,8 @@ public abstract class RestartActionBaseAction extends Action {
     sleep(sleepTime);
     getLogger().info("Starting region server: {}", server);
     startRs(server);
+    // Sleep some time to make sure RS is online.
+    sleep(sleepTime);
   }
 
   void restartZKNode(ServerName server, long sleepTime) throws IOException {
