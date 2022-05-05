@@ -127,7 +127,7 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
   }
 
   @Override
-  protected void closeOutput() {
+  protected void closeOutputIfNecessary() {
     if (this.output != null) {
       try {
         this.output.close();
