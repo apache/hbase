@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.Message;
+import com.google.protobuf.ServiceException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -112,7 +113,7 @@ public class TestRegionProcessRowsWithLocks {
     util.shutdownMiniCluster();
   }
 
-  public void prepareTestData() throws Exception {
+  public void prepareTestData() throws IOException {
     try {
       util.getHBaseAdmin().disableTable(TABLE);
       util.getHBaseAdmin().deleteTable(TABLE);
@@ -131,7 +132,7 @@ public class TestRegionProcessRowsWithLocks {
   }
 
   @Test
-  public void testProcessNormal() throws Throwable {
+  public void testProcessNormal() throws ServiceException, IOException {
     prepareTestData();
     List<HRegion> regions = util.getHBaseCluster().getRegions(TABLE);
     HRegion region = regions.get(0);
@@ -152,7 +153,7 @@ public class TestRegionProcessRowsWithLocks {
   }
 
   @Test
-  public void testProcessExceptionAndRollBack() throws Throwable {
+  public void testProcessExceptionAndRollBack() throws IOException {
     prepareTestData();
     List<HRegion> regions = util.getHBaseCluster().getRegions(TABLE);
     HRegion region = regions.get(0);
@@ -172,7 +173,7 @@ public class TestRegionProcessRowsWithLocks {
     try {
       incrementCounter(table);
       Assert.fail("Should throw IOException.");
-    } catch (IOException e) {
+    } catch (ServiceException | IOException e) {
     }
 
     long endMemstoreSize = region.getMemstoreSize();
@@ -184,7 +185,7 @@ public class TestRegionProcessRowsWithLocks {
         (endFlushableSize - startFlushableSize));
   }
 
-  private int incrementCounter(Table table) throws Throwable {
+  private int incrementCounter(Table table) throws ServiceException, IOException {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.IncrementCounterProcessor processor =
         new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
