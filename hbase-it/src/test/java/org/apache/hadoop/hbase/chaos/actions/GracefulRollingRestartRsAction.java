@@ -63,6 +63,8 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
         rm.load();
       } catch (Shell.ExitCodeException e) {
         getLogger().info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
+      } catch (Exception e) {
+        getLogger().info("Exception but continuing...", e);
       }
       sleep(rand.nextInt((int) sleepTime));
     }
