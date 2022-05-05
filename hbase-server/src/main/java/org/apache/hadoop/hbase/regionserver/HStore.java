@@ -1232,14 +1232,14 @@ public class HStore
       allowedOnPath = ".*/(HStore|TestHStore).java")
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result,
     boolean writeCompactionMarker) throws IOException {
+    if (writeCompactionMarker) {
+      writeCompactionWalRecord(compactedFiles, result);
+    }
     storeEngine.replaceStoreFiles(compactedFiles, result, () -> {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(compactedFiles);
       }
     });
-    if (writeCompactionMarker) {
-      writeCompactionWalRecord(compactedFiles, result);
-    }
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
     // sizes later so it's not super-critical if we miss these.
     RegionServerServices rsServices = region.getRegionServerServices();
