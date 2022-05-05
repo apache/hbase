@@ -347,10 +347,13 @@ function refguide_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ src/main/asciidoc ]] ||
-     [[ ${filename} =~ src/main/xslt ]] ||
-     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default.xml ]]; then
-    add_test refguide
+  # we only generate ref guide on master branch now
+  if [[ "${PATCH_BRANCH}" = master ]]; then
+    if [[ ${filename} =~ src/main/asciidoc ]] ||
+       [[ ${filename} =~ src/main/xslt ]] ||
+       [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
+      add_test refguide
+    fi
   fi
 }
 
