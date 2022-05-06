@@ -320,6 +320,9 @@ public class HRegionServer extends HasThread implements
   // of HRegionServer in isolation.
   private volatile boolean stopped = false;
 
+  // Only for testing
+  private boolean isShutdownHookInstalled = false;
+
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
   private AtomicBoolean abortRequested;
@@ -1012,7 +1015,12 @@ public class HRegionServer extends HasThread implements
    */
   @Override
   public void run() {
+    if (isStopped()) {
+      LOG.info("Skipping run; stopped");
+      return;
+    }
     try {
+      installShutdownHook();
       // Do pre-registration initializations; zookeeper, lease threads, etc.
       preRegistrationInitialization();
     } catch (Throwable e) {
@@ -1021,7 +1029,6 @@ public class HRegionServer extends HasThread implements
 
     try {
       if (!isStopped() && !isAborted()) {
-        ShutdownHook.install(conf, fs, this, Thread.currentThread());
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1260,6 +1267,22 @@ public class HRegionServer extends HasThread implements
       "; zookeeper connection closed.");
 
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  /**
+   * This method is called when HMaster and HRegionServer are started. Please see HBASE-26977
+   * for details.
+   */
+  private void installShutdownHook() {
+    ShutdownHook.install(conf, fs, this, Thread.currentThread());
+    isShutdownHookInstalled = true;
+  }
+
+  /**
+   * This method is used for testing.
+   */
+  public boolean isShutdownHookInstalled() {
+    return isShutdownHookInstalled;
   }
 
   private boolean containsMetaTableRegions() {
