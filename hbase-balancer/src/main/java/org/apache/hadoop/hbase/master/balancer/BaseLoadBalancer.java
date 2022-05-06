@@ -601,7 +601,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * @see #balanceTable(TableName, Map)
    */
   @Override
-  public final List<RegionPlan>
+  public List<RegionPlan>
     balanceCluster(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
     preBalanceCluster(loadOfAllTable);
     if (isByTable) {

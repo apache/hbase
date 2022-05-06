@@ -141,7 +141,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer.balanceTable(tableName, clusterState);
 
     String[] tableNames = new String[] { tableName.getNameAsString() };
-    String[] functionNames = loadBalancer.getCostFunctionNames();
+    String[] functionNames = loadBalancer.getCostFunctionNames(false);
     Set<String> jmxMetrics = readJmxMetricsWithRetry();
     Set<String> expectedMetrics = getExpectedJmxMetrics(tableNames, functionNames);
 
@@ -169,7 +169,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     // NOTE the size is normally set in setClusterMetrics, for test purpose, we set it manually
     // Tables: hbase:namespace, table1, table2
     // Functions: costFunctions, overall
-    String[] functionNames = loadBalancer.getCostFunctionNames();
+    String[] functionNames = loadBalancer.getCostFunctionNames(false);
     loadBalancer.updateMetricsSize(3 * (functionNames.length + 1));
 
     // table 1

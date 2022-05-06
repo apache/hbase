@@ -23,4 +23,9 @@ public class DummyCostFunction extends CostFunction {
   protected double cost() {
     return 0;
   }
+
+  @Override
+  float getMultiplier() {
+    return 1;
+  }
 }
