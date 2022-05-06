@@ -550,7 +550,6 @@
     <!--This property is for hadoops netty. HBase netty
          comes in via hbase-thirdparty hbase-shaded-netty-->
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
-    <netty.version>4.1.60.Final</netty.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
     <avro.version>1.8.2.7.2.16.0-SNAPSHOT</avro.version>
@@ -601,6 +600,7 @@
     <kerby.version>1.1.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.3.0.7.2.16.0-SNAPSHOT</curator.version>
+    <netty-for-minihdfs.version>4.1.60.Final</netty-for-minihdfs.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
@@ -1409,7 +1409,8 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>${netty.version}</version>
+        <version>${netty-for-minihdfs.version}</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

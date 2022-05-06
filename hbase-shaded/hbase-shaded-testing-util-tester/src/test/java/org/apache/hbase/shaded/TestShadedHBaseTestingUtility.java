@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, MediumTests.class })
@@ -51,7 +51,7 @@ public class TestShadedHBaseTestingUtility {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore("CDPD-35172")
+  @Test
   public void testCreateTable() throws Exception {
     TableName tableName = TableName.valueOf("test");
 
