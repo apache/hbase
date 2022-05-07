@@ -1257,8 +1257,8 @@ public class HRegionServer extends Thread
   }
 
   /**
-   * This method is called when HMaster and HRegionServer are started.
-   * Please see to HBASE-26977 for details.
+   * This method is called when HMaster and HRegionServer are started. Please see to HBASE-26977 for
+   * details.
    */
   private void installShutdownHook() {
     ShutdownHook.install(conf, dataFs, this, Thread.currentThread());
