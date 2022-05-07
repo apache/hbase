@@ -538,9 +538,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
+
     if (!this.isSourceActive()) {
-      retryStartup.set(!this.abortOnError);
       setSourceStartupStatus(false);
+      if (Thread.currentThread().isInterrupted()) {
+        // If source is not running and thread is interrupted this means someone has tried to
+        // remove this peer.
+        return;
+      }
+
+      retryStartup.set(!this.abortOnError);
       throw new IllegalStateException("Source should be active.");
     }
 
@@ -562,9 +569,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
-    if (!this.isSourceActive()) {
-      retryStartup.set(!this.abortOnError);
+    if(!this.isSourceActive()) {
       setSourceStartupStatus(false);
+      if (Thread.currentThread().isInterrupted()) {
+        // If source is not running and thread is interrupted this means someone has tried to
+        // remove this peer.
+        return;
+      }
+      retryStartup.set(!this.abortOnError);
       throw new IllegalStateException("Source should be active.");
     }
     LOG.info("{} queueId={} (queues={}) is replicating from cluster={} to cluster={}", logPeerId(),
