@@ -1096,7 +1096,7 @@ public class ServerManager {
     Path lastFlushedSeqIdPath = new Path(rootDir, LAST_FLUSHED_SEQ_ID_FILE);
     FileSystem fs = FileSystem.get(conf);
     if (!fs.exists(lastFlushedSeqIdPath)) {
-      LOG.info("No .lastflushedseqids found at" + lastFlushedSeqIdPath
+      LOG.info("No .lastflushedseqids found at " + lastFlushedSeqIdPath
         + " will record last flushed sequence id"
         + " for regions by regionserver report all over again");
       return;
