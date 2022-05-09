@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.namequeues.LogHandlerUtils;
@@ -223,12 +224,12 @@ public class SlowLogQueueService implements NamedQueueService {
    * table.
    */
   @Override
-  public void persistAll() {
+  public void persistAll(Connection connection) {
     if (!isOnlineLogProviderEnabled) {
       return;
     }
     if (slowLogPersistentService != null) {
-      slowLogPersistentService.addAllLogsToSysTable();
+      slowLogPersistentService.addAllLogsToSysTable(connection);
     }
   }
 

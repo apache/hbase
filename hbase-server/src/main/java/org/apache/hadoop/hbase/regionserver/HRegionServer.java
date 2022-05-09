@@ -19,8 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.HConstants.NAMED_QUEUE_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.HConstants.WAL_EVENT_TRACKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import java.io.IOException;
@@ -107,7 +111,7 @@ import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -130,6 +134,8 @@ import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
@@ -362,7 +368,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private final RegionServerAccounting regionServerAccounting;
 
-  private SlowLogTableOpsChore slowLogTableOpsChore = null;
+  private NamedQueueServiceChore namedQueueServiceChore = null;
 
   // Block cache
   private BlockCache blockCache;
@@ -1688,7 +1694,21 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
     // Instantiate replication if replication enabled. Pass it the log directories.
     createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
+
+    WALActionsListener walEventListener = getWALEventTrackerListener(conf);
+    if (walEventListener != null && factory.getWALProvider() != null) {
+      factory.getWALProvider().addWALActionsListener(walEventListener);
+    }
     this.walFactory = factory;
+  }
+
+  private WALActionsListener getWALEventTrackerListener(Configuration conf) {
+    if (conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT)) {
+      WALEventTrackerListener listener =
+        new WALEventTrackerListener(conf, getNamedQueueRecorder(), getServerName());
+      return listener;
+    }
+    return null;
   }
 
   /**
@@ -1860,8 +1880,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.fsUtilizationChore != null) {
       choreService.scheduleChore(fsUtilizationChore);
     }
-    if (this.slowLogTableOpsChore != null) {
-      choreService.scheduleChore(slowLogTableOpsChore);
+    if (this.namedQueueServiceChore != null) {
+      choreService.scheduleChore(namedQueueServiceChore);
     }
     if (this.brokenStoreFileCleaner != null) {
       choreService.scheduleChore(brokenStoreFileCleaner);
@@ -1913,10 +1933,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
       HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
-    if (isSlowLogTableEnabled) {
+    final boolean walEventTrackerEnabled =
+      conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT);
+
+    if (isSlowLogTableEnabled || walEventTrackerEnabled) {
       // default chore duration: 10 min
-      final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
-      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.namedQueueRecorder);
+      // After <version number>, we will remove hbase.slowlog.systable.chore.duration conf property
+      final int slowLogChoreDuration = conf.getInt(HConstants.SLOW_LOG_SYS_TABLE_CHORE_DURATION_KEY,
+        DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION);
+
+      final int namedQueueChoreDuration =
+        conf.getInt(HConstants.NAMED_QUEUE_CHORE_DURATION_KEY, NAMED_QUEUE_CHORE_DURATION_DEFAULT);
+      // Considering min of slowLogChoreDuration and namedQueueChoreDuration
+      int choreDuration = Math.min(slowLogChoreDuration, namedQueueChoreDuration);
+
+      namedQueueServiceChore = new NamedQueueServiceChore(this, choreDuration,
+        this.namedQueueRecorder, this.getConnection());
     }
 
     if (this.nonceManager != null) {
@@ -3498,13 +3530,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   protected NamedQueueRecorder createNamedQueueRecord() {
-    final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-      HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-    if (isOnlineLogProviderEnabled) {
-      return NamedQueueRecorder.getInstance(conf);
-    } else {
-      return null;
-    }
+    return NamedQueueRecorder.getInstance(conf);
   }
 
   @Override
@@ -3533,7 +3559,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(executorStatusChore);
     shutdownChore(storefileRefresher);
     shutdownChore(fsUtilizationChore);
-    shutdownChore(slowLogTableOpsChore);
+    shutdownChore(namedQueueServiceChore);
     shutdownChore(brokenStoreFileCleaner);
   }
 

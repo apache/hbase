@@ -639,7 +639,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return newPath;
   }
 
-  Path getOldPath() {
+  public Path getOldPath() {
     long currentFilenum = this.filenum.get();
     Path oldPath = null;
     if (currentFilenum > 0) {
