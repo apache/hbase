@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -407,7 +408,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     List<HStoreFile> openedFiles = openStoreFiles(toBeAddedFiles, false);
 
     // propogate the file changes to the underlying store file manager
-    replaceStoreFiles(toBeRemovedStoreFiles, openedFiles); // won't throw an exception
+    replaceStoreFiles(toBeRemovedStoreFiles, openedFiles, () -> {}, () -> {}); // won't throw an exception
   }
 
   /**
@@ -477,9 +478,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   public void replaceStoreFiles(Collection<HStoreFile> compactedFiles,
-    Collection<HStoreFile> newFiles) throws IOException {
+    Collection<HStoreFile> newFiles, IOExceptionRunnable walMarkerWriter,
+    Runnable actionUnderLock) throws IOException {
     storeFileTracker.replace(StoreUtils.toStoreFileInfo(compactedFiles),
       StoreUtils.toStoreFileInfo(newFiles));
+    walMarkerWriter.run();
     writeLock();
     try {
       storeFileManager.addCompactionResults(compactedFiles, newFiles);
