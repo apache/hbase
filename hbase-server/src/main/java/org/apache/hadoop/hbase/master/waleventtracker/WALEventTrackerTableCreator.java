@@ -47,6 +47,9 @@ public class WALEventTrackerTableCreator {
           .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false)
           .setMaxVersions(1).setTimeToLive(TTL.intValue()).build());
 
+  /* Private default constructor */
+  private WALEventTrackerTableCreator() {}
+
   /*
    * We will create this table only if hbase.regionserver.wal.event.tracker.enabled is enabled and
    * table doesn't exists already.
