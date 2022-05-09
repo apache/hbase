@@ -1018,14 +1018,14 @@ public class TestHStore {
     // call first time after files changed
     spiedStoreEngine.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
-    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
 
     // call second time
     spiedStoreEngine.refreshStoreFiles();
 
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,
-    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {
