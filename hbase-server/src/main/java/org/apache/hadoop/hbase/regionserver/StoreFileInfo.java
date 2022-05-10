@@ -119,18 +119,18 @@ public class StoreFileInfo implements Configurable {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath,
     final boolean primaryReplica) throws IOException {
-    this(conf, fs, null, initialPath, primaryReplica);
+    this(conf, fs, fs.getFileStatus(initialPath), primaryReplica);
   }
 
   private StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
-    final Path initialPath, final boolean primaryReplica) throws IOException {
+    final boolean primaryReplica) throws IOException {
     assert fs != null;
-    assert initialPath != null;
+    assert fileStatus != null;
     assert conf != null;
 
     this.fs = fs;
     this.conf = conf;
-    this.initialPath = initialPath;
+    this.initialPath = fileStatus.getPath();
     this.primaryReplica = primaryReplica;
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
@@ -153,14 +153,8 @@ public class StoreFileInfo implements Configurable {
       LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
     } else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
       // HFile
-      if (fileStatus != null) {
-        this.createdTimestamp = fileStatus.getModificationTime();
-        this.size = fileStatus.getLen();
-      } else {
-        FileStatus fStatus = fs.getFileStatus(initialPath);
-        this.createdTimestamp = fStatus.getModificationTime();
-        this.size = fStatus.getLen();
-      }
+      this.createdTimestamp = fileStatus.getModificationTime();
+      this.size = fileStatus.getLen();
       this.reference = null;
       this.link = null;
     } else {
@@ -176,7 +170,7 @@ public class StoreFileInfo implements Configurable {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
     throws IOException {
-    this(conf, fs, fileStatus, fileStatus.getPath(), true);
+    this(conf, fs, fileStatus, true);
   }
 
   /**
