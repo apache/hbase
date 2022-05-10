@@ -127,7 +127,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         try {
           // It's a mob store, flush the cells in a mob way. This is the difference of flushing
           // between a normal and a mob store.
-          performMobFlush(snapshot, cacheFlushId, scanner, writer, status, throughputController);
+          performMobFlush(snapshot, cacheFlushId, scanner, writer, status, throughputController,
+            writerCreationTracker);
         } catch (IOException ioe) {
           e = ioe;
           // throw the exception out
@@ -171,16 +172,21 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
    */
   protected void performMobFlush(MemStoreSnapshot snapshot, long cacheFlushId,
     InternalScanner scanner, StoreFileWriter writer, MonitoredTask status,
-    ThroughputController throughputController) throws IOException {
+    ThroughputController throughputController, Consumer<Path> writerCreationTracker)
+    throws IOException {
     StoreFileWriter mobFileWriter = null;
     int compactionKVMax =
       conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
     long mobCount = 0;
     long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMax();
-    mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
-      store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
-      false);
+    mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst() ?
+      mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
+        store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
+        false) :
+      mobStore.createWriter(new Date(time), snapshot.getCellsCount(),
+        store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
+        false, writerCreationTracker);
     // the target path is {tableName}/.mob/{cfName}/mobFiles
     // the relative path is mobFiles
     byte[] fileName = Bytes.toBytes(mobFileWriter.getPath().getName());

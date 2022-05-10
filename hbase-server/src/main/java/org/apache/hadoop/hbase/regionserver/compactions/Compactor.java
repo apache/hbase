@@ -362,7 +362,7 @@ public abstract class Compactor<T extends CellSink> {
       writer = sinkFactory.createWriter(scanner, fd, dropCache, request.isMajor(),
         request.getWriterCreationTracker());
       finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
-        throughputController, request.isAllFiles(), request.getFiles().size(), progress);
+        throughputController, request, progress);
       if (!finished) {
         throw new InterruptedIOException("Aborting compaction of store " + store + " in region "
           + store.getRegionInfo().getRegionNameAsString() + " because it was interrupted.");
@@ -407,14 +407,13 @@ public abstract class Compactor<T extends CellSink> {
    * @param smallestReadPoint   Smallest read point.
    * @param cleanSeqId          When true, remove seqId(used to be mvcc) value which is &lt;=
    *                            smallestReadPoint
-   * @param major               Is a major compaction.
-   * @param numofFilesToCompact the number of files to compact
+   * @param request             compaction request.
    * @param progress            Progress reporter.
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-    long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-    boolean major, int numofFilesToCompact, CompactionProgress progress) throws IOException {
+      long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
+      CompactionRequestImpl request, CompactionProgress progress) throws IOException {
     assert writer instanceof ShipperListener;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
@@ -436,7 +435,7 @@ public abstract class Compactor<T extends CellSink> {
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
     long shippedCallSizeLimit =
-      (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);

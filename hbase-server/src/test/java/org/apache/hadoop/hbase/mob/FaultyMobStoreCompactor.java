@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -92,8 +93,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
     long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-    boolean major, int numofFilesToCompact, CompactionProgress progress) throws IOException {
+    CompactionRequestImpl request, CompactionProgress progress) throws IOException {
 
+    boolean major = request.isAllFiles();
     totalCompactions.incrementAndGet();
     if (major) {
       totalMajorCompactions.incrementAndGet();
@@ -145,7 +147,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
     long shippedCallSizeLimit =
-      (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
 
     Cell mobCell = null;
 

@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -41,18 +43,20 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +70,7 @@ import org.slf4j.LoggerFactory;
  * Runs Mob cleaner chore 11 Verifies that number of MOB files in a mob directory is 20. 12 Runs
  * scanner and checks all 3 * 1000 rows.
  */
+@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestMobCompactionWithDefaults {
   private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactionWithDefaults.class);
@@ -73,7 +78,7 @@ public class TestMobCompactionWithDefaults {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMobCompactionWithDefaults.class);
 
-  protected static HBaseTestingUtil HTU;
+  protected HBaseTestingUtil HTU;
   protected static Configuration conf;
   protected static long minAgeToArchive = 10000;
 
@@ -95,8 +100,19 @@ public class TestMobCompactionWithDefaults {
 
   protected MobFileCleanerChore cleanerChore;
 
-  @BeforeClass
-  public static void htuStart() throws Exception {
+  protected Boolean useFileBasedSFT;
+
+  public TestMobCompactionWithDefaults(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = {false, true};
+    return Arrays.asList(data);
+  }
+
+  protected void htuStart() throws Exception {
     HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
     conf.setInt("hfile.format.version", 3);
@@ -109,21 +125,25 @@ public class TestMobCompactionWithDefaults {
     // Set compacted file discharger interval to a half minAgeToArchive
     conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive / 2);
     conf.setBoolean("hbase.regionserver.compaction.enabled", false);
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
+    additonalConfigSetup();
     HTU.startMiniCluster();
   }
 
-  @AfterClass
-  public static void htuStop() throws Exception {
-    HTU.shutdownMiniCluster();
+  protected void additonalConfigSetup() {
   }
 
   @Before
   public void setUp() throws Exception {
+    htuStart();
     admin = HTU.getAdmin();
     cleanerChore = new MobFileCleanerChore();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
-    tableDescriptor = HTU.createModifyableTableDescriptor(test.getMethodName())
+    tableDescriptor = HTU.createModifyableTableDescriptor(TestMobUtils.getTableName(test))
       .setColumnFamily(familyDescriptor).build();
     RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
     byte[][] splitKeys = splitAlgo.split(numRegions);
@@ -152,6 +172,7 @@ public class TestMobCompactionWithDefaults {
   public void tearDown() throws Exception {
     admin.disableTable(tableDescriptor.getTableName());
     admin.deleteTable(tableDescriptor.getTableName());
+    HTU.shutdownMiniCluster();
   }
 
   @Test
@@ -167,12 +188,12 @@ public class TestMobCompactionWithDefaults {
 
   @Test
   public void testMobFileCompactionAfterSnapshotClone() throws InterruptedException, IOException {
-    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
     LOG.info("MOB compaction of cloned snapshot, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(test.getMethodName(), table);
-    admin.cloneSnapshot(test.getMethodName(), clone);
+    admin.snapshot(TestMobUtils.getTableName(test), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
     assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
       getNumberOfMobFiles(clone, famStr));
     mobCompact(admin.getDescriptor(clone), familyDescriptor);
@@ -185,12 +206,12 @@ public class TestMobCompactionWithDefaults {
   @Test
   public void testMobFileCompactionAfterSnapshotCloneAndFlush()
     throws InterruptedException, IOException {
-    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
     LOG.info("MOB compaction of cloned snapshot after flush, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(test.getMethodName(), table);
-    admin.cloneSnapshot(test.getMethodName(), clone);
+    admin.snapshot(TestMobUtils.getTableName(test), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
     assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
       getNumberOfMobFiles(clone, famStr));
     loadAndFlushThreeTimes(rows, clone, famStr);
@@ -269,8 +290,11 @@ public class TestMobCompactionWithDefaults {
 
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
-    // Cleanup again
-    cleanerChore.cleanupObsoleteMobFiles(conf, table);
+
+    //run cleaner chore on each RS
+    for (ServerName sn : admin.getRegionServers()){
+      HTU.getMiniHBaseCluster().getRegionServer(sn).getRSMobFileCleanerChore().chore();
+    }
 
     assertEquals("After cleaning, we should have 1 MOB file per region based on size.", numRegions,
       getNumberOfMobFiles(table, family));

@@ -23,9 +23,10 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
  * time larger than minimum age to archive 10. Runs Mob cleaner chore 11 Verifies that number of MOB
  * files in a mob directory is 20. 12 Runs scanner and checks all 3 * 1000 rows.
  */
+@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionWithDefaults {
   private static final Logger LOG =
@@ -50,20 +52,20 @@ public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionWithDe
   private static final int batchSize = 7;
   private MobFileCompactionChore compactionChore;
 
+  public TestMobCompactionOptRegionBatchMode(Boolean useFileBasedSFT) {
+   super(useFileBasedSFT);
+  }
+
   @Before
   public void setUp() throws Exception {
     super.setUp();
     compactionChore = new MobFileCompactionChore(conf, batchSize);
   }
 
-  @BeforeClass
-  public static void configureOptimizedCompactionAndBatches()
-    throws InterruptedException, IOException {
-    HTU.shutdownMiniHBaseCluster();
+  protected void additonalConfigSetup() {
     conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, batchSize);
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
-    HTU.startMiniHBaseCluster();
   }
 
   @Override
