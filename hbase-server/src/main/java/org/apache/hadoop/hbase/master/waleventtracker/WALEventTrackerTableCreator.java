@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  * WALEventTracker Table creation to be used by HMaster
  */
 @InterfaceAudience.Private
-public class WALEventTrackerTableCreator {
+public final class WALEventTrackerTableCreator {
   private static final Logger LOG = LoggerFactory.getLogger(WALEventTrackerTableCreator.class);
   private static final Long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
 
