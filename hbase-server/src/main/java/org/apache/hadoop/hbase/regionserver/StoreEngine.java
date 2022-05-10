@@ -409,7 +409,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     // propogate the file changes to the underlying store file manager
     replaceStoreFiles(toBeRemovedStoreFiles, openedFiles, () -> {
     }, () -> {
-    }); // won't throw an exception
+      }); // won't throw an exception
   }
 
   /**
