@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestBadReplicationPeer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -65,15 +65,15 @@ public class TestBadReplicationPeer {
   }
 
   /*
-    Add dummy peer and make sure that we are able to remove that peer.
+   * Add dummy peer and make sure that we are able to remove that peer.
    */
   @Test
   public void testRemovePeerSucceeds() throws IOException {
     String peerId = "dummypeer_1";
     try (Connection connection = ConnectionFactory.createConnection(conf);
-      Admin admin = connection.getAdmin()){
+      Admin admin = connection.getAdmin()) {
       ReplicationPeerConfigBuilder rpcBuilder = ReplicationPeerConfig.newBuilder();
-      String quorum =  TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper().getQuorum();
+      String quorum = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper().getQuorum();
       rpcBuilder.setClusterKey(quorum + ":/1");
       ReplicationPeerConfig rpc = rpcBuilder.build();
       admin.addReplicationPeer(peerId, rpc);

@@ -538,7 +538,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
-
     if (!this.isSourceActive()) {
       setSourceStartupStatus(false);
       if (Thread.currentThread().isInterrupted()) {
@@ -569,7 +568,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
-    if(!this.isSourceActive()) {
+    if (!this.isSourceActive()) {
       setSourceStartupStatus(false);
       if (Thread.currentThread().isInterrupted()) {
         // If source is not running and thread is interrupted this means someone has tried to

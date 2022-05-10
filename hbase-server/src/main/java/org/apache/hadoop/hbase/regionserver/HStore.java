@@ -1232,13 +1232,11 @@ public class HStore
       allowedOnPath = ".*/(HStore|TestHStore).java")
   void replaceStoreFiles(Collection<HStoreFile> compactedFiles, Collection<HStoreFile> result,
     boolean writeCompactionMarker) throws IOException {
-    storeEngine.replaceStoreFiles(compactedFiles, result,
-      () -> {
-        if (writeCompactionMarker) {
-          writeCompactionWalRecord(compactedFiles, result);
-        }
-      },
-      () -> {
+    storeEngine.replaceStoreFiles(compactedFiles, result, () -> {
+      if (writeCompactionMarker) {
+        writeCompactionWalRecord(compactedFiles, result);
+      }
+    }, () -> {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(compactedFiles);
       }
