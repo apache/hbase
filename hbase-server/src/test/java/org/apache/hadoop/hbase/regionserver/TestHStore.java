@@ -947,7 +947,8 @@ public class TestHStore {
         sf = it.next();
       }
       sf.closeStoreFile(true);
-      store.getStoreEngine().getStoreFileManager().removeCompactedFiles(Lists.newArrayList(sf));
+      store.getStoreEngine().getStoreFileManager().
+        removeCompactedFiles(Collections.singletonList(sf));
     }
   }
 
