@@ -1237,10 +1237,10 @@ public class HStore
         writeCompactionWalRecord(compactedFiles, result);
       }
     }, () -> {
-        synchronized (filesCompacting) {
-          filesCompacting.removeAll(compactedFiles);
-        }
-      });
+      synchronized (filesCompacting) {
+        filesCompacting.removeAll(compactedFiles);
+      }
+    });
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
     // sizes later so it's not super-critical if we miss these.
     RegionServerServices rsServices = region.getRegionServerServices();
