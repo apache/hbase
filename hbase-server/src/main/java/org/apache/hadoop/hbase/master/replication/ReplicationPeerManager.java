@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
@@ -142,7 +143,7 @@ public class ReplicationPeerManager {
   private ReplicationPeerDescription checkPeerExists(String peerId) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = peers.get(peerId);
     if (desc == null) {
-      throw new DoNotRetryIOException("Replication peer " + peerId + " does not exist");
+      throw new ReplicationPeerNotFoundException(peerId);
     }
     return desc;
   }
