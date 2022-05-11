@@ -1235,8 +1235,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     String generateStatus(final int sr, final int i, final int lr) {
-      return sr + "/" + i + "/" + lr + ", latency " + getShortLatencyReport()
-        + (!isRandomValueSize() ? "" : ", value size " + getShortValueSizeReport());
+      return "row [start=" + sr + ", current=" + i + ", last=" + lr + "], latency ["
+        + getShortLatencyReport() + "]"
+        + (!isRandomValueSize() ? "" : ", value size [" + getShortValueSizeReport() + "]");
     }
 
     boolean isRandomValueSize() {
