@@ -1338,15 +1338,15 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
-            <trimTrailingWhitespace/>
-            <endWithNewline/>
+            <trimTrailingWhitespace />
+            <endWithNewline />
             <!-- make sure every file has the following copyright header.
               optionally, Spotless can set copyright years by digging
               through git history (see "license" section below) -->
             <licenseHeader>
               <file>${session.executionRootDirectory}/dev-support/license-header</file>
             </licenseHeader>
-            <removeUnusedImports/>
+            <removeUnusedImports />
           </java>
           <pom>
             <sortPom>
@@ -1368,8 +1368,8 @@
                 <include>*.txt</include>
               </includes>
               <!-- define the steps to apply to those files -->
-              <trimTrailingWhitespace/>
-              <endWithNewline/>
+              <trimTrailingWhitespace />
+              <endWithNewline />
             </format>
           </formats>
         </configuration>
