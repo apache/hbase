@@ -1752,8 +1752,6 @@
               <exclude>**/*.svg</exclude>
               <!-- non-standard notice file from jruby included by reference -->
               <exclude>**/src/main/resources/META-INF/LEGAL</exclude>
-              <!-- MIT: https://github.com/asciidoctor/asciidoctor/blob/master/LICENSE.adoc -->
-              <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <!-- MIT https://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <exclude>**/jquery.tablesorter.min.js</exclude>
