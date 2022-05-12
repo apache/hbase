@@ -221,7 +221,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
 
   public HStoreFile createStoreFileAndReader(Path p) throws IOException {
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
-    StoreFileInfo info = new StoreFileInfo(conf, fs, fs.getFileStatus(p));
+    StoreFileInfo info = new StoreFileInfo(conf, fs, p, ctx.isPrimaryReplicaStore());
     return createStoreFileAndReader(info);
   }
 

@@ -129,7 +129,7 @@ public class StoreFileInfo {
 
     this.fs = fs;
     this.conf = conf;
-    this.initialPath = initialPath;
+    this.initialPath = fs.makeQualified(initialPath);
     this.primaryReplica = primaryReplica;
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
