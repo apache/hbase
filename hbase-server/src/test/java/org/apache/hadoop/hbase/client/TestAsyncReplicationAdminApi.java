@@ -510,7 +510,7 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
   }
 
   /*
-    Tests that admin api throws ReplicationPeerNotFoundException if peer doesn't exist.
+   * Tests that admin api throws ReplicationPeerNotFoundException if peer doesn't exist.
    */
   @Test
   public void testReplicationPeerNotFoundException() throws InterruptedException {
