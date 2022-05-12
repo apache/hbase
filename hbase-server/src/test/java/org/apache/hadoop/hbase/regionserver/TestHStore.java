@@ -941,16 +941,13 @@ public class TestHStore {
   private void closeCompactedFile(int index) throws IOException {
     Collection<HStoreFile> files =
       this.store.getStoreEngine().getStoreFileManager().getCompactedfiles();
-    if (files.size() > 0) {
-      HStoreFile sf = null;
-      Iterator<HStoreFile> it = files.iterator();
-      for (int i = 0; i <= index; i++) {
-        sf = it.next();
-      }
-      sf.closeStoreFile(true);
-      store.getStoreEngine().getStoreFileManager().
-        removeCompactedFiles(Collections.singletonList(sf));
+    HStoreFile sf = null;
+    Iterator<HStoreFile> it = files.iterator();
+    for (int i = 0; i <= index; i++) {
+      sf = it.next();
     }
+    sf.closeStoreFile(true);
+    store.getStoreEngine().getStoreFileManager().removeCompactedFiles(Lists.newArrayList(sf));
   }
 
   @Test
