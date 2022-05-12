@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -110,21 +111,22 @@ public class TestBlockIOUtils {
 
   @Test
   public void testPreadWithReadFullBytes() throws IOException {
-    testPreadReadFullBytesInternal(true);
+    testPreadReadFullBytesInternal(true, EnvironmentEdgeManager.currentTime());
   }
 
   @Test
   public void testPreadWithoutReadFullBytes() throws IOException {
-    testPreadReadFullBytesInternal(false);
+    testPreadReadFullBytesInternal(false, EnvironmentEdgeManager.currentTime());
   }
 
-  private void testPreadReadFullBytesInternal(boolean readAllBytes) throws IOException {
+  private void testPreadReadFullBytesInternal(boolean readAllBytes, long randomSeed)
+    throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_KEY, readAllBytes);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path path = new Path(TEST_UTIL.getDataTestDirOnTestFS(), testName.getMethodName());
     // give a fixed seed such we can see failure easily.
-    Random rand = new Random(5685632);
+    Random rand = new Random(randomSeed);
     long totalDataBlockBytes =
       writeBlocks(TEST_UTIL.getConfiguration(), rand, COMPRESSION_ALGO, path);
     readDataBlocksAndVerify(fs, path, COMPRESSION_ALGO, totalDataBlockBytes);
