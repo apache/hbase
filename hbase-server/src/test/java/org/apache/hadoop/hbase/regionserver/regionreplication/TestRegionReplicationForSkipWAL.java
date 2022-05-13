@@ -79,6 +79,10 @@ public class TestRegionReplicationForSkipWAL {
 
   private static final byte[] QUAL5 = Bytes.toBytes("qualifier_test5");
 
+  private static final byte[] FAM6 = Bytes.toBytes("family_test6");
+
+  private static final byte[] QUAL6 = Bytes.toBytes("qualifier_test6");
+
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final int NB_SERVERS = 2;
 
@@ -126,20 +130,23 @@ public class TestRegionReplicationForSkipWAL {
     byte[] value4 = Bytes.toBytes(8);
     byte[] rowKey5 = Bytes.toBytes(5);
     byte[] value5 = Bytes.toBytes(10);
+    byte[] rowKey6 = Bytes.toBytes(6);
+    byte[] value6 = Bytes.toBytes(12);
 
     // Test the table is normal,but the Put is skipWAL
     final HRegion[] normalRegions = this.createTable(false);
     normalRegions[0].batchMutate(new Mutation[] { new Put(rowKey3).addColumn(FAM3, QUAL3, value3),
       new Put(rowKey4).addColumn(FAM4, QUAL4, value4).setDurability(Durability.SKIP_WAL),
-      new Put(rowKey5).addColumn(FAM5, QUAL5, value5).setDurability(Durability.SKIP_WAL) });
+      new Put(rowKey5).addColumn(FAM5, QUAL5, value5).setDurability(Durability.SKIP_WAL),
+      new Put(rowKey6).addColumn(FAM6, QUAL6, value6) });
 
     try (Table normalTable = HTU.getConnection().getTable(getTableName(false))) {
       HTU.waitFor(30000,
         () -> checkReplica(normalTable, FAM3, QUAL3, rowKey3, value3)
           && checkReplica(normalTable, FAM4, QUAL4, rowKey4, value4)
-          && checkReplica(normalTable, FAM5, QUAL5, rowKey5, value5));
+          && checkReplica(normalTable, FAM5, QUAL5, rowKey5, value5)
+          && checkReplica(normalTable, FAM6, QUAL6, rowKey6, value6));
     }
-
   }
 
 
@@ -161,7 +168,8 @@ public class TestRegionReplicationForSkipWAL {
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
             .setColumnFamilies(Arrays.asList(ColumnFamilyDescriptorBuilder.of(FAM1),
           ColumnFamilyDescriptorBuilder.of(FAM2), ColumnFamilyDescriptorBuilder.of(FAM3),
-          ColumnFamilyDescriptorBuilder.of(FAM4), ColumnFamilyDescriptorBuilder.of(FAM5)));
+          ColumnFamilyDescriptorBuilder.of(FAM4), ColumnFamilyDescriptorBuilder.of(FAM5),
+          ColumnFamilyDescriptorBuilder.of(FAM6)));
     if (skipWAL) {
       builder.setDurability(Durability.SKIP_WAL);
 
