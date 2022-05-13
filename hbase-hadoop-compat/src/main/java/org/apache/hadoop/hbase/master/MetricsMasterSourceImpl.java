@@ -121,7 +121,7 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
           masterWrapper.getNumDeadRegionServers())
         .tag(Interns.info(DRAINING_REGION_SERVER_NAME, DRAINING_REGION_SERVER_DESC),
           masterWrapper.getDrainingRegionServers())
-        .addGauge(Interns.info(NUM_DRAINING_REGION_SERVERS_NAME, NUMBER_OF_REGION_SERVERS_DESC),
+        .addGauge(Interns.info(NUM_DRAINING_REGION_SERVERS_NAME, NUMBER_OF_DRAINING_REGION_SERVERS_DESC),
           masterWrapper.getNumDrainingRegionServers())
         .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
           masterWrapper.getZookeeperQuorum())
