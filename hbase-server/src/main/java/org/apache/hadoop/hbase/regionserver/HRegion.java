@@ -4243,6 +4243,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     private WALKeyImpl createWALKey(long now) {
+      // for MutationBatchOperation,isReplay is false.
       return this.region.createWALKeyForWALAppend(false, this, now, this.nonceGroup,
         this.nonce);
     }
