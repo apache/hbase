@@ -49,9 +49,10 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfIncrements = 0;
   private int numOfAppends = 0;
   /**
-   * Saving the all the {@link Mutation}s if there is {@link Durability#SKIP_WAL} in
-   * {@link HRegion.BatchOperation#buildWALEdits} for {@link HRegion#doMiniBatchMutate} to also
-   * replicate {@link Mutation} which is {@link Durability#SKIP_WAL} to region replica.
+   * Here is for HBASE-26993,saving the all the {@link Mutation}s if there is
+   * {@link Durability#SKIP_WAL} in {@link HRegion.BatchOperation#buildWALEdits} for
+   * {@link HRegion#doMiniBatchMutate} to also replicate {@link Mutation} which is
+   * {@link Durability#SKIP_WAL} to region replica.
    */
   private WALEdit walEditForReplicateIfExistsSkipWAL = null;
 

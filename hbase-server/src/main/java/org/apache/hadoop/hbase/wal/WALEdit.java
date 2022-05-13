@@ -472,7 +472,6 @@ public class WALEdit implements HeapSize {
     }
   }
 
-
   private void addFamily(byte[] family) {
     getOrCreateFamilies().add(family);
   }

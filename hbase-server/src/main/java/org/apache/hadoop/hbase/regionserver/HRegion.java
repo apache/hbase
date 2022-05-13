@@ -4176,7 +4176,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       WALEdit walEditForReplicateIfExistsSkipWAL = miniBatchOp.getWalEditForReplicateIfExistsSkipWAL();
       /**
        * When there is a SKIP_WAL {@link Mutation},we create a new {@link WALEdit} for replicating
-       * to region replica,and first we fill the existing {@link WALEdit} to it and then add the
+       * to region replica,first we fill the existing {@link WALEdit} to it and then add the
        * {@link Mutation} which is SKIP_WAL to it.
        */
       if (walEditForReplicateIfExistsSkipWAL == null) {
@@ -4212,7 +4212,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
        * When walEditForReplicateIfExistsSkipWAL is not null,it means there exists SKIP_WAL
        * {@link Mutation} and we create a new {@link WALEdit} in
        * {@link MutationBatchOperation#cacheSkipWALMutationForReplicateRegionReplica} for
-       * replicating to region replica, so here we also add non SKIP_WAL to
+       * replicating to region replica, so here we also add non SKIP_WAL{@link Mutation}s to
        * walEditForReplicateIfExistsSkipWAL.
        */
       doAddCellsToWALEdit(walEditForReplicateIfExistsSkipWAL, cellsFromCP, familyCellMap);
@@ -4233,7 +4233,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
          * Here is for HBASE-26993 case 2,all {@link Mutation}s are {@link Durability#SKIP_WAL}. In
          * order to make the new framework for region replication could work for SKIP_WAL,because
          * there is no {@link RegionReplicationSink#add} attached in {@link HRegion#doWALAppend},so
-         * here we create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
+         * here we get {@link WALEdit} from
+         * {@link MiniBatchOperationInProgress#getWalEditForReplicateIfExistsSkipWAL} and attach
          * {@link RegionReplicationSink#add} to the new mvcc writeEntry.
          */
         attachReplicateRegionReplicaToMVCCEntry(miniBatchOp, writeEntry, now);
@@ -4247,7 +4248,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     /**
-     * Create {@link WALKeyImpl} and {@link WALEdit} for miniBatchOp and attach
+     * Create {@link WALKeyImpl} and get {@link WALEdit} from miniBatchOp and attach
      * {@link RegionReplicationSink#add} to the mvccWriteEntry.
      */
     private void attachReplicateRegionReplicaToMVCCEntry(
@@ -8091,11 +8092,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * {@link MutationBatchOperation},so for HBASE-26993 case 1,if
      * {@link MiniBatchOperationInProgress#getWalEditForReplicateSkipWAL} is not null and we could
      * enter {@link HRegion#doWALAppend},that means partial {@link Mutation}s are
-     * {@link Durability#SKIP_WAL}.In order to make the new framework for region replication could
-     * work for SKIP_WAL, we use {@link MiniBatchOperationInProgress#getWalEditForReplicateSkipWAL}
-     * for replicating to region replica,but if
-     * {@link MiniBatchOperationInProgress#getWalEditForReplicateSkipWAL} is null,that means there
-     * is no {@link Mutation} is {@link Durability#SKIP_WAL}.
+     * {@link Durability#SKIP_WAL}, we use
+     * {@link MiniBatchOperationInProgress#getWalEditForReplicateSkipWAL} to replicate to region
+     * replica,but if {@link MiniBatchOperationInProgress#getWalEditForReplicateSkipWAL} is
+     * null,that means there is no {@link Mutation} is {@link Durability#SKIP_WAL},so we just use
+     * walEdit to replicate.
      */
     assert batchOp instanceof MutationBatchOperation;
     WALEdit walEditToUse = miniBatchOp.getWalEditForReplicateIfExistsSkipWAL();
