@@ -57,7 +57,7 @@ public class TestRegionReplicationForSkipWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicationForSkipWAL.class);
+    HBaseClassTestRule.forClass(TestRegionReplicationForSkipWAL.class);
 
   private static final byte[] FAM1 = Bytes.toBytes("family_test1");
 
@@ -93,8 +93,7 @@ public class TestRegionReplicationForSkipWAL {
     Configuration conf = HTU.getConfiguration();
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, false);
-    HTU.startMiniCluster(StartTestingClusterOption.builder()
-        .numRegionServers(NB_SERVERS).build());
+    HTU.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(NB_SERVERS).build());
   }
 
   @AfterClass
@@ -149,9 +148,8 @@ public class TestRegionReplicationForSkipWAL {
     }
   }
 
-
   private static boolean checkReplica(Table table, byte[] fam, byte[] qual, byte[] rowKey,
-      byte[] expectValue) throws IOException {
+    byte[] expectValue) throws IOException {
     Get get = new Get(rowKey).setConsistency(Consistency.TIMELINE).setReplicaId(1);
     Result result = table.get(get);
     byte[] value = result.getValue(fam, qual);
@@ -166,7 +164,7 @@ public class TestRegionReplicationForSkipWAL {
     TableName tableName = getTableName(skipWAL);
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(NB_SERVERS)
-            .setColumnFamilies(Arrays.asList(ColumnFamilyDescriptorBuilder.of(FAM1),
+        .setColumnFamilies(Arrays.asList(ColumnFamilyDescriptorBuilder.of(FAM1),
           ColumnFamilyDescriptorBuilder.of(FAM2), ColumnFamilyDescriptorBuilder.of(FAM3),
           ColumnFamilyDescriptorBuilder.of(FAM4), ColumnFamilyDescriptorBuilder.of(FAM5),
           ColumnFamilyDescriptorBuilder.of(FAM6)));
@@ -192,5 +190,4 @@ public class TestRegionReplicationForSkipWAL {
     }
     return regions;
   }
-
 }

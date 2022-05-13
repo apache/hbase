@@ -162,7 +162,7 @@ public class TestRegionReplicaReplicationError {
   private void doTest(boolean skipWAL) throws IOException {
     TableName tableName = TableName.valueOf(TN + (skipWAL ? "_skipWAL" : ""));
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
-        .setRegionReplication(3).setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF));
+      .setRegionReplication(3).setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF));
     if (skipWAL) {
       builder.setDurability(Durability.SKIP_WAL);
     }
