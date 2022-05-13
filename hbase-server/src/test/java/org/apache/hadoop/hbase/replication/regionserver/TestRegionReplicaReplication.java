@@ -104,7 +104,8 @@ public class TestRegionReplicaReplication {
     // ensure that data is replicated to the secondary region
     TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
       + regionReplication + (skipWAL ? "_skipWAL" : ""));
-    TableDescriptorBuilder builder = HTU
+    TableDescriptorBuilder builder =
+      HTU
         .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
           ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
           ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
