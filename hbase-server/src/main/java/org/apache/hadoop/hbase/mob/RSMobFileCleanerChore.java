@@ -53,10 +53,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 /**
  * The class RSMobFileCleanerChore for running cleaner regularly to remove the
- * obsolete (files which have no active references to) mob files tht were referenced from the
+ * obsolete (files which have no active references to) mob files that were referenced from the
  * current RS.
  */
-@InterfaceAudience.Private public class RSMobFileCleanerChore extends ScheduledChore {
+@InterfaceAudience.Private
+public class RSMobFileCleanerChore extends ScheduledChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSMobFileCleanerChore.class);
   private final HRegionServer rs;

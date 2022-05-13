@@ -166,12 +166,9 @@ public class MobFileCleanerChore extends ScheduledChore {
       Path tableDir = CommonFSUtils.getTableDir(rootDir, table);
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
 
-      if(regionDirs != null){
-        regionDirs.stream().forEach(rd -> regionNames.add(rd.getName()));
-      }
-
       Set<String> allActiveMobFileName = new HashSet<String>();
       for (Path regionPath : regionDirs) {
+        regionNames.add(regionPath.getName());
         for (ColumnFamilyDescriptor hcd : list) {
           String family = hcd.getNameAsString();
           Path storePath = new Path(regionPath, family); 
