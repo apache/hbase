@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" xmlns="https://maven.apache.org/POM/4.0.0" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -33,7 +32,7 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>23</version>
-    <relativePath/>
+    <relativePath />
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
@@ -41,7 +40,7 @@
   <version>2.4.6.7.2.16.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
-  <description>Apache HBase is the Hadoop database. Use it when you need
+  <description>Apache HBase&#153; is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.</description>
@@ -663,7 +662,7 @@
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>7200</surefire.timeout>
-    <test.exclude.pattern/>
+    <test.exclude.pattern />
     <!--
       Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value.
       This value is managed separately for jdk11. See below.
@@ -2228,15 +2227,15 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
-            <trimTrailingWhitespace/>
-            <endWithNewline/>
+            <trimTrailingWhitespace />
+            <endWithNewline />
             <!-- make sure every file has the following copyright header.
               optionally, Spotless can set copyright years by digging
               through git history (see "license" section below) -->
             <licenseHeader>
               <file>${session.executionRootDirectory}/dev-support/license-header</file>
             </licenseHeader>
-            <removeUnusedImports/>
+            <removeUnusedImports />
           </java>
           <pom>
             <sortPom>
@@ -2258,8 +2257,8 @@
                 <include>*.txt</include>
               </includes>
               <!-- define the steps to apply to those files -->
-              <trimTrailingWhitespace/>
-              <endWithNewline/>
+              <trimTrailingWhitespace />
+              <endWithNewline />
             </format>
           </formats>
         </configuration>
@@ -2592,7 +2591,7 @@
       </activation>
       <build>
         <pluginManagement>
-          <plugins/>
+          <plugins />
         </pluginManagement>
       </build>
     </profile>
@@ -3737,7 +3736,7 @@
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups/>
+        <surefire.firstPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3750,7 +3749,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3763,7 +3762,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3776,7 +3775,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3815,7 +3814,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MiscTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3829,7 +3828,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.CoprocessorTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3843,7 +3842,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ClientTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3857,7 +3856,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MasterTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3871,7 +3870,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapredTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3885,7 +3884,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapReduceTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3899,7 +3898,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RegionServerTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3913,7 +3912,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
 
@@ -3928,7 +3927,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
 
@@ -3943,7 +3942,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FilterTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3957,7 +3956,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.IOTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3971,7 +3970,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RestTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3985,7 +3984,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RPCTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -3999,7 +3998,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ReplicationTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -4013,7 +4012,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SecurityTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -4027,7 +4026,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FlakeyTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -4041,7 +4040,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ZKTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
 
@@ -4057,7 +4056,7 @@
         <surefire.provider>surefire-junit4</surefire.provider>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups/>
+        <surefire.firstPartGroups />
       </properties>
     </profile>
     <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
@@ -4198,7 +4197,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore/>
+                        <ignore />
                       </action>
                     </pluginExecution>
                     <pluginExecution>
@@ -4211,7 +4210,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore/>
+                        <ignore />
                       </action>
                     </pluginExecution>
                     <pluginExecution>
@@ -4225,7 +4224,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore/>
+                        <ignore />
                       </action>
                     </pluginExecution>
                     <pluginExecution>
