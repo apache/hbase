@@ -228,21 +228,43 @@ public final class BlockIOUtils {
    */
   public static boolean preadWithExtra(ByteBuff buff, FSDataInputStream dis, long position,
     int necessaryLen, int extraLen) throws IOException {
+    return preadWithExtra(buff, dis, position, necessaryLen, extraLen, false);
+  }
+
+  /**
+   * Read from an input stream at least <code>necessaryLen</code> and if possible,
+   * <code>extraLen</code> also if available. Analogous to
+   * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but uses positional read and
+   * specifies a number of "extra" bytes that would be desirable but not absolutely necessary to
+   * read. If the input stream supports ByteBufferPositionedReadable, it reads to the byte buffer
+   * directly, and does not allocate a temporary byte array.
+   * @param buff         ByteBuff to read into.
+   * @param dis          the input stream to read from
+   * @param position     the position within the stream from which to start reading
+   * @param necessaryLen the number of bytes that are absolutely necessary to read
+   * @param extraLen     the number of extra bytes that would be nice to read
+   * @param readAllBytes whether we must read the necessaryLen and extraLen
+   * @return true if and only if extraLen is > 0 and reading those extra bytes was successful
+   * @throws IOException if failed to read the necessary bytes
+   */
+  public static boolean preadWithExtra(ByteBuff buff, FSDataInputStream dis, long position,
+    int necessaryLen, int extraLen, boolean readAllBytes) throws IOException {
     boolean preadbytebuffer = dis.hasCapability("in:preadbytebuffer");
 
     if (preadbytebuffer) {
-      return preadWithExtraDirectly(buff, dis, position, necessaryLen, extraLen);
+      return preadWithExtraDirectly(buff, dis, position, necessaryLen, extraLen, readAllBytes);
     } else {
-      return preadWithExtraOnHeap(buff, dis, position, necessaryLen, extraLen);
+      return preadWithExtraOnHeap(buff, dis, position, necessaryLen, extraLen, readAllBytes);
     }
   }
 
   private static boolean preadWithExtraOnHeap(ByteBuff buff, FSDataInputStream dis, long position,
-    int necessaryLen, int extraLen) throws IOException {
+    int necessaryLen, int extraLen, boolean readAllBytes) throws IOException {
     int remain = necessaryLen + extraLen;
     byte[] buf = new byte[remain];
     int bytesRead = 0;
-    while (bytesRead < necessaryLen) {
+    int lengthMustRead = readAllBytes ? remain : necessaryLen;
+    while (bytesRead < lengthMustRead) {
       int ret = dis.read(position + bytesRead, buf, bytesRead, remain);
       if (ret < 0) {
         throw new IOException("Premature EOF from inputStream (positional read returned " + ret
@@ -257,11 +279,12 @@ public final class BlockIOUtils {
   }
 
   private static boolean preadWithExtraDirectly(ByteBuff buff, FSDataInputStream dis, long position,
-    int necessaryLen, int extraLen) throws IOException {
+    int necessaryLen, int extraLen, boolean readAllBytes) throws IOException {
     int remain = necessaryLen + extraLen, bytesRead = 0, idx = 0;
     ByteBuffer[] buffers = buff.nioByteBuffers();
     ByteBuffer cur = buffers[idx];
-    while (bytesRead < necessaryLen) {
+    int lengthMustRead = readAllBytes ? remain : necessaryLen;
+    while (bytesRead < lengthMustRead) {
       int ret;
       while (!cur.hasRemaining()) {
         if (++idx >= buffers.length) {
