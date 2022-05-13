@@ -1011,6 +1011,13 @@ public final class HConstants {
   public static final long HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT =
     32 * 1024 * 1024L;
 
+  /**
+   * Configuration key for setting pread must read both necessaryLen and extraLen, default is
+   * disabled. This is an optimized flag for reading HFile from blob storage.
+   */
+  public static final String HFILE_PREAD_ALL_BYTES_ENABLED_KEY = "hfile.pread.all.bytes.enabled";
+  public static final boolean HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT = false;
+
   /*
    * Minimum percentage of free heap necessary for a successful cluster startup.
    */
