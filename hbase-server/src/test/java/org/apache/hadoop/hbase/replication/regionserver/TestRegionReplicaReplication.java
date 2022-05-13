@@ -99,11 +99,11 @@ public class TestRegionReplicaReplication {
   }
 
   private void testRegionReplicaReplication(int regionReplication, boolean skipWAL)
-      throws Exception {
+    throws Exception {
     // test region replica replication. Create a table with single region, write some data
     // ensure that data is replicated to the secondary region
     TableName tableName = TableName.valueOf("testRegionReplicaReplicationWithReplicas_"
-        + regionReplication + (skipWAL ? "_skipWAL" : ""));
+      + regionReplication + (skipWAL ? "_skipWAL" : ""));
     TableDescriptorBuilder builder = HTU
         .createModifyableTableDescriptor(TableName.valueOf(tableName.toString()),
           ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
