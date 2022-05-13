@@ -250,6 +250,17 @@ public class WALEdit implements HeapSize {
     return add(cell, CellUtil.cloneFamily(cell));
   }
 
+  @InterfaceAudience.Private
+  public WALEdit add(List<Cell> cells) {
+    if (cells == null || cells.isEmpty()) {
+      return this;
+    }
+    for (Cell cell : cells) {
+      add(cell);
+    }
+    return this;
+  }
+
   public boolean isEmpty() {
     return cells.isEmpty();
   }
@@ -460,6 +471,7 @@ public class WALEdit implements HeapSize {
       addFamily(e.getKey());
     }
   }
+
 
   private void addFamily(byte[] family) {
     getOrCreateFamilies().add(family);
