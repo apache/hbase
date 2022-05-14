@@ -40,6 +40,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -505,6 +506,20 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
       fail();
     } catch (ExecutionException e) {
       assertThat(e.getCause(), instanceOf(DoNotRetryIOException.class));
+    }
+  }
+
+  /*
+   * Tests that admin api throws ReplicationPeerNotFoundException if peer doesn't exist.
+   */
+  @Test
+  public void testReplicationPeerNotFoundException() throws InterruptedException {
+    String dummyPeer = "dummy_peer";
+    try {
+      admin.removeReplicationPeer(dummyPeer).get();
+      fail();
+    } catch (ExecutionException e) {
+      assertThat(e.getCause(), instanceOf(ReplicationPeerNotFoundException.class));
     }
   }
 }

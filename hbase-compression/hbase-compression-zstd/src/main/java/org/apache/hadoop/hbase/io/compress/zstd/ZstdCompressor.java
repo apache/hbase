@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Hadoop compressor glue for zstd-jni.
@@ -35,7 +33,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class ZstdCompressor implements CanReinit, Compressor {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(ZstdCompressor.class);
   protected int level, bufferSize;
   protected ByteBuffer inBuf, outBuf;
   protected boolean finish, finished;
@@ -66,7 +63,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("compress: read {} remaining bytes from outBuf", n);
       return n;
     }
     // We don't actually begin compression until our caller calls finish().
@@ -79,7 +75,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
         int needed = maxCompressedLength(uncompressed);
         if (outBuf.capacity() < needed) {
           needed = CompressionUtil.roundInt2(needed);
-          LOG.trace("compress: resize outBuf {}", needed);
           outBuf = ByteBuffer.allocateDirect(needed);
         } else {
           outBuf.clear();
@@ -92,37 +87,30 @@ public class ZstdCompressor implements CanReinit, Compressor {
         }
         bytesWritten += written;
         inBuf.clear();
-        LOG.trace("compress: compressed {} -> {} (level {})", uncompressed, written, level);
         finished = true;
         outBuf.flip();
         int n = Math.min(written, len);
         outBuf.get(b, off, n);
-        LOG.trace("compress: {} bytes", n);
         return n;
       } else {
         finished = true;
       }
     }
-    LOG.trace("No output");
     return 0;
   }
 
   @Override
   public void end() {
-    LOG.trace("end");
   }
 
   @Override
   public void finish() {
-    LOG.trace("finish");
     finish = true;
   }
 
   @Override
   public boolean finished() {
-    boolean b = finished && !outBuf.hasRemaining();
-    LOG.trace("finished: {}", b);
-    return b;
+    return finished && !outBuf.hasRemaining();
   }
 
   @Override
@@ -137,20 +125,16 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   @Override
   public boolean needsInput() {
-    boolean b = !finished();
-    LOG.trace("needsInput: {}", b);
-    return b;
+    return !finished();
   }
 
   @Override
   public void reinit(final Configuration conf) {
-    LOG.trace("reinit");
     if (conf != null) {
       // Level might have changed
       boolean levelChanged = false;
       int newLevel = ZstdCodec.getLevel(conf);
       if (level != newLevel) {
-        LOG.trace("Level changed, was {} now {}", level, newLevel);
         level = newLevel;
         levelChanged = true;
       }
@@ -162,7 +146,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
         if (dict == null || dictId != thisDictId || levelChanged) {
           dictId = thisDictId;
           dict = new ZstdDictCompress(b, level);
-          LOG.trace("Reloaded dictionary, new id is {}", dictId);
         }
       } else {
         dict = null;
@@ -173,7 +156,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
         bufferSize = newBufferSize;
         this.inBuf = ByteBuffer.allocateDirect(bufferSize);
         this.outBuf = ByteBuffer.allocateDirect(bufferSize);
-        LOG.trace("Resized buffers, new size is {}", bufferSize);
       }
     }
     reset();
@@ -181,7 +163,6 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   @Override
   public void reset() {
-    LOG.trace("reset");
     inBuf.clear();
     outBuf.clear();
     outBuf.position(outBuf.capacity());
@@ -198,13 +179,11 @@ public class ZstdCompressor implements CanReinit, Compressor {
 
   @Override
   public void setInput(final byte[] b, final int off, final int len) {
-    LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      LOG.trace("setInput: resize inBuf {}", needed);
       ByteBuffer newBuf = ByteBuffer.allocateDirect(needed);
       inBuf.flip();
       newBuf.put(inBuf);
