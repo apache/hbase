@@ -24,8 +24,6 @@ import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
 
 /**
@@ -34,7 +32,6 @@ import org.xerial.snappy.Snappy;
 @InterfaceAudience.Private
 public class SnappyCompressor implements CanReinit, Compressor {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(SnappyCompressor.class);
   protected ByteBuffer inBuf, outBuf;
   protected int bufferSize;
   protected boolean finish, finished;
@@ -54,7 +51,6 @@ public class SnappyCompressor implements CanReinit, Compressor {
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("compress: read {} remaining bytes from outBuf", n);
       return n;
     }
     // We don't actually begin compression until our caller calls finish().
@@ -67,7 +63,6 @@ public class SnappyCompressor implements CanReinit, Compressor {
         int needed = maxCompressedLength(uncompressed);
         if (outBuf.capacity() < needed) {
           needed = CompressionUtil.roundInt2(needed);
-          LOG.trace("setInput: resize inBuf {}", needed);
           outBuf = ByteBuffer.allocateDirect(needed);
         } else {
           outBuf.clear();
@@ -75,36 +70,29 @@ public class SnappyCompressor implements CanReinit, Compressor {
         int written = Snappy.compress(inBuf, outBuf);
         bytesWritten += written;
         inBuf.clear();
-        LOG.trace("compress: compressed {} -> {}", uncompressed, written);
         finished = true;
         int n = Math.min(written, len);
         outBuf.get(b, off, n);
-        LOG.trace("compress: {} bytes", n);
         return n;
       } else {
         finished = true;
       }
     }
-    LOG.trace("No output");
     return 0;
   }
 
   @Override
   public void end() {
-    LOG.trace("end");
   }
 
   @Override
   public void finish() {
-    LOG.trace("finish");
     finish = true;
   }
 
   @Override
   public boolean finished() {
-    boolean b = finished && !outBuf.hasRemaining();
-    LOG.trace("finished: {}", b);
-    return b;
+    return finished && !outBuf.hasRemaining();
   }
 
   @Override
@@ -119,14 +107,11 @@ public class SnappyCompressor implements CanReinit, Compressor {
 
   @Override
   public boolean needsInput() {
-    boolean b = !finished();
-    LOG.trace("needsInput: {}", b);
-    return b;
+    return !finished();
   }
 
   @Override
   public void reinit(Configuration conf) {
-    LOG.trace("reinit");
     if (conf != null) {
       // Buffer size might have changed
       int newBufferSize = SnappyCodec.getBufferSize(conf);
@@ -141,7 +126,6 @@ public class SnappyCompressor implements CanReinit, Compressor {
 
   @Override
   public void reset() {
-    LOG.trace("reset");
     inBuf.clear();
     outBuf.clear();
     outBuf.position(outBuf.capacity());
@@ -158,13 +142,11 @@ public class SnappyCompressor implements CanReinit, Compressor {
 
   @Override
   public void setInput(byte[] b, int off, int len) {
-    LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      LOG.trace("setInput: resize inBuf {}", needed);
       ByteBuffer newBuf = ByteBuffer.allocateDirect(needed);
       inBuf.flip();
       newBuf.put(inBuf);
