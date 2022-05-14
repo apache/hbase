@@ -550,7 +550,7 @@ public class HFileWriterImpl implements HFile.Writer {
     blockWriter.startWriting(BlockType.DATA);
     firstCellInBlock = null;
     if (lastCell != null) {
-      lastCellOfPreviousBlock = lastCell;
+      lastCellOfPreviousBlock = KeyValueUtil.toNewKeyCell(lastCell);
     }
   }
 
@@ -728,7 +728,7 @@ public class HFileWriterImpl implements HFile.Writer {
     if (firstCellInBlock == null) {
       // If cell is big, block will be closed and this firstCellInBlock reference will only last
       // a short while.
-      firstCellInBlock = cell;
+      firstCellInBlock = KeyValueUtil.toNewKeyCell(cell);
     }
 
     // TODO: What if cell is 10MB and we write infrequently? We hold on to cell here indefinitely?
@@ -747,12 +747,6 @@ public class HFileWriterImpl implements HFile.Writer {
     // Add clone methods for every cell
     if (this.lastCell != null) {
       this.lastCell = KeyValueUtil.toNewKeyCell(this.lastCell);
-    }
-    if (this.firstCellInBlock != null) {
-      this.firstCellInBlock = KeyValueUtil.toNewKeyCell(this.firstCellInBlock);
-    }
-    if (this.lastCellOfPreviousBlock != null) {
-      this.lastCellOfPreviousBlock = KeyValueUtil.toNewKeyCell(this.lastCellOfPreviousBlock);
     }
   }
 
