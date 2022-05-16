@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +40,7 @@ public class ReaderContext {
   private final HFileSystem hfs;
   private final boolean primaryReplicaReader;
   private final ReaderType type;
+  private final boolean preadAllBytes;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
     HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
@@ -48,6 +50,8 @@ public class ReaderContext {
     this.hfs = hfs;
     this.primaryReplicaReader = primaryReplicaReader;
     this.type = type;
+    this.preadAllBytes = hfs.getConf().getBoolean(HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_KEY,
+      HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_DEFAULT);
   }
 
   public Path getFilePath() {
@@ -72,5 +76,9 @@ public class ReaderContext {
 
   public ReaderType getReaderType() {
     return this.type;
+  }
+
+  public boolean isPreadAllBytes() {
+    return preadAllBytes;
   }
 }
