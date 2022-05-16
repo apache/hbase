@@ -1345,6 +1345,8 @@ public class HFileBlock implements Cacheable {
 
     private final Lock streamLock = new ReentrantLock();
 
+    private final boolean isPreadAllBytes;
+
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext, ByteBuffAllocator allocator)
       throws IOException {
       this.fileSize = readerContext.getFileSize();
@@ -1361,6 +1363,7 @@ public class HFileBlock implements Cacheable {
       this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
       defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
+      isPreadAllBytes = readerContext.isPreadAllBytes();
     }
 
     @Override
@@ -1449,7 +1452,9 @@ public class HFileBlock implements Cacheable {
       } else {
         // Positional read. Better for random reads; or when the streamLock is already locked.
         int extraSize = peekIntoNextBlock ? hdrSize : 0;
-        if (!BlockIOUtils.preadWithExtra(dest, istream, fileOffset, size, extraSize)) {
+        if (
+          !BlockIOUtils.preadWithExtra(dest, istream, fileOffset, size, extraSize, isPreadAllBytes)
+        ) {
           // did not read the next block header.
           return false;
         }
