@@ -750,6 +750,11 @@ pipeline {
         // See http://hbase.apache.org/book.html#maven.release
         // TODO (HBASE-23870): replace this with invocation of the release tool
         stage ('packaging and integration') {
+          agent {
+            node {
+              label 'hbase-large'
+            }
+          }
           tools {
             maven 'maven_latest'
             // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
