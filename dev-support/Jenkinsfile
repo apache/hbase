@@ -765,6 +765,9 @@ pipeline {
             BRANCH = "${env.BRANCH_NAME}"
           }
           steps {
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/bin/bash -e
               echo "Setting up directories"
               rm -rf "output-srctarball" && mkdir "output-srctarball"
