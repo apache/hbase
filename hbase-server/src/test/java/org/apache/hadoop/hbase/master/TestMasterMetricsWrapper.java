@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -59,7 +60,7 @@ public class TestMasterMetricsWrapper {
   }
 
   @Test
-  public void testInfo() {
+  public void testInfo() throws IOException {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MetricsMasterWrapperImpl info = new MetricsMasterWrapperImpl(master);
     assertEquals(master.getRegionNormalizerManager().getSplitPlanCount(), info.getSplitPlanCount(),
@@ -97,6 +98,12 @@ public class TestMasterMetricsWrapper {
     // now we do not expose this information as WALProcedureStore is not the only ProcedureStore
     // implementation any more.
     assertEquals(0, info.getNumWALFiles());
+    // We decommission the first online region server and verify the metrics.
+    TEST_UTIL.getMiniHBaseCluster().getMaster().decommissionRegionServers(
+      master.getServerManager().getOnlineServersList().subList(0, 1), false);
+    assertEquals(1, info.getNumDrainingRegionServers());
+    assertEquals(master.getServerManager().getOnlineServersList().get(0).toString(),
+      info.getDrainingRegionServers());
   }
 
   @Test
