@@ -191,8 +191,8 @@ public class ClassSize {
     @Override
     int headerSize() {
       try {
-        return (int) HBasePlatformDependent.objectFieldOffset(
-          HeaderSize.class.getDeclaredField("a"));
+        return (int) HBasePlatformDependent
+          .objectFieldOffset(HeaderSize.class.getDeclaredField("a"));
       } catch (NoSuchFieldException | SecurityException e) {
         LOG.error(e.toString(), e);
       }
@@ -221,8 +221,10 @@ public class ClassSize {
     // Have a safeguard in case Unsafe estimate is wrong. This is static context, there is
     // no configuration, so we look at System property.
     String enabled = System.getProperty("hbase.memorylayout.use.unsafe");
-    if (HBasePlatformDependent.isUnsafeAvailable() &&
-      (enabled == null || Boolean.parseBoolean(enabled))) {
+    if (
+      HBasePlatformDependent.isUnsafeAvailable()
+        && (enabled == null || Boolean.parseBoolean(enabled))
+    ) {
       LOG.debug("Using Unsafe to estimate memory layout");
       return new UnsafeLayout();
     }

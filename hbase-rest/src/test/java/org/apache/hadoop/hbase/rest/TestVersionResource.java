@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestVersionResource {
 
   @ClassRule

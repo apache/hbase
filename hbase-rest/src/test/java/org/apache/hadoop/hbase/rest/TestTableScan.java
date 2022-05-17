@@ -74,7 +74,7 @@ import org.xml.sax.XMLReader;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestTableScan {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

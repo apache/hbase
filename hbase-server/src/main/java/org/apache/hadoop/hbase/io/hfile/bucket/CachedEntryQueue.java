@@ -70,9 +70,9 @@ public class CachedEntryQueue {
    * @param entry a bucket entry with key to try to add to the queue
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-    justification = "head can not be null as cacheSize is greater than maxSize,"
-      + " which means we have something in the queue")
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "head can not be null as cacheSize is greater than maxSize,"
+        + " which means we have something in the queue")
   public void add(Map.Entry<BlockCacheKey, BucketEntry> entry) {
     if (cacheSize < maxSize) {
       queue.add(entry);

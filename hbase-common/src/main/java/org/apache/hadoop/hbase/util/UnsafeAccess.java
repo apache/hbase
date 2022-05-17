@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
+
 import org.apache.hbase.thirdparty.io.netty.util.internal.PlatformDependent;
 
 @InterfaceAudience.Private
@@ -192,10 +193,7 @@ public final class UnsafeAccess {
 
   /**
    * Reads a int value at the given Object's offset considering it was written in big-endian format.
-   * @param ref
-   * @param offset
-   * @return int value at offset
->>>>>>> 6cef9e1602... HBASE-25465 Use javac --release option for supporting cross version compilation (#4164)
+   * nn * @return int value at offset
    */
   public static int toInt(Object ref, long offset) {
     if (LITTLE_ENDIAN) {
@@ -254,7 +252,7 @@ public final class UnsafeAccess {
 
   /**
    * Returns the byte at the given offset
-   * @param buf the buffer to read
+   * @param buf    the buffer to read
    * @param offset the offset at which the byte has to be read
    * @return the byte at the given offset
    */
@@ -324,16 +322,12 @@ public final class UnsafeAccess {
 
   /**
    * Copies specified number of bytes from given offset of {@code src} ByteBuffer to the
-<<<<<<< HEAD
-   * {@code dest} array. nnnnn
-=======
    * {@code dest} array.
-   * @param src source buffer
-   * @param srcOffset offset into source buffer
-   * @param dest destination array
+   * @param src        source buffer
+   * @param srcOffset  offset into source buffer
+   * @param dest       destination array
    * @param destOffset offset into destination buffer
-   * @param length length of data to copy
->>>>>>> 6cef9e1602... HBASE-25465 Use javac --release option for supporting cross version compilation (#4164)
+   * @param length     length of data to copy
    */
   public static void copy(ByteBuffer src, int srcOffset, byte[] dest, int destOffset, int length) {
     long srcAddress = srcOffset;
@@ -351,11 +345,11 @@ public final class UnsafeAccess {
   /**
    * Copies specified number of bytes from given offset of {@code src} buffer into the {@code dest}
    * buffer.
-   * @param src source buffer
-   * @param srcOffset offset into source buffer
-   * @param dest destination buffer
+   * @param src        source buffer
+   * @param srcOffset  offset into source buffer
+   * @param dest       destination buffer
    * @param destOffset offset into destination buffer
-   * @param length length of data to copy
+   * @param length     length of data to copy
    */
   public static void copy(ByteBuffer src, int srcOffset, ByteBuffer dest, int destOffset,
     int length) {
@@ -433,7 +427,6 @@ public final class UnsafeAccess {
     }
     return offset + 1;
   }
-
 
   public static long directBufferAddress(ByteBuffer buf) {
     return PlatformDependent.directBufferAddress(buf);

@@ -55,7 +55,7 @@ import org.junit.runners.Parameterized;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestMultiRowResource {
   @ClassRule

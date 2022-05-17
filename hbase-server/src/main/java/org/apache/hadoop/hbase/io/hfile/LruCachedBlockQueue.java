@@ -67,9 +67,9 @@ public class LruCachedBlockQueue implements HeapSize {
    * @param cb block to try to add to the queue
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
-    justification = "head can not be null as heapSize is greater than maxSize,"
-      + " which means we have something in the queue")
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "head can not be null as heapSize is greater than maxSize,"
+        + " which means we have something in the queue")
   public void add(LruCachedBlock cb) {
     if (heapSize < maxSize) {
       queue.add(cb);

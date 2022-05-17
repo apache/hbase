@@ -1427,7 +1427,8 @@ public class Bytes implements Comparable<Bytes> {
 
     protected static final class UnsafeConverter extends Converter {
 
-      public UnsafeConverter() {}
+      public UnsafeConverter() {
+      }
 
       static {
         if (!UNSAFE_UNALIGNED) {
@@ -1475,11 +1476,11 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Provides a lexicographical comparer implementation; either a Java
-   * implementation or a faster implementation based on {@code Unsafe}.
-   *
-   * <p>Uses reflection to gracefully fall back to the Java implementation if
-   * {@code Unsafe} isn't available.
+   * Provides a lexicographical comparer implementation; either a Java implementation or a faster
+   * implementation based on {@code Unsafe}.
+   * <p>
+   * Uses reflection to gracefully fall back to the Java implementation if {@code Unsafe} isn't
+   * available.
    */
   @InterfaceAudience.Private
   static class LexicographicalComparerHolder {
