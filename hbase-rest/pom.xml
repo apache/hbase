@@ -166,10 +166,6 @@
       <artifactId>javax.activation</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.jaxrs</groupId>
-      <artifactId>jackson-jaxrs-json-provider</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
     </dependency>
@@ -180,6 +176,10 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-jackson-jaxrs-json-provider</artifactId>
     </dependency>
     <dependency>
       <!-- We *might* need this for XMLStreamReader use in RemoteAdmin
@@ -514,15 +514,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
-        </dependency>
-        <!--Needed when jdk11/hadoop3 else complaint about
-          NoSuchMethodError: 'java.util.Map javax.ws.rs.core.Application.getProperties()'
-          when REST server is started.
-          -->
-        <dependency>
-          <groupId>org.glassfish.jaxb</groupId>
-          <artifactId>jaxb-runtime</artifactId>
-          <version>2.3.2</version>
         </dependency>
       </dependencies>
     </profile>

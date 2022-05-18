@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.rest;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
@@ -39,7 +40,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import sun.security.x509.AlgorithmId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ RestTests.class, MediumTests.class })
 public class TestRESTServerSSL {
@@ -47,6 +49,8 @@ public class TestRESTServerSSL {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRESTServerSSL.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestRESTServerSSL.class);
 
   private static final String KEY_STORE_PASSWORD = "myKSPassword";
   private static final String TRUST_STORE_PASSWORD = "myTSPassword";
@@ -57,12 +61,23 @@ public class TestRESTServerSSL {
   private static File keyDir;
   private Configuration conf;
 
+  // Workaround for jdk8 292 bug. See https://github.com/bcgit/bc-java/issues/941
+  // Below is a workaround described in above URL. Issue fingered first in comments in
+  // HBASE-25920 Support Hadoop 3.3.1
+  private static void initializeAlgorithmId() {
+    try {
+      Class<?> algoId = Class.forName("sun.security.x509.AlgorithmId");
+      Method method = algoId.getMethod("get", String.class);
+      method.setAccessible(true);
+      method.invoke(null, "PBEWithSHA1AndDESede");
+    } catch (Exception e) {
+      LOG.warn("failed to initialize AlgorithmId", e);
+    }
+  }
+
   @BeforeClass
   public static void beforeClass() throws Exception {
-    // Workaround for jdk8 252 bug. See https://github.com/bcgit/bc-java/issues/941
-    // Below is a workaround described in above URL. Issue fingered first in comments in
-    // HBASE-25920 Support Hadoop 3.3.1
-    AlgorithmId.get("PBEWithSHA1AndDESede");
+    initializeAlgorithmId();
     keyDir = initKeystoreDir();
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
     X509Certificate serverCertificate =

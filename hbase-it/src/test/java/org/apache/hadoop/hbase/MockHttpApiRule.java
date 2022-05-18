@@ -28,11 +28,11 @@ import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Request;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
