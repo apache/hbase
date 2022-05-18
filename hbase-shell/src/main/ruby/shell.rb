@@ -16,9 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-# frozen_string_literal: true
-
 require 'irb'
 require 'irb/workspace'
 
