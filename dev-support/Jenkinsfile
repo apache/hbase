@@ -568,6 +568,11 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
         // This is meant to mimic what a release manager will do to create RCs.
         // See http://hbase.apache.org/book.html#maven.release
         stage ('create source tarball') {
+          agent {
+            node {
+              label 'hbase-large'
+            }
+          }
           tools {
             maven 'maven_latest'
             // this needs to be set to the jdk that ought to be used to build releases on the branch the Jenkinsfile is stored in.
@@ -577,6 +582,9 @@ curl -L  -o personality.sh "${env.PROJECT_PERSONALITY}"
             BASEDIR = "${env.WORKSPACE}/component"
           }
           steps {
+            dir('component') {
+              checkout scm
+            }
             sh '''#!/bin/bash -e
               echo "Setting up directories"
               rm -rf "output-srctarball" && mkdir "output-srctarball"
