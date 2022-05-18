@@ -138,6 +138,7 @@ Arrays.sort(serverNames);
 <tr><td>Total:<% servers.size() %></td>
 <td></td>
 <td></td>
+<td></td>
 <%if inconsistentNodeNum > 0%>
   <td style="color:red;"><% inconsistentNodeNum %> nodes with inconsistent version</td>
 <%else>
