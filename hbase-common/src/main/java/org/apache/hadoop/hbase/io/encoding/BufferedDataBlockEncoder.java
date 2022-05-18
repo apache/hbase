@@ -232,10 +232,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       int tOffset = 0;
       if (this.includeTags) {
         if (this.tagCompressionContext == null) {
+          tagsArray = valAndTagsBuffer.array();
           tOffset =
             valAndTagsBuffer.arrayOffset() + vOffset + this.valueLength + tagsLenSerializationSize;
-          tagsArray = Bytes.copy(valAndTagsBuffer.array(), tOffset, this.tagsLength);
-          tOffset = 0;
         } else {
           tagsArray = Bytes.copy(tagsBuffer, 0, this.tagsLength);
           tOffset = 0;
@@ -244,8 +243,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       return new OnheapDecodedCell(Bytes.copy(keyBuffer, 0, this.keyLength),
         currentKey.getRowLength(), currentKey.getFamilyOffset(), currentKey.getFamilyLength(),
         currentKey.getQualifierOffset(), currentKey.getQualifierLength(), currentKey.getTimestamp(),
-        currentKey.getTypeByte(), Bytes.copy(valAndTagsBuffer.array(), valAndTagsBuffer.arrayOffset() + vOffset,
-        this.valueLength), 0, this.valueLength, memstoreTS, tagsArray, tOffset, this.tagsLength);
+        currentKey.getTypeByte(), valAndTagsBuffer.array(),
+        valAndTagsBuffer.arrayOffset() + vOffset, this.valueLength, memstoreTS, tagsArray, tOffset,
+        this.tagsLength);
     }
 
     private Cell toOffheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
@@ -254,26 +254,13 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       int tOffset = 0;
       if (this.includeTags) {
         if (this.tagCompressionContext == null) {
+          tagsBuf = valAndTagsBuffer;
           tOffset = vOffset + this.valueLength + tagsLenSerializationSize;
-          byte[] output = new byte[this.tagsLength];
-          ByteBufferUtils.copyFromBufferToArray(output, valAndTagsBuffer, tOffset, 0,
-            this.tagsLength);
-          tagsBuf = ByteBuffer.wrap(output);
-          tOffset = 0;
         } else {
           tagsBuf = ByteBuffer.wrap(Bytes.copy(tagsBuffer, 0, this.tagsLength));
           tOffset = 0;
         }
       }
-
-      if (this.valueLength > 0) {
-        byte[] output = new byte[this.valueLength];
-        ByteBufferUtils.copyFromBufferToArray(output, valAndTagsBuffer, vOffset, 0,
-          this.valueLength);
-        valAndTagsBuffer = ByteBuffer.wrap(output);
-        vOffset = 0;
-      }
-
       return new OffheapDecodedExtendedCell(
         ByteBuffer.wrap(Bytes.copy(keyBuffer, 0, this.keyLength)), currentKey.getRowLength(),
         currentKey.getFamilyOffset(), currentKey.getFamilyLength(), currentKey.getQualifierOffset(),
