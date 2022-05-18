@@ -37,6 +37,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -79,7 +80,7 @@ public class TestBytes extends TestCase {
         assertEquals(Bytes.toShort(bytes, 0, bytes.length), n);
       }
     } finally {
-      setUnsafe(UnsafeAvailChecker.unaligned());
+      setUnsafe(HBasePlatformDependent.unaligned());
     }
   }
 

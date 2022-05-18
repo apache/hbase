@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.MinMaxPriorityQueue;
 
 /**
@@ -46,8 +47,12 @@ public class LruCachedBlockQueue implements HeapSize {
    * @param blockSize expected average size of blocks
    */
   public LruCachedBlockQueue(long maxSize, long blockSize) {
+    Preconditions.checkArgument(blockSize > 0, "negative blockSize %s", blockSize);
+    Preconditions.checkArgument(maxSize > 0, "negative maxSize %s", maxSize);
     int initialSize = (int) (maxSize / blockSize);
-    if (initialSize == 0) initialSize++;
+    if (initialSize == 0) {
+      initialSize++;
+    }
     queue = MinMaxPriorityQueue.expectedSize(initialSize).create();
     heapSize = 0;
     this.maxSize = maxSize;
@@ -61,6 +66,10 @@ public class LruCachedBlockQueue implements HeapSize {
    * side effect of this call.
    * @param cb block to try to add to the queue
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+      justification = "head can not be null as heapSize is greater than maxSize,"
+        + " which means we have something in the queue")
   public void add(LruCachedBlock cb) {
     if (heapSize < maxSize) {
       queue.add(cb);
