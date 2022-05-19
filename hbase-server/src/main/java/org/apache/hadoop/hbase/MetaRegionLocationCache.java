@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import io.opentelemetry.context.Context;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -91,8 +92,8 @@ public class MetaRegionLocationCache extends ZKListener {
     ThreadFactory threadFactory = new ThreadFactoryBuilder().setDaemon(true).build();
     RetryCounterFactory retryFactory = new RetryCounterFactory(Integer.MAX_VALUE,
       SLEEP_INTERVAL_MS_BETWEEN_RETRIES, SLEEP_INTERVAL_MS_MAX);
-    threadFactory.newThread(() -> loadMetaLocationsFromZk(retryFactory.create(), ZNodeOpType.INIT))
-      .start();
+    threadFactory.newThread(Context.current()
+      .wrap(() -> loadMetaLocationsFromZk(retryFactory.create(), ZNodeOpType.INIT))).start();
   }
 
   /**
