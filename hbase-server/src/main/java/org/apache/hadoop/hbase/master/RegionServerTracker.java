@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -70,8 +71,8 @@ public class RegionServerTracker extends ZKListener {
   public RegionServerTracker(ZKWatcher watcher, MasterServices server) {
     super(watcher);
     this.server = server;
-    this.executor = Executors.newSingleThreadExecutor(
-      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build());
+    this.executor = Context.current().wrap(Executors.newSingleThreadExecutor(
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("RegionServerTracker-%d").build()));
     watcher.registerListener(this);
     refresh();
   }

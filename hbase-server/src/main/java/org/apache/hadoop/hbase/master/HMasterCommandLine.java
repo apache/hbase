@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -30,13 +32,13 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKAuthentication;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,7 +163,8 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   private int startMaster() {
     Configuration conf = getConf();
-    try {
+    final Span span = TraceUtil.createSpan("HMasterCommandLine.startMaster");
+    try (Scope ignored = span.makeCurrent()) {
       // If 'local', defer to LocalHBaseCluster instance. Starts master
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
@@ -251,8 +254,11 @@ public class HMasterCommandLine extends ServerCommandLine {
         if (master.isAborted()) throw new RuntimeException("HMaster Aborted");
       }
     } catch (Throwable t) {
+      TraceUtil.setError(span, t);
       LOG.error("Master exiting", t);
       return 1;
+    } finally {
+      span.end();
     }
     return 0;
   }
@@ -310,8 +316,7 @@ public class HMasterCommandLine extends ServerCommandLine {
   public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf)
-      throws IOException, KeeperException, InterruptedException {
+    public LocalHMaster(Configuration conf) throws IOException {
       super(conf);
     }
 
