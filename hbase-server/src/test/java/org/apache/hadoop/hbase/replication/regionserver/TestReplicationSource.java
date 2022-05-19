@@ -571,9 +571,9 @@ public class TestReplicationSource {
     try {
       rs.startup();
       assertTrue(rs.isSourceActive());
-      Waiter.waitFor(conf, 1000, () -> rs.getSourceMetrics().getSourceInitializing() == 1);
+      Waiter.waitFor(conf, 10000, () -> rs.getSourceMetrics().getSourceInitializing() == 1);
       BadReplicationEndpoint.failing = false;
-      Waiter.waitFor(conf, 1000, () -> rs.getSourceMetrics().getSourceInitializing() == 0);
+      Waiter.waitFor(conf, 10000, () -> rs.getSourceMetrics().getSourceInitializing() == 0);
     } finally {
       rs.terminate("Done");
       rss.stop("Done");
