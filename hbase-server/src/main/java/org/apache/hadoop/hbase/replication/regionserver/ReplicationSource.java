@@ -561,8 +561,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
-      retryStartup.set(!this.abortOnError);
       setSourceStartupStatus(false);
+      if (Thread.currentThread().isInterrupted()) {
+        // If source is not running and thread is interrupted this means someone has tried to
+        // remove this peer.
+        return;
+      }
+      retryStartup.set(!this.abortOnError);
       throw new IllegalStateException("Source should be active.");
     }
 
@@ -585,14 +590,19 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if(!this.isSourceActive()) {
-      retryStartup.set(!this.abortOnError);
       setSourceStartupStatus(false);
+      if (Thread.currentThread().isInterrupted()) {
+        // If source is not running and thread is interrupted this means someone has tried to
+        // remove this peer.
+        return;
+      }
+      retryStartup.set(!this.abortOnError);
       throw new IllegalStateException("Source should be active.");
     }
 
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
     // peerClusterId value, which is the same as the source clusterId
-    if (clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
+    if (clusterId != null && clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
       this.terminate("ClusterId " + clusterId + " is replicating to itself: peerClusterId "
           + peerClusterId + " which is not allowed by ReplicationEndpoint:"
           + replicationEndpoint.getClass().getName(), null, false);
