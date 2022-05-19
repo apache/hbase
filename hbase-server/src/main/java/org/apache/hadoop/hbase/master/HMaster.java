@@ -26,6 +26,8 @@ import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -213,6 +215,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -452,7 +455,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public HMaster(final Configuration conf) throws IOException {
     super(conf);
-    try {
+    final Span span = TraceUtil.createSpan("HMaster.cxtor");
+    try (Scope ignored = span.makeCurrent()) {
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
         maintenanceMode = true;
@@ -516,8 +520,11 @@ public class HMaster extends HRegionServer implements MasterServices {
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
+      TraceUtil.setError(span, t);
       LOG.error("Failed construction of Master", t);
       throw t;
+    } finally {
+      span.end();
     }
   }
 
@@ -540,7 +547,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public void run() {
     try {
-      Threads.setDaemonThreadRunning(new Thread(() -> {
+      Threads.setDaemonThreadRunning(new Thread(() -> TraceUtil.trace(() -> {
         try {
           int infoPort = putUpJettyServer();
           startActiveMasterManager(infoPort);
@@ -553,7 +560,7 @@ public class HMaster extends HRegionServer implements MasterServices {
             abort(error, t);
           }
         }
-      }), getName() + ":becomeActiveMaster");
+      }, "HMaster.becomeActiveMaster")), getName() + ":becomeActiveMaster");
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
       super.run();
@@ -3094,6 +3101,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Shutdown the cluster. Master runs a coordinated stop of all RegionServers and then itself.
    */
   public void shutdown() throws IOException {
+    TraceUtil.trace(() -> {
     if (cpHost != null) {
       cpHost.preShutdown();
     }
@@ -3124,6 +3132,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (this.clusterConnection != null) {
       this.clusterConnection.close();
     }
+    }, "HMaster.shutdown");
   }
 
   public void stopMaster() throws IOException {

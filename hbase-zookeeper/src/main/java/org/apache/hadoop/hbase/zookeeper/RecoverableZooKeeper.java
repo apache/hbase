@@ -201,8 +201,8 @@ public class RecoverableZooKeeper {
    * throw NoNodeException if the path does not exist.
    */
   public void delete(String path, int version) throws InterruptedException, KeeperException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.delete").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.delete");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       boolean isRetry = false; // False for first attempt, true for all retries.
       while (true) {
@@ -244,8 +244,8 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, Watcher watcher) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.exists").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.exists");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -319,9 +319,8 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, Watcher watcher)
     throws KeeperException, InterruptedException {
-    Span span =
-      TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getChildren").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getChildren");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -387,8 +386,8 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getData").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getData");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -455,8 +454,8 @@ public class RecoverableZooKeeper {
    */
   public Stat setData(String path, byte[] data, int version)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setData").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.setData");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       boolean isRetry = false;
@@ -506,8 +505,8 @@ public class RecoverableZooKeeper {
    * @return list of ACLs
    */
   public List<ACL> getAcl(String path, Stat stat) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getAcl").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getAcl");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -539,8 +538,8 @@ public class RecoverableZooKeeper {
    */
   public Stat setAcl(String path, List<ACL> acls, int version)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setAcl").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.setAcl");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
@@ -578,8 +577,8 @@ public class RecoverableZooKeeper {
    */
   public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.create").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.create");
+    try (Scope ignored = span.makeCurrent()) {
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       switch (createMode) {
         case EPHEMERAL:
@@ -709,8 +708,8 @@ public class RecoverableZooKeeper {
    * Run multiple operations in a transactional manner. Retry before throwing exception
    */
   public List<OpResult> multi(Iterable<Op> ops) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.multi").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.multi");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       Iterable<Op> multiOps = prepareZKMulti(ops);
       while (true) {
