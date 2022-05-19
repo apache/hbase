@@ -473,6 +473,7 @@ Shell.load_command_group(
     splitormerge_enabled
     clear_compaction_queues
     list_deadservers
+    list_liveservers
     clear_deadservers
     clear_block_cache
     stop_master
