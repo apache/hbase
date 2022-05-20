@@ -149,9 +149,13 @@
 # https://github.com/open-telemetry/opentelemetry-java-instrumentation for details on how to
 # configure exporters and other components through system properties.
 #
-# The presence HBASE_TRACE_OPTS indicates that tracing should be enabled, and serves as site-wide
-# settings.
+# The presence HBASE_TRACE_OPTS indicates that tracing should be enabled, adding the agent to the
+# JVM launch command.
 # export HBASE_TRACE_OPTS="-Dotel.traces.exporter=none -Dotel.metrics.exporter=none"
+#
+# For standalone mode, you must explicitly add HBASE_TRACE_OPTS to HBASE_OPTS by uncommenting this line.
+# But do not use and uncomment this line if you're running in distributed mode.
+# export HBASE_OPTS="${HBASE_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-standalone"
 #
 # Per-process configuration variables allow for fine-grained configuration control.
 # export HBASE_SHELL_OPTS="${HBASE_SHELL_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-shell"
