@@ -17,17 +17,22 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
@@ -46,6 +51,7 @@ import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
 import org.apache.hadoop.hbase.trace.OpenTelemetryTestRule;
@@ -176,7 +182,8 @@ public abstract class AbstractTestAsyncTableScan {
   /**
    * Used by implementation classes to assert the correctness of spans having errors.
    */
-  protected abstract void assertTraceError(final Matcher<String> exceptionTypeNameMatcher);
+  protected abstract void
+    assertTraceError(final Matcher<io.opentelemetry.api.common.Attributes> exceptionMatcher);
 
   protected final List<Result> convertFromBatchResult(List<Result> results) {
     assertEquals(0, results.size() % 2);
@@ -269,7 +276,14 @@ public abstract class AbstractTestAsyncTableScan {
     } else {
       fail("Found unexpected Exception " + e);
     }
-    assertTraceError(endsWith(NoSuchColumnFamilyException.class.getName()));
+    assertTraceError(anyOf(
+      containsEntry(is(SemanticAttributes.EXCEPTION_TYPE),
+        endsWith(NoSuchColumnFamilyException.class.getName())),
+      allOf(
+        containsEntry(is(SemanticAttributes.EXCEPTION_TYPE),
+          endsWith(RemoteWithExtrasException.class.getName())),
+        containsEntry(is(SemanticAttributes.EXCEPTION_MESSAGE),
+          containsString(NoSuchColumnFamilyException.class.getName())))));
   }
 
   private void testScan(int start, boolean startInclusive, int stop, boolean stopInclusive,
