@@ -103,6 +103,11 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
             compression.createDecompressionStream(dataInputStream, decompressor, 0)) {
             BlockIOUtils.readFullyWithHeapBuffer(is, blockBufferWithoutHeader,
               uncompressedSizeWithoutHeader);
+            // The buffer has allocated space for checksum, but it's not always filled. That might
+            // lead to situations where this space is filled with old data. See HBASE-27053
+            while(blockBufferWithoutHeader.limit() > blockBufferWithoutHeader.position()) {
+              blockBufferWithoutHeader.put((byte) 0);
+            }
           }
         } finally {
           if (decompressor != null) {
