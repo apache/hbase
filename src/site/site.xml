@@ -103,9 +103,6 @@
       <item name="Plugins" href="plugins.html"/>
     </menu>
     <menu name="Documentation and API">
-      <item name="Reference Guide" href="book.html" target="_blank" />
-      <item name="Reference Guide (PDF)" href="apache_hbase_reference_guide.pdf" target="_blank" />
-      <item name="Getting Started" href="book.html#quickstart" target="_blank" />
       <item name="User API" href="apidocs/index.html" target="_blank" />
       <item name="User API (Test)" href="testapidocs/index.html" target="_blank" />
       <item name="Developer API" href="https://hbase.apache.org/2.0/devapidocs/index.html" target="_blank" />
@@ -119,16 +116,6 @@
       <item name="Metrics" href="metrics.html" target="_blank" />
       <item name="HBase on Windows" href="cygwin.html" target="_blank" />
       <item name="Cluster replication" href="book.html#replication" target="_blank" />
-      <item name="1.2 Documentation">
-        <item name="API" href="1.2/apidocs/index.html" target="_blank" />
-        <item name="X-Ref" href="1.2/xref/index.html" target="_blank" />
-        <item name="Ref Guide (single-page)" href="1.2/book.html" target="_blank" />
-      </item>
-      <item name="1.1 Documentation">
-        <item name="API" href="1.1/apidocs/index.html" target="_blank" />
-        <item name="X-Ref" href="1.1/xref/index.html" target="_blank" />
-        <item name="Ref Guide (single-page)" href="1.1/book.html" target="_blank" />
-      </item>
     </menu>
     <menu name="ASF">
       <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
