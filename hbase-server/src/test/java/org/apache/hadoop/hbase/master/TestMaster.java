@@ -249,5 +249,11 @@ public class TestMaster {
       TEST_UTIL.deleteTable(tableName);
     }
   }
+
+  @Test
+  public void testInstallShutdownHook() {
+    // Test for HBASE-26977
+    assertTrue(TEST_UTIL.getMiniHBaseCluster().getMaster().isShutdownHookInstalled());
+  }
 }
 
