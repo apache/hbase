@@ -99,7 +99,7 @@ Arrays.sort(serverNames);
     int inconsistentNodeNum = 0;
     String state = "Normal";
     String masterVersion = VersionInfo.getVersion();
-    List<ServerName> decommissionedServers = master.listDecommissionedRegionServers();
+    Set<ServerName> decommissionedServers = new HashSet<>(master.listDecommissionedRegionServers());
     for (ServerName serverName: serverNames) {
     if (decommissionedServers.contains(serverName)) {
         state = "Decommissioned";
