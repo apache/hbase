@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -801,7 +802,9 @@ public class MasterRpcServices extends RSRpcServices
     boolean prevValue =
       master.getLogCleaner().getEnabled() && master.getHFileCleaner().getEnabled();
     master.getLogCleaner().setEnabled(req.getOn());
-    master.getHFileCleaner().setEnabled(req.getOn());
+    for (HFileCleaner hFileCleaner : master.getHFileCleaners()) {
+      hFileCleaner.setEnabled(req.getOn());
+    }
     return SetCleanerChoreRunningResponse.newBuilder().setPrevValue(prevValue).build();
   }
 
