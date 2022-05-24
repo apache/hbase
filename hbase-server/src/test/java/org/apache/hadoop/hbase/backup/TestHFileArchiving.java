@@ -109,7 +109,7 @@ public class TestHFileArchiving {
     // We don't want the cleaner to remove files. The tests do that.
     UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cancel(true);
 
-    POOL = new DirScanPool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   private static void setupConf(Configuration conf) {

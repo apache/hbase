@@ -77,7 +77,7 @@ public class TestMasterRegionCompaction extends MasterRegionTestBase {
       public boolean isStopped() {
         return stopped;
       }
-    }, conf, fs, globalArchivePath, cleanerPool);
+    }, conf, fs, globalArchivePath, hfileCleanerPool);
     choreService.scheduleChore(hfileCleaner);
   }
 
