@@ -62,7 +62,7 @@ public class TestCleanerChore {
 
   @BeforeClass
   public static void setup() {
-    POOL = new DirScanPool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   @AfterClass
@@ -465,6 +465,57 @@ public class TestCleanerChore {
     // Change size of chore's pool
     conf.set(CleanerChore.CHORE_POOL_SIZE, String.valueOf(changedPoolSize));
     POOL.onConfigurationChange(conf);
+    assertEquals(changedPoolSize, chore.getChorePoolSize());
+    // Stop chore
+    t.join();
+  }
+
+  @Test
+  public void testOnConfigurationChangeLogCleaner() throws Exception {
+    int availableProcessorNum = Runtime.getRuntime().availableProcessors();
+    if (availableProcessorNum == 1) { // no need to run this test
+      return;
+    }
+
+    DirScanPool pool = DirScanPool.getLogCleanerScanPool(UTIL.getConfiguration());
+
+    // have at least 2 available processors/cores
+    int initPoolSize = availableProcessorNum / 2;
+    int changedPoolSize = availableProcessorNum;
+
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+    conf.set(CleanerChore.LOG_CLEANER_CHORE_SIZE, String.valueOf(initPoolSize));
+    final AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, pool);
+    chore.setEnabled(true);
+    // Create subdirs under testDir
+    int dirNums = 6;
+    Path[] subdirs = new Path[dirNums];
+    for (int i = 0; i < dirNums; i++) {
+      subdirs[i] = new Path(testDir, "subdir-" + i);
+      fs.mkdirs(subdirs[i]);
+    }
+    // Under each subdirs create 6 files
+    for (Path subdir : subdirs) {
+      createFiles(fs, subdir, 6);
+    }
+    // Start chore
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        chore.chore();
+      }
+    });
+    t.setDaemon(true);
+    t.start();
+    // Change size of chore's pool
+    conf.set(CleanerChore.LOG_CLEANER_CHORE_SIZE, String.valueOf(changedPoolSize));
+    pool.onConfigurationChange(conf);
     assertEquals(changedPoolSize, chore.getChorePoolSize());
     // Stop chore
     t.join();

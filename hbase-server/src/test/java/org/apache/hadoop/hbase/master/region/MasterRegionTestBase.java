@@ -47,7 +47,9 @@ public class MasterRegionTestBase {
 
   protected ChoreService choreService;
 
-  protected DirScanPool cleanerPool;
+  protected DirScanPool hfileCleanerPool;
+
+  protected DirScanPool logCleanerPool;
 
   protected static byte[] CF1 = Bytes.toBytes("f1");
 
@@ -87,7 +89,8 @@ public class MasterRegionTestBase {
   protected void createMasterRegion() throws IOException {
     configure(htu.getConfiguration());
     choreService = new ChoreService(getClass().getSimpleName());
-    cleanerPool = new DirScanPool(htu.getConfiguration());
+    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(htu.getConfiguration());
+    logCleanerPool = DirScanPool.getLogCleanerScanPool(htu.getConfiguration());
     Server server = mock(Server.class);
     when(server.getConfiguration()).thenReturn(htu.getConfiguration());
     when(server.getServerName())
@@ -110,7 +113,8 @@ public class MasterRegionTestBase {
   @After
   public void tearDown() throws IOException {
     region.close(true);
-    cleanerPool.shutdownNow();
+    hfileCleanerPool.shutdownNow();
+    logCleanerPool.shutdownNow();
     choreService.shutdown();
     htu.cleanupTestDir();
   }
