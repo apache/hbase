@@ -167,12 +167,16 @@ public class RSMobFileCleanerChore extends ScheduledChore {
           }
         }
 
-        LOG.debug("Found: {} active mob refs for table={}",
-          referencedMOBs.values().stream().map(inner -> inner.values())
-            .flatMap(lists -> lists.stream()).mapToInt(lists -> lists.size()).sum(),
-          htd.getTableName().getNameAsString());
-        referencedMOBs.values().stream().forEach(innerMap -> innerMap.values().stream()
-          .forEach(mobFileList -> mobFileList.stream().forEach(LOG::trace)));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Found: {} active mob refs for table={}",
+            referencedMOBs.values().stream().map(inner -> inner.values())
+              .flatMap(lists -> lists.stream()).mapToInt(lists -> lists.size()).sum(),
+            htd.getTableName().getNameAsString());
+        }
+        if (LOG.isTraceEnabled()) {
+          referencedMOBs.values().stream().forEach(innerMap -> innerMap.values().stream()
+            .forEach(mobFileList -> mobFileList.stream().forEach(LOG::trace)));
+        }
 
         //collect regions referencing MOB files belonging to the current rs
         Set<String> regionsCovered = new HashSet<>();
