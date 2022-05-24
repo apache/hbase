@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -148,6 +149,15 @@ public class TestMasterRegionFlush {
     assertEquals(1, flushCalled.get());
     Thread.sleep(1000);
     assertEquals(2, flushCalled.get());
+  }
 
+  @Test
+  public void testForceFlush() throws Exception {
+    // Test for HBASE-27028
+    HBaseTestingUtil htu = new HBaseTestingUtil();
+    htu.startMiniCluster(1);
+    htu.getConnection().getAdmin().flushMasterStore();
+    assertTrue(htu.getMiniHBaseCluster().getMaster().isLocalRegionFlushed());
+    htu.shutdownMiniCluster();
   }
 }

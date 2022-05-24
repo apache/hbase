@@ -161,9 +161,8 @@ public final class MasterRegion {
     return region.getScanner(scan);
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   public FlushResult flush(boolean force) throws IOException {
+    flusherAndCompactor.resetChangesAfterLastFlush();
     return region.flush(force);
   }
 

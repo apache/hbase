@@ -202,7 +202,7 @@ class MasterRegionFlusherAndCompactor implements Closeable {
         flushLock.unlock();
       }
       assert flushRequest;
-      changesAfterLastFlush.set(0);
+      resetChangesAfterLastFlush();
       try {
         region.flush(true);
         lastFlushTime = EnvironmentEdgeManager.currentTime();
@@ -261,6 +261,10 @@ class MasterRegionFlusherAndCompactor implements Closeable {
     } finally {
       flushLock.unlock();
     }
+  }
+
+  void resetChangesAfterLastFlush() {
+    changesAfterLastFlush.set(0);
   }
 
   @Override
