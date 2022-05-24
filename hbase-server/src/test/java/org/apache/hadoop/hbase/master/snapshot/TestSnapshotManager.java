@@ -234,7 +234,7 @@ public class TestSnapshotManager {
 
     // Initialize cleaner
     HFileCleaner cleaner = new HFileCleaner(10000, Mockito.mock(Stoppable.class), conf, fs,
-      archiveDir, new DirScanPool(UTIL.getConfiguration()));
+      archiveDir, DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration()));
     // Link backref and HFile cannot be removed
     cleaner.choreForTesting();
     assertTrue(fs.exists(linkBackRef));

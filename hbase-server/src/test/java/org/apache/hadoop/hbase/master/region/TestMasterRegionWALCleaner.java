@@ -72,7 +72,7 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
       public boolean isStopped() {
         return stopped;
       }
-    }, conf, fs, globalWALArchiveDir, cleanerPool, null);
+    }, conf, fs, globalWALArchiveDir, logCleanerPool, null);
     choreService.scheduleChore(logCleaner);
   }
 
