@@ -469,7 +469,7 @@ public class TestMetaRegionReplicaReplication {
 
       RegionLocator locator = tableForGet.getRegionLocator();
 
-      for (int j = 0; j < numOfMetaReplica * 3; j ++) {
+      for (int j = 0; j < numOfMetaReplica * 3; j++) {
         locator.getAllRegionLocations();
       }
 
