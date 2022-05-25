@@ -513,9 +513,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   @Override
   protected void doStop() {
-    disconnect(); // don't call super.doStop()
     // Allow currently running replication tasks to finish
     this.stopping = true;
+    disconnect(); // don't call super.doStop()
     notifyStopped();
   }
 
