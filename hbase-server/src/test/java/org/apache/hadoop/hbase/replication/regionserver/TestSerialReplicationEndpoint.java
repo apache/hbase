@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -165,11 +165,10 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
-      return () -> {
-        entryQueue.addAll(entries);
-        return ordinal;
-      };
+    protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int ordinal,
+      int timeout) {
+      entryQueue.addAll(entries);
+      return CompletableFuture.completedFuture(ordinal);
     }
 
     @Override
