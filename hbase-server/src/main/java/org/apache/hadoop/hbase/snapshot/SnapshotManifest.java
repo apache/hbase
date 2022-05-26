@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -310,7 +311,17 @@ public final class SnapshotManifest {
       for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
         Object familyData = visitor.familyOpen(regionData, cfd.getName());
         monitor.rethrowException();
-        StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
+        StoreFileTracker tracker = null;
+        if(isMobRegion){
+          //MOB regions are always using the default SFT implementation
+          ColumnFamilyDescriptor defaultSFTCfd = ColumnFamilyDescriptorBuilder.newBuilder(cfd)
+            .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+              StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+          tracker = StoreFileTrackerFactory.create(conf, htd, defaultSFTCfd, regionFs);
+        }
+        else {
+          tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
+        }
         List<StoreFileInfo> storeFiles = tracker.load();
         if (storeFiles.isEmpty()) {
           LOG.debug("No files under family: {}", cfd.getNameAsString());
