@@ -2891,7 +2891,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
        * {@link FlushDescriptor} and attach the {@link RegionReplicationSink#add} to the
        * flushOpSeqIdMVCCEntry,see HBASE-26960 for more details.
        */
-      this.attachReplicateRegionReplicaToFlushOpSeqIdMVCCEntry(flushOpSeqIdMVCCEntry, desc, sink);
+      this.attachRegionReplicationToFlushOpSeqIdMVCCEntry(flushOpSeqIdMVCCEntry, desc, sink);
       return false;
     }
 
@@ -2912,7 +2912,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Create {@link WALEdit} for {@link FlushDescriptor} and attach {@link RegionReplicationSink#add}
    * to the flushOpSeqIdMVCCEntry.
    */
-  private void attachReplicateRegionReplicaToFlushOpSeqIdMVCCEntry(WriteEntry flushOpSeqIdMVCCEntry,
+  private void attachRegionReplicationToFlushOpSeqIdMVCCEntry(WriteEntry flushOpSeqIdMVCCEntry,
     FlushDescriptor desc, RegionReplicationSink sink) {
     assert !flushOpSeqIdMVCCEntry.getCompletionAction().isPresent();
     WALEdit flushMarkerWALEdit = WALEdit.createFlushWALEdit(getRegionInfo(), desc);
@@ -3618,7 +3618,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
              * could work for SKIP_WAL, we save the {@link Mutation} which
              * {@link Mutation#getDurability} is {@link Durability#SKIP_WAL} in miniBatchOp.
              */
-            cacheSkipWALMutationForReplicateRegionReplica(miniBatchOp, walEdits,
+            cacheSkipWALMutationForRegionReplication(miniBatchOp, walEdits,
               familyCellMaps[index]);
             return true;
           }
@@ -3661,7 +3661,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       walEdit.add(familyCellMap);
     }
 
-    protected abstract void cacheSkipWALMutationForReplicateRegionReplica(
+    protected abstract void cacheSkipWALMutationForRegionReplication(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp,
       List<Pair<NonceKey, WALEdit>> walEdits, Map<byte[], List<Cell>> familyCellMap);
 
@@ -4164,8 +4164,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return walEdits;
     }
 
+    /**
+     * Here is for HBASE-26993,in order to make the new framework for region replication could work
+     * for SKIP_WAL, we save the {@link Mutation} which {@link Mutation#getDurability} is
+     * {@link Durability#SKIP_WAL} in miniBatchOp.
+     */
     @Override
-    protected void cacheSkipWALMutationForReplicateRegionReplica(
+    protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp,
       List<Pair<NonceKey, WALEdit>> nonceKeyAndWALEdits, Map<byte[], List<Cell>> familyCellMap) {
       if (!this.regionReplicateEnable) {
@@ -4240,7 +4245,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
          * {@link MiniBatchOperationInProgress#getWalEditForReplicateIfExistsSkipWAL} and attach
          * {@link RegionReplicationSink#add} to the new mvcc writeEntry.
          */
-        attachReplicateRegionReplicaToMVCCEntry(miniBatchOp, writeEntry, now);
+        attachRegionReplicationToMVCCEntry(miniBatchOp, writeEntry, now);
       }
       return writeEntry;
     }
@@ -4254,7 +4259,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * Create {@link WALKeyImpl} and get {@link WALEdit} from miniBatchOp and attach
      * {@link RegionReplicationSink#add} to the mvccWriteEntry.
      */
-    private void attachReplicateRegionReplicaToMVCCEntry(
+    private void attachRegionReplicationToMVCCEntry(
       final MiniBatchOperationInProgress<Mutation> miniBatchOp, WriteEntry mvccWriteEntry, long now)
       throws IOException {
       if (!this.regionReplicateEnable) {
@@ -4598,7 +4603,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     @Override
-    protected void cacheSkipWALMutationForReplicateRegionReplica(
+    protected void cacheSkipWALMutationForRegionReplication(
       MiniBatchOperationInProgress<Mutation> miniBatchOp, List<Pair<NonceKey, WALEdit>> walEdits,
       Map<byte[], List<Cell>> familyCellMap) {
       // There is no action to do if current region is secondary replica
@@ -8063,7 +8068,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
       WriteEntry writeEntry = walKey.getWriteEntry();
-      this.attachReplicateRegionReplicaInWALAppend(batchOp, miniBatchOp, walKey, walEdit,
+      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit,
         writeEntry);
       // Call sync on our edit.
       if (txid != 0) {
@@ -8082,7 +8087,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Attach {@link RegionReplicationSink#add} to the mvcc writeEntry for replicating to region
    * replica.
    */
-  private void attachReplicateRegionReplicaInWALAppend(BatchOperation<?> batchOp,
+  private void attachRegionReplicationInWALAppend(BatchOperation<?> batchOp,
     MiniBatchOperationInProgress<Mutation> miniBatchOp, WALKeyImpl walKey, WALEdit walEdit,
     WriteEntry writeEntry) throws IOException {
     if (!regionReplicationSink.isPresent()) {
