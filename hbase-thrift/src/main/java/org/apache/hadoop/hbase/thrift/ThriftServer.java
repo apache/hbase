@@ -408,7 +408,7 @@ public class ThriftServer extends Configured implements Tool {
       HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
-      SslContextFactory sslCtxFactory = new SslContextFactory();
+      SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
       String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE_KEY);
       String password =
         HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null);

@@ -43,9 +43,11 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+@Ignore // disable for now, see HBASE-27045
 @Category({ RegionServerTests.class, LargeTests.class })
 public class TestClusterScopeQuotaThrottle {
 

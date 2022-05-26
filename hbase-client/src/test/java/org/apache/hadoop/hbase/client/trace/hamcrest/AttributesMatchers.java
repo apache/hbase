@@ -45,6 +45,11 @@ public final class AttributesMatchers {
     return containsEntry(equalTo(key), equalTo(value));
   }
 
+  public static <T> Matcher<Attributes> containsEntry(AttributeKey<T> key,
+    Matcher<? super T> matcher) {
+    return containsEntry(equalTo(key), matcher);
+  }
+
   public static Matcher<Attributes> containsEntry(String key, String value) {
     return containsEntry(AttributeKey.stringKey(key), value);
   }

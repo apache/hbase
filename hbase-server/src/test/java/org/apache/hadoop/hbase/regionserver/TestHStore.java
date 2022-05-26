@@ -940,13 +940,16 @@ public class TestHStore {
   private void closeCompactedFile(int index) throws IOException {
     Collection<HStoreFile> files =
       this.store.getStoreEngine().getStoreFileManager().getCompactedfiles();
-    HStoreFile sf = null;
-    Iterator<HStoreFile> it = files.iterator();
-    for (int i = 0; i <= index; i++) {
-      sf = it.next();
+    if (files.size() > 0) {
+      HStoreFile sf = null;
+      Iterator<HStoreFile> it = files.iterator();
+      for (int i = 0; i <= index; i++) {
+        sf = it.next();
+      }
+      sf.closeStoreFile(true);
+      store.getStoreEngine().getStoreFileManager()
+        .removeCompactedFiles(Collections.singletonList(sf));
     }
-    sf.closeStoreFile(true);
-    store.getStoreEngine().getStoreFileManager().removeCompactedFiles(Lists.newArrayList(sf));
   }
 
   @Test
@@ -1017,14 +1020,14 @@ public class TestHStore {
     // call first time after files changed
     spiedStoreEngine.refreshStoreFiles();
     assertEquals(2, this.store.getStorefilesCount());
-    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
 
     // call second time
     spiedStoreEngine.refreshStoreFiles();
 
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,
-    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any());
+    verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {

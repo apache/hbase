@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Hadoop decompressor glue for aircompressor decompressors.
@@ -32,7 +30,6 @@ import org.slf4j.LoggerFactory;
 public class HadoopDecompressor<T extends Decompressor>
   implements org.apache.hadoop.io.compress.Decompressor {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(HadoopDecompressor.class);
   protected T decompressor;
   protected ByteBuffer inBuf, outBuf;
   protected int inLen;
@@ -50,7 +47,6 @@ public class HadoopDecompressor<T extends Decompressor>
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("decompress: read {} remaining bytes from outBuf", n);
       return n;
     }
     if (inBuf.position() > 0) {
@@ -63,50 +59,36 @@ public class HadoopDecompressor<T extends Decompressor>
       inBuf.rewind();
       inBuf.limit(inBuf.capacity());
       final int written = outBuf.position();
-      LOG.trace("decompress: decompressed {} -> {}", remaining, written);
       outBuf.flip();
       int n = Math.min(written, len);
       outBuf.get(b, off, n);
-      LOG.trace("decompress: {} bytes", n);
       return n;
     }
-    LOG.trace("decompress: No output, finished");
     finished = true;
     return 0;
   }
 
   @Override
   public void end() {
-    LOG.trace("end");
   }
 
   @Override
   public boolean finished() {
-    LOG.trace("finished");
     return finished;
   }
 
   @Override
   public int getRemaining() {
-    LOG.trace("getRemaining: {}", inLen);
     return inLen;
   }
 
   @Override
   public boolean needsDictionary() {
-    LOG.trace("needsDictionary");
     return false;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void reset() {
-    LOG.trace("reset");
-    try {
-      decompressor = (T) decompressor.getClass().getDeclaredConstructor().newInstance();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
     inBuf.rewind();
     inBuf.limit(inBuf.capacity());
     inLen = 0;
@@ -117,9 +99,7 @@ public class HadoopDecompressor<T extends Decompressor>
 
   @Override
   public boolean needsInput() {
-    boolean b = (inBuf.position() == 0);
-    LOG.trace("needsInput: {}", b);
-    return b;
+    return inBuf.position() == 0;
   }
 
   @Override
@@ -129,13 +109,11 @@ public class HadoopDecompressor<T extends Decompressor>
 
   @Override
   public void setInput(byte[] b, int off, int len) {
-    LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      LOG.trace("setInput: resize inBuf {}", needed);
       ByteBuffer newBuf = ByteBuffer.allocate(needed);
       inBuf.flip();
       newBuf.put(inBuf);
