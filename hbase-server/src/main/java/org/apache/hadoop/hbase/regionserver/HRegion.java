@@ -357,7 +357,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
-  private Path regionDir;
+  private Path regionWalDir;
   private FileSystem walFS;
 
   // set to true if the region is restored from snapshot
@@ -2052,11 +2052,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @throws IOException if there is an error getting WALRootDir
    */
   public Path getWALRegionDir() throws IOException {
-    if (regionDir == null) {
-      regionDir = CommonFSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
+    if (regionWalDir == null) {
+      regionWalDir = CommonFSUtils.getWALRegionDir(conf, getRegionInfo().getTable(),
         getRegionInfo().getEncodedName());
     }
-    return regionDir;
+    return regionWalDir;
   }
 
   @Override
@@ -6820,7 +6820,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           boolean reqTmp = store.storeEngine.requireWritingToTmpDirFirst();
           if (bulkLoadListener != null) {
             finalPath = bulkLoadListener.prepareBulkLoad(familyName, path, copyFile,
-              reqTmp ? null : regionDir.toString());
+              reqTmp ? null : fs.getRegionDir().toString());
           }
           Pair<Path, Path> pair = null;
           if (reqTmp) {
