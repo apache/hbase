@@ -53,7 +53,8 @@ public final class WALEventTrackerTableAccessor {
   public static final String WAL_EVENT_TRACKER_TABLE_NAME_STR = "REPLICATION.WALEVENTTRACKER";
   public static final String DELIMITER = "_";
 
-  private WALEventTrackerTableAccessor() {}
+  private WALEventTrackerTableAccessor() {
+  }
 
   /**
    * {@link #WAL_EVENT_TRACKER_TABLE_NAME_STR} table name - can be enabled with config -

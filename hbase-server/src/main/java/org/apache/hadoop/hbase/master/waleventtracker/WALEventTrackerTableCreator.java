@@ -48,7 +48,8 @@ public final class WALEventTrackerTableCreator {
           .setMaxVersions(1).setTimeToLive(TTL.intValue()).build());
 
   /* Private default constructor */
-  private WALEventTrackerTableCreator() {}
+  private WALEventTrackerTableCreator() {
+  }
 
   /*
    * We will create this table only if hbase.regionserver.wal.event.tracker.enabled is enabled and
