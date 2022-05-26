@@ -312,14 +312,14 @@ public final class SnapshotManifest {
         Object familyData = visitor.familyOpen(regionData, cfd.getName());
         monitor.rethrowException();
         StoreFileTracker tracker = null;
-        if(isMobRegion){
-          //MOB regions are always using the default SFT implementation
+        if (isMobRegion) {
+          // MOB regions are always using the default SFT implementation
           ColumnFamilyDescriptor defaultSFTCfd = ColumnFamilyDescriptorBuilder.newBuilder(cfd)
             .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
-              StoreFileTrackerFactory.Trackers.DEFAULT.name()).build();
+              StoreFileTrackerFactory.Trackers.DEFAULT.name())
+            .build();
           tracker = StoreFileTrackerFactory.create(conf, htd, defaultSFTCfd, regionFs);
-        }
-        else {
+        } else {
           tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
         }
         List<StoreFileInfo> storeFiles = tracker.load();
