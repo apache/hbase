@@ -3842,7 +3842,7 @@
             </exclusions>
           </dependency>
           <dependency>
-            <!-- Is this needed? Seems a duplicate of the above dependency but for the 
+            <!-- Is this needed? Seems a duplicate of the above dependency but for the
             classifier-->
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
