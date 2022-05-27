@@ -3618,8 +3618,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
              * could work for SKIP_WAL, we save the {@link Mutation} which
              * {@link Mutation#getDurability} is {@link Durability#SKIP_WAL} in miniBatchOp.
              */
-            cacheSkipWALMutationForRegionReplication(miniBatchOp, walEdits,
-              familyCellMaps[index]);
+            cacheSkipWALMutationForRegionReplication(miniBatchOp, walEdits, familyCellMaps[index]);
             return true;
           }
 
@@ -8068,8 +8067,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
       WriteEntry writeEntry = walKey.getWriteEntry();
-      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit,
-        writeEntry);
+      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit, writeEntry);
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, batchOp.durability);
