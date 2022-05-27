@@ -278,7 +278,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </section>
         <section>
             <h2><a name="region_visualizer"></a>Region Visualizer</h2>
-            <& RegionVisualizerTmpl &>
+            <& RegionVisualizerTmpl; master = master &>
         </section>
         <section>
             <h2><a name="peers">Peers</a></h2>

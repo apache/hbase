@@ -16,6 +16,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 </%doc>
+<%args>
+HMaster master;
+</%args>
+<%import>
+org.apache.hadoop.hbase.master.HMaster;
+org.apache.hadoop.hbase.ServerName;
+</%import>
+
+<%java>
+ServerName active_master = master.getActiveMaster().orElse(null);
+assert active_master != null : "Failed to retrieve active master's ServerName!";
+String activeHostname = active_master.getHostname();
+int activeInfoPort = master.getActiveMasterInfoPort();
+</%java>
 
     <script type="text/javascript" src="/static/js/vega@5.19.1.min.js"></script>
     <script type="text/javascript" src="/static/js/vega-lite@5.0.0.min.js"></script>
@@ -29,7 +43,7 @@ limitations under the License.
           description: 'Total `storefileSize` per Region Server',
           data: {
             name: 'region_info',
-            url: 'http://localhost:16010/api/v1/admin/cluster_metrics/live_servers',
+            url: 'http://<% activeHostname %>:<% activeInfoPort %>/api/v1/admin/cluster_metrics/live_servers',
             format: { type: 'json', property: 'data' }
           },
           transform: [
