@@ -3934,10 +3934,13 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <!--
+              Needed in test context when hadoop-3.3 runs.
               <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
               </exclusion>
+              -->
               <exclusion>
                 <groupId>org.fusesource.leveldbjni</groupId>
                 <artifactId>leveldbjni-all</artifactId>
@@ -3949,6 +3952,8 @@
             </exclusions>
           </dependency>
           <dependency>
+            <!-- Is this needed? Seems a duplicate of the above dependency but for the
+            classifier-->
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
             <version>${hadoop-three.version}</version>
