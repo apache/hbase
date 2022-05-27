@@ -139,7 +139,7 @@ ARGV.unshift('-d') if @shell_debug
 
 # Set logging level to avoid verboseness
 org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
-org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop.hbase', log_level)
+org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
 
 # Require HBase now after setting log levels
 require 'hbase_constants'
@@ -172,7 +172,7 @@ def debug
     log_level = org.apache.logging.log4j.Level::DEBUG
   end
   org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
-  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop.hbase', log_level)
+  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
   debug?
 end
 
