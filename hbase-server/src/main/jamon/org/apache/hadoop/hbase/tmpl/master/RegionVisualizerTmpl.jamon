@@ -22,11 +22,12 @@ HMaster master;
 <%import>
 org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.ServerName;
+org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 </%import>
 
 <%java>
 ServerName active_master = master.getActiveMaster().orElse(null);
-assert active_master != null : "Failed to retrieve active master's ServerName!";
+Preconditions.checkState(active_master != null, "Failed to retrieve active master's ServerName!");
 String activeHostname = active_master.getHostname();
 int activeInfoPort = master.getActiveMasterInfoPort();
 </%java>
