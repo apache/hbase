@@ -173,10 +173,10 @@ class ReplicationSourceWALReader extends Thread {
   protected final boolean addEntryToBatch(WALEntryBatch batch, Entry entry) {
     WALEdit edit = entry.getEdit();
     if (edit == null || edit.isEmpty()) {
-      LOG.debug("Edit null or empty for entry {} ", entry);
+      LOG.trace("Edit null or empty for entry {} ", entry);
       return false;
     }
-    LOG.debug("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
+    LOG.trace("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
       entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
@@ -343,7 +343,7 @@ class ReplicationSourceWALReader extends Thread {
   protected final Entry filterEntry(Entry entry) {
     Entry filtered = filter.filter(entry);
     if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
-      LOG.debug("Filtered entry for replication: {}", entry);
+      LOG.trace("Filtered entry for replication: {}", entry);
       source.getSourceMetrics().incrLogEditsFiltered();
     }
     return filtered;
