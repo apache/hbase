@@ -47,10 +47,22 @@ public class RSGroupInfo {
   private final Map<String, String> configuration;
 
   public RSGroupInfo(String name) {
-    this(name, new TreeSet<>(), new TreeSet<>());
+    this(name, new TreeSet<Address>(), new TreeSet<TableName>());
   }
 
-  RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
+  RSGroupInfo(String name, Set<Address> servers) {
+    this.name = name;
+    this.servers = servers == null ? new TreeSet<>() : new TreeSet<>(servers);
+    this.tables = new TreeSet<>();
+    configuration = new HashMap<>();
+  }
+
+  /**
+   * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information for a table will be
+   *             stored in the configuration of a table so this will be removed.
+   */
+  @Deprecated
+  RSGroupInfo(String name, Set<Address> servers, Set<TableName> tables) {
     this.name = name;
     this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
     this.tables = (tables == null) ? new TreeSet<>() : new TreeSet<>(tables);
