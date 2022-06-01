@@ -17,19 +17,16 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -83,37 +80,12 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
     }
   }
 
+  // This test relies on a disallowed API change in RSGroupInfo and was also found to be
+  // flaky. REVERTED from branch-2.5 and branch-2.
   @Test
+  @Ignore
   public void testCustomOnlineConfigChangeInRSGroup() throws Exception {
-    // Check the default configuration of the RegionServers
-    TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(thread -> {
-      Configuration conf = thread.getRegionServer().getConfiguration();
-      assertEquals(0, conf.getInt("hbase.custom.config", 0));
-    });
-
-    replaceHBaseSiteXML();
-    RSGroupInfo testRSGroup = addGroup(TEST_GROUP, 1);
-    RSGroupInfo test2RSGroup = addGroup(TEST2_GROUP, 1);
-    rsGroupAdmin.updateConfiguration(TEST_GROUP);
-
-    // Check the configuration of the RegionServer in test rsgroup, should be update
-    Configuration regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster()
-      .getLiveRegionServerThreads().stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .filter(regionServer -> (regionServer.getServerName().getAddress()
-        .equals(testRSGroup.getServers().first())))
-      .collect(Collectors.toList()).get(0).getConfiguration();
-    int custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(1000, custom);
-
-    // Check the configuration of the RegionServer in test2 rsgroup, should not be update
-    regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
-      .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
-      .filter(regionServer -> (regionServer.getServerName().getAddress()
-        .equals(test2RSGroup.getServers().first())))
-      .collect(Collectors.toList()).get(0).getConfiguration();
-    custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(0, custom);
-
-    restoreHBaseSiteXML();
+    // Test contents removed on branch-2.5 and branch-2.
   }
+
 }
