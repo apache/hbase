@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.TableName;
@@ -55,7 +56,7 @@ public class RSGroupInfo {
     this(name, new TreeSet<Address>(), new TreeSet<TableName>());
   }
 
-  RSGroupInfo(String name, SortedSet<Address> servers) {
+  RSGroupInfo(String name, Set<Address> servers) {
     this.name = name;
     this.servers = servers == null ? new TreeSet<>() : new TreeSet<>(servers);
     this.tables = new TreeSet<>();
@@ -67,7 +68,7 @@ public class RSGroupInfo {
    *             stored in the configuration of a table so this will be removed.
    */
   @Deprecated
-  RSGroupInfo(String name, SortedSet<Address> servers, SortedSet<TableName> tables) {
+  RSGroupInfo(String name, Set<Address> servers, Set<TableName> tables) {
     this.name = name;
     this.servers = (servers == null) ? new TreeSet<>() : new TreeSet<>(servers);
     this.tables = (tables == null) ? new TreeSet<>() : new TreeSet<>(tables);
@@ -110,7 +111,7 @@ public class RSGroupInfo {
   /**
    * Get list of servers.
    */
-  public SortedSet<Address> getServers() {
+  public Set<Address> getServers() {
     return servers;
   }
 

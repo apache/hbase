@@ -100,7 +100,7 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
     Configuration regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster()
       .getLiveRegionServerThreads().stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
       .filter(regionServer -> (regionServer.getServerName().getAddress()
-        .equals(testRSGroup.getServers().first())))
+        .equals(testRSGroup.getServers().iterator().next())))
       .collect(Collectors.toList()).get(0).getConfiguration();
     int custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(1000, custom);
@@ -109,7 +109,7 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
     regionServerConfiguration = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
       .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
       .filter(regionServer -> (regionServer.getServerName().getAddress()
-        .equals(test2RSGroup.getServers().first())))
+        .equals(test2RSGroup.getServers().iterator().next())))
       .collect(Collectors.toList()).get(0).getConfiguration();
     custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
     assertEquals(0, custom);
