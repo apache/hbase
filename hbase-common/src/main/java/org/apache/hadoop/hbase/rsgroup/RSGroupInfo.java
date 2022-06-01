@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.hadoop.hbase.TableName;
@@ -93,7 +94,7 @@ public class RSGroupInfo {
   /**
    * Get list of servers.
    */
-  public SortedSet<Address> getServers() {
+  public Set<Address> getServers() {
     return servers;
   }
 

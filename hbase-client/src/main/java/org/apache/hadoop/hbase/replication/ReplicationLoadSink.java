@@ -29,7 +29,7 @@ public class ReplicationLoadSink {
   private final long timestampStarted;
   private final long totalOpsProcessed;
 
-  private ReplicationLoadSink(long age, long timestamp, long timestampStarted,
+  public ReplicationLoadSink(long age, long timestamp, long timestampStarted,
     long totalOpsProcessed) {
     this.ageOfLastAppliedOp = age;
     this.timestampsOfLastAppliedOp = timestamp;

@@ -68,6 +68,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   public static final String REGION_MEMSTORE_REPLICATION =
     TableDescriptorBuilder.REGION_MEMSTORE_REPLICATION;
   public static final String NORMALIZATION_ENABLED = TableDescriptorBuilder.NORMALIZATION_ENABLED;
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED =
+    TableDescriptorBuilder.DEFAULT_NORMALIZATION_ENABLED;
   public static final String NORMALIZER_TARGET_REGION_COUNT =
     TableDescriptorBuilder.NORMALIZER_TARGET_REGION_COUNT;
   public static final String NORMALIZER_TARGET_REGION_SIZE =
