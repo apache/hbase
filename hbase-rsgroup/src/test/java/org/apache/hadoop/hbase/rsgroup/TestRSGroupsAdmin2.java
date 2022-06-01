@@ -664,7 +664,8 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       return getTableRegionMap().get(tableName).size() >= tableRegionCount;
     });
     long startTime = EnvironmentEdgeManager.currentTime();
-    rsGroupAdmin.moveServers(Sets.newHashSet(newGroup.getServers().iterator().next()), newGroup.getName());
+    rsGroupAdmin.moveServers(Sets.newHashSet(newGroup.getServers().iterator().next()),
+      newGroup.getName());
     long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     String msg =
       "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="
