@@ -102,7 +102,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
         sumSize += store.getSize();
       }
       if (sumSize > sizeToCheck) {
-        LOG.debug("ShouldSplit because region size is big enough "
+        LOG.debug("Should split because region size is big enough "
             + "sumSize={}, sizeToCheck={}", StringUtils.humanSize(sumSize),
           StringUtils.humanSize(sizeToCheck));
         return true;
@@ -111,7 +111,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       for (HStore store : region.getStores()) {
         long size = store.getSize();
         if (size > sizeToCheck) {
-          LOG.debug("ShouldSplit because {} size={}, sizeToCheck={}{}",
+          LOG.debug("Should split because {} size={}, sizeToCheck={}{}",
             store.getColumnFamilyName(), StringUtils.humanSize(size),
             StringUtils.humanSize(sizeToCheck));
           return true;
