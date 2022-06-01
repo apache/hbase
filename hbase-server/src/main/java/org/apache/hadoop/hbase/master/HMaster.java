@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStat
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
@@ -1227,6 +1228,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     final SlowLogMasterService slowLogMasterService = new SlowLogMasterService(conf, this);
     slowLogMasterService.init();
+
+    WALEventTrackerTableCreator.createIfNeededAndNotExists(conf, this);
 
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before

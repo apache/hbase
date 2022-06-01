@@ -24,6 +24,7 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
@@ -127,7 +128,7 @@ public class BalancerRejectionQueueService implements NamedQueueService {
   }
 
   @Override
-  public void persistAll() {
+  public void persistAll(Connection connection) {
     // no-op for now
   }
 

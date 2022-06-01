@@ -22,6 +22,7 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.util.Threads;
@@ -60,7 +61,7 @@ public class NamedQueueRecorder {
 
     // disruptor initialization with BlockingWaitStrategy
     this.disruptor = new Disruptor<>(RingBufferEnvelope::new, getEventCount(eventCount),
-      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".slowlog.append-pool-%d")
+      new ThreadFactoryBuilder().setNameFormat(hostingThreadName + ".named-queue-events-pool-%d")
         .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build(),
       ProducerType.MULTI, new BlockingWaitStrategy());
     this.disruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler());
@@ -137,9 +138,9 @@ public class NamedQueueRecorder {
    * Add all in memory queue records to system table. The implementors can use system table or
    * direct HDFS file or ZK as persistence system.
    */
-  public void persistAll(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
+  public void persistAll(NamedQueuePayload.NamedQueueEvent namedQueueEvent, Connection connection) {
     if (this.logEventHandler != null) {
-      this.logEventHandler.persistAll(namedQueueEvent);
+      this.logEventHandler.persistAll(namedQueueEvent, connection);
     }
   }
 
