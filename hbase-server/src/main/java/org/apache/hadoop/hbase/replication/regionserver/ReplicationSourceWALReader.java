@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import com.google.common.base.Preconditions;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
