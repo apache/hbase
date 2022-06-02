@@ -1,4 +1,5 @@
-<project xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" xmlns="https://maven.apache.org/POM/4.0.0" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -32,7 +33,7 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>23</version>
-    <relativePath />
+    <relativePath/>
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
@@ -40,7 +41,7 @@
   <version>2.4.6.7.2.16.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
-  <description>Apache HBase&#153; is the Hadoop database. Use it when you need
+  <description>Apache HBase is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.</description>
@@ -2250,15 +2251,9 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
-            <trimTrailingWhitespace />
-            <endWithNewline />
-            <!-- make sure every file has the following copyright header.
-              optionally, Spotless can set copyright years by digging
-              through git history (see "license" section below) -->
-            <licenseHeader>
-              <file>${session.executionRootDirectory}/dev-support/license-header</file>
-            </licenseHeader>
-            <removeUnusedImports />
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+            <removeUnusedImports/>
           </java>
           <pom>
             <sortPom>
@@ -2284,8 +2279,33 @@
                 <exclude>**/dependency-reduced-pom.xml</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
-              <trimTrailingWhitespace />
-              <endWithNewline />
+              <trimTrailingWhitespace/>
+              <endWithNewline/>
+            </format>
+            <format>
+              <!--
+                We have some files which have special license header which must be kept, so
+                here we add a special format section to apply license header, and leave the
+                java section above only used for formatting code style
+              -->
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+              </includes>
+              <excludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/package-info.java</exclude>
+                <!-- ByteRange, from Google protobuf -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/AbstractByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimpleMutableByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimplePositionedMutableByteRange.java</exclude>
+                <!-- Metrics, from Josh Elser -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/metrics/impl/HBaseMetrics2HadoopMetricsAdapter.java</exclude>
+              </excludes>
+              <licenseHeader>
+                <file>${session.executionRootDirectory}/dev-support/license-header</file>
+                <delimiter>package</delimiter>
+              </licenseHeader>
             </format>
           </formats>
         </configuration>
