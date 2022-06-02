@@ -132,6 +132,22 @@ public class WALEdit implements HeapSize {
   @InterfaceAudience.Private
   public static final byte[] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
+  /**
+   * Periodically {@link org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore}
+   * will create marker edits with family as {@link WALEdit#METAFAMILY} and
+   * {@link WALEdit#REPLICATION_MARKER} as qualifier and an empty value.
+   * org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader will populate the
+   * Replication Marker edit with region_server_name, wal_name and wal_offset encoded in
+   * {@link WALProtos.ReplicationMarkerDescriptor} object.
+   * {@link org.apache.hadoop.hbase.replication.regionserver.Replication} will change the
+   * REPLICATION_SCOPE for this edit to GLOBAL so that it can replicate. On the sink cluster,
+   * {@link org.apache.hadoop.hbase.replication.regionserver.ReplicationSink} will convert the
+   * ReplicationMarkerDescriptor into a Put mutation to REPLICATION_SINK_TRACKER_TABLE_NAME_STR
+   * table.
+   */
+  @InterfaceAudience.Private
+  public static final byte[] REPLICATION_MARKER = Bytes.toBytes("HBASE::REPLICATION_MARKER");
+
   private final transient boolean replay;
 
   private ArrayList<Cell> cells;
@@ -455,5 +471,29 @@ public class WALEdit implements HeapSize {
   private WALEdit addCell(Cell cell) {
     this.cells.add(cell);
     return this;
+  }
+
+  /**
+   * Creates a replication tracker edit with {@link #METAFAMILY} family and
+   * {@link #REPLICATION_MARKER} qualifier and has null value.
+   * @param rowKey    rowkey
+   * @param timestamp timestamp n
+   */
+  public static WALEdit createReplicationMarkerEdit(byte[] rowKey, long timestamp) {
+    KeyValue kv =
+      new KeyValue(rowKey, METAFAMILY, REPLICATION_MARKER, timestamp, KeyValue.Type.Put);
+    return new WALEdit().add(kv);
+  }
+
+  /**
+   * Checks whether this edit is a replication marker edit.
+   * @param edit edit
+   * @return true if the cell within an edit has column = METAFAMILY and qualifier =
+   *         REPLICATION_MARKER, false otherwise
+   */
+  public static boolean isReplicationMarkerEdit(WALEdit edit) {
+    // Check just the first cell from the edit. ReplicationMarker edit will have only 1 cell.
+    return edit.getCells().size() == 1
+      && CellUtil.matchingColumn(edit.getCells().get(0), METAFAMILY, REPLICATION_MARKER);
   }
 }

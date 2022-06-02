@@ -319,6 +319,14 @@ public class WALSplitter {
       Entry entry;
       startTS = EnvironmentEdgeManager.currentTime();
       while ((entry = getNextLogLine(walReader, wal, this.skipErrors)) != null) {
+        if (WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
+          // This condition is strictly not required since the regionid present in the edit is
+          // invalid, so it will skip processing this edit.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Ignoring Replication marker edits.");
+          }
+          continue;
+        }
         byte[] region = entry.getKey().getEncodedRegionName();
         String encodedRegionNameAsStr = Bytes.toString(region);
         Long lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);

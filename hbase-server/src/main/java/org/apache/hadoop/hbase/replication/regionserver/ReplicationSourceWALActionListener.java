@@ -69,6 +69,9 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
       return;
     }
+    if (WALEdit.isReplicationMarkerEdit(logEdit)) {
+      return;
+    }
     // For replay, or if all the cells are markers, do not need to store replication scope.
     if (
       logEdit.isReplay() || logEdit.getCells().stream().allMatch(c -> WALEdit.isMetaEditFamily(c))

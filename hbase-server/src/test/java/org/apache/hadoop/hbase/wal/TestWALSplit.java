@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_TABLE_NAME;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.getRowKey;
+import static org.apache.hadoop.hbase.wal.WALEdit.METAFAMILY;
+import static org.apache.hadoop.hbase.wal.WALEdit.REPLICATION_MARKER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -59,10 +63,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
+import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -482,6 +488,39 @@ public class TestWALSplit {
     assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
     // split log should have 10 test edits plus 1 compaction marker
     assertEquals(11, countWAL(splitLog[0]));
+  }
+
+  /*
+   * Tests that WalSplitter ignores replication marker edits.
+   */
+  @Test(timeout = 30000)
+  public void testSplitRemovesReplicationMarkerEdits() throws IOException {
+    RegionInfo regionInfo = ReplicationMarkerChore.REGION_INFO;
+    Path path = new Path(WALDIR, WAL_FILE_PREFIX + "1");
+    generateReplicationMarkerEdits(path, regionInfo);
+    useDifferentDFSClient();
+    List<FileStatus> logFiles =
+      SplitLogManager.getFileList(conf, Collections.singletonList(WALDIR), null);
+    assertEquals(1, logFiles.size());
+    assertEquals(path, logFiles.get(0).getPath());
+    List<Path> splitPaths = WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
+    // Make sure that WALSplitter doesn't fail.
+    assertEquals(0, splitPaths.size());
+  }
+
+  private void generateReplicationMarkerEdits(Path path, RegionInfo regionInfo) throws IOException {
+    long timestamp = EnvironmentEdgeManager.currentTime();
+    fs.mkdirs(WALDIR);
+    try (Writer writer = wals.createWALWriter(fs, path)) {
+      WALProtos.ReplicationMarkerDescriptor.Builder builder =
+        WALProtos.ReplicationMarkerDescriptor.newBuilder();
+      builder.setWalName("wal-name");
+      builder.setRegionServerName("rs-name");
+      builder.setOffset(0l);
+      WALProtos.ReplicationMarkerDescriptor desc = builder.build();
+      appendEntry(writer, REPLICATION_SINK_TRACKER_TABLE_NAME, regionInfo.getEncodedNameAsBytes(),
+        getRowKey(desc.getRegionServerName(), timestamp), METAFAMILY, REPLICATION_MARKER, VALUE, 1);
+    }
   }
 
   /**

@@ -17,6 +17,15 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.OFFSET_COLUMN;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_ENABLED_KEY;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_INFO_FAMILY;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,6 +71,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -100,6 +110,7 @@ public class ReplicationSink {
    * Row size threshold for multi requests above which a warning is logged
    */
   private final int rowSizeWarnThreshold;
+  private boolean replicationSinkTrackerEnabled;
 
   /**
    * Create a sink for replication
@@ -110,6 +121,8 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     rowSizeWarnThreshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
+      REPLICATION_SINK_TRACKER_ENABLED_DEFAULT);
     decorateConf();
     this.metrics = new MetricsSink();
     this.walEntrySinkFilter = setupWALEntrySinkFilter();
@@ -225,6 +238,17 @@ public class ReplicationSink {
                 bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
             }
+          } else if (CellUtil.matchingQualifier(cell, WALEdit.REPLICATION_MARKER)) {
+            Mutation put = processReplicationMarkerEntry(cell);
+            if (put == null) {
+              continue;
+            }
+            List<UUID> clusterIds = new ArrayList<>();
+            for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
+              clusterIds.add(toUUID(clusterId));
+            }
+            put.setClusterIds(clusterIds);
+            addToHashMultiMap(rowMap, table, clusterIds, put);
           } else {
             // Handle wal replication
             if (isNewRowOrType(previousCell, cell)) {
@@ -287,6 +311,36 @@ public class ReplicationSink {
       this.metrics.incrementFailedBatches();
       throw ex;
     }
+  }
+
+  /*
+   * First check if config key hbase.regionserver.replication.sink.tracker.enabled is true or not.
+   * If false, then ignore this cell. If set to true, de-serialize value into
+   * ReplicationTrackerDescriptor. Create a Put mutation with regionserver name, walname, offset and
+   * timestamp from ReplicationMarkerDescriptor.
+   */
+  private Put processReplicationMarkerEntry(Cell cell) throws IOException {
+    // If source is emitting replication marker rows but sink is not accepting them,
+    // ignore the edits.
+    if (!replicationSinkTrackerEnabled) {
+      return null;
+    }
+    WALProtos.ReplicationMarkerDescriptor descriptor =
+      WALProtos.ReplicationMarkerDescriptor.parseFrom(new ByteArrayInputStream(cell.getValueArray(),
+        cell.getValueOffset(), cell.getValueLength()));
+    Put put = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    put.addColumn(REPLICATION_SINK_TRACKER_INFO_FAMILY, RS_COLUMN, cell.getTimestamp(),
+      (Bytes.toBytes(descriptor.getRegionServerName())));
+    put.addColumn(REPLICATION_SINK_TRACKER_INFO_FAMILY, WAL_NAME_COLUMN, cell.getTimestamp(),
+      Bytes.toBytes(descriptor.getWalName()));
+    put.addColumn(REPLICATION_SINK_TRACKER_INFO_FAMILY, TIMESTAMP_COLUMN, cell.getTimestamp(),
+      Bytes.toBytes(cell.getTimestamp()));
+    put.addColumn(REPLICATION_SINK_TRACKER_INFO_FAMILY, OFFSET_COLUMN, cell.getTimestamp(),
+      Bytes.toBytes(descriptor.getOffset()));
+    LOG.info("RSS rs name: {}, wal name: {}, timestamp: {}, offset: {}",
+      descriptor.getRegionServerName(), descriptor.getWalName(), cell.getTimestamp(),
+      descriptor.getOffset());
+    return put;
   }
 
   private void buildBulkLoadHFileMap(

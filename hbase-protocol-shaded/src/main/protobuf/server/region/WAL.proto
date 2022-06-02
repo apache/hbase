@@ -182,3 +182,12 @@ message RegionEventDescriptor {
  */
 message WALTrailer {
 }
+
+/**
+ * Special WAL entry for replication marker event.
+ */
+message ReplicationMarkerDescriptor {
+  required string region_server_name = 1;
+  required string wal_name = 2;
+  required uint64 offset = 3;
+}
