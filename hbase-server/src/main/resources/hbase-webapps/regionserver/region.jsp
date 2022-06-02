@@ -18,11 +18,18 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.net.URLEncoder"
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
+  import="org.apache.hadoop.fs.FileStatus"
+  import="org.apache.hadoop.fs.Path"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
+  import="org.apache.hadoop.hbase.mob.MobUtils"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
+  import="org.apache.hadoop.hbase.regionserver.HMobStore"
+  import="org.apache.hadoop.hbase.regionserver.HStoreFile"
   import="org.apache.hadoop.hbase.regionserver.Region"
   import="org.apache.hadoop.hbase.regionserver.Store"
   import="org.apache.hadoop.hbase.regionserver.StoreFile"
@@ -80,7 +87,51 @@
 
          <p> <%= storeFiles.size() %> StoreFile(s) in set.</p>
          </table>
-   <%  }
+
+       <% if (store instanceof HMobStore) { %>
+       <h4>MOB Files</h4>
+       <table class="table table-striped">
+         <tr>
+           <th>MOB File</th>
+           <th>Size (MB)</th>
+           <th>Modification time</th>
+         </tr>
+
+         <%
+         int mobCnt = 0;
+         for (StoreFile sf : storeFiles) {
+           try {
+             byte[] value = ((HStoreFile)sf).getMetadataValue(HStoreFile.MOB_FILE_REFS);
+             if (value == null) {
+               continue;
+             }
+
+             Collection<String> fileNames = MobUtils.deserializeMobFileRefs(value).build().values();
+             mobCnt += fileNames.size();
+             for (String fileName : fileNames) {
+               Path mobPath = new Path(((HMobStore) store).getPath(), fileName);
+               FileStatus status = rs.getFileSystem().getFileStatus(mobPath);
+               String mobPathStr = mobPath.toString();
+               String encodedStr = URLEncoder.encode(mobPathStr, HConstants.UTF8_ENCODING); %>
+
+               <tr>
+                 <td><a href="storeFile.jsp?name=<%= encodedStr%>"><%= mobPathStr%></a></td>
+                 <td><%= status.getLen() / 1024 / 1024 %></td>
+                 <td><%= new Date(status.getModificationTime()) %></td>
+               </tr>
+
+             <% }
+           } catch (Exception e) { %>
+             <tr>
+              <td><%= e %></td>
+             </tr>
+           <% }
+         } %>
+
+         <p> <%= mobCnt %> MobFile(s) in set.</p>
+       </table>
+       <% }
+     }
    }%>
 </div>
 
