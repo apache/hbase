@@ -97,9 +97,13 @@ Arrays.sort(serverNames);
     int totalRegions = 0;
     int totalRequestsPerSecond = 0;
     int inconsistentNodeNum = 0;
+    String state = "Normal";
     String masterVersion = VersionInfo.getVersion();
+    Set<ServerName> decommissionedServers = new HashSet<>(master.listDecommissionedRegionServers());
     for (ServerName serverName: serverNames) {
-
+    if (decommissionedServers.contains(serverName)) {
+        state = "Decommissioned";
+    }
     ServerMetrics sl = master.getServerManager().getLoad(serverName);
     String version = master.getRegionServerVersion(serverName);
     if (!masterVersion.equals(version)) {
@@ -132,6 +136,7 @@ Arrays.sort(serverNames);
 </%java>
 </tbody>
 <tr><td>Total:<% servers.size() %></td>
+<td></td>
 <td></td>
 <td></td>
 <%if inconsistentNodeNum > 0%>
