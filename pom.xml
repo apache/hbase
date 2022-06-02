@@ -2403,12 +2403,6 @@
             </importOrder>
             <trimTrailingWhitespace/>
             <endWithNewline/>
-            <!-- make sure every file has the following copyright header.
-              optionally, Spotless can set copyright years by digging
-              through git history (see "license" section below) -->
-            <licenseHeader>
-              <file>${session.executionRootDirectory}/dev-support/license-header</file>
-            </licenseHeader>
             <removeUnusedImports/>
           </java>
           <pom>
@@ -2437,6 +2431,38 @@
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
               <endWithNewline/>
+            </format>
+            <format>
+              <!--
+                We have some files which have special license header which must be kept, so
+                here we add a special format section to apply license header, and leave the
+                java section above only used for formatting code style
+              -->
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+              </includes>
+              <excludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/package-info.java</exclude>
+                <!-- ByteRange, from Google protobuf -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/AbstractByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimpleMutableByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimplePositionedMutableByteRange.java</exclude>
+                <!-- Metrics, from Josh Elser -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/metrics/impl/HBaseMetrics2HadoopMetricsAdapter.java</exclude>
+                <!-- https://github.com/ept/warc-hadoop, from Martin Kleppmann -->
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileReader.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileWriter.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCInputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+              </excludes>
+              <licenseHeader>
+                <file>${session.executionRootDirectory}/dev-support/license-header</file>
+                <delimiter>package</delimiter>
+              </licenseHeader>
             </format>
           </formats>
         </configuration>
