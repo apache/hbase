@@ -516,7 +516,7 @@ public class TestWALSplit {
         WALProtos.ReplicationMarkerDescriptor.newBuilder();
       builder.setWalName("wal-name");
       builder.setRegionServerName("rs-name");
-      builder.setOffset(0l);
+      builder.setOffset(0L);
       WALProtos.ReplicationMarkerDescriptor desc = builder.build();
       appendEntry(writer, REPLICATION_SINK_TRACKER_TABLE_NAME, regionInfo.getEncodedNameAsBytes(),
         getRowKey(desc.getRegionServerName(), timestamp), METAFAMILY, REPLICATION_MARKER, VALUE, 1);

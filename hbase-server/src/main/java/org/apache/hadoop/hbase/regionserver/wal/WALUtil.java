@@ -240,7 +240,7 @@ public class WALUtil {
     RegionInfo regionInfo, byte[] rowKey, long timestamp) throws IOException {
     NavigableMap<byte[], Integer> replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     replicationScope.put(WALEdit.METAFAMILY, REPLICATION_SCOPE_GLOBAL);
-    WALKeyImpl walKey = writeMarker(wal, replicationScope, regionInfo,
+    writeMarker(wal, replicationScope, regionInfo,
       WALEdit.createReplicationMarkerEdit(rowKey, timestamp), mvcc, null, null);
   }
 }

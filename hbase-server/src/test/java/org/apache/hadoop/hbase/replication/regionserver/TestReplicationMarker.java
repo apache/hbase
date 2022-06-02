@@ -182,7 +182,7 @@ public class TestReplicationMarker {
   private ReplicationSinkTrackerRow getPayload(List<Cell> cells) {
     String rsName = null, walName = null;
     Long offset = null;
-    long timestamp = 0l;
+    long timestamp = 0L;
     for (Cell cell : cells) {
       byte[] qualifier = CellUtil.cloneQualifier(cell);
       byte[] value = CellUtil.cloneValue(cell);

@@ -54,12 +54,12 @@ import org.slf4j.LoggerFactory;
 public class ReplicationMarkerChore extends ScheduledChore {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationMarkerChore.class);
   private static final MultiVersionConcurrencyControl MVCC = new MultiVersionConcurrencyControl();
-  public static RegionInfo REGION_INFO =
+  public static final RegionInfo REGION_INFO =
     RegionInfoBuilder.newBuilder(REPLICATION_SINK_TRACKER_TABLE_NAME).build();
-  public static final String DELIMITER = "_";
-  public final Configuration conf;
-  public final RegionServerServices rsServices;
-  public WAL wal;
+  private static final String DELIMITER = "_";
+  private final Configuration conf;
+  private final RegionServerServices rsServices;
+  private WAL wal;
 
   public static final String REPLICATION_MARKER_ENABLED_KEY =
     "hbase.regionserver.replication.marker.enabled";
