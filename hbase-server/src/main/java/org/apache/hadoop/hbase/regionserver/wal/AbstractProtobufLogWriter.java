@@ -173,7 +173,7 @@ public abstract class AbstractProtobufLogWriter {
       }
     } catch (Exception e) {
       LOG.warn("Init output failed, path={}", path, e);
-      closeOutput();
+      closeOutputIfNecessary();
       throw e;
     }
   }
@@ -242,9 +242,10 @@ public abstract class AbstractProtobufLogWriter {
     short replication, long blockSize) throws IOException, StreamLacksCapabilityException;
 
   /**
-   * simply close the output, do not need to write trailer like the Writer.close
+   * It is straight forward to close the output, do not need to write trailer like the Writer.close
    */
-  protected abstract void closeOutput();
+  protected void closeOutputIfNecessary() {
+  }
 
   /**
    * return the file length after written.

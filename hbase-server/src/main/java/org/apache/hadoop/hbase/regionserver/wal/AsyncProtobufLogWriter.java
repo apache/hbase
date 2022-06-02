@@ -193,7 +193,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   @Override
-  protected void closeOutput() {
+  protected void closeOutputIfNecessary() {
     if (this.output != null) {
       try {
         this.output.close();
