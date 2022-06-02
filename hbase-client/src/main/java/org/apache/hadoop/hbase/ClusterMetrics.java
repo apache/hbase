@@ -81,6 +81,11 @@ public interface ClusterMetrics {
   List<ServerName> getDeadServerNames();
 
   /**
+   * @return the names of region servers on the decommissioned list
+   */
+  List<ServerName> getDecommissionedServerNames();
+
+  /**
    * @return the names of region servers on the live list
    */
   Map<ServerName, ServerMetrics> getLiveServerMetrics();
@@ -222,5 +227,9 @@ public interface ClusterMetrics {
      * metrics about monitored tasks
      */
     TASKS,
+    /**
+     * metrics about decommissioned region servers
+     */
+    DECOMMISSIONED_SERVERS,
   }
 }

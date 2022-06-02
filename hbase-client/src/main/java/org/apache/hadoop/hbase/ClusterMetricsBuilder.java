@@ -69,7 +69,9 @@ public final class ClusterMetricsBuilder {
           .map(status -> ClusterStatusProtos.TableRegionStatesCount.newBuilder()
             .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
             .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue())).build())
-          .collect(Collectors.toList()));
+          .collect(Collectors.toList()))
+        .addAllDecommissionedServers(metrics.getDecommissionedServerNames().stream()
+          .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
     if (metrics.getMasterName() != null) {
       builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
     }
@@ -111,7 +113,9 @@ public final class ClusterMetricsBuilder {
         .collect(Collectors.toMap(e -> ProtobufUtil.toTableName(e.getTableName()),
           e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))))
       .setMasterTasks(proto.getMasterTasksList().stream().map(t -> ProtobufUtil.getServerTask(t))
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList()))
+      .setDecommissionedServerNames(proto.getDecommissionedServersList().stream()
+        .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
     if (proto.hasClusterId()) {
       builder.setClusterId(ClusterId.convert(proto.getClusterId()).toString());
     }
@@ -167,6 +171,8 @@ public final class ClusterMetricsBuilder {
         return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
       case TASKS:
         return ClusterMetrics.Option.TASKS;
+      case DECOMMISSIONED_SERVERS:
+        return ClusterMetrics.Option.DECOMMISSIONED_SERVERS;
       // should not reach here
       default:
         throw new IllegalArgumentException("Invalid option: " + option);
@@ -206,6 +212,8 @@ public final class ClusterMetricsBuilder {
         return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
       case TASKS:
         return ClusterStatusProtos.Option.TASKS;
+      case DECOMMISSIONED_SERVERS:
+        return ClusterStatusProtos.Option.DECOMMISSIONED_SERVERS;
       // should not reach here
       default:
         throw new IllegalArgumentException("Invalid option: " + option);
@@ -253,6 +261,7 @@ public final class ClusterMetricsBuilder {
   private Map<TableName, RegionStatesCount> tableRegionStatesCount = Collections.emptyMap();
   @Nullable
   private List<ServerTask> masterTasks;
+  private List<ServerName> decommissionedServerNames = Collections.emptyList();
 
   private ClusterMetricsBuilder() {
   }
@@ -317,6 +326,11 @@ public final class ClusterMetricsBuilder {
     return this;
   }
 
+  public ClusterMetricsBuilder setDecommissionedServerNames(List<ServerName> value) {
+    this.decommissionedServerNames = value;
+    return this;
+  }
+
   public ClusterMetricsBuilder
     setTableRegionStatesCount(Map<TableName, RegionStatesCount> tableRegionStatesCount) {
     this.tableRegionStatesCount = tableRegionStatesCount;
@@ -326,13 +340,14 @@ public final class ClusterMetricsBuilder {
   public ClusterMetrics build() {
     return new ClusterMetricsImpl(hbaseVersion, deadServerNames, liveServerMetrics, masterName,
       backupMasterNames, regionsInTransition, clusterId, masterCoprocessorNames, balancerOn,
-      masterInfoPort, serversName, tableRegionStatesCount, masterTasks);
+      masterInfoPort, serversName, tableRegionStatesCount, masterTasks, decommissionedServerNames);
   }
 
   private static class ClusterMetricsImpl implements ClusterMetrics {
     @Nullable
     private final String hbaseVersion;
     private final List<ServerName> deadServerNames;
+    private final List<ServerName> decommissionedServerNames;
     private final Map<ServerName, ServerMetrics> liveServerMetrics;
     @Nullable
     private final ServerName masterName;
@@ -353,9 +368,10 @@ public final class ClusterMetricsBuilder {
       List<ServerName> backupMasterNames, List<RegionState> regionsInTransition, String clusterId,
       List<String> masterCoprocessorNames, Boolean balancerOn, int masterInfoPort,
       List<ServerName> serversName, Map<TableName, RegionStatesCount> tableRegionStatesCount,
-      List<ServerTask> masterTasks) {
+      List<ServerTask> masterTasks, List<ServerName> decommissionedServerNames) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
+      this.decommissionedServerNames = Preconditions.checkNotNull(decommissionedServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
       this.masterName = masterName;
       this.backupMasterNames = Preconditions.checkNotNull(backupMasterNames);
@@ -377,6 +393,11 @@ public final class ClusterMetricsBuilder {
     @Override
     public List<ServerName> getDeadServerNames() {
       return Collections.unmodifiableList(deadServerNames);
+    }
+
+    @Override
+    public List<ServerName> getDecommissionedServerNames() {
+      return Collections.unmodifiableList(decommissionedServerNames);
     }
 
     @Override
