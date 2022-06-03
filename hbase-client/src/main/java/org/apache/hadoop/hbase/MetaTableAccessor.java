@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -698,14 +699,20 @@ public class MetaTableAccessor {
   }
 
   public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
+    TableName tableName, CatalogReplicaMode metaReplicaMode) throws IOException {
+    scanMeta(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor, metaReplicaMode);
+  }
+
+  public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
     TableName tableName) throws IOException {
-    scanMeta(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
+    scanMetaForTableRegions(connection, visitor, tableName, CatalogReplicaMode.NONE);
   }
 
   private static void scanMeta(Connection connection, TableName table, QueryType type, int maxRows,
-    final Visitor visitor) throws IOException {
+    final Visitor visitor, CatalogReplicaMode metaReplicaMode) throws IOException {
     scanMeta(connection, getTableStartRowForMeta(table, type), getTableStopRowForMeta(table, type),
-      type, maxRows, visitor);
+      type, null, maxRows, visitor, metaReplicaMode);
+
   }
 
   private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
@@ -749,12 +756,12 @@ public class MetaTableAccessor {
   static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, int maxRows, final Visitor visitor)
     throws IOException {
-    scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor);
+    scanMeta(connection, startRow, stopRow, type, null, maxRows, visitor, CatalogReplicaMode.NONE);
   }
 
   private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
-    final Visitor visitor) throws IOException {
+    final Visitor visitor, CatalogReplicaMode metaReplicaMode) throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
     Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit);
 
@@ -779,6 +786,25 @@ public class MetaTableAccessor {
 
     int currentRow = 0;
     try (Table metaTable = getMetaHTable(connection)) {
+      switch (metaReplicaMode) {
+        case LOAD_BALANCE:
+          int numOfReplicas = metaTable.getDescriptor().getRegionReplication();
+          if (numOfReplicas > 1) {
+            int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+            // When the replicaId is 0, do not set to Consistency.TIMELINE
+            if (replicaId > 0) {
+              scan.setReplicaId(replicaId);
+              scan.setConsistency(Consistency.TIMELINE);
+            }
+          }
+          break;
+        case HEDGED_READ:
+          scan.setConsistency(Consistency.TIMELINE);
+          break;
+        default:
+          // Do nothing
+      }
       try (ResultScanner scanner = metaTable.getScanner(scan)) {
         Result data;
         while ((data = scanner.next()) != null) {
@@ -2056,7 +2082,7 @@ public class MetaTableAccessor {
       new FirstKeyOnlyFilter(), Integer.MAX_VALUE, r -> {
         list.add(RegionInfo.encodeRegionName(r.getRow()));
         return true;
-      });
+      }, CatalogReplicaMode.NONE);
     return list;
   }
 

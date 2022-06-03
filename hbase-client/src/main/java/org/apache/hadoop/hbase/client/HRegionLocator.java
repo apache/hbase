@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.apache.hadoop.hbase.CatalogReplicaMode;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -110,7 +111,9 @@ public class HRegionLocator implements RegionLocator {
         return true;
       }
     };
-    MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(connection.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+    MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName, metaReplicaMode);
     return regions;
   }
 }
