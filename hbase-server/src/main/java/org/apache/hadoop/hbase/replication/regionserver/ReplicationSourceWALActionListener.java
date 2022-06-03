@@ -69,6 +69,7 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
       return;
     }
+    // Allow replication marker row to pass through.
     if (WALEdit.isReplicationMarkerEdit(logEdit)) {
       return;
     }
