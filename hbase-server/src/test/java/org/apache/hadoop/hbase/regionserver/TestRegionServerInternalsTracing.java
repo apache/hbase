@@ -24,14 +24,11 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniClusterRule;
@@ -109,24 +106,6 @@ public class TestRegionServerInternalsTracing {
   };
 
   @Test
-  public void testHBaseServerBaseConstructor() {
-    final Matcher<SpanData> hbaseServerBaseMatcher =
-      allOf(hasName("HBaseServerBase.cxtor"), hasParentSpanId(NO_PARENT_ID));
-    assertThat("there should be a span from the HBaseServerBase constructor.", spans,
-      hasItem(hbaseServerBaseMatcher));
-    final List<SpanData> hbaseServerBaseSpans =
-      spans.stream().filter(hbaseServerBaseMatcher::matches).collect(Collectors.toList());
-    assertThat("there should be two spans from the HBaseServerBase constructor, one for the master"
-      + " and one for the region server.", hbaseServerBaseSpans, hasSize(2));
-    assertThat("both should show zookeeper interaction.", spans,
-      hasItems(
-        allOf(hasParentSpanId(hbaseServerBaseSpans.get(0)),
-          hasName(containsString("RecoverableZookeeper."))),
-        allOf(hasParentSpanId(hbaseServerBaseSpans.get(1)),
-          hasName(containsString("RecoverableZookeeper.")))));
-  }
-
-  @Test
   public void testHMasterConstructor() {
     final Matcher<SpanData> masterConstructorMatcher =
       allOf(hasName("HMaster.cxtor"), hasParentSpanId(NO_PARENT_ID));
@@ -184,8 +163,10 @@ public class TestRegionServerInternalsTracing {
       .findAny().orElseThrow(AssertionError::new);
     assertThat("the HMaster.shutdown span should show zookeeper interaction.", spans, hasItem(
       allOf(hasName(startsWith("RecoverableZookeeper.")), hasParentSpanId(masterShutdownSpan))));
-    assertThat("the HMaster.shutdown span should show AsyncConnection interaction.", spans,
-      hasItem(allOf(hasName(startsWith("AsyncConnection.")), hasParentSpanId(masterShutdownSpan))));
+    assertThat(
+      "the HMaster.shutdown span should show ShortCircuitingClusterConnection interaction.", spans,
+      hasItem(allOf(hasName(startsWith("ShortCircuitingClusterConnection.")),
+        hasParentSpanId(masterShutdownSpan))));
   }
 
   @Test
@@ -196,14 +177,8 @@ public class TestRegionServerInternalsTracing {
       hasItem(masterExitingMainLoopMatcher));
     final SpanData masterExitingMainLoopSpan = spans.stream()
       .filter(masterExitingMainLoopMatcher::matches).findAny().orElseThrow(AssertionError::new);
-    assertThat("the HMaster exiting main loop span should show zookeeper interaction.", spans,
-      hasItem(allOf(hasName(startsWith("RecoverableZookeeper.")),
-        hasParentSpanId(masterExitingMainLoopSpan))));
-    assertThat("the HMaster exiting main loop span should show WAL interaction.", spans,
-      hasItem(allOf(hasName(startsWith("WAL.")), hasParentSpanId(masterExitingMainLoopSpan))));
-    assertThat("the HMaster exiting main loop span should show AsyncConnection interaction.", spans,
-      hasItem(allOf(hasName(startsWith("AsyncConnection.")),
-        hasParentSpanId(masterExitingMainLoopSpan))));
+    assertThat("the HMaster exiting main loop span should show HTable interaction.", spans,
+      hasItem(allOf(hasName(startsWith("HTable.")), hasParentSpanId(masterExitingMainLoopSpan))));
   }
 
   @Test
@@ -305,9 +280,11 @@ public class TestRegionServerInternalsTracing {
     assertThat("the HRegionServer exiting main loop span should show zookeeper interaction.", spans,
       hasItem(allOf(hasName(startsWith("RecoverableZookeeper.")),
         hasParentSpanId(rsExitingMainLoopSpan))));
-    assertThat("the HRegionServer exiting main loop span should show AsyncConnection interaction.",
-      spans, hasItem(
-        allOf(hasName(startsWith("AsyncConnection.")), hasParentSpanId(rsExitingMainLoopSpan))));
+    assertThat(
+      "the HRegionServer exiting main loop span should show "
+        + "ShortCircuitingClusterConnection interaction.",
+      spans, hasItem(allOf(hasName(startsWith("ShortCircuitingClusterConnection.")),
+        hasParentSpanId(rsExitingMainLoopSpan))));
     assertThat("the HRegionServer exiting main loop span should invoke CloseMetaHandler.", spans,
       hasItem(allOf(hasName("CloseMetaHandler"), hasParentSpanId(rsExitingMainLoopSpan))));
   }

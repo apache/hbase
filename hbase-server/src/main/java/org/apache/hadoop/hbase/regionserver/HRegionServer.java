@@ -1054,37 +1054,37 @@ public class HRegionServer extends Thread
         // come up.
         LOG.debug("About to register with Master.");
         TraceUtil.trace(() -> {
-        RetryCounterFactory rcf =
-          new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
-        RetryCounter rc = rcf.create();
-        while (keepLooping()) {
-          RegionServerStartupResponse w = reportForDuty();
-          if (w == null) {
-            long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
-            LOG.warn("reportForDuty failed; sleeping {} ms and then retrying.", sleepTime);
-            this.sleeper.sleep(sleepTime);
-          } else {
-            handleReportForDutyResponse(w);
-            break;
+          RetryCounterFactory rcf =
+            new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
+          RetryCounter rc = rcf.create();
+          while (keepLooping()) {
+            RegionServerStartupResponse w = reportForDuty();
+            if (w == null) {
+              long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
+              LOG.warn("reportForDuty failed; sleeping {} ms and then retrying.", sleepTime);
+              this.sleeper.sleep(sleepTime);
+            } else {
+              handleReportForDutyResponse(w);
+              break;
+            }
           }
-        }
         }, "HRegionServer.registerWithMaster");
       }
 
       if (!isStopped() && isHealthy()) {
         TraceUtil.trace(() -> {
-        // start the snapshot handler and other procedure handlers,
-        // since the server is ready to run
-        if (this.rspmHost != null) {
-          this.rspmHost.start();
-        }
-        // Start the Quota Manager
-        if (this.rsQuotaManager != null) {
-          rsQuotaManager.start(getRpcServer().getScheduler());
-        }
-        if (this.rsSpaceQuotaManager != null) {
-          this.rsSpaceQuotaManager.start();
-        }
+          // start the snapshot handler and other procedure handlers,
+          // since the server is ready to run
+          if (this.rspmHost != null) {
+            this.rspmHost.start();
+          }
+          // Start the Quota Manager
+          if (this.rsQuotaManager != null) {
+            rsQuotaManager.start(getRpcServer().getScheduler());
+          }
+          if (this.rsSpaceQuotaManager != null) {
+            this.rsSpaceQuotaManager.start();
+          }
         }, "HRegionServer.startup");
       }
 
