@@ -337,9 +337,6 @@ public class ReplicationSink {
       Bytes.toBytes(cell.getTimestamp()));
     put.addColumn(REPLICATION_SINK_TRACKER_INFO_FAMILY, OFFSET_COLUMN, cell.getTimestamp(),
       Bytes.toBytes(descriptor.getOffset()));
-    LOG.info("RSS rs name: {}, wal name: {}, timestamp: {}, offset: {}",
-      descriptor.getRegionServerName(), descriptor.getWalName(), cell.getTimestamp(),
-      descriptor.getOffset());
     return put;
   }
 
