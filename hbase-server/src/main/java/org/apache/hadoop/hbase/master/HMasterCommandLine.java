@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.File;
 import java.io.IOException;
@@ -253,6 +254,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         master.join();
         if (master.isAborted()) throw new RuntimeException("HMaster Aborted");
       }
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       TraceUtil.setError(span, t);
       LOG.error("Master exiting", t);

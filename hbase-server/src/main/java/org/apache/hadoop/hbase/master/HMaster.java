@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
 import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -535,6 +536,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       cachedClusterId = new CachedClusterId(this, conf);
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
       this.rpcServices.start(zooKeeper);
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -572,7 +574,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     try {
       installShutdownHook();
       registerConfigurationObservers();
-      Threads.setDaemonThreadRunning(new Thread(() -> TraceUtil.trace(() -> {
+      Threads.setDaemonThreadRunning(new Thread(TraceUtil.tracedRunnable(() -> {
         try {
           int infoPort = putUpJettyServer();
           startActiveMasterManager(infoPort);
@@ -598,6 +600,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           this.rpcServices.stop();
         }
         closeZooKeeper();
+        span.setStatus(StatusCode.OK);
       } finally {
         span.end();
       }

@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -517,6 +518,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         masterAddressTracker = null;
       }
       this.rpcServices.start(zooKeeper);
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
       // cause of failed startup is lost.
@@ -660,6 +662,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       regionReplicationBufferManager = new RegionReplicationBufferManager(this);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
@@ -975,6 +978,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
       closeZooKeeper();
       LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
+      span.setStatus(StatusCode.OK);
     } finally {
       span.end();
     }
@@ -1024,6 +1028,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       request.setServer(ProtobufUtil.toServerName(this.serverName));
       request.setLoad(sl);
       rss.regionServerReport(null, request.build());
+      span.setStatus(StatusCode.OK);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {

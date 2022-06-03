@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -66,6 +67,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
           throw new RuntimeException("HRegionServer Aborted");
         }
       }
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       TraceUtil.setError(span, t);
       LOG.error("Region server exiting", t);

@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_
 
 import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.management.MemoryType;
@@ -289,6 +290,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
         clusterStatusTracker = null;
       }
       putUpWebUI();
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       TraceUtil.setError(span, t);
       throw t;
