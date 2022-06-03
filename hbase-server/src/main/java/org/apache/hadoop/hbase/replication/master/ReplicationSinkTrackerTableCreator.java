@@ -62,7 +62,8 @@ public class ReplicationSinkTrackerTableCreator {
   public static final String REPLICATION_SINK_TRACKER_TABLE_NAME_STR = "REPLICATION.SINK_TRACKER";
 
   /* Private default constructor */
-  public ReplicationSinkTrackerTableCreator() {}
+  public ReplicationSinkTrackerTableCreator() {
+  }
 
   /**
    * {@link #REPLICATION_SINK_TRACKER_TABLE_NAME_STR} table name - can be enabled with config -
