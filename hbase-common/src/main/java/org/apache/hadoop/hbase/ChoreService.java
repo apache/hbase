@@ -165,7 +165,7 @@ public class ChoreService {
           }
           chore.setChoreService(this);
           ScheduledFuture<?> future =
-            scheduler.scheduleAtFixedRate(() -> TraceUtil.trace(chore::run, chore.getName()),
+            scheduler.scheduleAtFixedRate(TraceUtil.tracedRunnable(chore, chore.getName()),
               chore.getInitialDelay(), chore.getPeriod(), chore.getTimeUnit());
           scheduledChores.put(chore, future);
           return true;

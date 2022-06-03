@@ -606,7 +606,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     LOG.debug(prefix("Received ZooKeeper Event, " + "type=" + event.getType() + ", " + "state="
       + event.getState() + ", " + "path=" + event.getPath()));
     final String spanName = ZKWatcher.class.getSimpleName() + "-" + identifier;
-    zkEventProcessor.submit(() -> TraceUtil.trace(() -> processEvent(event), spanName));
+    zkEventProcessor.submit(TraceUtil.tracedRunnable(() -> processEvent(event), spanName));
   }
 
   // Connection management

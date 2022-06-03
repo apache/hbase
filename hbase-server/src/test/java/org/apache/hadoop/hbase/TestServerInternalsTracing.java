@@ -15,24 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.startsWith;
 
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniClusterRule;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -52,12 +51,12 @@ import org.slf4j.LoggerFactory;
  * Test that sundry operations internal to the region server are traced as expected.
  */
 @Category({ MediumTests.class, RegionServerTests.class })
-public class TestRegionServerInternalsTracing {
-  private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerInternalsTracing.class);
+public class TestServerInternalsTracing {
+  private static final Logger LOG = LoggerFactory.getLogger(TestServerInternalsTracing.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerInternalsTracing.class);
+    HBaseClassTestRule.forClass(TestServerInternalsTracing.class);
 
   private static final String NO_PARENT_ID = "0000000000000000";
   private static List<SpanData> spans;
@@ -107,8 +106,8 @@ public class TestRegionServerInternalsTracing {
 
   @Test
   public void testHMasterConstructor() {
-    final Matcher<SpanData> masterConstructorMatcher =
-      allOf(hasName("HMaster.cxtor"), hasParentSpanId(NO_PARENT_ID));
+    final Matcher<SpanData> masterConstructorMatcher = allOf(hasName("HMaster.cxtor"),
+      hasParentSpanId(NO_PARENT_ID), hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HMaster constructor.", spans,
       hasItem(masterConstructorMatcher));
     final SpanData masterConstructorSpan = spans.stream().filter(masterConstructorMatcher::matches)
@@ -120,7 +119,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testHMasterBecomeActiveMaster() {
     final Matcher<SpanData> masterBecomeActiveMasterMatcher =
-      allOf(hasName("HMaster.becomeActiveMaster"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HMaster.becomeActiveMaster"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HMaster.becomeActiveMaster.", spans,
       hasItem(masterBecomeActiveMasterMatcher));
     final SpanData masterBecomeActiveMasterSpan = spans.stream()
@@ -143,8 +143,8 @@ public class TestRegionServerInternalsTracing {
 
   @Test
   public void testZKWatcherHMaster() {
-    final Matcher<SpanData> mZKWatcherMatcher =
-      allOf(hasName(startsWith("ZKWatcher-master")), hasParentSpanId(NO_PARENT_ID));
+    final Matcher<SpanData> mZKWatcherMatcher = allOf(hasName(startsWith("ZKWatcher-master")),
+      hasParentSpanId(NO_PARENT_ID), hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the ZKWatcher running in the HMaster.", spans,
       hasItem(mZKWatcherMatcher));
     final SpanData mZKWatcherSpan =
@@ -155,8 +155,8 @@ public class TestRegionServerInternalsTracing {
 
   @Test
   public void testHMasterShutdown() {
-    final Matcher<SpanData> masterShutdownMatcher =
-      allOf(hasName("HMaster.shutdown"), hasParentSpanId(NO_PARENT_ID));
+    final Matcher<SpanData> masterShutdownMatcher = allOf(hasName("HMaster.shutdown"),
+      hasParentSpanId(NO_PARENT_ID), hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HMaster.shutdown.", spans,
       hasItem(masterShutdownMatcher));
     final SpanData masterShutdownSpan = spans.stream().filter(masterShutdownMatcher::matches)
@@ -172,7 +172,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testHMasterExitingMainLoop() {
     final Matcher<SpanData> masterExitingMainLoopMatcher =
-      allOf(hasName("HMaster exiting main loop"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HMaster exiting main loop"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HMaster exiting main loop.", spans,
       hasItem(masterExitingMainLoopMatcher));
     final SpanData masterExitingMainLoopSpan = spans.stream()
@@ -184,7 +185,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testTryRegionServerReport() {
     final Matcher<SpanData> tryRegionServerReportMatcher =
-      allOf(hasName("HRegionServer.tryRegionServerReport"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HRegionServer.tryRegionServerReport"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span for the region server sending a report.", spans,
       hasItem(tryRegionServerReportMatcher));
     final SpanData tryRegionServerReportSpan = spans.stream()
@@ -197,8 +199,8 @@ public class TestRegionServerInternalsTracing {
 
   @Test
   public void testHRegionServerStartup() {
-    final Matcher<SpanData> regionServerStartupMatcher =
-      allOf(hasName("HRegionServer.startup"), hasParentSpanId(NO_PARENT_ID));
+    final Matcher<SpanData> regionServerStartupMatcher = allOf(hasName("HRegionServer.startup"),
+      hasParentSpanId(NO_PARENT_ID), hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HRegionServer startup procedure.", spans,
       hasItem(regionServerStartupMatcher));
     final SpanData regionServerStartupSpan = spans.stream()
@@ -210,8 +212,8 @@ public class TestRegionServerInternalsTracing {
 
   @Test
   public void testHRegionServerConstructor() {
-    final Matcher<SpanData> rsConstructorMatcher =
-      allOf(hasName("HRegionServer.cxtor"), hasParentSpanId(NO_PARENT_ID));
+    final Matcher<SpanData> rsConstructorMatcher = allOf(hasName("HRegionServer.cxtor"),
+      hasParentSpanId(NO_PARENT_ID), hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HRegionServer constructor.", spans,
       hasItem(rsConstructorMatcher));
     final SpanData rsConstructorSpan = spans.stream().filter(rsConstructorMatcher::matches)
@@ -227,7 +229,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testHRegionServerPreRegistrationInitialization() {
     final Matcher<SpanData> rsPreRegistrationInitializationMatcher =
-      allOf(hasName("HRegionServer.preRegistrationInitialization"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HRegionServer.preRegistrationInitialization"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HRegionServer preRegistrationInitialization.",
       spans, hasItem(rsPreRegistrationInitializationMatcher));
     final SpanData rsPreRegistrationInitializationSpan =
@@ -242,7 +245,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testHRegionServerRegisterWithMaster() {
     final Matcher<SpanData> rsRegisterWithMasterMatcher =
-      allOf(hasName("HRegionServer.registerWithMaster"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HRegionServer.registerWithMaster"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HRegionServer registerWithMaster.", spans,
       hasItem(rsRegisterWithMasterMatcher));
     final SpanData rsRegisterWithMasterSpan = spans.stream()
@@ -260,7 +264,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testZKWatcherRegionServer() {
     final Matcher<SpanData> rsZKWatcherMatcher =
-      allOf(hasName(startsWith("ZKWatcher-regionserver")), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName(startsWith("ZKWatcher-regionserver")), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the ZKWatcher running in the HRegionServer.", spans,
       hasItem(rsZKWatcherMatcher));
     final SpanData rsZKWatcherSpan =
@@ -272,7 +277,8 @@ public class TestRegionServerInternalsTracing {
   @Test
   public void testHRegionServerExitingMainLoop() {
     final Matcher<SpanData> rsExitingMainLoopMatcher =
-      allOf(hasName("HRegionServer exiting main loop"), hasParentSpanId(NO_PARENT_ID));
+      allOf(hasName("HRegionServer exiting main loop"), hasParentSpanId(NO_PARENT_ID),
+        hasStatusWithCode(isOneOf(StatusCode.OK, StatusCode.ERROR)));
     assertThat("there should be a span from the HRegionServer exiting main loop.", spans,
       hasItem(rsExitingMainLoopMatcher));
     final SpanData rsExitingMainLoopSpan = spans.stream().filter(rsExitingMainLoopMatcher::matches)

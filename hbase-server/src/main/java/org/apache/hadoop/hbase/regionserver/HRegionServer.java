@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -705,6 +706,7 @@ public class HRegionServer extends Thread
       this.choreService = new ChoreService(getName(), true);
       this.executorService = new ExecutorService(getName());
       putUpWebUI();
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
       // cause of failed startup is lost.
@@ -935,6 +937,7 @@ public class HRegionServer extends Thread
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId,
         new InetSocketAddress(this.rpcServices.isa.getAddress(), 0),
         clusterConnection.getConnectionMetrics());
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
@@ -1270,6 +1273,7 @@ public class HRegionServer extends Thread
       }
       this.shutDown = true;
       LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
+      span.setStatus(StatusCode.OK);
     } finally {
       span.end();
     }
@@ -1319,6 +1323,7 @@ public class HRegionServer extends Thread
       request.setServer(ProtobufUtil.toServerName(this.serverName));
       request.setLoad(sl);
       rss.regionServerReport(null, request.build());
+      span.setStatus(StatusCode.OK);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {

@@ -27,6 +27,7 @@ import com.google.errorprone.annotations.RestrictedApi;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -517,6 +518,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       cachedClusterId = new CachedClusterId(this, conf);
 
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
@@ -579,6 +581,7 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
         }
         this.activeMaster = false;
+        span.setStatus(StatusCode.OK);
       } finally {
         span.end();
       }
