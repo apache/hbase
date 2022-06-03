@@ -477,7 +477,7 @@ public class WALEdit implements HeapSize {
    * Creates a replication tracker edit with {@link #METAFAMILY} family and
    * {@link #REPLICATION_MARKER} qualifier and has null value.
    * @param rowKey    rowkey
-   * @param timestamp timestamp n
+   * @param timestamp timestamp
    */
   public static WALEdit createReplicationMarkerEdit(byte[] rowKey, long timestamp) {
     KeyValue kv =
