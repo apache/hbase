@@ -26,6 +26,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,8 +164,9 @@ public class ChoreService {
             chore.getChoreService().cancelChore(chore);
           }
           chore.setChoreService(this);
-          ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(),
-            chore.getPeriod(), chore.getTimeUnit());
+          ScheduledFuture<?> future =
+            scheduler.scheduleAtFixedRate(() -> TraceUtil.trace(chore::run, chore.getName()),
+              chore.getInitialDelay(), chore.getPeriod(), chore.getTimeUnit());
           scheduledChores.put(chore, future);
           return true;
         } catch (Exception e) {

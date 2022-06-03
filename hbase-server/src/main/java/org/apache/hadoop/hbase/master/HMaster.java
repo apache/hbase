@@ -572,18 +572,23 @@ public class HMaster extends HRegionServer implements MasterServices {
       // the super run call will do this for us.
       super.run();
     } finally {
-      if (this.clusterSchemaService != null) {
-        // If on way out, then we are no longer active master.
-        this.clusterSchemaService.stopAsync();
-        try {
-          this.clusterSchemaService
-            .awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
-              DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
-        } catch (TimeoutException te) {
-          LOG.warn("Failed shutdown of clusterSchemaService", te);
+      final Span span = TraceUtil.createSpan("HMaster exiting main loop");
+      try (Scope ignored = span.makeCurrent()) {
+        if (this.clusterSchemaService != null) {
+          // If on way out, then we are no longer active master.
+          this.clusterSchemaService.stopAsync();
+          try {
+            this.clusterSchemaService
+              .awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
+                DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
+          } catch (TimeoutException te) {
+            LOG.warn("Failed shutdown of clusterSchemaService", te);
+          }
         }
+        this.activeMaster = false;
+      } finally {
+        span.end();
       }
-      this.activeMaster = false;
     }
   }
 
@@ -3104,36 +3109,36 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public void shutdown() throws IOException {
     TraceUtil.trace(() -> {
-    if (cpHost != null) {
-      cpHost.preShutdown();
-    }
-
-    // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
-    // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
-    // the cluster status as down. RegionServers will notice this change in state and will start
-    // shutting themselves down. When last has exited, Master can go down.
-    if (this.serverManager != null) {
-      this.serverManager.shutdownCluster();
-    }
-    if (this.clusterStatusTracker != null) {
-      try {
-        this.clusterStatusTracker.setClusterDown();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+      if (cpHost != null) {
+        cpHost.preShutdown();
       }
-    }
-    // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
-    // processing so we can go down.
-    if (this.procedureExecutor != null) {
-      this.procedureExecutor.stop();
-    }
-    // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
-    // this is what we want especially if the Master is in startup phase doing call outs to
-    // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
-    // the rpc to timeout.
-    if (this.clusterConnection != null) {
-      this.clusterConnection.close();
-    }
+
+      // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
+      // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
+      // the cluster status as down. RegionServers will notice this change in state and will start
+      // shutting themselves down. When last has exited, Master can go down.
+      if (this.serverManager != null) {
+        this.serverManager.shutdownCluster();
+      }
+      if (this.clusterStatusTracker != null) {
+        try {
+          this.clusterStatusTracker.setClusterDown();
+        } catch (KeeperException e) {
+          LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+        }
+      }
+      // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
+      // processing so we can go down.
+      if (this.procedureExecutor != null) {
+        this.procedureExecutor.stop();
+      }
+      // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
+      // this is what we want especially if the Master is in startup phase doing call outs to
+      // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
+      // the rpc to timeout.
+      if (this.clusterConnection != null) {
+        this.clusterConnection.close();
+      }
     }, "HMaster.shutdown");
   }
 
