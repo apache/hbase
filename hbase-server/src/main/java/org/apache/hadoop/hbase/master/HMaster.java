@@ -583,6 +583,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         sleeper.sleep();
       }
       stopInfoServer();
+      // Please refer to HBASE-27029 for service stop order
       if (this.rpcServices != null) {
         this.rpcServices.stop();
       }
