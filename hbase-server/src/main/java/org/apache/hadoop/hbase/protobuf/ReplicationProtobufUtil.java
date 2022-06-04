@@ -55,7 +55,7 @@ public class ReplicationProtobufUtil {
    */
   public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
     AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) throws IOException {
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) {
     Pair<ReplicateWALEntryRequest, CellScanner> p = buildReplicateWALEntryRequest(entries, null,
       replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
     return admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout);

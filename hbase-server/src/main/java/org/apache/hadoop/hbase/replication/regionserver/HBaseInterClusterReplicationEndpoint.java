@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
@@ -399,7 +398,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       try {
         // wait for all futures, remove successful parts
         // (only the remaining parts will be retried)
-        int index = f.get();
+        int index = FutureUtils.get(f);
         List<Entry> batch = batches.get(index);
         batches.set(index, Collections.emptyList()); // remove successful batch
         // Find the most recent write time in the batch
@@ -407,12 +406,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         if (writeTime > lastWriteTime) {
           lastWriteTime = writeTime;
         }
-      } catch (InterruptedException ie) {
-        iox = new IOException(ie);
-      } catch (ExecutionException ee) {
-        iox = ee.getCause() instanceof IOException
-          ? (IOException) ee.getCause()
-          : new IOException(ee.getCause());
+      } catch (Throwable e) {
+        if (e instanceof IOException) {
+          iox = (IOException) e;
+        }
       }
     }
     if (iox != null) {
@@ -531,23 +528,26 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     final CompletableFuture<Integer> resultCompletableFuture = new CompletableFuture<Integer>();
     try {
       sinkPeer = getReplicationSink();
-      AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
-      final SinkPeer sinkPeerToUse = sinkPeer;
-      FutureUtils.addListener(ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
-        entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
-        hfileArchiveDir, timeout), (response, exception) -> {
-          if (exception != null) {
-            onReplicateWALEntryException(entriesHashCode, exception, sinkPeerToUse);
-            resultCompletableFuture.completeExceptionally(exception);
-            return;
-          }
-          reportSinkSuccess(sinkPeerToUse);
-          resultCompletableFuture.complete(batchIndex);
-        });
-    } catch (Throwable e) {
+    } catch (IOException e) {
       this.onReplicateWALEntryException(entriesHashCode, e, sinkPeer);
       resultCompletableFuture.completeExceptionally(e);
+      return resultCompletableFuture;
     }
+    assert sinkPeer != null;
+    AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
+    final SinkPeer sinkPeerToUse = sinkPeer;
+    FutureUtils.addListener(
+      ReplicationProtobufUtil.replicateWALEntry(rsAdmin, entries.toArray(new Entry[entries.size()]),
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout),
+      (response, exception) -> {
+        if (exception != null) {
+          onReplicateWALEntryException(entriesHashCode, exception, sinkPeerToUse);
+          resultCompletableFuture.completeExceptionally(exception);
+          return;
+        }
+        reportSinkSuccess(sinkPeerToUse);
+        resultCompletableFuture.complete(batchIndex);
+      });
     return resultCompletableFuture;
   }
 
@@ -563,6 +563,11 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
   }
 
+  /**
+   * Here for {@link HBaseInterClusterReplicationEndpoint#isSerialis} is true, we iterator over the
+   * WAL {@link Entry} list, once we reached a batch limit, we send it out, and in the callback, we
+   * send the next batch, until we send all entries out.
+   */
   private CompletableFuture<Integer> serialReplicateRegionEntries(
     PeekingIterator<Entry> walEntryPeekingIterator, int batchIndex, int timeout) {
     if (!walEntryPeekingIterator.hasNext()) {
@@ -574,9 +579,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       Entry entry = walEntryPeekingIterator.peek();
       int entrySize = getEstimatedEntrySize(entry);
       if (batchSize > 0 && batchSize + entrySize > replicationRpcLimit) {
-        // replicateEntries(batch, index++, timeout);
-        // batch.clear();
-        // batchSize = 0;
         break;
       }
       walEntryPeekingIterator.next();
