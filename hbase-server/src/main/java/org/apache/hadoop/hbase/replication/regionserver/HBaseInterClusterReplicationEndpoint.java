@@ -406,12 +406,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         if (writeTime > lastWriteTime) {
           lastWriteTime = writeTime;
         }
-      } catch (Throwable e) {
-        if (e instanceof IOException) {
-          iox = (IOException) e;
-        } else {
-          iox = new IOException(e);
-        }
+      } catch (IOException e) {
+        iox = e;
+      } catch (RuntimeException e) {
+        iox = new IOException(e);
       }
     }
     if (iox != null) {
