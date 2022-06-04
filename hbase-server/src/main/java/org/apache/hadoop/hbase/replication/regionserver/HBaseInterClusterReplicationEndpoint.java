@@ -409,6 +409,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       } catch (Throwable e) {
         if (e instanceof IOException) {
           iox = (IOException) e;
+        } else {
+          iox = new IOException(e);
         }
       }
     }
