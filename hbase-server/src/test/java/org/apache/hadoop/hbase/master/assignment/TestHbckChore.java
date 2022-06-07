@@ -19,11 +19,16 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,8 +38,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.master.HbckChore;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
+import org.apache.hadoop.hbase.master.hbck.HbckReport;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -75,7 +81,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-      hbckChore.getInconsistentRegions();
+      hbckChore.getLastReport().getInconsistentRegions();
 
     // Test for case1: Master thought this region opened, but no regionserver reported it.
     assertTrue(inconsistentRegions.containsKey(metaRegionName));
@@ -88,7 +94,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Reported right region location. Then not in problematic regions.
     am.reportOnlineRegions(locationInMeta, Collections.singleton(metaRegionNameAsBytes));
     hbckChore.choreForTesting();
-    inconsistentRegions = hbckChore.getInconsistentRegions();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(metaRegionName));
   }
 
@@ -107,7 +113,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Test for case1: Master thought this region opened, but no regionserver reported it.
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-      hbckChore.getInconsistentRegions();
+      hbckChore.getLastReport().getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
     ServerName locationInMeta = pair.getFirst();
@@ -122,7 +128,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
       serverNames.stream().filter(s -> !s.equals(tempLocationInMeta)).findFirst().get();
     am.reportOnlineRegions(anotherServer, Collections.singleton(hri.getRegionName()));
     hbckChore.choreForTesting();
-    inconsistentRegions = hbckChore.getInconsistentRegions();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     pair = inconsistentRegions.get(regionName);
     locationInMeta = pair.getFirst();
@@ -134,7 +140,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Test for case3: More than one regionservers reported opened this region.
     am.reportOnlineRegions(locationInMeta, Collections.singleton(hri.getRegionName()));
     hbckChore.choreForTesting();
-    inconsistentRegions = hbckChore.getInconsistentRegions();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     pair = inconsistentRegions.get(regionName);
     locationInMeta = pair.getFirst();
@@ -146,7 +152,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     // Reported right region location, then not in inconsistent regions.
     am.reportOnlineRegions(anotherServer, Collections.EMPTY_SET);
     hbckChore.choreForTesting();
-    inconsistentRegions = hbckChore.getInconsistentRegions();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
   }
 
@@ -164,7 +170,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-      hbckChore.getInconsistentRegions();
+      hbckChore.getLastReport().getInconsistentRegions();
     assertTrue(inconsistentRegions.containsKey(regionName));
     Pair<ServerName, List<ServerName>> pair = inconsistentRegions.get(regionName);
     ServerName locationInMeta = pair.getFirst();
@@ -177,7 +183,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     Mockito.when(tableStateManager.isTableState(tableName, TableState.State.DISABLED))
       .thenReturn(true);
     hbckChore.choreForTesting();
-    inconsistentRegions = hbckChore.getInconsistentRegions();
+    inconsistentRegions = hbckChore.getLastReport().getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
   }
 
@@ -196,7 +202,7 @@ public class TestHbckChore extends TestAssignmentManagerBase {
 
     hbckChore.choreForTesting();
     Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions =
-      hbckChore.getInconsistentRegions();
+      hbckChore.getLastReport().getInconsistentRegions();
     assertFalse(inconsistentRegions.containsKey(regionName));
   }
 
@@ -207,33 +213,35 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     Configuration conf = util.getConfiguration();
 
     hbckChore.choreForTesting();
-    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckChore.getLastReport().getOrphanRegionsOnFS().size());
 
     HRegion.createRegionDir(conf, regionInfo, CommonFSUtils.getRootDir(conf));
     hbckChore.choreForTesting();
-    assertEquals(1, hbckChore.getOrphanRegionsOnFS().size());
-    assertTrue(hbckChore.getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));
+    assertEquals(1, hbckChore.getLastReport().getOrphanRegionsOnFS().size());
+    assertTrue(
+      hbckChore.getLastReport().getOrphanRegionsOnFS().containsKey(regionInfo.getEncodedName()));
 
     FSUtils.deleteRegionDir(conf, new HRegionInfo(regionInfo));
     hbckChore.choreForTesting();
-    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckChore.getLastReport().getOrphanRegionsOnFS().size());
   }
 
   @Test
   public void testChoreDisable() {
     // The way to disable to chore is to set hbase.master.hbck.chore.interval <= 0
     // When the interval is > 0, the chore should run.
-    long lastRunTime = hbckChore.getCheckingEndTimestamp();
+    Instant lastRunTime = Optional.ofNullable(hbckChore.getLastReport())
+      .map(HbckReport::getCheckingEndTimestamp).orElse(null);
     hbckChore.choreForTesting();
-    boolean ran = lastRunTime != hbckChore.getCheckingEndTimestamp();
-    assertTrue(ran);
+    Instant thisRunTime = Optional.ofNullable(hbckChore.getLastReport())
+      .map(HbckReport::getCheckingEndTimestamp).orElse(null);
+    assertNotNull(thisRunTime);
+    assertNotEquals(lastRunTime, thisRunTime);
 
     // When the interval <= 0, the chore shouldn't run
     master.getConfiguration().setInt("hbase.master.hbck.chore.interval", 0);
     HbckChore hbckChoreWithChangedConf = new HbckChore(master);
-    lastRunTime = hbckChoreWithChangedConf.getCheckingEndTimestamp();
     hbckChoreWithChangedConf.choreForTesting();
-    ran = lastRunTime != hbckChoreWithChangedConf.getCheckingEndTimestamp();
-    assertFalse(ran);
+    assertNull(hbckChoreWithChangedConf.getLastReport());
   }
 }

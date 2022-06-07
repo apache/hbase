@@ -20,7 +20,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.time.Instant"
          import="java.time.ZoneId"
-         import="java.util.Date"
          import="java.util.List"
          import="java.util.Map"
          import="java.util.stream.Collectors"
@@ -29,7 +28,8 @@
 %>
 <%@ page import="org.apache.hadoop.fs.Path" %>
 <%@ page import="org.apache.hadoop.hbase.client.RegionInfo" %>
-<%@ page import="org.apache.hadoop.hbase.master.HbckChore" %>
+<%@ page import="org.apache.hadoop.hbase.master.hbck.HbckChore" %>
+<%@ page import="org.apache.hadoop.hbase.master.hbck.HbckReport" %>
 <%@ page import="org.apache.hadoop.hbase.master.HMaster" %>
 <%@ page import="org.apache.hadoop.hbase.master.ServerManager" %>
 <%@ page import="org.apache.hadoop.hbase.ServerName" %>
@@ -37,6 +37,8 @@
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
 <%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitor" %>
 <%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitorReport" %>
+<%@ page import="java.util.Optional" %>
+<%@ page import="org.apache.hadoop.hbase.util.EnvironmentEdgeManager" %>
 <%
   final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -55,26 +57,19 @@
     } 
   }
   HbckChore hbckChore = master.getHbckChore();
-  Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = null;
-  Map<String, ServerName> orphanRegionsOnRS = null;
-  Map<String, Path> orphanRegionsOnFS = null;
-  long startTimestamp = 0;
-  long endTimestamp = 0;
-  if (hbckChore != null) {
-    inconsistentRegions = hbckChore.getInconsistentRegions();
-    orphanRegionsOnRS = hbckChore.getOrphanRegionsOnRS();
-    orphanRegionsOnFS = hbckChore.getOrphanRegionsOnFS();
-    startTimestamp = hbckChore.getCheckingStartTimestamp();
-    endTimestamp = hbckChore.getCheckingEndTimestamp();
-  }
-  ZonedDateTime zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(startTimestamp),
-    ZoneId.systemDefault());
-  String iso8601start = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-  zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(endTimestamp),
-    ZoneId.systemDefault());
-  String iso8601end = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+  HbckReport hbckReport = hbckChore == null ? null : hbckChore.getLastReport();
+  String hbckReportStartTime = Optional.ofNullable(hbckReport)
+    .map(HbckReport::getCheckingStartTimestamp)
+    .map(start -> ZonedDateTime.ofInstant(start, ZoneId.systemDefault()))
+    .map(zdt -> zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+    .orElse(null);
+  String hbckReportEndTime = Optional.ofNullable(hbckReport)
+    .map(HbckReport::getCheckingEndTimestamp)
+    .map(start -> ZonedDateTime.ofInstant(start, ZoneId.systemDefault()))
+    .map(zdt -> zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+    .orElse(null);
   CatalogJanitor cj = master.getCatalogJanitor();
-  CatalogJanitorReport report = cj == null? null: cj.getLastReport();
+  CatalogJanitorReport cjReport = cj == null? null: cj.getLastReport();
   final ServerManager serverManager = master.getServerManager();
 %>
 <jsp:include page="header.jsp">
@@ -109,20 +104,22 @@
     <div class="page-header">
       <h1>HBCK Chore Report</h1>
       <p>
-        <% if (hbckChore.isDisabled()) { %>
+        <% if (hbckChore == null) { %>
+          <span>HBCK chore has not yet initialized. Try again later.</span>
+        <% } else if (hbckChore.isDisabled()) { %>
           <span>HBCK chore is currently disabled. Set hbase.master.hbck.chore.interval > 0 in the config & do a rolling-restart to enable it.</span>
-        <% } else if (startTimestamp == 0 && endTimestamp == 0){ %>
-          <span>No report created.</span>
-        <% } else if (startTimestamp > 0 && endTimestamp == 0){ %>
-          <span>Checking started at <%= iso8601start %>. Please wait for checking to generate a new sub-report.</span>
+        <% } else if (hbckReport == null) { %>
+          <span>No Report created.</span>
+        <% } else if (hbckReportStartTime != null && hbckReportEndTime == null) { %>
+          <span>Checking started at <%= hbckReportStartTime %>. Please wait for checking to generate a new sub-report.</span>
         <% } else { %>
-          <span>Checking started at <%= iso8601start %> and generated report at <%= iso8601end %>.</span>
+          <span>Checking started at <%= hbckReportStartTime %> and generated catalogJanitorReport at <%= hbckReportEndTime %>.</span>
         <% } %>
       </p>
     </div>
   </div>
 
-  <% if (inconsistentRegions != null && inconsistentRegions.size() > 0) { %>
+  <% if (hbckReport != null && hbckReport.getInconsistentRegions().size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Inconsistent Regions</h2>
@@ -145,7 +142,7 @@
       <th>Location in META</th>
       <th>Reported Online RegionServers</th>
     </tr>
-    <% for (Map.Entry<String, Pair<ServerName, List<ServerName>>> entry : inconsistentRegions.entrySet()) {%>
+    <% for (Map.Entry<String, Pair<ServerName, List<ServerName>>> entry : hbckReport.getInconsistentRegions().entrySet()) { %>
     <tr>
       <td><%= entry.getKey() %></td>
       <td><%= formatServerName(master, serverManager, entry.getValue().getFirst()) %></td>
@@ -153,11 +150,11 @@
         collect(Collectors.joining(", ")) %></td>
     </tr>
     <% } %>
-    <p><%= inconsistentRegions.size() %> region(s) in set.</p>
+    <p><%= hbckReport.getInconsistentRegions().size() %> region(s) in set.</p>
   </table>
   <% } %>
 
-  <% if (orphanRegionsOnRS != null && orphanRegionsOnRS.size() > 0) { %>
+  <% if (hbckReport != null && hbckReport.getOrphanRegionsOnRS().size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Orphan Regions on RegionServer</h2>
@@ -169,17 +166,17 @@
       <th>Region Name</th>
       <th>Reported Online RegionServer</th>
     </tr>
-    <% for (Map.Entry<String, ServerName> entry : orphanRegionsOnRS.entrySet()) { %>
+    <% for (Map.Entry<String, ServerName> entry : hbckReport.getOrphanRegionsOnRS().entrySet()) { %>
     <tr>
       <td><%= entry.getKey() %></td>
       <td><%= formatServerName(master, serverManager, entry.getValue()) %></td>
     </tr>
     <% } %>
-    <p><%= orphanRegionsOnRS.size() %> region(s) in set.</p>
+    <p><%= hbckReport.getOrphanRegionsOnRS().size() %> region(s) in set.</p>
   </table>
   <% } %>
 
-  <% if (orphanRegionsOnFS != null && orphanRegionsOnFS.size() > 0) { %>
+  <% if (hbckReport != null && hbckReport.getOrphanRegionsOnFS().size() > 0) { %>
   <div class="row">
     <div class="page-header">
       <h2>Orphan Regions on FileSystem</h2>
@@ -200,41 +197,41 @@
       <th>Region Encoded Name</th>
       <th>FileSystem Path</th>
     </tr>
-    <% for (Map.Entry<String, Path> entry : orphanRegionsOnFS.entrySet()) { %>
+    <% for (Map.Entry<String, Path> entry : hbckReport.getOrphanRegionsOnFS().entrySet()) { %>
     <tr>
       <td><%= entry.getKey() %></td>
       <td><%= entry.getValue() %></td>
     </tr>
     <% } %>
 
-    <p><%= orphanRegionsOnFS.size() %> region(s) in set.</p>
+    <p><%= hbckReport.getOrphanRegionsOnFS().size() %> region(s) in set.</p>
   </table>
   <% } %>
 
   <%
-    zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
-      ZoneId.systemDefault());
-    String iso8601Now = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-    String iso8601reportTime = "-1";
-    if (report != null) {
-      zdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(report.getCreateTime()),
-        ZoneId.systemDefault());
-      iso8601reportTime = zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-    }
+    Instant nowInstant = Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime());
+    ZonedDateTime nowZdt = ZonedDateTime.ofInstant(nowInstant, ZoneId.systemDefault());
+    String iso8601Now = nowZdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    String cjReportTime = Optional.ofNullable(cjReport)
+      .map(CatalogJanitorReport::getCreateTime)
+      .map(Instant::ofEpochMilli)
+      .map(start -> ZonedDateTime.ofInstant(start, ZoneId.systemDefault()))
+      .map(zdt -> zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+      .orElse(null);
   %>
   <div class="row inner_header">
     <div class="page-header">
       <h1>CatalogJanitor <em>hbase:meta</em> Consistency Issues</h1>
       <p>
-        <% if (report != null) { %>
-          <span>Report created: <%= iso8601reportTime %> (now=<%= iso8601Now %>).</span></p>
+        <% if (cjReport != null) { %>
+          <span>Report created: <%= cjReportTime %> (now=<%= iso8601Now %>).</span></p>
         <% } else { %>
-          <span>No report created.</span>
+          <span>No catalogJanitorReport created.</span>
         <% } %>
     </div>
   </div>
-  <% if (report != null && !report.isEmpty()) { %>
-      <% if (!report.getHoles().isEmpty()) { %>
+  <% if (cjReport != null && !cjReport.isEmpty()) { %>
+      <% if (!cjReport.getHoles().isEmpty()) { %>
           <div class="row inner_header">
             <div class="page-header">
               <h2>Holes</h2>
@@ -245,17 +242,17 @@
               <th>RegionInfo</th>
               <th>RegionInfo</th>
             </tr>
-            <% for (Pair<RegionInfo, RegionInfo> p : report.getHoles()) { %>
+            <% for (Pair<RegionInfo, RegionInfo> p : cjReport.getHoles()) { %>
             <tr>
               <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
               <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
             </tr>
             <% } %>
 
-            <p><%= report.getHoles().size() %> hole(s).</p>
+            <p><%= cjReport.getHoles().size() %> hole(s).</p>
           </table>
       <% } %>
-      <% if (!report.getOverlaps().isEmpty()) { %>
+      <% if (!cjReport.getOverlaps().isEmpty()) { %>
             <div class="row inner_header">
               <div class="page-header">
                 <h2>Overlaps</h2>
@@ -272,14 +269,14 @@
                 <th>RegionInfo</th>
                 <th>Other RegionInfo</th>
               </tr>
-              <% for (Pair<RegionInfo, RegionInfo> p : report.getOverlaps()) { %>
+              <% for (Pair<RegionInfo, RegionInfo> p : cjReport.getOverlaps()) { %>
               <tr>
-                <% if (report.getMergedRegions().containsKey(p.getFirst())) { %>
+                <% if (cjReport.getMergedRegions().containsKey(p.getFirst())) { %>
                   <td><span style="color:blue;" title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <% } else { %>
                   <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <% } %>
-                <% if (report.getMergedRegions().containsKey(p.getSecond())) { %>
+                <% if (cjReport.getMergedRegions().containsKey(p.getSecond())) { %>
                   <td><span style="color:blue;" title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
                 <% } else { %>
                   <td><span title="<%= p.getSecond() %>"><%= p.getSecond().getRegionNameAsString() %></span></td>
@@ -287,10 +284,10 @@
               </tr>
               <% } %>
 
-              <p><%= report.getOverlaps().size() %> overlap(s).</p>
+              <p><%= cjReport.getOverlaps().size() %> overlap(s).</p>
             </table>
       <% } %>
-      <% if (!report.getUnknownServers().isEmpty()) { %>
+      <% if (!cjReport.getUnknownServers().isEmpty()) { %>
             <div class="row inner_header">
               <div class="page-header">
                 <h2>Unknown Servers</h2>
@@ -316,17 +313,17 @@
                 <th>RegionInfo</th>
                 <th>ServerName</th>
               </tr>
-              <% for (Pair<RegionInfo, ServerName> p: report.getUnknownServers()) { %>
+              <% for (Pair<RegionInfo, ServerName> p: cjReport.getUnknownServers()) { %>
               <tr>
                 <td><span title="<%= p.getFirst() %>"><%= p.getFirst().getRegionNameAsString() %></span></td>
                 <td><%= p.getSecond() %></td>
               </tr>
               <% } %>
 
-              <p><%= report.getUnknownServers().size() %> unknown servers(s).</p>
+              <p><%= cjReport.getUnknownServers().size() %> unknown servers(s).</p>
             </table>
       <% } %>
-      <% if (!report.getEmptyRegionInfo().isEmpty()) { %>
+      <% if (!cjReport.getEmptyRegionInfo().isEmpty()) { %>
             <div class="row inner_header">
               <div class="page-header">
                 <h2>Empty <em>info:regioninfo</em></h2>
@@ -336,13 +333,13 @@
               <tr>
                 <th>Row</th>
               </tr>
-              <% for (byte [] row: report.getEmptyRegionInfo()) { %>
+              <% for (byte [] row: cjReport.getEmptyRegionInfo()) { %>
               <tr>
                 <td><%= Bytes.toStringBinary(row) %></td>
               </tr>
               <% } %>
 
-              <p><%= report.getEmptyRegionInfo().size() %> emptyRegionInfo(s).</p>
+              <p><%= cjReport.getEmptyRegionInfo().size() %> emptyRegionInfo(s).</p>
             </table>
       <% } %>
   <% } %>
