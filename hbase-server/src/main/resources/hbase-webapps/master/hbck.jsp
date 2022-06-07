@@ -36,7 +36,7 @@
 <%@ page import="org.apache.hadoop.hbase.util.Bytes" %>
 <%@ page import="org.apache.hadoop.hbase.util.Pair" %>
 <%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitor" %>
-<%@ page import="org.apache.hadoop.hbase.master.janitor.Report" %>
+<%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitorReport" %>
 <%
   final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
@@ -74,7 +74,7 @@
     ZoneId.systemDefault());
   String iso8601end = startTimestamp == 0? "-1": zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
   CatalogJanitor cj = master.getCatalogJanitor();
-  Report report = cj == null? null: cj.getLastReport();
+  CatalogJanitorReport report = cj == null? null: cj.getLastReport();
   final ServerManager serverManager = master.getServerManager();
 %>
 <jsp:include page="header.jsp">
