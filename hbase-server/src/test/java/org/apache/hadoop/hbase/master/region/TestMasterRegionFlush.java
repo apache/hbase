@@ -150,14 +150,4 @@ public class TestMasterRegionFlush {
     Thread.sleep(1000);
     assertEquals(2, flushCalled.get());
   }
-
-  @Test
-  public void testForceFlush() throws Exception {
-    // Test for HBASE-27028
-    HBaseTestingUtil htu = new HBaseTestingUtil();
-    htu.startMiniCluster(1);
-    htu.getConnection().getAdmin().flushMasterStore();
-    assertTrue(htu.getMiniHBaseCluster().getMaster().isLocalRegionFlushed());
-    htu.shutdownMiniCluster();
-  }
 }

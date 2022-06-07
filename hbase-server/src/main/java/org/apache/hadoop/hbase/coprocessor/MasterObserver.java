@@ -1001,6 +1001,22 @@ public interface MasterObserver {
   }
 
   /**
+   * Called before the master local region memstore is flushed to disk.
+   * @param ctx       the environment to interact with the framework and master
+   */
+  default void preMasterStoreFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  /**
+   * Called after the master local region memstore is flushed to disk.
+   * @param ctx       the environment to interact with the framework and master
+   */
+  default void postMasterStoreFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+    throws IOException {
+  }
+
+  /**
    * Called before the quota for the user is stored.
    * @param ctx      the environment to interact with the framework and master
    * @param userName the name of user

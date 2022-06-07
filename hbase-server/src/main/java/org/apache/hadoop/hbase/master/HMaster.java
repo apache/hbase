@@ -457,9 +457,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
-  // Only for testing
-  private boolean isLocalRegionFlushed = false;
-
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -4213,14 +4210,21 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public void flushMasterStore() throws IOException {
     LOG.info("Force flush master local region.");
+    if (this.cpHost != null) {
+      try {
+        cpHost.preMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor preMasterStoreFlush()", ioe);
+      }
+    }
     masterRegion.flush(true);
-    isLocalRegionFlushed = true;
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public boolean isLocalRegionFlushed() {
-    return isLocalRegionFlushed;
+    if (this.cpHost != null) {
+      try {
+        cpHost.postMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor postMasterStoreFlush()", ioe);
+      }
+    }
   }
 
   public Collection<ServerName> getLiveRegionServers() {
