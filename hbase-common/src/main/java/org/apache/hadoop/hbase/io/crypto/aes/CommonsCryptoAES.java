@@ -49,7 +49,8 @@ public class CommonsCryptoAES extends Cipher {
   public static final String CIPHER_MODE_KEY = "hbase.crypto.commons.mode";
   public static final String CIPHER_CLASSES_KEY = "hbase.crypto.commons.cipher.classes";
   public static final String CIPHER_JCE_PROVIDER_KEY = "hbase.crypto.commons.cipher.jce.provider";
-  public static final String CRYPTOSTREAM_BUFFERSIZE_KEY = "hbase.crypto.commons.cryptoStream.bufferSize";
+  public static final String CRYPTOSTREAM_BUFFERSIZE_KEY =
+    "hbase.crypto.commons.cryptoStream.bufferSize";
 
   private final String cipherMode;
   private Properties props;
@@ -83,8 +84,8 @@ public class CommonsCryptoAES extends Cipher {
 
     props.setProperty(CryptoCipherFactory.CLASSES_KEY, conf.get(CIPHER_CLASSES_KEY, ""));
     props.setProperty(CryptoCipherFactory.JCE_PROVIDER_KEY, conf.get(CIPHER_JCE_PROVIDER_KEY, ""));
-    props.setProperty(
-      CryptoInputStream.STREAM_BUFFER_SIZE_KEY, conf.get(CRYPTOSTREAM_BUFFERSIZE_KEY, ""));
+    props.setProperty(CryptoInputStream.STREAM_BUFFER_SIZE_KEY,
+      conf.get(CRYPTOSTREAM_BUFFERSIZE_KEY, ""));
 
     return props;
   }
