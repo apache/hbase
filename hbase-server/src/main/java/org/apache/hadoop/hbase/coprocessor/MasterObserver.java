@@ -1002,7 +1002,7 @@ public interface MasterObserver {
 
   /**
    * Called before the master local region memstore is flushed to disk.
-   * @param ctx       the environment to interact with the framework and master
+   * @param ctx the environment to interact with the framework and master
    */
   default void preMasterStoreFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx)
     throws IOException {
@@ -1010,7 +1010,7 @@ public interface MasterObserver {
 
   /**
    * Called after the master local region memstore is flushed to disk.
-   * @param ctx       the environment to interact with the framework and master
+   * @param ctx the environment to interact with the framework and master
    */
   default void postMasterStoreFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx)
     throws IOException {

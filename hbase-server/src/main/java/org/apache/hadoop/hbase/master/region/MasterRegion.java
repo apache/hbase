@@ -163,7 +163,9 @@ public final class MasterRegion {
 
   public FlushResult flush(boolean force) throws IOException {
     flusherAndCompactor.resetChangesAfterLastFlush();
-    return region.flush(force);
+    FlushResult flushResult = region.flush(force);
+    flusherAndCompactor.resetLastFlushTime();
+    return flushResult;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
