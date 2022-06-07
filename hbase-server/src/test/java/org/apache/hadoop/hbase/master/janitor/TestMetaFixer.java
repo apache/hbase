@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.janitor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -39,12 +40,13 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.HbckChore;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.GCMultipleMergedRegionsProcedure;
 import org.apache.hadoop.hbase.master.assignment.GCRegionProcedure;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
+import org.apache.hadoop.hbase.master.hbck.HbckReport;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -235,7 +237,9 @@ public class TestMetaFixer {
 
     // No orphan regions on FS
     hbckChore.choreForTesting();
-    assertEquals(0, hbckChore.getOrphanRegionsOnFS().size());
+    HbckReport hbckReport = hbckChore.getLastReport();
+    assertNotNull(hbckReport);
+    assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
 
     // No holes reported.
     cj.scan();
