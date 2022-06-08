@@ -41,6 +41,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.UnpooledByteBufAllocator;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
@@ -71,18 +74,35 @@ public class NettyRpcServer extends RpcServer {
     "hbase.netty.eventloop.rpcserver.thread.count";
   private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
+  /**
+   * Name of property to change the byte buf allocator for the netty channels. Default is no value,
+   * which causes us to use PooledByteBufAllocator. Valid settings here are "pooled", "unpooled",
+   * and "heap".
+   * <p>
+   * "pooled" and "unpooled" may prefer direct memory depending on netty configuration, which is
+   * controlled by platform specific code and documented system properties.
+   * <p>
+   * "heap" will prefer heap arena allocations.
+   */
+  public static final String HBASE_NETTY_ALLOCATOR_KEY = "hbase.netty.rpcserver.allocator";
+  static final String POOLED_ALLOCATOR_TYPE = "pooled";
+  static final String UNPOOLED_ALLOCATOR_TYPE = "unpooled";
+  static final String HEAP_ALLOCATOR_TYPE = "heap";
+
   private final InetSocketAddress bindAddress;
 
   private final CountDownLatch closed = new CountDownLatch(1);
   private final Channel serverChannel;
   private final ChannelGroup allChannels =
     new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+  private final ByteBufAllocator channelAllocator;
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
     boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
+    this.channelAllocator = getChannelAllocator(conf);
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
     if (server instanceof HRegionServer) {
@@ -103,9 +123,9 @@ public class NettyRpcServer extends RpcServer {
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
       .childOption(ChannelOption.SO_REUSEADDR, true)
       .childHandler(new ChannelInitializer<Channel>() {
-
         @Override
         protected void initChannel(Channel ch) throws Exception {
+          ch.config().setAllocator(channelAllocator);
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
@@ -124,6 +144,24 @@ public class NettyRpcServer extends RpcServer {
     }
     initReconfigurable(conf);
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  private ByteBufAllocator getChannelAllocator(Configuration conf) {
+    final String allocatorType = conf.get(HBASE_NETTY_ALLOCATOR_KEY);
+    if (allocatorType != null) {
+      if (POOLED_ALLOCATOR_TYPE.equalsIgnoreCase(allocatorType)) {
+        LOG.info("Using {} for buffer allocation", PooledByteBufAllocator.class.getName());
+        return PooledByteBufAllocator.DEFAULT;
+      } else if (UNPOOLED_ALLOCATOR_TYPE.equalsIgnoreCase(allocatorType)) {
+        LOG.info("Using {} for buffer allocation", UnpooledByteBufAllocator.class.getName());
+        return UnpooledByteBufAllocator.DEFAULT;
+      } else if (HEAP_ALLOCATOR_TYPE.equalsIgnoreCase(allocatorType)) {
+        LOG.info("Using {} for buffer allocation", HeapByteBufAllocator.class.getName());
+        return HeapByteBufAllocator.DEFAULT;
+      }
+    }
+    LOG.info("Using {} for buffer allocation", PooledByteBufAllocator.class.getName());
+    return PooledByteBufAllocator.DEFAULT;
   }
 
   @InterfaceAudience.Private
