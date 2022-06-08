@@ -625,11 +625,13 @@ public class HFileBlock implements Cacheable {
         : reader.getDefaultBlockDecodingContext();
       // Create a duplicated buffer without the header part.
       ByteBuff dup = this.buf.duplicate();
-      dup.position(this.headerSize());
+      int totalChecksumBytes = totalChecksumBytes();
+      dup.position(this.headerSize()).limit(dup.limit() - totalChecksumBytes);
       dup = dup.slice();
       // Decode the dup into unpacked#buf
-      ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
+      ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader() - totalChecksumBytes,
+        unpacked.getUncompressedSizeWithoutHeader()- totalChecksumBytes,
+        unpacked.getBufferWithoutHeader(false), dup);
       succ = true;
       return unpacked;
     } finally {
