@@ -85,6 +85,7 @@ Arrays.sort(serverNames);
 <thead>
 <tr>
     <th>ServerName</th>
+    <th>State</th>
     <th>Start time</th>
     <th>Last contact</th>
     <th>Version</th>
@@ -125,6 +126,7 @@ Arrays.sort(serverNames);
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; &></td>
+    <td><% state %></td>
     <td><% new Date(startcode) %></td>
     <td><% TraditionalBinaryPrefix.long2String(lastContact, "s", 1) %></td>
     <td><% version %></td>
