@@ -129,6 +129,10 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * not specify compression (by default) there is roughly a 10x expansion. Loading the full crawl
  * archive results in a table approximately 640 TB in size.
  * <p>
+ * The loader can optionally drive read load during ingest by incrementing counters for each URL
+ * discovered in content. Add <tt>-DIntegrationTestLoadCommonCrawl.increments=true</tt> to the
+ * command line to enable.
+ * <p>
  * You can also split the Loader and Verify stages:
  * <p>
  * Load with: <blockquote> ./bin/hbase
@@ -153,6 +157,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
   protected static String TABLE_NAME_KEY = "IntegrationTestLoadCommonCrawl.table";
   protected static String DEFAULT_TABLE_NAME = "IntegrationTestLoadCommonCrawl";
+
+  protected static String INCREMENTS_NAME_KEY = "IntegrationTestLoadCommonCrawl.increments";
+  protected static boolean DEFAULT_INCREMENTS = false;
 
   protected static byte[] CONTENT_FAMILY_NAME = Bytes.toBytes("c");
   protected static byte[] INFO_FAMILY_NAME = Bytes.toBytes("i");
@@ -579,11 +586,13 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       // Track futures to drain in cleanup()
       protected Set<CompletableFuture<?>> futures =
         Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+      protected boolean doIncrements;
 
       @Override
       protected void setup(final Context context) throws IOException, InterruptedException {
-        Configuration conf = context.getConfiguration();
         executor = Executors.newWorkStealingPool(Runtime.getRuntime().availableProcessors());
+        Configuration conf = context.getConfiguration();
+        doIncrements = conf.getBoolean(INCREMENTS_NAME_KEY, DEFAULT_INCREMENTS);
         try {
           conn = ConnectionFactory.createAsyncConnection(conf).get();
           table = conn.getTable(getTablename(conf), executor);
@@ -692,23 +701,25 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                 new BytesWritable(Bytes.toBytes(ipAddr)));
             }
 
-            // The URLs cf is not tracked for correctness. For now it is used only to exercise
-            // Increments, to drive some read load during ingest. They can be verified with a
-            // reducer to sum increments per row and then compare the final count to the table
-            // data. This is left as a future exercise.
-            final byte[] refQual = Bytes.add(REF_QUALIFIER, SEP, rowKey);
-            for (String refUri : extractUrls(content)) {
-              try {
-                byte[] urlRowKey = rowKeyFromTargetURI(refUri);
-                LOG.debug("  -> {}", refUri);
-                final Increment increment = new Increment(urlRowKey);
-                increment.setTimestamp(ts);
-                increment.addColumn(URL_FAMILY_NAME, refQual, 1);
-                final CompletableFuture<Result> incrFuture = table.increment(increment);
-                futures.add(incrFuture);
-                incrFuture.thenRun(() -> futures.remove(incrFuture));
-              } catch (IllegalArgumentException | URISyntaxException e) {
-                LOG.debug("Could not make a row key for URI " + refUri + ", ignoring", e);
+            if (doIncrements) {
+              // The URLs cf is not tracked for correctness. For now it is used only to exercise
+              // Increments, to drive some read load during ingest. They can be verified with a
+              // reducer to sum increments per row and then compare the final count to the table
+              // data. This is left as a future exercise.
+              final byte[] refQual = Bytes.add(REF_QUALIFIER, SEP, rowKey);
+              for (String refUri : extractUrls(content)) {
+                try {
+                  byte[] urlRowKey = rowKeyFromTargetURI(refUri);
+                  LOG.debug("  -> {}", refUri);
+                  final Increment increment = new Increment(urlRowKey);
+                  increment.setTimestamp(ts);
+                  increment.addColumn(URL_FAMILY_NAME, refQual, 1);
+                  final CompletableFuture<Result> incrFuture = table.increment(increment);
+                  futures.add(incrFuture);
+                  incrFuture.thenRun(() -> futures.remove(incrFuture));
+                } catch (IllegalArgumentException | URISyntaxException e) {
+                  LOG.debug("Could not make a row key for URI " + refUri + ", ignoring", e);
+                }
               }
             }
           }
