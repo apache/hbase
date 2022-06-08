@@ -177,7 +177,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
   public static enum Counts {
     REFERENCED,
     UNREFERENCED,
-    CORRUPT
+    CORRUPT,
+    RPC_BYTES_WRITTEN,
+    RPC_TIME_MS,
   }
 
   protected Path warcFileInputDir = null;
@@ -553,6 +555,15 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       if (!success) {
         LOG.error("Failure during job " + job.getJobID());
       }
+
+      final Counters counters = job.getCounters();
+      for (Counts c : Counts.values()) {
+        long value = counters.findCounter(c).getValue();
+        if (value != 0) {
+          LOG.info(c + ": " + value);
+        }
+      }
+
       return success ? 0 : 1;
     }
 
@@ -679,9 +690,16 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             if (ipAddr != null) {
               put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, ts, Bytes.toBytes(ipAddr));
             }
+            final long putStartTime = System.currentTimeMillis();
             final CompletableFuture<Void> putFuture = table.put(put);
             futures.add(putFuture);
-            putFuture.thenRun(() -> futures.remove(putFuture));
+            putFuture.thenAccept((v) -> {
+              output.getCounter(Counts.RPC_TIME_MS)
+                .increment(System.currentTimeMillis() - putStartTime);
+              output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(put.heapSize());
+            }).thenRun(() -> {
+              futures.remove(putFuture);
+            });
 
             // Write records out for later verification, one per HBase field except for the
             // content record, which will be verified by CRC64.
@@ -714,9 +732,16 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                   final Increment increment = new Increment(urlRowKey);
                   increment.setTimestamp(ts);
                   increment.addColumn(URL_FAMILY_NAME, refQual, 1);
+                  final long incrStartTime = System.currentTimeMillis();
                   final CompletableFuture<Result> incrFuture = table.increment(increment);
                   futures.add(incrFuture);
-                  incrFuture.thenRun(() -> futures.remove(incrFuture));
+                  incrFuture.thenAccept((r) -> {
+                    output.getCounter(Counts.RPC_TIME_MS)
+                      .increment(System.currentTimeMillis() - incrStartTime);
+                    output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(increment.heapSize());
+                  }).thenRun(() -> {
+                    futures.remove(putFuture);
+                  });
                 } catch (IllegalArgumentException | URISyntaxException e) {
                   LOG.debug("Could not make a row key for URI " + refUri + ", ignoring", e);
                 }
@@ -751,13 +776,18 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       job.setOutputKeyClass(NullWritable.class);
       job.setOutputValueClass(NullWritable.class);
       TableMapReduceUtil.addDependencyJars(job);
+
       boolean success = job.waitForCompletion(true);
       if (!success) {
         LOG.error("Failure during job " + job.getJobID());
       }
+
       final Counters counters = job.getCounters();
       for (Counts c : Counts.values()) {
-        LOG.info(c + ": " + counters.findCounter(c).getValue());
+        long value = counters.findCounter(c).getValue();
+        if (value != 0) {
+          LOG.info(c + ": " + value);
+        }
       }
       if (counters.findCounter(Counts.UNREFERENCED).getValue() > 0) {
         LOG.error("Nonzero UNREFERENCED count from job " + job.getJobID());
@@ -767,6 +797,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         LOG.error("Nonzero CORRUPT count from job " + job.getJobID());
         success = false;
       }
+
       return success ? 0 : 1;
     }
 
@@ -827,9 +858,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           final long expectedCRC64 = Bytes.toLong(value.getBytes(), 0, value.getLength());
           final Get get = new Get(row).setTimestamp(ts).addFamily(CONTENT_FAMILY_NAME)
             .addFamily(INFO_FAMILY_NAME);
+          final long startTime = System.currentTimeMillis();
           Result r;
           try {
             r = table.get(get);
+            output.getCounter(Counts.RPC_TIME_MS).increment(System.currentTimeMillis() - startTime);
           } catch (Exception e) {
             LOG.error("Row " + Bytes.toStringBinary(row) + ": exception", e);
             output.getCounter(Counts.UNREFERENCED).increment(1);
@@ -867,10 +900,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
           // record.
           output.getCounter(Counts.REFERENCED).increment(1);
         } else {
+          final long startTime = System.currentTimeMillis();
           final Get get = new Get(row).setTimestamp(ts).addColumn(family, qualifier);
           Result r;
           try {
             r = table.get(get);
+            output.getCounter(Counts.RPC_TIME_MS).increment(System.currentTimeMillis() - startTime);
           } catch (Exception e) {
             LOG.error("Row " + Bytes.toStringBinary(row) + ": exception", e);
             output.getCounter(Counts.UNREFERENCED).increment(1);
