@@ -28,11 +28,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -594,9 +591,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
       protected AsyncConnection conn;
       protected AsyncTable<ScanResultConsumer> table;
       protected ExecutorService executor;
-      // Track futures to drain in cleanup()
-      protected Set<CompletableFuture<?>> futures =
-        Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+      protected AtomicLong inflight = new AtomicLong();
       protected boolean doIncrements;
 
       @Override
@@ -614,24 +609,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
       @Override
       protected void cleanup(final Context context) throws IOException, InterruptedException {
-        // Drain futures. Every future has a chained stage that will remove the element. Treat the
-        // set of futures as a queue and take one element at a time.
-        while (true) {
-          CompletableFuture<?> future;
-          synchronized (futures) {
-            try {
-              // This is the "take"
-              future = futures.iterator().next();
-            } catch (NoSuchElementException e) {
-              break;
-            }
-          }
-          try {
-            future.get();
-          } catch (ExecutionException e) {
-            LOG.warn(e.getMessage());
-          }
+
+        while (inflight.get() != 0) {
+          LOG.info("Operations in flight, waiting");
+          Thread.sleep(1000);
         }
+
         // Shut down the executor
         executor.shutdown();
         if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
@@ -690,15 +673,16 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             if (ipAddr != null) {
               put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, ts, Bytes.toBytes(ipAddr));
             }
+            inflight.incrementAndGet();
             final long putStartTime = System.currentTimeMillis();
             final CompletableFuture<Void> putFuture = table.put(put);
-            futures.add(putFuture);
-            putFuture.thenAccept((v) -> {
-              output.getCounter(Counts.RPC_TIME_MS)
-                .increment(System.currentTimeMillis() - putStartTime);
-              output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(put.heapSize());
-            }).thenRun(() -> {
-              futures.remove(putFuture);
+            putFuture.thenRun(() -> {
+              inflight.decrementAndGet();
+              if (!putFuture.isCompletedExceptionally()) {
+                output.getCounter(Counts.RPC_TIME_MS)
+                  .increment(System.currentTimeMillis() - putStartTime);
+                output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(put.heapSize());
+              }
             });
 
             // Write records out for later verification, one per HBase field except for the
@@ -732,15 +716,16 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                   final Increment increment = new Increment(urlRowKey);
                   increment.setTimestamp(ts);
                   increment.addColumn(URL_FAMILY_NAME, refQual, 1);
+                  inflight.incrementAndGet();
                   final long incrStartTime = System.currentTimeMillis();
                   final CompletableFuture<Result> incrFuture = table.increment(increment);
-                  futures.add(incrFuture);
-                  incrFuture.thenAccept((r) -> {
-                    output.getCounter(Counts.RPC_TIME_MS)
-                      .increment(System.currentTimeMillis() - incrStartTime);
-                    output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(increment.heapSize());
-                  }).thenRun(() -> {
-                    futures.remove(putFuture);
+                  incrFuture.thenRun(() -> {
+                    inflight.decrementAndGet();
+                    if (!incrFuture.isCompletedExceptionally()) {
+                      output.getCounter(Counts.RPC_TIME_MS)
+                        .increment(System.currentTimeMillis() - incrStartTime);
+                      output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(increment.heapSize());
+                    }
                   });
                 } catch (IllegalArgumentException | URISyntaxException e) {
                   LOG.debug("Could not make a row key for URI " + refUri + ", ignoring", e);
