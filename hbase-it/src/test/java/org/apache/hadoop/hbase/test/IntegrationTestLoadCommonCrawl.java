@@ -152,24 +152,27 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestLoadCommonCrawl.class);
 
-  protected static String TABLE_NAME_KEY = "IntegrationTestLoadCommonCrawl.table";
-  protected static String DEFAULT_TABLE_NAME = "IntegrationTestLoadCommonCrawl";
+  static final String TABLE_NAME_KEY = "IntegrationTestLoadCommonCrawl.table";
+  static final String DEFAULT_TABLE_NAME = "IntegrationTestLoadCommonCrawl";
 
-  protected static String INCREMENTS_NAME_KEY = "IntegrationTestLoadCommonCrawl.increments";
-  protected static boolean DEFAULT_INCREMENTS = false;
+  static final String INCREMENTS_NAME_KEY = "IntegrationTestLoadCommonCrawl.increments";
+  static final boolean DEFAULT_INCREMENTS = false;
 
-  protected static byte[] CONTENT_FAMILY_NAME = Bytes.toBytes("c");
-  protected static byte[] INFO_FAMILY_NAME = Bytes.toBytes("i");
-  protected static byte[] URL_FAMILY_NAME = Bytes.toBytes("u");
-  protected static byte[] SEP = Bytes.toBytes(":");
-  protected static byte[] CONTENT_QUALIFIER = HConstants.EMPTY_BYTE_ARRAY;
-  protected static byte[] CONTENT_LENGTH_QUALIFIER = Bytes.toBytes("l");
-  protected static byte[] CONTENT_TYPE_QUALIFIER = Bytes.toBytes("t");
-  protected static byte[] CRC_QUALIFIER = Bytes.toBytes("c");
-  protected static byte[] DATE_QUALIFIER = Bytes.toBytes("d");
-  protected static byte[] IP_ADDRESS_QUALIFIER = Bytes.toBytes("a");
-  protected static byte[] TARGET_URI_QUALIFIER = Bytes.toBytes("u");
-  protected static byte[] REF_QUALIFIER = Bytes.toBytes("ref");
+  static final int MAX_INFLIGHT = 1000;
+  static final int INFLIGHT_PAUSE_MS = 100;
+
+  static final byte[] CONTENT_FAMILY_NAME = Bytes.toBytes("c");
+  static final byte[] INFO_FAMILY_NAME = Bytes.toBytes("i");
+  static final byte[] URL_FAMILY_NAME = Bytes.toBytes("u");
+  static final byte[] SEP = Bytes.toBytes(":");
+  static final byte[] CONTENT_QUALIFIER = HConstants.EMPTY_BYTE_ARRAY;
+  static final byte[] CONTENT_LENGTH_QUALIFIER = Bytes.toBytes("l");
+  static final byte[] CONTENT_TYPE_QUALIFIER = Bytes.toBytes("t");
+  static final byte[] CRC_QUALIFIER = Bytes.toBytes("c");
+  static final byte[] DATE_QUALIFIER = Bytes.toBytes("d");
+  static final byte[] IP_ADDRESS_QUALIFIER = Bytes.toBytes("a");
+  static final byte[] TARGET_URI_QUALIFIER = Bytes.toBytes("u");
+  static final byte[] REF_QUALIFIER = Bytes.toBytes("ref");
 
   public static enum Counts {
     REFERENCED,
@@ -612,7 +615,7 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
 
         while (inflight.get() != 0) {
           LOG.info("Operations in flight, waiting");
-          Thread.sleep(1000);
+          Thread.sleep(INFLIGHT_PAUSE_MS);
         }
 
         // Shut down the executor
@@ -673,7 +676,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             if (ipAddr != null) {
               put.addColumn(INFO_FAMILY_NAME, IP_ADDRESS_QUALIFIER, ts, Bytes.toBytes(ipAddr));
             }
-            inflight.incrementAndGet();
+            long pending = inflight.incrementAndGet();
+            while (pending > MAX_INFLIGHT) {
+              LOG.info("Too many operations in flight, waiting");
+              Thread.sleep(INFLIGHT_PAUSE_MS);
+              pending = inflight.get();
+            }
             final long putStartTime = System.currentTimeMillis();
             final CompletableFuture<Void> putFuture = table.put(put);
             putFuture.thenRun(() -> {
@@ -716,7 +724,12 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                   final Increment increment = new Increment(urlRowKey);
                   increment.setTimestamp(ts);
                   increment.addColumn(URL_FAMILY_NAME, refQual, 1);
-                  inflight.incrementAndGet();
+                  pending = inflight.incrementAndGet();
+                  while (pending > MAX_INFLIGHT) {
+                    LOG.info("Too many operations in flight, waiting");
+                    Thread.sleep(INFLIGHT_PAUSE_MS);
+                    pending = inflight.get();
+                  }
                   final long incrStartTime = System.currentTimeMillis();
                   final CompletableFuture<Result> incrFuture = table.increment(increment);
                   incrFuture.thenRun(() -> {
