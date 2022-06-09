@@ -203,8 +203,7 @@ IRB.conf[:PROMPT][:CUSTOM] = {
 
 IRB.conf[:IRB_NAME] = 'hbase'
 IRB.conf[:AP_NAME] = 'hbase'
-if IRB.conf[:PROMPT_MODE] != :NULL
-  # When prompt mode is :NULL, hbase shell is started with pipe for stdin, so prompt isn't necessary
+if interactive
   IRB.conf[:PROMPT_MODE] = :CUSTOM
 end
 IRB.conf[:BACK_TRACE_LIMIT] = 0 unless full_backtrace
