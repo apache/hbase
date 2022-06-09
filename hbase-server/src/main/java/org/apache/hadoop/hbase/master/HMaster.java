@@ -583,11 +583,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         sleeper.sleep();
       }
       stopInfoServer();
-      closeClusterConnection();
-      stopServiceThreads();
+      // Please refer to HBASE-27029 for service stop order
       if (this.rpcServices != null) {
         this.rpcServices.stop();
       }
+      stopServiceThreads();
+      closeClusterConnection();
       closeZooKeeper();
     } finally {
       if (this.clusterSchemaService != null) {
