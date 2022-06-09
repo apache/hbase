@@ -630,7 +630,7 @@ public class HFileBlock implements Cacheable {
       dup = dup.slice();
       // Decode the dup into unpacked#buf
       ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader() - totalChecksumBytes,
-        unpacked.getUncompressedSizeWithoutHeader()- totalChecksumBytes,
+        unpacked.getUncompressedSizeWithoutHeader() - totalChecksumBytes,
         unpacked.getBufferWithoutHeader(false), dup);
       succ = true;
       return unpacked;
