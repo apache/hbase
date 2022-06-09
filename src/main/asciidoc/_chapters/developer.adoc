@@ -294,14 +294,14 @@ type.
 The following plugins are recommended:
 
 . Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
-. EditorConfig, bundled. This will apply project whitespace settings found in the the
+. EditorConfig, bundled. This will apply project whitespace settings found in the
 `.editorconfig` file available on branches with
 link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
 . link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
 against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
 (If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
-sure the plugin's `version` popup menu matches the hbase checkstyle version -- see
-link:https://issues.apache.org/jira/browse/HBASE-23242[HBASE-23242] for more).
+sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
+checkstyle version as a property in `pom.xml`.
 This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
 pre-commit process.
 . link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
