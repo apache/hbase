@@ -164,7 +164,7 @@ public final class MasterRegion {
   public FlushResult flush(boolean force) throws IOException {
     flusherAndCompactor.resetChangesAfterLastFlush();
     FlushResult flushResult = region.flush(force);
-    flusherAndCompactor.resetLastFlushTime();
+    flusherAndCompactor.recordLastFlushTime();
     return flushResult;
   }
 
