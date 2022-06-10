@@ -85,7 +85,7 @@ public class CatalogJanitor extends ScheduledChore {
    * Saved report from last hbase:meta scan to completion. May be stale if having trouble completing
    * scan. Check its date.
    */
-  private volatile Report lastReport;
+  private volatile CatalogJanitorReport lastReport;
 
   public CatalogJanitor(final MasterServices services) {
     super("CatalogJanitor-" + services.getServerName().toShortString(), services,
@@ -227,10 +227,10 @@ public class CatalogJanitor extends ScheduledChore {
 
   /**
    * Scan hbase:meta.
-   * @return Return generated {@link Report}
+   * @return Return generated {@link CatalogJanitorReport}
    */
   // will be override in tests.
-  protected Report scanForReport() throws IOException {
+  protected CatalogJanitorReport scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
     MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
@@ -240,7 +240,7 @@ public class CatalogJanitor extends ScheduledChore {
   /**
    * @return Returns last published Report that comes of last successful scan of hbase:meta.
    */
-  public Report getLastReport() {
+  public CatalogJanitorReport getLastReport() {
     return this.lastReport;
   }
 
@@ -493,7 +493,7 @@ public class CatalogJanitor extends ScheduledChore {
         t.put(p);
       }
       MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null);
-      Report report = visitor.getReport();
+      CatalogJanitorReport report = visitor.getReport();
       LOG.info(report != null ? report.toString() : "empty");
     }
   }
