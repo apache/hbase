@@ -19,15 +19,18 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -42,6 +45,8 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
+import org.apache.hadoop.hbase.master.hbck.HbckReport;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -302,15 +307,14 @@ public class TestHbck {
   @Test
   public void testRunHbckChore() throws Exception {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    long endTimestamp = master.getHbckChore().getCheckingEndTimestamp();
+    HbckChore hbckChore = master.getHbckChore();
+    Instant endTimestamp = Optional.ofNullable(hbckChore.getLastReport())
+      .map(HbckReport::getCheckingEndTimestamp).orElse(Instant.EPOCH);
     Hbck hbck = getHbck();
-    boolean ran = false;
-    while (!ran) {
-      ran = hbck.runHbckChore();
-      if (ran) {
-        assertTrue(master.getHbckChore().getCheckingEndTimestamp() > endTimestamp);
-      }
-    }
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), hbck::runHbckChore);
+    HbckReport report = hbckChore.getLastReport();
+    assertNotNull(report);
+    assertTrue(report.getCheckingEndTimestamp().isAfter(endTimestamp));
   }
 
   public static class FailingSplitAfterMetaUpdatedMasterObserver
