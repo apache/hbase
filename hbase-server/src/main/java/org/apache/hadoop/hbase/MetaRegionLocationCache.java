@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ThreadFactory;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -101,41 +102,43 @@ public class MetaRegionLocationCache extends ZKListener {
    * @param retryCounter controls the number of retries and sleep between retries.
    */
   private void loadMetaLocationsFromZk(RetryCounter retryCounter, ZNodeOpType opType) {
-    List<String> znodes = null;
-    while (retryCounter.shouldRetry()) {
-      try {
-        znodes = watcher.getMetaReplicaNodesAndWatchChildren();
-        break;
-      } catch (KeeperException ke) {
-        LOG.debug("Error populating initial meta locations", ke);
-        if (!retryCounter.shouldRetry()) {
-          // Retries exhausted and watchers not set. This is not a desirable state since the cache
-          // could remain stale forever. Propagate the exception.
-          watcher.abort("Error populating meta locations", ke);
-          return;
-        }
+    TraceUtil.trace(() -> {
+      List<String> znodes = null;
+      while (retryCounter.shouldRetry()) {
         try {
-          retryCounter.sleepUntilNextRetry();
-        } catch (InterruptedException ie) {
-          LOG.error("Interrupted while loading meta locations from ZK", ie);
-          Thread.currentThread().interrupt();
-          return;
+          znodes = watcher.getMetaReplicaNodesAndWatchChildren();
+          break;
+        } catch (KeeperException ke) {
+          LOG.debug("Error populating initial meta locations", ke);
+          if (!retryCounter.shouldRetry()) {
+            // Retries exhausted and watchers not set. This is not a desirable state since the cache
+            // could remain stale forever. Propagate the exception.
+            watcher.abort("Error populating meta locations", ke);
+            return;
+          }
+          try {
+            retryCounter.sleepUntilNextRetry();
+          } catch (InterruptedException ie) {
+            LOG.error("Interrupted while loading meta locations from ZK", ie);
+            Thread.currentThread().interrupt();
+            return;
+          }
         }
       }
-    }
-    if (znodes == null || znodes.isEmpty()) {
-      // No meta znodes exist at this point but we registered a watcher on the base znode to listen
-      // for updates. They will be handled via nodeChildrenChanged().
-      return;
-    }
-    if (znodes.size() == cachedMetaLocations.size()) {
-      // No new meta znodes got added.
-      return;
-    }
-    for (String znode : znodes) {
-      String path = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode);
-      updateMetaLocation(path, opType);
-    }
+      if (znodes == null || znodes.isEmpty()) {
+        // No meta znodes exist at this point but we registered a watcher on the base znode to
+        // listen for updates. They will be handled via nodeChildrenChanged().
+        return;
+      }
+      if (znodes.size() == cachedMetaLocations.size()) {
+        // No new meta znodes got added.
+        return;
+      }
+      for (String znode : znodes) {
+        String path = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, znode);
+        updateMetaLocation(path, opType);
+      }
+    }, "MetaRegionLocationCache.loadMetaLocationsFromZk");
   }
 
   /**
