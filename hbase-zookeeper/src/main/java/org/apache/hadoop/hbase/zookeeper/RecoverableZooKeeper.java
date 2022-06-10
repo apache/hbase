@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -201,14 +202,15 @@ public class RecoverableZooKeeper {
    * throw NoNodeException if the path does not exist.
    */
   public void delete(String path, int version) throws InterruptedException, KeeperException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.delete").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.delete");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       boolean isRetry = false; // False for first attempt, true for all retries.
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           checkZk().delete(path, version);
+          span.setStatus(StatusCode.OK);
           return;
         } catch (KeeperException e) {
           switch (e.code()) {
@@ -216,18 +218,22 @@ public class RecoverableZooKeeper {
               if (isRetry) {
                 LOG.debug(
                   "Node " + path + " already deleted. Assuming a " + "previous attempt succeeded.");
+                span.setStatus(StatusCode.OK);
                 return;
               }
               LOG.debug("Node {} already deleted, retry={}", path, isRetry);
+              TraceUtil.setError(span, e);
               throw e;
 
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "delete");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -244,23 +250,26 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, Watcher watcher) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.exists").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.exists");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           Stat nodeStat = checkZk().exists(path, watcher);
+          span.setStatus(StatusCode.OK);
           return nodeStat;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "exists");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -276,24 +285,28 @@ public class RecoverableZooKeeper {
    * @return A Stat instance
    */
   public Stat exists(String path, boolean watch) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.exists").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    Span span = TraceUtil.createSpan("RecoverableZookeeper.exists");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           Stat nodeStat = checkZk().exists(path, watch);
+          span.setStatus(StatusCode.OK);
           return nodeStat;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "exists");
               break;
             case OPERATIONTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "exists");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -319,24 +332,26 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, Watcher watcher)
     throws KeeperException, InterruptedException {
-    Span span =
-      TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getChildren").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getChildren");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           List<String> children = checkZk().getChildren(path, watcher);
+          span.setStatus(StatusCode.OK);
           return children;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -353,25 +368,28 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, boolean watch)
     throws KeeperException, InterruptedException {
-    Span span =
-      TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getChildren").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    Span span = TraceUtil.createSpan("RecoverableZookeeper.getChildren");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           List<String> children = checkZk().getChildren(path, watch);
+          span.setStatus(StatusCode.OK);
           return children;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getChildren");
               break;
             case OPERATIONTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getChildren");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -387,23 +405,26 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getData").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getData");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           byte[] revData = checkZk().getData(path, watcher, stat);
+          span.setStatus(StatusCode.OK);
           return ZKMetadata.removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getData");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -426,17 +447,21 @@ public class RecoverableZooKeeper {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           byte[] revData = checkZk().getData(path, watch, stat);
+          span.setStatus(StatusCode.OK);
           return ZKMetadata.removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getData");
               break;
             case OPERATIONTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getData");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -455,8 +480,8 @@ public class RecoverableZooKeeper {
    */
   public Stat setData(String path, byte[] data, int version)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setData").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.setData");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       boolean isRetry = false;
@@ -465,12 +490,14 @@ public class RecoverableZooKeeper {
         try {
           startTime = EnvironmentEdgeManager.currentTime();
           Stat nodeStat = checkZk().setData(path, newData, version);
+          span.setStatus(StatusCode.OK);
           return nodeStat;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "setData");
               break;
             case BADVERSION:
@@ -481,15 +508,18 @@ public class RecoverableZooKeeper {
                   byte[] revData = checkZk().getData(path, false, stat);
                   if (Bytes.compareTo(revData, newData) == 0) {
                     // the bad version is caused by previous successful setData
+                    span.setStatus(StatusCode.OK);
                     return stat;
                   }
                 } catch (KeeperException keeperException) {
                   // the ZK is not reliable at this moment. just throwing exception
+                  TraceUtil.setError(span, keeperException);
                   throw keeperException;
                 }
               }
               // throw other exceptions and verified bad version exceptions
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -506,23 +536,26 @@ public class RecoverableZooKeeper {
    * @return list of ACLs
    */
   public List<ACL> getAcl(String path, Stat stat) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.getAcl").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.getAcl");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           List<ACL> nodeACL = checkZk().getACL(path, stat);
+          span.setStatus(StatusCode.OK);
           return nodeACL;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "getAcl");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -539,22 +572,25 @@ public class RecoverableZooKeeper {
    */
   public Stat setAcl(String path, List<ACL> acls, int version)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.setAcl").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.setAcl");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           Stat nodeStat = checkZk().setACL(path, acls, version);
+          span.setStatus(StatusCode.OK);
           return nodeStat;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "setAcl");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
@@ -578,20 +614,25 @@ public class RecoverableZooKeeper {
    */
   public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode)
     throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.create").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.create");
+    try (Scope ignored = span.makeCurrent()) {
       byte[] newData = ZKMetadata.appendMetaData(id, data);
       switch (createMode) {
         case EPHEMERAL:
         case PERSISTENT:
+          span.setStatus(StatusCode.OK);
           return createNonSequential(path, newData, acl, createMode);
 
         case EPHEMERAL_SEQUENTIAL:
         case PERSISTENT_SEQUENTIAL:
+          span.setStatus(StatusCode.OK);
           return createSequential(path, newData, acl, createMode);
 
         default:
-          throw new IllegalArgumentException("Unrecognized CreateMode: " + createMode);
+          final IllegalArgumentException e =
+            new IllegalArgumentException("Unrecognized CreateMode: " + createMode);
+          TraceUtil.setError(span, e);
+          throw e;
       }
     } finally {
       span.end();
@@ -709,24 +750,27 @@ public class RecoverableZooKeeper {
    * Run multiple operations in a transactional manner. Retry before throwing exception
    */
   public List<OpResult> multi(Iterable<Op> ops) throws KeeperException, InterruptedException {
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("RecoverableZookeeper.multi").startSpan();
-    try (Scope scope = span.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("RecoverableZookeeper.multi");
+    try (Scope ignored = span.makeCurrent()) {
       RetryCounter retryCounter = retryCounterFactory.create();
       Iterable<Op> multiOps = prepareZKMulti(ops);
       while (true) {
         try {
           long startTime = EnvironmentEdgeManager.currentTime();
           List<OpResult> opResults = checkZk().multi(multiOps);
+          span.setStatus(StatusCode.OK);
           return opResults;
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
             case OPERATIONTIMEOUT:
             case REQUESTTIMEOUT:
+              TraceUtil.setError(span, e);
               retryOrThrow(retryCounter, e, "multi");
               break;
 
             default:
+              TraceUtil.setError(span, e);
               throw e;
           }
         }
