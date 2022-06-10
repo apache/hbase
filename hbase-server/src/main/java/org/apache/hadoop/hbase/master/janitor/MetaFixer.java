@@ -76,7 +76,7 @@ public class MetaFixer {
   }
 
   public void fix() throws IOException {
-    Report report = this.masterServices.getCatalogJanitor().getLastReport();
+    CatalogJanitorReport report = this.masterServices.getCatalogJanitor().getLastReport();
     if (report == null) {
       LOG.info("CatalogJanitor has not generated a report yet; run 'catalogjanitor_run' in "
         + "shell or wait until CatalogJanitor chore runs.");
@@ -93,7 +93,7 @@ public class MetaFixer {
    * If hole, it papers it over by adding a region in the filesystem and to hbase:meta. Does not
    * assign.
    */
-  void fixHoles(Report report) {
+  void fixHoles(CatalogJanitorReport report) {
     final List<Pair<RegionInfo, RegionInfo>> holes = report.getHoles();
     if (holes.isEmpty()) {
       LOG.info("CatalogJanitor Report contains no holes to fix. Skipping.");
@@ -229,7 +229,7 @@ public class MetaFixer {
   /**
    * Fix overlaps noted in CJ consistency report.
    */
-  List<Long> fixOverlaps(Report report) throws IOException {
+  List<Long> fixOverlaps(CatalogJanitorReport report) throws IOException {
     List<Long> pidList = new ArrayList<>();
     for (Set<RegionInfo> regions : calculateMerges(maxMergeCount, report.getOverlaps())) {
       RegionInfo[] regionsArray = regions.toArray(new RegionInfo[] {});
