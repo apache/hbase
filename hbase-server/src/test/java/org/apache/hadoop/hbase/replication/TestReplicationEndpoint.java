@@ -556,7 +556,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int ordinal,
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
       int timeout) {
       // Fail only once, we don't want to slow down the test.
       if (failedOnce) {

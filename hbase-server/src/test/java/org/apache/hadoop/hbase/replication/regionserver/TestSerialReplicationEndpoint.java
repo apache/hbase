@@ -165,7 +165,7 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int ordinal,
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
       int timeout) {
       entryQueue.addAll(entries);
       return CompletableFuture.completedFuture(ordinal);

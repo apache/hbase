@@ -388,7 +388,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           replicateContext.getSize());
       }
       // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-      futures.add(createReplicator(entries, i, replicateContext.getTimeout()));
+      futures.add(asyncReplicate(entries, i, replicateContext.getTimeout()));
     }
 
     IOException iox = null;
@@ -612,7 +612,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return resultCompletableFuture;
   }
 
-  protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int batchIndex,
+  protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int batchIndex,
     int timeout) {
     return isSerial
       ? serialReplicateRegionEntries(Iterators.peekingIterator(entries.iterator()), batchIndex,

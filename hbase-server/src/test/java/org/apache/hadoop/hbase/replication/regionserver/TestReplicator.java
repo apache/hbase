@@ -228,7 +228,7 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int ordinal,
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
       int timeout) {
       return replicateEntries(entries, ordinal, timeout).whenComplete((response, exception) -> {
         entriesCount += entries.size();
@@ -245,7 +245,7 @@ public class TestReplicator extends TestReplicationBase {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override
-    protected CompletableFuture<Integer> createReplicator(List<Entry> entries, int ordinal,
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
       int timeout) {
 
       if (failNext.compareAndSet(false, true)) {
