@@ -977,6 +977,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       ZNodeClearer.deleteMyEphemeralNodeOnDisk();
 
       closeZooKeeper();
+      closeTableDescriptors();
       LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
       span.setStatus(StatusCode.OK);
     } finally {
