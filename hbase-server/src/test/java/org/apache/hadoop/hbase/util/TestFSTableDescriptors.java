@@ -286,6 +286,31 @@ public class TestFSTableDescriptors {
   }
 
   @Test
+  public void testParallelGetAll() throws IOException, InterruptedException {
+    final String name = "testParallelGetAll";
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    // Enable parallel load table descriptor.
+    FSTableDescriptors htds = new FSTableDescriptorsTest(fs, testDir, true, 20);
+    final int count = 100;
+    // Write out table infos.
+    for (int i = 0; i < count; i++) {
+      htds.createTableDescriptor(
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(name + i)).build());
+    }
+    // add hbase:meta
+    htds
+      .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
+    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
+      + htds.getAll().size(), count + 1, htds.getAll().size());
+
+    // Test whether the cache works well.
+    for (int i = 0; i < count; i++) {
+      htds.get(TableName.valueOf(name + i));
+    }
+    assertEquals("getAll()'s cache not working ", count, htds.cachehits);
+  }
+
+  @Test
   public void testGetAllOrdering() throws Exception {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors tds = new FSTableDescriptorsTest(fs, testDir);
@@ -465,6 +490,11 @@ public class TestFSTableDescriptors {
 
     public FSTableDescriptorsTest(FileSystem fs, Path rootdir, boolean usecache) {
       super(fs, rootdir, false, usecache);
+    }
+
+    public FSTableDescriptorsTest(FileSystem fs, Path rootdir, boolean usecache,
+      int tableDescriptorParallelLoadThreads) {
+      super(fs, rootdir, false, usecache, tableDescriptorParallelLoadThreads);
     }
 
     @Override
