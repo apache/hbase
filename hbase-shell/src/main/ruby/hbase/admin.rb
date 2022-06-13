@@ -1868,10 +1868,16 @@ module Hbase
       @admin.modifyTableStoreFileTracker(tableName, sft)
     end
 
-     #----------------------------------------------------------------------------------------------
+    #----------------------------------------------------------------------------------------------
     # Change table column family's sft
     def modify_table_family_sft(tableName, family_bytes, sft)
       @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Flush master local region
+    def flush_master_store()
+      @admin.flushMasterStore()
     end
   end
   # rubocop:enable Metrics/ClassLength

@@ -4225,6 +4225,26 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return metaRegionLocationCache.getMetaRegionLocations();
   }
 
+  @Override
+  public void flushMasterStore() throws IOException {
+    LOG.info("Force flush master local region.");
+    if (this.cpHost != null) {
+      try {
+        cpHost.preMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor preMasterStoreFlush()", ioe);
+      }
+    }
+    masterRegion.flush(true);
+    if (this.cpHost != null) {
+      try {
+        cpHost.postMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor postMasterStoreFlush()", ioe);
+      }
+    }
+  }
+
   public Collection<ServerName> getLiveRegionServers() {
     return regionServerTracker.getRegionServers();
   }
