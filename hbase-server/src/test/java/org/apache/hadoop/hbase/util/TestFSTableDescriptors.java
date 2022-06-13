@@ -300,14 +300,15 @@ public class TestFSTableDescriptors {
     // add hbase:meta
     htds
       .createTableDescriptor(TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).build());
-    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
-      + htds.getAll().size(), count + 1, htds.getAll().size());
 
-    // Test whether the cache works well.
-    for (int i = 0; i < count; i++) {
-      htds.get(TableName.valueOf(name + i));
-    }
-    assertEquals("getAll()'s cache not working ", count, htds.cachehits);
+    int getTableDescriptorSize = htds.getAll().size();
+    assertEquals("getAll() didn't return all TableDescriptors, expected: " + (count + 1) + " got: "
+      + getTableDescriptorSize, count + 1, getTableDescriptorSize);
+
+    // get again to check whether the cache works well
+    getTableDescriptorSize = htds.getAll().size();
+    assertEquals("getAll() didn't return all TableDescriptors with cache, expected: " + (count + 1)
+      + " got: " + getTableDescriptorSize, count + 1, getTableDescriptorSize);
   }
 
   @Test
