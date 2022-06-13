@@ -1654,15 +1654,15 @@ Rather than listing each metric which HBase emits by default, you can browse thr
 Different metrics are exposed for the Master process and each region server process.
 
 .Procedure: Access a JSON Output of Available Metrics
-. After starting HBase, access the region server's web UI, at pass:[http://REGIONSERVER_HOSTNAME:60030] by default (or port 16030 in HBase 1.0+).
+. After starting HBase, access the region server's web UI, at pass:[http://REGIONSERVER_HOSTNAME:16030] by default.
 . Click the [label]#Metrics Dump# link near the top.
   The metrics for the region server are presented as a dump of the JMX bean in JSON format.
   This will dump out all metrics names and their values.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:60030/jmx?description=true].
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:16030/jmx?description=true].
   Not all beans and attributes have descriptions.
-. To view metrics for the Master, connect to the Master's web UI instead (defaults to pass:[http://localhost:60010] or port 16010 in HBase 1.0+) and click its [label]#Metrics
+. To view metrics for the Master, connect to the Master's web UI instead (defaults to pass:[http://localhost:16010]) and click its [label]#Metrics
   Dump# link.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:60010/jmx?description=true].
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes pass:[http://REGIONSERVER_HOSTNAME:16010/jmx?description=true].
   Not all beans and attributes have descriptions.
 
 
