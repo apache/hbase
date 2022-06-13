@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +17,13 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,7 +43,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
-import org.apache.hadoop.hbase.regionserver.BrokenStoreFileCleaner;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -47,29 +52,19 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
-  * Mob file cleaner chore test.
-  * 1. Creates MOB table
-  * 2. Load MOB data and flushes it N times
-  * 3. Runs major MOB compaction
-  * 4. Verifies that number of MOB files in a mob directory is N+1
-  * 5. Waits for a period of time larger than minimum age to archive
-  * 6. Runs Mob cleaner chore
-  * 7 Verifies that every old MOB file referenced from current RS was archived
+ * Mob file cleaner chore test. 1. Creates MOB table 2. Load MOB data and flushes it N times 3. Runs
+ * major MOB compaction 4. Verifies that number of MOB files in a mob directory is N+1 5. Waits for
+ * a period of time larger than minimum age to archive 6. Runs Mob cleaner chore 7 Verifies that
+ * every old MOB file referenced from current RS was archived
  */
 @Category(MediumTests.class)
 public class TestRSMobFileCleanerChore {
   private static final Logger LOG = LoggerFactory.getLogger(TestRSMobFileCleanerChore.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSMobFileCleanerChore.class);
+    HBaseClassTestRule.forClass(TestRSMobFileCleanerChore.class);
 
   private HBaseTestingUtil HTU;
 
@@ -78,7 +73,7 @@ public class TestRSMobFileCleanerChore {
   private final static byte[] qualifier = Bytes.toBytes("q1");
   private final static long mobLen = 10;
   private final static byte[] mobVal = Bytes
-      .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
+    .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   private Configuration conf;
   private TableDescriptor tableDescriptor;
@@ -117,8 +112,8 @@ public class TestRSMobFileCleanerChore {
     conf.setInt("hbase.hstore.blockingStoreFiles", 150);
     conf.setInt("hbase.hstore.compaction.throughput.lower.bound", 52428800);
     conf.setInt("hbase.hstore.compaction.throughput.higher.bound", 2 * 52428800);
-    //conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
-    //  FaultyMobStoreCompactor.class.getName());
+    // conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+    // FaultyMobStoreCompactor.class.getName());
     // Disable automatic MOB compaction
     conf.setLong(MobConstants.MOB_COMPACTION_CHORE_PERIOD, 0);
     // Disable automatic MOB file cleaner chore
@@ -126,7 +121,7 @@ public class TestRSMobFileCleanerChore {
     // Set minimum age to archive to 10 sec
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, minAgeToArchive);
     // Set compacted file discharger interval to a half minAgeToArchive
-    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive/2);
+    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive / 2);
   }
 
   private void loadData(int start, int num) {
@@ -155,7 +150,7 @@ public class TestRSMobFileCleanerChore {
   public void testMobFileCleanerChore() throws InterruptedException, IOException {
     loadData(0, 10);
     loadData(10, 10);
-    //loadData(20, 10);
+    // loadData(20, 10);
     long num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(2, num);
     // Major compact
@@ -176,13 +171,13 @@ public class TestRSMobFileCleanerChore {
 
     ServerName serverUsed = null;
     List<RegionInfo> serverRegions = null;
-    for (ServerName sn : admin.getRegionServers()){
+    for (ServerName sn : admin.getRegionServers()) {
       serverRegions = admin.getRegions(sn);
-      if (serverRegions != null && serverRegions.size() > 0){
-        //filtering out non test table regions
-        serverRegions = serverRegions.stream().filter(r -> r.getTable() == table.getName()).collect(
-          Collectors.toList());
-        //if such one is found use this rs
+      if (serverRegions != null && serverRegions.size() > 0) {
+        // filtering out non test table regions
+        serverRegions = serverRegions.stream().filter(r -> r.getTable() == table.getName())
+          .collect(Collectors.toList());
+        // if such one is found use this rs
         if (serverRegions.size() > 0) {
           serverUsed = sn;
         }
@@ -200,12 +195,11 @@ public class TestRSMobFileCleanerChore {
     long scanned = scanTable();
     assertEquals(20, scanned);
 
-    //creating a MOB file not referenced from the current RS
-    Path extraMOBFile =
-      MobTestUtil.generateMOBFileForRegion(conf, table.getName(), familyDescriptor,
-        "nonExistentRegion");
+    // creating a MOB file not referenced from the current RS
+    Path extraMOBFile = MobTestUtil.generateMOBFileForRegion(conf, table.getName(),
+      familyDescriptor, "nonExistentRegion");
 
-    //verifying the new MOBfile is added
+    // verifying the new MOBfile is added
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(4 - serverRegions.size(), num);
 
@@ -217,11 +211,11 @@ public class TestRSMobFileCleanerChore {
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
 
-    //running chore again
+    // running chore again
     chore.chore();
 
-    //the chore should only archive old MOB files that were referenced from the current RS
-    //the unrelated MOB file is still there
+    // the chore should only archive old MOB files that were referenced from the current RS
+    // the unrelated MOB file is still there
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(4 - serverRegions.size(), num);
 
@@ -231,8 +225,8 @@ public class TestRSMobFileCleanerChore {
     assertEquals(20, scanned);
   }
 
-  private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
-      throws IOException {
+  private long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
+    throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
     FileStatus[] stat = fs.listStatus(dir);
@@ -243,7 +237,6 @@ public class TestRSMobFileCleanerChore {
 
     return stat.length;
   }
-
 
   private long scanTable() {
     try {

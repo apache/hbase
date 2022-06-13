@@ -190,17 +190,16 @@ public class HMobStore extends HStore {
 
   /**
    * Creates the writer for the mob file in the mob family directory.
-   * @param date The latest date of written cells.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param startKey The start key.
+   * @param date         The latest date of written cells.
+   * @param maxKeyCount  The key count.
+   * @param compression  The compression algorithm.
+   * @param startKey     The start key.
    * @param isCompaction If the writer is used in compaction.
-   * @return The writer for the mob file.
-   * @throws IOException
+   * @return The writer for the mob file. n
    */
   public StoreFileWriter createWriter(Date date, long maxKeyCount,
-    Compression.Algorithm compression, byte[] startKey,
-    boolean isCompaction, Consumer<Path> writerCreationTracker) throws IOException {
+    Compression.Algorithm compression, byte[] startKey, boolean isCompaction,
+    Consumer<Path> writerCreationTracker) throws IOException {
     if (startKey == null) {
       startKey = HConstants.EMPTY_START_ROW;
     }
@@ -239,9 +238,9 @@ public class HMobStore extends HStore {
    * @return The writer for the mob file. n
    */
 
-  public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath,
-    long maxKeyCount, Compression.Algorithm compression,
-    boolean isCompaction, Consumer<Path> writerCreationTracker) throws IOException {
+  public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath, long maxKeyCount,
+    Compression.Algorithm compression, boolean isCompaction, Consumer<Path> writerCreationTracker)
+    throws IOException {
     return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
       new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
       getStoreContext().getEncryptionContext(), StoreUtils.getChecksumType(conf),
@@ -260,7 +259,7 @@ public class HMobStore extends HStore {
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(sourceFile);
-    if(sourceFile.equals(targetPath)){
+    if (sourceFile.equals(targetPath)) {
       LOG.info("File is already in the destination dir: {}", sourceFile);
       return;
     }

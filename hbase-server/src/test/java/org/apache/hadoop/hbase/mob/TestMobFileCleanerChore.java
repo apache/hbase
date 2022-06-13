@@ -170,7 +170,7 @@ public class TestMobFileCleanerChore {
     // Cleanup
     chore.cleanupObsoleteMobFiles(conf, table.getName());
 
-    //verify that nothing have happened
+    // verify that nothing have happened
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(4, num);
 
@@ -178,9 +178,8 @@ public class TestMobFileCleanerChore {
     assertEquals(30, scanned);
 
     // add a MOB file to with a name refering to a non-existing region
-    Path extraMOBFile =
-      MobTestUtil.generateMOBFileForRegion(conf, table.getName(), familyDescriptor,
-        "nonExistentRegion");
+    Path extraMOBFile = MobTestUtil.generateMOBFileForRegion(conf, table.getName(),
+      familyDescriptor, "nonExistentRegion");
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(5, num);
 
@@ -190,7 +189,7 @@ public class TestMobFileCleanerChore {
     LOG.info("Cleaning up MOB files");
     chore.cleanupObsoleteMobFiles(conf, table.getName());
 
-    //check that the extra file got deleted
+    // check that the extra file got deleted
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
     assertEquals(4, num);
 
@@ -202,7 +201,7 @@ public class TestMobFileCleanerChore {
 
   }
 
-  private  long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
+  private long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)
     throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);

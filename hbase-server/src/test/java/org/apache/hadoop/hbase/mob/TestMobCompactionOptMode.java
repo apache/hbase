@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.mob;
-import java.io.IOException;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.ClassRule;
@@ -44,8 +44,7 @@ public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
   }
 
   protected void additonalConfigSetup() {
-    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY,
-      MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
+    conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
   }
 

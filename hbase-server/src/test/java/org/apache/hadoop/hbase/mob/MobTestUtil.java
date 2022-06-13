@@ -122,13 +122,15 @@ public class MobTestUtil {
     return HBaseTestingUtil.countRows(table, scan);
   }
 
-  public static Path generateMOBFileForRegion(Configuration conf, TableName tableName, ColumnFamilyDescriptor familyDescriptor, String regionName) throws IOException {
+  public static Path generateMOBFileForRegion(Configuration conf, TableName tableName,
+    ColumnFamilyDescriptor familyDescriptor, String regionName) throws IOException {
     Date date = new Date();
     String dateStr = MobUtils.formatDate(date);
     FileSystem fs = FileSystem.get(conf);
     Path cfMOBDir = MobUtils.getMobFamilyPath(conf, tableName, familyDescriptor.getNameAsString());
-    StoreFileWriter writer = MobUtils.createWriter(conf, fs, familyDescriptor, dateStr, cfMOBDir, 1000L, Compression.Algorithm.NONE, "startKey",
-      CacheConfig.DISABLED, Encryption.Context.NONE, false, "");
+    StoreFileWriter writer = MobUtils.createWriter(conf, fs, familyDescriptor, dateStr, cfMOBDir,
+      1000L, Compression.Algorithm.NONE, "startKey", CacheConfig.DISABLED, Encryption.Context.NONE,
+      false, "");
     writer.close();
     return writer.getPath();
   }

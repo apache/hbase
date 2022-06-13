@@ -75,7 +75,7 @@ public class TestDefaultMobStoreFlusher {
 
   @Parameterized.Parameters
   public static Collection<Boolean> data() {
-    Boolean[] data = {false, true};
+    Boolean[] data = { false, true };
     return Arrays.asList(data);
   }
 

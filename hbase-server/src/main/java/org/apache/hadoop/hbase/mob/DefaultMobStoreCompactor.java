@@ -620,11 +620,11 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   private StoreFileWriter newMobWriter(FileDetails fd, boolean major,
     Consumer<Path> writerCreationTracker) throws IOException {
     try {
-      StoreFileWriter mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst() ?
-        mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
+      StoreFileWriter mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst()
+        ? mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
           major ? majorCompactionCompression : minorCompactionCompression,
-          store.getRegionInfo().getStartKey(), true) :
-        mobStore.createWriter(new Date(fd.latestPutTs), fd.maxKeyCount,
+          store.getRegionInfo().getStartKey(), true)
+        : mobStore.createWriter(new Date(fd.latestPutTs), fd.maxKeyCount,
           major ? majorCompactionCompression : minorCompactionCompression,
           store.getRegionInfo().getStartKey(), true, writerCreationTracker);
       LOG.debug("New MOB writer created={} store={}", mobFileWriter.getPath().getName(),

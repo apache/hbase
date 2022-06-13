@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,14 +6,15 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mob;
 
 import java.io.FileNotFoundException;
@@ -49,12 +50,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 /**
- * The class RSMobFileCleanerChore for running cleaner regularly to remove the
- * obsolete (files which have no active references to) mob files that were referenced from the
- * current RS.
+ * The class RSMobFileCleanerChore for running cleaner regularly to remove the obsolete (files which
+ * have no active references to) mob files that were referenced from the current RS.
  */
 @InterfaceAudience.Private
 public class RSMobFileCleanerChore extends ScheduledChore {
@@ -63,11 +64,13 @@ public class RSMobFileCleanerChore extends ScheduledChore {
   private final HRegionServer rs;
 
   public RSMobFileCleanerChore(HRegionServer rs) {
-    super(rs.getServerName() + "-MobFileCleanerChore", rs, rs.getConfiguration()
-      .getInt(MobConstants.MOB_CLEANER_PERIOD, MobConstants.DEFAULT_MOB_CLEANER_PERIOD), Math.round(
-      rs.getConfiguration()
-        .getInt(MobConstants.MOB_CLEANER_PERIOD, MobConstants.DEFAULT_MOB_CLEANER_PERIOD) * ((
-        ThreadLocalRandom.current().nextDouble() + 0.5D))), TimeUnit.SECONDS);
+    super(rs.getServerName() + "-MobFileCleanerChore", rs,
+      rs.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
+        MobConstants.DEFAULT_MOB_CLEANER_PERIOD),
+      Math.round(rs.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
+        MobConstants.DEFAULT_MOB_CLEANER_PERIOD)
+        * ((ThreadLocalRandom.current().nextDouble() + 0.5D))),
+      TimeUnit.SECONDS);
     // to prevent a load spike on the fs the initial delay is modified by +/- 50%
     this.rs = rs;
   }
@@ -76,10 +79,11 @@ public class RSMobFileCleanerChore extends ScheduledChore {
     this.rs = null;
   }
 
-  @Override protected void chore() {
+  @Override
+  protected void chore() {
 
-    long minAgeToArchive = rs.getConfiguration()
-      .getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
+    long minAgeToArchive = rs.getConfiguration().getLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY,
+      MobConstants.DEFAULT_MIN_AGE_TO_ARCHIVE);
     // We check only those MOB files, which creation time is less
     // than maxCreationTimeToArchive. This is a current time - 1h. 1 hour gap
     // gives us full confidence that all corresponding store files will
@@ -112,7 +116,7 @@ public class RSMobFileCleanerChore extends ScheduledChore {
             Set<String> regionMobs = new HashSet<String>();
             Path currentPath = null;
             try {
-              //collectinng referenced MOBs
+              // collectinng referenced MOBs
               for (HStoreFile sf : sfs) {
                 currentPath = sf.getPath();
                 sf.initReader();
@@ -122,8 +126,10 @@ public class RSMobFileCleanerChore extends ScheduledChore {
                 sf.closeStoreFile(true);
                 if (mobRefData == null) {
                   if (bulkloadMarkerData == null) {
-                    LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
-                      + "can not proceed until all old files will be MOB-compacted.", currentPath);
+                    LOG.warn(
+                      "Found old store file with no MOB_FILE_REFS: {} - "
+                        + "can not proceed until all old files will be MOB-compacted.",
+                      currentPath);
                     return;
                   } else {
                     LOG.debug("Skipping file without MOB references (bulkloaded file):{}",
@@ -144,13 +150,12 @@ public class RSMobFileCleanerChore extends ScheduledChore {
                     exception);
                 }
               }
-              //collecting files, MOB included currently being written
-              regionMobs.addAll(
-                store.getStoreFilesBeingWritten().stream().map(path -> path.getName())
-                  .collect(Collectors.toList()));
+              // collecting files, MOB included currently being written
+              regionMobs.addAll(store.getStoreFilesBeingWritten().stream()
+                .map(path -> path.getName()).collect(Collectors.toList()));
 
-              referencedMOBs.computeIfAbsent(hcd.getNameAsString(),
-                  cf -> new HashMap<String, List<String>>())
+              referencedMOBs
+                .computeIfAbsent(hcd.getNameAsString(), cf -> new HashMap<String, List<String>>())
                 .computeIfAbsent(region.getRegionInfo().getEncodedName(), name -> new ArrayList<>())
                 .addAll(regionMobs);
 
@@ -178,7 +183,7 @@ public class RSMobFileCleanerChore extends ScheduledChore {
             .forEach(mobFileList -> mobFileList.stream().forEach(LOG::trace)));
         }
 
-        //collect regions referencing MOB files belonging to the current rs
+        // collect regions referencing MOB files belonging to the current rs
         Set<String> regionsCovered = new HashSet<>();
         referencedMOBs.values().stream()
           .forEach(regionMap -> regionsCovered.addAll(regionMap.keySet()));
@@ -194,16 +199,18 @@ public class RSMobFileCleanerChore extends ScheduledChore {
             String[] mobParts = p.getName().split("_");
             String regionName = mobParts[mobParts.length - 1];
 
-            //skip MOB files not belonging to a region assigned to the current rs
-            if (!regionsCovered.contains(regionName)){
+            // skip MOB files not belonging to a region assigned to the current rs
+            if (!regionsCovered.contains(regionName)) {
               LOG.trace("MOB file does not belong to current rs: {}", p);
               continue;
             }
 
-            //check active or actively written mob files
+            // check active or actively written mob files
             Map<String, List<String>> cfMobs = referencedMOBs.get(hcd.getNameAsString());
-            if (cfMobs != null && cfMobs.get(regionName) != null && cfMobs.get(regionName)
-              .contains(p.getName())) {
+            if (
+              cfMobs != null && cfMobs.get(regionName) != null
+                && cfMobs.get(regionName).contains(p.getName())
+            ) {
               LOG.trace("Keeping active MOB file: {}", p);
               continue;
             }
@@ -238,7 +245,6 @@ public class RSMobFileCleanerChore extends ScheduledChore {
 
   /**
    * Archives the mob files.
-   *
    * @param conf       The current configuration.
    * @param tableName  The table name.
    * @param family     The name of the column family.

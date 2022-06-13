@@ -401,19 +401,19 @@ public abstract class Compactor<T extends CellSink> {
 
   /**
    * Performs the compaction.
-   * @param fd                  FileDetails of cell sink writer
-   * @param scanner             Where to read from.
-   * @param writer              Where to write to.
-   * @param smallestReadPoint   Smallest read point.
-   * @param cleanSeqId          When true, remove seqId(used to be mvcc) value which is &lt;=
-   *                            smallestReadPoint
-   * @param request             compaction request.
-   * @param progress            Progress reporter.
+   * @param fd                FileDetails of cell sink writer
+   * @param scanner           Where to read from.
+   * @param writer            Where to write to.
+   * @param smallestReadPoint Smallest read point.
+   * @param cleanSeqId        When true, remove seqId(used to be mvcc) value which is &lt;=
+   *                          smallestReadPoint
+   * @param request           compaction request.
+   * @param progress          Progress reporter.
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-      CompactionRequestImpl request, CompactionProgress progress) throws IOException {
+    long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
+    CompactionRequestImpl request, CompactionProgress progress) throws IOException {
     assert writer instanceof ShipperListener;
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;

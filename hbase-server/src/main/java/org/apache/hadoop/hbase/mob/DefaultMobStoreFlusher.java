@@ -180,11 +180,11 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     long mobCount = 0;
     long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMax();
-    mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst() ?
-      mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
+    mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst()
+      ? mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
         store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
-        false) :
-      mobStore.createWriter(new Date(time), snapshot.getCellsCount(),
+        false)
+      : mobStore.createWriter(new Date(time), snapshot.getCellsCount(),
         store.getColumnFamilyDescriptor().getCompressionType(), store.getRegionInfo().getStartKey(),
         false, writerCreationTracker);
     // the target path is {tableName}/.mob/{cfName}/mobFiles

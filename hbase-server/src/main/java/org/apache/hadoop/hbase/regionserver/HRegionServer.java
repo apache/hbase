@@ -3529,7 +3529,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   @InterfaceAudience.Private
-  public RSMobFileCleanerChore getRSMobFileCleanerChore(){
+  public RSMobFileCleanerChore getRSMobFileCleanerChore() {
     return rsMobFileCleanerChore;
   }
 

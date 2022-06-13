@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -108,7 +107,7 @@ public class TestMobCompactionWithDefaults {
 
   @Parameterized.Parameters
   public static Collection<Boolean> data() {
-    Boolean[] data = {false, true};
+    Boolean[] data = { false, true };
     return Arrays.asList(data);
   }
 
@@ -291,8 +290,8 @@ public class TestMobCompactionWithDefaults {
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
 
-    //run cleaner chore on each RS
-    for (ServerName sn : admin.getRegionServers()){
+    // run cleaner chore on each RS
+    for (ServerName sn : admin.getRegionServers()) {
       HTU.getMiniHBaseCluster().getRegionServer(sn).getRSMobFileCleanerChore().chore();
     }
 

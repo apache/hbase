@@ -53,7 +53,7 @@ public class TestMobCompactionOptRegionBatchMode extends TestMobCompactionWithDe
   private MobFileCompactionChore compactionChore;
 
   public TestMobCompactionOptRegionBatchMode(Boolean useFileBasedSFT) {
-   super(useFileBasedSFT);
+    super(useFileBasedSFT);
   }
 
   @Before

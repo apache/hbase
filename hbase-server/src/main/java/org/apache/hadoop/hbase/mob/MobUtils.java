@@ -571,19 +571,19 @@ public final class MobUtils {
 
   /**
    * Creates a writer for the mob file in temp directory.
-   * @param conf The current configuration.
-   * @param fs The current file system.
-   * @param family The descriptor of the current column family.
-   * @param path The path for a temp directory.
-   * @param maxKeyCount The key count.
-   * @param compression The compression algorithm.
-   * @param cacheConfig The current cache config.
-   * @param cryptoContext The encryption context.
-   * @param checksumType The checksum type.
-   * @param bytesPerChecksum The bytes per checksum.
-   * @param blocksize The HFile block size.
-   * @param bloomType The bloom filter type.
-   * @param isCompaction If the writer is used in compaction.
+   * @param conf                  The current configuration.
+   * @param fs                    The current file system.
+   * @param family                The descriptor of the current column family.
+   * @param path                  The path for a temp directory.
+   * @param maxKeyCount           The key count.
+   * @param compression           The compression algorithm.
+   * @param cacheConfig           The current cache config.
+   * @param cryptoContext         The encryption context.
+   * @param checksumType          The checksum type.
+   * @param bytesPerChecksum      The bytes per checksum.
+   * @param blocksize             The HFile block size.
+   * @param bloomType             The bloom filter type.
+   * @param isCompaction          If the writer is used in compaction.
    * @param writerCreationTracker to track the current writer in the store
    * @return The writer for the mob file.
    */
@@ -609,9 +609,8 @@ public final class MobUtils {
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(cryptoContext)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
-    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs)
-      .withFilePath(path).withBloomType(bloomType)
-      .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext)
+    StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs).withFilePath(path)
+      .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext)
       .withWriterCreationTracker(writerCreationTracker).build();
     return w;
   }

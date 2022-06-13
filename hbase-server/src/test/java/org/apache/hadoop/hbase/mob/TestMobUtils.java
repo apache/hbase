@@ -27,10 +27,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
-import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
 public class TestMobUtils {
@@ -91,8 +91,7 @@ public class TestMobUtils {
     assertTrue(testTable3Refs.contains("file3b"));
   }
 
-  public static String getTableName(TestName test){
-    return test.getMethodName().replace("[", "-")
-      .replace("]", "");
+  public static String getTableName(TestName test) {
+    return test.getMethodName().replace("[", "-").replace("]", "");
   }
 }

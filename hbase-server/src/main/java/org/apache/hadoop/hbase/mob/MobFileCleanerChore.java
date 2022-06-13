@@ -171,7 +171,7 @@ public class MobFileCleanerChore extends ScheduledChore {
         regionNames.add(regionPath.getName());
         for (ColumnFamilyDescriptor hcd : list) {
           String family = hcd.getNameAsString();
-          Path storePath = new Path(regionPath, family); 
+          Path storePath = new Path(regionPath, family);
           boolean succeed = false;
           Set<String> regionMobs = new HashSet<String>();
 
@@ -200,18 +200,17 @@ public class MobFileCleanerChore extends ScheduledChore {
                 byte[] mobRefData = null;
                 byte[] bulkloadMarkerData = null;
                 try {
-                  sf =
-                    new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
+                  sf = new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
                   sf.initReader();
                   mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
                   bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
                   // close store file to avoid memory leaks
                   sf.closeStoreFile(true);
-                } catch (IOException ex){
+                } catch (IOException ex) {
                   // When FileBased SFT is active the store dir can contain corrupted or incomplete
                   // files. So read errors are expected. We just skip these files.
-                  if (ex instanceof FileNotFoundException){
-                    throw  ex;
+                  if (ex instanceof FileNotFoundException) {
+                    throw ex;
                   }
                   LOG.debug("Failed to get mob data from file: {} due to error.", pp.toString(),
                     ex);
