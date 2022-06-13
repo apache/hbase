@@ -23,6 +23,9 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.MemoryType;
@@ -161,6 +164,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -589,7 +593,8 @@ public class HRegionServer extends Thread
    */
   public HRegionServer(final Configuration conf) throws IOException {
     super("RegionServer"); // thread name
-    try {
+    final Span span = TraceUtil.createSpan("HRegionServer.cxtor");
+    try (Scope ignored = span.makeCurrent()) {
       this.startcode = EnvironmentEdgeManager.currentTime();
       this.conf = conf;
       this.dataFsOk = true;
@@ -701,11 +706,15 @@ public class HRegionServer extends Thread
       this.choreService = new ChoreService(getName(), true);
       this.executorService = new ExecutorService(getName());
       putUpWebUI();
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
       // cause of failed startup is lost.
+      TraceUtil.setError(span, t);
       LOG.error("Failed construction RegionServer", t);
       throw t;
+    } finally {
+      span.end();
     }
   }
 
@@ -920,18 +929,23 @@ public class HRegionServer extends Thread
    * In here we just put up the RpcServer, setup Connection, and ZooKeeper.
    */
   private void preRegistrationInitialization() {
-    try {
+    final Span span = TraceUtil.createSpan("HRegionServer.preRegistrationInitialization");
+    try (Scope ignored = span.makeCurrent()) {
       initializeZooKeeper();
       setupClusterConnection();
       // Setup RPC client for master communication
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId,
         new InetSocketAddress(this.rpcServices.isa.getAddress(), 0),
         clusterConnection.getConnectionMetrics());
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
+      TraceUtil.setError(span, t);
       this.rpcServices.stop();
       abort("Initialization of RS failed.  Hence aborting RS.", t);
+    } finally {
+      span.end();
     }
   }
 
@@ -1042,35 +1056,39 @@ public class HRegionServer extends Thread
         // start up all Services. Use RetryCounter to get backoff in case Master is struggling to
         // come up.
         LOG.debug("About to register with Master.");
-        RetryCounterFactory rcf =
-          new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
-        RetryCounter rc = rcf.create();
-        while (keepLooping()) {
-          RegionServerStartupResponse w = reportForDuty();
-          if (w == null) {
-            long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
-            LOG.warn("reportForDuty failed; sleeping {} ms and then retrying.", sleepTime);
-            this.sleeper.sleep(sleepTime);
-          } else {
-            handleReportForDutyResponse(w);
-            break;
+        TraceUtil.trace(() -> {
+          RetryCounterFactory rcf =
+            new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
+          RetryCounter rc = rcf.create();
+          while (keepLooping()) {
+            RegionServerStartupResponse w = reportForDuty();
+            if (w == null) {
+              long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
+              LOG.warn("reportForDuty failed; sleeping {} ms and then retrying.", sleepTime);
+              this.sleeper.sleep(sleepTime);
+            } else {
+              handleReportForDutyResponse(w);
+              break;
+            }
           }
-        }
+        }, "HRegionServer.registerWithMaster");
       }
 
       if (!isStopped() && isHealthy()) {
-        // start the snapshot handler and other procedure handlers,
-        // since the server is ready to run
-        if (this.rspmHost != null) {
-          this.rspmHost.start();
-        }
-        // Start the Quota Manager
-        if (this.rsQuotaManager != null) {
-          rsQuotaManager.start(getRpcServer().getScheduler());
-        }
-        if (this.rsSpaceQuotaManager != null) {
-          this.rsSpaceQuotaManager.start();
-        }
+        TraceUtil.trace(() -> {
+          // start the snapshot handler and other procedure handlers,
+          // since the server is ready to run
+          if (this.rspmHost != null) {
+            this.rspmHost.start();
+          }
+          // Start the Quota Manager
+          if (this.rsQuotaManager != null) {
+            rsQuotaManager.start(getRpcServer().getScheduler());
+          }
+          if (this.rsSpaceQuotaManager != null) {
+            this.rsSpaceQuotaManager.start();
+          }
+        }, "HRegionServer.startup");
       }
 
       // We registered with the Master. Go into run mode.
@@ -1121,138 +1139,144 @@ public class HRegionServer extends Thread
       }
     }
 
-    if (this.leaseManager != null) {
-      this.leaseManager.closeAfterLeasesExpire();
-    }
-    if (this.splitLogWorker != null) {
-      splitLogWorker.stop();
-    }
-    if (this.infoServer != null) {
-      LOG.info("Stopping infoServer");
-      try {
-        this.infoServer.stop();
-      } catch (Exception e) {
-        LOG.error("Failed to stop infoServer", e);
+    final Span span = TraceUtil.createSpan("HRegionServer exiting main loop");
+    try (Scope ignored = span.makeCurrent()) {
+      if (this.leaseManager != null) {
+        this.leaseManager.closeAfterLeasesExpire();
       }
-    }
-    // Send cache a shutdown.
-    if (blockCache != null) {
-      blockCache.shutdown();
-    }
-    if (mobFileCache != null) {
-      mobFileCache.shutdown();
-    }
-
-    // Send interrupts to wake up threads if sleeping so they notice shutdown.
-    // TODO: Should we check they are alive? If OOME could have exited already
-    if (this.hMemManager != null) {
-      this.hMemManager.stop();
-    }
-    if (this.cacheFlusher != null) {
-      this.cacheFlusher.interruptIfNecessary();
-    }
-    if (this.compactSplitThread != null) {
-      this.compactSplitThread.interruptIfNecessary();
-    }
-
-    // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
-    if (rspmHost != null) {
-      rspmHost.stop(this.abortRequested.get() || this.killed);
-    }
-
-    if (this.killed) {
-      // Just skip out w/o closing regions. Used when testing.
-    } else if (abortRequested.get()) {
-      if (this.dataFsOk) {
-        closeUserRegions(abortRequested.get()); // Don't leave any open file handles
+      if (this.splitLogWorker != null) {
+        splitLogWorker.stop();
       }
-      LOG.info("aborting server " + this.serverName);
-    } else {
-      closeUserRegions(abortRequested.get());
-      LOG.info("stopping server " + this.serverName);
-    }
-
-    if (this.clusterConnection != null && !clusterConnection.isClosed()) {
-      try {
-        this.clusterConnection.close();
-      } catch (IOException e) {
-        // Although the {@link Closeable} interface throws an {@link
-        // IOException}, in reality, the implementation would never do that.
-        LOG.warn("Attempt to close server's short circuit ClusterConnection failed.", e);
-      }
-    }
-
-    // Closing the compactSplit thread before closing meta regions
-    if (!this.killed && containsMetaTableRegions()) {
-      if (!abortRequested.get() || this.dataFsOk) {
-        if (this.compactSplitThread != null) {
-          this.compactSplitThread.join();
-          this.compactSplitThread = null;
+      if (this.infoServer != null) {
+        LOG.info("Stopping infoServer");
+        try {
+          this.infoServer.stop();
+        } catch (Exception e) {
+          LOG.error("Failed to stop infoServer", e);
         }
-        closeMetaTableRegions(abortRequested.get());
       }
-    }
+      // Send cache a shutdown.
+      if (blockCache != null) {
+        blockCache.shutdown();
+      }
+      if (mobFileCache != null) {
+        mobFileCache.shutdown();
+      }
 
-    if (!this.killed && this.dataFsOk) {
-      waitOnAllRegionsToClose(abortRequested.get());
-      LOG.info("stopping server " + this.serverName + "; all regions closed.");
-    }
+      // Send interrupts to wake up threads if sleeping so they notice shutdown.
+      // TODO: Should we check they are alive? If OOME could have exited already
+      if (this.hMemManager != null) {
+        this.hMemManager.stop();
+      }
+      if (this.cacheFlusher != null) {
+        this.cacheFlusher.interruptIfNecessary();
+      }
+      if (this.compactSplitThread != null) {
+        this.compactSplitThread.interruptIfNecessary();
+      }
 
-    // Stop the quota manager
-    if (rsQuotaManager != null) {
-      rsQuotaManager.stop();
-    }
-    if (rsSpaceQuotaManager != null) {
-      rsSpaceQuotaManager.stop();
-      rsSpaceQuotaManager = null;
-    }
+      // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
+      if (rspmHost != null) {
+        rspmHost.stop(this.abortRequested.get() || this.killed);
+      }
 
-    // flag may be changed when closing regions throws exception.
-    if (this.dataFsOk) {
-      shutdownWAL(!abortRequested.get());
-    }
+      if (this.killed) {
+        // Just skip out w/o closing regions. Used when testing.
+      } else if (abortRequested.get()) {
+        if (this.dataFsOk) {
+          closeUserRegions(abortRequested.get()); // Don't leave any open file handles
+        }
+        LOG.info("aborting server " + this.serverName);
+      } else {
+        closeUserRegions(abortRequested.get());
+        LOG.info("stopping server " + this.serverName);
+      }
 
-    // Make sure the proxy is down.
-    if (this.rssStub != null) {
-      this.rssStub = null;
-    }
-    if (this.lockStub != null) {
-      this.lockStub = null;
-    }
-    if (this.rpcClient != null) {
-      this.rpcClient.close();
-    }
-    if (this.leaseManager != null) {
-      this.leaseManager.close();
-    }
-    if (this.pauseMonitor != null) {
-      this.pauseMonitor.stop();
-    }
+      if (this.clusterConnection != null && !clusterConnection.isClosed()) {
+        try {
+          this.clusterConnection.close();
+        } catch (IOException e) {
+          // Although the {@link Closeable} interface throws an {@link
+          // IOException}, in reality, the implementation would never do that.
+          LOG.warn("Attempt to close server's short circuit ClusterConnection failed.", e);
+        }
+      }
 
-    if (!killed) {
-      stopServiceThreads();
-    }
+      // Closing the compactSplit thread before closing meta regions
+      if (!this.killed && containsMetaTableRegions()) {
+        if (!abortRequested.get() || this.dataFsOk) {
+          if (this.compactSplitThread != null) {
+            this.compactSplitThread.join();
+            this.compactSplitThread = null;
+          }
+          closeMetaTableRegions(abortRequested.get());
+        }
+      }
 
-    if (this.rpcServices != null) {
-      this.rpcServices.stop();
-    }
+      if (!this.killed && this.dataFsOk) {
+        waitOnAllRegionsToClose(abortRequested.get());
+        LOG.info("stopping server " + this.serverName + "; all regions closed.");
+      }
 
-    try {
-      deleteMyEphemeralNode();
-    } catch (KeeperException.NoNodeException nn) {
-      // pass
-    } catch (KeeperException e) {
-      LOG.warn("Failed deleting my ephemeral node", e);
-    }
-    // We may have failed to delete the znode at the previous step, but
-    // we delete the file anyway: a second attempt to delete the znode is likely to fail again.
-    ZNodeClearer.deleteMyEphemeralNodeOnDisk();
+      // Stop the quota manager
+      if (rsQuotaManager != null) {
+        rsQuotaManager.stop();
+      }
+      if (rsSpaceQuotaManager != null) {
+        rsSpaceQuotaManager.stop();
+        rsSpaceQuotaManager = null;
+      }
 
-    if (this.zooKeeper != null) {
-      this.zooKeeper.close();
+      // flag may be changed when closing regions throws exception.
+      if (this.dataFsOk) {
+        shutdownWAL(!abortRequested.get());
+      }
+
+      // Make sure the proxy is down.
+      if (this.rssStub != null) {
+        this.rssStub = null;
+      }
+      if (this.lockStub != null) {
+        this.lockStub = null;
+      }
+      if (this.rpcClient != null) {
+        this.rpcClient.close();
+      }
+      if (this.leaseManager != null) {
+        this.leaseManager.close();
+      }
+      if (this.pauseMonitor != null) {
+        this.pauseMonitor.stop();
+      }
+
+      if (!killed) {
+        stopServiceThreads();
+      }
+
+      if (this.rpcServices != null) {
+        this.rpcServices.stop();
+      }
+
+      try {
+        deleteMyEphemeralNode();
+      } catch (KeeperException.NoNodeException nn) {
+        // pass
+      } catch (KeeperException e) {
+        LOG.warn("Failed deleting my ephemeral node", e);
+      }
+      // We may have failed to delete the znode at the previous step, but
+      // we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+      ZNodeClearer.deleteMyEphemeralNodeOnDisk();
+
+      if (this.zooKeeper != null) {
+        this.zooKeeper.close();
+      }
+      this.shutDown = true;
+      LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
+      span.setStatus(StatusCode.OK);
+    } finally {
+      span.end();
     }
-    this.shutDown = true;
-    LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
   }
 
   private boolean containsMetaTableRegions() {
@@ -1293,23 +1317,29 @@ public class HRegionServer extends Thread
       return;
     }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
-    try {
+    final Span span = TraceUtil.createSpan("HRegionServer.tryRegionServerReport");
+    try (Scope ignored = span.makeCurrent()) {
       RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
       request.setServer(ProtobufUtil.toServerName(this.serverName));
       request.setLoad(sl);
       rss.regionServerReport(null, request.build());
+      span.setStatus(StatusCode.OK);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
         // This will be caught and handled as a fatal error in run()
+        TraceUtil.setError(span, ioe);
         throw ioe;
       }
       if (rssStub == rss) {
         rssStub = null;
       }
+      TraceUtil.setError(span, se);
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
       createRegionServerStatusStub(true);
+    } finally {
+      span.end();
     }
   }
 

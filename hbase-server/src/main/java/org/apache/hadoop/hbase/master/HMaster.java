@@ -26,6 +26,9 @@ import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 import com.google.errorprone.annotations.RestrictedApi;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -213,6 +216,7 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -452,7 +456,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    */
   public HMaster(final Configuration conf) throws IOException {
     super(conf);
-    try {
+    final Span span = TraceUtil.createSpan("HMaster.cxtor");
+    try (Scope ignored = span.makeCurrent()) {
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
         maintenanceMode = true;
@@ -513,11 +518,15 @@ public class HMaster extends HRegionServer implements MasterServices {
       cachedClusterId = new CachedClusterId(this, conf);
 
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
+      TraceUtil.setError(span, t);
       LOG.error("Failed construction of Master", t);
       throw t;
+    } finally {
+      span.end();
     }
   }
 
@@ -540,7 +549,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   @Override
   public void run() {
     try {
-      Threads.setDaemonThreadRunning(new Thread(() -> {
+      Threads.setDaemonThreadRunning(new Thread(() -> TraceUtil.trace(() -> {
         try {
           int infoPort = putUpJettyServer();
           startActiveMasterManager(infoPort);
@@ -553,23 +562,29 @@ public class HMaster extends HRegionServer implements MasterServices {
             abort(error, t);
           }
         }
-      }), getName() + ":becomeActiveMaster");
+      }, "HMaster.becomeActiveMaster")), getName() + ":becomeActiveMaster");
       // Fall in here even if we have been aborted. Need to run the shutdown services and
       // the super run call will do this for us.
       super.run();
     } finally {
-      if (this.clusterSchemaService != null) {
-        // If on way out, then we are no longer active master.
-        this.clusterSchemaService.stopAsync();
-        try {
-          this.clusterSchemaService
-            .awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
-              DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
-        } catch (TimeoutException te) {
-          LOG.warn("Failed shutdown of clusterSchemaService", te);
+      final Span span = TraceUtil.createSpan("HMaster exiting main loop");
+      try (Scope ignored = span.makeCurrent()) {
+        if (this.clusterSchemaService != null) {
+          // If on way out, then we are no longer active master.
+          this.clusterSchemaService.stopAsync();
+          try {
+            this.clusterSchemaService
+              .awaitTerminated(getConfiguration().getInt(HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
+                DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
+          } catch (TimeoutException te) {
+            LOG.warn("Failed shutdown of clusterSchemaService", te);
+          }
         }
+        this.activeMaster = false;
+        span.setStatus(StatusCode.OK);
+      } finally {
+        span.end();
       }
-      this.activeMaster = false;
     }
   }
 
@@ -3094,36 +3109,38 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Shutdown the cluster. Master runs a coordinated stop of all RegionServers and then itself.
    */
   public void shutdown() throws IOException {
-    if (cpHost != null) {
-      cpHost.preShutdown();
-    }
-
-    // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
-    // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
-    // the cluster status as down. RegionServers will notice this change in state and will start
-    // shutting themselves down. When last has exited, Master can go down.
-    if (this.serverManager != null) {
-      this.serverManager.shutdownCluster();
-    }
-    if (this.clusterStatusTracker != null) {
-      try {
-        this.clusterStatusTracker.setClusterDown();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+    TraceUtil.trace(() -> {
+      if (cpHost != null) {
+        cpHost.preShutdown();
       }
-    }
-    // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
-    // processing so we can go down.
-    if (this.procedureExecutor != null) {
-      this.procedureExecutor.stop();
-    }
-    // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
-    // this is what we want especially if the Master is in startup phase doing call outs to
-    // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
-    // the rpc to timeout.
-    if (this.clusterConnection != null) {
-      this.clusterConnection.close();
-    }
+
+      // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
+      // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
+      // the cluster status as down. RegionServers will notice this change in state and will start
+      // shutting themselves down. When last has exited, Master can go down.
+      if (this.serverManager != null) {
+        this.serverManager.shutdownCluster();
+      }
+      if (this.clusterStatusTracker != null) {
+        try {
+          this.clusterStatusTracker.setClusterDown();
+        } catch (KeeperException e) {
+          LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+        }
+      }
+      // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
+      // processing so we can go down.
+      if (this.procedureExecutor != null) {
+        this.procedureExecutor.stop();
+      }
+      // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
+      // this is what we want especially if the Master is in startup phase doing call outs to
+      // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
+      // the rpc to timeout.
+      if (this.clusterConnection != null) {
+        this.clusterConnection.close();
+      }
+    }, "HMaster.shutdown");
   }
 
   public void stopMaster() throws IOException {
