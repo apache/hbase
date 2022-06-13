@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -1479,6 +1480,53 @@ public class TestSplitTransactionOnCluster {
       assertEquals(1,regionDirs.size());
     } finally {
       TESTING_UTIL.deleteTable(table);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testMetaRegionMoveDuringSplit() throws Exception {
+    final TableName tableName = TableName.valueOf("testMetaRegionMoveDuringSplit");
+    try {
+      this.admin.setBalancerRunning(false, true);
+
+      ServerName rs1, rs2, rs3;
+      ClusterStatus status = TESTING_UTIL.getHBaseClusterInterface().getClusterStatus();
+      ArrayList<ServerName> serverNames = new ArrayList<>(status.getServers());
+      rs1 = serverNames.get(0);
+      rs2 = serverNames.get(1);
+      rs3 = serverNames.get(2);
+
+      // Move meta region to rs1
+      admin.move(Bytes.toBytes("1588230740"), Bytes.toBytes(rs1.getServerName()));
+      TESTING_UTIL.waitUntilNoRegionsInTransition(60000);
+
+      // Create test table
+      try(Table t = createTableAndWait(tableName, Bytes.toBytes("cf"))) {
+        insertData(tableName, admin, t);
+      }
+
+      // Move test table to rs2 that is different from the RS of meta region. This will cause the problem
+      List<HRegion> regions = cluster.getRegions(tableName);
+      final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+      admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(rs2.getServerName()));
+      TESTING_UTIL.waitUntilNoRegionsInTransition(60000);
+
+      // Find a splittable region
+      regions = cluster.getRegions(tableName);
+      final HRegion region = findSplittableRegion(regions);
+      assertNotNull("not able to find a splittable region", region);
+
+      // Split
+      this.admin.split(region.getRegionInfo().getRegionName(), new byte[] {42});
+
+      // Move meta region from rs1 to rs3 during split
+      this.admin.move(Bytes.toBytes("1588230740"), Bytes.toBytes(rs3.getServerName()));
+
+      LOG.info("Waiting for region to come out of RIT");
+      TESTING_UTIL.waitUntilNoRegionsInTransition(60000);
+    } finally {
+      admin.setBalancerRunning(true, false);
+      TESTING_UTIL.deleteTable(tableName);
     }
   }
 

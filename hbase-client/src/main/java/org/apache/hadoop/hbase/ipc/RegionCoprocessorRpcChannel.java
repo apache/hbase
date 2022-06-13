@@ -90,6 +90,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
       public CoprocessorServiceResponse call(int callTimeout) throws Exception {
         if (rpcController instanceof HBaseRpcController) {
           HBaseRpcController hrc = (HBaseRpcController) rpcController;
+          hrc.reset();
           hrc.setPriority(tableName);
           hrc.setCallTimeout(callTimeout);
         }
