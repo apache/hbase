@@ -104,7 +104,7 @@ public class TestCatalogJanitorCluster {
     RegionStateStore regionStateStore =
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     janitor.scan();
-    Report report = janitor.getLastReport();
+    CatalogJanitorReport report = janitor.getLastReport();
     // Assert no problems.
     assertTrue(report.isEmpty());
     // Now remove first region in table t2 to see if catalogjanitor scan notices.
@@ -234,7 +234,7 @@ public class TestCatalogJanitorCluster {
   public void testHoles() throws IOException {
     CatalogJanitor janitor = TEST_UTIL.getHBaseCluster().getMaster().getCatalogJanitor();
 
-    Report report = janitor.getLastReport();
+    CatalogJanitorReport report = janitor.getLastReport();
     // Assert no problems.
     assertTrue(report.isEmpty());
     // Verify start and end region holes
@@ -249,7 +249,7 @@ public class TestCatalogJanitorCluster {
   private void fixHoles(CatalogJanitor janitor) throws IOException {
     MetaFixer metaFixer = new MetaFixer(TEST_UTIL.getHBaseCluster().getMaster());
     janitor.scan();
-    Report report = janitor.getLastReport();
+    CatalogJanitorReport report = janitor.getLastReport();
     // Verify total number of holes, 2 in t1 and t2 each and one in t3
     assertEquals("Number of holes are not matching", 5, report.getHoles().size());
     metaFixer.fix();
@@ -307,7 +307,7 @@ public class TestCatalogJanitorCluster {
   private LinkedList<Pair<RegionInfo, RegionInfo>> getHoles(CatalogJanitor janitor,
     TableName tableName) throws IOException {
     janitor.scan();
-    Report lastReport = janitor.getLastReport();
+    CatalogJanitorReport lastReport = janitor.getLastReport();
     assertFalse(lastReport.isEmpty());
     LinkedList<Pair<RegionInfo, RegionInfo>> holes = new LinkedList<>();
     for (Pair<RegionInfo, RegionInfo> hole : lastReport.getHoles()) {

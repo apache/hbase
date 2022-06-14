@@ -799,7 +799,7 @@
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.2.13.0</jruby.version>
+    <jruby.version>9.3.4.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.0.1</opentelemetry.version>
@@ -816,16 +816,16 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.31</joni.version>
-    <jcodings.version>1.0.55</jcodings.version>
+    <joni.version>2.1.42</joni.version>
+    <jcodings.version>1.0.56</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.67</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>2.1.0</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>1.5.3</asciidoctorj.pdf.version>
+    <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
@@ -1785,6 +1785,7 @@
           <configuration>
             <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
+            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
@@ -2566,11 +2567,6 @@
             <artifactId>asciidoctorj-pdf</artifactId>
             <version>${asciidoctorj.pdf.version}</version>
           </dependency>
-          <dependency>
-            <groupId>org.jruby</groupId>
-            <artifactId>jruby-complete</artifactId>
-            <version>${jruby.version}</version>
-          </dependency>
         </dependencies>
         <executions>
           <execution>
@@ -2729,12 +2725,6 @@
             </importOrder>
             <trimTrailingWhitespace/>
             <endWithNewline/>
-            <!-- make sure every file has the following copyright header.
-              optionally, Spotless can set copyright years by digging
-              through git history (see "license" section below) -->
-            <licenseHeader>
-              <file>${session.executionRootDirectory}/dev-support/license-header</file>
-            </licenseHeader>
             <removeUnusedImports/>
           </java>
           <pom>
@@ -2763,6 +2753,38 @@
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
               <endWithNewline/>
+            </format>
+            <format>
+              <!--
+                We have some files which have special license header which must be kept, so
+                here we add a special format section to apply license header, and leave the
+                java section above only used for formatting code style
+              -->
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+              </includes>
+              <excludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/package-info.java</exclude>
+                <!-- ByteRange, from Google protobuf -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/AbstractByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimpleMutableByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimplePositionedMutableByteRange.java</exclude>
+                <!-- Metrics, from Josh Elser -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/metrics/impl/HBaseMetrics2HadoopMetricsAdapter.java</exclude>
+                <!-- https://github.com/ept/warc-hadoop, from Martin Kleppmann -->
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileReader.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileWriter.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCInputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+              </excludes>
+              <licenseHeader>
+                <file>${session.executionRootDirectory}/dev-support/license-header</file>
+                <delimiter>package</delimiter>
+              </licenseHeader>
             </format>
           </formats>
         </configuration>
@@ -3366,6 +3388,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3406,6 +3436,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3432,6 +3470,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3461,6 +3507,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3513,6 +3567,22 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.fusesource.leveldbjni</groupId>
+                <artifactId>leveldbjni-all</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.openlabtesting.leveldbjni</groupId>
+                <artifactId>leveldbjni-all</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3562,6 +3632,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3575,6 +3653,22 @@
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3598,6 +3692,14 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3670,6 +3772,14 @@
                 <artifactId>log4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
               </exclusion>
@@ -3712,12 +3822,25 @@
                 <artifactId>log4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <!--
+              Needed in test context when hadoop-3.3 runs.
+              <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
               </exclusion>
+              -->
             </exclusions>
           </dependency>
           <dependency>
+            <!-- Is this needed? Seems a duplicate of the above dependency but for the
+            classifier-->
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-three.version}</version>
@@ -3782,6 +3905,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3793,6 +3924,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

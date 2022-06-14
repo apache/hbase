@@ -54,7 +54,7 @@ public interface MetricsMasterSource extends BaseSource {
   String AVERAGE_LOAD_NAME = "averageLoad";
   String LIVE_REGION_SERVERS_NAME = "liveRegionServers";
   String DEAD_REGION_SERVERS_NAME = "deadRegionServers";
-  String DRAINING_REGION_SERVER_NAME = "draininigRegionServers";
+  String DRAINING_REGION_SERVER_NAME = "drainingRegionServers";
   String NUM_REGION_SERVERS_NAME = "numRegionServers";
   String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
   String NUM_DRAINING_REGION_SERVERS_NAME = "numDrainingRegionServers";

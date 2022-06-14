@@ -758,6 +758,9 @@ message ModifyColumnStoreFileTrackerResponse {
   optional uint64 proc_id = 1;
 }
 
+message FlushMasterStoreRequest {}
+message FlushMasterStoreResponse {}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1197,6 +1200,9 @@ service MasterService {
 
   rpc ModifyColumnStoreFileTracker(ModifyColumnStoreFileTrackerRequest)
     returns(ModifyColumnStoreFileTrackerResponse);
+
+  rpc FlushMasterStore(FlushMasterStoreRequest)
+    returns(FlushMasterStoreResponse);
 }
 
 // HBCK Service definitions.

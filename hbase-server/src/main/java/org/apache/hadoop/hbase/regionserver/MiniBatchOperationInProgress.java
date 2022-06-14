@@ -48,6 +48,13 @@ public class MiniBatchOperationInProgress<T> {
   private int numOfDeletes = 0;
   private int numOfIncrements = 0;
   private int numOfAppends = 0;
+  /**
+   * Here is for HBASE-26993,saving the all the {@link Mutation}s if there is
+   * {@link Durability#SKIP_WAL} in {@link HRegion.BatchOperation#buildWALEdits} for
+   * {@link HRegion#doMiniBatchMutate} to also replicate {@link Mutation} which is
+   * {@link Durability#SKIP_WAL} to region replica.
+   */
+  private WALEdit walEditForReplicateIfExistsSkipWAL = null;
 
   public MiniBatchOperationInProgress(T[] operations, OperationStatus[] retCodeDetails,
     WALEdit[] walEditsFromCoprocessors, int firstIndex, int lastIndexExclusive,
@@ -181,5 +188,13 @@ public class MiniBatchOperationInProgress<T> {
 
   public void incrementNumOfAppends() {
     this.numOfAppends += 1;
+  }
+
+  public WALEdit getWalEditForReplicateIfExistsSkipWAL() {
+    return walEditForReplicateIfExistsSkipWAL;
+  }
+
+  public void setWalEditForReplicateIfExistsSkipWAL(WALEdit walEditForReplicateSkipWAL) {
+    this.walEditForReplicateIfExistsSkipWAL = walEditForReplicateSkipWAL;
   }
 }

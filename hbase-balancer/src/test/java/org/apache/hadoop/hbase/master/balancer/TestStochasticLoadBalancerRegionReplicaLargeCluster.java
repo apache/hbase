@@ -26,7 +26,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestStochasticLoadBalancerRegionReplicaLargeCluster
-  extends StochasticBalancerTestBase2 {
+  extends StochasticBalancerTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -34,6 +34,12 @@ public class TestStochasticLoadBalancerRegionReplicaLargeCluster
 
   @Test
   public void testRegionReplicasOnLargeCluster() {
+    // With default values for moveCost and tableSkewCost, the balancer makes much slower progress.
+    // Since we're only looking for balance in region counts and no colocated replicas, we can
+    // ignore these two cost functions to allow us to make any move that helps other functions.
+    conf.setFloat("hbase.master.balancer.stochastic.moveCost", 0f);
+    conf.setFloat("hbase.master.balancer.stochastic.tableSkewCost", 0f);
+    loadBalancer.onConfigurationChange(conf);
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
     int numRegionsPerServer = 19; // all servers except one

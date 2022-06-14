@@ -46,6 +46,8 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public class CellComparatorImpl implements CellComparator {
 
+  private static final long serialVersionUID = 8186411895799094989L;
+
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion of
    * KeyValue only.

@@ -125,6 +125,10 @@ public class SecureBulkLoadManager {
     }
     if (!fs.exists(baseStagingDir)) {
       fs.mkdirs(baseStagingDir, PERM_HIDDEN);
+      if (!PERM_HIDDEN.equals(PERM_HIDDEN.applyUMask(FsPermission.getUMask(conf)))) {
+        LOG.info("Modifying permissions to " + PERM_HIDDEN);
+        fs.setPermission(baseStagingDir, PERM_HIDDEN);
+      }
     }
   }
 
@@ -398,10 +402,7 @@ public class SecureBulkLoadManager {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
       }
-
-      if (StringUtils.isNotEmpty(customStaging)) {
-        fs.setPermission(stageP, PERM_ALL_ACCESS);
-      }
+      fs.setPermission(stageP, PERM_ALL_ACCESS);
 
       return stageP.toString();
     }

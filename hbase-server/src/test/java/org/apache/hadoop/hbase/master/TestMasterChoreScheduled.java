@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -63,7 +65,7 @@ public class TestMasterChoreScheduled {
   }
 
   @Test
-  public void testDefaultScheduledChores() {
+  public void testDefaultScheduledChores() throws Exception {
     // test if logCleaner chore is scheduled by default in HMaster init
     TestChoreField<LogCleaner> logCleanerTestChoreField = new TestChoreField<>();
     LogCleaner logCleaner = logCleanerTestChoreField.getChoreObj("logCleaner");
@@ -71,7 +73,9 @@ public class TestMasterChoreScheduled {
 
     // test if hfileCleaner chore is scheduled by default in HMaster init
     TestChoreField<HFileCleaner> hFileCleanerTestChoreField = new TestChoreField<>();
-    HFileCleaner hFileCleaner = hFileCleanerTestChoreField.getChoreObj("hfileCleaner");
+    Field masterField = HMaster.class.getDeclaredField("hfileCleaners");
+    masterField.setAccessible(true);
+    HFileCleaner hFileCleaner = ((ArrayList<HFileCleaner>) masterField.get(hMaster)).get(0);
     hFileCleanerTestChoreField.testIfChoreScheduled(hFileCleaner);
 
     // test if replicationBarrierCleaner chore is scheduled by default in HMaster init
