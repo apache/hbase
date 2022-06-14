@@ -29,7 +29,7 @@ limitations under the License.
           description: 'Total `storefileSize` per Region Server',
           data: {
             name: 'region_info',
-            url: 'http://localhost:16010/api/v1/admin/cluster_metrics/live_servers',
+            url: '/api/v1/admin/cluster_metrics/live_servers',
             format: { type: 'json', property: 'data' }
           },
           transform: [

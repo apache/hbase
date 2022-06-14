@@ -20,9 +20,13 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+import static org.apache.hadoop.hbase.master.cleaner.HFileCleaner.CUSTOM_POOL_SIZE;
 import static org.apache.hadoop.hbase.util.DNS.MASTER_HOSTNAME_KEY;
 
 import com.google.errorprone.annotations.RestrictedApi;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -37,6 +41,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -78,6 +83,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PleaseRestartMasterException;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ServerTask;
@@ -129,6 +135,7 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
@@ -218,6 +225,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -378,12 +386,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private HbckChore hbckChore;
   CatalogJanitor catalogJanitorChore;
-  // Threadpool for scanning the archive directory, used by the HFileCleaner
-  private DirScanPool hfileCleanerPool;
   // Threadpool for scanning the Old logs directory, used by the LogCleaner
   private DirScanPool logCleanerPool;
   private LogCleaner logCleaner;
-  private HFileCleaner hfileCleaner;
+  // HFile cleaners for the custom hfile archive paths and the default archive path
+  // The archive path cleaner is the first element
+  private List<HFileCleaner> hfileCleaners = new ArrayList<>();
+  // The hfile cleaner paths, including custom paths and the default archive path
+  private List<Path> hfileCleanerPaths = new ArrayList<>();
+  // The shared hfile cleaner pool for the custom archive paths
+  private DirScanPool sharedHFileCleanerPool;
+  // The exclusive hfile cleaner pool for scanning the archive directory
+  private DirScanPool exclusiveHFileCleanerPool;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
@@ -462,7 +476,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    */
   public HMaster(final Configuration conf) throws IOException {
     super(conf, "Master");
-    try {
+    final Span span = TraceUtil.createSpan("HMaster.cxtor");
+    try (Scope ignored = span.makeCurrent()) {
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
         maintenanceMode = true;
@@ -522,11 +537,15 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       cachedClusterId = new CachedClusterId(this, conf);
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
       this.rpcServices.start(zooKeeper);
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HMaster is often started via reflection and the
       // cause of failed startup is lost.
+      TraceUtil.setError(span, t);
       LOG.error("Failed construction of Master", t);
       throw t;
+    } finally {
+      span.end();
     }
   }
 
@@ -556,7 +575,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     try {
       installShutdownHook();
       registerConfigurationObservers();
-      Threads.setDaemonThreadRunning(new Thread(() -> {
+      Threads.setDaemonThreadRunning(new Thread(TraceUtil.tracedRunnable(() -> {
         try {
           int infoPort = putUpJettyServer();
           startActiveMasterManager(infoPort);
@@ -569,17 +588,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             abort(error, t);
           }
         }
-      }), getName() + ":becomeActiveMaster");
+      }, "HMaster.becomeActiveMaster")), getName() + ":becomeActiveMaster");
       while (!isStopped() && !isAborted()) {
         sleeper.sleep();
       }
-      stopInfoServer();
-      closeClusterConnection();
-      stopServiceThreads();
-      if (this.rpcServices != null) {
-        this.rpcServices.stop();
+      final Span span = TraceUtil.createSpan("HMaster exiting main loop");
+      try (Scope ignored = span.makeCurrent()) {
+        stopInfoServer();
+        closeClusterConnection();
+        stopServiceThreads();
+        if (this.rpcServices != null) {
+          this.rpcServices.stop();
+        }
+        closeZooKeeper();
+        span.setStatus(StatusCode.OK);
+      } finally {
+        span.end();
       }
-      closeZooKeeper();
     } finally {
       if (this.clusterSchemaService != null) {
         // If on way out, then we are no longer active master.
@@ -1158,11 +1183,18 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
     configurationManager.registerObserver(this.balancer);
-    configurationManager.registerObserver(this.hfileCleanerPool);
     configurationManager.registerObserver(this.logCleanerPool);
-    configurationManager.registerObserver(this.hfileCleaner);
     configurationManager.registerObserver(this.logCleaner);
     configurationManager.registerObserver(this.regionsRecoveryConfigManager);
+    configurationManager.registerObserver(this.exclusiveHFileCleanerPool);
+    if (this.sharedHFileCleanerPool != null) {
+      configurationManager.registerObserver(this.sharedHFileCleanerPool);
+    }
+    if (this.hfileCleaners != null) {
+      for (HFileCleaner cleaner : hfileCleaners) {
+        configurationManager.registerObserver(cleaner);
+      }
+    }
     // Set master as 'initialized'.
     setInitialized(true);
 
@@ -1439,8 +1471,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   boolean isCleanerChoreEnabled() {
     boolean hfileCleanerFlag = true, logCleanerFlag = true;
 
-    if (hfileCleaner != null) {
-      hfileCleanerFlag = hfileCleaner.getEnabled();
+    if (getHFileCleaner() != null) {
+      hfileCleanerFlag = getHFileCleaner().getEnabled();
     }
 
     if (logCleaner != null) {
@@ -1539,13 +1571,47 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         getMasterWalManager().getOldLogDir(), logCleanerPool, params);
     getChoreService().scheduleChore(logCleaner);
 
-    // start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    // Create archive cleaner thread pool
-    hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
-    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf,
-      getMasterFileSystem().getFileSystem(), archiveDir, hfileCleanerPool, params);
-    getChoreService().scheduleChore(hfileCleaner);
+
+    // Create custom archive hfile cleaners
+    String[] paths = conf.getStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS);
+    // todo: handle the overlap issues for the custom paths
+
+    if (paths != null && paths.length > 0) {
+      if (conf.getStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS) == null) {
+        Set<String> cleanerClasses = new HashSet<>();
+        String[] cleaners = conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+        if (cleaners != null) {
+          Collections.addAll(cleanerClasses, cleaners);
+        }
+        conf.setStrings(HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS,
+          cleanerClasses.toArray(new String[cleanerClasses.size()]));
+        LOG.info("Archive custom cleaner paths: {}, plugins: {}", Arrays.asList(paths),
+          cleanerClasses);
+      }
+      // share the hfile cleaner pool in custom paths
+      sharedHFileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf.get(CUSTOM_POOL_SIZE, "6"));
+      for (int i = 0; i < paths.length; i++) {
+        Path path = new Path(paths[i].trim());
+        HFileCleaner cleaner =
+          new HFileCleaner("ArchiveCustomHFileCleaner-" + path.getName(), cleanerInterval, this,
+            conf, getMasterFileSystem().getFileSystem(), new Path(archiveDir, path),
+            HFileCleaner.HFILE_CLEANER_CUSTOM_PATHS_PLUGINS, sharedHFileCleanerPool, params, null);
+        hfileCleaners.add(cleaner);
+        hfileCleanerPaths.add(path);
+      }
+    }
+
+    // Create the whole archive dir cleaner thread pool
+    exclusiveHFileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
+    hfileCleaners.add(0,
+      new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem().getFileSystem(),
+        archiveDir, exclusiveHFileCleanerPool, params, hfileCleanerPaths));
+    hfileCleanerPaths.add(0, archiveDir);
+    // Schedule all the hfile cleaners
+    for (HFileCleaner hFileCleaner : hfileCleaners) {
+      getChoreService().scheduleChore(hFileCleaner);
+    }
 
     // Regions Reopen based on very high storeFileRefCount is considered enabled
     // only if hbase.regions.recovery.store.file.ref.count has value > 0
@@ -1593,13 +1659,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     stopChoreService();
     stopExecutorService();
-    if (hfileCleanerPool != null) {
-      hfileCleanerPool.shutdownNow();
-      hfileCleanerPool = null;
+    if (exclusiveHFileCleanerPool != null) {
+      exclusiveHFileCleanerPool.shutdownNow();
+      exclusiveHFileCleanerPool = null;
     }
     if (logCleanerPool != null) {
       logCleanerPool.shutdownNow();
       logCleanerPool = null;
+    }
+    if (sharedHFileCleanerPool != null) {
+      sharedHFileCleanerPool.shutdownNow();
+      sharedHFileCleanerPool = null;
     }
     if (maintenanceRegionServer != null) {
       maintenanceRegionServer.getRegionServer().stop(HBASE_MASTER_CLEANER_INTERVAL);
@@ -1735,7 +1805,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(clusterStatusPublisherChore);
     shutdownChore(snapshotQuotaChore);
     shutdownChore(logCleaner);
-    shutdownChore(hfileCleaner);
+    if (hfileCleaners != null) {
+      for (ScheduledChore chore : hfileCleaners) {
+        chore.shutdown();
+      }
+      hfileCleaners = null;
+    }
     shutdownChore(replicationBarrierCleaner);
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
@@ -2844,6 +2919,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           }
           break;
         }
+        case DECOMMISSIONED_SERVERS: {
+          if (serverManager != null) {
+            builder.setDecommissionedServerNames(serverManager.getDrainingServersList());
+          }
+          break;
+        }
       }
     }
 
@@ -3024,36 +3105,38 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * Shutdown the cluster. Master runs a coordinated stop of all RegionServers and then itself.
    */
   public void shutdown() throws IOException {
-    if (cpHost != null) {
-      cpHost.preShutdown();
-    }
-
-    // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
-    // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
-    // the cluster status as down. RegionServers will notice this change in state and will start
-    // shutting themselves down. When last has exited, Master can go down.
-    if (this.serverManager != null) {
-      this.serverManager.shutdownCluster();
-    }
-    if (this.clusterStatusTracker != null) {
-      try {
-        this.clusterStatusTracker.setClusterDown();
-      } catch (KeeperException e) {
-        LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+    TraceUtil.trace(() -> {
+      if (cpHost != null) {
+        cpHost.preShutdown();
       }
-    }
-    // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
-    // processing so we can go down.
-    if (this.procedureExecutor != null) {
-      this.procedureExecutor.stop();
-    }
-    // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
-    // this is what we want especially if the Master is in startup phase doing call outs to
-    // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
-    // the rpc to timeout.
-    if (this.asyncClusterConnection != null) {
-      this.asyncClusterConnection.close();
-    }
+
+      // Tell the servermanager cluster shutdown has been called. This makes it so when Master is
+      // last running server, it'll stop itself. Next, we broadcast the cluster shutdown by setting
+      // the cluster status as down. RegionServers will notice this change in state and will start
+      // shutting themselves down. When last has exited, Master can go down.
+      if (this.serverManager != null) {
+        this.serverManager.shutdownCluster();
+      }
+      if (this.clusterStatusTracker != null) {
+        try {
+          this.clusterStatusTracker.setClusterDown();
+        } catch (KeeperException e) {
+          LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
+        }
+      }
+      // Stop the procedure executor. Will stop any ongoing assign, unassign, server crash etc.,
+      // processing so we can go down.
+      if (this.procedureExecutor != null) {
+        this.procedureExecutor.stop();
+      }
+      // Shutdown our cluster connection. This will kill any hosted RPCs that might be going on;
+      // this is what we want especially if the Master is in startup phase doing call outs to
+      // hbase:meta, etc. when cluster is down. Without ths connection close, we'd have to wait on
+      // the rpc to timeout.
+      if (this.asyncClusterConnection != null) {
+        this.asyncClusterConnection.close();
+      }
+    }, "HMaster.shutdown");
   }
 
   public void stopMaster() throws IOException {
@@ -3210,7 +3293,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   public HFileCleaner getHFileCleaner() {
-    return this.hfileCleaner;
+    return this.hfileCleaners.get(0);
+  }
+
+  public List<HFileCleaner> getHFileCleaners() {
+    return this.hfileCleaners;
   }
 
   public LogCleaner getLogCleaner() {
@@ -4136,6 +4223,26 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public List<HRegionLocation> getMetaLocations() {
     return metaRegionLocationCache.getMetaRegionLocations();
+  }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    LOG.info("Force flush master local region.");
+    if (this.cpHost != null) {
+      try {
+        cpHost.preMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor preMasterStoreFlush()", ioe);
+      }
+    }
+    masterRegion.flush(true);
+    if (this.cpHost != null) {
+      try {
+        cpHost.postMasterStoreFlush();
+      } catch (IOException ioe) {
+        LOG.error("Error invoking master coprocessor postMasterStoreFlush()", ioe);
+      }
+    }
   }
 
   public Collection<ServerName> getLiveRegionServers() {

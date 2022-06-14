@@ -718,7 +718,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     ADMIN.addRSGroup(rsGroup2);
 
     long startTime = EnvironmentEdgeManager.currentTime();
-    ADMIN.moveServersToRSGroup(Sets.newHashSet(newGroup.getServers().first()), rsGroup2);
+    ADMIN.moveServersToRSGroup(Sets.newHashSet(newGroup.getServers().iterator().next()), rsGroup2);
     long timeTaken = EnvironmentEdgeManager.currentTime() - startTime;
     String msg =
       "Should not take mote than 15000 ms to move a table with 100 regions. Time taken  ="

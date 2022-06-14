@@ -934,4 +934,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     throws IOException {
     return admin.modifyTableStoreFileTrackerAsync(tableName, dstSFT);
   }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    admin.flushMasterStore();
+  }
 }

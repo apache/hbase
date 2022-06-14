@@ -57,10 +57,13 @@ public class DirScanPool implements ConfigurationObserver {
   }
 
   private DirScanPool(Configuration conf, Type dirScanPoolType) {
+    this(dirScanPoolType, conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
+      dirScanPoolType.cleanerPoolSizeConfigDefault));
+  }
+
+  private DirScanPool(Type dirScanPoolType, String poolSize) {
     this.dirScanPoolType = dirScanPoolType;
     this.name = dirScanPoolType.name().toLowerCase();
-    String poolSize = conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
-      dirScanPoolType.cleanerPoolSizeConfigDefault);
     size = CleanerChore.calculatePoolSize(poolSize);
     // poolSize may be 0 or 0.0 from a careless configuration,
     // double check to make sure.
@@ -141,6 +144,10 @@ public class DirScanPool implements ConfigurationObserver {
 
   public static DirScanPool getHFileCleanerScanPool(Configuration conf) {
     return new DirScanPool(conf, Type.HFILE_CLEANER);
+  }
+
+  public static DirScanPool getHFileCleanerScanPool(String poolSize) {
+    return new DirScanPool(Type.HFILE_CLEANER, poolSize);
   }
 
   public static DirScanPool getLogCleanerScanPool(Configuration conf) {

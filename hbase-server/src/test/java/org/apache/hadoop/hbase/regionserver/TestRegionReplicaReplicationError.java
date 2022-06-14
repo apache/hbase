@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -69,7 +72,8 @@ public class TestRegionReplicaReplicationError {
 
   public static final class ErrorReplayRSRpcServices extends RSRpcServices {
 
-    private final AtomicInteger count = new AtomicInteger(0);
+    private final ConcurrentHashMap<HRegion, AtomicInteger> regionToCounter =
+      new ConcurrentHashMap<HRegion, AtomicInteger>();
 
     public ErrorReplayRSRpcServices(HRegionServer rs) throws IOException {
       super(rs);
@@ -89,8 +93,12 @@ public class TestRegionReplicaReplicationError {
       } catch (NotServingRegionException e) {
         throw new ServiceException(e);
       }
+
+      AtomicInteger counter =
+        ConcurrentMapUtils.computeIfAbsent(regionToCounter, region, () -> new AtomicInteger(0));
+
       // fail the first several request
-      if (region.getRegionInfo().getReplicaId() == 1 && count.addAndGet(entries.size()) < 100) {
+      if (region.getRegionInfo().getReplicaId() == 1 && counter.addAndGet(entries.size()) < 100) {
         throw new ServiceException("Inject error!");
       }
       return super.replicateToReplica(controller, request);
@@ -112,7 +120,7 @@ public class TestRegionReplicaReplicationError {
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
-  private static TableName TN = TableName.valueOf("test");
+  private static String TN = "test";
 
   private static byte[] CF = Bytes.toBytes("cf");
 
@@ -124,9 +132,6 @@ public class TestRegionReplicaReplicationError {
       true);
     HTU.startMiniCluster(
       StartTestingClusterOption.builder().rsClass(RSForTest.class).numRegionServers(3).build());
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(TN).setRegionReplication(3)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
-    HTU.getAdmin().createTable(td);
   }
 
   @AfterClass
@@ -145,8 +150,26 @@ public class TestRegionReplicaReplicationError {
   }
 
   @Test
-  public void test() throws IOException {
-    try (Table table = HTU.getConnection().getTable(TN)) {
+  public void testDefaultDurability() throws IOException {
+    doTest(false);
+  }
+
+  @Test
+  public void testSkipWAL() throws IOException {
+    doTest(true);
+  }
+
+  private void doTest(boolean skipWAL) throws IOException {
+    TableName tableName = TableName.valueOf(TN + (skipWAL ? "_skipWAL" : ""));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
+      .setRegionReplication(3).setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF));
+    if (skipWAL) {
+      builder.setDurability(Durability.SKIP_WAL);
+    }
+    TableDescriptor td = builder.build();
+    HTU.getAdmin().createTable(td);
+
+    try (Table table = HTU.getConnection().getTable(tableName)) {
       for (int i = 0; i < 500; i++) {
         table.put(new Put(Bytes.toBytes(i)).addColumn(CF, CQ, Bytes.toBytes(i)));
       }

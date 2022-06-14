@@ -244,8 +244,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       return new OnheapDecodedCell(Bytes.copy(keyBuffer, 0, this.keyLength),
         currentKey.getRowLength(), currentKey.getFamilyOffset(), currentKey.getFamilyLength(),
         currentKey.getQualifierOffset(), currentKey.getQualifierLength(), currentKey.getTimestamp(),
-        currentKey.getTypeByte(), Bytes.copy(valAndTagsBuffer.array(), valAndTagsBuffer.arrayOffset() + vOffset,
-        this.valueLength), 0, this.valueLength, memstoreTS, tagsArray, tOffset, this.tagsLength);
+        currentKey.getTypeByte(), Bytes.copy(valAndTagsBuffer.array(),
+          valAndTagsBuffer.arrayOffset() + vOffset, this.valueLength),
+        0, this.valueLength, memstoreTS, tagsArray, tOffset, this.tagsLength);
     }
 
     private Cell toOffheapCell(ByteBuffer valAndTagsBuffer, int vOffset,

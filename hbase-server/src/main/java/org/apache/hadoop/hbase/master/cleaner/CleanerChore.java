@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,10 +80,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected final Map<String, Object> params;
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   protected List<T> cleanersChain;
+  protected List<String> excludeDirs;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
     FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
-    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null);
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null, null);
   }
 
   /**
@@ -97,7 +99,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param params      members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params) {
+    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params,
+    List<Path> excludePaths) {
     super(name, s, sleepPeriod);
 
     Preconditions.checkNotNull(pool, "Chore's pool can not be null");
@@ -106,6 +109,19 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.oldFileDir = oldFileDir;
     this.conf = conf;
     this.params = params;
+    if (excludePaths != null && !excludePaths.isEmpty()) {
+      excludeDirs = new ArrayList<>(excludePaths.size());
+      for (Path path : excludePaths) {
+        StringBuilder dirPart = new StringBuilder(path.toString());
+        if (!path.toString().endsWith("/")) {
+          dirPart.append("/");
+        }
+        excludeDirs.add(dirPart.toString());
+      }
+    }
+    if (excludeDirs != null) {
+      LOG.info("Cleaner {} excludes sub dirs: {}", name, excludeDirs);
+    }
     initCleanerChain(confKey);
   }
 
@@ -419,9 +435,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         sortByConsumedSpace(subDirs);
         // Submit the request of sub-directory deletion.
         subDirs.forEach(subDir -> {
-          CompletableFuture<Boolean> subFuture = new CompletableFuture<>();
-          pool.execute(() -> traverseAndDelete(subDir.getPath(), false, subFuture));
-          futures.add(subFuture);
+          if (!shouldExclude(subDir)) {
+            CompletableFuture<Boolean> subFuture = new CompletableFuture<>();
+            pool.execute(() -> traverseAndDelete(subDir.getPath(), false, subFuture));
+            futures.add(subFuture);
+          }
         });
       }
 
@@ -451,9 +469,32 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
         });
     } catch (Exception e) {
-      LOG.debug("Failed to traverse and delete the path: {}", dir, e);
+      if (e instanceof FileNotFoundException) {
+        LOG.debug("Dir dose not exist, {}", dir);
+      } else {
+        LOG.error("Failed to traverse and delete the path: {}", dir, e);
+      }
       result.completeExceptionally(e);
     }
+  }
+
+  /**
+   * Check if a path should not perform clear
+   */
+  private boolean shouldExclude(FileStatus f) {
+    if (!f.isDirectory()) {
+      return false;
+    }
+    if (excludeDirs != null && !excludeDirs.isEmpty()) {
+      for (String dirPart : excludeDirs) {
+        // since we make excludeDirs end with '/',
+        // if a path contains() the dirPart, the path should be excluded
+        if (f.getPath().toString().contains(dirPart)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
