@@ -60,6 +60,17 @@ public final class TableDescriptorChecker {
   private TableDescriptorChecker() {
   }
 
+
+  private static boolean shouldSanityCheck(final Configuration conf, final TableDescriptor td) {
+    if (conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
+      return true;
+    }
+    String tableVal = td.getValue(TABLE_SANITY_CHECKS);
+    if (tableVal != null && Boolean.valueOf(tableVal)) {
+      return true;
+    }
+    return false;
+  }
   /**
    * Checks whether the table conforms to some sane limits, and configured values (compression, etc)
    * work. Throws an exception if something is wrong.
@@ -68,15 +79,8 @@ public final class TableDescriptorChecker {
     throws IOException {
     CompoundConfiguration conf = new CompoundConfiguration().add(c).addBytesMap(td.getValues());
 
-    // Setting this to true logs the warning instead of throwing exception
-    boolean logWarn = false;
-    if (!conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
-      logWarn = true;
-    }
-    String tableVal = td.getValue(TABLE_SANITY_CHECKS);
-    if (tableVal != null && !Boolean.valueOf(tableVal)) {
-      logWarn = true;
-    }
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(c, td);
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
@@ -107,28 +111,16 @@ public final class TableDescriptorChecker {
     }
 
     // check that coprocessors and other specified plugin classes can be loaded
-    try {
-      checkClassLoading(conf, td);
-    } catch (Exception ex) {
-      warnOrThrowExceptionForFailure(logWarn, ex.getMessage(), null);
-    }
+    checkClassLoading(conf, td);
 
     if (conf.getBoolean(MASTER_CHECK_COMPRESSION, DEFAULT_MASTER_CHECK_COMPRESSION)) {
       // check compression can be loaded
-      try {
-        checkCompression(td);
-      } catch (IOException e) {
-        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-      }
+      checkCompression(conf, td);
     }
 
     if (conf.getBoolean(MASTER_CHECK_ENCRYPTION, DEFAULT_MASTER_CHECK_ENCRYPTION)) {
       // check encryption can be loaded
-      try {
-        checkEncryption(conf, td);
-      } catch (IOException e) {
-        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-      }
+      checkEncryption(conf, td);
     }
 
     // Verify compaction policy
@@ -186,9 +178,18 @@ public final class TableDescriptorChecker {
       }
 
       // check replication scope
-      checkReplicationScope(hcd);
+      try {
+        checkReplicationScope(hcd);
+      } catch (IOException e) {
+        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+      }
+
       // check bloom filter type
-      checkBloomFilterType(hcd);
+      try {
+        checkBloomFilterType(hcd);
+      } catch (IOException e) {
+        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+      }
 
       // check data replication factor, it can be 0(default value) when user has not explicitly
       // set the value, in this case we use default replication factor set in the file system.
@@ -214,7 +215,6 @@ public final class TableDescriptorChecker {
       String message = "Replication scope for column family " + cfd.getNameAsString() + " is "
         + cfd.getScope() + " which is invalid.";
 
-      LOG.error(message);
       throw new DoNotRetryIOException(message);
     }
   }
@@ -284,26 +284,44 @@ public final class TableDescriptorChecker {
     }
   }
 
-  public static void checkCompression(final TableDescriptor td) throws IOException {
-    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      CompressionTest.testCompression(cfd.getCompressionType());
-      CompressionTest.testCompression(cfd.getCompactionCompressionType());
-      CompressionTest.testCompression(cfd.getMajorCompactionCompressionType());
-      CompressionTest.testCompression(cfd.getMinorCompactionCompressionType());
+  public static void checkCompression(final Configuration conf, final TableDescriptor td) throws IOException {
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
+    try {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        CompressionTest.testCompression(cfd.getCompressionType());
+        CompressionTest.testCompression(cfd.getCompactionCompressionType());
+        CompressionTest.testCompression(cfd.getMajorCompactionCompressionType());
+        CompressionTest.testCompression(cfd.getMinorCompactionCompressionType());
+      }
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
   }
 
   public static void checkEncryption(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-      EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
+    try {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
+      }
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
   }
 
   public static void checkClassLoading(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    RegionSplitPolicy.getSplitPolicyClass(td, conf);
-    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
+    try {
+      RegionSplitPolicy.getSplitPolicyClass(td, conf);
+      RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+    }
   }
 
   // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.

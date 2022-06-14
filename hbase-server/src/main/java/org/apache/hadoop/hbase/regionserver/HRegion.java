@@ -7708,7 +7708,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private HRegion openHRegion(final CancelableProgressable reporter) throws IOException {
     try {
       // Refuse to open the region if we are missing local compression support
-      TableDescriptorChecker.checkCompression(htableDescriptor);
+      TableDescriptorChecker.checkCompression(conf, htableDescriptor);
       // Refuse to open the region if encryption configuration is incorrect or
       // codec support is missing
       LOG.debug("checking encryption for " + this.getRegionInfo().getEncodedName());
