@@ -45,27 +45,28 @@ public final class NettyRpcClientConfigHelper {
   public static final String EVENT_LOOP_CONFIG = "hbase.rpc.client.event-loop.config";
 
   /**
-   * Name of property to change netty rpc client eventloop thread count. Default is 0.
-   * Tests may set this down from unlimited.
+   * Name of property to change netty rpc client eventloop thread count. Default is 0. Tests may set
+   * this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY =
     "hbase.netty.eventloop.rpcclient.thread.count";
 
   private static final String CONFIG_NAME = "global-event-loop";
 
-  private static final Map<String, Pair<EventLoopGroup, Class<? extends Channel>>>
-    EVENT_LOOP_CONFIG_MAP = new HashMap<>();
+  private static final Map<String,
+    Pair<EventLoopGroup, Class<? extends Channel>>> EVENT_LOOP_CONFIG_MAP = new HashMap<>();
 
   /**
    * Shutdown constructor.
    */
-  private NettyRpcClientConfigHelper() {}
+  private NettyRpcClientConfigHelper() {
+  }
 
   /**
    * Set the EventLoopGroup and channel class for {@code AsyncRpcClient}.
    */
   public static void setEventLoopConfig(Configuration conf, EventLoopGroup group,
-      Class<? extends Channel> channelClass) {
+    Class<? extends Channel> channelClass) {
     Preconditions.checkNotNull(group, "group is null");
     Preconditions.checkNotNull(channelClass, "channel class is null");
     conf.set(EVENT_LOOP_CONFIG, CONFIG_NAME);

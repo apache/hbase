@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,11 +19,15 @@ package org.apache.hadoop.hbase.hbtop.field;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents the type of a {@link FieldValue}.
  */
 @InterfaceAudience.Private
 public enum FieldValueType {
-  STRING, INTEGER, LONG, FLOAT, SIZE, PERCENT
+  STRING,
+  INTEGER,
+  LONG,
+  FLOAT,
+  SIZE,
+  PERCENT
 }

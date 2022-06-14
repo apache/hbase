@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.nio.ByteBuffer;
@@ -30,20 +29,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.DirectBuffer;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * ByteBuffAllocator is a nio ByteBuffer pool.
- * It returns {@link ByteBuff}s which are wrappers of offheap {@link ByteBuffer} usually. If we are
- * sure that the returned ByteBuffs have reached the end of their life cycle, we must call
- * {@link ByteBuff#release()} to return buffers to the pool otherwise the pool will leak. If the
- * desired memory size is larger than what the ByteBufferPool has available, we'll downgrade to
- * allocate ByteBuffers from the heap. Increase the ByteBufferPool size if detect this case.<br/>
+ * ByteBuffAllocator is a nio ByteBuffer pool. It returns {@link ByteBuff}s which are wrappers of
+ * offheap {@link ByteBuffer} usually. If we are sure that the returned ByteBuffs have reached the
+ * end of their life cycle, we must call {@link ByteBuff#release()} to return buffers to the pool
+ * otherwise the pool will leak. If the desired memory size is larger than what the ByteBufferPool
+ * has available, we'll downgrade to allocate ByteBuffers from the heap. Increase the ByteBufferPool
+ * size if detect this case.<br/>
  * <br/>
  * For better memory/pool utilization, there is a lower bound named
  * <code>minSizeForReservoirUse</code> in this allocator, and if the desired size is less than
@@ -72,30 +71,29 @@ public class ByteBuffAllocator {
   public static final String MIN_ALLOCATE_SIZE_KEY = "hbase.server.allocator.minimal.allocate.size";
 
   /**
-   * Set an alternate bytebuffallocator by setting this config,
-   * e.g. we can config {@link DeallocateRewriteByteBuffAllocator} to find out
-   * prematurely release issues
+   * Set an alternate bytebuffallocator by setting this config, e.g. we can config
+   * {@link DeallocateRewriteByteBuffAllocator} to find out prematurely release issues
    */
   public static final String BYTEBUFF_ALLOCATOR_CLASS = "hbase.bytebuff.allocator.class";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
+   *             {@link ByteBuffAllocator#ALLOCATOR_POOL_ENABLED_KEY} instead.
    */
   @Deprecated
   public static final String DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY =
-      "hbase.ipc.server.reservoir.enabled";
+    "hbase.ipc.server.reservoir.enabled";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
+   *             {@link ByteBuffAllocator#MAX_BUFFER_COUNT_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_MAX_BUFFER_COUNT_KEY = "hbase.ipc.server.reservoir.initial.max";
 
   /**
    * @deprecated since 2.3.0 and will be removed in 4.0.0. Use
-   *   {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
+   *             {@link ByteBuffAllocator#BUFFER_SIZE_KEY} instead.
    */
   @Deprecated
   static final String DEPRECATED_BUFFER_SIZE_KEY = "hbase.ipc.server.reservoir.initial.buffer.size";
@@ -149,11 +147,12 @@ public class ByteBuffAllocator {
    * Initialize an {@link ByteBuffAllocator} which will try to allocate ByteBuffers from off-heap if
    * reservoir is enabled and the reservoir has enough buffers, otherwise the allocator will just
    * allocate the insufficient buffers from on-heap to meet the requirement.
-   * @param conf which get the arguments to initialize the allocator.
+   * @param conf             which get the arguments to initialize the allocator.
    * @param reservoirEnabled indicate whether the reservoir is enabled or disabled. NOTICE: if
-   *          reservoir is enabled, then we will use the pool allocator to allocate off-heap
-   *          ByteBuffers and use the HEAP allocator to allocate heap ByteBuffers. Otherwise if
-   *          reservoir is disabled then all allocations will happen in HEAP instance.
+   *                         reservoir is enabled, then we will use the pool allocator to allocate
+   *                         off-heap ByteBuffers and use the HEAP allocator to allocate heap
+   *                         ByteBuffers. Otherwise if reservoir is disabled then all allocations
+   *                         will happen in HEAP instance.
    * @return ByteBuffAllocator to manage the byte buffers.
    */
   public static ByteBuffAllocator create(Configuration conf, boolean reservoirEnabled) {
@@ -174,12 +173,12 @@ public class ByteBuffAllocator {
       // we consider and consider that also for the max buffers to pool
       int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
       int maxBuffCount =
-          conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-            HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
+        conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
       Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
-      return (ByteBuffAllocator) ReflectionUtils
-        .newInstance(clazz, true, maxBuffCount, poolBufSize, minSizeForReservoirUse);
+      return (ByteBuffAllocator) ReflectionUtils.newInstance(clazz, true, maxBuffCount, poolBufSize,
+        minSizeForReservoirUse);
     } else {
       return HEAP;
     }
@@ -335,11 +334,8 @@ public class ByteBuffAllocator {
   public void clean() {
     while (!buffers.isEmpty()) {
       ByteBuffer b = buffers.poll();
-      if (b instanceof DirectBuffer) {
-        DirectBuffer db = (DirectBuffer) b;
-        if (db.cleaner() != null) {
-          db.cleaner().clean();
-        }
+      if (b.isDirect()) {
+        UnsafeAccess.freeDirectBuffer(b);
       }
     }
     this.usedBufCount.set(0);
@@ -369,8 +365,7 @@ public class ByteBuffAllocator {
       if (c >= this.maxBufCount) {
         if (!maxPoolSizeInfoLevelLogged) {
           LOG.info("Pool already reached its max capacity : {} and no free buffers now. Consider "
-              + "increasing the value for '{}' ?",
-            maxBufCount, MAX_BUFFER_COUNT_KEY);
+            + "increasing the value for '{}' ?", maxBufCount, MAX_BUFFER_COUNT_KEY);
           maxPoolSizeInfoLevelLogged = true;
         }
         return null;

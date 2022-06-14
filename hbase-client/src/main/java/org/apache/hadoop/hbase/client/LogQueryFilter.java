@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -26,8 +24,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Slow/Large Log Query Filter with all filter and limit parameters
- * Extends generic LogRequest used by Admin API getLogEntries
+ * Slow/Large Log Query Filter with all filter and limit parameters Extends generic LogRequest used
+ * by Admin API getLogEntries
  * @deprecated as of 2.4.0. Will be removed in 4.0.0.
  */
 @InterfaceAudience.Public
@@ -121,41 +119,24 @@ public class LogQueryFilter {
 
     LogQueryFilter that = (LogQueryFilter) o;
 
-    return new EqualsBuilder()
-      .append(limit, that.limit)
-      .append(regionName, that.regionName)
-      .append(clientAddress, that.clientAddress)
-      .append(tableName, that.tableName)
-      .append(userName, that.userName)
-      .append(type, that.type)
-      .append(filterByOperator, that.filterByOperator)
-      .isEquals();
+    return new EqualsBuilder().append(limit, that.limit).append(regionName, that.regionName)
+      .append(clientAddress, that.clientAddress).append(tableName, that.tableName)
+      .append(userName, that.userName).append(type, that.type)
+      .append(filterByOperator, that.filterByOperator).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(regionName)
-      .append(clientAddress)
-      .append(tableName)
-      .append(userName)
-      .append(limit)
-      .append(type)
-      .append(filterByOperator)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(regionName).append(clientAddress).append(tableName)
+      .append(userName).append(limit).append(type).append(filterByOperator).toHashCode();
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("regionName", regionName)
-      .append("clientAddress", clientAddress)
-      .append("tableName", tableName)
-      .append("userName", userName)
-      .append("limit", limit)
-      .append("type", type)
-      .append("filterByOperator", filterByOperator)
-      .toString();
+    return new ToStringBuilder(this).append("regionName", regionName)
+      .append("clientAddress", clientAddress).append("tableName", tableName)
+      .append("userName", userName).append("limit", limit).append("type", type)
+      .append("filterByOperator", filterByOperator).toString();
   }
 
 }

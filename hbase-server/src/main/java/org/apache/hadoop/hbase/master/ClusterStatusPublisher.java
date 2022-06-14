@@ -15,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 package org.apache.hadoop.hbase.master;
 
 import java.io.Closeable;
@@ -47,8 +45,11 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -64,27 +65,24 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.InternetProtocolFamil
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.hbase.thirdparty.io.netty.util.internal.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
- * Class to publish the cluster status to the client. This allows them to know immediately
- *  the dead region servers, hence to cut the connection they have with them, eventually stop
- *  waiting on the socket. This improves the mean time to recover, and as well allows to increase
- *  on the client the different timeouts, as the dead servers will be detected separately.
+ * Class to publish the cluster status to the client. This allows them to know immediately the dead
+ * region servers, hence to cut the connection they have with them, eventually stop waiting on the
+ * socket. This improves the mean time to recover, and as well allows to increase on the client the
+ * different timeouts, as the dead servers will be detected separately.
  */
 @InterfaceAudience.Private
 public class ClusterStatusPublisher extends ScheduledChore {
   private static Logger LOG = LoggerFactory.getLogger(ClusterStatusPublisher.class);
   /**
-   * The implementation class used to publish the status. Default is null (no publish).
-   * Use org.apache.hadoop.hbase.master.ClusterStatusPublisher.MulticastPublisher to multicast the
+   * The implementation class used to publish the status. Default is null (no publish). Use
+   * org.apache.hadoop.hbase.master.ClusterStatusPublisher.MulticastPublisher to multicast the
    * status.
    */
   public static final String STATUS_PUBLISHER_CLASS = "hbase.status.publisher.class";
-  public static final Class<? extends ClusterStatusPublisher.Publisher>
-      DEFAULT_STATUS_PUBLISHER_CLASS =
+  public static final Class<
+    ? extends ClusterStatusPublisher.Publisher> DEFAULT_STATUS_PUBLISHER_CLASS =
       org.apache.hadoop.hbase.master.ClusterStatusPublisher.MulticastPublisher.class;
 
   /**
@@ -101,8 +99,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
   private boolean connected = false;
 
   /**
-   * We want to limit the size of the protobuf message sent, do fit into a single packet.
-   * a reasonable size for ip / ethernet is less than 1Kb.
+   * We want to limit the size of the protobuf message sent, do fit into a single packet. a
+   * reasonable size for ip / ethernet is less than 1Kb.
    */
   public final static int MAX_SERVER_PER_MESSAGE = 10;
 
@@ -113,10 +111,9 @@ public class ClusterStatusPublisher extends ScheduledChore {
   public final static int NB_SEND = 5;
 
   public ClusterStatusPublisher(HMaster master, Configuration conf,
-                                Class<? extends Publisher> publisherClass)
-      throws IOException {
-    super("ClusterStatusPublisher for=" + master.getName(), master, conf.getInt(
-      STATUS_PUBLISH_PERIOD, DEFAULT_STATUS_PUBLISH_PERIOD));
+    Class<? extends Publisher> publisherClass) throws IOException {
+    super("ClusterStatusPublisher for=" + master.getName(), master,
+      conf.getInt(STATUS_PUBLISH_PERIOD, DEFAULT_STATUS_PUBLISH_PERIOD));
     this.master = master;
     this.messagePeriod = conf.getInt(STATUS_PUBLISH_PERIOD, DEFAULT_STATUS_PUBLISH_PERIOD);
     try {
@@ -162,13 +159,10 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     // We're reusing an existing protobuf message, but we don't send everything.
     // This could be extended in the future, for example if we want to send stuff like the
-    //  hbase:meta server name.
-    publisher.publish(ClusterMetricsBuilder.newBuilder()
-      .setHBaseVersion(VersionInfo.getVersion())
+    // hbase:meta server name.
+    publisher.publish(ClusterMetricsBuilder.newBuilder().setHBaseVersion(VersionInfo.getVersion())
       .setClusterId(master.getMasterFileSystem().getClusterId().toString())
-      .setMasterName(master.getServerName())
-      .setDeadServerNames(sns)
-      .build());
+      .setMasterName(master.getServerName()).setDeadServerNames(sns).build());
   }
 
   @Override
@@ -183,8 +177,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
   /**
    * Create the dead server to send. A dead server is sent NB_SEND times. We send at max
-   * MAX_SERVER_PER_MESSAGE at a time. if there are too many dead servers, we send the newly
-   * dead first.
+   * MAX_SERVER_PER_MESSAGE at a time. if there are too many dead servers, we send the newly dead
+   * first.
    */
   protected List<ServerName> generateDeadServersListToSend() {
     // We're getting the message sent since last time, and add them to the list
@@ -221,8 +215,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
   }
 
   /**
-   * Get the servers which died since a given timestamp.
-   * protected because it can be subclassed by the tests.
+   * Get the servers which died since a given timestamp. protected because it can be subclassed by
+   * the tests.
    */
   protected List<Pair<ServerName, Long>> getDeadServers(long since) {
     if (master.getServerManager() == null) {
@@ -231,7 +225,6 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     return master.getServerManager().getDeadServers().copyDeadServersSince(since);
   }
-
 
   public interface Publisher extends Closeable {
 
@@ -260,10 +253,10 @@ public class ClusterStatusPublisher extends ScheduledChore {
 
     @Override
     public void connect(Configuration conf) throws IOException {
-      String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
-          HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
-      int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
-          HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      String mcAddress =
+        conf.get(HConstants.STATUS_MULTICAST_ADDRESS, HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
+      int port =
+        conf.getInt(HConstants.STATUS_MULTICAST_PORT, HConstants.DEFAULT_STATUS_MULTICAST_PORT);
       String bindAddress = conf.get(HConstants.STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS,
         HConstants.DEFAULT_STATUS_MULTICAST_PUBLISHER_BIND_ADDRESS);
       String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
@@ -300,8 +293,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
       Bootstrap b = new Bootstrap();
       b.group(group)
         .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
-        .option(ChannelOption.SO_REUSEADDR, true)
-        .handler(new ClusterMetricsEncoder(isa));
+        .option(ChannelOption.SO_REUSEADDR, true).handler(new ClusterMetricsEncoder(isa));
       try {
         LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
         channel = (DatagramChannel) b.bind(bindAddress, 0).sync().channel();
@@ -321,7 +313,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     }
 
     private static final class HBaseDatagramChannelFactory<T extends Channel>
-        implements ChannelFactory<T> {
+      implements ChannelFactory<T> {
       private final Class<? extends T> clazz;
       private final InternetProtocolFamily family;
 
@@ -348,7 +340,7 @@ public class ClusterStatusPublisher extends ScheduledChore {
     }
 
     private static final class ClusterMetricsEncoder
-        extends MessageToMessageEncoder<ClusterMetrics> {
+      extends MessageToMessageEncoder<ClusterMetrics> {
       final private InetSocketAddress isa;
 
       private ClusterMetricsEncoder(InetSocketAddress isa) {
@@ -358,8 +350,8 @@ public class ClusterStatusPublisher extends ScheduledChore {
       @Override
       protected void encode(ChannelHandlerContext channelHandlerContext,
         ClusterMetrics clusterStatus, List<Object> objects) {
-        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(
-          ClusterMetricsBuilder.toClusterStatus(clusterStatus).toByteArray()), isa));
+        objects.add(new DatagramPacket(Unpooled
+          .wrappedBuffer(ClusterMetricsBuilder.toClusterStatus(clusterStatus).toByteArray()), isa));
       }
     }
 

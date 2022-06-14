@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestBackupCommandLineTool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupCommandLineTool.class);
+    HBaseClassTestRule.forClass(TestBackupCommandLineTool.class);
 
   private final static String USAGE_DESCRIBE = "Usage: hbase backup describe <backup_id>";
   private final static String USAGE_CREATE = "Usage: hbase backup create";
@@ -86,7 +86,6 @@ public class TestBackupCommandLineTool {
     assertTrue(output.indexOf(USAGE_DESCRIBE) >= 0);
   }
 
-
   @Test
   public void testBackupDriverCreateTopLevelBackupDest() throws Exception {
     String[] args = new String[] { "create", "full", "hdfs://localhost:1020", "-t", "t1" };
@@ -106,7 +105,6 @@ public class TestBackupCommandLineTool {
     System.out.println(baos.toString());
     assertTrue(output.indexOf(USAGE_CREATE) >= 0);
     assertTrue(output.indexOf(BackupRestoreConstants.OPTION_TABLE_LIST_DESC) > 0);
-
 
     baos = new ByteArrayOutputStream();
     System.setOut(new PrintStream(baos));

@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +43,8 @@ public class DeleteDataFilesAction extends Action {
     this.chance = chance * 100;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -53,13 +54,14 @@ public class DeleteDataFilesAction extends Action {
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(getConf());
     Path rootDir = CommonFSUtils.getRootDir(getConf());
     Path defaultDir = rootDir.suffix("/data/default");
-    RemoteIterator<LocatedFileStatus> iterator =  fs.listFiles(defaultDir, true);
-    while (iterator.hasNext()){
+    RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(defaultDir, true);
+    Random rand = ThreadLocalRandom.current();
+    while (iterator.hasNext()) {
       LocatedFileStatus status = iterator.next();
-      if(!HFile.isHFileFormat(fs, status.getPath())){
+      if (!HFile.isHFileFormat(fs, status.getPath())) {
         continue;
       }
-      if(RandomUtils.nextFloat(0, 100) > chance){
+      if ((100 * rand.nextFloat()) > chance) {
         continue;
       }
       fs.delete(status.getPath(), true);

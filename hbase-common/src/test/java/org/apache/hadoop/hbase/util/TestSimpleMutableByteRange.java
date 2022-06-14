@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,15 +25,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestSimpleMutableByteRange {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleMutableByteRange.class);
+    HBaseClassTestRule.forClass(TestSimpleMutableByteRange.class);
 
   @Test
-  public void testEmpty(){
+  public void testEmpty() {
     Assert.assertTrue(SimpleMutableByteRange.isEmpty(null));
     ByteRange r = new SimpleMutableByteRange();
     Assert.assertTrue(SimpleMutableByteRange.isEmpty(r));
@@ -51,29 +51,29 @@ public class TestSimpleMutableByteRange {
   public void testBasics() {
     ByteRange r = new SimpleMutableByteRange(new byte[] { 1, 3, 2 });
     Assert.assertFalse(SimpleMutableByteRange.isEmpty(r));
-    Assert.assertNotNull(r.getBytes());//should be empty byte[], but could change this behavior
+    Assert.assertNotNull(r.getBytes());// should be empty byte[], but could change this behavior
     Assert.assertEquals(3, r.getBytes().length);
     Assert.assertEquals(0, r.getOffset());
     Assert.assertEquals(3, r.getLength());
 
-    //cloning (deep copying)
-    Assert.assertTrue(Bytes.equals(new byte[]{1, 3, 2}, r.deepCopyToNewArray()));
+    // cloning (deep copying)
+    Assert.assertTrue(Bytes.equals(new byte[] { 1, 3, 2 }, r.deepCopyToNewArray()));
     Assert.assertNotSame(r.getBytes(), r.deepCopyToNewArray());
 
-    //hash code
+    // hash code
     Assert.assertTrue(r.hashCode() > 0);
     Assert.assertEquals(r.hashCode(), r.deepCopy().hashCode());
 
-    //copying to arrays
-    byte[] destination = new byte[]{-59};//junk
+    // copying to arrays
+    byte[] destination = new byte[] { -59 };// junk
     r.deepCopySubRangeTo(2, 1, destination, 0);
-    Assert.assertTrue(Bytes.equals(new byte[]{2}, destination));
+    Assert.assertTrue(Bytes.equals(new byte[] { 2 }, destination));
 
-    //set length
+    // set length
     r.setLength(1);
-    Assert.assertTrue(Bytes.equals(new byte[]{1}, r.deepCopyToNewArray()));
-    r.setLength(2);//verify we retained the 2nd byte, but dangerous in real code
-    Assert.assertTrue(Bytes.equals(new byte[]{1, 3}, r.deepCopyToNewArray()));
+    Assert.assertTrue(Bytes.equals(new byte[] { 1 }, r.deepCopyToNewArray()));
+    r.setLength(2);// verify we retained the 2nd byte, but dangerous in real code
+    Assert.assertTrue(Bytes.equals(new byte[] { 1, 3 }, r.deepCopyToNewArray()));
   }
 
   @Test

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.ServerName;
@@ -23,8 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to restart the active master.
-*/
+ * Action that tries to restart the active master.
+ */
 public class RestartActiveMasterAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(RestartActiveMasterAction.class);
 
@@ -32,7 +31,8 @@ public class RestartActiveMasterAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.exceptions;
 
 import java.io.EOFException;
@@ -48,7 +46,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 @InterfaceStability.Evolving
 public final class ClientExceptionsUtil {
 
-  private ClientExceptionsUtil() {}
+  private ClientExceptionsUtil() {
+  }
 
   public static boolean isMetaClearingException(Throwable cur) {
     cur = findException(cur);
@@ -57,25 +56,21 @@ public final class ClientExceptionsUtil {
       return true;
     }
     return !isSpecialException(cur) || (cur instanceof RegionMovedException)
-        || cur instanceof NotServingRegionException;
+      || cur instanceof NotServingRegionException;
   }
 
   public static boolean isSpecialException(Throwable cur) {
     return (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-        || cur instanceof RegionTooBusyException || cur instanceof RpcThrottlingException
-        || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
-        || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
-        || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
+      || cur instanceof RegionTooBusyException || cur instanceof RpcThrottlingException
+      || cur instanceof MultiActionResultTooLarge || cur instanceof RetryImmediatelyException
+      || cur instanceof CallQueueTooBigException || cur instanceof CallDroppedException
+      || cur instanceof NotServingRegionException || cur instanceof RequestTooBigException);
   }
 
-
   /**
-   * Look for an exception we know in the remote exception:
-   * - hadoop.ipc wrapped exceptions
-   * - nested exceptions
-   *
-   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
-   *            RpcThrottlingException
+   * Look for an exception we know in the remote exception: - hadoop.ipc wrapped exceptions - nested
+   * exceptions Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
+   * RpcThrottlingException
    * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {
@@ -92,7 +87,7 @@ public final class ClientExceptionsUtil {
         cur = re.unwrapRemoteException();
 
         // unwrapRemoteException can return the exception given as a parameter when it cannot
-        //  unwrap it. In this case, there is no need to look further
+        // unwrap it. In this case, there is no need to look further
         // noinspection ObjectEquality
         if (cur == re) {
           return cur;
@@ -109,28 +104,6 @@ public final class ClientExceptionsUtil {
     }
 
     return null;
-  }
-
-  /**
-   * Checks if the exception is CallQueueTooBig exception (maybe wrapped
-   * into some RemoteException).
-   * @param t exception to check
-   * @return true if it's a CQTBE, false otherwise
-   */
-  public static boolean isCallQueueTooBigException(Throwable t) {
-    t = findException(t);
-    return (t instanceof CallQueueTooBigException);
-  }
-
-  /**
-   * Checks if the exception is CallDroppedException (maybe wrapped
-   * into some RemoteException).
-   * @param t exception to check
-   * @return true if it's a CQTBE, false otherwise
-   */
-  public static boolean isCallDroppedException(Throwable t) {
-    t = findException(t);
-    return (t instanceof CallDroppedException);
   }
 
   // This list covers most connectivity exceptions but not all.
@@ -172,8 +145,7 @@ public final class ClientExceptionsUtil {
   /**
    * Translates exception for preemptive fast fail checks.
    * @param t exception to check
-   * @return translated exception
-   * @throws IOException
+   * @return translated exception n
    */
   public static Throwable translatePFFE(Throwable t) throws IOException {
     if (t instanceof NoSuchMethodError) {

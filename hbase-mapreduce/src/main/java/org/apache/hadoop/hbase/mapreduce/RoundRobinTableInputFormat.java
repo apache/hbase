@@ -50,11 +50,11 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
   private Boolean hbaseRegionsizecalculatorEnableOriginalValue = null;
   /**
    * Boolean config for whether superclass should produce InputSplits with 'lengths'. If true, TIF
-   * will query every RegionServer to get the 'size' of all involved Regions and this 'size' will
-   * be used the the InputSplit length. If false, we skip this query and the super-classes
-   * returned InputSplits will have lenghths of zero. This override will set the flag to false.
-   * All returned lengths will be zero. Makes it so sorting on 'length' becomes a noop. The sort
-   * returned by this override will prevail. Thats what we want.
+   * will query every RegionServer to get the 'size' of all involved Regions and this 'size' will be
+   * used the the InputSplit length. If false, we skip this query and the super-classes returned
+   * InputSplits will have lenghths of zero. This override will set the flag to false. All returned
+   * lengths will be zero. Makes it so sorting on 'length' becomes a noop. The sort returned by this
+   * override will prevail. Thats what we want.
    */
   static String HBASE_REGIONSIZECALCULATOR_ENABLE = "hbase.regionsizecalculator.enable";
 
@@ -116,26 +116,26 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
   }
 
   /**
-   * Adds a configuration to the Context disabling remote rpc'ing to figure Region size
-   * when calculating InputSplits. See up in super-class TIF where we rpc to every server to find
-   * the size of all involved Regions. Here we disable this super-class action. This means
-   * InputSplits will have a length of zero. If all InputSplits have zero-length InputSplits, the
-   * ordering done in here will 'pass-through' Hadoop's length-first sort. The superclass TIF will
-   * ask every node for the current size of each of the participating Table Regions. It does this
-   * because it wants to schedule the biggest Regions first (This fixation comes of hadoop itself
-   * -- see JobSubmitter where it sorts inputs by size). This extra diligence takes time and is of
-   * no utility in this RRTIF where spread is of more import than size-first. Also, if a rolling
-   * restart is happening when we go to launch the job, the job launch may fail because the request
-   * for Region size fails -- even after retries -- because rolled RegionServer may take a while to
-   * come online: e.g. it takes java 90 seconds to allocate a 160G. RegionServer is offline during
-   * this time. The job launch will fail with 'Connection rejected'. So, we set
-   * 'hbase.regionsizecalculator.enable' to false here in RRTIF.
+   * Adds a configuration to the Context disabling remote rpc'ing to figure Region size when
+   * calculating InputSplits. See up in super-class TIF where we rpc to every server to find the
+   * size of all involved Regions. Here we disable this super-class action. This means InputSplits
+   * will have a length of zero. If all InputSplits have zero-length InputSplits, the ordering done
+   * in here will 'pass-through' Hadoop's length-first sort. The superclass TIF will ask every node
+   * for the current size of each of the participating Table Regions. It does this because it wants
+   * to schedule the biggest Regions first (This fixation comes of hadoop itself -- see JobSubmitter
+   * where it sorts inputs by size). This extra diligence takes time and is of no utility in this
+   * RRTIF where spread is of more import than size-first. Also, if a rolling restart is happening
+   * when we go to launch the job, the job launch may fail because the request for Region size fails
+   * -- even after retries -- because rolled RegionServer may take a while to come online: e.g. it
+   * takes java 90 seconds to allocate a 160G. RegionServer is offline during this time. The job
+   * launch will fail with 'Connection rejected'. So, we set 'hbase.regionsizecalculator.enable' to
+   * false here in RRTIF.
    * @see #unconfigure()
    */
   void configure() {
     if (getConf().get(HBASE_REGIONSIZECALCULATOR_ENABLE) != null) {
-      this.hbaseRegionsizecalculatorEnableOriginalValue = getConf().
-        getBoolean(HBASE_REGIONSIZECALCULATOR_ENABLE, true);
+      this.hbaseRegionsizecalculatorEnableOriginalValue =
+        getConf().getBoolean(HBASE_REGIONSIZECALCULATOR_ENABLE, true);
     }
     getConf().setBoolean(HBASE_REGIONSIZECALCULATOR_ENABLE, false);
   }
@@ -165,7 +165,7 @@ public class RoundRobinTableInputFormat extends TableInputFormat {
     configuration.set(TableInputFormat.INPUT_TABLE, args[0]);
     tif.setConf(configuration);
     List<InputSplit> splits = tif.getSplits(new JobContextImpl(configuration, new JobID()));
-    for (InputSplit split: splits) {
+    for (InputSplit split : splits) {
       System.out.println(split);
     }
   }

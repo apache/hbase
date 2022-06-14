@@ -17,21 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_METHOD_KEY;
-import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SERVICE_KEY;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
-import java.util.Optional;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.server.trace.IpcServerSpanBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -43,30 +40,30 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 /**
  * The request processing logic, which is usually executed in thread pools provided by an
- * {@link RpcScheduler}.  Call {@link #run()} to actually execute the contained
- * RpcServer.Call
+ * {@link RpcScheduler}. Call {@link #run()} to actually execute the contained RpcServer.Call
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class CallRunner {
 
-  private static final CallDroppedException CALL_DROPPED_EXCEPTION
-    = new CallDroppedException();
+  private static final CallDroppedException CALL_DROPPED_EXCEPTION = new CallDroppedException();
 
   private RpcCall call;
   private RpcServerInterface rpcServer;
   private MonitoredRPCHandler status;
-  private volatile boolean sucessful;
+  private final Span span;
+  private volatile boolean successful;
 
   /**
    * On construction, adds the size of this call to the running count of outstanding call sizes.
-   * Presumption is that we are put on a queue while we wait on an executor to run us.  During this
+   * Presumption is that we are put on a queue while we wait on an executor to run us. During this
    * time we occupy heap.
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
   CallRunner(final RpcServerInterface rpcServer, final RpcCall call) {
     this.call = call;
     this.rpcServer = rpcServer;
+    this.span = Span.current();
     // Add size of the call to queue size.
     if (call != null && rpcServer != null) {
       this.rpcServer.addCallSize(call.getSize());
@@ -90,58 +87,47 @@ public class CallRunner {
     this.rpcServer = null;
   }
 
-  private String getServiceName() {
-    return call.getService() != null ? call.getService().getDescriptorForType().getName() : "";
-  }
-
-  private String getMethodName() {
-    return call.getMethod() != null ? call.getMethod().getName() : "";
-  }
-
   public void run() {
-    try {
+    try (Scope ignored = span.makeCurrent()) {
       if (call.disconnectSince() >= 0) {
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
-        }
+        RpcServer.LOG.debug("{}: skipped {}", Thread.currentThread().getName(), call);
+        span.addEvent("Client disconnect detected");
+        span.setStatus(StatusCode.OK);
         return;
       }
       call.setStartTime(EnvironmentEdgeManager.currentTime());
       if (call.getStartTime() > call.getDeadline()) {
-        RpcServer.LOG.warn("Dropping timed out call: " + call);
+        RpcServer.LOG.warn("Dropping timed out call: {}", call);
+        this.rpcServer.getMetrics().callTimedOut();
+        span.addEvent("Call deadline exceeded");
+        span.setStatus(StatusCode.OK);
         return;
       }
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.getRemoteAddress().getHostAddress(), call.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
-        Optional<User> remoteUser = call.getRequestUser();
-        RpcServer.LOG.trace(call.toShortString() + " executing as " +
-            (remoteUser.isPresent() ? remoteUser.get().getName() : "NULL principal"));
+        RpcServer.LOG.trace("{} executing as {}", call.toShortString(),
+          call.getRequestUser().map(User::getName).orElse("NULL principal"));
       }
       Throwable errorThrowable = null;
       String error = null;
       Pair<Message, CellScanner> resultPair = null;
       RpcServer.CurCall.set(call);
-      String serviceName = getServiceName();
-      String methodName = getMethodName();
-      Span span = TraceUtil.getGlobalTracer().spanBuilder("RpcServer.callMethod")
-        .setParent(Context.current().with(((ServerCall<?>) call).getSpan())).startSpan()
-        .setAttribute(RPC_SERVICE_KEY, serviceName)
-        .setAttribute(RPC_METHOD_KEY, methodName);
-      try (Scope traceScope = span.makeCurrent()) {
+      final Span ipcServerSpan = new IpcServerSpanBuilder(call).build();
+      try (Scope ignored1 = ipcServerSpan.makeCurrent()) {
         if (!this.rpcServer.isStarted()) {
           InetSocketAddress address = rpcServer.getListenerAddress();
-          throw new ServerNotRunningYetException("Server " +
-              (address != null ? address : "(channel closed)") + " is not running yet");
+          throw new ServerNotRunningYetException(
+            "Server " + (address != null ? address : "(channel closed)") + " is not running yet");
         }
         // make the call
         resultPair = this.rpcServer.call(call, this.status);
-      } catch (TimeoutIOException e){
-        RpcServer.LOG.warn("Can not complete this request in time, drop it: " + call);
-        TraceUtil.setError(span, e);
+      } catch (TimeoutIOException e) {
+        RpcServer.LOG.warn("Can not complete this request in time, drop it: {}", call);
+        TraceUtil.setError(ipcServerSpan, e);
         return;
       } catch (Throwable e) {
-        TraceUtil.setError(span, e);
+        TraceUtil.setError(ipcServerSpan, e);
         if (e instanceof ServerNotRunningYetException) {
           // If ServerNotRunningYetException, don't spew stack trace.
           if (RpcServer.LOG.isTraceEnabled()) {
@@ -149,51 +135,56 @@ public class CallRunner {
           }
         } else {
           // Don't dump full exception.. just String version
-          RpcServer.LOG.debug(call.toShortString() + ", exception=" + e);
+          RpcServer.LOG.debug("{}, exception={}", call.toShortString(), e);
         }
         errorThrowable = e;
         error = StringUtils.stringifyException(e);
         if (e instanceof Error) {
-          throw (Error)e;
+          throw (Error) e;
         }
       } finally {
         RpcServer.CurCall.set(null);
         if (resultPair != null) {
           this.rpcServer.addCallSize(call.getSize() * -1);
-          span.setStatus(StatusCode.OK);
-          sucessful = true;
+          ipcServerSpan.setStatus(StatusCode.OK);
+          successful = true;
         }
-        span.end();
+        ipcServerSpan.end();
       }
       this.status.markComplete("To send response");
-      // return back the RPC request read BB we can do here. It is done by now.
+      // return the RPC request read BB we can do here. It is done by now.
       call.cleanup();
       // Set the response
       Message param = resultPair != null ? resultPair.getFirst() : null;
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
       call.setResponse(param, cells, errorThrowable, error);
       call.sendResponseIfReady();
+      // don't touch `span` here because its status and `end()` are managed in `call#setResponse()`
     } catch (OutOfMemoryError e) {
-      if (this.rpcServer.getErrorHandler() != null) {
-        if (this.rpcServer.getErrorHandler().checkOOME(e)) {
-          RpcServer.LOG.info(Thread.currentThread().getName() + ": exiting on OutOfMemoryError");
-          return;
-        }
+      TraceUtil.setError(span, e);
+      if (
+        this.rpcServer.getErrorHandler() != null && this.rpcServer.getErrorHandler().checkOOME(e)
+      ) {
+        RpcServer.LOG.info("{}: exiting on OutOfMemoryError", Thread.currentThread().getName());
+        // exception intentionally swallowed
       } else {
         // rethrow if no handler
         throw e;
       }
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
-      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-          "this means that the server " + (address != null ? address : "(channel closed)") +
-          " was processing a request but the client went away. The error message was: " +
-          cce.getMessage());
+      RpcServer.LOG.warn(
+        "{}: caught a ClosedChannelException, " + "this means that the server "
+          + (address != null ? address : "(channel closed)")
+          + " was processing a request but the client went away. The error message was: {}",
+        Thread.currentThread().getName(), cce.getMessage());
+      TraceUtil.setError(span, cce);
     } catch (Exception e) {
-      RpcServer.LOG.warn(Thread.currentThread().getName()
-          + ": caught: " + StringUtils.stringifyException(e));
+      RpcServer.LOG.warn("{}: caught: {}", Thread.currentThread().getName(),
+        StringUtils.stringifyException(e));
+      TraceUtil.setError(span, e);
     } finally {
-      if (!sucessful) {
+      if (!successful) {
         this.rpcServer.addCallSize(call.getSize() * -1);
       }
 
@@ -202,6 +193,7 @@ public class CallRunner {
       }
       this.status.pause("Waiting for a call");
       cleanup();
+      span.end();
     }
   }
 
@@ -209,11 +201,11 @@ public class CallRunner {
    * When we want to drop this call because of server is overloaded.
    */
   public void drop() {
-    try {
+    try (Scope ignored = span.makeCurrent()) {
       if (call.disconnectSince() >= 0) {
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
-        }
+        RpcServer.LOG.debug("{}: skipped {}", Thread.currentThread().getName(), call);
+        span.addEvent("Client disconnect detected");
+        span.setStatus(StatusCode.OK);
         return;
       }
 
@@ -221,21 +213,27 @@ public class CallRunner {
       InetSocketAddress address = rpcServer.getListenerAddress();
       call.setResponse(null, null, CALL_DROPPED_EXCEPTION, "Call dropped, server "
         + (address != null ? address : "(channel closed)") + " is overloaded, please retry.");
+      TraceUtil.setError(span, CALL_DROPPED_EXCEPTION);
       call.sendResponseIfReady();
+      this.rpcServer.getMetrics().exception(CALL_DROPPED_EXCEPTION);
     } catch (ClosedChannelException cce) {
       InetSocketAddress address = rpcServer.getListenerAddress();
-      RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-        "this means that the server " + (address != null ? address : "(channel closed)") +
-        " was processing a request but the client went away. The error message was: " +
-        cce.getMessage());
+      RpcServer.LOG.warn(
+        "{}: caught a ClosedChannelException, " + "this means that the server "
+          + (address != null ? address : "(channel closed)")
+          + " was processing a request but the client went away. The error message was: {}",
+        Thread.currentThread().getName(), cce.getMessage());
+      TraceUtil.setError(span, cce);
     } catch (Exception e) {
-      RpcServer.LOG.warn(Thread.currentThread().getName()
-        + ": caught: " + StringUtils.stringifyException(e));
+      RpcServer.LOG.warn("{}: caught: {}", Thread.currentThread().getName(),
+        StringUtils.stringifyException(e));
+      TraceUtil.setError(span, e);
     } finally {
-      if (!sucessful) {
+      if (!successful) {
         this.rpcServer.addCallSize(call.getSize() * -1);
       }
       cleanup();
+      span.end();
     }
   }
 }

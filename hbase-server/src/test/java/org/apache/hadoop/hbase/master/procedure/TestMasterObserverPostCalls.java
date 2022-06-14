@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,14 +52,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests class that validates that "post" observer hook methods are only invoked when the operation was successful.
+ * Tests class that validates that "post" observer hook methods are only invoked when the operation
+ * was successful.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterObserverPostCalls {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterObserverPostCalls.class);
+    HBaseClassTestRule.forClass(TestMasterObserverPostCalls.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterObserverPostCalls.class);
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -73,7 +74,7 @@ public class TestMasterObserverPostCalls {
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.set(MasterCoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        MasterObserverForTest.class.getName());
+      MasterObserverForTest.class.getName());
   }
 
   @AfterClass
@@ -100,34 +101,31 @@ public class TestMasterObserverPostCalls {
 
     @Override
     public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String namespace) {
+      String namespace) {
       postHookCalls.incrementAndGet();
     }
 
     @Override
-    public void postModifyNamespace(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor oldNsDesc,
-        NamespaceDescriptor currentNsDesc) {
+    public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor oldNsDesc, NamespaceDescriptor currentNsDesc) {
       postHookCalls.incrementAndGet();
     }
 
     @Override
-    public void postCreateNamespace(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor desc) {
+    public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor desc) {
       postHookCalls.incrementAndGet();
     }
 
     @Override
-    public void postCreateTable(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableDescriptor td,
-        RegionInfo[] regions) {
+    public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableDescriptor td, RegionInfo[] regions) {
       postHookCalls.incrementAndGet();
     }
 
     @Override
-    public void postModifyTable(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tn,
-        TableDescriptor oldDescriptor, TableDescriptor currentDescriptor) {
+    public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tn,
+      TableDescriptor oldDescriptor, TableDescriptor currentDescriptor) {
       postHookCalls.incrementAndGet();
     }
 
@@ -150,12 +148,12 @@ public class TestMasterObserverPostCalls {
 
     admin.createNamespace(NamespaceDescriptor.create(ns).build());
     admin.createTable(TableDescriptorBuilder.newBuilder(tn1)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
-        .build());
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build());
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
     int preCount = observer.postHookCalls.get();
     try {
       admin.deleteNamespace(ns);
@@ -165,7 +163,7 @@ public class TestMasterObserverPostCalls {
     }
     int postCount = observer.postHookCalls.get();
     assertEquals("Expected no invocations of postDeleteNamespace when the operation fails",
-        preCount, postCount);
+      preCount, postCount);
 
     // Disable and delete the table so that we can delete the NS.
     admin.disableTable(tn1);
@@ -187,8 +185,8 @@ public class TestMasterObserverPostCalls {
     admin.createNamespace(nsDesc);
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
     int preCount = observer.postHookCalls.get();
     try {
       admin.modifyNamespace(NamespaceDescriptor.create("nonexistent").build());
@@ -198,12 +196,12 @@ public class TestMasterObserverPostCalls {
     }
     int postCount = observer.postHookCalls.get();
     assertEquals("Expected no invocations of postModifyNamespace when the operation fails",
-        preCount, postCount);
+      preCount, postCount);
 
     // Validate that the postDeletNS hook is invoked
     preCount = observer.postHookCalls.get();
-    admin.modifyNamespace(
-        NamespaceDescriptor.create(nsDesc).addConfiguration("foo", "bar").build());
+    admin
+      .modifyNamespace(NamespaceDescriptor.create(nsDesc).addConfiguration("foo", "bar").build());
     postCount = observer.postHookCalls.get();
     assertEquals("Expected 1 invocation of postModifyNamespace", preCount + 1, postCount);
   }
@@ -214,8 +212,8 @@ public class TestMasterObserverPostCalls {
     final String ns = "postcreatens";
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
 
     // Validate that the post hook is called
     int preCount = observer.postHookCalls.get();
@@ -234,19 +232,20 @@ public class TestMasterObserverPostCalls {
     }
     postCount = observer.postHookCalls.get();
     assertEquals("Expected no invocations of postModifyNamespace when the operation fails",
-        preCount, postCount);
+      preCount, postCount);
   }
 
   @Test
   public void testPostCreateTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postcreatetable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
 
     // Validate that the post hook is called
     int preCount = observer.postHookCalls.get();
@@ -263,20 +262,21 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postCreateTable when the operation fails",
-        preCount, postCount);
+    assertEquals("Expected no invocations of postCreateTable when the operation fails", preCount,
+      postCount);
   }
 
   @Test
   public void testPostModifyTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postmodifytable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
 
     // Create the table
     admin.createTable(td);
@@ -291,26 +291,27 @@ public class TestMasterObserverPostCalls {
     preCount = observer.postHookCalls.get();
     try {
       admin.modifyTable(TableDescriptorBuilder.newBuilder(TableName.valueOf("missing"))
-          .setColumnFamily(td.getColumnFamily(Bytes.toBytes("f1"))).build());
+        .setColumnFamily(td.getColumnFamily(Bytes.toBytes("f1"))).build());
       fail("Modifying a missing table should fail");
     } catch (IOException e) {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postModifyTable when the operation fails",
-        preCount, postCount);
+    assertEquals("Expected no invocations of postModifyTable when the operation fails", preCount,
+      postCount);
   }
 
   @Test
   public void testPostDisableTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postdisabletable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
 
     // Create the table and disable it
     admin.createTable(td);
@@ -330,20 +331,21 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postDisableTable when the operation fails",
-        preCount, postCount);
+    assertEquals("Expected no invocations of postDisableTable when the operation fails", preCount,
+      postCount);
   }
 
   @Test
   public void testPostDeleteTable() throws IOException {
     final Admin admin = UTIL.getAdmin();
     final TableName tn = TableName.valueOf("postdeletetable");
-    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build()).build();
+    final TableDescriptor td = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("f1")).build())
+      .build();
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    MasterObserverForTest observer = master.getMasterCoprocessorHost().findCoprocessor(
-        MasterObserverForTest.class);
+    MasterObserverForTest observer =
+      master.getMasterCoprocessorHost().findCoprocessor(MasterObserverForTest.class);
 
     // Create the table and disable it
     admin.createTable(td);
@@ -364,7 +366,7 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postDeleteTable when the operation fails",
-        preCount, postCount);
+    assertEquals("Expected no invocations of postDeleteTable when the operation fails", preCount,
+      postCount);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestFieldScreenPresenter {
@@ -71,17 +70,15 @@ public class TestFieldScreenPresenter {
   @Before
   public void setup() {
     Field sortField = Mode.REGION.getDefaultSortField();
-    fields = Mode.REGION.getFieldInfos().stream()
-      .map(FieldInfo::getField)
-      .collect(Collectors.toList());
+    fields =
+      Mode.REGION.getFieldInfos().stream().map(FieldInfo::getField).collect(Collectors.toList());
 
-    fieldDisplayMap = Mode.REGION.getFieldInfos().stream()
-      .collect(() -> new EnumMap<>(Field.class),
-        (r, fi) -> r.put(fi.getField(), fi.isDisplayByDefault()), (r1, r2) -> {});
+    fieldDisplayMap = Mode.REGION.getFieldInfos().stream().collect(() -> new EnumMap<>(Field.class),
+      (r, fi) -> r.put(fi.getField(), fi.isDisplayByDefault()), (r1, r2) -> {
+      });
 
-    fieldScreenPresenter =
-      new FieldScreenPresenter(fieldScreenView, sortField, fields, fieldDisplayMap, resultListener,
-        topScreenView);
+    fieldScreenPresenter = new FieldScreenPresenter(fieldScreenView, sortField, fields,
+      fieldDisplayMap, resultListener, topScreenView);
 
     for (int i = 0; i < fields.size(); i++) {
       Field field = fields.get(i);
@@ -122,8 +119,8 @@ public class TestFieldScreenPresenter {
     inOrder.verify(fieldScreenView).showScreenDescription(eq("LRS"));
     inOrder.verify(fieldScreenView).showScreenDescription(eq("#READ/S"));
     inOrder.verify(fieldScreenView).showScreenDescription(eq(fields.get(0).getHeader()));
-    inOrder.verify(fieldScreenView).showScreenDescription(
-      eq(fields.get(fields.size() - 1).getHeader()));
+    inOrder.verify(fieldScreenView)
+      .showScreenDescription(eq(fields.get(fields.size() - 1).getHeader()));
   }
 
   @Test

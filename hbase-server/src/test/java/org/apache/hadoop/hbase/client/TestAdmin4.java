@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -33,14 +31,11 @@ import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestAdmin4 extends TestAdminBase {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAdmin4.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin4.class);
 
   // For HBASE-24208
   @Test
@@ -48,8 +43,7 @@ public class TestAdmin4 extends TestAdminBase {
     List<ServerName> decommissionedRegionServers = ADMIN.listDecommissionedRegionServers();
     assertTrue(decommissionedRegionServers.isEmpty());
 
-    ArrayList<ServerName> clusterRegionServers =
-      new ArrayList<>(ADMIN.getRegionServers(true));
+    ArrayList<ServerName> clusterRegionServers = new ArrayList<>(ADMIN.getRegionServers(true));
 
     List<ServerName> serversToDecommission = new ArrayList<ServerName>();
     serversToDecommission.add(clusterRegionServers.get(0));
@@ -60,7 +54,7 @@ public class TestAdmin4 extends TestAdminBase {
 
     // Stop decommissioned region server and verify it is removed from draining znode
     ServerName serverName = serversToDecommission.get(0);
-    ADMIN.stopRegionServer(serverName.getHostname()+":"+serverName.getPort());
+    ADMIN.stopRegionServer(serverName.getHostname() + ":" + serverName.getPort());
     assertNotEquals("RS not removed from decommissioned list", -1,
       TEST_UTIL.waitFor(10000, () -> ADMIN.listDecommissionedRegionServers().isEmpty()));
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();

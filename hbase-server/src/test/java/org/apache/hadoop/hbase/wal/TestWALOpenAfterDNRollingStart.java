@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestWALOpenAfterDNRollingStart {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALOpenAfterDNRollingStart.class);
+    HBaseClassTestRule.forClass(TestWALOpenAfterDNRollingStart.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Sleep time before restart next dn, we need to wait the current dn to finish start up
@@ -70,7 +70,7 @@ public class TestWALOpenAfterDNRollingStart {
   public static void setUpBeforeClass() throws Exception {
     // don't let hdfs client to choose a new replica when dn down
     TEST_UTIL.getConfiguration()
-        .setBoolean("dfs.client.block.write.replace-datanode-on-failure.enable", false);
+      .setBoolean("dfs.client.block.write.replace-datanode-on-failure.enable", false);
     TEST_UTIL.getConfiguration().setLong("hbase.regionserver.hlog.check.lowreplication.interval",
       CHECK_LOW_REPLICATION_INTERVAL);
     TEST_UTIL.startMiniDFSCluster(3);
@@ -98,8 +98,7 @@ public class TestWALOpenAfterDNRollingStart {
    * all datanode restarted (rolling upgrade, for example). Before this patch, low replication
    * detection is only used when syncing wal. But if the wal haven't had any entry whiten, it will
    * never know all the replica of the wal is broken(because of dn restarting). And this wal can
-   * never be open
-   * @throws Exception
+   * never be open n
    */
   @Test
   public void test() throws Exception {

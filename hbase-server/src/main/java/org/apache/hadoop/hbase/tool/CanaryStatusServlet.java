@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,15 +25,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.hbase.tmpl.tool.CanaryStatusTmpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 @InterfaceAudience.Private
 public class CanaryStatusServlet extends HttpServlet {
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
     throws ServletException, IOException {
     CanaryTool.RegionStdOutSink sink =
-      (CanaryTool.RegionStdOutSink) getServletContext().getAttribute(
-        "sink");
+      (CanaryTool.RegionStdOutSink) getServletContext().getAttribute("sink");
     if (sink == null) {
       throw new ServletException(
         "RegionStdOutSink is null! The CanaryTool's InfoServer is not initialized correctly");

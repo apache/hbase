@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,16 +38,17 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test CoreCoprocessor Annotation works giving access to facility not usually available.
- * Test MasterCoprocessor.
+ * Test CoreCoprocessor Annotation works giving access to facility not usually available. Test
+ * MasterCoprocessor.
  */
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestCoreMasterCoprocessor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoreMasterCoprocessor.class);
+    HBaseClassTestRule.forClass(TestCoreMasterCoprocessor.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private MasterServices ms;
   private MasterCoprocessorHost mch;
@@ -70,31 +71,31 @@ public class TestCoreMasterCoprocessor {
    * MasterServices instance after some gymnastics.
    */
   public static class NotCoreMasterCoprocessor implements MasterCoprocessor {
-    public NotCoreMasterCoprocessor() {}
+    public NotCoreMasterCoprocessor() {
+    }
   }
 
   /**
-   * Annotate with CoreCoprocessor. This should make it so I can get at instance of a
-   * MasterServices instance after some gymnastics.
+   * Annotate with CoreCoprocessor. This should make it so I can get at instance of a MasterServices
+   * instance after some gymnastics.
    */
   @CoreCoprocessor
   public static class CoreMasterCoprocessor implements MasterCoprocessor {
-    public CoreMasterCoprocessor() {}
+    public CoreMasterCoprocessor() {
+    }
   }
 
   /**
-   * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to
-   * access a MasterServices instance. Assert the opposite too.
-   * Do it to MasterCoprocessors.
-   * @throws IOException
+   * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to access
+   * a MasterServices instance. Assert the opposite too. Do it to MasterCoprocessors. n
    */
   @Test
   public void testCoreRegionCoprocessor() throws IOException {
     MasterCoprocessorEnvironment env =
-        this.mch.load(null, NotCoreMasterCoprocessor.class.getName(), 0, HTU.getConfiguration());
+      this.mch.load(null, NotCoreMasterCoprocessor.class.getName(), 0, HTU.getConfiguration());
     assertFalse(env instanceof HasMasterServices);
     env = this.mch.load(null, CoreMasterCoprocessor.class.getName(), 1, HTU.getConfiguration());
     assertTrue(env instanceof HasMasterServices);
-    assertEquals(this.ms, ((HasMasterServices)env).getMasterServices());
+    assertEquals(this.ms, ((HasMasterServices) env).getMasterServices());
   }
 }

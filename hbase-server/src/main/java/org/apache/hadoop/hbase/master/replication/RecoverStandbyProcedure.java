@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class RecoverStandbyProcedure extends AbstractPeerNoLockProcedure<Recover
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, RecoverStandbyState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     SyncReplicationReplayWALManager syncReplicationReplayWALManager =
       env.getMasterServices().getSyncReplicationReplayWALManager();
     switch (state) {
@@ -94,7 +94,7 @@ public class RecoverStandbyProcedure extends AbstractPeerNoLockProcedure<Recover
 
   // TODO: dispatch wals by region server when serial is true and sort wals
   private void dispathWals(SyncReplicationReplayWALManager syncReplicationReplayWALManager)
-      throws ProcedureYieldException {
+    throws ProcedureYieldException {
     try {
       List<Path> wals = syncReplicationReplayWALManager.getReplayWALsAndCleanUpUnusedFiles(peerId);
       addChildProcedure(wals.stream()

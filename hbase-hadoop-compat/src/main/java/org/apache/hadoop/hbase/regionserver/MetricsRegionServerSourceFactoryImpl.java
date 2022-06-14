@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,12 +23,13 @@ import org.apache.hadoop.hbase.io.MetricsIOWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
+ * Factory to create MetricsRegionServerSource when given a MetricsRegionServerWrapper
  */
 @InterfaceAudience.Private
 public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServerSourceFactory {
   public static enum FactoryStorage {
     INSTANCE;
+
     private Object aggLock = new Object();
     private MetricsRegionAggregateSourceImpl regionAggImpl;
     private MetricsUserAggregateSourceImpl userAggImpl;
@@ -75,8 +76,8 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   }
 
   @Override
-  public synchronized MetricsRegionServerSource createServer(
-      MetricsRegionServerWrapper regionServerWrapper) {
+  public synchronized MetricsRegionServerSource
+    createServer(MetricsRegionServerWrapper regionServerWrapper) {
     return new MetricsRegionServerSourceImpl(regionServerWrapper);
   }
 
@@ -97,6 +98,6 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   @Override
   public org.apache.hadoop.hbase.regionserver.MetricsUserSource createUser(String shortUserName) {
     return new org.apache.hadoop.hbase.regionserver.MetricsUserSourceImpl(shortUserName,
-        getUserAggregate());
+      getUserAggregate());
   }
 }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -60,36 +58,17 @@ public class TestImmutableScan {
     Scan scan = new Scan();
 
     scan.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q"))
-      .setACL("test_user2", new Permission(Permission.Action.READ))
-      .setAllowPartialResults(true)
-      .setAsyncPrefetch(false)
-      .setAttribute("test_key", Bytes.toBytes("test_value"))
-      .setAuthorizations(new Authorizations("test_label"))
-      .setBatch(10)
-      .setCacheBlocks(false)
-      .setCaching(10)
-      .setConsistency(Consistency.TIMELINE)
-      .setFilter(new FilterList())
-      .setId("scan_copy_constructor")
-      .setIsolationLevel(IsolationLevel.READ_COMMITTED)
-      .setLimit(100)
-      .setLoadColumnFamiliesOnDemand(false)
-      .setMaxResultSize(100)
-      .setMaxResultsPerColumnFamily(1000)
-      .readVersions(9999)
-      .setMvccReadPoint(5)
-      .setNeedCursorResult(true)
-      .setPriority(1)
-      .setRaw(true)
-      .setReplicaId(3)
-      .setReversed(true)
-      .setRowOffsetPerColumnFamily(5)
-      .setRowPrefixFilter(Bytes.toBytes("row_"))
-      .setScanMetricsEnabled(true)
-      .setReadType(Scan.ReadType.STREAM)
-      .withStartRow(Bytes.toBytes("row_1"))
-      .withStopRow(Bytes.toBytes("row_2"))
-      .setTimeRange(0, 13);
+      .setACL("test_user2", new Permission(Permission.Action.READ)).setAllowPartialResults(true)
+      .setAsyncPrefetch(false).setAttribute("test_key", Bytes.toBytes("test_value"))
+      .setAuthorizations(new Authorizations("test_label")).setBatch(10).setCacheBlocks(false)
+      .setCaching(10).setConsistency(Consistency.TIMELINE).setFilter(new FilterList())
+      .setId("scan_copy_constructor").setIsolationLevel(IsolationLevel.READ_COMMITTED).setLimit(100)
+      .setLoadColumnFamiliesOnDemand(false).setMaxResultSize(100).setMaxResultsPerColumnFamily(1000)
+      .readVersions(9999).setMvccReadPoint(5).setNeedCursorResult(true).setPriority(1).setRaw(true)
+      .setReplicaId(3).setReversed(true).setRowOffsetPerColumnFamily(5)
+      .setStartStopRowForPrefixScan(Bytes.toBytes("row_")).setScanMetricsEnabled(true)
+      .setReadType(Scan.ReadType.STREAM).withStartRow(Bytes.toBytes("row_1"))
+      .withStopRow(Bytes.toBytes("row_2")).setTimeRange(0, 13);
 
     // create a copy of existing scan object
     Scan scanCopy = new ImmutableScan(scan);
@@ -181,10 +160,11 @@ public class TestImmutableScan {
       assertEquals("ImmutableScan does not allow access to withStopRow", e.getMessage());
     }
     try {
-      scanCopy.setRowPrefixFilter(new byte[] { 1, 2 });
+      scanCopy.setStartStopRowForPrefixScan(new byte[] { 1, 2 });
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
-      assertEquals("ImmutableScan does not allow access to setRowPrefixFilter", e.getMessage());
+      assertEquals("ImmutableScan does not allow access to setStartStopRowForPrefixScan",
+        e.getMessage());
     }
     try {
       scanCopy.readAllVersions();
@@ -209,8 +189,7 @@ public class TestImmutableScan {
       scanCopy.setCaching(1);
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
-      assertEquals("ImmutableScan does not allow access to setCaching",
-        e.getMessage());
+      assertEquals("ImmutableScan does not allow access to setCaching", e.getMessage());
     }
     try {
       scanCopy.setLoadColumnFamiliesOnDemand(true);
@@ -301,8 +280,7 @@ public class TestImmutableScan {
       scanCopy.setAllowPartialResults(true);
       throw new RuntimeException("Should not reach here");
     } catch (UnsupportedOperationException e) {
-      assertEquals("ImmutableScan does not allow access to setAllowPartialResults",
-        e.getMessage());
+      assertEquals("ImmutableScan does not allow access to setAllowPartialResults", e.getMessage());
     }
     try {
       scanCopy.setId("id");
@@ -381,12 +359,13 @@ public class TestImmutableScan {
   }
 
   private static boolean isGetter(Method method) {
-    if ("hashCode".equals(method.getName()) || "equals".equals(method.getName())
-        || method.getName().startsWith("set")) {
+    if (
+      "hashCode".equals(method.getName()) || "equals".equals(method.getName())
+        || method.getName().startsWith("set")
+    ) {
       return false;
     }
-    return !void.class.equals(method.getReturnType())
-      && !Scan.class.equals(method.getReturnType());
+    return !void.class.equals(method.getReturnType()) && !Scan.class.equals(method.getReturnType());
   }
 
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,7 +27,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface FlushRequester {
   /**
    * Tell the listener the cache needs to be flushed.
-   *
    * @param region the Region requesting the cache flush
    * @return true if our region is added into the queue, false otherwise
    */
@@ -38,42 +34,33 @@ public interface FlushRequester {
 
   /**
    * Tell the listener the cache needs to be flushed.
-   *
-   * @param region the Region requesting the cache flush
+   * @param region   the Region requesting the cache flush
    * @param families stores of region to flush, if null then use flush policy
    * @return true if our region is added into the queue, false otherwise
    */
-  boolean requestFlush(HRegion region, List<byte[]> families,
-    FlushLifeCycleTracker tracker);
+  boolean requestFlush(HRegion region, List<byte[]> families, FlushLifeCycleTracker tracker);
 
   /**
    * Tell the listener the cache needs to be flushed after a delay
-   *
    * @param region the Region requesting the cache flush
-   * @param delay after how much time should the flush happen
+   * @param delay  after how much time should the flush happen
    * @return true if our region is added into the queue, false otherwise
    */
   boolean requestDelayedFlush(HRegion region, long delay);
 
   /**
-   * Register a FlushRequestListener
-   *
-   * @param listener
+   * Register a FlushRequestListener n
    */
   void registerFlushRequestListener(final FlushRequestListener listener);
 
   /**
-   * Unregister the given FlushRequestListener
-   *
-   * @param listener
-   * @return true when passed listener is unregistered successfully.
+   * Unregister the given FlushRequestListener n * @return true when passed listener is unregistered
+   * successfully.
    */
   public boolean unregisterFlushRequestListener(final FlushRequestListener listener);
 
   /**
-   * Sets the global memstore limit to a new size.
-   *
-   * @param globalMemStoreSize
+   * Sets the global memstore limit to a new size. n
    */
   public void setGlobalMemStoreLimit(long globalMemStoreSize);
 }

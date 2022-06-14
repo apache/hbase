@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,6 @@ public class OrderedInt16 extends OrderedBytesBase<Short> {
 
   /**
    * Creates a new 16-bit {@code short} with a fixed-length encoding.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedInt16(Order order) {
@@ -78,7 +77,6 @@ public class OrderedInt16 extends OrderedBytesBase<Short> {
 
   /**
    * Read a {@code short} value from the buffer {@code src}.
-   *
    * @param src the {@link PositionedByteRange} to read the {@code float} from
    * @return the {@code short} read from buffer
    */
@@ -88,7 +86,6 @@ public class OrderedInt16 extends OrderedBytesBase<Short> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
-   *
    * @param dst the {@link PositionedByteRange} to write to
    * @param val the value to write to {@code dst}
    * @return the number of bytes written

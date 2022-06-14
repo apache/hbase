@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 
 /**
  * We will expose the connection to upper layer before initialized, so we need to buffer the calls
@@ -35,7 +34,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
 
   private enum BufferCallAction {
-    FLUSH, FAIL
+    FLUSH,
+    FAIL
   }
 
   public static final class BufferCallEvent {
@@ -45,7 +45,7 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
     public final IOException error;
 
     private BufferCallEvent(BufferCallBeforeInitHandler.BufferCallAction action,
-        IOException error) {
+      IOException error) {
       this.action = action;
       this.error = error;
     }
@@ -59,8 +59,8 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
     }
   }
 
-  private static final BufferCallEvent SUCCESS_EVENT = new BufferCallEvent(BufferCallAction.FLUSH,
-      null);
+  private static final BufferCallEvent SUCCESS_EVENT =
+    new BufferCallEvent(BufferCallAction.FLUSH, null);
 
   private final Map<Integer, Call> id2Call = new HashMap<>();
 

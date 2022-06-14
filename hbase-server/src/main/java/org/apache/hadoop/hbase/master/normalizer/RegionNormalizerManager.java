@@ -32,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -51,22 +52,17 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
   private boolean started = false;
   private boolean stopped = false;
 
-  RegionNormalizerManager(
-    @NonNull  final RegionNormalizerTracker regionNormalizerTracker,
+  RegionNormalizerManager(@NonNull final RegionNormalizerTracker regionNormalizerTracker,
     @Nullable final RegionNormalizerChore regionNormalizerChore,
     @Nullable final RegionNormalizerWorkQueue<TableName> workQueue,
-    @Nullable final RegionNormalizerWorker worker
-  ) {
+    @Nullable final RegionNormalizerWorker worker) {
     this.regionNormalizerTracker = regionNormalizerTracker;
     this.regionNormalizerChore = regionNormalizerChore;
     this.workQueue = workQueue;
     this.worker = worker;
     this.pool = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-      .setDaemon(true)
-      .setNameFormat("normalizer-worker-%d")
-      .setUncaughtExceptionHandler(
-        (thread, throwable) ->
-          LOG.error("Uncaught exception, worker thread likely terminated.", throwable))
+      .setDaemon(true).setNameFormat("normalizer-worker-%d").setUncaughtExceptionHandler((thread,
+        throwable) -> LOG.error("Uncaught exception, worker thread likely terminated.", throwable))
       .build());
   }
 
@@ -141,8 +137,8 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
   }
 
   /**
-   * Call-back for the case where plan couldn't be executed due to constraint violation,
-   * such as namespace quota.
+   * Call-back for the case where plan couldn't be executed due to constraint violation, such as
+   * namespace quota.
    * @param type type of plan that was skipped.
    */
   public void planSkipped(NormalizationPlan.PlanType type) {
@@ -177,9 +173,9 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
 
   /**
    * Submit tables for normalization.
-   * @param tables   a list of tables to submit.
-   * @param isHighPriority {@code true} when these requested tables should skip to the front of
-   *   the queue.
+   * @param tables         a list of tables to submit.
+   * @param isHighPriority {@code true} when these requested tables should skip to the front of the
+   *                       queue.
    * @return {@code true} when work was queued, {@code false} otherwise.
    */
   public boolean normalizeRegions(List<TableName> tables, boolean isHighPriority) {

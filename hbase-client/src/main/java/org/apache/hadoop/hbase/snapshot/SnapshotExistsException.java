@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class SnapshotExistsException extends HBaseSnapshotException {
   /**
    * Failure due to the snapshot already existing.
-   *
    * @param message the full description of the failure
    */
   public SnapshotExistsException(String message) {
@@ -37,8 +36,7 @@ public class SnapshotExistsException extends HBaseSnapshotException {
 
   /**
    * Failure due to the snapshot already existing.
-   *
-   * @param message the full description of the failure
+   * @param message             the full description of the failure
    * @param snapshotDescription snapshot that was attempted
    */
   public SnapshotExistsException(String message, SnapshotDescription snapshotDescription) {

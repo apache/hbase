@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,12 +30,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Test webapp loading
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHttpServerWebapps extends HttpServerFunctionalTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHttpServerWebapps.class);
+    HBaseClassTestRule.forClass(TestHttpServerWebapps.class);
 
   private static final Logger log = LoggerFactory.getLogger(TestHttpServerWebapps.class);
 
@@ -61,8 +61,8 @@ public class TestHttpServerWebapps extends HttpServerFunctionalTest {
   public void testMissingServerResource() throws Throwable {
     try {
       HttpServer server = createServer("NoSuchWebapp");
-      //should not have got here.
-      //close the server
+      // should not have got here.
+      // close the server
       String serverDescription = server.toString();
       stop(server);
       fail("Expected an exception, got " + serverDescription);

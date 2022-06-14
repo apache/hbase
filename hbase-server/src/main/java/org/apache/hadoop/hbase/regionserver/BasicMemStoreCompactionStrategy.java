@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,12 +22,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Basic strategy chooses between two actions: flattening a segment or merging indices of all
- * segments in the pipeline.
- * If number of segments in pipeline exceed the limit defined in MemStoreCompactionStrategy then
- * apply merge, otherwise flatten some segment.
+ * segments in the pipeline. If number of segments in pipeline exceed the limit defined in
+ * MemStoreCompactionStrategy then apply merge, otherwise flatten some segment.
  */
 @InterfaceAudience.Private
-public class BasicMemStoreCompactionStrategy extends MemStoreCompactionStrategy{
+public class BasicMemStoreCompactionStrategy extends MemStoreCompactionStrategy {
   private static final String NAME = "BASIC";
 
   public BasicMemStoreCompactionStrategy(Configuration conf, String cfName) {

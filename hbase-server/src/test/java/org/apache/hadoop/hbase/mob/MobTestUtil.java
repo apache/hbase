@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -41,29 +40,25 @@ public class MobTestUtil {
 
   protected static String generateRandomString(int demoLength) {
     String base = "abcdefghijklmnopqrstuvwxyz";
-    Random random = new Random();
+    Random rand = ThreadLocalRandom.current();
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < demoLength; i++) {
-      int number = random.nextInt(base.length());
+      int number = rand.nextInt(base.length());
       sb.append(base.charAt(number));
     }
     return sb.toString();
   }
+
   protected static void writeStoreFile(final StoreFileWriter writer, String caseName)
-      throws IOException {
+    throws IOException {
     writeStoreFile(writer, Bytes.toBytes(caseName), Bytes.toBytes(caseName));
   }
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes
-   * it.
-   *
-   * @param writer
-   *
-   * @throws IOException
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. n * n
    */
-  private static void writeStoreFile(final StoreFileWriter writer, byte[] fam,
-      byte[] qualifier) throws IOException {
+  private static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
+    throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     try {
       for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
@@ -81,23 +76,22 @@ public class MobTestUtil {
    * Compare two Cells only for their row family qualifier value
    */
   public static void assertCellEquals(Cell firstKeyValue, Cell secondKeyValue) {
-    Assert.assertArrayEquals(CellUtil.cloneRow(firstKeyValue),
-        CellUtil.cloneRow(secondKeyValue));
+    Assert.assertArrayEquals(CellUtil.cloneRow(firstKeyValue), CellUtil.cloneRow(secondKeyValue));
     Assert.assertArrayEquals(CellUtil.cloneFamily(firstKeyValue),
-        CellUtil.cloneFamily(secondKeyValue));
+      CellUtil.cloneFamily(secondKeyValue));
     Assert.assertArrayEquals(CellUtil.cloneQualifier(firstKeyValue),
-        CellUtil.cloneQualifier(secondKeyValue));
+      CellUtil.cloneQualifier(secondKeyValue));
     Assert.assertArrayEquals(CellUtil.cloneValue(firstKeyValue),
-        CellUtil.cloneValue(secondKeyValue));
+      CellUtil.cloneValue(secondKeyValue));
   }
 
-  public static void assertCellsValue(Table table, Scan scan,
-      byte[] expectedValue, int expectedCount) throws IOException {
+  public static void assertCellsValue(Table table, Scan scan, byte[] expectedValue,
+    int expectedCount) throws IOException {
     ResultScanner results = table.getScanner(scan);
     int count = 0;
     for (Result res : results) {
       List<Cell> cells = res.listCells();
-      for(Cell cell : cells) {
+      for (Cell cell : cells) {
         // Verify the value
         Assert.assertArrayEquals(expectedValue, CellUtil.cloneValue(cell));
         count++;
@@ -109,7 +103,7 @@ public class MobTestUtil {
 
   /**
    * Gets the number of rows in the given table.
-   * @param table to get the  scanner
+   * @param table to get the scanner
    * @return the number of rows
    */
   public static int countMobRows(final Table table) throws IOException {
@@ -117,5 +111,5 @@ public class MobTestUtil {
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     return HBaseTestingUtil.countRows(table, scan);
-    }
+  }
 }

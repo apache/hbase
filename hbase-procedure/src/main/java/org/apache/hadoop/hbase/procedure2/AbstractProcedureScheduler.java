@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,13 +68,12 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ==========================================================================
-  //  Add related
+  // Add related
   // ==========================================================================
   /**
-   * Add the procedure to the queue.
-   * NOTE: this method is called with the sched lock held.
+   * Add the procedure to the queue. NOTE: this method is called with the sched lock held.
    * @param procedure the Procedure to add
-   * @param addFront true if the item should be added to the front of the queue
+   * @param addFront  true if the item should be added to the front of the queue
    */
   protected abstract void enqueue(Procedure procedure, boolean addFront);
 
@@ -131,11 +129,10 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ==========================================================================
-  //  Poll related
+  // Poll related
   // ==========================================================================
   /**
-   * Fetch one Procedure from the queue
-   * NOTE: this method is called with the sched lock held.
+   * Fetch one Procedure from the queue NOTE: this method is called with the sched lock held.
    * @return the Procedure to execute, or null if nothing is available.
    */
   protected abstract Procedure dequeue();
@@ -187,18 +184,18 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ==========================================================================
-  //  Utils
+  // Utils
   // ==========================================================================
   /**
-   * Returns the number of elements in this queue.
-   * NOTE: this method is called with the sched lock held.
+   * Returns the number of elements in this queue. NOTE: this method is called with the sched lock
+   * held.
    * @return the number of elements in this queue.
    */
   protected abstract int queueSize();
 
   /**
-   * Returns true if there are procedures available to process.
-   * NOTE: this method is called with the sched lock held.
+   * Returns true if there are procedures available to process. NOTE: this method is called with the
+   * sched lock held.
    * @return true if there are procedures available to process, otherwise false.
    */
   protected abstract boolean queueHasRunnables();
@@ -224,7 +221,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ============================================================================
-  //  TODO: Metrics
+  // TODO: Metrics
   // ============================================================================
   public long getPollCalls() {
     return pollCalls;
@@ -235,13 +232,13 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ==========================================================================
-  //  Procedure Events
+  // Procedure Events
   // ==========================================================================
 
   /**
-   * Wake up all of the given events.
-   * Note that we first take scheduler lock and then wakeInternal() synchronizes on the event.
-   * Access should remain package-private. Use ProcedureEvent class to wake/suspend events.
+   * Wake up all of the given events. Note that we first take scheduler lock and then wakeInternal()
+   * synchronizes on the event. Access should remain package-private. Use ProcedureEvent class to
+   * wake/suspend events.
    * @param events the list of events to wake
    */
   public void wakeEvents(ProcedureEvent[] events) {
@@ -276,7 +273,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   }
 
   // ==========================================================================
-  //  Internal helpers
+  // Internal helpers
   // ==========================================================================
   protected void schedLock() {
     schedulerLock.lock();

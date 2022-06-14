@@ -51,17 +51,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests unhandled exceptions thrown by coprocessors running on master.
- * Expected result is that the master will abort with an informative
- * error message describing the set of its loaded coprocessors for crash diagnosis.
- * (HBASE-4014).
+ * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
+ * master will abort with an informative error message describing the set of its loaded coprocessors
+ * for crash diagnosis. (HBASE-4014).
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestMasterCoprocessorExceptionWithAbort {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithAbort.class);
+    HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithAbort.class);
 
   public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
@@ -80,6 +79,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
   public static class CreateTableThread extends Thread {
     HBaseTestingUtil UTIL;
+
     public CreateTableThread(HBaseTestingUtil UTIL) {
       this.UTIL = UTIL;
     }
@@ -97,9 +97,9 @@ public class TestMasterCoprocessorExceptionWithAbort {
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
         assertEquals("HBaseAdmin threw an interrupted IOException as expected.",
-            "java.io.InterruptedIOException", e.getClass().getName());
+          "java.io.InterruptedIOException", e.getClass().getName());
       }
-   }
+    }
   }
 
   public static class BuggyMasterObserver implements MasterCoprocessor, MasterObserver {
@@ -115,7 +115,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     @Override
     public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableDescriptor desc, RegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
       // cause a NullPointerException and don't catch it: this will cause the
       // master to abort().
       Integer i;
@@ -129,7 +129,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     @Override
     public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       postStartMasterCalled = true;
     }
 
@@ -154,10 +154,9 @@ public class TestMasterCoprocessorExceptionWithAbort {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        BuggyMasterObserver.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, BuggyMasterObserver.class.getName());
     conf.setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, true);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Fail fast
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2); // Fail fast
     UTIL.startMiniCluster();
   }
 
@@ -167,8 +166,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
   }
 
   @Test
-  public void testExceptionFromCoprocessorWhenCreatingTable()
-      throws IOException {
+  public void testExceptionFromCoprocessorWhenCreatingTable() throws IOException {
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
@@ -178,29 +176,29 @@ public class TestMasterCoprocessorExceptionWithAbort {
 
     // set a watch on the zookeeper /hbase/master node. If the master dies,
     // the node will be deleted.
-    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(),
-      "unittest", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(UTIL.getConfiguration(), "unittest", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException("Fatal ZK error: " + why, e);
       }
+
       @Override
       public boolean isAborted() {
         return false;
       }
     });
 
-    MasterTracker masterTracker = new MasterTracker(zkw,"/hbase/master",
-        new Abortable() {
-          @Override
-          public void abort(String why, Throwable e) {
-            throw new RuntimeException("Fatal ZK master tracker error, why=", e);
-          }
-          @Override
-          public boolean isAborted() {
-            return false;
-          }
-        });
+    MasterTracker masterTracker = new MasterTracker(zkw, "/hbase/master", new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        throw new RuntimeException("Fatal ZK master tracker error, why=", e);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+    });
 
     masterTracker.start();
     zkw.registerListener(masterTracker);
@@ -208,12 +206,13 @@ public class TestMasterCoprocessorExceptionWithAbort {
     // Test (part of the) output that should have be printed by master when it aborts:
     // (namely the part that shows the set of loaded coprocessors).
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
-    assertTrue(HMaster.getLoadedCoprocessors().
-      contains(TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName()));
+    assertTrue(HMaster.getLoadedCoprocessors()
+      .contains(TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName()));
 
     CreateTableThread createTableThread = new CreateTableThread(UTIL);
 
-    // Attempting to create a table (using createTableThread above) triggers an NPE in BuggyMasterObserver.
+    // Attempting to create a table (using createTableThread above) triggers an NPE in
+    // BuggyMasterObserver.
     // Master will then abort and the /hbase/master zk node will be deleted.
     createTableThread.start();
 
@@ -225,22 +224,20 @@ public class TestMasterCoprocessorExceptionWithAbort {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
-        fail("InterruptedException while waiting for master zk node to "
-            + "be deleted.");
+        fail("InterruptedException while waiting for master zk node to " + "be deleted.");
       }
     }
 
     assertTrue("Master aborted on coprocessor exception, as expected.",
-        masterTracker.masterZKNodeWasDeleted);
+      masterTracker.masterZKNodeWasDeleted);
 
     createTableThread.interrupt();
     try {
       createTableThread.join(1000);
     } catch (InterruptedException e) {
-      assertTrue("Ignoring InterruptedException while waiting for " +
-          " createTableThread.join().", true);
+      assertTrue("Ignoring InterruptedException while waiting for " + " createTableThread.join().",
+        true);
     }
   }
 
 }
-

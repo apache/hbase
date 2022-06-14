@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -34,20 +34,18 @@ import org.slf4j.LoggerFactory;
  * Action that removes a column family.
  */
 public class RemoveColumnAction extends Action {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(RemoveColumnAction.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RemoveColumnAction.class);
   private final TableName tableName;
   private final Set<String> protectedColumns;
   private Admin admin;
-  private final Random random;
 
   public RemoveColumnAction(TableName tableName, Set<String> protectedColumns) {
     this.tableName = tableName;
     this.protectedColumns = protectedColumns;
-    random = new Random();
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -61,19 +59,21 @@ public class RemoveColumnAction extends Action {
   public void perform() throws Exception {
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+    Random rand = ThreadLocalRandom.current();
 
     if (columnDescriptors.length <= (protectedColumns == null ? 1 : protectedColumns.size())) {
       return;
     }
-
-    int index = random.nextInt(columnDescriptors.length);
-    while(protectedColumns != null &&
-          protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
-      index = random.nextInt(columnDescriptors.length);
+    int index = rand.nextInt(columnDescriptors.length);
+    while (
+      protectedColumns != null
+        && protectedColumns.contains(columnDescriptors[index].getNameAsString())
+    ) {
+      index = rand.nextInt(columnDescriptors.length);
     }
     byte[] colDescName = columnDescriptors[index].getName();
-    getLogger().debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "
-        + tableName.getNameAsString());
+    getLogger().debug("Performing action: Removing " + Bytes.toString(colDescName) + " from "
+      + tableName.getNameAsString());
 
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor);
     builder.removeColumnFamily(colDescName);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -30,10 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface CacheableDeserializer<T extends Cacheable> {
   /**
-   * @param b ByteBuff to deserialize the Cacheable.
+   * @param b         ByteBuff to deserialize the Cacheable.
    * @param allocator to manage NIO ByteBuffers for future allocation or de-allocation.
-   * @return T the deserialized object.
-   * @throws IOException
+   * @return T the deserialized object. n
    */
   T deserialize(ByteBuff b, ByteBuffAllocator allocator) throws IOException;
 

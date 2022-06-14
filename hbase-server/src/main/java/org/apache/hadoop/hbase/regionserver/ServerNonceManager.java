@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
@@ -34,16 +32,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of nonce manager that stores nonces in a hash map and cleans them up after
- * some time; if nonce group/client ID is supplied, nonces are stored by client ID.
+ * Implementation of nonce manager that stores nonces in a hash map and cleans them up after some
+ * time; if nonce group/client ID is supplied, nonces are stored by client ID.
  */
 @InterfaceAudience.Private
 public class ServerNonceManager {
   public static final String HASH_NONCE_GRACE_PERIOD_KEY = "hbase.server.hashNonce.gracePeriod";
   private static final Logger LOG = LoggerFactory.getLogger(ServerNonceManager.class);
 
-  /** The time to wait in an extremely unlikely case of a conflict with a running op.
-   * Only here so that tests could override it and not wait. */
+  /**
+   * The time to wait in an extremely unlikely case of a conflict with a running op. Only here so
+   * that tests could override it and not wait.
+   */
   private int conflictWaitIterationMs = 30000;
 
   private static final SimpleDateFormat tsFormat = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -65,7 +65,7 @@ public class ServerNonceManager {
     @Override
     public String toString() {
       return "[state " + getState() + ", hasWait " + hasWait() + ", activity "
-          + tsFormat.format(new Date(getActivityTime())) + "]";
+        + tsFormat.format(new Date(getActivityTime())) + "]";
     }
 
     public OperationContext() {
@@ -78,7 +78,7 @@ public class ServerNonceManager {
     }
 
     public int getState() {
-      return (int)(this.data & STATE_BITS);
+      return (int) (this.data & STATE_BITS);
     }
 
     public void setHasWait() {
@@ -112,12 +112,10 @@ public class ServerNonceManager {
   }
 
   /**
-   * Nonces.
-   * Approximate overhead per nonce: 64 bytes from hashmap, 32 from two objects (k/v),
-   * NK: 16 bytes (2 longs), OC: 8 bytes (1 long) - so, 120 bytes.
-   * With 30min expiration time, 5k increments/appends per sec., we'd use approximately 1Gb,
-   * which is a realistic worst case. If it's much worse, we could use some sort of memory
-   * limit and cleanup.
+   * Nonces. Approximate overhead per nonce: 64 bytes from hashmap, 32 from two objects (k/v), NK:
+   * 16 bytes (2 longs), OC: 8 bytes (1 long) - so, 120 bytes. With 30min expiration time, 5k
+   * increments/appends per sec., we'd use approximately 1Gb, which is a realistic worst case. If
+   * it's much worse, we could use some sort of memory limit and cleanup.
    */
   private ConcurrentHashMap<NonceKey, OperationContext> nonces = new ConcurrentHashMap<>();
 
@@ -128,7 +126,7 @@ public class ServerNonceManager {
     deleteNonceGracePeriod = conf.getInt(HASH_NONCE_GRACE_PERIOD_KEY, 30 * 60 * 1000);
     if (deleteNonceGracePeriod < 60 * 1000) {
       LOG.warn("Nonce grace period " + deleteNonceGracePeriod
-          + " is less than a minute; might be too small to be useful");
+        + " is less than a minute; might be too small to be useful");
     }
   }
 
@@ -137,15 +135,15 @@ public class ServerNonceManager {
   }
 
   /**
-   * Starts the operation if operation with such nonce has not already succeeded. If the
-   * operation is in progress, waits for it to end and checks whether it has succeeded.
-   * @param group Nonce group.
-   * @param nonce Nonce.
+   * Starts the operation if operation with such nonce has not already succeeded. If the operation
+   * is in progress, waits for it to end and checks whether it has succeeded.
+   * @param group     Nonce group.
+   * @param nonce     Nonce.
    * @param stoppable Stoppable that terminates waiting (if any) when the server is stopped.
    * @return true if the operation has not already succeeded and can proceed; false otherwise.
    */
   public boolean startOperation(long group, long nonce, Stoppable stoppable)
-      throws InterruptedException {
+    throws InterruptedException {
     if (nonce == HConstants.NO_NONCE) return true;
     NonceKey nk = new NonceKey(group, nonce);
     OperationContext ctx = new OperationContext();
@@ -171,8 +169,8 @@ public class ServerNonceManager {
 
   /**
    * Ends the operation started by startOperation.
-   * @param group Nonce group.
-   * @param nonce Nonce.
+   * @param group   Nonce group.
+   * @param nonce   Nonce.
    * @param success Whether the operation has succeeded.
    */
   public void endOperation(long group, long nonce, boolean success) {
@@ -201,7 +199,7 @@ public class ServerNonceManager {
    * Store the write point in OperationContext when the operation succeed.
    * @param group Nonce group.
    * @param nonce Nonce.
-   * @param mvcc Write point of the succeed operation.
+   * @param mvcc  Write point of the succeed operation.
    */
   public void addMvccToOperationContext(long group, long nonce, long mvcc) {
     if (nonce == HConstants.NO_NONCE) {
@@ -232,8 +230,8 @@ public class ServerNonceManager {
 
   /**
    * Reports the operation from WAL during replay.
-   * @param group Nonce group.
-   * @param nonce Nonce.
+   * @param group     Nonce group.
+   * @param nonce     Nonce.
    * @param writeTime Entry write time, used to ignore entries that are too old.
    */
   public void reportOperationFromWal(long group, long nonce, long writeTime) {
@@ -248,8 +246,8 @@ public class ServerNonceManager {
     if (oldResult != null) {
       // Some schemes can have collisions (for example, expiring hashes), so just log it.
       // We have no idea about the semantics here, so this is the least of many evils.
-      LOG.warn("Nonce collision during WAL recovery: " + nk
-          + ", " + oldResult + " with " + newResult);
+      LOG.warn(
+        "Nonce collision during WAL recovery: " + nk + ", " + oldResult + " with " + newResult);
     }
   }
 

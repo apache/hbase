@@ -153,8 +153,7 @@ public class TestSeparateClientZKCluster {
     TableName tn = name.getTableName();
     // create table
     Connection conn = TEST_UTIL.getConnection();
-    try (Admin admin = conn.getAdmin();
-      Table table = conn.getTable(tn);
+    try (Admin admin = conn.getAdmin(); Table table = conn.getTable(tn);
       RegionLocator locator = conn.getRegionLocator(tn)) {
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       ColumnFamilyDescriptorBuilder cfDescBuilder =

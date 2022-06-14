@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.ipc.RpcServer.MAX_REQUEST_SIZE;
 import static org.junit.Assert.assertThrows;
 
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +67,7 @@ public class TestRequestTooBigException {
   @Test
   public void testHbasePutDeleteCell() throws Exception {
     byte[] value = new byte[1024];
-    ThreadLocalRandom.current().nextBytes(value);
+    Bytes.random(value);
     for (int m = 0; m < 100; m++) {
       Put p = new Put(Bytes.toBytes("bigrow-" + m));
       // max request is 10K, big request = 100 * 1K

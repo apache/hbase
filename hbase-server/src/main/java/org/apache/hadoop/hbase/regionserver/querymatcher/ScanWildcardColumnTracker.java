@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Keeps track of the columns for a scan if they are not explicitly specified
@@ -50,15 +48,16 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   private long oldestStamp;
 
   private final CellComparator comparator;
+
   /**
    * Return maxVersions of every row.
-   * @param minVersion Minimum number of versions to keep
-   * @param maxVersion Maximum number of versions to return
+   * @param minVersion        Minimum number of versions to keep
+   * @param maxVersion        Maximum number of versions to return
    * @param oldestUnexpiredTS oldest timestamp that has not expired according to the TTL.
-   * @param comparator used to compare the qualifier of cell
+   * @param comparator        used to compare the qualifier of cell
    */
-  public ScanWildcardColumnTracker(int minVersion, int maxVersion,
-      long oldestUnexpiredTS, CellComparator comparator) {
+  public ScanWildcardColumnTracker(int minVersion, int maxVersion, long oldestUnexpiredTS,
+    CellComparator comparator) {
     this.maxVersions = maxVersion;
     this.minVersions = minVersion;
     this.oldestStamp = oldestUnexpiredTS;
@@ -79,7 +78,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    */
   @Override
   public ScanQueryMatcher.MatchCode checkVersions(Cell cell, long timestamp, byte type,
-      boolean ignoreCount) throws IOException {
+    boolean ignoreCount) throws IOException {
     if (columnCell == null) {
       // first iteration.
       resetCell(cell);
@@ -119,8 +118,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     // was incorrectly stored into the store for this one. Throw an exception,
     // because this might lead to data corruption.
     throw new IOException("ScanWildcardColumnTracker.checkColumn ran into a column actually "
-        + "smaller than the previous column: "
-        + Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
+      + "smaller than the previous column: " + Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
   }
 
   private void resetCell(Cell columnCell) {
@@ -186,8 +184,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * We can never know a-priori if we are done, so always return false.
-   * @return false
+   * We can never know a-priori if we are done, so always return false. n
    */
   @Override
   public boolean done() {

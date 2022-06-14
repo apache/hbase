@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
@@ -26,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,9 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Not thread safe!
  */
 @InterfaceAudience.Public
-public class ByteBufferOutputStream extends OutputStream
-    implements ByteBufferWriter {
-  
+public class ByteBufferOutputStream extends OutputStream implements ByteBufferWriter {
+
   // Borrowed from openJDK:
   // http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8-b132/java/util/ArrayList.java#221
   private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
@@ -58,12 +54,12 @@ public class ByteBufferOutputStream extends OutputStream
 
   /**
    * @param bb ByteBuffer to use. If too small, will be discarded and a new one allocated in its
-   * place; i.e. the passed in BB may NOT BE RETURNED!! Minimally it will be altered. SIDE EFFECT!!
-   * If you want to get the newly allocated ByteBuffer, you'll need to pick it up when
-   * done with this instance by calling {@link #getByteBuffer()}. All this encapsulation violation
-   * is so we can recycle buffers rather than allocate each time; it can get expensive especially
-   * if the buffers are big doing allocations each time or having them undergo resizing because
-   * initial allocation was small.
+   *           place; i.e. the passed in BB may NOT BE RETURNED!! Minimally it will be altered. SIDE
+   *           EFFECT!! If you want to get the newly allocated ByteBuffer, you'll need to pick it up
+   *           when done with this instance by calling {@link #getByteBuffer()}. All this
+   *           encapsulation violation is so we can recycle buffers rather than allocate each time;
+   *           it can get expensive especially if the buffers are big doing allocations each time or
+   *           having them undergo resizing because initial allocation was small.
    * @see #getByteBuffer()
    */
   public ByteBufferOutputStream(final ByteBuffer bb) {
@@ -80,12 +76,13 @@ public class ByteBufferOutputStream extends OutputStream
     if (capacity > MAX_ARRAY_SIZE) { // avoid OutOfMemoryError
       throw new BufferOverflowException();
     }
-    return useDirectByteBuffer? ByteBuffer.allocateDirect(capacity): ByteBuffer.allocate(capacity);
+    return useDirectByteBuffer
+      ? ByteBuffer.allocateDirect(capacity)
+      : ByteBuffer.allocate(capacity);
   }
 
   /**
-   * This flips the underlying BB so be sure to use it _last_!
-   * @return ByteBuffer
+   * This flips the underlying BB so be sure to use it _last_! n
    */
   public ByteBuffer getByteBuffer() {
     curBuf.flip();
@@ -114,16 +111,15 @@ public class ByteBufferOutputStream extends OutputStream
   @Override
   public void write(int b) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_BYTE);
-    curBuf.put((byte)b);
+    curBuf.put((byte) b);
   }
 
- /**
-  * Writes the complete contents of this byte buffer output stream to
-  * the specified output stream argument.
-  *
-  * @param      out   the output stream to which to write the data.
-  * @exception  IOException  if an I/O error occurs.
-  */
+  /**
+   * Writes the complete contents of this byte buffer output stream to the specified output stream
+   * argument.
+   * @param out the output stream to which to write the data.
+   * @exception IOException if an I/O error occurs.
+   */
   public void writeTo(OutputStream out) throws IOException {
     WritableByteChannel channel = Channels.newChannel(out);
     ByteBuffer bb = curBuf.duplicate();
@@ -149,8 +145,7 @@ public class ByteBufferOutputStream extends OutputStream
   }
 
   /**
-   * Writes an <code>int</code> to the underlying output stream as four
-   * bytes, high byte first.
+   * Writes an <code>int</code> to the underlying output stream as four bytes, high byte first.
    * @param i the <code>int</code> to write
    * @throws IOException if an I/O error occurs.
    */

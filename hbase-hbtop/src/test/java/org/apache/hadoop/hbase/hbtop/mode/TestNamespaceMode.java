@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestNamespaceMode extends TestModeBase {
 
@@ -59,8 +58,7 @@ public class TestNamespaceMode extends TestModeBase {
         break;
 
       case "namespace":
-        assertThat(drillDownInfo.getInitialFilters().get(0).toString(),
-          is("NAMESPACE==namespace"));
+        assertThat(drillDownInfo.getInitialFilters().get(0).toString(), is("NAMESPACE==namespace"));
         break;
 
       default:

@@ -63,17 +63,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
 /**
  * This class implements atomic multi row transactions using
  * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)} and Coprocessor
- * endpoints. We can also specify some conditions to perform conditional update.
- *
- * Defines a protocol to perform multi row transactions.
- * See {@link MultiRowMutationEndpoint} for the implementation.
+ * endpoints. We can also specify some conditions to perform conditional update. Defines a protocol
+ * to perform multi row transactions. See {@link MultiRowMutationEndpoint} for the implementation.
  * <br>
- * See
- * {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)}
- * for details and limitations.
- * <br>
- * Example:
- * <code>
+ * See {@link HRegion#mutateRowsWithLocks(Collection, Collection, long, long)} for details and
+ * limitations. <br>
+ * Example: <code>
  * Put p = new Put(row1);
  * Delete d = new Delete(row2);
  * Increment i = new Increment(row3);
@@ -113,7 +108,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
 
   @Override
   public void mutateRows(RpcController controller, MutateRowsRequest request,
-      RpcCallback<MutateRowsResponse> done) {
+    RpcCallback<MutateRowsResponse> done) {
     boolean matches = true;
     List<Region.RowLock> rowLocks = null;
     try {
@@ -131,8 +126,7 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
       for (Mutation m : mutations) {
         // check whether rows are in range for this region
         if (!HRegion.rowIsInRange(regionInfo, m.getRow())) {
-          String msg = "Requested row out of range '"
-              + Bytes.toStringBinary(m.getRow()) + "'";
+          String msg = "Requested row out of range '" + Bytes.toStringBinary(m.getRow()) + "'";
           if (rowsToLock.isEmpty()) {
             // if this is the first row, region might have moved,
             // allow client to retry
@@ -208,8 +202,9 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
       comparator = ProtobufUtil.toComparator(condition.getComparator());
     }
 
-    TimeRange timeRange = condition.hasTimeRange() ?
-      ProtobufUtil.toTimeRange(condition.getTimeRange()) : TimeRange.allTime();
+    TimeRange timeRange = condition.hasTimeRange()
+      ? ProtobufUtil.toTimeRange(condition.getTimeRange())
+      : TimeRange.allTime();
 
     Get get = new Get(row);
     if (family != null) {
@@ -251,9 +246,8 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
 
   private void checkFamily(Region region, byte[] family) throws NoSuchColumnFamilyException {
     if (!region.getTableDescriptor().hasColumnFamily(family)) {
-      throw new NoSuchColumnFamilyException(
-        "Column family " + Bytes.toString(family) + " does not exist in region " + this
-          + " in table " + region.getTableDescriptor());
+      throw new NoSuchColumnFamilyException("Column family " + Bytes.toString(family)
+        + " does not exist in region " + this + " in table " + region.getTableDescriptor());
     }
   }
 
@@ -284,17 +278,17 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
   /**
    * Stores a reference to the coprocessor environment provided by the
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost} from the region where this
-   * coprocessor is loaded.  Since this is a coprocessor endpoint, it always expects to be loaded
-   * on a table region, so always expects this to be an instance of
+   * coprocessor is loaded. Since this is a coprocessor endpoint, it always expects to be loaded on
+   * a table region, so always expects this to be an instance of
    * {@link RegionCoprocessorEnvironment}.
    * @param env the environment provided by the coprocessor host
    * @throws IOException if the provided environment is not an instance of
-   * {@code RegionCoprocessorEnvironment}
+   *                     {@code RegionCoprocessorEnvironment}
    */
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment) {
-      this.env = (RegionCoprocessorEnvironment)env;
+      this.env = (RegionCoprocessorEnvironment) env;
     } else {
       throw new CoprocessorException("Must be loaded on a table region!");
     }

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Random;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.util.Random;
 
 /**
  * These helper methods generate random byte[]'s data for KeyValues
@@ -32,16 +31,13 @@ public class RandomKeyValueUtil {
 
   public static final char randomReadableChar(Random rand) {
     int i = rand.nextInt(26 * 2 + 10 + 1);
-    if (i < 26)
-      return (char) ('A' + i);
+    if (i < 26) return (char) ('A' + i);
     i -= 26;
 
-    if (i < 26)
-      return (char) ('a' + i);
+    if (i < 26) return (char) ('a' + i);
     i -= 26;
 
-    if (i < 10)
-      return (char) ('0' + i);
+    if (i < 10) return (char) ('0' + i);
     i -= 10;
 
     assert i == 0;
@@ -49,16 +45,14 @@ public class RandomKeyValueUtil {
   }
 
   public static KeyValue randomKeyValue(Random rand) {
-    return new KeyValue(randomRowOrQualifier(rand),
-        Bytes.toBytes(COLUMN_FAMILY_NAME), randomRowOrQualifier(rand),
-        randomValue(rand));
+    return new KeyValue(randomRowOrQualifier(rand), Bytes.toBytes(COLUMN_FAMILY_NAME),
+      randomRowOrQualifier(rand), randomValue(rand));
   }
 
   public static byte[] randomRowOrQualifier(Random rand) {
     StringBuilder field = new StringBuilder();
     int fieldLen = MIN_ROW_OR_QUALIFIER_LENGTH
-        + rand.nextInt(MAX_ROW_OR_QUALIFIER_LENGTH
-        - MIN_ROW_OR_QUALIFIER_LENGTH + 1);
+      + rand.nextInt(MAX_ROW_OR_QUALIFIER_LENGTH - MIN_ROW_OR_QUALIFIER_LENGTH + 1);
     for (int i = 0; i < fieldLen; ++i)
       field.append(randomReadableChar(rand));
     return Bytes.toBytes(field.toString());
@@ -75,23 +69,18 @@ public class RandomKeyValueUtil {
   }
 
   /**
-   * Generates a random key that is guaranteed to increase as the given index i
-   * increases. The result consists of a prefix, which is a deterministic
-   * increasing function of i, and a random suffix.
-   *
-   * @param rand random number generator to use
-   * @param i
-   * @return the random key
+   * Generates a random key that is guaranteed to increase as the given index i increases. The
+   * result consists of a prefix, which is a deterministic increasing function of i, and a random
+   * suffix.
+   * @param rand random number generator to use n * @return the random key
    */
   public static byte[] randomOrderedKey(Random rand, int i) {
     StringBuilder k = new StringBuilder();
 
     // The fixed-length lexicographically increasing part of the key.
     for (int bitIndex = 31; bitIndex >= 0; --bitIndex) {
-      if ((i & (1 << bitIndex)) == 0)
-        k.append("a");
-      else
-        k.append("b");
+      if ((i & (1 << bitIndex)) == 0) k.append("a");
+      else k.append("b");
     }
 
     // A random-length random suffix of the key.
@@ -107,10 +96,8 @@ public class RandomKeyValueUtil {
 
     // The fixed-length lexicographically increasing part of the key.
     for (int bitIndex = 31; bitIndex >= 0; --bitIndex) {
-      if ((i & (1 << bitIndex)) == 0)
-        k.append("a");
-      else
-        k.append("b");
+      if ((i & (1 << bitIndex)) == 0) k.append("a");
+      else k.append("b");
     }
 
     // A random suffix of the key.

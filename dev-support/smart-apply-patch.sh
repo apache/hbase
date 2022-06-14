@@ -52,7 +52,7 @@ if $PATCH -p0 -E --dry-run < $PATCH_FILE 2>&1 > $TMP; then
   # correct place to put those files.
 
 #  NOTE 2014/07/17:
-#  Temporarily disabling below check since our jenkins boxes seems to be not defaulting to bash 
+#  Temporarily disabling below check since our jenkins boxes seems to be not defaulting to bash
 #  causing below checks to fail. Once it is fixed, we can revert the commit and enable this again.
 
 #  TMP2=/tmp/tmp.paths.2.$$

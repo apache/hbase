@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,21 +20,18 @@ package org.apache.hadoop.hbase.monitoring;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public abstract class ThreadMonitoring {
 
-  private static final ThreadMXBean threadBean = 
-    ManagementFactory.getThreadMXBean();
+  private static final ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
   private static final int STACK_DEPTH = 20;
 
   public static ThreadInfo getThreadInfo(Thread t) {
     long tid = t.getId();
     return threadBean.getThreadInfo(tid, STACK_DEPTH);
   }
-    
 
   /**
    * Format the given ThreadInfo object as a String.
@@ -48,15 +44,9 @@ public abstract class ThreadMonitoring {
   }
 
   /**
-   * Print all of the thread's information and stack traces.
-   * 
-   * @param sb
-   * @param info
-   * @param indent
+   * Print all of the thread's information and stack traces. nnn
    */
-  public static void appendThreadInfo(StringBuilder sb,
-                                      ThreadInfo info,
-                                      String indent) {
+  public static void appendThreadInfo(StringBuilder sb, ThreadInfo info, String indent) {
     boolean contention = threadBean.isThreadContentionMonitoringEnabled();
 
     if (info == null) {
@@ -65,7 +55,7 @@ public abstract class ThreadMonitoring {
     }
     String taskName = getTaskName(info.getThreadId(), info.getThreadName());
     sb.append(indent).append("Thread ").append(taskName).append(":\n");
-    
+
     Thread.State state = info.getThreadState();
     sb.append(indent).append("  State: ").append(state).append("\n");
     sb.append(indent).append("  Blocked count: ").append(info.getBlockedCount()).append("\n");
@@ -76,23 +66,22 @@ public abstract class ThreadMonitoring {
     }
     if (state == Thread.State.WAITING) {
       sb.append(indent).append("  Waiting on ").append(info.getLockName()).append("\n");
-    } else  if (state == Thread.State.BLOCKED) {
+    } else if (state == Thread.State.BLOCKED) {
       sb.append(indent).append("  Blocked on ").append(info.getLockName()).append("\n");
-      sb.append(indent).append("  Blocked by ").append(
-        getTaskName(info.getLockOwnerId(), info.getLockOwnerName())).append("\n");
+      sb.append(indent).append("  Blocked by ")
+        .append(getTaskName(info.getLockOwnerId(), info.getLockOwnerName())).append("\n");
     }
     sb.append(indent).append("  Stack:").append("\n");
-    for (StackTraceElement frame: info.getStackTrace()) {
+    for (StackTraceElement frame : info.getStackTrace()) {
       sb.append(indent).append("    ").append(frame.toString()).append("\n");
     }
   }
-  
+
   private static String getTaskName(long id, String name) {
     if (name == null) {
       return Long.toString(id);
     }
     return id + " (" + name + ")";
   }
-
 
 }

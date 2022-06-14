@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -37,16 +35,14 @@ public class MetricsUserAggregateSourceImpl extends BaseSourceImpl
   private static final Logger LOG = LoggerFactory.getLogger(MetricsUserAggregateSourceImpl.class);
 
   private final ConcurrentHashMap<String, MetricsUserSource> userSources =
-      new ConcurrentHashMap<String, MetricsUserSource>();
+    new ConcurrentHashMap<String, MetricsUserSource>();
 
   public MetricsUserAggregateSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-  public MetricsUserAggregateSourceImpl(String metricsName,
-      String metricsDescription,
-      String metricsContext,
-      String metricsJmxContext) {
+  public MetricsUserAggregateSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 

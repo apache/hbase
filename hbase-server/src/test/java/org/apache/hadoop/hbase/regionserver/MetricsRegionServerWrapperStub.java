@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
@@ -66,6 +65,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getMemStoreSize() {
     return 1025;
+  }
+
+  @Override
+  public long getOnHeapMemStoreSize() {
+    return 500;
+  }
+
+  @Override
+  public long getOffHeapMemStoreSize() {
+    return 600;
   }
 
   @Override
@@ -140,6 +149,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public long getByteBuffAllocatorUsedBufferCount() {
+    return 0;
+  }
+
+  @Override
+  public int getActiveScanners() {
     return 0;
   }
 
@@ -259,6 +273,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getOnHeapMemStoreLimit() {
+    return 311;
+  }
+
+  @Override
+  public long getOffHeapMemStoreLimit() {
+    return 419;
+  }
+
+  @Override
   public long getBlockCacheFreeSize() {
     return 413;
   }
@@ -299,7 +323,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-   public long getBlockCachePrimaryEvictedCount() {
+  public long getBlockCachePrimaryEvictedCount() {
     return 420;
   }
 
@@ -365,7 +389,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public void forceRecompute() {
-    //IGNORED.
+    // IGNORED.
   }
 
   @Override
@@ -639,7 +663,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public  long getRpcFullScanRequestsCount() {
+  public long getRpcFullScanRequestsCount() {
     return 10;
   }
 }

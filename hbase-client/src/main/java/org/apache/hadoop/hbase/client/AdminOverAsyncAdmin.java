@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -136,14 +136,13 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables)
-      throws IOException {
+  public List<TableDescriptor> listTableDescriptors(boolean includeSysTables) throws IOException {
     return get(admin.listTableDescriptors(includeSysTables));
   }
 
   @Override
   public List<TableDescriptor> listTableDescriptors(Pattern pattern, boolean includeSysTables)
-      throws IOException {
+    throws IOException {
     return get(admin.listTableDescriptors(pattern, includeSysTables));
   }
 
@@ -159,13 +158,13 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public TableDescriptor getDescriptor(TableName tableName)
-      throws TableNotFoundException, IOException {
+    throws TableNotFoundException, IOException {
     return get(admin.getDescriptor(tableName));
   }
 
   @Override
   public void createTable(TableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
-      throws IOException {
+    throws IOException {
     get(admin.createTable(desc, startKey, endKey, numRegions));
   }
 
@@ -176,7 +175,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> createTableAsync(TableDescriptor desc, byte[][] splitKeys)
-      throws IOException {
+    throws IOException {
     return admin.createTable(desc, splitKeys);
   }
 
@@ -187,7 +186,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> truncateTableAsync(TableName tableName, boolean preserveSplits)
-      throws IOException {
+    throws IOException {
     return admin.truncateTable(tableName, preserveSplits);
   }
 
@@ -218,20 +217,26 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> addColumnFamilyAsync(TableName tableName, ColumnFamilyDescriptor columnFamily)
-      throws IOException {
+    throws IOException {
     return admin.addColumnFamily(tableName, columnFamily);
   }
 
   @Override
   public Future<Void> deleteColumnFamilyAsync(TableName tableName, byte[] columnFamily)
-      throws IOException {
+    throws IOException {
     return admin.deleteColumnFamily(tableName, columnFamily);
   }
 
   @Override
   public Future<Void> modifyColumnFamilyAsync(TableName tableName,
-      ColumnFamilyDescriptor columnFamily) throws IOException {
+    ColumnFamilyDescriptor columnFamily) throws IOException {
     return admin.modifyColumnFamily(tableName, columnFamily);
+  }
+
+  @Override
+  public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
+    String dstSFT) throws IOException {
+    return admin.modifyColumnFamilyStoreFileTracker(tableName, family, dstSFT);
   }
 
   @Override
@@ -286,13 +291,13 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void compact(TableName tableName, CompactType compactType)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     get(admin.compact(tableName, compactType));
   }
 
   @Override
   public void compact(TableName tableName, byte[] columnFamily, CompactType compactType)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     get(admin.compact(tableName, columnFamily, compactType));
   }
 
@@ -318,19 +323,19 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void majorCompact(TableName tableName, CompactType compactType)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     get(admin.majorCompact(tableName, compactType));
   }
 
   @Override
   public void majorCompact(TableName tableName, byte[] columnFamily, CompactType compactType)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     get(admin.majorCompact(tableName, columnFamily, compactType));
   }
 
   @Override
   public Map<ServerName, Boolean> compactionSwitch(boolean switchState,
-      List<String> serverNamesList) throws IOException {
+    List<String> serverNamesList) throws IOException {
     return get(admin.compactionSwitch(switchState, serverNamesList));
   }
 
@@ -373,7 +378,6 @@ class AdminOverAsyncAdmin implements Admin {
   public boolean balancerSwitch(boolean onOrOff, boolean synchronous) throws IOException {
     return get(admin.balancerSwitch(onOrOff, synchronous));
   }
-
 
   public BalanceResponse balance(BalanceRequest request) throws IOException {
     return get(admin.balance(request));
@@ -446,7 +450,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> mergeRegionsAsync(byte[][] nameOfRegionsToMerge, boolean forcible)
-      throws IOException {
+    throws IOException {
     return admin.mergeRegions(Arrays.asList(nameOfRegionsToMerge), forcible);
   }
 
@@ -473,6 +477,12 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public Future<Void> modifyTableAsync(TableDescriptor td) throws IOException {
     return admin.modifyTable(td);
+  }
+
+  @Override
+  public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
+    throws IOException {
+    return admin.modifyTableStoreFileTracker(tableName, dstSFT);
   }
 
   @Override
@@ -507,7 +517,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName)
-      throws IOException {
+    throws IOException {
     return get(admin.getRegionMetrics(serverName, tableName));
   }
 
@@ -533,7 +543,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public NamespaceDescriptor getNamespaceDescriptor(String name)
-      throws NamespaceNotFoundException, IOException {
+    throws NamespaceNotFoundException, IOException {
     return get(admin.getNamespaceDescriptor(name));
   }
 
@@ -574,7 +584,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Boolean> abortProcedureAsync(long procId, boolean mayInterruptIfRunning)
-      throws IOException {
+    throws IOException {
     return admin.abortProcedure(procId, mayInterruptIfRunning);
   }
 
@@ -600,7 +610,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public CompactionState getCompactionState(TableName tableName, CompactType compactType)
-      throws IOException {
+    throws IOException {
     return get(admin.getCompactionState(tableName, compactType));
   }
 
@@ -621,19 +631,19 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void snapshot(SnapshotDescription snapshot)
-      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    throws IOException, SnapshotCreationException, IllegalArgumentException {
     get(admin.snapshot(snapshot));
   }
 
   @Override
   public Future<Void> snapshotAsync(SnapshotDescription snapshot)
-      throws IOException, SnapshotCreationException {
+    throws IOException, SnapshotCreationException {
     return admin.snapshot(snapshot);
   }
 
   @Override
   public boolean isSnapshotFinished(SnapshotDescription snapshot)
-      throws IOException, HBaseSnapshotException, UnknownSnapshotException {
+    throws IOException, HBaseSnapshotException, UnknownSnapshotException {
     return get(admin.isSnapshotFinished(snapshot));
   }
 
@@ -657,19 +667,19 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void execProcedure(String signature, String instance, Map<String, String> props)
-      throws IOException {
+    throws IOException {
     get(admin.execProcedure(signature, instance, props));
   }
 
   @Override
   public byte[] execProcedureWithReturn(String signature, String instance,
-      Map<String, String> props) throws IOException {
+    Map<String, String> props) throws IOException {
     return get(admin.execProcedureWithReturn(signature, instance, props));
   }
 
   @Override
   public boolean isProcedureFinished(String signature, String instance, Map<String, String> props)
-      throws IOException {
+    throws IOException {
     return get(admin.isProcedureFinished(signature, instance, props));
   }
 
@@ -685,7 +695,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public List<SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
-      Pattern snapshotNamePattern) throws IOException {
+    Pattern snapshotNamePattern) throws IOException {
     return get(admin.listTableSnapshots(tableNamePattern, snapshotNamePattern));
   }
 
@@ -701,7 +711,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern)
-      throws IOException {
+    throws IOException {
     get(admin.deleteTableSnapshots(tableNamePattern, snapshotNamePattern));
   }
 
@@ -726,7 +736,7 @@ class AdminOverAsyncAdmin implements Admin {
 
     @Override
     public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-        Message responsePrototype, RpcCallback<Message> done) {
+      Message responsePrototype, RpcCallback<Message> done) {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
       CoprocessorBlockingRpcCallback<Message> callback = new CoprocessorBlockingRpcCallback<>();
       delegate.callMethod(method, c, request, responsePrototype, callback);
@@ -745,7 +755,7 @@ class AdminOverAsyncAdmin implements Admin {
 
     @Override
     public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
-        Message request, Message responsePrototype) throws ServiceException {
+      Message request, Message responsePrototype) throws ServiceException {
       ClientCoprocessorRpcController c = new ClientCoprocessorRpcController();
       CoprocessorBlockingRpcCallback<Message> done = new CoprocessorBlockingRpcCallback<>();
       callMethod(method, c, request, responsePrototype, done);
@@ -819,7 +829,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> addReplicationPeerAsync(String peerId, ReplicationPeerConfig peerConfig,
-      boolean enabled) throws IOException {
+    boolean enabled) throws IOException {
     return admin.addReplicationPeer(peerId, peerConfig, enabled);
   }
 
@@ -845,7 +855,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> updateReplicationPeerConfigAsync(String peerId,
-      ReplicationPeerConfig peerConfig) throws IOException {
+    ReplicationPeerConfig peerConfig) throws IOException {
     return admin.updateReplicationPeerConfig(peerId, peerConfig);
   }
 
@@ -861,13 +871,13 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public Future<Void> transitReplicationPeerSyncReplicationStateAsync(String peerId,
-      SyncReplicationState state) throws IOException {
+    SyncReplicationState state) throws IOException {
     return admin.transitReplicationPeerSyncReplicationState(peerId, state);
   }
 
   @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
-      throws IOException {
+    throws IOException {
     get(admin.decommissionRegionServers(servers, offload));
   }
 
@@ -878,7 +888,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void recommissionRegionServer(ServerName server, List<byte[]> encodedRegionNames)
-      throws IOException {
+    throws IOException {
     get(admin.recommissionRegionServer(server, encodedRegionNames));
   }
 
@@ -899,7 +909,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void clearCompactionQueues(ServerName serverName, Set<String> queues)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     get(admin.clearCompactionQueues(serverName, queues));
   }
 
@@ -910,7 +920,7 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void cloneTableSchema(TableName tableName, TableName newTableName, boolean preserveSplits)
-      throws IOException {
+    throws IOException {
     get(admin.cloneTableSchema(tableName, newTableName, preserveSplits));
   }
 
@@ -935,8 +945,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public Map<TableName, ? extends SpaceQuotaSnapshotView> getRegionServerSpaceQuotaSnapshots(
-      ServerName serverName) throws IOException {
+  public Map<TableName, ? extends SpaceQuotaSnapshotView>
+    getRegionServerSpaceQuotaSnapshots(ServerName serverName) throws IOException {
     return get(admin.getRegionServerSpaceQuotaSnapshots(serverName));
   }
 
@@ -947,13 +957,13 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public SpaceQuotaSnapshotView getCurrentSpaceQuotaSnapshot(TableName tableName)
-      throws IOException {
+    throws IOException {
     return get(admin.getCurrentSpaceQuotaSnapshot(tableName));
   }
 
   @Override
   public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
-      throws IOException {
+    throws IOException {
     get(admin.grant(userPermission, mergeExistingPermissions));
   }
 
@@ -963,20 +973,20 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<UserPermission> getUserPermissions(
-      GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
+  public List<UserPermission>
+    getUserPermissions(GetUserPermissionsRequest getUserPermissionsRequest) throws IOException {
     return get(admin.getUserPermissions(getUserPermissionsRequest));
   }
 
   @Override
   public List<Boolean> hasUserPermissions(String userName, List<Permission> permissions)
-      throws IOException {
+    throws IOException {
     return get(admin.hasUserPermissions(userName, permissions));
   }
 
   @Override
   public boolean snapshotCleanupSwitch(final boolean on, final boolean synchronous)
-      throws IOException {
+    throws IOException {
     return get(admin.snapshotCleanupSwitch(on, synchronous));
   }
 
@@ -986,8 +996,7 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames)
-      throws IOException {
+  public List<Boolean> clearSlowLogResponses(final Set<ServerName> serverNames) throws IOException {
     return get(admin.clearSlowLogResponses(serverNames));
   }
 
@@ -1012,7 +1021,8 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     return get(admin.balanceRSGroup(groupName, request));
   }
 
@@ -1059,14 +1069,18 @@ class AdminOverAsyncAdmin implements Admin {
 
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
-      throws IOException {
+    throws IOException {
     get(admin.updateRSGroupConfig(groupName, configuration));
   }
 
   @Override
   public List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType,
-      ServerType serverType, int limit, Map<String, Object> filterParams)
-      throws IOException {
+    ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
     return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
+  }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    get(admin.flushMasterStore());
   }
 }

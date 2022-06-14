@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,10 +63,10 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.LogQueryFilter;
 import org.apache.hadoop.hbase.client.OnlineLogRecord;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -98,13 +97,14 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.thrift2.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
@@ -121,8 +121,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   private final AtomicInteger nextScannerId = new AtomicInteger(0);
   private final Cache<Integer, ResultScanner> scannerMap;
 
-  private static final IOException ioe
-      = new DoNotRetryIOException("Thrift Server is in Read-only mode.");
+  private static final IOException ioe =
+    new DoNotRetryIOException("Thrift Server is in Read-only mode.");
   private boolean isReadOnly;
 
   private static class TIOErrorWithCause extends TIOError {
@@ -140,8 +140,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
     @Override
     public boolean equals(Object other) {
-      if (super.equals(other) &&
-          other instanceof TIOErrorWithCause) {
+      if (super.equals(other) && other instanceof TIOErrorWithCause) {
         Throwable otherCause = ((TIOErrorWithCause) other).getCause();
         if (this.getCause() != null) {
           return otherCause != null && this.getCause().equals(otherCause);
@@ -160,16 +159,15 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     }
   }
 
-  public ThriftHBaseServiceHandler(final Configuration conf,
-      final UserProvider userProvider) throws IOException {
+  public ThriftHBaseServiceHandler(final Configuration conf, final UserProvider userProvider)
+    throws IOException {
     super(conf, userProvider);
     long cacheTimeout = conf.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
     isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
-    scannerMap = CacheBuilder.newBuilder()
-      .expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
-      .removalListener((RemovalListener<Integer, ResultScanner>) removalNotification ->
-          removalNotification.getValue().close())
+    scannerMap = CacheBuilder.newBuilder().expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
+      .removalListener((RemovalListener<Integer,
+        ResultScanner>) removalNotification -> removalNotification.getValue().close())
       .build();
   }
 
@@ -301,12 +299,13 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public boolean checkAndPut(ByteBuffer table, ByteBuffer row, ByteBuffer family,
-      ByteBuffer qualifier, ByteBuffer value, TPut put) throws TIOError, TException {
+    ByteBuffer qualifier, ByteBuffer value, TPut put) throws TIOError, TException {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
-      Table.CheckAndMutateBuilder builder = htable.checkAndMutate(byteBufferToByteArray(row),
-          byteBufferToByteArray(family)).qualifier(byteBufferToByteArray(qualifier));
+      Table.CheckAndMutateBuilder builder =
+        htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
+          .qualifier(byteBufferToByteArray(qualifier));
       if (value == null) {
         return builder.ifNotExists().thenPut(putFromThrift(put));
       } else {
@@ -346,8 +345,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
-  public List<TDelete> deleteMultiple(ByteBuffer table, List<TDelete> deletes) throws TIOError,
-      TException {
+  public List<TDelete> deleteMultiple(ByteBuffer table, List<TDelete> deletes)
+    throws TIOError, TException {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
@@ -359,18 +358,17 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     }
     return Collections.emptyList();
   }
-  
+
   @Override
   public boolean checkAndMutate(ByteBuffer table, ByteBuffer row, ByteBuffer family,
-      ByteBuffer qualifier, TCompareOperator compareOp, ByteBuffer value,
-      TRowMutations rowMutations)
-          throws TIOError, TException {
+    ByteBuffer qualifier, TCompareOperator compareOp, ByteBuffer value, TRowMutations rowMutations)
+    throws TIOError, TException {
     checkReadOnlyMode();
     try (final Table htable = getTable(table)) {
       return htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
-          .qualifier(byteBufferToByteArray(qualifier))
-          .ifMatches(compareOpFromThrift(compareOp), byteBufferToByteArray(value))
-          .thenMutate(rowMutationsFromThrift(rowMutations));
+        .qualifier(byteBufferToByteArray(qualifier))
+        .ifMatches(compareOpFromThrift(compareOp), byteBufferToByteArray(value))
+        .thenMutate(rowMutationsFromThrift(rowMutations));
     } catch (IOException e) {
       throw getTIOError(e);
     }
@@ -378,18 +376,18 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public boolean checkAndDelete(ByteBuffer table, ByteBuffer row, ByteBuffer family,
-      ByteBuffer qualifier, ByteBuffer value, TDelete deleteSingle) throws TIOError, TException {
+    ByteBuffer qualifier, ByteBuffer value, TDelete deleteSingle) throws TIOError, TException {
     checkReadOnlyMode();
     Table htable = getTable(table);
     try {
       Table.CheckAndMutateBuilder mutateBuilder =
-          htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
-              .qualifier(byteBufferToByteArray(qualifier));
+        htable.checkAndMutate(byteBufferToByteArray(row), byteBufferToByteArray(family))
+          .qualifier(byteBufferToByteArray(qualifier));
       if (value == null) {
         return mutateBuilder.ifNotExists().thenDelete(deleteFromThrift(deleteSingle));
       } else {
         return mutateBuilder.ifEquals(byteBufferToByteArray(value))
-            .thenDelete(deleteFromThrift(deleteSingle));
+          .thenDelete(deleteFromThrift(deleteSingle));
       }
     } catch (IOException e) {
       throw getTIOError(e);
@@ -439,8 +437,8 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   }
 
   @Override
-  public List<TResult> getScannerRows(int scannerId, int numRows) throws TIOError,
-      TIllegalArgument, TException {
+  public List<TResult> getScannerRows(int scannerId, int numRows)
+    throws TIOError, TIllegalArgument, TException {
     ResultScanner scanner = getScanner(scannerId);
     if (scanner == null) {
       TIllegalArgument ex = new TIllegalArgument();
@@ -457,7 +455,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TResult> getScannerResults(ByteBuffer table, TScan scan, int numRows)
-      throws TIOError, TException {
+    throws TIOError, TException {
     Table htable = getTable(table);
     List<TResult> results = null;
     ResultScanner scanner = null;
@@ -504,7 +502,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<THRegionLocation> getAllRegionLocations(ByteBuffer table)
-      throws TIOError, TException {
+    throws TIOError, TException {
     RegionLocator locator = null;
     try {
       locator = getLocator(table);
@@ -525,7 +523,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public THRegionLocation getRegionLocation(ByteBuffer table, ByteBuffer row, boolean reload)
-      throws TIOError, TException {
+    throws TIOError, TException {
 
     RegionLocator locator = null;
     try {
@@ -570,11 +568,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TTableDescriptor> getTableDescriptors(List<TTableName> tables)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       List<TableName> tableNames = ThriftUtilities.tableNamesFromThrift(tables);
-      List<TableDescriptor> tableDescriptors = connectionCache.getAdmin()
-          .listTableDescriptors(tableNames);
+      List<TableDescriptor> tableDescriptors =
+        connectionCache.getAdmin().listTableDescriptors(tableNames);
       return tableDescriptorsFromHBase(tableDescriptors);
     } catch (IOException e) {
       throw getTIOError(e);
@@ -593,11 +591,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TTableDescriptor> getTableDescriptorsByPattern(String regex, boolean includeSysTables)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       Pattern pattern = (regex == null ? null : Pattern.compile(regex));
-      List<TableDescriptor> tableDescriptors = connectionCache.getAdmin()
-          .listTableDescriptors(pattern, includeSysTables);
+      List<TableDescriptor> tableDescriptors =
+        connectionCache.getAdmin().listTableDescriptors(pattern, includeSysTables);
       return tableDescriptorsFromHBase(tableDescriptors);
     } catch (IOException e) {
       throw getTIOError(e);
@@ -606,10 +604,10 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TTableDescriptor> getTableDescriptorsByNamespace(String name)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
-      List<TableDescriptor> descriptors = connectionCache.getAdmin()
-          .listTableDescriptorsByNamespace(Bytes.toBytes(name));
+      List<TableDescriptor> descriptors =
+        connectionCache.getAdmin().listTableDescriptorsByNamespace(Bytes.toBytes(name));
       return tableDescriptorsFromHBase(descriptors);
     } catch (IOException e) {
       throw getTIOError(e);
@@ -618,11 +616,10 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TTableName> getTableNamesByPattern(String regex, boolean includeSysTables)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       Pattern pattern = (regex == null ? null : Pattern.compile(regex));
-      TableName[] tableNames = connectionCache.getAdmin()
-          .listTableNames(pattern, includeSysTables);
+      TableName[] tableNames = connectionCache.getAdmin().listTableNames(pattern, includeSysTables);
       return tableNamesFromHBase(tableNames);
     } catch (IOException e) {
       throw getTIOError(e);
@@ -641,7 +638,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void createTable(TTableDescriptor desc, List<ByteBuffer> splitKeys)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       TableDescriptor descriptor = tableDescriptorFromThrift(desc);
       byte[][] split = splitKeyFromThrift(splitKeys);
@@ -667,7 +664,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void truncateTable(TTableName tableName, boolean preserveSplits)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       connectionCache.getAdmin().truncateTable(table, preserveSplits);
@@ -728,13 +725,13 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public boolean isTableAvailableWithSplit(TTableName tableName, List<ByteBuffer> splitKeys)
-      throws TIOError, TException {
+    throws TIOError, TException {
     throw new NotImplementedException("isTableAvailableWithSplit not supported");
   }
 
   @Override
   public void addColumnFamily(TTableName tableName, TColumnFamilyDescriptor column)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       ColumnFamilyDescriptor columnFamilyDescriptor = columnFamilyDescriptorFromThrift(column);
@@ -746,7 +743,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void deleteColumnFamily(TTableName tableName, ByteBuffer column)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       connectionCache.getAdmin().deleteColumnFamily(table, column.array());
@@ -757,7 +754,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public void modifyColumnFamily(TTableName tableName, TColumnFamilyDescriptor column)
-      throws TIOError, TException {
+    throws TIOError, TException {
     try {
       TableName table = tableNameFromThrift(tableName);
       ColumnFamilyDescriptor columnFamilyDescriptor = columnFamilyDescriptorFromThrift(column);
@@ -821,7 +818,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     try {
       String[] namespaces = connectionCache.getAdmin().listNamespaces();
       List<String> result = new ArrayList<>(namespaces.length);
-      for (String ns: namespaces) {
+      for (String ns : namespaces) {
         result.add(ns);
       }
       return result;
@@ -842,11 +839,10 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<TOnlineLogRecord> getSlowLogResponses(Set<TServerName> tServerNames,
-      TLogQueryFilter tLogQueryFilter) throws TIOError, TException {
+    TLogQueryFilter tLogQueryFilter) throws TIOError, TException {
     try {
       Set<ServerName> serverNames = ThriftUtilities.getServerNamesFromThrift(tServerNames);
-      LogQueryFilter logQueryFilter =
-        ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
+      LogQueryFilter logQueryFilter = ThriftUtilities.getSlowLogQueryFromThrift(tLogQueryFilter);
       List<OnlineLogRecord> onlineLogRecords =
         connectionCache.getAdmin().getSlowLogResponses(serverNames, logQueryFilter);
       return ThriftUtilities.getSlowLogRecordsFromHBase(onlineLogRecords);
@@ -857,7 +853,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   @Override
   public List<Boolean> clearSlowLogResponses(Set<TServerName> tServerNames)
-      throws TIOError, TException {
+    throws TIOError, TException {
     Set<ServerName> serverNames = ThriftUtilities.getServerNamesFromThrift(tServerNames);
     try {
       return connectionCache.getAdmin().clearSlowLogResponses(serverNames);
@@ -871,12 +867,12 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
     try {
       if (info.scope == TPermissionScope.NAMESPACE) {
-        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
-          info.getNsName(), info.getUsername(), actions);
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(), info.getNsName(),
+          info.getUsername(), actions);
       } else if (info.scope == TPermissionScope.TABLE) {
         TableName tableName = TableName.valueOf(info.getTableName());
-        AccessControlClient.grant(connectionCache.getAdmin().getConnection(),
-          tableName, info.getUsername(), null, null, actions);
+        AccessControlClient.grant(connectionCache.getAdmin().getConnection(), tableName,
+          info.getUsername(), null, null, actions);
       }
     } catch (Throwable t) {
       if (t instanceof IOException) {
@@ -893,12 +889,12 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     Permission.Action[] actions = ThriftUtilities.permissionActionsFromString(info.actions);
     try {
       if (info.scope == TPermissionScope.NAMESPACE) {
-        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
-          info.getNsName(), info.getUsername(), actions);
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(), info.getNsName(),
+          info.getUsername(), actions);
       } else if (info.scope == TPermissionScope.TABLE) {
         TableName tableName = TableName.valueOf(info.getTableName());
-        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(),
-          tableName, info.getUsername(), null, null, actions);
+        AccessControlClient.revoke(connectionCache.getAdmin().getConnection(), tableName,
+          info.getUsername(), null, null, actions);
       }
     } catch (Throwable t) {
       if (t instanceof IOException) {

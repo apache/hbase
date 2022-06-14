@@ -37,12 +37,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package org.apache.hadoop.hbase.test.util.warc;
 
 import java.io.EOFException;
 import java.io.IOException;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -53,29 +51,20 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
 /**
- * Hadoop InputFormat for mapreduce jobs ('new' API) that want to process data in WARC files.
- *
- * Usage:
- *
- * ```java
- * Job job = new Job(getConf());
- * job.setInputFormatClass(WARCInputFormat.class);
- * ```
- *
- * Mappers should use a key of {@link org.apache.hadoop.io.LongWritable} (which is
- * 1 for the first record in a file, 2 for the second record, etc.) and a value of
- * {@link WARCWritable}.
+ * Hadoop InputFormat for mapreduce jobs ('new' API) that want to process data in WARC files. Usage:
+ * ```java Job job = new Job(getConf()); job.setInputFormatClass(WARCInputFormat.class); ``` Mappers
+ * should use a key of {@link org.apache.hadoop.io.LongWritable} (which is 1 for the first record in
+ * a file, 2 for the second record, etc.) and a value of {@link WARCWritable}.
  */
 public class WARCInputFormat extends FileInputFormat<LongWritable, WARCWritable> {
 
   /**
-   * Opens a WARC file (possibly compressed) for reading, and returns a RecordReader for
-   * accessing it.
+   * Opens a WARC file (possibly compressed) for reading, and returns a RecordReader for accessing
+   * it.
    */
   @Override
   public RecordReader<LongWritable, WARCWritable> createRecordReader(InputSplit split,
-      TaskAttemptContext context)
-          throws IOException, InterruptedException {
+    TaskAttemptContext context) throws IOException, InterruptedException {
     return new WARCReader();
   }
 
@@ -94,7 +83,7 @@ public class WARCInputFormat extends FileInputFormat<LongWritable, WARCWritable>
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context)
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       reader = new WARCFileReader(context.getConfiguration(), ((FileSplit) split).getPath());
     }
 

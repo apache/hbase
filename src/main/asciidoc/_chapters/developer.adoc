@@ -294,14 +294,14 @@ type.
 The following plugins are recommended:
 
 . Maven, bundled. This allows IntelliJ to resolve dependencies and recognize the project structure.
-. EditorConfig, bundled. This will apply project whitespace settings found in the the
+. EditorConfig, bundled. This will apply project whitespace settings found in the
 `.editorconfig` file available on branches with
 link:https://issues.apache.org/jira/browse/HBASE-23234[HBASE-23234] or later.
 . link:https://plugins.jetbrains.com/plugin/1065-checkstyle-idea/[Checkstyle-IDEA]. Configure this
 against the configuration file found under `hbase-checkstyle/src/main/resources/hbase/checkstyle.xml`
 (If the Intellij checkstyle plugin complains parsing the volunteered hbase `checkstyle.xml`, make
-sure the plugin's `version` popup menu matches the hbase checkstyle version -- see
-link:https://issues.apache.org/jira/browse/HBASE-23242[HBASE-23242] for more).
+sure the plugin's `version` popup menu matches the hbase checkstyle version. Find the current
+checkstyle version as a property in `pom.xml`.
 This plugin will highlight style errors in the IDE, so you can fix them before they get flagged during the
 pre-commit process.
 . link:https://plugins.jetbrains.com/plugin/8277-protobuf-support/[Protobuf Support]. HBase uses
@@ -1575,7 +1575,7 @@ They are generally long-lasting, sizeable (the test can be asked to 1M rows or 1
 Integration tests are what you would run when you need to more elaborate proofing of a release candidate beyond what unit tests can do.
 They are not generally run on the Apache Continuous Integration build server, however, some sites opt to run integration tests as a part of their continuous testing on an actual cluster.
 
-Integration tests currently live under the _src/test_                directory in the hbase-it submodule and will match the regex: _**/IntegrationTest*.java_.
+Integration tests currently live under the _src/test_ directory in the hbase-it submodule and will match the regex: _*IntegrationTest*.java_.
 All integration tests are also annotated with `@Category(IntegrationTests.class)`.
 
 Integration tests can be run in two modes: using a mini cluster, or against an actual distributed cluster.
@@ -1691,6 +1691,17 @@ By default, it picks up `HBASE_SSH_OPTS`, `HBASE_HOME`, `HBASE_CONF_DIR` from th
 Currently tarball deployments, deployments which uses _hbase-daemons.sh_, and link:https://incubator.apache.org/ambari/[Apache Ambari]                    deployments are supported.
 _/etc/init.d/_ scripts are not supported for now, but it can be easily added.
 For other deployment options, a ClusterManager can be implemented and plugged in.
+
+Some integration tests define a _main_ method as entry point, and can be run on its' own, rather than using the test driver. For example, the _itbll_ test can be run as follows:
+
+----
+bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList loop 2 1 100000 /temp 1 1000 50 1 0
+----
+
+NOTE: The _hbase_ script assumes all integration tests with exposed _main_ methods to be run
+against a distributed cluster will follow the *IntegrationTest* regex naming pattern
+mentioned above, in order to proper set test dependencies into the classpath.
+
 
 [[maven.build.commands.integration.tests.destructive]]
 ==== Destructive integration / system tests (ChaosMonkey)
@@ -1836,6 +1847,46 @@ properties file, which may be `hbase-site.xml` or a different properties file.
   <value>zookeeper</value>
 </property>
 ----
+
+==== Customizing Destructive ChaosMonkey Actions
+
+The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
+running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
+_heavy weight_. Although it's possible to define some properties for the different actions
+(such as timeouts, frequency, etc), the actions themselves are not configurable.
+
+For certain deployments, it may be interesting to define its own test strategy, either less or more
+aggressive than the pre-defined set of actions provided by _slowDeterministic_. For such cases,
+the _configurableSlowDeterministic_ policy can be used. It allows for a customizable set of
+_heavy weight_ actions to be defined in the _monkey.properties_ properties file:
+
+[source]
+----
+batch.restart.rs.ratio=0.3f
+heavy.actions=RestartRandomRsAction(500000);MoveRandomRegionOfTableAction(360000,$table_name);SplitAllRegionOfTableAction($table_name)
+----
+
+The above properties file definition instructs chaos monkey to perform a RegionServer crash every 8 minutes,
+a random region move every 6 minutes, and at least one split of all table regions.
+
+To run this policy, just specify _configurableSlowDeterministic_ as the monkey policy to run, together
+with a property file containing the _heavy.actions_ property definition:
+
+[source,bourne]
+----
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m configurableSlowDeterministic -monkeyProps monkey.properties
+----
+
+When specifying monkey actions, make sure to define all required constructor parameters. For actions
+that require a table name parameter, the _$table_name_ placeholder can be specified, and it will
+automatically resort to the table created by the integration test run.
+
+If _heavy.actions_ property is omitted in the properties file,  _configurableSlowDeterministic_ will
+just run as the _slowDeterministic_ policy
+(it will execute all the heavy weight actions defined by _slowDeterministic_ policy).
+
+
 
 [[developing]]
 == Developer Guidelines

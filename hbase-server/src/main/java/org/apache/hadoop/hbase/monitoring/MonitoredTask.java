@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.monitoring;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -40,22 +38,35 @@ public interface MonitoredTask extends Cloneable {
   }
 
   long getStartTime();
+
   String getDescription();
+
   String getStatus();
+
   long getStatusTime();
+
   State getState();
+
   long getStateTime();
+
   long getCompletionTimestamp();
+
   long getWarnTime();
 
   void markComplete(String msg);
+
   void pause(String msg);
+
   void resume(String msg);
+
   void abort(String msg);
+
   void expireNow();
 
   void setStatus(String status);
+
   void setDescription(String description);
+
   void setWarnTime(final long t);
 
   List<StatusJournalEntry> getStatusJournal();
@@ -72,21 +83,18 @@ public interface MonitoredTask extends Cloneable {
   String prettyPrintJournal();
 
   /**
-   * Explicitly mark this status as able to be cleaned up,
-   * even though it might not be complete.
+   * Explicitly mark this status as able to be cleaned up, even though it might not be complete.
    */
   void cleanup();
 
   /**
-   * Public exposure of Object.clone() in order to allow clients to easily 
-   * capture current state.
+   * Public exposure of Object.clone() in order to allow clients to easily capture current state.
    * @return a copy of the object whose references will not change
    */
   MonitoredTask clone();
 
   /**
-   * Creates a string map of internal details for extensible exposure of 
-   * monitored tasks.
+   * Creates a string map of internal details for extensible exposure of monitored tasks.
    * @return A Map containing information for this task.
    */
   Map<String, Object> toMap() throws IOException;

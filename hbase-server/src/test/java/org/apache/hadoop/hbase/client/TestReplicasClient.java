@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,16 +65,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
- * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
- * cluster. See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
+ * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
+ * See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicasClient.class);
+    HBaseClassTestRule.forClass(TestReplicasClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
@@ -98,9 +98,10 @@ public class TestReplicasClient {
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
     private static final AtomicReference<CountDownLatch> primaryCdl =
-        new AtomicReference<>(new CountDownLatch(0));
+      new AtomicReference<>(new CountDownLatch(0));
     private static final AtomicReference<CountDownLatch> secondaryCdl =
-        new AtomicReference<>(new CountDownLatch(0));
+      new AtomicReference<>(new CountDownLatch(0));
+
     public SlowMeCopro() {
     }
 
@@ -110,25 +111,25 @@ public class TestReplicasClient {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-                         final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+      final List<Cell> results) throws IOException {
       slowdownCode(e);
     }
 
     @Override
     public void preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Scan scan) throws IOException {
+      final Scan scan) throws IOException {
       slowdownCode(e);
     }
 
     @Override
     public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final InternalScanner s, final List<Result> results,
-        final int limit, final boolean hasMore) throws IOException {
-      //this will slow down a certain next operation if the conditions are met. The slowness
-      //will allow the call to go to a replica
+      final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
+      throws IOException {
+      // this will slow down a certain next operation if the conditions are met. The slowness
+      // will allow the call to go to a replica
       if (slowDownNext.get()) {
-        //have some "next" return successfully from the primary; hence countOfNext checked
+        // have some "next" return successfully from the primary; hence countOfNext checked
         if (countOfNext.incrementAndGet() == 2) {
           sleepTime.set(2000);
           slowdownCode(e);
@@ -184,12 +185,12 @@ public class TestReplicasClient {
   @BeforeClass
   public static void beforeClass() throws Exception {
     // enable store file refreshing
-    HTU.getConfiguration().setInt(
-        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
+    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.getConfiguration().setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(1).
-        numAlwaysStandByMasters(1).numMasters(1).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(1)
+      .numAlwaysStandByMasters(1).numMasters(1).build();
     HTU.startMiniCluster(option);
 
     // Create table then get the single region for our new table.
@@ -199,7 +200,7 @@ public class TestReplicasClient {
       ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     builder.setCoprocessor(SlowMeCopro.class.getName());
     TableDescriptor hdt = builder.build();
-    HTU.createTable(hdt, new byte[][]{f}, null);
+    HTU.createTable(hdt, new byte[][] { f }, null);
     TABLE_NAME = hdt.getTableName();
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
       hriPrimary = locator.getRegionLocation(row, false).getRegion();
@@ -256,22 +257,23 @@ public class TestReplicasClient {
   private void openRegion(RegionInfo hri) throws Exception {
     try {
       if (isRegionOpened(hri)) return;
-    } catch (Exception e){}
+    } catch (Exception e) {
+    }
     // first version is '0'
-    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-      getRS().getServerName(), hri, null);
+    AdminProtos.OpenRegionRequest orr =
+      RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
     Assert.assertEquals(1, responseOpen.getOpeningStateCount());
     Assert.assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
-        responseOpen.getOpeningState(0));
+      responseOpen.getOpeningState(0));
     checkRegionIsOpened(hri);
   }
 
   private void closeRegion(RegionInfo hri) throws Exception {
-    AdminProtos.CloseRegionRequest crr = ProtobufUtil.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getRegionName());
-    AdminProtos.CloseRegionResponse responseClose = getRS()
-        .getRSRpcServices().closeRegion(null, crr);
+    AdminProtos.CloseRegionRequest crr =
+      ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), hri.getRegionName());
+    AdminProtos.CloseRegionResponse responseClose =
+      getRS().getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed(hri.getEncodedName());
@@ -326,7 +328,7 @@ public class TestReplicasClient {
     openRegion(hriSecondary);
 
     try (Connection conn = ConnectionFactory.createConnection(HTU.getConfiguration());
-        RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
+      RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       conn.clearRegionLocationCache();
       List<HRegionLocation> rl = locator.getRegionLocations(b1, true);
       Assert.assertEquals(2, rl.size());
@@ -359,7 +361,6 @@ public class TestReplicasClient {
       closeRegion(hriSecondary);
     }
   }
-
 
   @Test
   public void testGetNoResultStaleRegionWithReplica() throws Exception {
@@ -566,7 +567,7 @@ public class TestReplicasClient {
       Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
       LOG.info("get works and is not stale done");
 
-      //reset
+      // reset
       AsyncConnectionImpl conn = (AsyncConnectionImpl) HTU.getConnection().toAsyncConnection();
       Counter hedgedReadOps = conn.getConnectionMetrics().get().hedgedReadOps;
       Counter hedgedReadWin = conn.getConnectionMetrics().get().hedgedReadWin;
@@ -590,7 +591,6 @@ public class TestReplicasClient {
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.getSecondaryCdl().get().countDown();
       LOG.info("hedged read occurred but not faster");
-
 
       // But if we ask for stale we will get it and hedged read returned faster
       SlowMeCopro.getPrimaryCdl().set(new CountDownLatch(1));

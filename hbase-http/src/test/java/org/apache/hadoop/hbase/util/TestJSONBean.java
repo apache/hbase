@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +22,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
@@ -39,13 +39,14 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.reflect.TypeToken;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 /**
  * Test {@link JSONBean}.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestJSONBean {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -58,25 +59,20 @@ public class TestJSONBean {
     when(mbeanServer.queryNames(any(), any())).thenReturn(names);
     MBeanInfo mbeanInfo = mock(MBeanInfo.class);
     when(mbeanInfo.getClassName()).thenReturn("testClassName");
-    String[] attributeNames = new String[] {"intAttr", "nanAttr", "infinityAttr",
-      "strAttr", "boolAttr"};
+    String[] attributeNames =
+      new String[] { "intAttr", "nanAttr", "infinityAttr", "strAttr", "boolAttr", "test:Attr" };
     MBeanAttributeInfo[] attributeInfos = new MBeanAttributeInfo[attributeNames.length];
     for (int i = 0; i < attributeInfos.length; i++) {
-      attributeInfos[i] = new MBeanAttributeInfo(attributeNames[i],
-        null,
-        null,
-        true,
-        false,
-        false);
+      attributeInfos[i] = new MBeanAttributeInfo(attributeNames[i], null, null, true, false, false);
     }
     when(mbeanInfo.getAttributes()).thenReturn(attributeInfos);
     when(mbeanServer.getMBeanInfo(any())).thenReturn(mbeanInfo);
     when(mbeanServer.getAttribute(any(), eq("intAttr"))).thenReturn(3);
     when(mbeanServer.getAttribute(any(), eq("nanAttr"))).thenReturn(Double.NaN);
-    when(mbeanServer.getAttribute(any(), eq("infinityAttr"))).
-      thenReturn(Double.POSITIVE_INFINITY);
+    when(mbeanServer.getAttribute(any(), eq("infinityAttr"))).thenReturn(Double.POSITIVE_INFINITY);
     when(mbeanServer.getAttribute(any(), eq("strAttr"))).thenReturn("aString");
     when(mbeanServer.getAttribute(any(), eq("boolAttr"))).thenReturn(true);
+    when(mbeanServer.getAttribute(any(), eq("test:Attr"))).thenReturn("aString");
     return mbeanServer;
   }
 
@@ -92,7 +88,8 @@ public class TestJSONBean {
     pw.println("      \"nanAttr\": \"NaN\",");
     pw.println("      \"infinityAttr\": \"Infinity\",");
     pw.println("      \"strAttr\": \"aString\",");
-    pw.println("      \"boolAttr\": true");
+    pw.println("      \"boolAttr\": true,");
+    pw.println("      \"test:Attr\": aString");
     pw.println("    }");
     pw.println("  ]");
     pw.print("}");
@@ -103,14 +100,14 @@ public class TestJSONBean {
   public void testJSONBeanValueTypes() throws Exception {
     JSONBean bean = new JSONBean();
     StringWriter stringWriter = new StringWriter();
-    try (
-      PrintWriter printWriter = new PrintWriter(stringWriter);
+    try (PrintWriter printWriter = new PrintWriter(stringWriter);
       JSONBean.Writer jsonWriter = bean.open(printWriter)) {
       jsonWriter.write(getMockMBeanServer(), null, null, false);
     }
 
     final Gson gson = GsonUtil.createGson().create();
-    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {}.getType();
+    Type typeOfHashMap = new TypeToken<Map<String, Object>>() {
+    }.getType();
     Map<String, Object> expectedJson = gson.fromJson(getExpectedJSON(), typeOfHashMap);
     Map<String, Object> actualJson = gson.fromJson(stringWriter.toString(), typeOfHashMap);
     assertEquals(expectedJson, actualJson);

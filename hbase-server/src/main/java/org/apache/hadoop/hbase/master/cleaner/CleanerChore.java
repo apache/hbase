@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,17 +58,16 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private static final int AVAIL_PROCESSORS = Runtime.getRuntime().availableProcessors();
 
   /**
-   * Configures the threadpool used for scanning the archive directory for the HFileCleaner
-   * If it is an integer and >= 1, it would be the size;
-   * if 0.0 < size <= 1.0, size would be available processors * size.
-   * Pay attention that 1.0 is different from 1, former indicates it will use 100% of cores,
-   * while latter will use only 1 thread for chore to scan dir.
+   * Configures the threadpool used for scanning the archive directory for the HFileCleaner If it is
+   * an integer and >= 1, it would be the size; if 0.0 < size <= 1.0, size would be available
+   * processors * size. Pay attention that 1.0 is different from 1, former indicates it will use
+   * 100% of cores, while latter will use only 1 thread for chore to scan dir.
    */
   public static final String CHORE_POOL_SIZE = "hbase.cleaner.scan.dir.concurrent.size";
   static final String DEFAULT_CHORE_POOL_SIZE = "0.25";
   /**
-   * Configures the threadpool used for scanning the Old logs directory for the LogCleaner
-   * Follows the same configuration mechanism as CHORE_POOL_SIZE, but has a default of 1 thread.
+   * Configures the threadpool used for scanning the Old logs directory for the LogCleaner Follows
+   * the same configuration mechanism as CHORE_POOL_SIZE, but has a default of 1 thread.
    */
   public static final String LOG_CLEANER_CHORE_SIZE = "hbase.log.cleaner.scan.dir.concurrent.size";
   static final String DEFAULT_LOG_CLEANER_CHORE_POOL_SIZE = "1";
@@ -80,25 +80,27 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected final Map<String, Object> params;
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   protected List<T> cleanersChain;
+  protected List<String> excludeDirs;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
     FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
-    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null);
+    this(name, sleepPeriod, s, conf, fs, oldFileDir, confKey, pool, null, null);
   }
 
   /**
-   * @param name name of the chore being run
+   * @param name        name of the chore being run
    * @param sleepPeriod the period of time to sleep between each run
-   * @param s the stopper
-   * @param conf configuration to use
-   * @param fs handle to the FS
-   * @param oldFileDir the path to the archived files
-   * @param confKey configuration key for the classes to instantiate
-   * @param pool the thread pool used to scan directories
-   * @param params members could be used in cleaner
+   * @param s           the stopper
+   * @param conf        configuration to use
+   * @param fs          handle to the FS
+   * @param oldFileDir  the path to the archived files
+   * @param confKey     configuration key for the classes to instantiate
+   * @param pool        the thread pool used to scan directories
+   * @param params      members could be used in cleaner
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
-    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params) {
+    FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool, Map<String, Object> params,
+    List<Path> excludePaths) {
     super(name, s, sleepPeriod);
 
     Preconditions.checkNotNull(pool, "Chore's pool can not be null");
@@ -107,6 +109,19 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.oldFileDir = oldFileDir;
     this.conf = conf;
     this.params = params;
+    if (excludePaths != null && !excludePaths.isEmpty()) {
+      excludeDirs = new ArrayList<>(excludePaths.size());
+      for (Path path : excludePaths) {
+        StringBuilder dirPart = new StringBuilder(path.toString());
+        if (!path.toString().endsWith("/")) {
+          dirPart.append("/");
+        }
+        excludeDirs.add(dirPart.toString());
+      }
+    }
+    if (excludeDirs != null) {
+      LOG.info("Cleaner {} excludes sub dirs: {}", name, excludeDirs);
+    }
     initCleanerChain(confKey);
   }
 
@@ -134,8 +149,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       }
       return computedThreads;
     } else {
-      LOG.error("Unrecognized value: " + poolSize + " for " + CHORE_POOL_SIZE +
-          ", use default config: " + DEFAULT_CHORE_POOL_SIZE + " instead.");
+      LOG.error("Unrecognized value: " + poolSize + " for " + CHORE_POOL_SIZE
+        + ", use default config: " + DEFAULT_CHORE_POOL_SIZE + " instead.");
       return calculatePoolSize(DEFAULT_CHORE_POOL_SIZE);
     }
   }
@@ -156,7 +171,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.cleanersChain = new LinkedList<>();
     String[] logCleaners = conf.getStrings(confKey);
     if (logCleaners != null) {
-      for (String className: logCleaners) {
+      for (String className : logCleaners) {
         className = className.trim();
         if (className.isEmpty()) {
           continue;
@@ -174,13 +189,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * A utility method to create new instances of LogCleanerDelegate based on the class name of the
    * LogCleanerDelegate.
    * @param className fully qualified class name of the LogCleanerDelegate
-   * @param conf used configuration
+   * @param conf      used configuration
    * @return the new instance
    */
   private T newFileCleaner(String className, Configuration conf) {
     try {
-      Class<? extends FileCleanerDelegate> c = Class.forName(className).asSubclass(
-        FileCleanerDelegate.class);
+      Class<? extends FileCleanerDelegate> c =
+        Class.forName(className).asSubclass(FileCleanerDelegate.class);
       @SuppressWarnings("unchecked")
       T cleaner = (T) c.getDeclaredConstructor().newInstance();
       cleaner.setConf(conf);
@@ -258,7 +273,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         }
         try {
           long space =
-              f.isDirectory() ? fs.getContentSummary(f.getPath()).getSpaceConsumed() : f.getLen();
+            f.isDirectory() ? fs.getContentSummary(f.getPath()).getSpaceConsumed() : f.getLen();
           directorySpaces.put(f, space);
           return space;
         } catch (IOException e) {
@@ -297,7 +312,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     for (T cleaner : cleanersChain) {
       if (cleaner.isStopped() || this.getStopper().isStopped()) {
         LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any more files in:"
-            + this.oldFileDir);
+          + this.oldFileDir);
         return false;
       }
 
@@ -356,11 +371,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           deletedFileCount++;
         } else {
           LOG.warn("Attempted to delete:" + filePath
-              + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
+            + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
         }
       } catch (IOException e) {
-        e = e instanceof RemoteException ?
-                  ((RemoteException)e).unwrapRemoteException() : e;
+        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
         LOG.warn("Error while deleting: " + filePath, e);
       }
     }
@@ -383,13 +397,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   }
 
   /**
-   * @param enabled
+   * n
    */
   public boolean setEnabled(final boolean enabled) {
     return this.enabled.getAndSet(enabled);
   }
 
-  public boolean getEnabled() { return this.enabled.get();
+  public boolean getEnabled() {
+    return this.enabled.get();
   }
 
   private interface Action<T> {
@@ -406,13 +421,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       // Step.1: List all files under the given directory.
       List<FileStatus> allPaths = Arrays.asList(fs.listStatus(dir));
       List<FileStatus> subDirs =
-          allPaths.stream().filter(FileStatus::isDirectory).collect(Collectors.toList());
+        allPaths.stream().filter(FileStatus::isDirectory).collect(Collectors.toList());
       List<FileStatus> files =
-          allPaths.stream().filter(FileStatus::isFile).collect(Collectors.toList());
+        allPaths.stream().filter(FileStatus::isFile).collect(Collectors.toList());
 
       // Step.2: Try to delete all the deletable files.
       boolean allFilesDeleted =
-          files.isEmpty() || deleteAction(() -> checkAndDeleteFiles(files), "files", dir);
+        files.isEmpty() || deleteAction(() -> checkAndDeleteFiles(files), "files", dir);
 
       // Step.3: Start to traverse and delete the sub-directories.
       List<CompletableFuture<Boolean>> futures = new ArrayList<>();
@@ -420,9 +435,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         sortByConsumedSpace(subDirs);
         // Submit the request of sub-directory deletion.
         subDirs.forEach(subDir -> {
-          CompletableFuture<Boolean> subFuture = new CompletableFuture<>();
-          pool.execute(() -> traverseAndDelete(subDir.getPath(), false, subFuture));
-          futures.add(subFuture);
+          if (!shouldExclude(subDir)) {
+            CompletableFuture<Boolean> subFuture = new CompletableFuture<>();
+            pool.execute(() -> traverseAndDelete(subDir.getPath(), false, subFuture));
+            futures.add(subFuture);
+          }
         });
       }
 
@@ -452,15 +469,38 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
           }
         });
     } catch (Exception e) {
-      LOG.debug("Failed to traverse and delete the path: {}", dir, e);
+      if (e instanceof FileNotFoundException) {
+        LOG.debug("Dir dose not exist, {}", dir);
+      } else {
+        LOG.error("Failed to traverse and delete the path: {}", dir, e);
+      }
       result.completeExceptionally(e);
     }
   }
 
   /**
+   * Check if a path should not perform clear
+   */
+  private boolean shouldExclude(FileStatus f) {
+    if (!f.isDirectory()) {
+      return false;
+    }
+    if (excludeDirs != null && !excludeDirs.isEmpty()) {
+      for (String dirPart : excludeDirs) {
+        // since we make excludeDirs end with '/',
+        // if a path contains() the dirPart, the path should be excluded
+        if (f.getPath().toString().contains(dirPart)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Perform a delete on a specified type.
    * @param deletion a delete
-   * @param type possible values are 'files', 'subdirs', 'dirs'
+   * @param type     possible values are 'files', 'subdirs', 'dirs'
    * @return true if it deleted successfully, false otherwise
    */
   private boolean deleteAction(Action<Boolean> deletion, String type, Path dir) {
@@ -476,12 +516,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       deleted = false;
     } catch (IOException ioe) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, " +
-            "quote the exception when asking on mailing list.", type, dir, ioe);
+        LOG.trace("Could not delete {} under {}; will retry. If it keeps happening, "
+          + "quote the exception when asking on mailing list.", type, dir, ioe);
       } else {
-        LOG.info("Could not delete {} under {} because {}; will retry. If it  keeps happening, enable" +
-            "TRACE-level logging and quote the exception when asking on mailing list.",
-            type, dir, ioe.getMessage());
+        LOG.info(
+          "Could not delete {} under {} because {}; will retry. If it  keeps happening, enable"
+            + "TRACE-level logging and quote the exception when asking on mailing list.",
+          type, dir, ioe.getMessage());
       }
       deleted = false;
     } catch (Exception e) {

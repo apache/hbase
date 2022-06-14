@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,10 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -78,21 +81,39 @@ public final class MasterRegionFactory {
 
   private static final int DEFAULT_RING_BUFFER_SLOT_COUNT = 128;
 
+  public static final String TRACKER_IMPL = "hbase.master.store.region.file-tracker.impl";
+
   public static final TableName TABLE_NAME = TableName.valueOf("master:store");
 
   public static final byte[] PROC_FAMILY = Bytes.toBytes("proc");
+
+  public static final byte[] REGION_SERVER_FAMILY = Bytes.toBytes("rs");
 
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
       .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
       .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE).setBloomFilterType(BloomType.ROWCOL)
       .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY))
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY)).build();
+
+  private static TableDescriptor withTrackerConfigs(Configuration conf) {
+    String trackerImpl = conf.get(TRACKER_IMPL, conf.get(StoreFileTrackerFactory.TRACKER_IMPL,
+      StoreFileTrackerFactory.Trackers.DEFAULT.name()));
+    Class<? extends StoreFileTracker> trackerClass =
+      StoreFileTrackerFactory.getTrackerClass(trackerImpl);
+    if (StoreFileTrackerFactory.isMigration(trackerClass)) {
+      throw new IllegalArgumentException("Should not set store file tracker to "
+        + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
+    }
+    StoreFileTracker tracker = ReflectionUtils.newInstance(trackerClass, conf, true, null);
+    return tracker.updateWithTrackerConfigs(TableDescriptorBuilder.newBuilder(TABLE_DESC)).build();
+  }
 
   public static MasterRegion create(Server server) throws IOException {
-    MasterRegionParams params = new MasterRegionParams().server(server)
-      .regionDirName(MASTER_STORE_DIR).tableDescriptor(TABLE_DESC);
     Configuration conf = server.getConfiguration();
+    MasterRegionParams params = new MasterRegionParams().server(server)
+      .regionDirName(MASTER_STORE_DIR).tableDescriptor(withTrackerConfigs(conf));
     long flushSize = conf.getLong(FLUSH_SIZE_KEY, DEFAULT_FLUSH_SIZE);
     long flushPerChanges = conf.getLong(FLUSH_PER_CHANGES_KEY, DEFAULT_FLUSH_PER_CHANGES);
     long flushIntervalMs = conf.getLong(FLUSH_INTERVAL_MS_KEY, DEFAULT_FLUSH_INTERVAL_MS);

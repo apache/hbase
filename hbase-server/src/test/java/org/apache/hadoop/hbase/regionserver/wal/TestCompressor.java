@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test our compressor class.
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestCompressor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompressor.class);
+    HBaseClassTestRule.forClass(TestCompressor.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -53,27 +53,26 @@ public class TestCompressor {
   @Test
   public void testToShort() {
     short s = 1;
-    assertEquals(s, Compressor.toShort((byte)0, (byte)1));
+    assertEquals(s, Compressor.toShort((byte) 0, (byte) 1));
     s <<= 8;
-    assertEquals(s, Compressor.toShort((byte)1, (byte)0));
+    assertEquals(s, Compressor.toShort((byte) 1, (byte) 0));
   }
 
-  @Test (expected = IllegalArgumentException.class)
+  @Test(expected = IllegalArgumentException.class)
   public void testNegativeToShort() {
-    Compressor.toShort((byte)0xff, (byte)0xff);
+    Compressor.toShort((byte) 0xff, (byte) 0xff);
   }
 
   @Test
   public void testCompressingWithNullDictionaries() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
-    byte [] blahBytes = Bytes.toBytes("blah");
+    byte[] blahBytes = Bytes.toBytes("blah");
     Compressor.writeCompressed(blahBytes, 0, blahBytes.length, dos, null);
     dos.close();
-    byte [] dosbytes = baos.toByteArray();
-    DataInputStream dis =
-      new DataInputStream(new ByteArrayInputStream(dosbytes));
-    byte [] product = Compressor.readCompressed(dis, null);
+    byte[] dosbytes = baos.toByteArray();
+    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(dosbytes));
+    byte[] product = Compressor.readCompressed(dis, null);
     assertTrue(Bytes.equals(blahBytes, product));
   }
 
@@ -83,15 +82,14 @@ public class TestCompressor {
     DataOutputStream dos = new DataOutputStream(baos);
     Dictionary dictionary = new LRUDictionary();
     dictionary.init(Short.MAX_VALUE);
-    byte [] blahBytes = Bytes.toBytes("blah");
+    byte[] blahBytes = Bytes.toBytes("blah");
     Compressor.writeCompressed(blahBytes, 0, blahBytes.length, dos, dictionary);
     dos.close();
-    byte [] dosbytes = baos.toByteArray();
-    DataInputStream dis =
-      new DataInputStream(new ByteArrayInputStream(dosbytes));
+    byte[] dosbytes = baos.toByteArray();
+    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(dosbytes));
     dictionary = new LRUDictionary();
     dictionary.init(Short.MAX_VALUE);
-    byte [] product = Compressor.readCompressed(dis, dictionary);
+    byte[] product = Compressor.readCompressed(dis, dictionary);
     assertTrue(Bytes.equals(blahBytes, product));
   }
 }

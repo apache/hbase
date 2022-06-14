@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,31 +25,23 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *
- * The <code>PoolMap</code> maps a key to a collection of values, the elements
- * of which are managed by a pool. In effect, that collection acts as a shared
- * pool of resources, access to which is closely controlled as per the semantics
- * of the pool.
- *
+ * The <code>PoolMap</code> maps a key to a collection of values, the elements of which are managed
+ * by a pool. In effect, that collection acts as a shared pool of resources, access to which is
+ * closely controlled as per the semantics of the pool.
  * <p>
- * In case the size of the pool is set to a non-zero positive number, that is
- * used to cap the number of resources that a pool may contain for any given
- * key. A size of {@link Integer#MAX_VALUE} is interpreted as an unbounded pool.
+ * In case the size of the pool is set to a non-zero positive number, that is used to cap the number
+ * of resources that a pool may contain for any given key. A size of {@link Integer#MAX_VALUE} is
+ * interpreted as an unbounded pool.
  * </p>
- *
  * <p>
- * PoolMap is thread-safe. It does not remove elements automatically. Unused resources
- * must be closed and removed explicitly.
+ * PoolMap is thread-safe. It does not remove elements automatically. Unused resources must be
+ * closed and removed explicitly.
  * </p>
- *
- * @param <K>
- *          the type of the key to the resource
- * @param <V>
- *          the type of the resource being pooled
+ * @param <K> the type of the key to the resource
+ * @param <V> the type of the resource being pooled
  */
 @InterfaceAudience.Private
 public class PoolMap<K, V> {
@@ -58,32 +49,33 @@ public class PoolMap<K, V> {
   private final PoolType poolType;
   private final int poolMaxSize;
 
-   public PoolMap(PoolType poolType, int poolMaxSize) {
-     pools = new HashMap<>();
-     this.poolType = poolType;
-     this.poolMaxSize = poolMaxSize;
+  public PoolMap(PoolType poolType, int poolMaxSize) {
+    pools = new HashMap<>();
+    this.poolType = poolType;
+    this.poolMaxSize = poolMaxSize;
   }
 
   public V getOrCreate(K key, PoolResourceSupplier<V> supplier) throws IOException {
-     synchronized (pools) {
-       Pool<V> pool = pools.get(key);
+    synchronized (pools) {
+      Pool<V> pool = pools.get(key);
 
-       if (pool == null) {
-         pool = createPool();
-         pools.put(key, pool);
-       }
+      if (pool == null) {
+        pool = createPool();
+        pools.put(key, pool);
+      }
 
-       try {
-         return pool.getOrCreate(supplier);
-       } catch (IOException | RuntimeException | Error e) {
-         if (pool.size() == 0) {
-           pools.remove(key);
-         }
+      try {
+        return pool.getOrCreate(supplier);
+      } catch (IOException | RuntimeException | Error e) {
+        if (pool.size() == 0) {
+          pools.remove(key);
+        }
 
-         throw e;
-       }
-     }
+        throw e;
+      }
+    }
   }
+
   public boolean remove(K key, V value) {
     synchronized (pools) {
       Pool<V> pool = pools.get(key);
@@ -128,7 +120,7 @@ public class PoolMap<K, V> {
   }
 
   public interface PoolResourceSupplier<R> {
-     R get() throws IOException;
+    R get() throws IOException;
   }
 
   protected static <V> V createResource(PoolResourceSupplier<V> supplier) throws IOException {
@@ -149,7 +141,8 @@ public class PoolMap<K, V> {
   }
 
   public enum PoolType {
-    ThreadLocal, RoundRobin;
+    ThreadLocal,
+    RoundRobin;
 
     public static PoolType valueOf(String poolTypeName, PoolType defaultPoolType) {
       PoolType poolType = PoolType.fuzzyMatch(poolTypeName);
@@ -172,30 +165,25 @@ public class PoolMap<K, V> {
 
   protected Pool<V> createPool() {
     switch (poolType) {
-    case RoundRobin:
-      return new RoundRobinPool<>(poolMaxSize);
-    case ThreadLocal:
-      return new ThreadLocalPool<>();
-    default:
-      return new RoundRobinPool<>(poolMaxSize);
+      case RoundRobin:
+        return new RoundRobinPool<>(poolMaxSize);
+      case ThreadLocal:
+        return new ThreadLocalPool<>();
+      default:
+        return new RoundRobinPool<>(poolMaxSize);
     }
   }
 
   /**
-   * The <code>RoundRobinPool</code> represents a {@link PoolMap.Pool}, which
-   * stores its resources in an {@link ArrayList}. It load-balances access to
-   * its resources by returning a different resource every time a given key is
-   * looked up.
-   *
+   * The <code>RoundRobinPool</code> represents a {@link PoolMap.Pool}, which stores its resources
+   * in an {@link ArrayList}. It load-balances access to its resources by returning a different
+   * resource every time a given key is looked up.
    * <p>
-   * If {@link #maxSize} is set to {@link Integer#MAX_VALUE}, then the size of
-   * the pool is unbounded. Otherwise, it caps the number of resources in this
-   * pool to the (non-zero positive) value specified in {@link #maxSize}.
+   * If {@link #maxSize} is set to {@link Integer#MAX_VALUE}, then the size of the pool is
+   * unbounded. Otherwise, it caps the number of resources in this pool to the (non-zero positive)
+   * value specified in {@link #maxSize}.
    * </p>
-   *
-   * @param <R>
-   *          the type of the resource
-   *
+   * @param <R> the type of the resource
    */
   @SuppressWarnings("serial")
   static class RoundRobinPool<R> implements Pool<R> {
@@ -254,18 +242,15 @@ public class PoolMap<K, V> {
   }
 
   /**
-   * The <code>ThreadLocalPool</code> represents a {@link PoolMap.Pool} that
-   * works similarly to {@link ThreadLocal} class. It essentially binds the resource
-   * to the thread from which it is accessed. It doesn't remove resources when a thread exits,
-   * those resources must be closed manually.
-   *
+   * The <code>ThreadLocalPool</code> represents a {@link PoolMap.Pool} that works similarly to
+   * {@link ThreadLocal} class. It essentially binds the resource to the thread from which it is
+   * accessed. It doesn't remove resources when a thread exits, those resources must be closed
+   * manually.
    * <p>
-   * Note that the size of the pool is essentially bounded by the number of threads
-   * that add resources to this pool.
+   * Note that the size of the pool is essentially bounded by the number of threads that add
+   * resources to this pool.
    * </p>
-   *
-   * @param <R>
-   *          the type of the resource
+   * @param <R> the type of the resource
    */
   static class ThreadLocalPool<R> implements Pool<R> {
     private final Map<Thread, R> resources;

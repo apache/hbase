@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,30 +19,25 @@ package org.apache.hadoop.hbase.types;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * An {@link Iterator} over encoded {@code Struct} members.
  * <p>
- * This iterates over each serialized {@code Struct} field from the specified
- * {@code DataTypes<?>[]} definition. It allows you to read the field or skip
- * over its serialized bytes using {@link #next()} and {@link #skip()},
- * respectively. This is in contrast to the {@code Struct} method which allow
- * you to {@link Struct#decode(PositionedByteRange)} or
- * {@link Struct#skip(PositionedByteRange)} over the entire {@code Struct} at
- * once.
+ * This iterates over each serialized {@code Struct} field from the specified {@code DataTypes<?>[]}
+ * definition. It allows you to read the field or skip over its serialized bytes using
+ * {@link #next()} and {@link #skip()}, respectively. This is in contrast to the {@code Struct}
+ * method which allow you to {@link Struct#decode(PositionedByteRange)} or
+ * {@link Struct#skip(PositionedByteRange)} over the entire {@code Struct} at once.
  * </p>
  * <p>
- * This iterator may also be used to read bytes from any {@code Struct} for
- * which the specified {@code DataType<?>[]} is a prefix. For example, if the
- * specified {@code Struct} definition has a {@link RawInteger} and a
- * {@link RawStringTerminated} field, you may parse the serialized output
- * of a {@code Struct} whose fields are {@link RawInteger},
- * {@link RawStringTerminated}, and {@link RawBytes}. The iterator would
- * return a number followed by a {@code String}. The trailing {@code byte[]}
- * would be ignored.
+ * This iterator may also be used to read bytes from any {@code Struct} for which the specified
+ * {@code DataType<?>[]} is a prefix. For example, if the specified {@code Struct} definition has a
+ * {@link RawInteger} and a {@link RawStringTerminated} field, you may parse the serialized output
+ * of a {@code Struct} whose fields are {@link RawInteger}, {@link RawStringTerminated}, and
+ * {@link RawBytes}. The iterator would return a number followed by a {@code String}. The trailing
+ * {@code byte[]} would be ignored.
  * </p>
  */
 @InterfaceAudience.Public
@@ -54,11 +49,10 @@ public class StructIterator implements Iterator<Object> {
   protected final DataType[] types;
 
   /**
-   * Construct {@code StructIterator} over the values encoded in {@code src}
-   * using the specified {@code types} definition.
-   * @param src The buffer from which to read encoded values.
-   * @param types The sequence of types to use as the schema for this
-   *          {@code Struct}.
+   * Construct {@code StructIterator} over the values encoded in {@code src} using the specified
+   * {@code types} definition.
+   * @param src   The buffer from which to read encoded values.
+   * @param types The sequence of types to use as the schema for this {@code Struct}.
    */
   public StructIterator(PositionedByteRange src, @SuppressWarnings("rawtypes") DataType[] types) {
     this.src = src;

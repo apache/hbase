@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.setCoprocessorError;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +41,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
 /**
  * The implementation of a region based coprocessor rpc channel.
@@ -62,7 +63,7 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   private byte[] lastRegion;
 
   RegionCoprocessorRpcChannelImpl(AsyncConnectionImpl conn, TableName tableName, RegionInfo region,
-      byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
+    byte[] row, long rpcTimeoutNs, long operationTimeoutNs) {
     this.conn = conn;
     this.tableName = tableName;
     this.region = region;
@@ -72,49 +73,51 @@ class RegionCoprocessorRpcChannelImpl implements RpcChannel {
   }
 
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
-      Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
-      ClientService.Interface stub) {
+    Message responsePrototype, HBaseRpcController controller, HRegionLocation loc,
+    ClientService.Interface stub) {
+    final Context context = Context.current();
     CompletableFuture<Message> future = new CompletableFuture<>();
     if (region != null && !Bytes.equals(loc.getRegion().getRegionName(), region.getRegionName())) {
-      future.completeExceptionally(new DoNotRetryIOException("Region name is changed, expected " +
-        region.getRegionNameAsString() + ", actual " + loc.getRegion().getRegionNameAsString()));
+      future.completeExceptionally(new DoNotRetryIOException("Region name is changed, expected "
+        + region.getRegionNameAsString() + ", actual " + loc.getRegion().getRegionNameAsString()));
       return future;
     }
     CoprocessorServiceRequest csr = CoprocessorRpcUtils.getCoprocessorServiceRequest(method,
       request, row, loc.getRegion().getRegionName());
-    stub.execService(controller, csr,
-      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
-
-        @Override
-        public void run(CoprocessorServiceResponse resp) {
-          if (controller.failed()) {
-            future.completeExceptionally(controller.getFailed());
-          } else {
-            lastRegion = resp.getRegion().getValue().toByteArray();
-            try {
-              future.complete(CoprocessorRpcUtils.getResponse(resp, responsePrototype));
-            } catch (IOException e) {
-              future.completeExceptionally(e);
-            }
+    stub.execService(controller, csr, resp -> {
+      try (Scope ignored = context.makeCurrent()) {
+        if (controller.failed()) {
+          future.completeExceptionally(controller.getFailed());
+        } else {
+          lastRegion = resp.getRegion().getValue().toByteArray();
+          try {
+            future.complete(CoprocessorRpcUtils.getResponse(resp, responsePrototype));
+          } catch (IOException e) {
+            future.completeExceptionally(e);
           }
         }
-      });
+      }
+    });
     return future;
   }
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
-    addListener(
-      conn.callerFactory.<Message> single().table(tableName).row(row)
-        .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
-        .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-        .action((c, l, s) -> rpcCall(method, request, responsePrototype, c, l, s)).call(),
-      (r, e) -> {
-        if (e != null) {
-          setCoprocessorError(controller, e);
+    Message responsePrototype, RpcCallback<Message> done) {
+    final Context context = Context.current();
+    addListener(conn.callerFactory.<Message> single().table(tableName).row(row)
+      .locateType(RegionLocateType.CURRENT).rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
+      .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS).action((c, l, s) -> {
+        try (Scope ignored = context.makeCurrent()) {
+          return rpcCall(method, request, responsePrototype, c, l, s);
         }
-        done.run(r);
+      }).call(), (r, e) -> {
+        try (Scope ignored = context.makeCurrent()) {
+          if (e != null) {
+            setCoprocessorError(controller, e);
+          }
+          done.run(r);
+        }
       });
   }
 

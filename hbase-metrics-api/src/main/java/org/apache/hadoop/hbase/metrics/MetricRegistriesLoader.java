@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
-
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -32,8 +29,8 @@ import org.slf4j.LoggerFactory;
 public final class MetricRegistriesLoader {
   private static final Logger LOG = LoggerFactory.getLogger(MetricRegistries.class);
 
-  private static final String defaultClass
-      = "org.apache.hadoop.hbase.metrics.impl.MetricRegistriesImpl";
+  private static final String defaultClass =
+    "org.apache.hadoop.hbase.metrics.impl.MetricRegistriesImpl";
 
   private MetricRegistriesLoader() {
   }
@@ -64,7 +61,7 @@ public final class MetricRegistriesLoader {
       return impl;
     } else if (availableImplementations.isEmpty()) {
       try {
-        return ReflectionUtils.newInstance((Class<MetricRegistries>)Class.forName(defaultClass));
+        return ReflectionUtils.newInstance((Class<MetricRegistries>) Class.forName(defaultClass));
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
       }
@@ -78,7 +75,7 @@ public final class MetricRegistriesLoader {
         sb.append(factory.getClass());
       }
       LOG.warn("Found multiple MetricRegistries implementations: " + sb
-          + ". Using first found implementation: " + availableImplementations.get(0));
+        + ". Using first found implementation: " + availableImplementations.get(0));
       return availableImplementations.get(0);
     }
   }

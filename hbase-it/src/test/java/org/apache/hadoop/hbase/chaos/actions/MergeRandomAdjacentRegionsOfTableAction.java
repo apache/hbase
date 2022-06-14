@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -32,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MergeRandomAdjacentRegionsOfTableAction extends Action {
   private static final Logger LOG =
-      LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
+    LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
@@ -45,7 +44,8 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -61,7 +61,7 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
       return;
     }
 
-    int i = RandomUtils.nextInt(0, regions.size() - 1);
+    int i = ThreadLocalRandom.current().nextInt(regions.size() - 1);
     RegionInfo a = regions.get(i++);
     RegionInfo b = regions.get(i);
     getLogger().debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());

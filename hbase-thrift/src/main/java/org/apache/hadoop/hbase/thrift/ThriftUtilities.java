@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.util.Bytes.getBytes;
@@ -54,24 +53,21 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a new Hbase HColumnDescriptor object based on a
-   * Thrift ColumnDescriptor "struct".
-   *
-   * @param in Thrift ColumnDescriptor object
-   * @return ModifyableColumnFamilyDescriptor
-   * @throws IllegalArgument if the column name is empty
+   * This utility method creates a new Hbase HColumnDescriptor object based on a Thrift
+   * ColumnDescriptor "struct".
+   * @param in Thrift ColumnDescriptor object n * @throws IllegalArgument if the column name is
+   *           empty
    */
-  public static ColumnFamilyDescriptor colDescFromThrift(
-      ColumnDescriptor in) throws IllegalArgument {
+  public static ColumnFamilyDescriptor colDescFromThrift(ColumnDescriptor in)
+    throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase(Locale.ROOT));
-    BloomType bt =
-      BloomType.valueOf(in.bloomFilterType);
+    BloomType bt = BloomType.valueOf(in.bloomFilterType);
 
     if (in.name == null || !in.name.hasRemaining()) {
       throw new IllegalArgument("column name is empty");
     }
-    byte [] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
+    byte[] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
     return ColumnFamilyDescriptorBuilder.newBuilder(parsedName).setMaxVersions(in.maxVersions)
       .setCompressionType(comp).setInMemory(in.inMemory).setBlockCacheEnabled(in.blockCacheEnabled)
       .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE).setBloomFilterType(bt)
@@ -79,11 +75,8 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a new Thrift ColumnDescriptor "struct" based on
-   * an Hbase HColumnDescriptor object.
-   *
-   * @param in
-   *          Hbase HColumnDescriptor object
+   * This utility method creates a new Thrift ColumnDescriptor "struct" based on an Hbase
+   * HColumnDescriptor object. n * Hbase HColumnDescriptor object
    * @return Thrift ColumnDescriptor
    */
   public static ColumnDescriptor colDescFromHbase(ColumnFamilyDescriptor in) {
@@ -99,11 +92,8 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a list of Thrift TCell "struct" based on
-   * an Hbase Cell object. The empty list is returned if the input is null.
-   *
-   * @param in
-   *          Hbase Cell object
+   * This utility method creates a list of Thrift TCell "struct" based on an Hbase Cell object. The
+   * empty list is returned if the input is null. n * Hbase Cell object
    * @return Thrift TCell array
    */
   public static List<TCell> cellFromHBase(Cell in) {
@@ -115,8 +105,8 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a list of Thrift TCell "struct" based on
-   * an Hbase Cell array. The empty list is returned if the input is null.
+   * This utility method creates a list of Thrift TCell "struct" based on an Hbase Cell array. The
+   * empty list is returned if the input is null.
    * @param in Hbase Cell array
    * @return Thrift TCell array
    */
@@ -134,24 +124,17 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a list of Thrift TRowResult "struct" based on
-   * an Hbase RowResult object. The empty list is returned if the input is
-   * null.
-   *
-   * @param in
-   *          Hbase RowResult object
-   * @param sortColumns
-   *          This boolean dictates if row data is returned in a sorted order
-   *          sortColumns = True will set TRowResult's sortedColumns member
-   *                        which is an ArrayList of TColumn struct
-   *          sortColumns = False will set TRowResult's columns member which is
-   *                        a map of columnName and TCell struct
+   * This utility method creates a list of Thrift TRowResult "struct" based on an Hbase RowResult
+   * object. The empty list is returned if the input is null. n * Hbase RowResult object n * This
+   * boolean dictates if row data is returned in a sorted order sortColumns = True will set
+   * TRowResult's sortedColumns member which is an ArrayList of TColumn struct sortColumns = False
+   * will set TRowResult's columns member which is a map of columnName and TCell struct
    * @return Thrift TRowResult array
    */
   public static List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
     List<TRowResult> results = new ArrayList<>(in.length);
     for (Result result_ : in) {
-      if(result_ == null || result_.isEmpty()) {
+      if (result_ == null || result_.isEmpty()) {
         continue;
       }
 
@@ -162,17 +145,17 @@ public final class ThriftUtilities {
         result.sortedColumns = new ArrayList<>();
         for (Cell kv : result_.rawCells()) {
           result.sortedColumns.add(new TColumn(
-              ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
-                  CellUtil.cloneQualifier(kv))),
-              new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
+            ByteBuffer
+              .wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv))),
+            new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
         }
       } else {
         result.columns = new TreeMap<>();
         for (Cell kv : result_.rawCells()) {
           result.columns.put(
-              ByteBuffer.wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv),
-                  CellUtil.cloneQualifier(kv))),
-              new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
+            ByteBuffer
+              .wrap(CellUtil.makeColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv))),
+            new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
         }
       }
 
@@ -183,12 +166,9 @@ public final class ThriftUtilities {
   }
 
   /**
-   * This utility method creates a list of Thrift TRowResult "struct" based on
-   * an array of Hbase RowResult objects. The empty list is returned if the input is
-   * null.
-   *
-   * @param in
-   *          Array of Hbase RowResult objects
+   * This utility method creates a list of Thrift TRowResult "struct" based on an array of Hbase
+   * RowResult objects. The empty list is returned if the input is null. n * Array of Hbase
+   * RowResult objects
    * @return Thrift TRowResult array
    */
   public static List<TRowResult> rowResultFromHBase(Result[] in) {
@@ -196,7 +176,7 @@ public final class ThriftUtilities {
   }
 
   public static List<TRowResult> rowResultFromHBase(Result in) {
-    Result [] result = { in };
+    Result[] result = { in };
     return rowResultFromHBase(result);
   }
 
@@ -229,7 +209,7 @@ public final class ThriftUtilities {
 
     if (columns.size() != values.size()) {
       throw new IllegalArgumentException(
-          "Sizes of columns and values in tappend object are not matching");
+        "Sizes of columns and values in tappend object are not matching");
     }
 
     int length = columns.size();
@@ -245,12 +225,23 @@ public final class ThriftUtilities {
     Set<Permission.Action> actions = new HashSet<>();
     for (char c : permission_actions.toCharArray()) {
       switch (c) {
-        case 'R': actions.add(Permission.Action.READ);   break;
-        case 'W': actions.add(Permission.Action.WRITE);  break;
-        case 'C': actions.add(Permission.Action.CREATE); break;
-        case 'X': actions.add(Permission.Action.EXEC);   break;
-        case 'A': actions.add(Permission.Action.ADMIN);  break;
-        default:                                         break;
+        case 'R':
+          actions.add(Permission.Action.READ);
+          break;
+        case 'W':
+          actions.add(Permission.Action.WRITE);
+          break;
+        case 'C':
+          actions.add(Permission.Action.CREATE);
+          break;
+        case 'X':
+          actions.add(Permission.Action.EXEC);
+          break;
+        case 'A':
+          actions.add(Permission.Action.ADMIN);
+          break;
+        default:
+          break;
       }
     }
     return actions.toArray(new Permission.Action[0]);

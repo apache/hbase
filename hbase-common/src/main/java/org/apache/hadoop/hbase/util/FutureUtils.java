@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public final class FutureUtils {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public static <T> void addListener(CompletableFuture<T> future,
-      BiConsumer<? super T, ? super Throwable> action) {
+    BiConsumer<? super T, ? super Throwable> action) {
     future.whenComplete((resp, error) -> {
       try {
         // See this post on stack overflow(shorten since the url is too long),
@@ -80,7 +80,7 @@ public final class FutureUtils {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public static <T> void addListener(CompletableFuture<T> future,
-      BiConsumer<? super T, ? super Throwable> action, Executor executor) {
+    BiConsumer<? super T, ? super Throwable> action, Executor executor) {
     future.whenCompleteAsync((resp, error) -> {
       try {
         action.accept(resp, unwrapCompletionException(error));
@@ -95,7 +95,7 @@ public final class FutureUtils {
    * the callbacks in the given {@code executor}.
    */
   public static <T> CompletableFuture<T> wrapFuture(CompletableFuture<T> future,
-      Executor executor) {
+    Executor executor) {
     CompletableFuture<T> wrappedFuture = new CompletableFuture<>();
     addListener(future, (r, e) -> {
       if (e != null) {

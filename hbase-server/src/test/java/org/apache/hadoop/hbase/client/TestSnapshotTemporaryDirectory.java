@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,20 +75,23 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 @RunWith(Parameterized.class)
 public class TestSnapshotTemporaryDirectory {
 
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotTemporaryDirectory.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestSnapshotTemporaryDirectory.class);
 
-  @Parameterized.Parameters public static Iterable<Integer> data() {
-    return Arrays
-        .asList(SnapshotManifestV1.DESCRIPTOR_VERSION, SnapshotManifestV2.DESCRIPTOR_VERSION);
+  @Parameterized.Parameters
+  public static Iterable<Integer> data() {
+    return Arrays.asList(SnapshotManifestV1.DESCRIPTOR_VERSION,
+      SnapshotManifestV2.DESCRIPTOR_VERSION);
   }
 
-  @Parameterized.Parameter public int manifestVersion;
+  @Parameterized.Parameter
+  public int manifestVersion;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotTemporaryDirectory.class);
   protected static final int NUM_RS = 2;
   protected static String TEMP_DIR =
-      Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR + UUID.randomUUID().toString();
+    Paths.get("").toAbsolutePath().toString() + Path.SEPARATOR + UUID.randomUUID().toString();
 
   protected static Admin admin;
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -98,7 +101,6 @@ public class TestSnapshotTemporaryDirectory {
 
   /**
    * Setup the config for the cluster
-   *
    * @throws Exception on failure
    */
   @BeforeClass
@@ -122,8 +124,9 @@ public class TestSnapshotTemporaryDirectory {
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(TEMP_DIR, ".tmpDir").toUri());
+      ConstantSizeRegionSplitPolicy.class.getName());
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR,
+      "file://" + new Path(TEMP_DIR, ".tmpDir").toUri());
   }
 
   @Before
@@ -155,8 +158,7 @@ public class TestSnapshotTemporaryDirectory {
   }
 
   @Test
-  public void testRestoreDisabledSnapshot()
-      throws IOException, InterruptedException {
+  public void testRestoreDisabledSnapshot() throws IOException, InterruptedException {
     long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
@@ -222,8 +224,7 @@ public class TestSnapshotTemporaryDirectory {
   }
 
   @Test
-  public void testRestoreEnabledSnapshot()
-      throws IOException, InterruptedException {
+  public void testRestoreEnabledSnapshot() throws IOException, InterruptedException {
     long tid = EnvironmentEdgeManager.currentTime();
     TableName tableName = TableName.valueOf("testtb-" + tid);
     String emptySnapshot = "emptySnaptb-" + tid;
@@ -286,7 +287,6 @@ public class TestSnapshotTemporaryDirectory {
 
   /**
    * Test snapshotting a table that is offline
-   *
    * @throws Exception if snapshot does not complete successfully
    */
   @Test
@@ -318,7 +318,7 @@ public class TestSnapshotTemporaryDirectory {
 
     // make sure we have the snapshot
     List<SnapshotDescription> snapshots =
-        SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
+      SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot, TABLE_NAME);
 
     // make sure its a valid snapshot
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
@@ -327,18 +327,17 @@ public class TestSnapshotTemporaryDirectory {
     CommonFSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       CommonFSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
-    SnapshotTestingUtils
-        .confirmSnapshotValid(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)),
-            TABLE_NAME, TEST_FAM, rootDir, admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, TEST_FAM, rootDir,
+      admin, fs);
 
     admin.deleteSnapshot(snapshot);
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
   /**
-   * Tests that snapshot has correct contents by taking snapshot, cloning it, then affirming
-   * the contents of the original and cloned table match
-   *
+   * Tests that snapshot has correct contents by taking snapshot, cloning it, then affirming the
+   * contents of the original and cloned table match
    * @throws Exception if snapshot does not complete successfully
    */
   @Test
@@ -362,7 +361,7 @@ public class TestSnapshotTemporaryDirectory {
     Scan cloned = new Scan();
     ResultScanner originalScan = admin.getConnection().getTable(TABLE_NAME).getScanner(original);
     ResultScanner clonedScan =
-        admin.getConnection().getTable(TableName.valueOf("Table1Clone")).getScanner(cloned);
+      admin.getConnection().getTable(TableName.valueOf("Table1Clone")).getScanner(cloned);
 
     Iterator<Result> i = originalScan.iterator();
     Iterator<Result> i2 = clonedScan.iterator();
@@ -370,7 +369,7 @@ public class TestSnapshotTemporaryDirectory {
     while (i.hasNext()) {
       assertTrue(i2.hasNext());
       assertEquals(Bytes.toString(i.next().getValue(TEST_FAM, new byte[] {})),
-          Bytes.toString(i2.next().getValue(TEST_FAM, new byte[] {})));
+        Bytes.toString(i2.next().getValue(TEST_FAM, new byte[] {})));
     }
     assertFalse(i2.hasNext());
     admin.deleteSnapshot(snapshot1);
@@ -412,9 +411,9 @@ public class TestSnapshotTemporaryDirectory {
 
     List<byte[]> emptyCfs = Lists.newArrayList(TEST_FAM); // no file in the region
     List<byte[]> nonEmptyCfs = Lists.newArrayList();
-    SnapshotTestingUtils
-        .confirmSnapshotValid(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)),
-            TABLE_NAME, nonEmptyCfs, emptyCfs, rootDir, admin, fs);
+    SnapshotTestingUtils.confirmSnapshotValid(
+      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshots.get(0)), TABLE_NAME, nonEmptyCfs,
+      emptyCfs, rootDir, admin, fs);
 
     admin.deleteSnapshot(snapshot);
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -464,10 +463,10 @@ public class TestSnapshotTemporaryDirectory {
   }
 
   private void takeSnapshot(TableName tableName, String snapshotName, boolean disabled)
-      throws IOException {
+    throws IOException {
     SnapshotType type = disabled ? SnapshotType.DISABLED : SnapshotType.FLUSH;
-    SnapshotDescription desc = new SnapshotDescription(snapshotName, tableName, type, null, -1,
-        manifestVersion, null);
+    SnapshotDescription desc =
+      new SnapshotDescription(snapshotName, tableName, type, null, -1, manifestVersion, null);
     admin.snapshot(desc);
   }
 }

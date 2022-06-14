@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,20 +59,19 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestHRegionFileSystem {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
+    HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
-  private static final byte[][] FAMILIES = {
-    Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")),
-    Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
+  private static final byte[][] FAMILIES =
+    { Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")), Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
 
   @Rule
@@ -111,23 +110,25 @@ public class TestHRegionFileSystem {
 
       // alter table cf schema to change storage policies
       // and make sure it could override settings in conf
-      ColumnFamilyDescriptorBuilder cfdA =
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
+      ColumnFamilyDescriptorBuilder cfdA = ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[0]);
       // alter through setting HStore#BLOCK_STORAGE_POLICY_KEY in HColumnDescriptor
       cfdA.setValue(HStore.BLOCK_STORAGE_POLICY_KEY, "ONE_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdA.build());
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().
-          getRegionStates().hasRegionsInTransition()) {
+      while (
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .hasRegionsInTransition()
+      ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
       // alter through HColumnDescriptor#setStoragePolicy
-      ColumnFamilyDescriptorBuilder cfdB =
-        ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[1]);
+      ColumnFamilyDescriptorBuilder cfdB = ColumnFamilyDescriptorBuilder.newBuilder(FAMILIES[1]);
       cfdB.setStoragePolicy("ALL_SSD");
       admin.modifyColumnFamily(TABLE_NAME, cfdB.build());
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-          .hasRegionsInTransition()) {
+      while (
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+          .hasRegionsInTransition()
+      ) {
         Thread.sleep(200);
         LOG.debug("Waiting on table to finish schema altering");
       }
@@ -185,7 +186,7 @@ public class TestHRegionFileSystem {
   }
 
   private HRegionFileSystem getHRegionFS(Connection conn, Table table, Configuration conf)
-      throws IOException {
+    throws IOException {
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
     Path tableDir = CommonFSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), table.getName());
     List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
@@ -281,7 +282,7 @@ public class TestHRegionFileSystem {
 
     @Override
     public FSDataOutputStream create(Path arg0, FsPermission arg1, boolean arg2, int arg3,
-        short arg4, long arg5, Progressable arg6) throws IOException {
+      short arg4, long arg5, Progressable arg6) throws IOException {
       LOG.debug("Create, " + retryCount);
       if (retryCount++ < successRetryCount) throw new IOException("Something bad happen");
       return null;

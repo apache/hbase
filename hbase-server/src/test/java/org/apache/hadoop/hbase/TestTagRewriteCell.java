@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,33 +31,30 @@ public class TestTagRewriteCell {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTagRewriteCell.class);
+    HBaseClassTestRule.forClass(TestTagRewriteCell.class);
 
   @Test
   public void testHeapSize() {
     Cell originalCell = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(Bytes.toBytes("row"))
-      .setFamily(HConstants.EMPTY_BYTE_ARRAY)
-      .setQualifier(HConstants.EMPTY_BYTE_ARRAY)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(Bytes.toBytes("value"))
-      .build();
+      .setRow(Bytes.toBytes("row")).setFamily(HConstants.EMPTY_BYTE_ARRAY)
+      .setQualifier(HConstants.EMPTY_BYTE_ARRAY).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(Bytes.toBytes("value")).build();
     final int fakeTagArrayLength = 10;
     Cell trCell = PrivateCellUtil.createCell(originalCell, new byte[fakeTagArrayLength]);
 
     // Get the heapSize before the internal tags array in trCell are nuked
-    long trCellHeapSize = ((HeapSize)trCell).heapSize();
+    long trCellHeapSize = ((HeapSize) trCell).heapSize();
 
     // Make another TagRewriteCell with the original TagRewriteCell
     // This happens on systems with more than one RegionObserver/Coproc loaded (such as
     // VisibilityController and AccessController)
     Cell trCell2 = PrivateCellUtil.createCell(trCell, new byte[fakeTagArrayLength]);
 
-    assertTrue("TagRewriteCell containing a TagRewriteCell's heapsize should be " +
-            "larger than a single TagRewriteCell's heapsize",
-        trCellHeapSize < ((HeapSize)trCell2).heapSize());
+    assertTrue(
+      "TagRewriteCell containing a TagRewriteCell's heapsize should be "
+        + "larger than a single TagRewriteCell's heapsize",
+      trCellHeapSize < ((HeapSize) trCell2).heapSize());
     assertTrue("TagRewriteCell should have had nulled out tags array",
-        ((HeapSize)trCell).heapSize() < trCellHeapSize);
+      ((HeapSize) trCell).heapSize() < trCellHeapSize);
   }
 }

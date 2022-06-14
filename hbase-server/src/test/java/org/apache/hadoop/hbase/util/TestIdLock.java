@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -37,13 +38,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 // Medium as it creates 100 threads; seems better to run it isolated
 public class TestIdLock {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIdLock.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestIdLock.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIdLock.class);
 
@@ -66,7 +66,7 @@ public class TestIdLock {
     @Override
     public Boolean call() throws Exception {
       Thread.currentThread().setName(clientId);
-      Random rand = new Random();
+      Random rand = ThreadLocalRandom.current();
       long endTime = EnvironmentEdgeManager.currentTime() + NUM_SECONDS * 1000;
       while (EnvironmentEdgeManager.currentTime() < endTime) {
         long id = rand.nextInt(NUM_IDS);
@@ -76,8 +76,7 @@ public class TestIdLock {
           int sleepMs = 1 + rand.nextInt(4);
           String owner = idOwner.get(id);
           if (owner != null) {
-            LOG.error("Id " + id + " already taken by " + owner + ", "
-                + clientId + " failed");
+            LOG.error("Id " + id + " already taken by " + owner + ", " + clientId + " failed");
             return false;
           }
 
@@ -112,6 +111,4 @@ public class TestIdLock {
     }
   }
 
-
 }
-

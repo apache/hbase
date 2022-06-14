@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +61,7 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   /**
    * Start a MiniHBaseCluster.
-   * @param conf Configuration to be used for cluster
+   * @param conf             Configuration to be used for cluster
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numRegionServers)
@@ -72,8 +71,8 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   /**
    * Start a MiniHBaseCluster.
-   * @param conf Configuration to be used for cluster
-   * @param numMasters initial number of masters to start.
+   * @param conf             Configuration to be used for cluster
+   * @param numMasters       initial number of masters to start.
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
@@ -83,8 +82,8 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   /**
    * Start a MiniHBaseCluster.
-   * @param conf Configuration to be used for cluster
-   * @param numMasters initial number of masters to start.
+   * @param conf             Configuration to be used for cluster
+   * @param numMasters       initial number of masters to start.
    * @param numRegionServers initial number of region servers to start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
@@ -96,9 +95,9 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
 
   /**
    * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
-   *          restart where for sure the regionservers come up on same address+port (but just with
-   *          different startcode); by default mini hbase clusters choose new arbitrary ports on
-   *          each cluster start.
+   *                restart where for sure the regionservers come up on same address+port (but just
+   *                with different startcode); by default mini hbase clusters choose new arbitrary
+   *                ports on each cluster start.
    */
   public SingleProcessHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
     int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
@@ -470,9 +469,10 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   /**
    * Shut down the specified region server cleanly
    * @param serverNumber Used as index into a list.
-   * @param shutdownFS True is we are to shutdown the filesystem as part of this regionserver's
-   *          shutdown. Usually we do but you do not want to do this if you are running multiple
-   *          regionservers in a test and you shut down one before end of the test.
+   * @param shutdownFS   True is we are to shutdown the filesystem as part of this regionserver's
+   *                     shutdown. Usually we do but you do not want to do this if you are running
+   *                     multiple regionservers in a test and you shut down one before end of the
+   *                     test.
    * @return the region server that was stopped
    */
   public JVMClusterUtil.RegionServerThread stopRegionServer(int serverNumber,
@@ -585,9 +585,9 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   /**
    * Shut down the specified master cleanly
    * @param serverNumber Used as index into a list.
-   * @param shutdownFS True is we are to shutdown the filesystem as part of this master's shutdown.
-   *          Usually we do but you do not want to do this if you are running multiple master in a
-   *          test and you shut down one before end of the test.
+   * @param shutdownFS   True is we are to shutdown the filesystem as part of this master's
+   *                     shutdown. Usually we do but you do not want to do this if you are running
+   *                     multiple master in a test and you shut down one before end of the test.
    * @return the master that was stopped
    */
   public JVMClusterUtil.MasterThread stopMaster(int serverNumber, final boolean shutdownFS) {

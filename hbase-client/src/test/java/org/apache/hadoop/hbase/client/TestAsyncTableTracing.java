@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntryWithStringValuesOf;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasAttributes;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
@@ -26,22 +28,30 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.TraceTestUtil.buildT
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
@@ -71,8 +81,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -101,7 +113,7 @@ public class TestAsyncTableTracing {
 
   private AsyncConnectionImpl conn;
 
-  private AsyncTable<?> table;
+  private AsyncTable<ScanResultConsumer> table;
 
   @Rule
   public OpenTelemetryRule traceRule = OpenTelemetryRule.create();
@@ -197,37 +209,37 @@ public class TestAsyncTableTracing {
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class), any());
     final User user = UserProvider.instantiate(CONF).getCurrent();
-    conn = new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null,
-      user) {
+    conn =
+      new AsyncConnectionImpl(CONF, new DoNothingConnectionRegistry(CONF), "test", null, user) {
 
-      @Override
-      AsyncRegionLocator getLocator() {
-        AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
-        Answer<CompletableFuture<HRegionLocation>> answer =
-          new Answer<CompletableFuture<HRegionLocation>>() {
+        @Override
+        AsyncRegionLocator getLocator() {
+          AsyncRegionLocator locator = mock(AsyncRegionLocator.class);
+          Answer<CompletableFuture<HRegionLocation>> answer =
+            new Answer<CompletableFuture<HRegionLocation>>() {
 
-            @Override
-            public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-              throws Throwable {
-              TableName tableName = invocation.getArgument(0);
-              RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-              ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
-              HRegionLocation loc = new HRegionLocation(info, serverName);
-              return CompletableFuture.completedFuture(loc);
-            }
-          };
-        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-          any(RegionLocateType.class), anyLong());
-        doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
-          anyInt(), any(RegionLocateType.class), anyLong());
-        return locator;
-      }
+              @Override
+              public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
+                throws Throwable {
+                TableName tableName = invocation.getArgument(0);
+                RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+                ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
+                HRegionLocation loc = new HRegionLocation(info, serverName);
+                return CompletableFuture.completedFuture(loc);
+              }
+            };
+          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+            any(RegionLocateType.class), anyLong());
+          doAnswer(answer).when(locator).getRegionLocation(any(TableName.class), any(byte[].class),
+            anyInt(), any(RegionLocateType.class), anyLong());
+          return locator;
+        }
 
-      @Override
-      ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
-        return stub;
-      }
-    };
+        @Override
+        ClientService.Interface getRegionServerStub(ServerName serverName) throws IOException {
+          return stub;
+        }
+      };
     table = conn.getTable(TableName.valueOf("table"), ForkJoinPool.commonPool());
   }
 
@@ -242,25 +254,19 @@ public class TestAsyncTableTracing {
 
   private void assertTrace(String tableOperation, Matcher<SpanData> matcher) {
     final TableName tableName = table.getName();
-    final Matcher<SpanData> spanLocator = allOf(
-      hasName(containsString(tableOperation)), hasEnded());
+    final Matcher<SpanData> spanLocator =
+      allOf(hasName(containsString(tableOperation)), hasEnded());
     final String expectedName = tableOperation + " " + tableName.getNameWithNamespaceInclAsString();
 
-    Waiter.waitFor(CONF, 1000, new MatcherPredicate<>(
-      "waiting for span to emit",
+    Waiter.waitFor(CONF, 1000, new MatcherPredicate<>("waiting for span to emit",
       () -> traceRule.getSpans(), hasItem(spanLocator)));
-    SpanData data = traceRule.getSpans()
-      .stream()
-      .filter(spanLocator::matches)
-      .findFirst()
-      .orElseThrow(AssertionError::new);
-    assertThat(data, allOf(
-      hasName(expectedName),
-      hasKind(SpanKind.CLIENT),
-      hasStatusWithCode(StatusCode.OK),
-      buildConnectionAttributesMatcher(conn),
-      buildTableAttributesMatcher(tableName),
-      matcher));
+    List<SpanData> candidateSpans =
+      traceRule.getSpans().stream().filter(spanLocator::matches).collect(Collectors.toList());
+    assertThat(candidateSpans, hasSize(1));
+    SpanData data = candidateSpans.iterator().next();
+    assertThat(data,
+      allOf(hasName(expectedName), hasKind(SpanKind.CLIENT), hasStatusWithCode(StatusCode.OK),
+        buildConnectionAttributesMatcher(conn), buildTableAttributesMatcher(tableName), matcher));
   }
 
   @Test
@@ -333,7 +339,9 @@ public class TestAsyncTableTracing {
         .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
         .build(new Delete(Bytes.toBytes(0))))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations",
+        "CHECK_AND_MUTATE", "DELETE")));
   }
 
   @Test
@@ -341,13 +349,14 @@ public class TestAsyncTableTracing {
     table.checkAndMutateAll(Arrays.asList(CheckAndMutate.newBuilder(Bytes.toBytes(0))
       .ifEquals(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))
       .build(new Delete(Bytes.toBytes(0))))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations",
+        "CHECK_AND_MUTATE", "DELETE")));
   }
 
   private void testCheckAndMutateBuilder(Row op) {
     AsyncTable.CheckAndMutateBuilder builder =
-      table.checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
-        .qualifier(Bytes.toBytes("cq"))
+      table.checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
         .ifEquals(Bytes.toBytes("v"));
     if (op instanceof Put) {
       Put put = (Put) op;
@@ -366,8 +375,8 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateBuilderThenPut() {
-    Put put = new Put(Bytes.toBytes(0))
-      .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v"));
+    Put put = new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
+      Bytes.toBytes("v"));
     testCheckAndMutateBuilder(put);
   }
 
@@ -378,10 +387,9 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateBuilderThenMutations() throws IOException {
-    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
-      .add(new Put(Bytes.toBytes(0))
-        .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
-      .add(new Delete(Bytes.toBytes(0)));
+    RowMutations mutations =
+      new RowMutations(Bytes.toBytes(0)).add(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"),
+        Bytes.toBytes("cq"), Bytes.toBytes("v"))).add(new Delete(Bytes.toBytes(0)));
     testCheckAndMutateBuilder(mutations);
   }
 
@@ -406,8 +414,8 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateWithFilterBuilderThenPut() {
-    Put put = new Put(Bytes.toBytes(0))
-      .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v"));
+    Put put = new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
+      Bytes.toBytes("v"));
     testCheckAndMutateWithFilterBuilder(put);
   }
 
@@ -418,17 +426,20 @@ public class TestAsyncTableTracing {
 
   @Test
   public void testCheckAndMutateWithFilterBuilderThenMutations() throws IOException {
-    RowMutations mutations = new RowMutations(Bytes.toBytes(0))
-      .add(new Put(Bytes.toBytes(0))
-        .addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
-      .add(new Delete(Bytes.toBytes(0)));
+    RowMutations mutations =
+      new RowMutations(Bytes.toBytes(0)).add(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"),
+        Bytes.toBytes("cq"), Bytes.toBytes("v"))).add(new Delete(Bytes.toBytes(0)));
     testCheckAndMutateWithFilterBuilder(mutations);
   }
 
   @Test
   public void testMutateRow() throws IOException {
-    table.mutateRow(new RowMutations(Bytes.toBytes(0)).add(new Delete(Bytes.toBytes(0))));
-    assertTrace("BATCH");
+    final RowMutations mutations = new RowMutations(Bytes.toBytes(0)).add(new Put(Bytes.toBytes(0))
+      .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
+      .add(new Delete(Bytes.toBytes(0)));
+    table.mutateRow(mutations).join();
+    assertTrace("BATCH", hasAttributes(
+      containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE", "PUT")));
   }
 
   @Test
@@ -438,18 +449,70 @@ public class TestAsyncTableTracing {
   }
 
   @Test
+  public void testScan() throws Throwable {
+    final CountDownLatch doneSignal = new CountDownLatch(1);
+    final AtomicInteger count = new AtomicInteger();
+    final AtomicReference<Throwable> throwable = new AtomicReference<>();
+    final Scan scan = new Scan().setCaching(1).setMaxResultSize(1).setLimit(1);
+    table.scan(scan, new ScanResultConsumer() {
+      @Override
+      public boolean onNext(Result result) {
+        if (result.getRow() != null) {
+          count.incrementAndGet();
+        }
+        return true;
+      }
+
+      @Override
+      public void onError(Throwable error) {
+        throwable.set(error);
+        doneSignal.countDown();
+      }
+
+      @Override
+      public void onComplete() {
+        doneSignal.countDown();
+      }
+    });
+    doneSignal.await();
+    if (throwable.get() != null) {
+      throw throwable.get();
+    }
+    assertThat("user code did not run. check test setup.", count.get(), greaterThan(0));
+    assertTrace("SCAN");
+  }
+
+  @Test
+  public void testGetScanner() {
+    final Scan scan = new Scan().setCaching(1).setMaxResultSize(1).setLimit(1);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      int count = 0;
+      for (Result result : scanner) {
+        if (result.getRow() != null) {
+          count++;
+        }
+      }
+      // do something with it.
+      assertThat(count, greaterThanOrEqualTo(0));
+    }
+    assertTrace("SCAN");
+  }
+
+  @Test
   public void testExistsList() {
     CompletableFuture
       .allOf(
         table.exists(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testExistsAll() {
     table.existsAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
@@ -457,13 +520,15 @@ public class TestAsyncTableTracing {
     CompletableFuture
       .allOf(table.get(Arrays.asList(new Get(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
   public void testGetAll() {
     table.getAll(Arrays.asList(new Get(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "GET")));
   }
 
   @Test
@@ -472,14 +537,16 @@ public class TestAsyncTableTracing {
       .allOf(table.put(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
         Bytes.toBytes("cq"), Bytes.toBytes("v")))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
   }
 
   @Test
   public void testPutAll() {
     table.putAll(Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
       Bytes.toBytes("cq"), Bytes.toBytes("v")))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "PUT")));
   }
 
   @Test
@@ -488,13 +555,15 @@ public class TestAsyncTableTracing {
       .allOf(
         table.delete(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testDeleteAll() {
     table.deleteAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
@@ -503,12 +572,14 @@ public class TestAsyncTableTracing {
       .allOf(
         table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)))).toArray(new CompletableFuture[0]))
       .join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 
   @Test
   public void testBatchAll() {
     table.batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
-    assertTrace("BATCH");
+    assertTrace("BATCH",
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.container_operations", "DELETE")));
   }
 }

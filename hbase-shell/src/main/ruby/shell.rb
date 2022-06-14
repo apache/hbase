@@ -469,6 +469,7 @@ Shell.load_command_group(
     compact
     compaction_switch
     flush
+    flush_master_store
     get_balancer_decisions
     get_balancer_rejections
     get_slowlog_responses
@@ -496,6 +497,7 @@ Shell.load_command_group(
     splitormerge_enabled
     clear_compaction_queues
     list_deadservers
+    list_liveservers
     clear_deadservers
     clear_block_cache
     stop_master
@@ -646,5 +648,14 @@ Shell.load_command_group(
     alter_rsgroup_config
     show_rsgroup_config
     get_namespace_rsgroup
+  ]
+)
+
+Shell.load_command_group(
+  'storefiletracker',
+  full_name: 'StoreFileTracker',
+  commands: %w[
+    change_sft
+    change_sft_all
   ]
 )

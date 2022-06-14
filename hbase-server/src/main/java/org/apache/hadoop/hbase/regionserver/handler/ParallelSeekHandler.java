@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +19,13 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handler to seek storefiles in parallel.
@@ -41,8 +39,8 @@ public class ParallelSeekHandler extends EventHandler {
   private CountDownLatch latch;
   private Throwable err = null;
 
-  public ParallelSeekHandler(KeyValueScanner scanner,Cell keyValue, 
-      long readPoint, CountDownLatch latch) {
+  public ParallelSeekHandler(KeyValueScanner scanner, Cell keyValue, long readPoint,
+    CountDownLatch latch) {
     super(null, EventType.RS_PARALLEL_SEEK);
     this.scanner = scanner;
     this.keyValue = keyValue;

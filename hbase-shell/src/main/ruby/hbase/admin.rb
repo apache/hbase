@@ -27,6 +27,7 @@ java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder
 java_import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder
+java_import org.apache.hadoop.hbase.client.MobCompactPartitionPolicy
 java_import org.apache.hadoop.hbase.client.TableDescriptorBuilder
 java_import org.apache.hadoop.hbase.HConstants
 
@@ -477,7 +478,7 @@ module Hbase
       )
       zk = @zk_wrapper.getRecoverableZooKeeper.getZooKeeper
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
-      org.apache.hadoop.hbase.zookeeper.ZKUtil.dump(@zk_wrapper)
+      org.apache.hadoop.hbase.zookeeper.ZKDump.dump(@zk_wrapper)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -924,13 +925,16 @@ module Hbase
           puts(format('    %s', v))
         end
         master = cluster_metrics.getMasterName
-        puts(format('active master:  %s:%d %d', master.getHostname, master.getPort,
-                    master.getStartcode))
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          for task in cluster_metrics.getMasterTasks
+            puts(format('    %s', task.toString))
+          end
+        end
         puts(format('%d backup masters', cluster_metrics.getBackupMasterNames.size))
         for server in cluster_metrics.getBackupMasterNames
           puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
         end
-
         master_coprocs = @admin.getMasterCoprocessorNames.toString
         unless master_coprocs.nil?
           puts(format('master coprocessors: %s', master_coprocs))
@@ -943,6 +947,9 @@ module Hbase
             puts(format('        %s', region.getNameAsString.dump))
             puts(format('            %s', region.toString))
           end
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+            puts(format('        %s', task.toString))
+          end
         end
         puts(format('%d dead servers', cluster_metrics.getDeadServerNames.size))
         for server in cluster_metrics.getDeadServerNames
@@ -954,24 +961,26 @@ module Hbase
                     servers: cluster_metrics.getLiveServerMetrics.size))
         cluster_metrics.getLiveServerMetrics.keySet.each do |server_name|
           sl = cluster_metrics.getLiveServerMetrics.get(server_name)
-          r_sink_string   = '      SINK:'
-          r_source_string = '       SOURCE:'
+          r_sink_string   = '        SINK:'
+          r_source_string = '        SOURCE:'
           r_load_sink = sl.getReplicationLoadSink
           next if r_load_sink.nil?
+
           if r_load_sink.getTimestampsOfLastAppliedOp() == r_load_sink.getTimestampStarted()
           # If we have applied no operations since we've started replication,
           # assume that we're not acting as a sink and don't print the normal information
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
-            r_sink_string << ", Waiting for OPs... "
+            r_sink_string << "\n            TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ",\n            Waiting for OPs... "
           else
-            r_sink_string << " TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
-            r_sink_string << ", AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
-            r_sink_string << ", TimeStampsOfLastAppliedOp=" +
-               (java.util.Date.new(r_load_sink.getTimestampsOfLastAppliedOp())).toString()
+            r_sink_string << "\n            TimeStampStarted=" + r_load_sink.getTimestampStarted().to_s
+            r_sink_string << ",\n            AgeOfLastAppliedOp=" + r_load_sink.getAgeOfLastAppliedOp().to_s
+            r_sink_string << ",\n            TimeStampsOfLastAppliedOp=" +
+               r_load_sink.getTimestampsOfLastAppliedOp().to_s
           end
 
           r_load_source_map = sl.getReplicationLoadSourceMap
           build_source_string(r_load_source_map, r_source_string)
+
           puts(format('    %<host>s:', host: server_name.getHostname))
           if type.casecmp('SOURCE').zero?
             puts(format('%<source>s', source: r_source_string))
@@ -980,6 +989,33 @@ module Hbase
           else
             puts(format('%<source>s', source: r_source_string))
             puts(format('%<sink>s', sink: r_sink_string))
+          end
+        end
+      elsif format == 'tasks'
+        master = cluster_metrics.getMasterName
+        unless master.nil?
+          puts(format('active master:  %s:%d %d', master.getHostname, master.getPort, master.getStartcode))
+          printed = false
+          for task in cluster_metrics.getMasterTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('    %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('    no active tasks')
+          end
+        end
+        puts(format('%d live servers', cluster_metrics.getServersSize))
+        for server in cluster_metrics.getServers
+          puts(format('    %s:%d %d', server.getHostname, server.getPort, server.getStartcode))
+          printed = false
+          for task in cluster_metrics.getLiveServerMetrics.get(server).getTasks
+            next unless task.getState.name == 'RUNNING'
+            puts(format('        %s', task.toString))
+            printed = true
+          end
+          if !printed
+            puts('        no active tasks')
           end
         end
       elsif format == 'simple'
@@ -1007,6 +1043,7 @@ module Hbase
       else
         puts "1 active master, #{cluster_metrics.getBackupMasterNames.size} backup masters,
               #{cluster_metrics.getLiveServerMetrics.size} servers,
+              #{cluster_metrics.getDecommissionedServerNames.size} decommissioned,
               #{cluster_metrics.getDeadServerNames.size} dead,
               #{format('%.4f', cluster_metrics.getAverageLoad)} average load"
       end
@@ -1014,19 +1051,20 @@ module Hbase
 
     def build_source_string(r_load_source_map, r_source_string)
       r_load_source_map.each do |peer, sources|
-        r_source_string << ' PeerID=' + peer
+        r_source_string << "\n            PeerID=" + peer
         sources.each do |source_load|
           build_queue_title(source_load, r_source_string)
           build_running_source_stats(source_load, r_source_string)
+          r_source_string << "\n"
         end
       end
     end
 
     def build_queue_title(source_load, r_source_string)
       r_source_string << if source_load.isRecovered
-                           "\n         Recovered Queue: "
+                           ",\n            Queue(Recovered)="
                          else
-                           "\n         Normal Queue: "
+                           ",\n            Queue(Normal)="
                          end
       r_source_string << source_load.getQueueId
     end
@@ -1035,45 +1073,43 @@ module Hbase
       if source_load.isRunning
         build_shipped_stats(source_load, r_source_string)
         build_load_general_stats(source_load, r_source_string)
-        r_source_string << ', Replication Lag=' +
+        r_source_string << ",\n            ReplicationLag=" +
                            source_load.getReplicationLag.to_s
       else
-        r_source_string << "\n           "
+        r_source_string << ",\n            IsRunning=false, "
         r_source_string << 'No Reader/Shipper threads runnning yet.'
       end
     end
 
     def build_shipped_stats(source_load, r_source_string)
       r_source_string << if source_load.getTimestampOfLastShippedOp.zero?
-                           "\n           " \
+                           ",\n            TimeStampOfLastShippedOp=0, " \
                            'No Ops shipped since last restart'
                          else
-                           "\n           AgeOfLastShippedOp=" +
+                           ",\n            AgeOfLastShippedOp=" +
                            source_load.getAgeOfLastShippedOp.to_s +
-                           ', TimeStampOfLastShippedOp=' +
-                           java.util.Date.new(source_load
-                             .getTimestampOfLastShippedOp).toString
+                           ",\n            TimeStampOfLastShippedOp=" +
+                           source_load.getTimestampOfLastShippedOp.to_s
                          end
     end
 
     def build_load_general_stats(source_load, r_source_string)
-      r_source_string << ', SizeOfLogQueue=' +
+      r_source_string << ",\n            SizeOfLogQueue=" +
                          source_load.getSizeOfLogQueue.to_s
-      r_source_string << ', EditsReadFromLogQueue=' +
+      r_source_string << ",\n            EditsReadFromLogQueue=" +
                          source_load.getEditsRead.to_s
-      r_source_string << ', OpsShippedToTarget=' +
+      r_source_string << ",\n            OpsShippedToTarget=" +
                          source_load.getOPsShipped.to_s
       build_edits_for_source(source_load, r_source_string)
     end
 
     def build_edits_for_source(source_load, r_source_string)
       if source_load.hasEditsSinceRestart
-        r_source_string << ', TimeStampOfNextToReplicate=' +
-                           java.util.Date.new(source_load
-                             .getTimeStampOfNextToReplicate).toString
+        r_source_string << ",\n            TimeStampOfNextToReplicate=" +
+                           source_load.getTimeStampOfNextToReplicate.to_s
       else
-        r_source_string << ', No edits for this source'
-        r_source_string << ' since it started'
+        r_source_string << ",\n            HasEditsSinceRestart=false, "
+        r_source_string << 'No edits for this source since it started'
       end
     end
 
@@ -1824,6 +1860,24 @@ module Hbase
       else
         java.util.Arrays.asList(server_names)
       end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Change table's sft
+    def modify_table_sft(tableName, sft)
+      @admin.modifyTableStoreFileTracker(tableName, sft)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Change table column family's sft
+    def modify_table_family_sft(tableName, family_bytes, sft)
+      @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Flush master local region
+    def flush_master_store()
+      @admin.flushMasterStore()
     end
   end
   # rubocop:enable Metrics/ClassLength

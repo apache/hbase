@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.fail;
 
 import java.text.MessageFormat;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,8 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A class that provides a standard waitFor pattern
- * See details at https://issues.apache.org/jira/browse/HBASE-7384
+ * A class that provides a standard waitFor pattern See details at
+ * https://issues.apache.org/jira/browse/HBASE-7384
  */
 @InterfaceAudience.Private
 public final class Waiter {
@@ -101,7 +99,6 @@ public final class Waiter {
   public interface ExplainingPredicate<E extends Exception> extends Predicate<E> {
     /**
      * Perform a predicate evaluation.
-     *
      * @return explanation of failed state
      */
     String explainFailure() throws E;
@@ -127,14 +124,14 @@ public final class Waiter {
    * <code>true</code>, failing the test if the timeout is reached and the Predicate is still
    * <code>false</code>.
    * <p/>
-   * @param conf the configuration
-   * @param timeout the timeout in milliseconds to wait for the predicate.
+   * @param conf      the configuration
+   * @param timeout   the timeout in milliseconds to wait for the predicate.
    * @param predicate the predicate to evaluate.
    * @return the effective wait, in milli-seconds until the predicate becomes <code>true</code> or
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout,
-      Predicate<E> predicate) {
+    Predicate<E> predicate) {
     return waitFor(conf, timeout, 100, true, predicate);
   }
 
@@ -144,15 +141,15 @@ public final class Waiter {
    * <code>true</code>, failing the test if the timeout is reached and the Predicate is still
    * <code>false</code>.
    * <p/>
-   * @param conf the configuration
-   * @param timeout the max timeout in milliseconds to wait for the predicate.
-   * @param interval the interval in milliseconds to evaluate predicate.
+   * @param conf      the configuration
+   * @param timeout   the max timeout in milliseconds to wait for the predicate.
+   * @param interval  the interval in milliseconds to evaluate predicate.
    * @param predicate the predicate to evaluate.
    * @return the effective wait, in milli-seconds until the predicate becomes <code>true</code> or
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      Predicate<E> predicate) {
+    Predicate<E> predicate) {
     return waitFor(conf, timeout, interval, true, predicate);
   }
 
@@ -162,16 +159,16 @@ public final class Waiter {
    * <code>true</code>, failing the test if the timeout is reached, the Predicate is still
    * <code>false</code> and failIfTimeout is set as <code>true</code>.
    * <p/>
-   * @param conf the configuration
-   * @param timeout the timeout in milliseconds to wait for the predicate.
-   * @param interval the interval in milliseconds to evaluate predicate.
+   * @param conf          the configuration
+   * @param timeout       the timeout in milliseconds to wait for the predicate.
+   * @param interval      the interval in milliseconds to evaluate predicate.
    * @param failIfTimeout indicates if should fail current test case when times out.
-   * @param predicate the predicate to evaluate.
+   * @param predicate     the predicate to evaluate.
    * @return the effective wait, in milli-seconds until the predicate becomes <code>true</code> or
    *         wait is interrupted otherwise <code>-1</code> when times out
    */
   public static <E extends Exception> long waitFor(Configuration conf, long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) {
+    boolean failIfTimeout, Predicate<E> predicate) {
     long started = EnvironmentEdgeManager.currentTime();
     long adjustedTimeout = (long) (getWaitForRatio(conf) * timeout);
     long mustEnd = started + adjustedTimeout;
@@ -183,8 +180,10 @@ public final class Waiter {
     try {
       LOG.info(MessageFormat.format("Waiting up to [{0}] milli-secs(wait.for.ratio=[{1}])",
         adjustedTimeout, getWaitForRatio(conf)));
-      while (!(eval = predicate.evaluate())
-              && (remainderWait = mustEnd - EnvironmentEdgeManager.currentTime()) > 0) {
+      while (
+        !(eval = predicate.evaluate())
+          && (remainderWait = mustEnd - EnvironmentEdgeManager.currentTime()) > 0
+      ) {
         try {
           // handle tail case when remainder wait is less than one interval
           sleepInterval = Math.min(remainderWait, interval);
@@ -201,12 +200,11 @@ public final class Waiter {
             EnvironmentEdgeManager.currentTime() - started));
         } else if (failIfTimeout) {
           String msg = getExplanation(predicate);
-          fail(MessageFormat
-              .format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
+          fail(MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         } else {
           String msg = getExplanation(predicate);
           LOG.warn(
-              MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
+            MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         }
       }
       return (eval || interrupted) ? (EnvironmentEdgeManager.currentTime() - started) : -1;

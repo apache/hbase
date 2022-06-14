@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +18,20 @@
 package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
-
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * A life-cycle management interface for globally barriered procedures on
- * region servers.
+ * A life-cycle management interface for globally barriered procedures on region servers.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class RegionServerProcedureManager extends ProcedureManager {
   /**
    * Initialize a globally barriered procedure for region servers.
-   *
-   * @param rss Region Server service interface
-   * @throws KeeperException
+   * @param rss Region Server service interface n
    */
   public abstract void initialize(RegionServerServices rss) throws KeeperException;
 
@@ -46,9 +42,7 @@ public abstract class RegionServerProcedureManager extends ProcedureManager {
 
   /**
    * Close <tt>this</tt> and all running procedure tasks
-   *
-   * @param force forcefully stop all running tasks
-   * @throws IOException
+   * @param force forcefully stop all running tasks n
    */
   public abstract void stop(boolean force) throws IOException;
 }

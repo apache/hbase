@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -104,15 +104,16 @@ public class TestIPCUtil {
     Address addr = Address.fromParts("127.0.0.1", 12345);
     for (Throwable exception : exceptions) {
       if (exception instanceof TimeoutException) {
-        assertThat(IPCUtil.wrapException(addr, null, exception), instanceOf(TimeoutIOException.class));
+        assertThat(IPCUtil.wrapException(addr, null, exception),
+          instanceOf(TimeoutIOException.class));
       } else {
-        IOException ioe = IPCUtil.wrapException(addr, RegionInfoBuilder.FIRST_META_REGIONINFO,
-          exception);
+        IOException ioe =
+          IPCUtil.wrapException(addr, RegionInfoBuilder.FIRST_META_REGIONINFO, exception);
         // Assert that the exception contains the Region name if supplied. HBASE-25735.
         // Not all exceptions get the region stuffed into it.
         if (ioe.getMessage() != null) {
-          assertTrue(ioe.getMessage().
-            contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString()));
+          assertTrue(ioe.getMessage()
+            .contains(RegionInfoBuilder.FIRST_META_REGIONINFO.getRegionNameAsString()));
         }
         assertThat(ioe, instanceOf(exception.getClass()));
       }
@@ -135,8 +136,8 @@ public class TestIPCUtil {
           if (depth <= IPCUtil.MAX_DEPTH) {
             if (numElements <= numStackTraceElements.intValue()) {
               future.completeExceptionally(
-                new AssertionError("should call run directly but stack trace decreased from " +
-                  numStackTraceElements.intValue() + " to " + numElements));
+                new AssertionError("should call run directly but stack trace decreased from "
+                  + numStackTraceElements.intValue() + " to " + numElements));
               return;
             }
             numStackTraceElements.setValue(numElements);
@@ -144,9 +145,9 @@ public class TestIPCUtil {
           } else {
             if (numElements >= numStackTraceElements.intValue()) {
               future.completeExceptionally(
-                new AssertionError("should call eventLoop.execute to prevent stack overflow but" +
-                  " stack trace increased from " + numStackTraceElements.intValue() + " to " +
-                  numElements));
+                new AssertionError("should call eventLoop.execute to prevent stack overflow but"
+                  + " stack trace increased from " + numStackTraceElements.intValue() + " to "
+                  + numElements));
             } else {
               future.complete(null);
             }

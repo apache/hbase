@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,17 +45,18 @@ import org.slf4j.LoggerFactory;
 public final class AssignmentTestingUtil {
   private static final Logger LOG = LoggerFactory.getLogger(AssignmentTestingUtil.class);
 
-  private AssignmentTestingUtil() {}
+  private AssignmentTestingUtil() {
+  }
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtil util,
-      final RegionInfo hri) throws Exception {
+    final RegionInfo hri) throws Exception {
     while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
       Threads.sleep(10);
     }
   }
 
-  public static void waitForRsToBeDead(final HBaseTestingUtil util,
-      final ServerName serverName) throws Exception {
+  public static void waitForRsToBeDead(final HBaseTestingUtil util, final ServerName serverName)
+    throws Exception {
     util.waitFor(60000, new ExplainingPredicate<Exception>() {
       @Override
       public boolean evaluate() {
@@ -70,21 +71,21 @@ public final class AssignmentTestingUtil {
   }
 
   public static void stopRs(final HBaseTestingUtil util, final ServerName serverName)
-      throws Exception {
+    throws Exception {
     LOG.info("STOP REGION SERVER " + serverName);
     util.getMiniHBaseCluster().stopRegionServer(serverName);
     waitForRsToBeDead(util, serverName);
   }
 
   public static void killRs(final HBaseTestingUtil util, final ServerName serverName)
-      throws Exception {
+    throws Exception {
     LOG.info("KILL REGION SERVER " + serverName);
     util.getMiniHBaseCluster().killRegionServer(serverName);
     waitForRsToBeDead(util, serverName);
   }
 
   public static void crashRs(final HBaseTestingUtil util, final ServerName serverName,
-      final boolean kill) throws Exception {
+    final boolean kill) throws Exception {
     if (kill) {
       killRs(util, serverName);
     } else {
@@ -92,19 +93,19 @@ public final class AssignmentTestingUtil {
     }
   }
 
-  public static ServerName crashRsWithRegion(final HBaseTestingUtil util,
-      final RegionInfo hri, final boolean kill) throws Exception {
+  public static ServerName crashRsWithRegion(final HBaseTestingUtil util, final RegionInfo hri,
+    final boolean kill) throws Exception {
     ServerName serverName = getServerHoldingRegion(util, hri);
     crashRs(util, serverName, kill);
     return serverName;
   }
 
-  public static ServerName getServerHoldingRegion(final HBaseTestingUtil util,
-      final RegionInfo hri) throws Exception {
-    ServerName serverName = util.getMiniHBaseCluster().getServerHoldingRegion(
-      hri.getTable(), hri.getRegionName());
-    ServerName amServerName = getMaster(util).getAssignmentManager().getRegionStates()
-      .getRegionServerOfRegion(hri);
+  public static ServerName getServerHoldingRegion(final HBaseTestingUtil util, final RegionInfo hri)
+    throws Exception {
+    ServerName serverName =
+      util.getMiniHBaseCluster().getServerHoldingRegion(hri.getTable(), hri.getRegionName());
+    ServerName amServerName =
+      getMaster(util).getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
 
     // Make sure AM and MiniCluster agrees on the Server holding the region
     // and that the server is online.
@@ -114,8 +115,8 @@ public final class AssignmentTestingUtil {
   }
 
   public static boolean isServerHoldingMeta(final HBaseTestingUtil util,
-      final ServerName serverName) throws Exception {
-    for (RegionInfo hri: getMetaRegions(util)) {
+    final ServerName serverName) throws Exception {
+    for (RegionInfo hri : getMetaRegions(util)) {
       if (serverName.equals(getServerHoldingRegion(util, hri))) {
         return true;
       }
@@ -132,7 +133,7 @@ public final class AssignmentTestingUtil {
   }
 
   public static boolean waitForAssignment(AssignmentManager am, RegionInfo regionInfo)
-      throws IOException {
+    throws IOException {
     // This method can be called before the regionInfo has made it into the regionStateMap
     // so wait around here a while.
     Waiter.waitFor(am.getConfiguration(), 10000,

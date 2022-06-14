@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,14 +22,11 @@ import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Implementations of this interface will keep and return to clients
- * implementations of classes providing API to execute
- * coordinated operations. This interface is client-side, so it does NOT
- * include methods to retrieve the particular interface implementations.
- *
- * For each coarse-grained area of operations there will be a separate
- * interface with implementation, providing API for relevant operations
- * requiring coordination.
+ * Implementations of this interface will keep and return to clients implementations of classes
+ * providing API to execute coordinated operations. This interface is client-side, so it does NOT
+ * include methods to retrieve the particular interface implementations. For each coarse-grained
+ * area of operations there will be a separate interface with implementation, providing API for
+ * relevant operations requiring coordination.
  */
 @InterfaceAudience.Private
 public interface CoordinatedStateManager {

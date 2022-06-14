@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.WRITER_IDLE;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -179,7 +180,10 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
   // State for connections to DN
   private enum State {
-    STREAMING, CLOSING, BROKEN, CLOSED
+    STREAMING,
+    CLOSING,
+    BROKEN,
+    CLOSED
   }
 
   private volatile State state;
@@ -195,7 +199,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       if (c.unfinishedReplicas.remove(channel.id())) {
         long current = EnvironmentEdgeManager.currentTime();
         streamSlowMonitor.checkProcessTimeAndSpeed(datanodeInfoMap.get(channel), c.packetDataLen,
-            current - c.flushTimestamp, c.lastAckTimestamp, c.unfinishedReplicas.size());
+          current - c.flushTimestamp, c.lastAckTimestamp, c.unfinishedReplicas.size());
         c.lastAckTimestamp = current;
         if (c.unfinishedReplicas.isEmpty()) {
           // we need to remove first before complete the future. It is possible that after we
@@ -231,7 +235,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
-    if (state == State.BROKEN || state == State.CLOSED) {
+    if (state == State.CLOSED) {
+      return;
+    }
+    if (state == State.BROKEN) {
+      failWaitingAckQueue(channel, errorSupplier);
       return;
     }
     if (state == State.CLOSING) {
@@ -243,6 +251,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     // disable further write, and fail all pending ack.
     state = State.BROKEN;
+    failWaitingAckQueue(channel, errorSupplier);
+    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
+  }
+
+  private void failWaitingAckQueue(Channel channel, Supplier<Throwable> errorSupplier) {
     Throwable error = errorSupplier.get();
     for (Iterator<Callback> iter = waitingAckQueue.iterator(); iter.hasNext();) {
       Callback c = iter.next();
@@ -259,7 +272,6 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       }
       break;
     }
-    datanodeInfoMap.keySet().forEach(ChannelOutboundInvoker::close);
   }
 
   @Sharable
@@ -275,13 +287,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     protected void channelRead0(ChannelHandlerContext ctx, PipelineAckProto ack) throws Exception {
       Status reply = getStatus(ack);
       if (reply != Status.SUCCESS) {
-        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Bad response " + reply + " for block " + block
+          + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (PipelineAck.isRestartOOBStatus(reply)) {
-        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block " +
-          block + " from datanode " + ctx.channel().remoteAddress()));
+        failed(ctx.channel(), () -> new IOException("Restart response " + reply + " for block "
+          + block + " from datanode " + ctx.channel().remoteAddress()));
         return;
       }
       if (ack.getSeqno() == HEART_BEAT_SEQNO) {
@@ -336,10 +348,10 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
   }
 
-  FanOutOneBlockAsyncDFSOutput(Configuration conf,DistributedFileSystem dfs,
-      DFSClient client, ClientProtocol namenode, String clientName, String src, long fileId,
-      LocatedBlock locatedBlock, Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap,
-      DataChecksum summer, ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
+  FanOutOneBlockAsyncDFSOutput(Configuration conf, DistributedFileSystem dfs, DFSClient client,
+    ClientProtocol namenode, String clientName, String src, long fileId, LocatedBlock locatedBlock,
+    Encryptor encryptor, Map<Channel, DatanodeInfo> datanodeInfoMap, DataChecksum summer,
+    ByteBufAllocator alloc, StreamSlowMonitor streamSlowMonitor) {
     this.conf = conf;
     this.dfs = dfs;
     this.client = client;
@@ -394,7 +406,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   }
 
   private void flushBuffer(CompletableFuture<Long> future, ByteBuf dataBuf,
-      long nextPacketOffsetInBlock, boolean syncBlock) {
+    long nextPacketOffsetInBlock, boolean syncBlock) {
     int dataLen = dataBuf.readableBytes();
     int chunkLen = summer.getBytesPerChecksum();
     int trailingPartialChunkLen = dataLen % chunkLen;
@@ -404,13 +416,13 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     summer.calculateChunkedSums(dataBuf.nioBuffer(), checksumBuf.nioBuffer(0, checksumLen));
     checksumBuf.writerIndex(checksumLen);
     PacketHeader header = new PacketHeader(4 + checksumLen + dataLen, nextPacketOffsetInBlock,
-        nextPacketSeqno, false, dataLen, syncBlock);
+      nextPacketSeqno, false, dataLen, syncBlock);
     int headerLen = header.getSerializedSize();
     ByteBuf headerBuf = alloc.buffer(headerLen);
     header.putInBuffer(headerBuf.nioBuffer(0, headerLen));
     headerBuf.writerIndex(headerLen);
-    Callback c = new Callback(future, nextPacketOffsetInBlock + dataLen,
-        datanodeInfoMap.keySet(), dataLen);
+    Callback c =
+      new Callback(future, nextPacketOffsetInBlock + dataLen, datanodeInfoMap.keySet(), dataLen);
     waitingAckQueue.addLast(c);
     // recheck again after we pushed the callback to queue
     if (state != State.STREAMING && waitingAckQueue.peekFirst() == c) {
@@ -420,7 +432,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       return;
     }
     // TODO: we should perhaps measure time taken per DN here;
-    //       we could collect statistics per DN, and/or exclude bad nodes in createOutput.
+    // we could collect statistics per DN, and/or exclude bad nodes in createOutput.
     datanodeInfoMap.keySet().forEach(ch -> {
       ch.write(headerBuf.retainedDuplicate());
       ch.write(checksumBuf.retainedDuplicate());
@@ -505,7 +517,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
     trailingPartialChunkLength = dataLen % summer.getBytesPerChecksum();
     ByteBuf newBuf = alloc.directBuffer(sendBufSizePRedictor.guess(dataLen))
-        .ensureWritable(trailingPartialChunkLength);
+      .ensureWritable(trailingPartialChunkLength);
     if (trailingPartialChunkLength != 0) {
       buf.readerIndex(dataLen - trailingPartialChunkLength).readBytes(newBuf,
         trailingPartialChunkLength);
@@ -597,5 +609,11 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   @Override
   public long getSyncedLength() {
     return this.ackedBlockLength;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  Map<Channel, DatanodeInfo> getDatanodeInfoMap() {
+    return this.datanodeInfoMap;
   }
 }

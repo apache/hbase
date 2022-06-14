@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
@@ -27,26 +26,41 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
 
   private final MutableHistogram ageHist;
   private final MutableFastCounter batchesCounter;
+  private final MutableFastCounter failedBatchesCounter;
   private final MutableFastCounter opsCounter;
   private final MutableFastCounter hfilesCounter;
 
   public MetricsReplicationSinkSourceImpl(MetricsReplicationSourceImpl rms) {
-    ageHist = rms.getMetricsRegistry().getHistogram(SINK_AGE_OF_LAST_APPLIED_OP);
+    ageHist = rms.getMetricsRegistry().newTimeHistogram(SINK_AGE_OF_LAST_APPLIED_OP);
     batchesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_BATCHES, 0L);
+    failedBatchesCounter = rms.getMetricsRegistry().getCounter(SINK_FAILED_BATCHES, 0L);
     opsCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_OPS, 0L);
     hfilesCounter = rms.getMetricsRegistry().getCounter(SINK_APPLIED_HFILES, 0L);
   }
 
-  @Override public void setLastAppliedOpAge(long age) {
+  @Override
+  public void setLastAppliedOpAge(long age) {
     ageHist.add(age);
   }
 
-  @Override public void incrAppliedBatches(long batches) {
+  @Override
+  public void incrAppliedBatches(long batches) {
     batchesCounter.incr(batches);
   }
 
-  @Override public void incrAppliedOps(long batchsize) {
+  @Override
+  public void incrAppliedOps(long batchsize) {
     opsCounter.incr(batchsize);
+  }
+
+  @Override
+  public void incrFailedBatches() {
+    failedBatchesCounter.incr();
+  }
+
+  @Override
+  public long getFailedBatches() {
+    return failedBatchesCounter.value();
   }
 
   @Override
@@ -59,7 +73,9 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
     hfilesCounter.incr(hfiles);
   }
 
-  @Override public long getSinkAppliedOps() {
+  @Override
+  public long getSinkAppliedOps() {
     return opsCounter.value();
   }
+
 }

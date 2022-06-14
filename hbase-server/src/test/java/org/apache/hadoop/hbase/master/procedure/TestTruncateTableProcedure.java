@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,7 +78,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     Throwable cause = null;
     try {
       long procId = ProcedureTestingUtility.submitAndWait(procExec,
-          new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+        new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
 
       // Second delete should fail with TableNotFound
       Procedure<?> result = procExec.getResult(procId);
@@ -103,7 +103,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     Throwable cause = null;
     try {
       long procId = ProcedureTestingUtility.submitAndWait(procExec,
-          new TruncateTableProcedure(procExec.getEnvironment(), tableName, false));
+        new TruncateTableProcedure(procExec.getEnvironment(), tableName, false));
 
       // Second delete should fail with TableNotDisabled
       Procedure<?> result = procExec.getResult(procId);
@@ -129,17 +129,16 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
   }
 
   private void testSimpleTruncate(final TableName tableName, final boolean preserveSplits)
-      throws Exception {
+    throws Exception {
     final String[] families = new String[] { "f1", "f2" };
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
 
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      getMasterProcedureExecutor(), tableName, splitKeys, families);
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
     // load and verify that there are rows in the table
-    MasterProcedureTestingUtility.loadData(
-      UTIL.getConnection(), tableName, 100, splitKeys, families);
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 100, splitKeys,
+      families);
     assertEquals(100, UTIL.countRows(tableName));
     // disable the table
     UTIL.getAdmin().disableTable(tableName);
@@ -161,15 +160,15 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     } else {
       assertEquals(1, regions.length);
     }
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
+    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+      tableName, regions, families);
 
     // verify that there are no rows in the table
     assertEquals(0, UTIL.countRows(tableName));
 
     // verify that the table is read/writable
-    MasterProcedureTestingUtility.loadData(
-      UTIL.getConnection(), tableName, 50, splitKeys, families);
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 50, splitKeys,
+      families);
     assertEquals(50, UTIL.countRows(tableName));
   }
 
@@ -186,18 +185,17 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
   }
 
   private void testRecoveryAndDoubleExecution(final TableName tableName,
-      final boolean preserveSplits) throws Exception {
+    final boolean preserveSplits) throws Exception {
     final String[] families = new String[] { "f1", "f2" };
 
     // create the table
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      getMasterProcedureExecutor(), tableName, splitKeys, families);
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
     // load and verify that there are rows in the table
-    MasterProcedureTestingUtility.loadData(
-      UTIL.getConnection(), tableName, 100, splitKeys, families);
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 100, splitKeys,
+      families);
     assertEquals(100, UTIL.countRows(tableName));
     // disable the table
     UTIL.getAdmin().disableTable(tableName);
@@ -224,15 +222,15 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     } else {
       assertEquals(1, regions.length);
     }
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
+    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+      tableName, regions, families);
 
     // verify that there are no rows in the table
     assertEquals(0, UTIL.countRows(tableName));
 
     // verify that the table is read/writable
-    MasterProcedureTestingUtility.loadData(
-      UTIL.getConnection(), tableName, 50, splitKeys, families);
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 50, splitKeys,
+      families);
     assertEquals(50, UTIL.countRows(tableName));
   }
 
@@ -258,8 +256,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     }
 
     public TruncateTableProcedureOnHDFSFailure(final MasterProcedureEnv env, TableName tableName,
-      boolean preserveSplits)
-      throws HBaseIOException {
+      boolean preserveSplits) throws HBaseIOException {
       super(env, tableName, preserveSplits);
     }
 
@@ -267,8 +264,10 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     protected Flow executeFromState(MasterProcedureEnv env,
       MasterProcedureProtos.TruncateTableState state) throws InterruptedException {
 
-      if (!failOnce &&
-        state == MasterProcedureProtos.TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT) {
+      if (
+        !failOnce
+          && state == MasterProcedureProtos.TruncateTableState.TRUNCATE_TABLE_CREATE_FS_LAYOUT
+      ) {
         try {
           // To emulate an HDFS failure, create only the first region directory
           RegionInfo regionInfo = getFirstRegionInfo();
@@ -293,17 +292,16 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
   private void testOnHDFSFailure(TableName tableName, boolean preserveSplits) throws Exception {
     String[] families = new String[] { "f1", "f2" };
-    byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
+    byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
 
     // create a table
-    MasterProcedureTestingUtility.createTable(
-      getMasterProcedureExecutor(), tableName, splitKeys, families);
+    MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(), tableName, splitKeys,
+      families);
 
     // load and verify that there are rows in the table
-    MasterProcedureTestingUtility.loadData(
-      UTIL.getConnection(), tableName, 100, splitKeys, families);
+    MasterProcedureTestingUtility.loadData(UTIL.getConnection(), tableName, 100, splitKeys,
+      families);
     assertEquals(100, UTIL.countRows(tableName));
 
     // disable the table
@@ -311,9 +309,9 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
 
     // truncate the table
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    long procId = ProcedureTestingUtility.submitAndWait(procExec,
-      new TruncateTableProcedureOnHDFSFailure(procExec.getEnvironment(), tableName,
-        preserveSplits));
+    long procId =
+      ProcedureTestingUtility.submitAndWait(procExec, new TruncateTableProcedureOnHDFSFailure(
+        procExec.getEnvironment(), tableName, preserveSplits));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
 
@@ -351,7 +349,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
   }
 
   private void splitAndTruncate(TableName tableName, RegionInfo[] regions, int regionReplication)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     // split a region
     UTIL.getAdmin().split(tableName, new byte[] { '0' });
 

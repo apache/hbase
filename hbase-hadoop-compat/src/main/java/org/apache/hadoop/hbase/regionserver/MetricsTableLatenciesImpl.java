@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsTableLatenciesImpl extends BaseSourceImpl implements MetricsTableLatencies {
 
-  private final HashMap<TableName,TableHistograms> histogramsByTable = new HashMap<>();
+  private final HashMap<TableName, TableHistograms> histogramsByTable = new HashMap<>();
 
   public static class TableHistograms {
     final MetricHistogram getTimeHisto;
@@ -50,20 +51,17 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
 
     TableHistograms(DynamicMetricsRegistry registry, TableName tn) {
       getTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, GET_TIME));
-      incrementTimeHisto = registry.newTimeHistogram(
-          qualifyMetricsName(tn, INCREMENT_TIME));
+      incrementTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, INCREMENT_TIME));
       appendTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, APPEND_TIME));
       putTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, PUT_TIME));
       putBatchTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, PUT_BATCH_TIME));
       deleteTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, DELETE_TIME));
-      deleteBatchTimeHisto = registry.newTimeHistogram(
-          qualifyMetricsName(tn, DELETE_BATCH_TIME));
+      deleteBatchTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, DELETE_BATCH_TIME));
       scanTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, SCAN_TIME));
       scanSizeHisto = registry.newSizeHistogram(qualifyMetricsName(tn, SCAN_SIZE));
       checkAndDeleteTimeHisto =
         registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_DELETE_TIME));
-      checkAndPutTimeHisto =
-        registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_PUT_TIME));
+      checkAndPutTimeHisto = registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_PUT_TIME));
       checkAndMutateTimeHisto =
         registry.newTimeHistogram(qualifyMetricsName(tn, CHECK_AND_MUTATE_TIME));
     }
@@ -141,7 +139,7 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   }
 
   public MetricsTableLatenciesImpl(String metricsName, String metricsDescription,
-      String metricsContext, String metricsJmxContext) {
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 

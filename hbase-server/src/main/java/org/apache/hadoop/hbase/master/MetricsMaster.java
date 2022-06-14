@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,25 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This class is for maintaining the various master statistics
- * and publishing them through the metrics interfaces.
+ * This class is for maintaining the various master statistics and publishing them through the
+ * metrics interfaces.
  * <p>
- * This class has a number of metrics variables that are publicly accessible;
- * these variables (objects) have methods to update their values.
+ * This class has a number of metrics variables that are publicly accessible; these variables
+ * (objects) have methods to update their values.
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
@@ -46,11 +45,12 @@ public class MetricsMaster {
   private ProcedureMetrics serverCrashProcMetrics;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
-    masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class).create(masterWrapper);
-    masterProcSource =
-            CompatibilitySingletonFactory.getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
-    masterQuotaSource =
-            CompatibilitySingletonFactory.getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
+    masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class)
+      .create(masterWrapper);
+    masterProcSource = CompatibilitySingletonFactory
+      .getInstance(MetricsMasterProcSourceFactory.class).create(masterWrapper);
+    masterQuotaSource = CompatibilitySingletonFactory
+      .getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
 
     serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
   }
@@ -91,7 +91,6 @@ public class MetricsMaster {
 
   /**
    * Sets the number of space quotas defined.
-   *
    * @see MetricsMasterQuotaSource#updateNumSpaceQuotas(long)
    */
   public void setNumSpaceQuotas(final long numSpaceQuotas) {
@@ -100,7 +99,6 @@ public class MetricsMaster {
 
   /**
    * Sets the number of table in violation of a space quota.
-   *
    * @see MetricsMasterQuotaSource#updateNumTablesInSpaceQuotaViolation(long)
    */
   public void setNumTableInSpaceQuotaViolation(final long numTablesInViolation) {
@@ -109,7 +107,6 @@ public class MetricsMaster {
 
   /**
    * Sets the number of namespaces in violation of a space quota.
-   *
    * @see MetricsMasterQuotaSource#updateNumNamespacesInSpaceQuotaViolation(long)
    */
   public void setNumNamespacesInSpaceQuotaViolation(final long numNamespacesInViolation) {
@@ -118,7 +115,6 @@ public class MetricsMaster {
 
   /**
    * Sets the number of region size reports the master currently has in memory.
-   *
    * @see MetricsMasterQuotaSource#updateNumCurrentSpaceQuotaRegionSizeReports(long)
    */
   public void setNumRegionSizeReports(final long numRegionReports) {
@@ -127,7 +123,6 @@ public class MetricsMaster {
 
   /**
    * Sets the execution time of a period of the QuotaObserverChore.
-   *
    * @param executionTime The execution time in milliseconds.
    * @see MetricsMasterQuotaSource#incrementSpaceQuotaObserverChoreTime(long)
    */
@@ -144,12 +139,11 @@ public class MetricsMaster {
 
   /**
    * This is utility function that converts {@link OperationMetrics} to {@link ProcedureMetrics}.
-   *
    * NOTE: Procedure framework in hbase-procedure module accesses metrics common to most procedures
    * through {@link ProcedureMetrics} interface. Metrics source classes in hbase-hadoop-compat
-   * module provides similar interface {@link OperationMetrics} that contains metrics common to
-   * most operations. As both hbase-procedure and hbase-hadoop-compat are lower level modules used
-   * by hbase-server (this) module and there is no dependency between them, this method does the
+   * module provides similar interface {@link OperationMetrics} that contains metrics common to most
+   * operations. As both hbase-procedure and hbase-hadoop-compat are lower level modules used by
+   * hbase-server (this) module and there is no dependency between them, this method does the
    * required conversion.
    */
   public static ProcedureMetrics convertToProcedureMetrics(final OperationMetrics metrics) {

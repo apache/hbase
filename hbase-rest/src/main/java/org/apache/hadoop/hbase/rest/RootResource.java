@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -50,8 +48,7 @@ public class RootResource extends ResourceBase {
   }
 
   /**
-   * Constructor
-   * @throws IOException
+   * Constructor n
    */
   public RootResource() throws IOException {
     super();
@@ -60,15 +57,15 @@ public class RootResource extends ResourceBase {
   private final TableListModel getTableList() throws IOException {
     TableListModel tableList = new TableListModel();
     TableName[] tableNames = servlet.getAdmin().listTableNames();
-    for (TableName name: tableNames) {
+    for (TableName name : tableNames) {
       tableList.add(new TableModel(name.getNameAsString()));
     }
     return tableList;
   }
 
   @GET
-  @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
+  @Produces({ MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
+    MIMETYPE_PROTOBUF_IETF })
   public Response get(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
@@ -86,8 +83,7 @@ public class RootResource extends ResourceBase {
   }
 
   @Path("status/cluster")
-  public StorageClusterStatusResource getClusterStatusResource()
-      throws IOException {
+  public StorageClusterStatusResource getClusterStatusResource() throws IOException {
     return new StorageClusterStatusResource();
   }
 
@@ -97,8 +93,7 @@ public class RootResource extends ResourceBase {
   }
 
   @Path("{table}")
-  public TableResource getTableResource(
-      final @PathParam("table") String table) throws IOException {
+  public TableResource getTableResource(final @PathParam("table") String table) throws IOException {
     return new TableResource(table);
   }
 

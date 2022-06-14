@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,12 +24,8 @@ class KeyValueBuilder extends ExtendedCellBuilderImpl {
 
   @Override
   protected ExtendedCell innerBuild() {
-    KeyValue kv = new KeyValue(row, rOffset, rLength,
-            family, fOffset, fLength,
-            qualifier, qOffset, qLength,
-            timestamp, type,
-            value, vOffset, vLength,
-        tags, tagsOffset, tagsLength);
+    KeyValue kv = new KeyValue(row, rOffset, rLength, family, fOffset, fLength, qualifier, qOffset,
+      qLength, timestamp, type, value, vOffset, vLength, tags, tagsOffset, tagsLength);
     kv.setSequenceId(seqId);
     return kv;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
@@ -25,10 +24,9 @@ import org.apache.hadoop.hbase.util.HbckTableInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This interface provides callbacks for handling particular table integrity
- * invariant violations.  This could probably be boiled down to handling holes
- * and handling overlaps but currently preserves the older more specific error
- * condition codes.
+ * This interface provides callbacks for handling particular table integrity invariant violations.
+ * This could probably be boiled down to handling holes and handling overlaps but currently
+ * preserves the older more specific error condition codes.
  */
 @InterfaceAudience.Private
 public interface TableIntegrityErrorHandler {
@@ -41,66 +39,56 @@ public interface TableIntegrityErrorHandler {
   void setTableInfo(HbckTableInfo ti);
 
   /**
-   * Callback for handling case where a Table has a first region that does not
-   * have an empty start key.
-   *
-   * @param hi An HbckRegionInfo of the second region in a table.  This should have
-   *    a non-empty startkey, and can be used to fabricate a first region that
-   *    has an empty start key.
+   * Callback for handling case where a Table has a first region that does not have an empty start
+   * key.
+   * @param hi An HbckRegionInfo of the second region in a table. This should have a non-empty
+   *           startkey, and can be used to fabricate a first region that has an empty start key.
    */
   void handleRegionStartKeyNotEmpty(HbckRegionInfo hi) throws IOException;
 
   /**
-   * Callback for handling case where a Table has a last region that does not
-   * have an empty end key.
-   *
-   * @param curEndKey The end key of the current last region. There should be a new region
-   *    with start key as this and an empty end key.
+   * Callback for handling case where a Table has a last region that does not have an empty end key.
+   * @param curEndKey The end key of the current last region. There should be a new region with
+   *                  start key as this and an empty end key.
    */
   void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException;
 
   /**
    * Callback for handling a region that has the same start and end key.
-   *
    * @param hi An HbckRegionInfo for a degenerate key.
    */
   void handleDegenerateRegion(HbckRegionInfo hi) throws IOException;
 
   /**
-   * Callback for handling two regions that have the same start key.  This is
-   * a specific case of a region overlap.
+   * Callback for handling two regions that have the same start key. This is a specific case of a
+   * region overlap.
    * @param hi1 one of the overlapping HbckRegionInfo
    * @param hi2 the other overlapping HbckRegionInfo
    */
   void handleDuplicateStartKeys(HbckRegionInfo hi1, HbckRegionInfo hi2) throws IOException;
 
   /**
-   * Callback for handling two regions that have the same regionID
-   * a specific case of a split
+   * Callback for handling two regions that have the same regionID a specific case of a split
    * @param hi1 one of the overlapping HbckRegionInfo
    * @param hi2 the other overlapping HbckRegionInfo
    */
   void handleSplit(HbckRegionInfo hi1, HbckRegionInfo hi2) throws IOException;
 
   /**
-   * Callback for handling two reigons that overlap in some arbitrary way.
-   * This is a specific case of region overlap, and called for each possible
-   * pair. If two regions have the same start key, the handleDuplicateStartKeys
-   * method is called.
+   * Callback for handling two reigons that overlap in some arbitrary way. This is a specific case
+   * of region overlap, and called for each possible pair. If two regions have the same start key,
+   * the handleDuplicateStartKeys method is called.
    * @param hi1 one of the overlapping HbckRegionInfo
    * @param hi2 the other overlapping HbckRegionInfo
    */
-  void handleOverlapInRegionChain(HbckRegionInfo hi1, HbckRegionInfo hi2)
-      throws IOException;
+  void handleOverlapInRegionChain(HbckRegionInfo hi1, HbckRegionInfo hi2) throws IOException;
 
   /**
    * Callback for handling a region hole between two keys.
    * @param holeStartKey key at the beginning of the region hole
-   * @param holeEndKey key at the end of the region hole
-
+   * @param holeEndKey   key at the end of the region hole
    */
-  void handleHoleInRegionChain(byte[] holeStartKey, byte[] holeEndKey)
-      throws IOException;
+  void handleHoleInRegionChain(byte[] holeStartKey, byte[] holeEndKey) throws IOException;
 
   /**
    * Callback for handling an group of regions that overlap.

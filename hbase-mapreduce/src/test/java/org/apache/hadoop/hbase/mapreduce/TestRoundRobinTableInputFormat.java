@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,25 +44,17 @@ import org.mockito.Mockito;
 /**
  * Basic test of {@link RoundRobinTableInputFormat}; i.e. RRTIF.
  */
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestRoundRobinTableInputFormat {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRoundRobinTableInputFormat.class);
+    HBaseClassTestRule.forClass(TestRoundRobinTableInputFormat.class);
 
   private static final int SERVERS_COUNT = 5;
-  private static final String[] KEYS = {
-    "aa", "ab", "ac", "ad", "ae",
-    "ba", "bb", "bc", "bd", "be",
-    "ca", "cb", "cc", "cd", "ce",
-    "da", "db", "dc", "dd", "de",
-    "ea", "eb", "ec", "ed", "ee",
-    "fa", "fb", "fc", "fd", "fe",
-    "ga", "gb", "gc", "gd", "ge",
-    "ha", "hb", "hc", "hd", "he",
-    "ia", "ib", "ic", "id", "ie",
-    "ja", "jb", "jc", "jd", "je", "jf"
-  };
+  private static final String[] KEYS = { "aa", "ab", "ac", "ad", "ae", "ba", "bb", "bc", "bd", "be",
+    "ca", "cb", "cc", "cd", "ce", "da", "db", "dc", "dd", "de", "ea", "eb", "ec", "ed", "ee", "fa",
+    "fb", "fc", "fd", "fe", "ga", "gb", "gc", "gd", "ge", "ha", "hb", "hc", "hd", "he", "ia", "ib",
+    "ic", "id", "ie", "ja", "jb", "jc", "jd", "je", "jf" };
 
   /**
    * Test default behavior.
@@ -78,8 +71,8 @@ public class TestRoundRobinTableInputFormat {
     Arrays.sort(copy.toArray(new InputSplit[0]), new SplitComparator());
     // Assert the sort is retained even after passing through SplitComparator.
     for (int i = 0; i < sortedSplits.size(); i++) {
-      TableSplit sortedTs = (TableSplit)sortedSplits.get(i);
-      TableSplit copyTs = (TableSplit)copy.get(i);
+      TableSplit sortedTs = (TableSplit) sortedSplits.get(i);
+      TableSplit copyTs = (TableSplit) copy.get(i);
       assertEquals(sortedTs.getEncodedRegionName(), copyTs.getEncodedRegionName());
     }
   }
@@ -90,17 +83,17 @@ public class TestRoundRobinTableInputFormat {
   private List<InputSplit> createSplits() {
     List<InputSplit> splits = new ArrayList<>(KEYS.length - 1);
     for (int i = 0; i < KEYS.length - 1; i++) {
-      InputSplit split = new TableSplit(TableName.valueOf("test"), new Scan(),
-        Bytes.toBytes(KEYS[i]), Bytes.toBytes(KEYS[i + 1]), String.valueOf(i % SERVERS_COUNT + 1),
-        "", 0);
+      InputSplit split =
+        new TableSplit(TableName.valueOf("test"), new Scan(), Bytes.toBytes(KEYS[i]),
+          Bytes.toBytes(KEYS[i + 1]), String.valueOf(i % SERVERS_COUNT + 1), "", 0);
       splits.add(split);
     }
     return splits;
   }
 
   private void testDistribution(List<InputSplit> list) throws IOException, InterruptedException {
-    for (int i = 0; i < KEYS.length/SERVERS_COUNT; i++) {
-      int [] counts = new int[SERVERS_COUNT];
+    for (int i = 0; i < KEYS.length / SERVERS_COUNT; i++) {
+      int[] counts = new int[SERVERS_COUNT];
       for (int j = i * SERVERS_COUNT; j < i * SERVERS_COUNT + SERVERS_COUNT; j++) {
         counts[Integer.parseInt(list.get(j).getLocations()[0]) - 1]++;
       }
@@ -120,21 +113,21 @@ public class TestRoundRobinTableInputFormat {
     public int compare(InputSplit o1, InputSplit o2) {
       try {
         return Long.compare(o1.getLength(), o2.getLength());
-      } catch (IOException|InterruptedException e) {
+      } catch (IOException | InterruptedException e) {
         throw new RuntimeException("exception in compare", e);
       }
     }
   }
 
   /**
-   * Assert that lengths are descending. RRTIF writes lengths in descending order so any
-   * subsequent sort using dump SplitComparator as is done in JobSubmitter up in Hadoop keeps
-   * our RRTIF ordering.
+   * Assert that lengths are descending. RRTIF writes lengths in descending order so any subsequent
+   * sort using dump SplitComparator as is done in JobSubmitter up in Hadoop keeps our RRTIF
+   * ordering.
    */
   private void assertLengthDescending(List<InputSplit> list)
     throws IOException, InterruptedException {
     long previousLength = Long.MAX_VALUE;
-    for (InputSplit is: list) {
+    for (InputSplit is : list) {
       long length = is.getLength();
       assertTrue(previousLength + " " + length, previousLength > length);
       previousLength = length;
@@ -165,13 +158,13 @@ public class TestRoundRobinTableInputFormat {
   }
 
   private void checkRetainsBooleanValue(JobContext jobContext, RoundRobinTableInputFormat rrtif,
-      final boolean b) {
-    jobContext.getConfiguration().
-      setBoolean(RoundRobinTableInputFormat.HBASE_REGIONSIZECALCULATOR_ENABLE, b);
+    final boolean b) {
+    jobContext.getConfiguration()
+      .setBoolean(RoundRobinTableInputFormat.HBASE_REGIONSIZECALCULATOR_ENABLE, b);
     rrtif.configure();
     rrtif.unconfigure();
-    String value = jobContext.getConfiguration().
-      get(RoundRobinTableInputFormat.HBASE_REGIONSIZECALCULATOR_ENABLE);
+    String value = jobContext.getConfiguration()
+      .get(RoundRobinTableInputFormat.HBASE_REGIONSIZECALCULATOR_ENABLE);
     assertEquals(b, Boolean.valueOf(value));
   }
 }

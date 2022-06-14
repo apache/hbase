@@ -437,10 +437,13 @@ message IsCleanerChoreEnabledResponse {
 
 message SnapshotRequest {
   required SnapshotDescription snapshot = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message SnapshotResponse {
   required int64 expected_timeout = 1;
+  optional int64 proc_id = 2;
 }
 
 message GetCompletedSnapshotsRequest {
@@ -731,6 +734,32 @@ message BalancerDecisionsResponse {
 message BalancerRejectionsResponse {
   repeated BalancerRejection balancer_rejection = 1;
 }
+
+message ModifyTableStoreFileTrackerRequest {
+  required TableName table_Name = 1;
+  required string dst_sft = 2;
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message ModifyTableStoreFileTrackerResponse {
+  optional uint64 proc_id = 1;
+}
+
+message ModifyColumnStoreFileTrackerRequest {
+  required TableName table_Name = 1;
+  required bytes family = 2;
+  required string dst_sft = 3;
+  optional uint64 nonce_group = 4 [default = 0];
+  optional uint64 nonce = 5 [default = 0];
+}
+
+message ModifyColumnStoreFileTrackerResponse {
+  optional uint64 proc_id = 1;
+}
+
+message FlushMasterStoreRequest {}
+message FlushMasterStoreResponse {}
 
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
@@ -1165,6 +1194,15 @@ service MasterService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
+
+  rpc ModifyTableStoreFileTracker(ModifyTableStoreFileTrackerRequest)
+    returns(ModifyTableStoreFileTrackerResponse);
+
+  rpc ModifyColumnStoreFileTracker(ModifyColumnStoreFileTrackerRequest)
+    returns(ModifyColumnStoreFileTrackerResponse);
+
+  rpc FlushMasterStore(FlushMasterStoreRequest)
+    returns(FlushMasterStoreResponse);
 }
 
 // HBCK Service definitions.

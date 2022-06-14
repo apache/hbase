@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawAsyncScanCursor.class);
+    HBaseClassTestRule.forClass(TestRawAsyncScanCursor.class);
 
   private static AsyncConnection CONN;
 
@@ -56,7 +56,7 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
   }
 
   private void doTest(boolean reversed)
-      throws InterruptedException, ExecutionException, IOException {
+    throws InterruptedException, ExecutionException, IOException {
     CompletableFuture<Void> future = new CompletableFuture<>();
     AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
     table.scan(reversed ? createReversedScanWithSparseFilter() : createScanWithSparseFilter(),
@@ -111,13 +111,13 @@ public class TestRawAsyncScanCursor extends AbstractTestScanCursor {
 
   @Test
   public void testHeartbeatWithSparseFilter()
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     doTest(false);
   }
 
   @Test
   public void testHeartbeatWithSparseFilterReversed()
-      throws IOException, InterruptedException, ExecutionException {
+    throws IOException, InterruptedException, ExecutionException {
     doTest(true);
   }
 

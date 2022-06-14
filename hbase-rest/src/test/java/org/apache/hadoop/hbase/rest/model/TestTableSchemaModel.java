@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,12 +31,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableSchemaModel.class);
+    HBaseClassTestRule.forClass(TestTableSchemaModel.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableSchemaModel.class);
 
@@ -51,24 +51,21 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
     super(TableSchemaModel.class);
     testColumnSchemaModel = new TestColumnSchemaModel();
 
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-      "<TableSchema name=\"testTable\" IS_META=\"false\" IS_ROOT=\"false\" READONLY=\"false\">" +
-      "<ColumnSchema name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" " +
-      "BLOCKCACHE=\"true\" COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>" +
-      "</TableSchema>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+      + "<TableSchema name=\"testTable\" IS_META=\"false\" IS_ROOT=\"false\" READONLY=\"false\">"
+      + "<ColumnSchema name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" "
+      + "BLOCKCACHE=\"true\" COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>"
+      + "</TableSchema>";
 
-    AS_PB =
-      "Cgl0ZXN0VGFibGUSEAoHSVNfTUVUQRIFZmFsc2USEAoHSVNfUk9PVBIFZmFsc2USEQoIUkVBRE9O" +
-      "TFkSBWZhbHNlGpcBCgp0ZXN0Y29sdW1uEhIKCUJMT0NLU0laRRIFMTYzODQSEwoLQkxPT01GSUxU" +
-      "RVISBE5PTkUSEgoKQkxPQ0tDQUNIRRIEdHJ1ZRIRCgtDT01QUkVTU0lPThICR1oSDQoIVkVSU0lP" +
-      "TlMSATESDAoDVFRMEgU4NjQwMBISCglJTl9NRU1PUlkSBWZhbHNlGICjBSABKgJHWigA";
+    AS_PB = "Cgl0ZXN0VGFibGUSEAoHSVNfTUVUQRIFZmFsc2USEAoHSVNfUk9PVBIFZmFsc2USEQoIUkVBRE9O"
+      + "TFkSBWZhbHNlGpcBCgp0ZXN0Y29sdW1uEhIKCUJMT0NLU0laRRIFMTYzODQSEwoLQkxPT01GSUxU"
+      + "RVISBE5PTkUSEgoKQkxPQ0tDQUNIRRIEdHJ1ZRIRCgtDT01QUkVTU0lPThICR1oSDQoIVkVSU0lP"
+      + "TlMSATESDAoDVFRMEgU4NjQwMBISCglJTl9NRU1PUlkSBWZhbHNlGICjBSABKgJHWigA";
 
-    AS_JSON =
-      "{\"name\":\"testTable\",\"IS_META\":\"false\",\"IS_ROOT\":\"false\"," +
-      "\"READONLY\":\"false\",\"ColumnSchema\":[{\"name\":\"testcolumn\"," +
-      "\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\",\"BLOCKCACHE\":\"true\"," +
-      "\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\",\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}]}";
+    AS_JSON = "{\"name\":\"testTable\",\"IS_META\":\"false\",\"IS_ROOT\":\"false\","
+      + "\"READONLY\":\"false\",\"ColumnSchema\":[{\"name\":\"testcolumn\","
+      + "\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\",\"BLOCKCACHE\":\"true\","
+      + "\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\",\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}]}";
   }
 
   @Override
@@ -122,4 +119,3 @@ public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
   }
 
 }
-

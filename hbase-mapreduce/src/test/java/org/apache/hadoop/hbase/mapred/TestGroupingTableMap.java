@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,17 +49,16 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestGroupingTableMap {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGroupingTableMap.class);
+    HBaseClassTestRule.forClass(TestGroupingTableMap.class);
 
   @Test
   @SuppressWarnings({ "deprecation", "unchecked" })
-  public void shouldNotCallCollectonSinceFindUniqueKeyValueMoreThanOnes()
-      throws Exception {
+  public void shouldNotCallCollectonSinceFindUniqueKeyValueMoreThanOnes() throws Exception {
     GroupingTableMap gTableMap = null;
     try {
       Result result = mock(Result.class);
@@ -71,22 +70,21 @@ public class TestGroupingTableMap {
       gTableMap.configure(jobConf);
 
       byte[] row = {};
-      List<Cell> keyValues = ImmutableList.<Cell>of(
-          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
-              Bytes.toBytes("1111")),
-          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
-              Bytes.toBytes("2222")),
-          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
-              Bytes.toBytes("3333")));
+      List<Cell> keyValues = ImmutableList.<Cell> of(
+        new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+          Bytes.toBytes("1111")),
+        new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+          Bytes.toBytes("2222")),
+        new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+          Bytes.toBytes("3333")));
       when(result.listCells()).thenReturn(keyValues);
       OutputCollector<ImmutableBytesWritable, Result> outputCollectorMock =
-          mock(OutputCollector.class);
+        mock(OutputCollector.class);
       gTableMap.map(null, result, outputCollectorMock, reporter);
       verify(result).listCells();
       verifyZeroInteractions(outputCollectorMock);
     } finally {
-      if (gTableMap != null)
-        gTableMap.close();
+      if (gTableMap != null) gTableMap.close();
     }
   }
 
@@ -104,24 +102,22 @@ public class TestGroupingTableMap {
       gTableMap.configure(jobConf);
 
       byte[] row = {};
-      List<Cell> keyValues = ImmutableList.<Cell>of(
-          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
-              Bytes.toBytes("1111")),
-          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
-              Bytes.toBytes("2222")),
-          new KeyValue(row, Bytes.toBytes("familyC"), Bytes.toBytes("qualifierC"),
-              Bytes.toBytes("3333")));
+      List<Cell> keyValues = ImmutableList.<Cell> of(
+        new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
+          Bytes.toBytes("1111")),
+        new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+          Bytes.toBytes("2222")),
+        new KeyValue(row, Bytes.toBytes("familyC"), Bytes.toBytes("qualifierC"),
+          Bytes.toBytes("3333")));
       when(result.listCells()).thenReturn(keyValues);
       OutputCollector<ImmutableBytesWritable, Result> outputCollectorMock =
-          mock(OutputCollector.class);
+        mock(OutputCollector.class);
       gTableMap.map(null, result, outputCollectorMock, reporter);
       verify(result).listCells();
-      verify(outputCollectorMock, times(1))
-        .collect(any(), any());
+      verify(outputCollectorMock, times(1)).collect(any(), any());
       verifyNoMoreInteractions(outputCollectorMock);
     } finally {
-      if (gTableMap != null)
-        gTableMap.close();
+      if (gTableMap != null) gTableMap.close();
     }
   }
 
@@ -142,24 +138,22 @@ public class TestGroupingTableMap {
       final byte[] firstPartKeyValue = Bytes.toBytes("34879512738945");
       final byte[] secondPartKeyValue = Bytes.toBytes("35245142671437");
       byte[] row = {};
-      List<Cell> cells = ImmutableList.<Cell>of(
-          new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"),
-              firstPartKeyValue),
-          new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
-              secondPartKeyValue));
+      List<Cell> cells = ImmutableList.<Cell> of(
+        new KeyValue(row, Bytes.toBytes("familyA"), Bytes.toBytes("qualifierA"), firstPartKeyValue),
+        new KeyValue(row, Bytes.toBytes("familyB"), Bytes.toBytes("qualifierB"),
+          secondPartKeyValue));
       when(result.listCells()).thenReturn(cells);
 
       final AtomicBoolean outputCollected = new AtomicBoolean();
       OutputCollector<ImmutableBytesWritable, Result> outputCollector =
-          new OutputCollector<ImmutableBytesWritable, Result>() {
-        @Override
-        public void collect(ImmutableBytesWritable arg, Result result) throws IOException {
-          assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.
-            Bytes.concat(firstPartKeyValue, bSeparator,
-              secondPartKeyValue), arg.copyBytes());
-          outputCollected.set(true);
-        }
-      };
+        new OutputCollector<ImmutableBytesWritable, Result>() {
+          @Override
+          public void collect(ImmutableBytesWritable arg, Result result) throws IOException {
+            assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.Bytes
+              .concat(firstPartKeyValue, bSeparator, secondPartKeyValue), arg.copyBytes());
+            outputCollected.set(true);
+          }
+        };
 
       gTableMap.map(null, result, outputCollector, reporter);
       verify(result).listCells();
@@ -169,12 +163,10 @@ public class TestGroupingTableMap {
       final byte[] secondPartValue = Bytes.toBytes("4678456942345");
       byte[][] data = { firstPartValue, secondPartValue };
       ImmutableBytesWritable byteWritable = gTableMap.createGroupKey(data);
-      assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.
-        Bytes.concat(firstPartValue,
-          bSeparator, secondPartValue), byteWritable.get());
+      assertArrayEquals(org.apache.hbase.thirdparty.com.google.common.primitives.Bytes
+        .concat(firstPartValue, bSeparator, secondPartValue), byteWritable.get());
     } finally {
-      if (gTableMap != null)
-        gTableMap.close();
+      if (gTableMap != null) gTableMap.close();
     }
   }
 
@@ -186,8 +178,7 @@ public class TestGroupingTableMap {
       gTableMap = new GroupingTableMap();
       assertNull(gTableMap.createGroupKey(null));
     } finally {
-      if(gTableMap != null)
-        gTableMap.close();
+      if (gTableMap != null) gTableMap.close();
     }
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,25 +31,22 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestKeyValueScanFixture extends TestCase {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestKeyValueScanFixture {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestKeyValueScanFixture.class);
+    HBaseClassTestRule.forClass(TestKeyValueScanFixture.class);
 
-
+  @Test
   public void testKeyValueScanFixture() throws IOException {
-    KeyValue kvs[] = new KeyValue[]{
-        KeyValueTestUtil.create("RowA", "family", "qf1",
-            1, KeyValue.Type.Put, "value-1"),
-        KeyValueTestUtil.create("RowA", "family", "qf2",
-            1, KeyValue.Type.Put, "value-2"),
-        KeyValueTestUtil.create("RowB", "family", "qf1",
-            10, KeyValue.Type.Put, "value-10")
-    };
+    KeyValue kvs[] = new KeyValue[] {
+      KeyValueTestUtil.create("RowA", "family", "qf1", 1, KeyValue.Type.Put, "value-1"),
+      KeyValueTestUtil.create("RowA", "family", "qf2", 1, KeyValue.Type.Put, "value-2"),
+      KeyValueTestUtil.create("RowB", "family", "qf1", 10, KeyValue.Type.Put, "value-10") };
     KeyValueScanner scan = new KeyValueScanFixture(CellComparator.getInstance(), kvs);
 
     KeyValue kv = KeyValueUtil.createFirstOnRow(Bytes.toBytes("RowA"));
@@ -75,4 +74,3 @@ public class TestKeyValueScanFixture extends TestCase {
   }
 
 }
-

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,17 +51,17 @@ public class TestShellExecEndpointCoprocessor {
     HBaseClassTestRule.forClass(TestShellExecEndpointCoprocessor.class);
 
   @ClassRule
-  public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
-    .setConfiguration(createConfiguration())
-    .build();
+  public static final MiniClusterRule miniClusterRule =
+    MiniClusterRule.newBuilder().setConfiguration(createConfiguration()).build();
 
   @Rule
   public final ConnectionRule connectionRule =
-    new ConnectionRule(miniClusterRule::createConnection);
+    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
 
   @Test
   public void testShellExecUnspecified() {
-    testShellExecForeground(b -> {});
+    testShellExecForeground(b -> {
+    });
   }
 
   @Test
@@ -69,25 +70,23 @@ public class TestShellExecEndpointCoprocessor {
   }
 
   private void testShellExecForeground(final Consumer<ShellExecRequest.Builder> consumer) {
-    final AsyncConnection conn = connectionRule.getConnection();
+    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final String command = "echo -n \"hello world\"";
-    final ShellExecRequest.Builder builder = ShellExecRequest.newBuilder()
-      .setCommand(command);
+    final ShellExecRequest.Builder builder = ShellExecRequest.newBuilder().setCommand(command);
     consumer.accept(builder);
-    final ShellExecResponse resp = admin
-      .<ShellExecService.Stub, ShellExecResponse>coprocessorService(
-        ShellExecService::newStub,
+    final ShellExecResponse resp =
+      admin.<ShellExecService.Stub, ShellExecResponse> coprocessorService(ShellExecService::newStub,
         (stub, controller, callback) -> stub.shellExec(controller, builder.build(), callback))
-      .join();
+        .join();
     assertEquals(0, resp.getExitCode());
     assertEquals("hello world", resp.getStdout());
   }
 
   @Test
   public void testShellExecBackground() throws IOException {
-    final AsyncConnection conn = connectionRule.getConnection();
+    final AsyncConnection conn = connectionRule.getAsyncConnection();
     final AsyncAdmin admin = conn.getAdmin();
 
     final File testDataDir = ensureTestDataDirExists(miniClusterRule.getTestingUtility());
@@ -96,15 +95,11 @@ public class TestShellExecEndpointCoprocessor {
     assertEquals(0, testFile.length());
 
     final String command = "echo \"hello world\" >> " + testFile.getAbsolutePath();
-    final ShellExecRequest req = ShellExecRequest.newBuilder()
-      .setCommand(command)
-      .setAwaitResponse(false)
-      .build();
-    final ShellExecResponse resp = admin
-      .<ShellExecService.Stub, ShellExecResponse>coprocessorService(
-        ShellExecService::newStub,
-        (stub, controller, callback) -> stub.shellExec(controller, req, callback))
-      .join();
+    final ShellExecRequest req =
+      ShellExecRequest.newBuilder().setCommand(command).setAwaitResponse(false).build();
+    final ShellExecResponse resp =
+      admin.<ShellExecService.Stub, ShellExecResponse> coprocessorService(ShellExecService::newStub,
+        (stub, controller, callback) -> stub.shellExec(controller, req, callback)).join();
 
     assertFalse("the response from a background task should have no exit code", resp.hasExitCode());
     assertFalse("the response from a background task should have no stdout", resp.hasStdout());
@@ -115,13 +110,10 @@ public class TestShellExecEndpointCoprocessor {
     assertEquals("hello world", content);
   }
 
-  private static File ensureTestDataDirExists(
-    final HBaseTestingUtil testingUtility
-  ) throws IOException {
-    final Path testDataDir = Optional.of(testingUtility)
-      .map(HBaseTestingUtil::getDataTestDir)
-      .map(Object::toString)
-      .map(val -> Paths.get(val))
+  private static File ensureTestDataDirExists(final HBaseTestingUtil testingUtility)
+    throws IOException {
+    final Path testDataDir = Optional.of(testingUtility).map(HBaseTestingUtil::getDataTestDir)
+      .map(Object::toString).map(Paths::get)
       .orElseThrow(() -> new RuntimeException("Unable to locate temp directory path."));
     final File testDataDirFile = Files.createDirectories(testDataDir).toFile();
     assertTrue(testDataDirFile.exists());

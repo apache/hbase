@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,7 @@ public class TestHalfStoreFileReader {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHalfStoreFileReader.class);
+    HBaseClassTestRule.forClass(TestHalfStoreFileReader.class);
 
   private static HBaseTestingUtil TEST_UTIL;
 
@@ -79,8 +79,7 @@ public class TestHalfStoreFileReader {
    * may or may not be a 'next' in the scanner/file. A bug in the half file scanner was returning -1
    * at the end of the bottom half, and that was causing the infrastructure above to go null causing
    * NPEs and other problems. This test reproduces that failure, and also tests both the bottom and
-   * top of the file while we are at it.
-   * @throws IOException
+   * top of the file while we are at it. n
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {
@@ -92,7 +91,7 @@ public class TestHalfStoreFileReader {
     CacheConfig cacheConf = new CacheConfig(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w =
-        HFile.getWriterFactory(conf, cacheConf).withPath(fs, p).withFileContext(meta).create();
+      HFile.getWriterFactory(conf, cacheConf).withPath(fs, p).withFileContext(meta).create();
 
     // write some things.
     List<KeyValue> items = genSomeKeys();
@@ -117,11 +116,11 @@ public class TestHalfStoreFileReader {
   }
 
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
-      throws IOException {
+    throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
     HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
     final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConf,
-        bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
+      bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
     fileInfo.initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
@@ -153,7 +152,7 @@ public class TestHalfStoreFileReader {
     CacheConfig cacheConf = new CacheConfig(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(1024).build();
     HFile.Writer w =
-        HFile.getWriterFactory(conf, cacheConf).withPath(fs, p).withFileContext(meta).create();
+      HFile.getWriterFactory(conf, cacheConf).withPath(fs, p).withFileContext(meta).create();
 
     // write some things.
     List<KeyValue> items = genSomeKeys();
@@ -213,11 +212,11 @@ public class TestHalfStoreFileReader {
   }
 
   private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
-      CacheConfig cacheConfig) throws IOException {
+    CacheConfig cacheConfig) throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
     HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
     final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConfig,
-        bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
+      bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
     fileInfo.initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
@@ -241,8 +240,8 @@ public class TestHalfStoreFileReader {
     List<KeyValue> ret = new ArrayList<>(SIZE);
     for (int i = 0; i < SIZE; i++) {
       KeyValue kv =
-          new KeyValue(_b(String.format("row_%04d", i)), _b("family"), _b("qualifier"), 1000, // timestamp
-              _b("value"));
+        new KeyValue(_b(String.format("row_%04d", i)), _b("family"), _b("qualifier"), 1000, // timestamp
+          _b("value"));
       ret.add(kv);
     }
     return ret;

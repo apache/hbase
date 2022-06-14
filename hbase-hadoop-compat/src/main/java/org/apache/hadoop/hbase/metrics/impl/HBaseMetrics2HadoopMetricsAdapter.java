@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,16 +53,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This is the adapter from "HBase Metrics Framework", implemented in hbase-metrics-api and
- * hbase-metrics modules to the Hadoop Metrics2 framework. This adapter is not a metric source,
- * but a helper to be able to collect all of the Metric's in the MetricRegistry using the
- * MetricsCollector and MetricsRecordBuilder.
- *
- * Some of the code is forked from https://github.com/joshelser/dropwizard-hadoop-metrics2.
+ * hbase-metrics modules to the Hadoop Metrics2 framework. This adapter is not a metric source, but
+ * a helper to be able to collect all of the Metric's in the MetricRegistry using the
+ * MetricsCollector and MetricsRecordBuilder. Some of the code is forked from
+ * https://github.com/joshelser/dropwizard-hadoop-metrics2.
  */
 @InterfaceAudience.Private
 public class HBaseMetrics2HadoopMetricsAdapter {
-  private static final Logger LOG
-      = LoggerFactory.getLogger(HBaseMetrics2HadoopMetricsAdapter.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(HBaseMetrics2HadoopMetricsAdapter.class);
   private static final String EMPTY_STRING = "";
 
   public HBaseMetrics2HadoopMetricsAdapter() {
@@ -70,14 +69,12 @@ public class HBaseMetrics2HadoopMetricsAdapter {
 
   /**
    * Iterates over the MetricRegistry and adds them to the {@code collector}.
-   *
    * @param collector A metrics collector
    */
-  public void snapshotAllMetrics(MetricRegistry metricRegistry,
-                                 MetricsCollector collector) {
+  public void snapshotAllMetrics(MetricRegistry metricRegistry, MetricsCollector collector) {
     MetricRegistryInfo info = metricRegistry.getMetricRegistryInfo();
-    MetricsRecordBuilder builder = collector.addRecord(Interns.info(info.getMetricsName(),
-        info.getMetricsDescription()));
+    MetricsRecordBuilder builder =
+      collector.addRecord(Interns.info(info.getMetricsName(), info.getMetricsDescription()));
     builder.setContext(info.getMetricsContext());
 
     snapshotAllMetrics(metricRegistry, builder);
@@ -85,13 +82,12 @@ public class HBaseMetrics2HadoopMetricsAdapter {
 
   /**
    * Iterates over the MetricRegistry and adds them to the {@code builder}.
-   *
    * @param builder A record builder
    */
   public void snapshotAllMetrics(MetricRegistry metricRegistry, MetricsRecordBuilder builder) {
     Map<String, Metric> metrics = metricRegistry.getMetrics();
 
-    for (Map.Entry<String, Metric> e: metrics.entrySet()) {
+    for (Map.Entry<String, Metric> e : metrics.entrySet()) {
       // Always capitalize the name
       String name = StringUtils.capitalize(e.getKey());
       Metric metric = e.getValue();
@@ -99,13 +95,13 @@ public class HBaseMetrics2HadoopMetricsAdapter {
       if (metric instanceof Gauge) {
         addGauge(name, (Gauge<?>) metric, builder);
       } else if (metric instanceof Counter) {
-        addCounter(name, (Counter)metric, builder);
+        addCounter(name, (Counter) metric, builder);
       } else if (metric instanceof Histogram) {
-        addHistogram(name, (Histogram)metric, builder);
+        addHistogram(name, (Histogram) metric, builder);
       } else if (metric instanceof Meter) {
-        addMeter(name, (Meter)metric, builder);
+        addMeter(name, (Meter) metric, builder);
       } else if (metric instanceof Timer) {
-        addTimer(name, (Timer)metric, builder);
+        addTimer(name, (Timer) metric, builder);
       } else {
         LOG.info("Ignoring unknown Metric class " + metric.getClass().getName());
       }
@@ -137,10 +133,9 @@ public class HBaseMetrics2HadoopMetricsAdapter {
 
   /**
    * Add Histogram value-distribution data to a Hadoop-Metrics2 record building.
-   *
-   * @param name A base name for this record.
+   * @param name      A base name for this record.
    * @param histogram A histogram to measure distribution of values.
-   * @param builder A Hadoop-Metrics2 record builder.
+   * @param builder   A Hadoop-Metrics2 record builder.
    */
   private void addHistogram(String name, Histogram histogram, MetricsRecordBuilder builder) {
     MutableHistogram.snapshot(name, EMPTY_STRING, histogram, builder, true);
@@ -149,9 +144,8 @@ public class HBaseMetrics2HadoopMetricsAdapter {
   /**
    * Add Dropwizard-Metrics rate information to a Hadoop-Metrics2 record builder, converting the
    * rates to the appropriate unit.
-   *
    * @param builder A Hadoop-Metrics2 record builder.
-   * @param name A base name for this record.
+   * @param name    A base name for this record.
    */
   private void addMeter(String name, Meter meter, MetricsRecordBuilder builder) {
     builder.addGauge(Interns.info(name + "_count", EMPTY_STRING), meter.getCount());
@@ -159,7 +153,7 @@ public class HBaseMetrics2HadoopMetricsAdapter {
     builder.addGauge(Interns.info(name + "_1min_rate", EMPTY_STRING), meter.getOneMinuteRate());
     builder.addGauge(Interns.info(name + "_5min_rate", EMPTY_STRING), meter.getFiveMinuteRate());
     builder.addGauge(Interns.info(name + "_15min_rate", EMPTY_STRING),
-        meter.getFifteenMinuteRate());
+      meter.getFifteenMinuteRate());
   }
 
   private void addTimer(String name, Timer timer, MetricsRecordBuilder builder) {

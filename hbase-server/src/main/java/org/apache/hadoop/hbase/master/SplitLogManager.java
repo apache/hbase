@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master;
+
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.CHECK;
 import static org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective.FORCE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.DELETED;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.FAILURE;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.IN_PROGRESS;
 import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.SUCCESS;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,36 +59,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Distributes the task of log splitting to the available region servers.
- * Coordination happens via coordination engine. For every log file that has to be split a
- * task is created. SplitLogWorkers race to grab a task.
- *
- * <p>SplitLogManager monitors the tasks that it creates using the
- * timeoutMonitor thread. If a task's progress is slow then
- * {@link SplitLogManagerCoordination#checkTasks} will take away the
- * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
- * and the task will be up for grabs again. When the task is done then it is
- * deleted by SplitLogManager.
- *
- * <p>Clients call {@link #splitLogDistributed(Path)} to split a region server's
- * log files. The caller thread waits in this method until all the log files
- * have been split.
- *
- * <p>All the coordination calls made by this class are asynchronous. This is mainly
- * to help reduce response time seen by the callers.
- *
- * <p>There is race in this design between the SplitLogManager and the
- * SplitLogWorker. SplitLogManager might re-queue a task that has in reality
- * already been completed by a SplitLogWorker. We rely on the idempotency of
- * the log splitting task for correctness.
- *
- * <p>It is also assumed that every log splitting task is unique and once
- * completed (either with success or with error) it will be not be submitted
- * again. If a task is resubmitted then there is a risk that old "delete task"
- * can delete the re-submission.
+ * Distributes the task of log splitting to the available region servers. Coordination happens via
+ * coordination engine. For every log file that has to be split a task is created. SplitLogWorkers
+ * race to grab a task.
+ * <p>
+ * SplitLogManager monitors the tasks that it creates using the timeoutMonitor thread. If a task's
+ * progress is slow then {@link SplitLogManagerCoordination#checkTasks} will take away the task from
+ * the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker} and the task will be up for
+ * grabs again. When the task is done then it is deleted by SplitLogManager.
+ * <p>
+ * Clients call {@link #splitLogDistributed(Path)} to split a region server's log files. The caller
+ * thread waits in this method until all the log files have been split.
+ * <p>
+ * All the coordination calls made by this class are asynchronous. This is mainly to help reduce
+ * response time seen by the callers.
+ * <p>
+ * There is race in this design between the SplitLogManager and the SplitLogWorker. SplitLogManager
+ * might re-queue a task that has in reality already been completed by a SplitLogWorker. We rely on
+ * the idempotency of the log splitting task for correctness.
+ * <p>
+ * It is also assumed that every log splitting task is unique and once completed (either with
+ * success or with error) it will be not be submitted again. If a task is resubmitted then there is
+ * a risk that old "delete task" can delete the re-submission.
  * @see SplitWALManager for an alternate implementation based on Procedures.
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALManager.
+ *             distributed WAL splitter, see SplitWALManager.
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -113,11 +110,9 @@ public class SplitLogManager {
    * Its OK to construct this object even when region-servers are not online. It does lookup the
    * orphan tasks in coordination engine but it doesn't block waiting for them to be done.
    * @param master the master services
-   * @param conf the HBase configuration
-   * @throws IOException
+   * @param conf   the HBase configuration n
    */
-  public SplitLogManager(MasterServices master, Configuration conf)
-      throws IOException {
+  public SplitLogManager(MasterServices master, Configuration conf) throws IOException {
     this.server = master;
     this.conf = conf;
     // If no CoordinatedStateManager, skip registering as a chore service (The
@@ -134,9 +129,8 @@ public class SplitLogManager {
       coordination.init();
       this.unassignedTimeout =
         conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-      this.timeoutMonitor =
-        new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
-          master);
+      this.timeoutMonitor = new TimeoutMonitor(
+        conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000), master);
       this.choreService.scheduleChore(timeoutMonitor);
     } else {
       this.choreService = null;
@@ -154,18 +148,17 @@ public class SplitLogManager {
 
   /**
    * Get a list of paths that need to be split given a set of server-specific directories and
-   * optionally  a filter.
-   *
+   * optionally a filter.
+   * <p/>
    * See {@link AbstractFSWALProvider#getServerNameFromWALDirectoryName} for more info on directory
    * layout.
-   *
+   * <p/>
    * Should be package-private, but is needed by
-   * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
-   *     Configuration, org.apache.hadoop.hbase.wal.WALFactory)} for tests.
+   * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem, Configuration, org.apache.hadoop.hbase.wal.WALFactory)}
+   * for tests.
    */
   public static List<FileStatus> getFileList(final Configuration conf, final List<Path> logDirs,
-      final PathFilter filter)
-      throws IOException {
+    final PathFilter filter) throws IOException {
     List<FileStatus> fileStatus = new ArrayList<>();
     for (Path logDir : logDirs) {
       final FileSystem fs = logDir.getFileSystem(conf);
@@ -187,8 +180,7 @@ public class SplitLogManager {
   /**
    * @param logDir one region sever wal dir path in .logs
    * @throws IOException if there was an error while splitting any log file
-   * @return cumulative size of the logfiles split
-   * @throws IOException
+   * @return cumulative size of the logfiles split n
    */
   public long splitLogDistributed(final Path logDir) throws IOException {
     List<Path> logDirs = new ArrayList<>();
@@ -228,14 +220,14 @@ public class SplitLogManager {
    * processed - successfully split or an error is encountered - by an available worker region
    * server. This method must only be called after the region servers have been brought online.
    * @param logDirs List of log dirs to split
-   * @param filter the Path filter to select specific files for considering
+   * @param filter  the Path filter to select specific files for considering
    * @throws IOException If there was an error while splitting any log file
    * @return cumulative size of the logfiles split
    */
   public long splitLogDistributed(final Set<ServerName> serverNames, final List<Path> logDirs,
-      PathFilter filter) throws IOException {
-    MonitoredTask status = TaskMonitor.get().createStatus("Doing distributed log split in " +
-      logDirs + " for serverName=" + serverNames);
+    PathFilter filter) throws IOException {
+    MonitoredTask status = TaskMonitor.get()
+      .createStatus("Doing distributed log split in " + logDirs + " for serverName=" + serverNames);
     long totalSize = 0;
     TaskBatch batch = null;
     long startTime = 0;
@@ -243,8 +235,8 @@ public class SplitLogManager {
     if (!logfiles.isEmpty()) {
       status.setStatus("Checking directory contents...");
       SplitLogCounters.tot_mgr_log_split_batch_start.increment();
-      LOG.info("Started splitting " + logfiles.size() + " logs in " + logDirs +
-          " for " + serverNames);
+      LOG.info(
+        "Started splitting " + logfiles.size() + " logs in " + logDirs + " for " + serverNames);
       startTime = EnvironmentEdgeManager.currentTime();
       batch = new TaskBatch();
       for (FileStatus lf : logfiles) {
@@ -266,7 +258,7 @@ public class SplitLogManager {
       batch.isDead = true;
       SplitLogCounters.tot_mgr_log_split_batch_err.increment();
       LOG.warn("error while splitting logs in " + logDirs + " installed = " + batch.installed
-          + " but only " + batch.done + " done");
+        + " but only " + batch.done + " done");
       String msg = "error or interrupted while splitting logs in " + logDirs + " Task = " + batch;
       status.abort(msg);
       throw new IOException(msg);
@@ -281,21 +273,20 @@ public class SplitLogManager {
       } catch (IOException ioe) {
         FileStatus[] files = fs.listStatus(logDir);
         if (files != null && files.length > 0) {
-          LOG.warn("Returning success without actually splitting and "
-              + "deleting all the log files in path " + logDir + ": "
-              + Arrays.toString(files), ioe);
+          LOG.warn(
+            "Returning success without actually splitting and "
+              + "deleting all the log files in path " + logDir + ": " + Arrays.toString(files),
+            ioe);
         } else {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
         }
       }
       SplitLogCounters.tot_mgr_log_split_batch_success.increment();
     }
-    String msg =
-        "Finished splitting (more than or equal to) " + StringUtils.humanSize(totalSize) + " (" +
-            totalSize + " bytes) in " + ((batch == null) ? 0 : batch.installed) + " log files in " +
-            logDirs + " in " +
-            ((startTime == 0) ? startTime : (EnvironmentEdgeManager.currentTime() - startTime)) +
-            "ms";
+    String msg = "Finished splitting (more than or equal to) " + StringUtils.humanSize(totalSize)
+      + " (" + totalSize + " bytes) in " + ((batch == null) ? 0 : batch.installed)
+      + " log files in " + logDirs + " in "
+      + ((startTime == 0) ? startTime : (EnvironmentEdgeManager.currentTime() - startTime)) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;
@@ -304,7 +295,7 @@ public class SplitLogManager {
   /**
    * Add a task entry to coordination if it is not already there.
    * @param taskname the path of the log to be split
-   * @param batch the batch this task belongs to
+   * @param batch    the batch this task belongs to
    * @return true if a new entry is created, false if it is already there.
    */
   boolean enqueueSplitTask(String taskname, TaskBatch batch) {
@@ -320,18 +311,17 @@ public class SplitLogManager {
   }
 
   /**
-   * Get the amount of time in milliseconds to wait till next check.
-   * Check less frequently if a bunch of work to do still. At a max, check every minute.
-   * At a minimum, check every 100ms. This is to alleviate case where perhaps there are a bunch of
-   * threads waiting on a completion. For example, if the zk-based implementation, we will scan the
-   * '/hbase/splitWAL' dir every time through this loop. If there are lots of WALs to
-   * split -- could be tens of thousands if big cluster -- then it will take a while. If
-   * the Master has many SCPs waiting on wal splitting -- could be up to 10 x the configured
-   * PE thread count (default would be 160) -- then the Master will be putting up a bunch of
-   * load on zk.
+   * Get the amount of time in milliseconds to wait till next check. Check less frequently if a
+   * bunch of work to do still. At a max, check every minute. At a minimum, check every 100ms. This
+   * is to alleviate case where perhaps there are a bunch of threads waiting on a completion. For
+   * example, if the zk-based implementation, we will scan the '/hbase/splitWAL' dir every time
+   * through this loop. If there are lots of WALs to split -- could be tens of thousands if big
+   * cluster -- then it will take a while. If the Master has many SCPs waiting on wal splitting --
+   * could be up to 10 x the configured PE thread count (default would be 160) -- then the Master
+   * will be putting up a bunch of load on zk.
    */
   static int getBatchWaitTimeMillis(int remainingTasks) {
-    return remainingTasks < 10? 100: remainingTasks < 100? 1000: 60_000;
+    return remainingTasks < 10 ? 100 : remainingTasks < 100 ? 1000 : 60_000;
   }
 
   private void waitForSplittingCompletion(TaskBatch batch, MonitoredTask status) {
@@ -339,7 +329,7 @@ public class SplitLogManager {
       while ((batch.done + batch.error) != batch.installed) {
         try {
           status.setStatus("Waiting for distributed tasks to finish. " + " scheduled="
-              + batch.installed + " done=" + batch.done + " error=" + batch.error);
+            + batch.installed + " done=" + batch.done + " error=" + batch.error);
           int remaining = batch.installed - (batch.done + batch.error);
           int actual = activeTasks(batch);
           if (remaining != actual) {
@@ -348,12 +338,12 @@ public class SplitLogManager {
           int remainingTasks = getSplitLogManagerCoordination().remainingTasksInCoordination();
           if (remainingTasks >= 0 && actual > remainingTasks) {
             LOG.warn("Expected at least" + actual + " tasks remaining, but actually there are "
-                + remainingTasks);
+              + remainingTasks);
           }
           if (remainingTasks == 0 || actual == 0) {
-            LOG.warn("No more task remaining, splitting "
-                + "should have completed. Remaining tasks is " + remainingTasks
-                + ", active tasks in map " + actual);
+            LOG.warn(
+              "No more task remaining, splitting " + "should have completed. Remaining tasks is "
+                + remainingTasks + ", active tasks in map " + actual);
             if (remainingTasks == 0 && actual == 0) {
               return;
             }
@@ -388,9 +378,7 @@ public class SplitLogManager {
   }
 
   /**
-   * @param path
-   * @param batch
-   * @return null on success, existing task on error
+   * nn * @return null on success, existing task on error
    */
   private Task createTaskIfAbsent(String path, TaskBatch batch) {
     Task oldtask;
@@ -433,7 +421,7 @@ public class SplitLogManager {
         }
         if (oldtask.status != DELETED) {
           LOG.warn("Failure because previously failed task"
-              + " state still present. Waiting for znode delete callback" + " path=" + path);
+            + " state still present. Waiting for znode delete callback" + " path=" + path);
           return oldtask;
         }
         // reinsert the newTask and it must succeed this time
@@ -518,8 +506,8 @@ public class SplitLogManager {
     @Override
     public String toString() {
       return ("last_update = " + last_update + " last_version = " + last_version
-          + " cur_worker_name = " + cur_worker_name + " status = " + status + " incarnation = "
-          + incarnation + " resubmits = " + unforcedResubmits.get() + " batch = " + batch);
+        + " cur_worker_name = " + cur_worker_name + " status = " + status + " incarnation = "
+        + incarnation + " resubmits = " + unforcedResubmits.get() + " batch = " + batch);
     }
 
     public Task() {
@@ -600,8 +588,8 @@ public class SplitLogManager {
             resubmitted++;
           } else {
             handleDeadWorker(cur_worker);
-            LOG.warn("Failed to resubmit task " + path + " owned by dead " + cur_worker
-                + ", will retry.");
+            LOG.warn(
+              "Failed to resubmit task " + path + " owned by dead " + cur_worker + ", will retry.");
           }
         } else if (getSplitLogManagerCoordination().resubmitTask(path, task, CHECK)) {
           resubmitted++;
@@ -626,9 +614,10 @@ public class SplitLogManager {
       // manager will be indefinitely creating RESCAN nodes. TODO may be the
       // master should spawn both a manager and a worker thread to guarantee
       // that there is always one worker in the system
-      if (tot > 0
-          && !found_assigned_task
-          && ((EnvironmentEdgeManager.currentTime() - lastTaskCreateTime) > unassignedTimeout)) {
+      if (
+        tot > 0 && !found_assigned_task
+          && ((EnvironmentEdgeManager.currentTime() - lastTaskCreateTime) > unassignedTimeout)
+      ) {
         for (Map.Entry<String, Task> e : tasks.entrySet()) {
           String key = e.getKey();
           Task task = e.getValue();
@@ -660,11 +649,15 @@ public class SplitLogManager {
   }
 
   public enum ResubmitDirective {
-    CHECK(), FORCE()
+    CHECK(),
+    FORCE()
   }
 
   public enum TerminationStatus {
-    IN_PROGRESS("in_progress"), SUCCESS("success"), FAILURE("failure"), DELETED("deleted");
+    IN_PROGRESS("in_progress"),
+    SUCCESS("success"),
+    FAILURE("failure"),
+    DELETED("deleted");
 
     final String statusMsg;
 

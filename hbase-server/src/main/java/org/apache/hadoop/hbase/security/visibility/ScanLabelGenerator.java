@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +18,19 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This would be the interface which would be used add labels to the RPC context
- * and this would be stored against the UGI.
- *
+ * This would be the interface which would be used add labels to the RPC context and this would be
+ * stored against the UGI.
  */
 @InterfaceAudience.Public
 public interface ScanLabelGenerator extends Configurable {
 
   /**
-   * Helps to get a list of lables associated with an UGI
-   * @param user
-   * @param authorizations
-   * @return The labels 
+   * Helps to get a list of lables associated with an UGI nn * @return The labels
    */
   public List<String> getLabels(User user, Authorizations authorizations);
 }

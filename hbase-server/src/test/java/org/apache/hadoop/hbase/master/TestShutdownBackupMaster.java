@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ public class TestShutdownBackupMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestShutdownBackupMaster.class);
+    HBaseClassTestRule.forClass(TestShutdownBackupMaster.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -72,8 +72,8 @@ public class TestShutdownBackupMaster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, MockHMaster.class, HMaster.class);
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(2).numRegionServers(2).numDataNodes(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).numDataNodes(2).build();
     UTIL.startMiniCluster(option);
     UTIL.waitUntilAllSystemRegionsAssigned();
   }
@@ -105,7 +105,7 @@ public class TestShutdownBackupMaster {
     ARRIVE.await();
     // killall RSes
     cluster.getRegionServerThreads().stream().map(t -> t.getRegionServer())
-        .forEachOrdered(rs -> rs.abort("Aborting RS for test"));
+      .forEachOrdered(rs -> rs.abort("Aborting RS for test"));
     CONTINUE.countDown();
   }
 }

@@ -18,68 +18,228 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.RegionReplicaTestHelper.testLocator;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasKind;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItem;
 
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ConnectionRule;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.MiniClusterRule;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.RegionReplicaTestHelper.Locator;
+import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hbase.trace.OpenTelemetryClassRule;
+import org.apache.hadoop.hbase.trace.OpenTelemetryTestRule;
+import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.hamcrest.Matcher;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExternalResource;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
+import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
-
-@Category({ MediumTests.class, ClientTests.class })
+@RunWith(Enclosed.class)
 public class TestAsyncMetaRegionLocator {
+  private static final Logger logger = LoggerFactory.getLogger(TestAsyncMetaRegionLocator.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncMetaRegionLocator.class);
+  private static final class Setup extends ExternalResource {
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    private final MiniClusterRule miniClusterRule;
+    private final ConnectionRule connectionRule;
 
-  private static ConnectionRegistry REGISTRY;
+    private boolean initialized = false;
+    private HBaseTestingUtil testUtil;
+    private AsyncMetaRegionLocator locator;
+    private ConnectionRegistry registry;
 
-  private static AsyncMetaRegionLocator LOCATOR;
+    public Setup(final ConnectionRule connectionRule, final MiniClusterRule miniClusterRule) {
+      this.connectionRule = connectionRule;
+      this.miniClusterRule = miniClusterRule;
+    }
 
-  @BeforeClass
-  public static void setUp() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
-    HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
-    TEST_UTIL.waitUntilNoRegionsInTransition();
-    REGISTRY = ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
-    RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
-    TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    LOCATOR = new AsyncMetaRegionLocator(REGISTRY);
+    public HBaseTestingUtil getTestingUtility() {
+      assertInitialized();
+      return testUtil;
+    }
+
+    public AsyncMetaRegionLocator getLocator() {
+      assertInitialized();
+      return locator;
+    }
+
+    private void assertInitialized() {
+      if (!initialized) {
+        throw new IllegalStateException("before method has not been called.");
+      }
+    }
+
+    @Override
+    protected void before() throws Throwable {
+      final AsyncAdmin admin = connectionRule.getAsyncConnection().getAdmin();
+      testUtil = miniClusterRule.getTestingUtility();
+      HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, 3);
+      testUtil.waitUntilNoRegionsInTransition();
+      registry = ConnectionRegistryFactory.getRegistry(testUtil.getConfiguration());
+      RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(testUtil, registry);
+      admin.balancerSwitch(false).get();
+      locator = new AsyncMetaRegionLocator(registry);
+      initialized = true;
+    }
+
+    @Override
+    protected void after() {
+      registry.close();
+    }
   }
 
-  @AfterClass
-  public static void tearDown() throws Exception {
-    Closeables.close(REGISTRY, true);
-    TEST_UTIL.shutdownMiniCluster();
+  public static abstract class AbstractBase {
+    private final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
+    private final MiniClusterRule miniClusterRule;
+    private final Setup setup;
+
+    protected Matcher<SpanData> parentSpanMatcher;
+    protected List<SpanData> spans;
+    protected Matcher<SpanData> registryGetMetaRegionLocationsMatcher;
+
+    @Rule
+    public final TestRule classRule;
+
+    @Rule
+    public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
+
+    @Rule
+    public TestName testName = new TestName();
+
+    public AbstractBase() {
+      miniClusterRule = MiniClusterRule.newBuilder()
+        .setMiniClusterOption(StartTestingClusterOption.builder().numWorkers(3).build())
+        .setConfiguration(() -> {
+          final Configuration conf = HBaseConfiguration.create();
+          conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
+            getConnectionRegistryClass(), ConnectionRegistry.class);
+          return conf;
+        }).build();
+      final ConnectionRule connectionRule =
+        ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+      setup = new Setup(connectionRule, miniClusterRule);
+      classRule = RuleChain.outerRule(otelClassRule).around(miniClusterRule).around(connectionRule)
+        .around(setup);
+    }
+
+    protected abstract Class<? extends ConnectionRegistry> getConnectionRegistryClass();
+
+    @Test
+    public void test() throws Exception {
+      final AsyncMetaRegionLocator locator = setup.getLocator();
+      final HBaseTestingUtil testUtil = setup.getTestingUtility();
+
+      TraceUtil.trace(() -> {
+        try {
+          testLocator(miniClusterRule.getTestingUtility(), TableName.META_TABLE_NAME,
+            new Locator() {
+              @Override
+              public void updateCachedLocationOnError(HRegionLocation loc, Throwable error) {
+                locator.updateCachedLocationOnError(loc, error);
+              }
+
+              @Override
+              public RegionLocations getRegionLocations(TableName tableName, int replicaId,
+                boolean reload) throws Exception {
+                return locator.getRegionLocations(replicaId, reload).get();
+              }
+            });
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }, testName.getMethodName());
+
+      final Configuration conf = testUtil.getConfiguration();
+      parentSpanMatcher = allOf(hasName(testName.getMethodName()), hasEnded());
+      Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5),
+        new MatcherPredicate<>(otelClassRule::getSpans, hasItem(parentSpanMatcher)));
+      spans = otelClassRule.getSpans();
+      if (logger.isDebugEnabled()) {
+        StringTraceRenderer renderer = new StringTraceRenderer(spans);
+        renderer.render(logger::debug);
+      }
+      assertThat(spans, hasItem(parentSpanMatcher));
+      final SpanData parentSpan = spans.stream().filter(parentSpanMatcher::matches).findAny()
+        .orElseThrow(AssertionError::new);
+
+      registryGetMetaRegionLocationsMatcher =
+        allOf(hasName(endsWith("ConnectionRegistry.getMetaRegionLocations")),
+          hasParentSpanId(parentSpan), hasKind(SpanKind.INTERNAL), hasEnded());
+      assertThat(spans, hasItem(registryGetMetaRegionLocationsMatcher));
+    }
   }
 
-  @Test
-  public void test() throws Exception {
-    testLocator(TEST_UTIL, TableName.META_TABLE_NAME, new Locator() {
+  /**
+   * Test covers when client is configured with {@link ZKConnectionRegistry}.
+   */
+  @Category({ MediumTests.class, ClientTests.class })
+  public static class TestZKConnectionRegistry extends AbstractBase {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestZKConnectionRegistry.class);
 
-      @Override
-      public void updateCachedLocationOnError(HRegionLocation loc, Throwable error)
-          throws Exception {
-        LOCATOR.updateCachedLocationOnError(loc, error);
-      }
+    @Override
+    protected Class<? extends ConnectionRegistry> getConnectionRegistryClass() {
+      return ZKConnectionRegistry.class;
+    }
+  }
 
-      @Override
-      public RegionLocations getRegionLocations(TableName tableName, int replicaId, boolean reload)
-          throws Exception {
-        return LOCATOR.getRegionLocations(replicaId, reload).get();
-      }
-    });
+  /**
+   * Test covers when client is configured with {@link RpcConnectionRegistry}.
+   */
+  @Category({ MediumTests.class, ClientTests.class })
+  public static class TestRpcConnectionRegistry extends AbstractBase {
+    @ClassRule
+    public static final HBaseClassTestRule CLASS_RULE =
+      HBaseClassTestRule.forClass(TestRpcConnectionRegistry.class);
+
+    @Override
+    protected Class<? extends ConnectionRegistry> getConnectionRegistryClass() {
+      return RpcConnectionRegistry.class;
+    }
+
+    @Test
+    @Override
+    public void test() throws Exception {
+      super.test();
+      final SpanData registry_getMetaRegionLocationsSpan =
+        spans.stream().filter(registryGetMetaRegionLocationsMatcher::matches).findAny()
+          .orElseThrow(AssertionError::new);
+      final Matcher<SpanData> clientGetMetaRegionLocationsMatcher = allOf(
+        hasName(endsWith("ClientMetaService/GetMetaRegionLocations")),
+        hasParentSpanId(registry_getMetaRegionLocationsSpan), hasKind(SpanKind.CLIENT), hasEnded());
+      assertThat(spans, hasItem(clientGetMetaRegionLocationsMatcher));
+    }
   }
 }

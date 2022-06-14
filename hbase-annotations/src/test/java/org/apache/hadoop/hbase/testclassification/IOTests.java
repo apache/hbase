@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.testclassification;
 
 /**
  * Tag a test as related to the {@code org.apache.hadoop.hbase.io} package. Things like HFile and
  * the like.
- *
  * @see org.apache.hadoop.hbase.testclassification.ClientTests
  * @see org.apache.hadoop.hbase.testclassification.CoprocessorTests
  * @see org.apache.hadoop.hbase.testclassification.FilterTests

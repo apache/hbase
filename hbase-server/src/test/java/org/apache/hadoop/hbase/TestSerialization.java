@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -149,8 +149,7 @@ public class TestSerialization {
   }
 
   /**
-   * Test RegionInfo serialization
-   * @throws Exception
+   * Test RegionInfo serialization n
    */
   @Test
   public void testRegionInfo() throws Exception {
@@ -301,7 +300,7 @@ public class TestSerialization {
 
   /**
    * Create a table of name <code>name</code> with {@link #COLUMNS} for families.
-   * @param name Name to give table.
+   * @param name     Name to give table.
    * @param versions How many versions to allow per column.
    * @return Column descriptor.
    */

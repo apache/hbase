@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +22,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * The {@code Union} family of {@link DataType}s encode one of a fixed
- * set of {@code Object}s. They provide convenience methods which handle
- * type casting on your behalf.
+ * The {@code Union} family of {@link DataType}s encode one of a fixed set of {@code Object}s. They
+ * provide convenience methods which handle type casting on your behalf.
  */
 @SuppressWarnings("unchecked")
 @InterfaceAudience.Public
@@ -34,8 +33,7 @@ public abstract class Union2<A, B> implements DataType<Object> {
   protected final DataType<B> typeB;
 
   /**
-   * Create an instance of {@code Union2} over the set of specified
-   * types.
+   * Create an instance of {@code Union2} over the set of specified types.
    */
   public Union2(DataType<A> typeA, DataType<B> typeB) {
     this.typeA = typeA;

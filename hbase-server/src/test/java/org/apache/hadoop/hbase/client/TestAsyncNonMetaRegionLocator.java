@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogReplicaMode;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -101,8 +103,9 @@ public class TestAsyncNonMetaRegionLocator {
 
     // Enable hbase:meta replication.
     HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, NUM_OF_META_REPLICA);
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
-      .getRegions(TableName.META_TABLE_NAME).size() >= NUM_OF_META_REPLICA);
+    TEST_UTIL.waitFor(30000,
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
+          >= NUM_OF_META_REPLICA);
 
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
@@ -198,11 +201,11 @@ public class TestAsyncNonMetaRegionLocator {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
         getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, locateType, false).get());
     }
-    byte[] randKey = new byte[ThreadLocalRandom.current().nextInt(128)];
-    ThreadLocalRandom.current().nextBytes(randKey);
+    byte[] key = new byte[ThreadLocalRandom.current().nextInt(128)];
+    Bytes.random(key);
     for (RegionLocateType locateType : RegionLocateType.values()) {
       assertLocEquals(EMPTY_START_ROW, EMPTY_END_ROW, serverName,
-        getDefaultRegionLocation(TABLE_NAME, randKey, locateType, false).get());
+        getDefaultRegionLocation(TABLE_NAME, key, locateType, false).get());
     }
   }
 
@@ -288,8 +291,9 @@ public class TestAsyncNonMetaRegionLocator {
       .get();
 
     TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()), newServerName);
-    while (!TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName()
-      .equals(newServerName)) {
+    while (
+      !TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName().equals(newServerName)
+    ) {
       Thread.sleep(100);
     }
     // Should be same as it is in cache
@@ -459,5 +463,17 @@ public class TestAsyncNonMetaRegionLocator {
       getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get();
     IntStream.range(0, 100).parallel()
       .forEach(i -> locator.updateCachedLocationOnError(loc, new NotServingRegionException()));
+  }
+
+  @Test
+  public void testCacheLocationWhenGetAllLocations() throws Exception {
+    createMultiRegionTable();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    conn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+    for (RegionInfo region : regions) {
+      assertNotNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+    }
   }
 }

@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -54,24 +55,26 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
   @Override
   public ByteBuffer decodeKeyValues(DataInputStream source,
-      HFileBlockDecodingContext blkDecodingCtx) throws IOException {
+    HFileBlockDecodingContext blkDecodingCtx) throws IOException {
     if (blkDecodingCtx.getClass() != HFileBlockDefaultDecodingContext.class) {
       throw new IOException(this.getClass().getName() + " only accepts "
-          + HFileBlockDefaultDecodingContext.class.getName() + " as the decoding context.");
+        + HFileBlockDefaultDecodingContext.class.getName() + " as the decoding context.");
     }
 
     HFileBlockDefaultDecodingContext decodingCtx =
-        (HFileBlockDefaultDecodingContext) blkDecodingCtx;
-    if (decodingCtx.getHFileContext().isIncludesTags()
-        && decodingCtx.getHFileContext().isCompressTags()) {
+      (HFileBlockDefaultDecodingContext) blkDecodingCtx;
+    if (
+      decodingCtx.getHFileContext().isIncludesTags()
+        && decodingCtx.getHFileContext().isCompressTags()
+    ) {
       if (decodingCtx.getTagCompressionContext() != null) {
         // It will be overhead to create the TagCompressionContext again and again for every block
         // decoding.
         decodingCtx.getTagCompressionContext().clear();
       } else {
         try {
-          TagCompressionContext tagCompressionContext = new TagCompressionContext(
-              LRUDictionary.class, Byte.MAX_VALUE);
+          TagCompressionContext tagCompressionContext =
+            new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
           decodingCtx.setTagCompressionContext(tagCompressionContext);
         } catch (Exception e) {
           throw new IOException("Failed to initialize TagCompressionContext", e);
@@ -86,21 +89,20 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   // change this.
   public static int compareCommonRowPrefix(Cell left, Cell right, int rowCommonPrefix) {
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset() + rowCommonPrefix,
-        left.getRowLength() - rowCommonPrefix, right.getRowArray(), right.getRowOffset()
-            + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
+      left.getRowLength() - rowCommonPrefix, right.getRowArray(),
+      right.getRowOffset() + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
   }
 
   public static int compareCommonFamilyPrefix(Cell left, Cell right, int familyCommonPrefix) {
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset() + familyCommonPrefix,
-        left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
-        right.getFamilyOffset() + familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix);
+      left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+      right.getFamilyOffset() + familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix);
   }
 
   public static int compareCommonQualifierPrefix(Cell left, Cell right, int qualCommonPrefix) {
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset() + qualCommonPrefix,
-        left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
-        right.getQualifierOffset() + qualCommonPrefix, right.getQualifierLength()
-            - qualCommonPrefix);
+      left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
+      right.getQualifierOffset() + qualCommonPrefix, right.getQualifierLength() - qualCommonPrefix);
   }
 
   protected static class SeekerState {
@@ -146,8 +148,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     protected void ensureSpaceForKey() {
       if (keyLength > keyBuffer.length) {
-        int newKeyBufferLength = Integer.highestOneBit(Math.max(
-            INITIAL_KEY_BUFFER_SIZE, keyLength) - 1) << 1;
+        int newKeyBufferLength =
+          Integer.highestOneBit(Math.max(INITIAL_KEY_BUFFER_SIZE, keyLength) - 1) << 1;
         byte[] newKeyBuffer = new byte[newKeyBufferLength];
         System.arraycopy(keyBuffer, 0, newKeyBuffer, 0, keyBuffer.length);
         keyBuffer = newKeyBuffer;
@@ -156,8 +158,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     protected void ensureSpaceForTags() {
       if (tagsLength > tagsBuffer.length) {
-        int newTagsBufferLength = Integer.highestOneBit(Math.max(
-            INITIAL_KEY_BUFFER_SIZE, tagsLength) - 1) << 1;
+        int newTagsBufferLength =
+          Integer.highestOneBit(Math.max(INITIAL_KEY_BUFFER_SIZE, tagsLength) - 1) << 1;
         byte[] newTagsBuffer = new byte[newTagsBufferLength];
         System.arraycopy(tagsBuffer, 0, newTagsBuffer, 0, tagsBuffer.length);
         tagsBuffer = newTagsBuffer;
@@ -170,9 +172,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     /**
-     * Copy the state from the next one into this instance (the previous state
-     * placeholder). Used to save the previous state when we are advancing the
-     * seeker to the next key/value.
+     * Copy the state from the next one into this instance (the previous state placeholder). Used to
+     * save the previous state when we are advancing the seeker to the next key/value.
      */
     protected void copyFromNext(SeekerState nextState) {
       if (keyBuffer.length != nextState.keyBuffer.length) {
@@ -180,13 +181,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       } else if (!isValid()) {
         // Note: we can only call isValid before we override our state, so this
         // comes before all the assignments at the end of this method.
-        System.arraycopy(nextState.keyBuffer, 0, keyBuffer, 0,
-             nextState.keyLength);
+        System.arraycopy(nextState.keyBuffer, 0, keyBuffer, 0, nextState.keyLength);
       } else {
         // don't copy the common prefix between this key and the previous one
-        System.arraycopy(nextState.keyBuffer, nextState.lastCommonPrefix,
-            keyBuffer, nextState.lastCommonPrefix, nextState.keyLength
-                - nextState.lastCommonPrefix);
+        System.arraycopy(nextState.keyBuffer, nextState.lastCommonPrefix, keyBuffer,
+          nextState.lastCommonPrefix, nextState.keyLength - nextState.lastCommonPrefix);
       }
       currentKey.set(nextState.currentKey);
 
@@ -228,61 +227,73 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     private Cell toOnheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
-        int tagsLenSerializationSize) {
+      int tagsLenSerializationSize) {
       byte[] tagsArray = HConstants.EMPTY_BYTE_ARRAY;
       int tOffset = 0;
       if (this.includeTags) {
         if (this.tagCompressionContext == null) {
-          tagsArray = valAndTagsBuffer.array();
-          tOffset = valAndTagsBuffer.arrayOffset() + vOffset + this.valueLength
-              + tagsLenSerializationSize;
+          tOffset =
+            valAndTagsBuffer.arrayOffset() + vOffset + this.valueLength + tagsLenSerializationSize;
+          tagsArray = Bytes.copy(valAndTagsBuffer.array(), tOffset, this.tagsLength);
+          tOffset = 0;
         } else {
           tagsArray = Bytes.copy(tagsBuffer, 0, this.tagsLength);
           tOffset = 0;
         }
       }
       return new OnheapDecodedCell(Bytes.copy(keyBuffer, 0, this.keyLength),
-          currentKey.getRowLength(), currentKey.getFamilyOffset(), currentKey.getFamilyLength(),
-          currentKey.getQualifierOffset(), currentKey.getQualifierLength(),
-          currentKey.getTimestamp(), currentKey.getTypeByte(), valAndTagsBuffer.array(),
-          valAndTagsBuffer.arrayOffset() + vOffset, this.valueLength, memstoreTS, tagsArray,
-          tOffset, this.tagsLength);
+        currentKey.getRowLength(), currentKey.getFamilyOffset(), currentKey.getFamilyLength(),
+        currentKey.getQualifierOffset(), currentKey.getQualifierLength(), currentKey.getTimestamp(),
+        currentKey.getTypeByte(), Bytes.copy(valAndTagsBuffer.array(),
+          valAndTagsBuffer.arrayOffset() + vOffset, this.valueLength),
+        0, this.valueLength, memstoreTS, tagsArray, tOffset, this.tagsLength);
     }
 
     private Cell toOffheapCell(ByteBuffer valAndTagsBuffer, int vOffset,
-        int tagsLenSerializationSize) {
+      int tagsLenSerializationSize) {
       ByteBuffer tagsBuf = HConstants.EMPTY_BYTE_BUFFER;
       int tOffset = 0;
       if (this.includeTags) {
         if (this.tagCompressionContext == null) {
-          tagsBuf = valAndTagsBuffer;
           tOffset = vOffset + this.valueLength + tagsLenSerializationSize;
+          byte[] output = new byte[this.tagsLength];
+          ByteBufferUtils.copyFromBufferToArray(output, valAndTagsBuffer, tOffset, 0,
+            this.tagsLength);
+          tagsBuf = ByteBuffer.wrap(output);
+          tOffset = 0;
         } else {
           tagsBuf = ByteBuffer.wrap(Bytes.copy(tagsBuffer, 0, this.tagsLength));
           tOffset = 0;
         }
       }
+
+      if (this.valueLength > 0) {
+        byte[] output = new byte[this.valueLength];
+        ByteBufferUtils.copyFromBufferToArray(output, valAndTagsBuffer, vOffset, 0,
+          this.valueLength);
+        valAndTagsBuffer = ByteBuffer.wrap(output);
+        vOffset = 0;
+      }
+
       return new OffheapDecodedExtendedCell(
-          ByteBuffer.wrap(Bytes.copy(keyBuffer, 0, this.keyLength)), currentKey.getRowLength(),
-          currentKey.getFamilyOffset(), currentKey.getFamilyLength(),
-          currentKey.getQualifierOffset(), currentKey.getQualifierLength(),
-          currentKey.getTimestamp(), currentKey.getTypeByte(), valAndTagsBuffer, vOffset,
-          this.valueLength, memstoreTS, tagsBuf, tOffset, this.tagsLength);
+        ByteBuffer.wrap(Bytes.copy(keyBuffer, 0, this.keyLength)), currentKey.getRowLength(),
+        currentKey.getFamilyOffset(), currentKey.getFamilyLength(), currentKey.getQualifierOffset(),
+        currentKey.getQualifierLength(), currentKey.getTimestamp(), currentKey.getTypeByte(),
+        valAndTagsBuffer, vOffset, this.valueLength, memstoreTS, tagsBuf, tOffset, this.tagsLength);
     }
   }
 
   /**
-   * Copies only the key part of the keybuffer by doing a deep copy and passes the
-   * seeker state members for taking a clone.
-   * Note that the value byte[] part is still pointing to the currentBuffer and
-   * represented by the valueOffset and valueLength
+   * Copies only the key part of the keybuffer by doing a deep copy and passes the seeker state
+   * members for taking a clone. Note that the value byte[] part is still pointing to the
+   * currentBuffer and represented by the valueOffset and valueLength
    */
   // We return this as a Cell to the upper layers of read flow and might try setting a new SeqId
   // there. So this has to be an instance of ExtendedCell.
   protected static class OnheapDecodedCell implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-        + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.ARRAY));
+      + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
+      + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.ARRAY));
     private byte[] keyOnlyBuffer;
     private short rowLength;
     private int familyOffset;
@@ -300,9 +311,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     private long seqId;
 
     protected OnheapDecodedCell(byte[] keyBuffer, short rowLength, int familyOffset,
-        byte familyLength, int qualOffset, int qualLength, long timeStamp, byte typeByte,
-        byte[] valueBuffer, int valueOffset, int valueLen, long seqId, byte[] tagsBuffer,
-        int tagsOffset, int tagsLength) {
+      byte familyLength, int qualOffset, int qualLength, long timeStamp, byte typeByte,
+      byte[] valueBuffer, int valueOffset, int valueLen, long seqId, byte[] tagsBuffer,
+      int tagsOffset, int tagsLength) {
       this.keyOnlyBuffer = keyBuffer;
       this.rowLength = rowLength;
       this.familyOffset = familyOffset;
@@ -413,7 +424,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public String toString() {
       return KeyValue.keyToString(this.keyOnlyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
-          + getValueLength() + "/seqid=" + seqId;
+        + getValueLength() + "/seqid=" + seqId;
     }
 
     @Override
@@ -449,7 +460,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public int getSerializedSize(boolean withTags) {
       return KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength, tagsLength,
-          withTags);
+        withTags);
     }
 
     @Override
@@ -479,8 +490,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
   protected static class OffheapDecodedExtendedCell extends ByteBufferExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-        + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.BYTE_BUFFER));
+      + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
+      + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.BYTE_BUFFER));
     private ByteBuffer keyBuffer;
     private short rowLength;
     private int familyOffset;
@@ -498,9 +509,9 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     private long seqId;
 
     protected OffheapDecodedExtendedCell(ByteBuffer keyBuffer, short rowLength, int familyOffset,
-        byte familyLength, int qualOffset, int qualLength, long timeStamp, byte typeByte,
-        ByteBuffer valueBuffer, int valueOffset, int valueLen, long seqId, ByteBuffer tagsBuffer,
-        int tagsOffset, int tagsLength) {
+      byte familyLength, int qualOffset, int qualLength, long timeStamp, byte typeByte,
+      ByteBuffer valueBuffer, int valueOffset, int valueLen, long seqId, ByteBuffer tagsBuffer,
+      int tagsOffset, int tagsLength) {
       // The keyBuffer is always onheap
       assert keyBuffer.hasArray();
       assert keyBuffer.arrayOffset() == 0;
@@ -694,7 +705,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public int getSerializedSize(boolean withTags) {
       return KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength, tagsLength,
-          withTags);
+        withTags);
     }
 
     @Override
@@ -723,10 +734,10 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   protected abstract static class BufferedEncodedSeeker<STATE extends SeekerState>
-      extends AbstractEncodedSeeker {
+    extends AbstractEncodedSeeker {
     protected ByteBuff currentBuffer;
     protected TagCompressionContext tagCompressionContext = null;
-    protected  KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
+    protected KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
     // A temp pair object which will be reused by ByteBuff#asSubByteBuffer calls. This avoids too
     // many object creations.
     protected final ObjectIntPair<ByteBuffer> tmpPair = new ObjectIntPair<>();
@@ -758,7 +769,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
       currentBuffer = buffer;
       current.currentBuffer = currentBuffer;
-      if(tagCompressionContext != null) {
+      if (tagCompressionContext != null) {
         current.tagCompressionContext = tagCompressionContext;
       }
       decodeFirst();
@@ -817,7 +828,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
           current.ensureSpaceForTags();
           try {
             current.tagsCompressedLength = tagCompressionContext.uncompressTags(currentBuffer,
-                current.tagsBuffer, 0, current.tagsLength);
+              current.tagsBuffer, 0, current.tagsLength);
           } catch (IOException e) {
             throw new RuntimeException("Exception while uncompressing tags", e);
           }
@@ -860,24 +871,18 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
           comp = compareTypeBytes(seekCell, keyOnlyKV);
           if (comp == 0) {
             // Subtract the fixed row key length and the family key fixed length
-            familyCommonPrefix = Math.max(
-                0,
-                Math.min(familyCommonPrefix,
-                    current.lastCommonPrefix - (3 + keyOnlyKV.getRowLength())));
-            familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell, keyOnlyKV,
-                familyCommonPrefix);
+            familyCommonPrefix = Math.max(0, Math.min(familyCommonPrefix,
+              current.lastCommonPrefix - (3 + keyOnlyKV.getRowLength())));
+            familyCommonPrefix +=
+              findCommonPrefixInFamilyPart(seekCell, keyOnlyKV, familyCommonPrefix);
             comp = compareCommonFamilyPrefix(seekCell, keyOnlyKV, familyCommonPrefix);
             if (comp == 0) {
               // subtract the rowkey fixed length and the family key fixed
               // length
-              qualCommonPrefix = Math.max(
-                  0,
-                  Math.min(
-                      qualCommonPrefix,
-                      current.lastCommonPrefix
-                          - (3 + keyOnlyKV.getRowLength() + keyOnlyKV.getFamilyLength())));
-              qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell, keyOnlyKV,
-                  qualCommonPrefix);
+              qualCommonPrefix = Math.max(0, Math.min(qualCommonPrefix, current.lastCommonPrefix
+                - (3 + keyOnlyKV.getRowLength() + keyOnlyKV.getFamilyLength())));
+              qualCommonPrefix +=
+                findCommonPrefixInQualifierPart(seekCell, keyOnlyKV, qualCommonPrefix);
               comp = compareCommonQualifierPrefix(seekCell, keyOnlyKV, qualCommonPrefix);
               if (comp == 0) {
                 comp = CellComparator.getInstance().compareTimestamps(seekCell, keyOnlyKV);
@@ -901,8 +906,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
             if (!previous.isValid()) {
               // The caller (seekBefore) has to ensure that we are not at the
               // first key in the block.
-              throw new IllegalStateException("Cannot seekBefore if "
-                  + "positioned at the first key in the block: key="
+              throw new IllegalStateException(
+                "Cannot seekBefore if " + "positioned at the first key in the block: key="
                   + Bytes.toStringBinary(seekCell.getRowArray()));
             }
             moveToPrevious();
@@ -935,44 +940,47 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     private int compareTypeBytes(Cell key, Cell right) {
-      if (key.getFamilyLength() + key.getQualifierLength() == 0
-          && key.getTypeByte() == Type.Minimum.getCode()) {
+      if (
+        key.getFamilyLength() + key.getQualifierLength() == 0
+          && key.getTypeByte() == Type.Minimum.getCode()
+      ) {
         // left is "bigger", i.e. it appears later in the sorted order
         return 1;
       }
-      if (right.getFamilyLength() + right.getQualifierLength() == 0
-          && right.getTypeByte() == Type.Minimum.getCode()) {
+      if (
+        right.getFamilyLength() + right.getQualifierLength() == 0
+          && right.getTypeByte() == Type.Minimum.getCode()
+      ) {
         return -1;
       }
       return 0;
     }
 
     private static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
-      return Bytes.findCommonPrefix(left.getRowArray(), right.getRowArray(), left.getRowLength()
-          - rowCommonPrefix, right.getRowLength() - rowCommonPrefix, left.getRowOffset()
-          + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
+      return Bytes.findCommonPrefix(left.getRowArray(), right.getRowArray(),
+        left.getRowLength() - rowCommonPrefix, right.getRowLength() - rowCommonPrefix,
+        left.getRowOffset() + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
     }
 
     private static int findCommonPrefixInFamilyPart(Cell left, Cell right, int familyCommonPrefix) {
-      return Bytes
-          .findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(), left.getFamilyLength()
-              - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix,
-              left.getFamilyOffset() + familyCommonPrefix, right.getFamilyOffset()
-                  + familyCommonPrefix);
+      return Bytes.findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(),
+        left.getFamilyLength() - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix,
+        left.getFamilyOffset() + familyCommonPrefix, right.getFamilyOffset() + familyCommonPrefix);
     }
 
     private static int findCommonPrefixInQualifierPart(Cell left, Cell right,
-        int qualifierCommonPrefix) {
+      int qualifierCommonPrefix) {
       return Bytes.findCommonPrefix(left.getQualifierArray(), right.getQualifierArray(),
-          left.getQualifierLength() - qualifierCommonPrefix, right.getQualifierLength()
-              - qualifierCommonPrefix, left.getQualifierOffset() + qualifierCommonPrefix,
-          right.getQualifierOffset() + qualifierCommonPrefix);
+        left.getQualifierLength() - qualifierCommonPrefix,
+        right.getQualifierLength() - qualifierCommonPrefix,
+        left.getQualifierOffset() + qualifierCommonPrefix,
+        right.getQualifierOffset() + qualifierCommonPrefix);
     }
 
     private void moveToPrevious() {
       if (!previous.isValid()) {
         throw new IllegalStateException(
-            "Can move back only once and not in first key in the block.");
+          "Can move back only once and not in first key in the block.");
       }
 
       STATE tmp = previous;
@@ -1003,6 +1011,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     abstract protected void decodeFirst();
+
     abstract protected void decodeNext();
   }
 
@@ -1010,7 +1019,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
    * @return unencoded size added
    */
   protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
-      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
+    HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
       int tagsLength = cell.getTagsLength();
@@ -1040,8 +1049,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     return size;
   }
 
-  protected final void afterDecodingKeyValue(DataInputStream source,
-      ByteBuffer dest, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+  protected final void afterDecodingKeyValue(DataInputStream source, ByteBuffer dest,
+    HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     if (decodingCtx.getHFileContext().isIncludesTags()) {
       int tagsLength = ByteBufferUtils.readCompressedInt(source);
       // Put as unsigned short
@@ -1066,55 +1075,54 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         memstoreTS = WritableUtils.readVLong(source);
         ByteBufferUtils.writeVLong(dest, memstoreTS);
       } catch (IOException ex) {
-        throw new RuntimeException("Unable to copy memstore timestamp " +
-            memstoreTS + " after decoding a key/value");
+        throw new RuntimeException(
+          "Unable to copy memstore timestamp " + memstoreTS + " after decoding a key/value");
       }
     }
   }
 
   protected abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
-      int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
-      throws IOException;
+    int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
+    throws IOException;
 
   /**
-   * Asserts that there is at least the given amount of unfilled space
-   * remaining in the given buffer.
-   * @param out typically, the buffer we are writing to
+   * Asserts that there is at least the given amount of unfilled space remaining in the given
+   * buffer.
+   * @param out    typically, the buffer we are writing to
    * @param length the required space in the buffer
    * @throws EncoderBufferTooSmallException If there are no enough bytes.
    */
   protected static void ensureSpace(ByteBuffer out, int length)
-      throws EncoderBufferTooSmallException {
+    throws EncoderBufferTooSmallException {
     if (out.position() + length > out.limit()) {
-      throw new EncoderBufferTooSmallException(
-          "Buffer position=" + out.position() +
-          ", buffer limit=" + out.limit() +
-          ", length to be written=" + length);
+      throw new EncoderBufferTooSmallException("Buffer position=" + out.position()
+        + ", buffer limit=" + out.limit() + ", length to be written=" + length);
     }
   }
 
   @Override
   public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx, DataOutputStream out)
-      throws IOException {
+    throws IOException {
     if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
       throw new IOException(this.getClass().getName() + " only accepts "
-          + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
-          "encoding context.");
+        + HFileBlockDefaultEncodingContext.class.getName() + " as the " + "encoding context.");
     }
 
     HFileBlockDefaultEncodingContext encodingCtx =
-        (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+      (HFileBlockDefaultEncodingContext) blkEncodingCtx;
     encodingCtx.prepareEncoding(out);
-    if (encodingCtx.getHFileContext().isIncludesTags()
-        && encodingCtx.getHFileContext().isCompressTags()) {
+    if (
+      encodingCtx.getHFileContext().isIncludesTags()
+        && encodingCtx.getHFileContext().isCompressTags()
+    ) {
       if (encodingCtx.getTagCompressionContext() != null) {
         // It will be overhead to create the TagCompressionContext again and again for every block
         // encoding.
         encodingCtx.getTagCompressionContext().clear();
       } else {
         try {
-          TagCompressionContext tagCompressionContext = new TagCompressionContext(
-              LRUDictionary.class, Byte.MAX_VALUE);
+          TagCompressionContext tagCompressionContext =
+            new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
           encodingCtx.setTagCompressionContext(tagCompressionContext);
         } catch (Exception e) {
           throw new IOException("Failed to initialize TagCompressionContext", e);
@@ -1127,7 +1135,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
   @Override
   public void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
-      throws IOException {
+    throws IOException {
     EncodingState state = encodingCtx.getEncodingState();
     int posBeforeEncode = out.size();
     int encodedKvSize = internalEncode(cell, (HFileBlockDefaultEncodingContext) encodingCtx, out);
@@ -1135,11 +1143,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   public abstract int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingCtx,
-      DataOutputStream out) throws IOException;
+    DataOutputStream out) throws IOException;
 
   @Override
   public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
-      byte[] uncompressedBytesWithHeader) throws IOException {
+    byte[] uncompressedBytesWithHeader) throws IOException {
     EncodingState state = encodingCtx.getEncodingState();
     // Write the unencodedDataSizeWritten (with header size)
     Bytes.putInt(uncompressedBytesWithHeader,

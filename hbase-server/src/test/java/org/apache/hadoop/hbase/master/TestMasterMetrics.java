@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -88,8 +88,7 @@ public class TestMasterMetrics {
                 serverManager.regionServerReport(sn,
                   ServerMetricsBuilder.newBuilder(sn).setVersionNumber(sm.getVersionNumber())
                     .setVersion(sm.getVersion())
-                      .setLastReportTimestamp(EnvironmentEdgeManager.currentTime())
-                    .build());
+                    .setLastReportTimestamp(EnvironmentEdgeManager.currentTime()).build());
               } catch (YouAreDeadException e) {
                 throw new UncheckedIOException(e);
               }
@@ -144,9 +143,8 @@ public class TestMasterMetrics {
 
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
-       .setTotalNumberOfRequests(expectedRequestNumber)
-       .setReadRequestsCount(expectedRequestNumber)
-       .setWriteRequestsCount(expectedRequestNumber).build();
+      .setTotalNumberOfRequests(expectedRequestNumber).setReadRequestsCount(expectedRequestNumber)
+      .setWriteRequestsCount(expectedRequestNumber).build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -156,10 +154,9 @@ public class TestMasterMetrics {
 
     expectedRequestNumber = 15000;
 
-    sl = ClusterStatusProtos.ServerLoad.newBuilder()
-            .setTotalNumberOfRequests(expectedRequestNumber)
-            .setReadRequestsCount(expectedRequestNumber)
-            .setWriteRequestsCount(expectedRequestNumber).build();
+    sl = ClusterStatusProtos.ServerLoad.newBuilder().setTotalNumberOfRequests(expectedRequestNumber)
+      .setReadRequestsCount(expectedRequestNumber).setWriteRequestsCount(expectedRequestNumber)
+      .build();
     request.setLoad(sl);
 
     master.getMasterRpcServices().regionServerReport(null, request.build());
@@ -184,7 +181,7 @@ public class TestMasterMetrics {
     metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
     metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
 
-    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX+"SubmittedCount",
+    metricsHelper.assertCounter(MetricsMasterSource.SERVER_CRASH_METRIC_PREFIX + "SubmittedCount",
       0, masterSource);
   }
 

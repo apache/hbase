@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.lang.management.ManagementFactory;
@@ -26,21 +24,19 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Locale;
-
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetric;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetricProvider;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
-
 
 /**
  * Utilities for interacting with and monitoring DirectByteBuffer allocations.
@@ -82,17 +78,16 @@ public class DirectMemoryUtils {
   }
 
   /**
-   * @return the setting of -XX:MaxDirectMemorySize as a long. Returns 0 if
-   *         -XX:MaxDirectMemorySize is not set.
+   * @return the setting of -XX:MaxDirectMemorySize as a long. Returns 0 if -XX:MaxDirectMemorySize
+   *         is not set.
    */
   public static long getDirectMemorySize() {
     RuntimeMXBean runtimemxBean = ManagementFactory.getRuntimeMXBean();
     List<String> arguments = runtimemxBean.getInputArguments();
-    long multiplier = 1; //for the byte case.
+    long multiplier = 1; // for the byte case.
     for (String s : arguments) {
       if (s.contains("-XX:MaxDirectMemorySize=")) {
-        String memSize = s.toLowerCase(Locale.ROOT)
-            .replace("-xx:maxdirectmemorysize=", "").trim();
+        String memSize = s.toLowerCase(Locale.ROOT).replace("-xx:maxdirectmemorysize=", "").trim();
 
         if (memSize.contains("k")) {
           multiplier = 1024;
@@ -133,29 +128,24 @@ public class DirectMemoryUtils {
    */
   public static long getNettyDirectMemoryUsage() {
 
-    ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider)
-        PooledByteBufAllocator.DEFAULT).metric();
+    ByteBufAllocatorMetric metric =
+      ((ByteBufAllocatorMetricProvider) PooledByteBufAllocator.DEFAULT).metric();
     return metric.usedDirectMemory();
   }
 
   /**
-   * DirectByteBuffers are garbage collected by using a phantom reference and a
-   * reference queue. Every once a while, the JVM checks the reference queue and
-   * cleans the DirectByteBuffers. However, as this doesn't happen
-   * immediately after discarding all references to a DirectByteBuffer, it's
-   * easy to OutOfMemoryError yourself using DirectByteBuffers. This function
-   * explicitly calls the Cleaner method of a DirectByteBuffer.
-   * 
-   * @param toBeDestroyed
-   *          The DirectByteBuffer that will be "cleaned". Utilizes reflection.
-   *          
+   * DirectByteBuffers are garbage collected by using a phantom reference and a reference queue.
+   * Every once a while, the JVM checks the reference queue and cleans the DirectByteBuffers.
+   * However, as this doesn't happen immediately after discarding all references to a
+   * DirectByteBuffer, it's easy to OutOfMemoryError yourself using DirectByteBuffers. This function
+   * explicitly calls the Cleaner method of a DirectByteBuffer. n * The DirectByteBuffer that will
+   * be "cleaned". Utilizes reflection.
    */
   public static void destroyDirectByteBuffer(ByteBuffer toBeDestroyed)
-      throws IllegalArgumentException, IllegalAccessException,
-      InvocationTargetException, SecurityException, NoSuchMethodException {
+    throws IllegalArgumentException, IllegalAccessException, InvocationTargetException,
+    SecurityException, NoSuchMethodException {
 
-    Preconditions.checkArgument(toBeDestroyed.isDirect(),
-        "toBeDestroyed isn't direct!");
+    Preconditions.checkArgument(toBeDestroyed.isDirect(), "toBeDestroyed isn't direct!");
 
     Method cleanerMethod = toBeDestroyed.getClass().getMethod("cleaner");
     cleanerMethod.setAccessible(true);

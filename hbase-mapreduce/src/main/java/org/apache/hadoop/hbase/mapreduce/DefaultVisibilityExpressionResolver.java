@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,13 +25,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -43,6 +39,9 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelOrdinalProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This implementation creates tags by expanding expression using label ordinal. Labels will be
@@ -51,7 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class DefaultVisibilityExpressionResolver implements VisibilityExpressionResolver {
   private static final Logger LOG =
-      LoggerFactory.getLogger(DefaultVisibilityExpressionResolver.class);
+    LoggerFactory.getLogger(DefaultVisibilityExpressionResolver.class);
 
   private Configuration conf;
   private final Map<String, Integer> labels = new HashMap<>();
@@ -98,7 +97,9 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
       } catch (IOException e) {
         LOG.error("Error scanning 'labels' table", e);
       } finally {
-        if (scanner != null) scanner.close();
+        if (scanner != null) {
+          scanner.close();
+        }
       }
     } catch (IOException ioe) {
       LOG.error("Failed reading 'labels' tags", ioe);
@@ -111,12 +112,13 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
           LOG.warn("Error closing 'labels' table", ioe);
         }
       }
-      if (connection != null)
+      if (connection != null) {
         try {
           connection.close();
         } catch (IOException ioe) {
           LOG.warn("Failed close of temporary connection", ioe);
         }
+      }
     }
   }
 
@@ -137,7 +139,7 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
       public String getLabel(int ordinal) {
         // Unused
         throw new UnsupportedOperationException(
-            "getLabel should not be used in VisibilityExpressionResolver");
+          "getLabel should not be used in VisibilityExpressionResolver");
       }
     };
     return VisibilityUtils.createVisibilityExpTags(visExpression, true, false, null, provider);

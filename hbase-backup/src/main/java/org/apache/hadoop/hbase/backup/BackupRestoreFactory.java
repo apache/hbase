@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Factory implementation for backup/restore related jobs
- *
  */
 @InterfaceAudience.Private
 public final class BackupRestoreFactory {
@@ -45,7 +44,7 @@ public final class BackupRestoreFactory {
    */
   public static RestoreJob getRestoreJob(Configuration conf) {
     Class<? extends RestoreJob> cls =
-        conf.getClass(HBASE_INCR_RESTORE_IMPL_CLASS, MapReduceRestoreJob.class, RestoreJob.class);
+      conf.getClass(HBASE_INCR_RESTORE_IMPL_CLASS, MapReduceRestoreJob.class, RestoreJob.class);
     RestoreJob service = ReflectionUtils.newInstance(cls, conf);
     service.setConf(conf);
     return service;
@@ -57,9 +56,8 @@ public final class BackupRestoreFactory {
    * @return backup copy job instance
    */
   public static BackupCopyJob getBackupCopyJob(Configuration conf) {
-    Class<? extends BackupCopyJob> cls =
-        conf.getClass(HBASE_BACKUP_COPY_IMPL_CLASS, MapReduceBackupCopyJob.class,
-          BackupCopyJob.class);
+    Class<? extends BackupCopyJob> cls = conf.getClass(HBASE_BACKUP_COPY_IMPL_CLASS,
+      MapReduceBackupCopyJob.class, BackupCopyJob.class);
     BackupCopyJob service = ReflectionUtils.newInstance(cls, conf);
     service.setConf(conf);
     return service;
@@ -71,9 +69,8 @@ public final class BackupRestoreFactory {
    * @return backup merge job instance
    */
   public static BackupMergeJob getBackupMergeJob(Configuration conf) {
-    Class<? extends BackupMergeJob> cls =
-        conf.getClass(HBASE_BACKUP_MERGE_IMPL_CLASS, MapReduceBackupMergeJob.class,
-          BackupMergeJob.class);
+    Class<? extends BackupMergeJob> cls = conf.getClass(HBASE_BACKUP_MERGE_IMPL_CLASS,
+      MapReduceBackupMergeJob.class, BackupMergeJob.class);
     BackupMergeJob service = ReflectionUtils.newInstance(cls, conf);
     service.setConf(conf);
     return service;

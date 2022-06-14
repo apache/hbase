@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,13 +47,13 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
   /**
    * Construct an IPC client for the cluster {@code clusterId} with the default SocketFactory This
    * method is called with reflection by the RpcClientFactory to create an instance
-   * @param conf configuration
+   * @param conf      configuration
    * @param clusterId the cluster id
    * @param localAddr client socket bind address.
-   * @param metrics the connection metrics
+   * @param metrics   the connection metrics
    */
   public BlockingRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-      MetricsConnection metrics) {
+    MetricsConnection metrics) {
     super(conf, clusterId, localAddr, metrics);
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
   }

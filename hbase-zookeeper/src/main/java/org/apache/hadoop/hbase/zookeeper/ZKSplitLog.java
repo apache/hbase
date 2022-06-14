@@ -1,5 +1,5 @@
 /*
-  * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,8 +31,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Common methods and attributes used by SplitLogManager and SplitLogWorker running distributed
  * splitting of WAL logs.
- * @deprecated  since 2.4.0 and 3.0.0 replaced by procedure-based WAL splitting; see
- *    SplitWALManager.
+ * @deprecated since 2.4.0 and 3.0.0 replaced by procedure-based WAL splitting; see SplitWALManager.
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -44,9 +42,9 @@ public final class ZKSplitLog {
   }
 
   /**
-   * Gets the full path node name for the log file being split.
-   * This method will url encode the filename.
-   * @param zkw zk reference
+   * Gets the full path node name for the log file being split. This method will url encode the
+   * filename.
+   * @param zkw      zk reference
    * @param filename log file name (only the basename)
    */
   public static String getEncodedNodeName(ZKWatcher zkw, String filename) {
@@ -88,8 +86,7 @@ public final class ZKSplitLog {
 
   /**
    * Checks if the given path represents a rescan node.
-   *
-   * @param zkw reference to the {@link ZKWatcher} which also contains configuration and constants
+   * @param zkw  reference to the {@link ZKWatcher} which also contains configuration and constants
    * @param path the absolute path, starts with '/'
    * @return whether the path represents a rescan node
    */
@@ -110,19 +107,17 @@ public final class ZKSplitLog {
     return new Path(new Path(rootdir, HConstants.SPLIT_LOGDIR_NAME), tmpname);
   }
 
-  public static void markCorrupted(Path rootdir, String logFileName,
-      FileSystem fs) {
+  public static void markCorrupted(Path rootdir, String logFileName, FileSystem fs) {
     Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     try {
       fs.createNewFile(file);
     } catch (IOException e) {
-      LOG.warn("Could not flag a log file as corrupted. Failed to create " +
-          file, e);
+      LOG.warn("Could not flag a log file as corrupted. Failed to create " + file, e);
     }
   }
 
-  public static boolean isCorrupted(Path rootdir, String logFileName,
-      FileSystem fs) throws IOException {
+  public static boolean isCorrupted(Path rootdir, String logFileName, FileSystem fs)
+    throws IOException {
     Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     boolean isCorrupt;
     isCorrupt = fs.exists(file);

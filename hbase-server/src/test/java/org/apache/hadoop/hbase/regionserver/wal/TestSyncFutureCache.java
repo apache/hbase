@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -35,7 +36,7 @@ public class TestSyncFutureCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncFutureCache.class);
+    HBaseClassTestRule.forClass(TestSyncFutureCache.class);
 
   @Test
   public void testSyncFutureCacheLifeCycle() throws Exception {
@@ -55,8 +56,8 @@ public class TestSyncFutureCache {
       assertEquals(future3, future0);
       final SyncFuture[] future4 = new SyncFuture[1];
       // From a different thread
-      CompletableFuture.runAsync(() ->
-          future4[0] = cache.getIfPresentOrNew().reset(4, false)).get();
+      CompletableFuture.runAsync(() -> future4[0] = cache.getIfPresentOrNew().reset(4, false))
+        .get();
       assertNotNull(future4[0]);
       assertNotSame(future3, future4[0]);
       // Clean up

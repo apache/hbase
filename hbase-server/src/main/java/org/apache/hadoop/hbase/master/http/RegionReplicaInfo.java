@@ -67,9 +67,8 @@ public final class RegionReplicaInfo {
     this.targetServerName = (result != null && regionInfo != null)
       ? MetaTableAccessor.getTargetServerName(result, regionInfo.getReplicaId())
       : null;
-    this.mergeRegionInfo = (result != null)
-      ? CatalogFamilyFormat.getMergeRegionsWithName(result.rawCells())
-      : null;
+    this.mergeRegionInfo =
+      (result != null) ? CatalogFamilyFormat.getMergeRegionsWithName(result.rawCells()) : null;
 
     if (result != null) {
       PairOfSameType<RegionInfo> daughterRegions = MetaTableAccessor.getDaughterRegions(result);
@@ -96,8 +95,7 @@ public final class RegionReplicaInfo {
     }
 
     return StreamSupport.stream(locations.spliterator(), false)
-      .map(location -> new RegionReplicaInfo(result, location))
-      .collect(Collectors.toList());
+      .map(location -> new RegionReplicaInfo(result, location)).collect(Collectors.toList());
   }
 
   public byte[] getRow() {
@@ -160,43 +158,26 @@ public final class RegionReplicaInfo {
 
     RegionReplicaInfo that = (RegionReplicaInfo) other;
 
-    return new EqualsBuilder()
-      .append(row, that.row)
-      .append(regionInfo, that.regionInfo)
-      .append(regionState, that.regionState)
-      .append(serverName, that.serverName)
-      .append(seqNum, that.seqNum)
-      .append(targetServerName, that.targetServerName)
-      .append(mergeRegionInfo, that.mergeRegionInfo)
-      .append(splitRegionInfo, that.splitRegionInfo)
+    return new EqualsBuilder().append(row, that.row).append(regionInfo, that.regionInfo)
+      .append(regionState, that.regionState).append(serverName, that.serverName)
+      .append(seqNum, that.seqNum).append(targetServerName, that.targetServerName)
+      .append(mergeRegionInfo, that.mergeRegionInfo).append(splitRegionInfo, that.splitRegionInfo)
       .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(row)
-      .append(regionInfo)
-      .append(regionState)
-      .append(serverName)
-      .append(seqNum)
-      .append(targetServerName)
-      .append(mergeRegionInfo)
-      .append(splitRegionInfo)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(row).append(regionInfo).append(regionState)
+      .append(serverName).append(seqNum).append(targetServerName).append(mergeRegionInfo)
+      .append(splitRegionInfo).toHashCode();
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-      .append("row", Bytes.toStringBinary(row))
-      .append("regionInfo", regionInfo)
-      .append("regionState", regionState)
-      .append("serverName", serverName)
-      .append("seqNum", seqNum)
-      .append("transitioningOnServerName", targetServerName)
-      .append("merge*", mergeRegionInfo)
-      .append("split*", splitRegionInfo)
-      .toString();
+      .append("row", Bytes.toStringBinary(row)).append("regionInfo", regionInfo)
+      .append("regionState", regionState).append("serverName", serverName).append("seqNum", seqNum)
+      .append("transitioningOnServerName", targetServerName).append("merge*", mergeRegionInfo)
+      .append("split*", splitRegionInfo).toString();
   }
 }

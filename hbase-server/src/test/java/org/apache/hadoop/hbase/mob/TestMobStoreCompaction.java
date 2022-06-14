@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -88,7 +87,7 @@ public class TestMobStoreCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
+    HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
 
   @Rule
   public TestName name = new TestName();
@@ -119,8 +118,8 @@ public class TestMobStoreCompaction {
       .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    region = HBaseTestingUtil.createRegionAndWAL(regionInfo,
-      UTIL.getDataTestDir(), conf, tableDescriptor, new MobFileCache(conf));
+    region = HBaseTestingUtil.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf,
+      tableDescriptor, new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
 
@@ -176,23 +175,21 @@ public class TestMobStoreCompaction {
     assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("Before compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
 
     List<HStore> stores = region.getStores();
-    for (HStore store: stores) {
+    for (HStore store : stores) {
       // Force major compaction
       store.triggerMajorCompaction();
-      Optional<CompactionContext> context =
-          store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            User.getCurrent());
+      Optional<CompactionContext> context = store.requestCompaction(HStore.PRIORITY_USER,
+        CompactionLifeCycleTracker.DUMMY, User.getCurrent());
       if (!context.isPresent()) {
         continue;
       }
-      region.compact(context.get(), store,
-        NoLimitThroughputController.INSTANCE, User.getCurrent());
+      region.compact(context.get(), store, NoLimitThroughputController.INSTANCE, User.getCurrent());
     }
 
     assertEquals("After compaction: store files", 1, countStoreFiles());
@@ -203,22 +200,18 @@ public class TestMobStoreCompaction {
   }
 
   private static HRegion setMobThreshold(HRegion region, byte[] cfName, long modThreshold) {
-    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
-            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
-            .setMobThreshold(modThreshold)
-            .build();
-    TableDescriptor td = TableDescriptorBuilder
-            .newBuilder(region.getTableDescriptor())
-            .removeColumnFamily(cfName)
-            .setColumnFamily(cfd)
-            .build();
+    ColumnFamilyDescriptor cfd =
+      ColumnFamilyDescriptorBuilder.newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+        .setMobThreshold(modThreshold).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(region.getTableDescriptor())
+      .removeColumnFamily(cfName).setColumnFamily(cfd).build();
     region.setTableDescriptor(td);
     return region;
   }
 
   /**
-   * This test will first generate store files, then bulk load them and trigger the compaction.
-   * When compaction, the cell value will be larger than the threshold.
+   * This test will first generate store files, then bulk load them and trigger the compaction. When
+   * compaction, the cell value will be larger than the threshold.
    */
   @Test
   public void testMobCompactionWithBulkload() throws Exception {
@@ -253,7 +246,7 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
     assertEquals("After compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
   }
 
   @Test
@@ -336,11 +329,11 @@ public class TestMobStoreCompaction {
   private void createHFile(Path path, int rowIdx, byte[] dummyData) throws IOException {
     HFileContext meta = new HFileContextBuilder().build();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
-        .withFileContext(meta).create();
+      .withFileContext(meta).create();
     long now = EnvironmentEdgeManager.currentTime();
     try {
       KeyValue kv = new KeyValue(Bytes.add(STARTROW, Bytes.toBytes(rowIdx)), COLUMN_FAMILY,
-          Bytes.toBytes("colX"), now, dummyData);
+        Bytes.toBytes("colX"), now, dummyData);
       writer.append(kv);
     } finally {
       writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
@@ -373,7 +366,7 @@ public class TestMobStoreCompaction {
 
   private byte[] makeDummyData(int size) {
     byte[] dummyData = new byte[size];
-    new Random().nextBytes(dummyData);
+    Bytes.random(dummyData);
     return dummyData;
   }
 
@@ -407,7 +400,7 @@ public class TestMobStoreCompaction {
         }
         files.add(fileName);
         Path familyPath = MobUtils.getMobFamilyPath(conf, tableDescriptor.getTableName(),
-            familyDescriptor.getNameAsString());
+          familyDescriptor.getNameAsString());
         assertTrue(fs.exists(new Path(familyPath, fileName)));
       }
     } while (hasMore);

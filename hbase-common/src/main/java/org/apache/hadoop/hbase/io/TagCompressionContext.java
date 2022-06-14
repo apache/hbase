@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
@@ -24,7 +23,6 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -43,8 +41,8 @@ public class TagCompressionContext {
   private final Dictionary tagDict;
 
   public TagCompressionContext(Class<? extends Dictionary> dictType, int dictCapacity)
-      throws SecurityException, NoSuchMethodException, InstantiationException,
-      IllegalAccessException, InvocationTargetException {
+    throws SecurityException, NoSuchMethodException, InstantiationException, IllegalAccessException,
+    InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor = dictType.getConstructor();
     tagDict = dictConstructor.newInstance();
     tagDict.init(dictCapacity);
@@ -56,14 +54,12 @@ public class TagCompressionContext {
 
   /**
    * Compress tags one by one and writes to the OutputStream.
-   * @param out Stream to which the compressed tags to be written
-   * @param in Source where tags are available
+   * @param out    Stream to which the compressed tags to be written
+   * @param in     Source where tags are available
    * @param offset Offset for the tags bytes
-   * @param length Length of all tag bytes
-   * @throws IOException
+   * @param length Length of all tag bytes n
    */
-  public void compressTags(OutputStream out, byte[] in, int offset, int length)
-      throws IOException {
+  public void compressTags(OutputStream out, byte[] in, int offset, int length) throws IOException {
     int pos = offset;
     int endOffset = pos + length;
     assert pos < endOffset;
@@ -77,14 +73,13 @@ public class TagCompressionContext {
 
   /**
    * Compress tags one by one and writes to the OutputStream.
-   * @param out Stream to which the compressed tags to be written
-   * @param in Source buffer where tags are available
+   * @param out    Stream to which the compressed tags to be written
+   * @param in     Source buffer where tags are available
    * @param offset Offset for the tags byte buffer
-   * @param length Length of all tag bytes
-   * @throws IOException
+   * @param length Length of all tag bytes n
    */
   public void compressTags(OutputStream out, ByteBuffer in, int offset, int length)
-      throws IOException {
+    throws IOException {
     if (in.hasArray()) {
       compressTags(out, in.array(), offset, length);
     } else {
@@ -102,14 +97,13 @@ public class TagCompressionContext {
 
   /**
    * Uncompress tags from the InputStream and writes to the destination array.
-   * @param src Stream where the compressed tags are available
-   * @param dest Destination array where to write the uncompressed tags
+   * @param src    Stream where the compressed tags are available
+   * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
-   * @param length Length of all tag bytes
-   * @throws IOException
+   * @param length Length of all tag bytes n
    */
   public void uncompressTags(InputStream src, byte[] dest, int offset, int length)
-      throws IOException {
+    throws IOException {
     int endOffset = offset + length;
     while (offset < endOffset) {
       byte status = (byte) src.read();
@@ -134,15 +128,13 @@ public class TagCompressionContext {
 
   /**
    * Uncompress tags from the input ByteBuffer and writes to the destination array.
-   * @param src Buffer where the compressed tags are available
-   * @param dest Destination array where to write the uncompressed tags
+   * @param src    Buffer where the compressed tags are available
+   * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
    * @param length Length of all tag bytes
-   * @return bytes count read from source to uncompress all tags.
-   * @throws IOException
+   * @return bytes count read from source to uncompress all tags. n
    */
-  public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length)
-      throws IOException {
+  public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length) throws IOException {
     int srcBeginPos = src.position();
     int endOffset = offset + length;
     while (offset < endOffset) {
@@ -171,8 +163,8 @@ public class TagCompressionContext {
 
   /**
    * Uncompress tags from the InputStream and writes to the destination buffer.
-   * @param src Stream where the compressed tags are available
-   * @param dest Destination buffer where to write the uncompressed tags
+   * @param src    Stream where the compressed tags are available
+   * @param dest   Destination buffer where to write the uncompressed tags
    * @param length Length of all tag bytes
    * @throws IOException when the dictionary does not have the entry
    */

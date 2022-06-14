@@ -191,6 +191,45 @@ message RestoreParentToChildRegionsPair {
   required string child2_region_name = 3;
 }
 
+enum SnapshotState {
+  SNAPSHOT_PREPARE = 1;
+  SNAPSHOT_PRE_OPERATION = 2;
+  SNAPSHOT_WRITE_SNAPSHOT_INFO = 3;
+  SNAPSHOT_SNAPSHOT_ONLINE_REGIONS = 4;
+  SNAPSHOT_SNAPSHOT_SPLIT_REGIONS = 5;
+  SNAPSHOT_SNAPSHOT_CLOSED_REGIONS = 6;
+  SNAPSHOT_SNAPSHOT_MOB_REGION = 7;
+  SNAPSHOT_CONSOLIDATE_SNAPSHOT = 8;
+  SNAPSHOT_VERIFIER_SNAPSHOT = 9;
+  SNAPSHOT_COMPLETE_SNAPSHOT = 10;
+  SNAPSHOT_POST_OPERATION = 11;
+}
+
+message SnapshotProcedureStateData {
+  required SnapshotDescription snapshot = 1;
+}
+
+message SnapshotRegionProcedureStateData {
+  required RegionInfo region = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
+message SnapshotRegionParameter {
+  required RegionInfo region = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
+message SnapshotVerifyProcedureStateData {
+  required SnapshotDescription snapshot = 1;
+  required RegionInfo region = 2;
+  optional ServerName target_server = 3;
+}
+
+message SnapshotVerifyParameter {
+  required SnapshotDescription snapshot = 1;
+  required RegionInfo region = 2;
+}
+
 enum CloneSnapshotState {
   CLONE_SNAPSHOT_PRE_OPERATION = 1;
   CLONE_SNAPSHOT_WRITE_FS_LAYOUT = 2;
@@ -657,4 +696,19 @@ enum ModifyTableDescriptorState {
 message ModifyTableDescriptorStateData {
   required TableName table_name = 1;
   optional TableSchema modified_table_schema = 2;
+}
+
+enum ModifyStoreFileTrackerState {
+  MODIFY_STORE_FILE_TRACKER_FINISH_PREVIOUS_MIGRATION = 1;
+  MODIFY_STORE_FILE_TRACKER_START_MIGRATION = 2;
+  MODIFY_STORE_FILE_TRACKER_FINISH_MIGRATION = 3;
+}
+
+message ModifyStoreFileTrackerStateData {
+  required TableName table_name = 1;
+  required string dst_sft = 2;
+}
+
+message ModifyColumnFamilyStoreFileTrackerStateData {
+  required bytes family = 1;
 }

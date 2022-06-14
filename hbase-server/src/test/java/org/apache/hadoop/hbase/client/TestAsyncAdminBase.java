@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -85,8 +85,8 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numRegionServers(2).
-        numMasters(2).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(2).numMasters(2).build();
     TEST_UTIL.startMiniCluster(option);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
@@ -129,33 +129,34 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
   }
 
   protected void createTableWithDefaultConf(TableName tableName, int regionReplication)
-      throws IOException {
+    throws IOException {
     createTableWithDefaultConf(tableName, regionReplication, null, FAMILY);
   }
 
   protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys)
-      throws IOException {
+    throws IOException {
     createTableWithDefaultConf(tableName, splitKeys, FAMILY);
   }
 
   protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
-      byte[][] splitKeys) throws IOException {
+    byte[][] splitKeys) throws IOException {
     createTableWithDefaultConf(tableName, regionReplication, splitKeys, FAMILY);
   }
 
   protected void createTableWithDefaultConf(TableName tableName, byte[][] splitKeys,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     createTableWithDefaultConf(tableName, 1, splitKeys, families);
   }
 
   protected void createTableWithDefaultConf(TableName tableName, int regionReplication,
-      byte[][] splitKeys, byte[]... families) throws IOException {
+    byte[][] splitKeys, byte[]... families) throws IOException {
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(regionReplication);
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
-    CompletableFuture<Void> future = splitKeys == null ? admin.createTable(builder.build())
+    CompletableFuture<Void> future = splitKeys == null
+      ? admin.createTable(builder.build())
       : admin.createTable(builder.build(), splitKeys);
     future.join();
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);

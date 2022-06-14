@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,26 +17,35 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -48,12 +57,12 @@ import org.mockito.Mockito;
 /**
  * Test basic snapshot manager functionality
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestSnapshotManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotManager.class);
+    HBaseClassTestRule.forClass(TestSnapshotManager.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -73,7 +82,7 @@ public class TestSnapshotManager {
     }
   }
 
-   private SnapshotManager getNewManager() throws IOException, KeeperException {
+  private SnapshotManager getNewManager() throws IOException, KeeperException {
     return getNewManager(UTIL.getConfiguration());
   }
 
@@ -82,7 +91,7 @@ public class TestSnapshotManager {
   }
 
   private SnapshotManager getNewManager(Configuration conf, int intervalSeconds)
-      throws IOException, KeeperException {
+    throws IOException, KeeperException {
     Mockito.reset(services);
     Mockito.when(services.getConfiguration()).thenReturn(conf);
     Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
@@ -123,14 +132,14 @@ public class TestSnapshotManager {
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
     assertFalse("Manager is in process when there is no current handler",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
     manager.setSnapshotHandlerForTesting(tableName, handler);
     Mockito.when(handler.isFinished()).thenReturn(false);
     assertTrue("Manager isn't in process when handler is running",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
     Mockito.when(handler.isFinished()).thenReturn(true);
     assertFalse("Manager is process when handler isn't running",
-        manager.isTakingSnapshot(tableName));
+      manager.isTakingSnapshot(tableName));
   }
 
   /**
@@ -157,24 +166,24 @@ public class TestSnapshotManager {
 
     // force snapshot feature to be disabled, even if cleaners are present
     conf = new Configuration();
-    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName(),
+      HFileLinkCleaner.class.getName());
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     manager = getNewManager(conf);
     assertFalse("Snapshot should be disabled", isSnapshotSupported(manager));
 
     // cleaners are present, but missing snapshot enabled property
     conf = new Configuration();
-    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
-      SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
+    conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName(),
+      HFileLinkCleaner.class.getName());
     manager = getNewManager(conf);
     assertTrue("Snapshot should be enabled, because cleaners are present",
       isSnapshotSupported(manager));
 
     // Create a "test snapshot"
     Path rootDir = UTIL.getDataTestDir();
-    Path testSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-      "testSnapshotSupportConfiguration", rootDir);
+    Path testSnapshotDir =
+      SnapshotDescriptionUtils.getCompletedSnapshotDir("testSnapshotSupportConfiguration", rootDir);
     fs.mkdirs(testSnapshotDir);
     try {
       // force snapshot feature to be disabled, but snapshots are present
@@ -187,6 +196,63 @@ public class TestSnapshotManager {
     } finally {
       fs.delete(testSnapshotDir, true);
     }
+  }
+
+  @Test
+  public void testDisableSnapshotAndNotDeleteBackReference() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
+    SnapshotManager manager = getNewManager(conf);
+    String cleaners = conf.get(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS);
+    assertTrue(cleaners != null && cleaners.contains(HFileLinkCleaner.class.getName()));
+    Path rootDir = UTIL.getDataTestDir();
+    CommonFSUtils.setRootDir(conf, rootDir);
+
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableLinkName = TableName.valueOf(name.getMethodName() + "-link");
+    String hfileName = "1234567890";
+    String familyName = "cf";
+    RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
+    RegionInfo hriLink = RegionInfoBuilder.newBuilder(tableLinkName).build();
+    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    Path archiveStoreDir =
+      HFileArchiveUtil.getStoreArchivePath(conf, tableName, hri.getEncodedName(), familyName);
+
+    // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
+    Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
+    Path hfilePath = new Path(familyPath, hfileName);
+    fs.createNewFile(hfilePath);
+    // Create link to hfile
+    Path familyLinkPath =
+      getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
+    HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
+    Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
+    assertTrue(fs.exists(linkBackRefDir));
+    FileStatus[] backRefs = fs.listStatus(linkBackRefDir);
+    assertEquals(1, backRefs.length);
+    Path linkBackRef = backRefs[0].getPath();
+
+    // Initialize cleaner
+    HFileCleaner cleaner = new HFileCleaner(10000, Mockito.mock(Stoppable.class), conf, fs,
+      archiveDir, DirScanPool.getHFileCleanerScanPool(conf));
+    // Link backref and HFile cannot be removed
+    cleaner.choreForTesting();
+    assertTrue(fs.exists(linkBackRef));
+    assertTrue(fs.exists(hfilePath));
+
+    fs.rename(CommonFSUtils.getTableDir(rootDir, tableLinkName),
+      CommonFSUtils.getTableDir(archiveDir, tableLinkName));
+    // Link backref can be removed
+    cleaner.choreForTesting();
+    assertFalse("Link should be deleted", fs.exists(linkBackRef));
+    // HFile can be removed
+    cleaner.choreForTesting();
+    assertFalse("HFile should be deleted", fs.exists(hfilePath));
+  }
+
+  private Path getFamilyDirPath(final Path rootDir, final TableName table, final String region,
+    final String family) {
+    return new Path(new Path(CommonFSUtils.getTableDir(rootDir, table), region), family);
   }
 
   private boolean isSnapshotSupported(final SnapshotManager manager) {

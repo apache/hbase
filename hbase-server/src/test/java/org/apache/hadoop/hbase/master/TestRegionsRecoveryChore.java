@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -25,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -33,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerTask;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -58,7 +57,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test for RegionsRecoveryChore
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestRegionsRecoveryChore {
 
   @ClassRule
@@ -78,19 +77,18 @@ public class TestRegionsRecoveryChore {
   private RegionsRecoveryChore regionsRecoveryChore;
 
   private static int regionNo;
-  public static final byte[][] REGION_NAME_LIST = new byte[][]{
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 49, 95, 51},
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 53, 95, 51},
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 54, 95, 52},
-    new byte[]{114, 101, 103, 105, 111, 110, 51, 50, 95, 53},
-    new byte[]{114, 101, 103, 105, 111, 110, 51, 49, 95, 52},
-    new byte[]{114, 101, 103, 105, 111, 110, 51, 48, 95, 51},
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 48, 95, 50},
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 52, 95, 50},
-    new byte[]{114, 101, 103, 105, 111, 110, 50, 57, 95, 50},
-    new byte[]{114, 101, 103, 105, 111, 110, 51, 53, 95, 50},
-    new byte[]{114, 101, 103, 105, 111, 110, 49, 48, 56, 95, 49, 49}
-  };
+  public static final byte[][] REGION_NAME_LIST =
+    new byte[][] { new byte[] { 114, 101, 103, 105, 111, 110, 50, 49, 95, 51 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 50, 53, 95, 51 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 50, 54, 95, 52 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 51, 50, 95, 53 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 51, 49, 95, 52 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 51, 48, 95, 51 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 50, 48, 95, 50 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 50, 52, 95, 50 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 50, 57, 95, 50 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 51, 53, 95, 50 },
+      new byte[] { 114, 101, 103, 105, 111, 110, 49, 48, 56, 95, 49, 49 } };
 
   private Configuration getCustomConf() {
     Configuration conf = HBASE_TESTING_UTILITY.getConfiguration();
@@ -114,14 +112,13 @@ public class TestRegionsRecoveryChore {
   public void testRegionReopensWithStoreRefConfig() throws Exception {
     regionNo = 0;
     ClusterMetrics clusterMetrics = TestRegionsRecoveryChore.getClusterMetrics(4);
-    final Map<ServerName, ServerMetrics> serverMetricsMap =
-      clusterMetrics.getLiveServerMetrics();
+    final Map<ServerName, ServerMetrics> serverMetricsMap = clusterMetrics.getLiveServerMetrics();
     LOG.debug("All Region Names with refCount....");
     for (ServerMetrics serverMetrics : serverMetricsMap.values()) {
       Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
       for (RegionMetrics regionMetrics : regionMetricsMap.values()) {
-        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: " +
-          regionMetrics.getStoreRefCount());
+        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: "
+          + regionMetrics.getStoreRefCount());
       }
     }
     Mockito.when(hMaster.getClusterMetrics()).thenReturn(clusterMetrics);
@@ -143,22 +140,20 @@ public class TestRegionsRecoveryChore {
 
     // Verify that we need to reopen total 3 regions that have refCount > 300
     Mockito.verify(hMaster, Mockito.times(3)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(3))
-      .getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(3)).getRegionInfo(Mockito.any());
   }
 
   @Test
   public void testRegionReopensWithLessThreshold() throws Exception {
     regionNo = 0;
     ClusterMetrics clusterMetrics = TestRegionsRecoveryChore.getClusterMetrics(4);
-    final Map<ServerName, ServerMetrics> serverMetricsMap =
-      clusterMetrics.getLiveServerMetrics();
+    final Map<ServerName, ServerMetrics> serverMetricsMap = clusterMetrics.getLiveServerMetrics();
     LOG.debug("All Region Names with refCount....");
     for (ServerMetrics serverMetrics : serverMetricsMap.values()) {
       Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
       for (RegionMetrics regionMetrics : regionMetricsMap.values()) {
-        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: " +
-          regionMetrics.getStoreRefCount());
+        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: "
+          + regionMetrics.getStoreRefCount());
       }
     }
     Mockito.when(hMaster.getClusterMetrics()).thenReturn(clusterMetrics);
@@ -180,22 +175,20 @@ public class TestRegionsRecoveryChore {
 
     // Verify that we need to reopen only 1 region with refCount > 400
     Mockito.verify(hMaster, Mockito.times(1)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(1))
-      .getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(1)).getRegionInfo(Mockito.any());
   }
 
   @Test
   public void testRegionReopensWithoutStoreRefConfig() throws Exception {
     regionNo = 0;
     ClusterMetrics clusterMetrics = TestRegionsRecoveryChore.getClusterMetrics(10);
-    final Map<ServerName, ServerMetrics> serverMetricsMap =
-      clusterMetrics.getLiveServerMetrics();
+    final Map<ServerName, ServerMetrics> serverMetricsMap = clusterMetrics.getLiveServerMetrics();
     LOG.debug("All Region Names with refCount....");
     for (ServerMetrics serverMetrics : serverMetricsMap.values()) {
       Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
       for (RegionMetrics regionMetrics : regionMetricsMap.values()) {
-        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: " +
-          regionMetrics.getStoreRefCount());
+        LOG.debug("name: " + new String(regionMetrics.getRegionName()) + " refCount: "
+          + regionMetrics.getStoreRefCount());
       }
     }
     Mockito.when(hMaster.getClusterMetrics()).thenReturn(clusterMetrics);
@@ -217,8 +210,7 @@ public class TestRegionsRecoveryChore {
 
     // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
-    Mockito.verify(assignmentManager, Mockito.times(0))
-      .getRegionInfo(Mockito.any());
+    Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any());
   }
 
   private static ClusterMetrics getClusterMetrics(int noOfLiveServer) {
@@ -232,6 +224,11 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public List<ServerName> getDeadServerNames() {
+        return null;
+      }
+
+      @Override
+      public List<ServerName> getDecommissionedServerNames() {
         return null;
       }
 
@@ -290,6 +287,11 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public Map<TableName, RegionStatesCount> getTableRegionStatesCount() {
+        return null;
+      }
+
+      @Override
+      public List<ServerTask> getMasterTasks() {
         return null;
       }
 
@@ -368,7 +370,8 @@ public class TestRegionsRecoveryChore {
         return regionMetricsMap;
       }
 
-      @Override public Map<byte[], UserMetrics> getUserMetrics() {
+      @Override
+      public Map<byte[], UserMetrics> getUserMetrics() {
         return new HashMap<>();
       }
 
@@ -385,6 +388,11 @@ public class TestRegionsRecoveryChore {
       @Override
       public long getLastReportTimestamp() {
         return 0;
+      }
+
+      @Override
+      public List<ServerTask> getTasks() {
+        return null;
       }
 
     };

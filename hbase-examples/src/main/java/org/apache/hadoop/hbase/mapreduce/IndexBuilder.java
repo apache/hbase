@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,32 +34,27 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Example map/reduce job to construct index tables that can be used to quickly
- * find a row based on the value of a column. It demonstrates:
+ * Example map/reduce job to construct index tables that can be used to quickly find a row based on
+ * the value of a column. It demonstrates:
  * <ul>
- * <li>Using TableInputFormat and TableMapReduceUtil to use an HTable as input
- * to a map/reduce job.</li>
+ * <li>Using TableInputFormat and TableMapReduceUtil to use an HTable as input to a map/reduce
+ * job.</li>
  * <li>Passing values from main method to children via the configuration.</li>
- * <li>Using MultiTableOutputFormat to output to multiple tables from a
- * map/reduce job.</li>
+ * <li>Using MultiTableOutputFormat to output to multiple tables from a map/reduce job.</li>
  * <li>A real use case of building a secondary index over a table.</li>
  * </ul>
- *
  * <h3>Usage</h3>
- *
  * <p>
- * Modify ${HADOOP_HOME}/conf/hadoop-env.sh to include the hbase jar, the
- * zookeeper jar (can be found in lib/ directory under HBase root, the examples output directory,
- * and the hbase conf directory in HADOOP_CLASSPATH, and then run
+ * Modify ${HADOOP_HOME}/conf/hadoop-env.sh to include the hbase jar, the zookeeper jar (can be
+ * found in lib/ directory under HBase root, the examples output directory, and the hbase conf
+ * directory in HADOOP_CLASSPATH, and then run
  * <tt><strong>bin/hadoop org.apache.hadoop.hbase.mapreduce.IndexBuilder
  *  TABLE_NAME COLUMN_FAMILY ATTR [ATTR ...]</strong></tt>
  * </p>
- *
  * <p>
- * To run with the sample data provided in index-builder-setup.rb, use the
- * arguments <strong><tt>people attributes name email phone</tt></strong>.
+ * To run with the sample data provided in index-builder-setup.rb, use the arguments
+ * <strong><tt>people attributes name email phone</tt></strong>.
  * </p>
- *
  * <p>
  * This code was written against HBase 0.21 trunk.
  * </p>
@@ -75,15 +69,15 @@ public class IndexBuilder extends Configured implements Tool {
   /**
    * Internal Mapper to be run by Hadoop.
    */
-  public static class Map extends
-      Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Put> {
+  public static class Map
+    extends Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Put> {
     private byte[] family;
     private TreeMap<byte[], ImmutableBytesWritable> indexes;
 
     @Override
     protected void map(ImmutableBytesWritable rowKey, Result result, Context context)
-        throws IOException, InterruptedException {
-      for(java.util.Map.Entry<byte[], ImmutableBytesWritable> index : indexes.entrySet()) {
+      throws IOException, InterruptedException {
+      for (java.util.Map.Entry<byte[], ImmutableBytesWritable> index : indexes.entrySet()) {
         byte[] qualifier = index.getKey();
         ImmutableBytesWritable tableName = index.getValue();
         byte[] value = result.getValue(family, qualifier);
@@ -98,19 +92,18 @@ public class IndexBuilder extends Configured implements Tool {
     }
 
     @Override
-    protected void setup(Context context) throws IOException,
-        InterruptedException {
+    protected void setup(Context context) throws IOException, InterruptedException {
       Configuration configuration = context.getConfiguration();
       String tableName = configuration.get("index.tablename");
       String[] fields = configuration.getStrings("index.fields");
       String familyName = configuration.get("index.familyname");
       family = Bytes.toBytes(familyName);
       indexes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(String field : fields) {
+      for (String field : fields) {
         // if the table is "people" and the field to index is "email", then the
         // index table will be called "people-email"
         indexes.put(Bytes.toBytes(field),
-            new ImmutableBytesWritable(Bytes.toBytes(tableName + "-" + field)));
+          new ImmutableBytesWritable(Bytes.toBytes(tableName + "-" + field)));
       }
     }
   }
@@ -118,7 +111,7 @@ public class IndexBuilder extends Configured implements Tool {
   /**
    * Job configuration.
    */
-  public static Job configureJob(Configuration conf, String [] args) throws IOException {
+  public static Job configureJob(Configuration conf, String[] args) throws IOException {
     String tableName = args[0];
     String columnFamily = args[1];
     System.out.println("****" + tableName);
@@ -140,7 +133,7 @@ public class IndexBuilder extends Configured implements Tool {
 
   public int run(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create(getConf());
-    if(args.length < 3) {
+    if (args.length < 3) {
       System.err.println("Only " + args.length + " arguments supplied, required: 3");
       System.err.println("Usage: IndexBuilder <TABLE_NAME> <COLUMN_FAMILY> <ATTR> [<ATTR> ...]");
       System.exit(-1);

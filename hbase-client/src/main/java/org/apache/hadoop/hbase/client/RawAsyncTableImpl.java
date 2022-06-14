@@ -28,6 +28,8 @@ import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFutures;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -110,7 +113,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private final int maxAttempts;
 
@@ -126,20 +129,21 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     this.operationTimeoutNs = builder.operationTimeoutNs;
     this.scanTimeoutNs = builder.scanTimeoutNs;
     this.pauseNs = builder.pauseNs;
-    if (builder.pauseForCQTBENs < builder.pauseNs) {
+    if (builder.pauseNsForServerOverloaded < builder.pauseNs) {
       LOG.warn(
-        "Configured value of pauseForCQTBENs is {} ms, which is less than" +
-          " the normal pause value {} ms, use the greater one instead",
-        TimeUnit.NANOSECONDS.toMillis(builder.pauseForCQTBENs),
+        "Configured value of pauseNsForServerOverloaded is {} ms, which is less than"
+          + " the normal pause value {} ms, use the greater one instead",
+        TimeUnit.NANOSECONDS.toMillis(builder.pauseNsForServerOverloaded),
         TimeUnit.NANOSECONDS.toMillis(builder.pauseNs));
-      this.pauseForCQTBENs = builder.pauseNs;
+      this.pauseNsForServerOverloaded = builder.pauseNs;
     } else {
-      this.pauseForCQTBENs = builder.pauseForCQTBENs;
+      this.pauseNsForServerOverloaded = builder.pauseNsForServerOverloaded;
     }
     this.maxAttempts = builder.maxAttempts;
     this.startLogErrorsCnt = builder.startLogErrorsCnt;
-    this.defaultScannerCaching = tableName.isSystemTable() ? conn.connConf.getMetaScannerCaching() :
-      conn.connConf.getScannerCaching();
+    this.defaultScannerCaching = tableName.isSystemTable()
+      ? conn.connConf.getMetaScannerCaching()
+      : conn.connConf.getScannerCaching();
     this.defaultScannerMaxResultSize = conn.connConf.getScannerMaxResultSize();
   }
 
@@ -204,7 +208,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return conn.callerFactory.<T> single().table(tableName).row(row).priority(priority)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
-      .pause(pauseNs, TimeUnit.NANOSECONDS).pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS)
+      .pause(pauseNs, TimeUnit.NANOSECONDS)
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
       .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt);
   }
 
@@ -215,9 +220,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   private CompletableFuture<Result> get(Get get, int replicaId) {
     return this.<Result, Get> newCaller(get, readRpcTimeoutNs)
-      .action((controller, loc, stub) -> ConnectionUtils
-        .<Get, GetRequest, GetResponse, Result> call(controller, loc, stub, get,
-          RequestConverter::buildGetRequest, (s, c, req, done) -> s.get(c, req, done),
+      .action((controller, loc, stub) -> ConnectionUtils.<Get, GetRequest, GetResponse,
+        Result> call(controller, loc, stub, get, RequestConverter::buildGetRequest,
+          (s, c, req, done) -> s.get(c, req, done),
           (c, resp) -> ProtobufUtil.toResult(resp.getResult(), c.cellScanner())))
       .replicaId(replicaId).call();
   }
@@ -228,8 +233,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Result> get(Get get) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(get);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(get);
     return tracedFuture(
       () -> timelineConsistentRead(conn.getLocator(), tableName, get, get.getRow(),
         RegionLocateType.CURRENT, replicaId -> get(get, replicaId), readRpcTimeoutNs,
@@ -240,8 +244,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Void> put(Put put) {
     validatePut(put, conn.connConf.getMaxKeyValueSize());
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(put);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(put);
     return tracedFuture(() -> this.<Void, Put> newCaller(put, writeRpcTimeoutNs)
       .action((controller, loc, stub) -> RawAsyncTableImpl.<Put> voidMutate(controller, loc, stub,
         put, RequestConverter::buildMutateRequest))
@@ -250,21 +253,17 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<Void> delete(Delete delete) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(delete);
-    return tracedFuture(
-      () -> this.<Void, Delete> newCaller(delete, writeRpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete> voidMutate(controller, loc,
-          stub, delete, RequestConverter::buildMutateRequest))
-        .call(),
-      supplier);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(delete);
+    return tracedFuture(() -> this.<Void, Delete> newCaller(delete, writeRpcTimeoutNs)
+      .action((controller, loc, stub) -> RawAsyncTableImpl.<Delete> voidMutate(controller, loc,
+        stub, delete, RequestConverter::buildMutateRequest))
+      .call(), supplier);
   }
 
   @Override
   public CompletableFuture<Result> append(Append append) {
     checkHasFamilies(append);
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(append);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(append);
     return tracedFuture(() -> {
       long nonceGroup = conn.getNonceGenerator().getNonceGroup();
       long nonce = conn.getNonceGenerator().newNonce();
@@ -279,8 +278,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public CompletableFuture<Result> increment(Increment increment) {
     checkHasFamilies(increment);
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(increment);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(increment);
     return tracedFuture(() -> {
       long nonceGroup = conn.getNonceGenerator().getNonceGroup();
       long nonce = conn.getNonceGenerator().newNonce();
@@ -313,8 +311,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
-        " an empty byte array, or just do not call this method if you want a null qualifier");
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using"
+        + " an empty byte array, or just do not call this method if you want a null qualifier");
       return this;
     }
 
@@ -339,8 +337,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     }
 
     private void preCheck() {
-      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by" +
-        " calling ifNotExists/ifEquals/ifMatches before executing the request");
+      Preconditions.checkNotNull(op, "condition is null. You need to specify the condition by"
+        + " calling ifNotExists/ifEquals/ifMatches before executing the request");
     }
 
     @Override
@@ -348,7 +346,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       validatePut(put, conn.connConf.getMaxKeyValueSize());
       preCheck();
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(put);
       return tracedFuture(
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
@@ -363,7 +362,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
       preCheck();
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(delete);
       return tracedFuture(
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
@@ -379,17 +379,16 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       preCheck();
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
-      return tracedFuture(
-        () -> RawAsyncTableImpl.this
-          .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
-          .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
-            mutations,
-            (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, family, qualifier, op, value,
-              null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
-            CheckAndMutateResult::isSuccess))
-          .call(),
-        supplier);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(mutations);
+      return tracedFuture(() -> RawAsyncTableImpl.this
+        .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
+          mutations,
+          (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, family, qualifier, op, value,
+            null, timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+          CheckAndMutateResult::isSuccess))
+        .call(), supplier);
     }
   }
 
@@ -422,22 +421,23 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenPut(Put put) {
       validatePut(put, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(put);
       return tracedFuture(
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, put.getPriority(), rpcTimeoutNs)
-        .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc,
-          stub, put,
-          (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null,
-            filter, timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
-          (c, r) -> r.getProcessed()))
-        .call(),
+          .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, put,
+            (rn, p) -> RequestConverter.buildMutateRequest(rn, row, null, null, null, null, filter,
+              timeRange, p, HConstants.NO_NONCE, HConstants.NO_NONCE),
+            (c, r) -> r.getProcessed()))
+          .call(),
         supplier);
     }
 
     @Override
     public CompletableFuture<Boolean> thenDelete(Delete delete) {
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(delete);
       return tracedFuture(
         () -> RawAsyncTableImpl.this.<Boolean> newCaller(row, delete.getPriority(), rpcTimeoutNs)
           .action((controller, loc, stub) -> RawAsyncTableImpl.mutate(controller, loc, stub, delete,
@@ -452,17 +452,16 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     public CompletableFuture<Boolean> thenMutate(RowMutations mutations) {
       validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
       final Supplier<Span> supplier = newTableOperationSpanBuilder()
-        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE);
-      return tracedFuture(
-        () -> RawAsyncTableImpl.this
-          .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
-          .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
-            mutations,
-            (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, null, null, null, null, filter,
-              timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
-            CheckAndMutateResult::isSuccess))
-          .call(),
-        supplier);
+        .setOperation(HBaseSemanticAttributes.Operation.CHECK_AND_MUTATE)
+        .setContainerOperations(mutations);
+      return tracedFuture(() -> RawAsyncTableImpl.this
+        .<Boolean> newCaller(row, mutations.getMaxPriority(), rpcTimeoutNs)
+        .action((controller, loc, stub) -> RawAsyncTableImpl.this.mutateRow(controller, loc, stub,
+          mutations,
+          (rn, rm) -> RequestConverter.buildMultiRequest(rn, row, null, null, null, null, filter,
+            timeRange, rm, HConstants.NO_NONCE, HConstants.NO_NONCE),
+          CheckAndMutateResult::isSuccess))
+        .call(), supplier);
     }
   }
 
@@ -473,13 +472,14 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
 
   @Override
   public CompletableFuture<CheckAndMutateResult> checkAndMutate(CheckAndMutate checkAndMutate) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(checkAndMutate);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(checkAndMutate)
+      .setContainerOperations(checkAndMutate.getAction());
     return tracedFuture(() -> {
-      if (checkAndMutate.getAction() instanceof Put ||
-        checkAndMutate.getAction() instanceof Delete ||
-        checkAndMutate.getAction() instanceof Increment ||
-        checkAndMutate.getAction() instanceof Append) {
+      if (
+        checkAndMutate.getAction() instanceof Put || checkAndMutate.getAction() instanceof Delete
+          || checkAndMutate.getAction() instanceof Increment
+          || checkAndMutate.getAction() instanceof Append
+      ) {
         Mutation mutation = (Mutation) checkAndMutate.getAction();
         if (mutation instanceof Put) {
           validatePut((Put) mutation, conn.connConf.getMaxKeyValueSize());
@@ -505,9 +505,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
         return RawAsyncTableImpl.this
           .<CheckAndMutateResult> newCaller(checkAndMutate.getRow(), rowMutations.getMaxPriority(),
             rpcTimeoutNs)
-          .action((controller, loc, stub) -> RawAsyncTableImpl.this
-            .<CheckAndMutateResult, CheckAndMutateResult> mutateRow(controller, loc, stub,
-              rowMutations,
+          .action((controller, loc, stub) -> RawAsyncTableImpl.this.<CheckAndMutateResult,
+            CheckAndMutateResult> mutateRow(controller, loc, stub, rowMutations,
               (rn, rm) -> RequestConverter.buildMultiRequest(rn, checkAndMutate.getRow(),
                 checkAndMutate.getFamily(), checkAndMutate.getQualifier(),
                 checkAndMutate.getCompareOp(), checkAndMutate.getValue(),
@@ -526,12 +525,10 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public List<CompletableFuture<CheckAndMutateResult>>
     checkAndMutate(List<CheckAndMutate> checkAndMutates) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(checkAndMutates);
-    return tracedFutures(
-      () -> batch(checkAndMutates, rpcTimeoutNs).stream()
-        .map(f -> f.thenApply(r -> (CheckAndMutateResult) r)).collect(toList()),
-      supplier);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(checkAndMutates)
+      .setContainerOperations(checkAndMutates);
+    return tracedFutures(() -> batch(checkAndMutates, rpcTimeoutNs).stream()
+      .map(f -> f.thenApply(r -> (CheckAndMutateResult) r)).collect(toList()), supplier);
   }
 
   // We need the MultiRequest when constructing the org.apache.hadoop.hbase.client.MultiResponse,
@@ -558,8 +555,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
                 loc.getServerName(), multiResp);
               Throwable ex = multiResp.getException(regionName);
               if (ex != null) {
-                future.completeExceptionally(ex instanceof IOException ? ex :
-                  new IOException(
+                future.completeExceptionally(ex instanceof IOException
+                  ? ex
+                  : new IOException(
                     "Failed to mutate row: " + Bytes.toStringBinary(mutation.getRow()), ex));
               } else {
                 future.complete(
@@ -582,8 +580,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     validatePutsInRowMutations(mutations, conn.connConf.getMaxKeyValueSize());
     long nonceGroup = conn.getNonceGenerator().getNonceGroup();
     long nonce = conn.getNonceGenerator().newNonce();
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(mutations);
+    final Supplier<Span> supplier =
+      newTableOperationSpanBuilder().setOperation(mutations).setContainerOperations(mutations);
     return tracedFuture(
       () -> this
         .<Result> newCaller(mutations.getRow(), mutations.getMaxPriority(), writeRpcTimeoutNs)
@@ -609,8 +607,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   @Override
   public void scan(Scan scan, AdvancedScanResultConsumer consumer) {
     new AsyncClientScanner(setDefaultScanConfig(scan), consumer, tableName, conn, retryTimer,
-      pauseNs, pauseForCQTBENs, maxAttempts, scanTimeoutNs, readRpcTimeoutNs, startLogErrorsCnt)
-        .start();
+      pauseNs, pauseNsForServerOverloaded, maxAttempts, scanTimeoutNs, readRpcTimeoutNs,
+      startLogErrorsCnt).start();
   }
 
   private long resultSize2CacheSize(long maxResultSize) {
@@ -619,65 +617,65 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
   }
 
   @Override
-  public ResultScanner getScanner(Scan scan) {
-    return new AsyncTableResultScanner(this, ReflectionUtils.newInstance(scan.getClass(), scan),
-      resultSize2CacheSize(
-        scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize));
+  public AsyncTableResultScanner getScanner(Scan scan) {
+    final long maxCacheSize = resultSize2CacheSize(
+      scan.getMaxResultSize() > 0 ? scan.getMaxResultSize() : defaultScannerMaxResultSize);
+    final Scan scanCopy = ReflectionUtils.newInstance(scan.getClass(), scan);
+    final AsyncTableResultScanner scanner =
+      new AsyncTableResultScanner(tableName, scanCopy, maxCacheSize);
+    scan(scan, scanner);
+    return scanner;
   }
 
   @Override
   public CompletableFuture<List<Result>> scanAll(Scan scan) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(scan);
-    return tracedFuture(() -> {
-      CompletableFuture<List<Result>> future = new CompletableFuture<>();
-      List<Result> scanResults = new ArrayList<>();
-      scan(scan, new AdvancedScanResultConsumer() {
+    CompletableFuture<List<Result>> future = new CompletableFuture<>();
+    List<Result> scanResults = new ArrayList<>();
+    scan(scan, new AdvancedScanResultConsumer() {
 
-        @Override
-        public void onNext(Result[] results, ScanController controller) {
-          scanResults.addAll(Arrays.asList(results));
-        }
+      @Override
+      public void onNext(Result[] results, ScanController controller) {
+        scanResults.addAll(Arrays.asList(results));
+      }
 
-        @Override
-        public void onError(Throwable error) {
-          future.completeExceptionally(error);
-        }
+      @Override
+      public void onError(Throwable error) {
+        future.completeExceptionally(error);
+      }
 
-        @Override
-        public void onComplete() {
-          future.complete(scanResults);
-        }
-      });
-      return future;
-    }, supplier);
+      @Override
+      public void onComplete() {
+        future.complete(scanResults);
+      }
+    });
+    return future;
   }
 
   @Override
   public List<CompletableFuture<Result>> get(List<Get> gets) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(gets);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(gets)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.GET);
     return tracedFutures(() -> batch(gets, readRpcTimeoutNs), supplier);
   }
 
   @Override
   public List<CompletableFuture<Void>> put(List<Put> puts) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(puts);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(puts)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.PUT);
     return tracedFutures(() -> voidMutate(puts), supplier);
   }
 
   @Override
   public List<CompletableFuture<Void>> delete(List<Delete> deletes) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(deletes);
+    final Supplier<Span> supplier = newTableOperationSpanBuilder().setOperation(deletes)
+      .setContainerOperations(HBaseSemanticAttributes.Operation.DELETE);
     return tracedFutures(() -> voidMutate(deletes), supplier);
   }
 
   @Override
   public <T> List<CompletableFuture<T>> batch(List<? extends Row> actions) {
-    final Supplier<Span> supplier = newTableOperationSpanBuilder()
-      .setOperation(actions);
+    final Supplier<Span> supplier =
+      newTableOperationSpanBuilder().setOperation(actions).setContainerOperations(actions);
     return tracedFutures(() -> batch(actions, rpcTimeoutNs), supplier);
   }
 
@@ -705,8 +703,8 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     return conn.callerFactory.batch().table(tableName).actions(actions)
       .operationTimeout(operationTimeoutNs, TimeUnit.NANOSECONDS)
       .rpcTimeout(rpcTimeoutNs, TimeUnit.NANOSECONDS).pause(pauseNs, TimeUnit.NANOSECONDS)
-      .pauseForCQTBE(pauseForCQTBENs, TimeUnit.NANOSECONDS).maxAttempts(maxAttempts)
-      .startLogErrorsCnt(startLogErrorsCnt).call();
+      .pauseForServerOverloaded(pauseNsForServerOverloaded, TimeUnit.NANOSECONDS)
+      .maxAttempts(maxAttempts).startLogErrorsCnt(startLogErrorsCnt).call();
   }
 
   @Override
@@ -738,14 +736,22 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     ServiceCaller<S, R> callable, RegionInfo region, byte[] row) {
     RegionCoprocessorRpcChannelImpl channel = new RegionCoprocessorRpcChannelImpl(conn, tableName,
       region, row, rpcTimeoutNs, operationTimeoutNs);
+    final Span span = Span.current();
     S stub = stubMaker.apply(channel);
     CompletableFuture<R> future = new CompletableFuture<>();
     ClientCoprocessorRpcController controller = new ClientCoprocessorRpcController();
     callable.call(stub, controller, resp -> {
-      if (controller.failed()) {
-        future.completeExceptionally(controller.getFailed());
-      } else {
-        future.complete(resp);
+      try (Scope ignored = span.makeCurrent()) {
+        if (controller.failed()) {
+          final Throwable failure = controller.getFailed();
+          future.completeExceptionally(failure);
+          TraceUtil.setError(span, failure);
+        } else {
+          future.complete(resp);
+          span.setStatus(StatusCode.OK);
+        }
+      } finally {
+        span.end();
       }
     });
     return future;
@@ -778,8 +784,11 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     ServiceCaller<S, R> callable, CoprocessorCallback<R> callback, List<HRegionLocation> locs,
     byte[] endKey, boolean endKeyInclusive, AtomicBoolean locateFinished,
     AtomicInteger unfinishedRequest, HRegionLocation loc, Throwable error) {
+    final Span span = Span.current();
     if (error != null) {
       callback.onError(error);
+      TraceUtil.setError(span, error);
+      span.end();
       return;
     }
     unfinishedRequest.incrementAndGet();
@@ -787,20 +796,24 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     if (locateFinished(region, endKey, endKeyInclusive)) {
       locateFinished.set(true);
     } else {
-      addListener(
-        conn.getLocator().getRegionLocation(tableName, region.getEndKey(), RegionLocateType.CURRENT,
-          operationTimeoutNs),
-        (l, e) -> onLocateComplete(stubMaker, callable, callback, locs, endKey, endKeyInclusive,
-          locateFinished, unfinishedRequest, l, e));
+      addListener(conn.getLocator().getRegionLocation(tableName, region.getEndKey(),
+        RegionLocateType.CURRENT, operationTimeoutNs), (l, e) -> {
+          try (Scope ignored = span.makeCurrent()) {
+            onLocateComplete(stubMaker, callable, callback, locs, endKey, endKeyInclusive,
+              locateFinished, unfinishedRequest, l, e);
+          }
+        });
     }
     addListener(coprocessorService(stubMaker, callable, region, region.getStartKey()), (r, e) -> {
-      if (e != null) {
-        callback.onRegionError(region, e);
-      } else {
-        callback.onRegionComplete(region, r);
-      }
-      if (unfinishedRequest.decrementAndGet() == 0 && locateFinished.get()) {
-        callback.onComplete();
+      try (Scope ignored = span.makeCurrent()) {
+        if (e != null) {
+          callback.onRegionError(region, e);
+        } else {
+          callback.onRegionComplete(region, r);
+        }
+        if (unfinishedRequest.decrementAndGet() == 0 && locateFinished.get()) {
+          callback.onComplete();
+        }
       }
     });
   }
@@ -832,9 +845,9 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CoprocessorServiceBuilderImpl<S, R> fromRow(byte[] startKey, boolean inclusive) {
       this.startKey = Preconditions.checkNotNull(startKey,
-        "startKey is null. Consider using" +
-          " an empty byte array, or just do not call this method if you want to start selection" +
-          " from the first region");
+        "startKey is null. Consider using"
+          + " an empty byte array, or just do not call this method if you want to start selection"
+          + " from the first region");
       this.startKeyInclusive = inclusive;
       return this;
     }
@@ -842,19 +855,29 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
     @Override
     public CoprocessorServiceBuilderImpl<S, R> toRow(byte[] endKey, boolean inclusive) {
       this.endKey = Preconditions.checkNotNull(endKey,
-        "endKey is null. Consider using" +
-          " an empty byte array, or just do not call this method if you want to continue" +
-          " selection to the last region");
+        "endKey is null. Consider using"
+          + " an empty byte array, or just do not call this method if you want to continue"
+          + " selection to the last region");
       this.endKeyInclusive = inclusive;
       return this;
     }
 
     @Override
     public void execute() {
-      addListener(conn.getLocator().getRegionLocation(tableName, startKey,
-        startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER, operationTimeoutNs),
-        (loc, error) -> onLocateComplete(stubMaker, callable, callback, new ArrayList<>(), endKey,
-          endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error));
+      final Span span = newTableOperationSpanBuilder()
+        .setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC).build();
+      try (Scope ignored = span.makeCurrent()) {
+        final RegionLocateType regionLocateType =
+          startKeyInclusive ? RegionLocateType.CURRENT : RegionLocateType.AFTER;
+        final CompletableFuture<HRegionLocation> future = conn.getLocator()
+          .getRegionLocation(tableName, startKey, regionLocateType, operationTimeoutNs);
+        addListener(future, (loc, error) -> {
+          try (Scope ignored1 = span.makeCurrent()) {
+            onLocateComplete(stubMaker, callable, callback, new ArrayList<>(), endKey,
+              endKeyInclusive, new AtomicBoolean(false), new AtomicInteger(0), loc, error);
+          }
+        });
+      }
     }
   }
 

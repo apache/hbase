@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +27,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class contains the mapping information between each region name and
- * its favored region server list. Used by FavoredNodeLoadBalancer set
- * of classes and from unit tests (hence the class is public)
- *
- * All the access to this class is thread-safe.
+ * This class contains the mapping information between each region name and its favored region
+ * server list. Used by FavoredNodeLoadBalancer set of classes and from unit tests (hence the class
+ * is public) All the access to this class is thread-safe.
  */
 @InterfaceAudience.Private
 public class FavoredNodesPlan {
@@ -82,18 +79,19 @@ public class FavoredNodesPlan {
   }
 
   /**
-   * Return the position of the server in the favoredNodes list. Assumes the
-   * favoredNodes list is of size 3.
-   * @return position
+   * Return the position of the server in the favoredNodes list. Assumes the favoredNodes list is of
+   * size 3. n
    */
-  public static Position getFavoredServerPosition(
-      List<ServerName> favoredNodes, ServerName server) {
-    if (favoredNodes == null || server == null ||
-        favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+  public static Position getFavoredServerPosition(List<ServerName> favoredNodes,
+    ServerName server) {
+    if (
+      favoredNodes == null || server == null
+        || favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM
+    ) {
       return null;
     }
     for (Position p : Position.values()) {
-      if (ServerName.isSameAddress(favoredNodes.get(p.ordinal()),server)) {
+      if (ServerName.isSameAddress(favoredNodes.get(p.ordinal()), server)) {
         return p;
       }
     }
@@ -105,8 +103,8 @@ public class FavoredNodesPlan {
    */
   public Map<String, List<ServerName>> getAssignmentMap() {
     // Make a deep copy so changes don't harm our copy of favoredNodesMap.
-    return this.favoredNodesMap.entrySet().stream().
-      collect(Collectors.toMap(k -> k.getKey(), v -> new ArrayList<ServerName>(v.getValue())));
+    return this.favoredNodesMap.entrySet().stream()
+      .collect(Collectors.toMap(k -> k.getKey(), v -> new ArrayList<ServerName>(v.getValue())));
   }
 
   public int size() {
@@ -125,7 +123,7 @@ public class FavoredNodesPlan {
       return false;
     }
     // To compare the map from object o is identical to current assignment map.
-    Map<String, List<ServerName>> comparedMap = ((FavoredNodesPlan)o).favoredNodesMap;
+    Map<String, List<ServerName>> comparedMap = ((FavoredNodesPlan) o).favoredNodesMap;
 
     // compare the size
     if (comparedMap.size() != this.favoredNodesMap.size()) {
@@ -133,8 +131,7 @@ public class FavoredNodesPlan {
     }
 
     // compare each element in the assignment map
-    for (Map.Entry<String, List<ServerName>> entry :
-      comparedMap.entrySet()) {
+    for (Map.Entry<String, List<ServerName>> entry : comparedMap.entrySet()) {
       List<ServerName> serverList = this.favoredNodesMap.get(entry.getKey());
       if (serverList == null && entry.getValue() != null) {
         return false;

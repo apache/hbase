@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,8 +52,7 @@ public abstract class TestModelBase<T> {
     super();
     this.clazz = clazz;
     context = new JAXBContextResolver().getContext(clazz);
-    mapper = new JacksonJaxbJsonProvider().locateMapper(clazz,
-        MediaType.APPLICATION_JSON_TYPE);
+    mapper = new JacksonJaxbJsonProvider().locateMapper(clazz, MediaType.APPLICATION_JSON_TYPE);
   }
 
   protected abstract T buildTestModel();
@@ -68,19 +67,17 @@ public abstract class TestModelBase<T> {
   protected String toJSON(T model) throws JAXBException, IOException {
     StringWriter writer = new StringWriter();
     mapper.writeValue(writer, model);
-//  original marshaller, uncomment this and comment mapper to verify backward compatibility
-//  ((JSONJAXBContext)context).createJSONMarshaller().marshallToJSON(model, writer);
+    // original marshaller, uncomment this and comment mapper to verify backward compatibility
+    // ((JSONJAXBContext)context).createJSONMarshaller().marshallToJSON(model, writer);
     return writer.toString();
   }
 
   public T fromJSON(String json) throws JAXBException, IOException {
-    return (T)
-      mapper.readValue(json, clazz);
+    return (T) mapper.readValue(json, clazz);
   }
 
   public T fromXML(String xml) throws JAXBException {
-    return (T)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
+    return (T) context.createUnmarshaller().unmarshal(new StringReader(xml));
   }
 
   @SuppressWarnings("unused")
@@ -88,14 +85,12 @@ public abstract class TestModelBase<T> {
     return model.createProtobufOutput();
   }
 
-  protected T fromPB(String pb) throws
-      Exception {
-    return (T)clazz.getMethod("getObjectFromMessage", byte[].class).invoke(
-        clazz.getDeclaredConstructor().newInstance(),
-        Base64.getDecoder().decode(AS_PB));
+  protected T fromPB(String pb) throws Exception {
+    return (T) clazz.getMethod("getObjectFromMessage", byte[].class)
+      .invoke(clazz.getDeclaredConstructor().newInstance(), Base64.getDecoder().decode(AS_PB));
   }
 
-  protected abstract  void checkModel(T model);
+  protected abstract void checkModel(T model);
 
   @Test
   public void testBuildModel() throws Exception {
@@ -124,7 +119,7 @@ public abstract class TestModelBase<T> {
       ObjectNode expObj = mapper.readValue(AS_JSON, ObjectNode.class);
       ObjectNode actObj = mapper.readValue(toJSON(buildTestModel()), ObjectNode.class);
       assertEquals(expObj, actObj);
-    } catch(Exception e) {
+    } catch (Exception e) {
       assertEquals(AS_JSON, toJSON(buildTestModel()));
     }
   }
@@ -134,4 +129,3 @@ public abstract class TestModelBase<T> {
     checkModel(fromJSON(AS_JSON));
   }
 }
-

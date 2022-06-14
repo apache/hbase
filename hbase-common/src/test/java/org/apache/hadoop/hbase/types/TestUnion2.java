@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,15 +32,14 @@ import org.junit.experimental.categories.Category;
 @Category({ MiscTests.class, SmallTests.class })
 public class TestUnion2 {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestUnion2.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestUnion2.class);
 
   /**
    * An example <code>Union</code>
    */
   private static class SampleUnion1 extends Union2<Integer, String> {
     private static final byte IS_INTEGER = 0x00;
-    private static final byte IS_STRING  = 0x01;
+    private static final byte IS_STRING = 0x01;
 
     public SampleUnion1() {
       super(new RawInteger(), new RawStringTerminated(Order.DESCENDING, "."));
@@ -76,10 +75,12 @@ public class TestUnion2 {
       String s = null;
       try {
         i = (Integer) val;
-      } catch (ClassCastException ignored) {}
+      } catch (ClassCastException ignored) {
+      }
       try {
         s = (String) val;
-      } catch (ClassCastException ignored) {}
+      } catch (ClassCastException ignored) {
+      }
 
       if (null != i) {
         return 1 + typeA.encodedLength(i);
@@ -98,10 +99,12 @@ public class TestUnion2 {
       String s = null;
       try {
         i = (Integer) val;
-      } catch (ClassCastException ignored) {}
+      } catch (ClassCastException ignored) {
+      }
       try {
         s = (String) val;
-      } catch (ClassCastException ignored) {}
+      } catch (ClassCastException ignored) {
+      }
 
       if (null != i) {
         dst.put(IS_INTEGER);

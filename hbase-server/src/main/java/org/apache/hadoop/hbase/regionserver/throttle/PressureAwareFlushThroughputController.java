@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 
 /**
  * A throughput controller which uses the follow schema to limit throughput
@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
  * <li>If flush pressure is greater than or equal to 1.0, no limitation.</li>
  * <li>In normal case, the max throughput is tuned between
  * {@value #HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND} and
- * {@value #HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND}, using the formula &quot;lower +
- * (upper - lower) * flushPressure&quot;, where flushPressure is in range [0.0, 1.0)</li>
+ * {@value #HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND}, using the formula &quot;lower + (upper -
+ * lower) * flushPressure&quot;, where flushPressure is in range [0.0, 1.0)</li>
  * </ul>
  * @see org.apache.hadoop.hbase.regionserver.HRegionServer#getFlushPressure()
  */
@@ -41,31 +41,31 @@ import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 public class PressureAwareFlushThroughputController extends PressureAwareThroughputController {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PressureAwareFlushThroughputController.class);
+    LoggerFactory.getLogger(PressureAwareFlushThroughputController.class);
 
   public static final String HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND =
-      "hbase.hstore.flush.throughput.upper.bound";
+    "hbase.hstore.flush.throughput.upper.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND =
-      200L * 1024 * 1024;
+    200L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND =
-      "hbase.hstore.flush.throughput.lower.bound";
+    "hbase.hstore.flush.throughput.lower.bound";
 
   private static final long DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND =
-      100L * 1024 * 1024;
+    100L * 1024 * 1024;
 
   public static final String HBASE_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD =
-      "hbase.hstore.flush.throughput.tune.period";
+    "hbase.hstore.flush.throughput.tune.period";
 
   private static final int DEFAULT_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD = 20 * 1000;
 
   // check flush throughput every this size
   public static final String HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL =
-      "hbase.hstore.flush.throughput.control.check.interval";
+    "hbase.hstore.flush.throughput.control.check.interval";
 
   private static final long DEFAULT_HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL =
-      10L * 1024 * 1024;// 10MB
+    10L * 1024 * 1024;// 10MB
 
   @Override
   public void setup(final RegionServerServices server) {
@@ -87,13 +87,12 @@ public class PressureAwareFlushThroughputController extends PressureAwareThrough
     } else {
       // flushPressure is between 0.0 and 1.0, we use a simple linear formula to
       // calculate the throughput limitation.
-      maxThroughputToSet =
-          maxThroughputLowerBound + (maxThroughputUpperBound - maxThroughputLowerBound)
-              * flushPressure;
+      maxThroughputToSet = maxThroughputLowerBound
+        + (maxThroughputUpperBound - maxThroughputLowerBound) * flushPressure;
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("flushPressure is " + flushPressure + ", tune flush throughput to "
-          + throughputDesc(maxThroughputToSet));
+        + throughputDesc(maxThroughputToSet));
     }
     this.setMaxThroughput(maxThroughputToSet);
   }
@@ -104,28 +103,24 @@ public class PressureAwareFlushThroughputController extends PressureAwareThrough
     if (conf == null) {
       return;
     }
-    this.maxThroughputUpperBound =
-        conf.getLong(HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND,
-          DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND);
-    this.maxThroughputLowerBound =
-        conf.getLong(HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND,
-          DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND);
+    this.maxThroughputUpperBound = conf.getLong(HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND,
+      DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND);
+    this.maxThroughputLowerBound = conf.getLong(HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND,
+      DEFAULT_HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND);
     this.offPeakHours = OffPeakHours.getInstance(conf);
-    this.controlPerSize =
-        conf.getLong(HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL,
-          DEFAULT_HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL);
+    this.controlPerSize = conf.getLong(HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL,
+      DEFAULT_HBASE_HSTORE_FLUSH_THROUGHPUT_CONTROL_CHECK_INTERVAL);
     this.setMaxThroughput(this.maxThroughputLowerBound);
-    this.tuningPeriod =
-        getConf().getInt(HBASE_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD,
-          DEFAULT_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD);
+    this.tuningPeriod = getConf().getInt(HBASE_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD,
+      DEFAULT_HSTORE_FLUSH_THROUGHPUT_TUNE_PERIOD);
     LOG.info("Flush throughput configurations, upper bound: "
-        + throughputDesc(maxThroughputUpperBound) + ", lower bound "
-        + throughputDesc(maxThroughputLowerBound) + ", tuning period: " + tuningPeriod + " ms");
+      + throughputDesc(maxThroughputUpperBound) + ", lower bound "
+      + throughputDesc(maxThroughputLowerBound) + ", tuning period: " + tuningPeriod + " ms");
   }
 
   @Override
   public String toString() {
     return "DefaultFlushController [maxThroughput=" + throughputDesc(getMaxThroughput())
-        + ", activeFlushNumber=" + activeOperations.size() + "]";
+      + ", activeFlushNumber=" + activeOperations.size() + "]";
   }
 }

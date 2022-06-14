@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,9 +47,9 @@ public final class AsyncFSOutputHelper {
    * implementation for other {@link FileSystem} which wraps around a {@link FSDataOutputStream}.
    */
   public static AsyncFSOutput createOutput(FileSystem fs, Path f, boolean overwrite,
-      boolean createParent, short replication, long blockSize, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
-      throws IOException, CommonFSUtils.StreamLacksCapabilityException {
+    boolean createParent, short replication, long blockSize, EventLoopGroup eventLoopGroup,
+    Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
+    throws IOException, CommonFSUtils.StreamLacksCapabilityException {
     if (fs instanceof DistributedFileSystem) {
       return FanOutOneBlockAsyncDFSOutputHelper.createOutput((DistributedFileSystem) fs, f,
         overwrite, createParent, replication, blockSize, eventLoopGroup, channelClass, monitor);

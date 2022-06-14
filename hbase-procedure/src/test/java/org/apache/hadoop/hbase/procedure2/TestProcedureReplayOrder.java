@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,7 +52,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int64Value;
 public class TestProcedureReplayOrder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureReplayOrder.class);
+    HBaseClassTestRule.forClass(TestProcedureReplayOrder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureReplayOrder.class);
 
@@ -133,7 +134,7 @@ public class TestProcedureReplayOrder {
   }
 
   private void submitProcedures(final int nthreads, final int nprocPerThread,
-      final Class<?> procClazz) throws Exception {
+    final Class<?> procClazz) throws Exception {
     Thread[] submitThreads = new Thread[nthreads];
     for (int i = 0; i < submitThreads.length; ++i) {
       submitThreads[i] = new Thread() {
@@ -141,8 +142,8 @@ public class TestProcedureReplayOrder {
         public void run() {
           for (int i = 0; i < nprocPerThread; ++i) {
             try {
-              procExecutor.submitProcedure((Procedure)
-                procClazz.getDeclaredConstructor().newInstance());
+              procExecutor
+                .submitProcedure((Procedure) procClazz.getDeclaredConstructor().newInstance());
             } catch (Exception e) {
               LOG.error("unable to instantiate the procedure", e);
               fail("failure during the proc.newInstance(): " + e.getMessage());
@@ -197,7 +198,8 @@ public class TestProcedureReplayOrder {
     }
 
     @Override
-    protected void rollback(TestProcedureEnv env) { }
+    protected void rollback(TestProcedureEnv env) {
+    }
 
     @Override
     protected boolean abort(TestProcedureEnv env) {
@@ -205,15 +207,13 @@ public class TestProcedureReplayOrder {
     }
 
     @Override
-    protected void serializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
       Int64Value.Builder builder = Int64Value.newBuilder().setValue(execId);
       serializer.serialize(builder.build());
     }
 
     @Override
-    protected void deserializeStateData(ProcedureStateSerializer serializer)
-        throws IOException {
+    protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
       Int64Value value = serializer.deserialize(Int64Value.class);
       execId = value.getValue();
       step = 2;
@@ -221,7 +221,8 @@ public class TestProcedureReplayOrder {
   }
 
   public static class TestSingleStepProcedure extends TestProcedure {
-    public TestSingleStepProcedure() { }
+    public TestSingleStepProcedure() {
+    }
 
     @Override
     protected Procedure[] execute(TestProcedureEnv env) throws ProcedureYieldException {
@@ -244,7 +245,8 @@ public class TestProcedureReplayOrder {
   }
 
   public static class TestTwoStepProcedure extends TestProcedure {
-    public TestTwoStepProcedure() { }
+    public TestTwoStepProcedure() {
+    }
 
     @Override
     protected Procedure[] execute(TestProcedureEnv env) throws ProcedureYieldException {

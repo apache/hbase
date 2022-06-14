@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -50,13 +49,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 @RunWith(Parameterized.class)
 public class TestWALCellCodecWithCompression {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
+    HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
 
   private Compression.Algorithm compression;
 
@@ -108,8 +107,8 @@ public class TestWALCellCodecWithCompression {
     fillBytes(value_5, Bytes.toBytes("CAFEBABE"));
 
     Configuration conf = new Configuration(false);
-    WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, true, true, compression));
+    WALCellCodec codec = new WALCellCodec(conf,
+      new CompressionContext(LRUDictionary.class, false, true, true, compression));
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     Encoder encoder = codec.getEncoder(bos);
     encoder.write(createKV(row_1, value_1, 0));
@@ -122,34 +121,34 @@ public class TestWALCellCodecWithCompression {
       Decoder decoder = codec.getDecoder(is);
       decoder.advance();
       KeyValue kv = (KeyValue) decoder.current();
-      assertTrue(Bytes.equals(row_1, 0, row_1.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-      assertTrue(Bytes.equals(value_1, 0, value_1.length,
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertTrue(Bytes.equals(row_1, 0, row_1.length, kv.getRowArray(), kv.getRowOffset(),
+        kv.getRowLength()));
+      assertTrue(Bytes.equals(value_1, 0, value_1.length, kv.getValueArray(), kv.getValueOffset(),
+        kv.getValueLength()));
       decoder.advance();
       kv = (KeyValue) decoder.current();
-      assertTrue(Bytes.equals(row_2, 0, row_2.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-      assertTrue(Bytes.equals(value_2, 0, value_2.length,
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertTrue(Bytes.equals(row_2, 0, row_2.length, kv.getRowArray(), kv.getRowOffset(),
+        kv.getRowLength()));
+      assertTrue(Bytes.equals(value_2, 0, value_2.length, kv.getValueArray(), kv.getValueOffset(),
+        kv.getValueLength()));
       decoder.advance();
       kv = (KeyValue) decoder.current();
-      assertTrue(Bytes.equals(row_3, 0, row_3.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-      assertTrue(Bytes.equals(value_3, 0, value_3.length,
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertTrue(Bytes.equals(row_3, 0, row_3.length, kv.getRowArray(), kv.getRowOffset(),
+        kv.getRowLength()));
+      assertTrue(Bytes.equals(value_3, 0, value_3.length, kv.getValueArray(), kv.getValueOffset(),
+        kv.getValueLength()));
       decoder.advance();
       kv = (KeyValue) decoder.current();
-      assertTrue(Bytes.equals(row_4, 0, row_4.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-      assertTrue(Bytes.equals(value_4, 0, value_4.length,
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertTrue(Bytes.equals(row_4, 0, row_4.length, kv.getRowArray(), kv.getRowOffset(),
+        kv.getRowLength()));
+      assertTrue(Bytes.equals(value_4, 0, value_4.length, kv.getValueArray(), kv.getValueOffset(),
+        kv.getValueLength()));
       decoder.advance();
       kv = (KeyValue) decoder.current();
-      assertTrue(Bytes.equals(row_5, 0, row_5.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
-      assertTrue(Bytes.equals(value_5, 0, value_5.length,
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+      assertTrue(Bytes.equals(row_5, 0, row_5.length, kv.getRowArray(), kv.getRowOffset(),
+        kv.getRowLength()));
+      assertTrue(Bytes.equals(value_5, 0, value_5.length, kv.getValueArray(), kv.getValueOffset(),
+        kv.getValueLength()));
     }
   }
 
@@ -164,14 +163,13 @@ public class TestWALCellCodecWithCompression {
     }
   }
 
-  private void doTest(boolean compressTags, boolean offheapKV)
-      throws Exception {
+  private void doTest(boolean compressTags, boolean offheapKV) throws Exception {
     final byte[] key = Bytes.toBytes("myRow");
     final byte[] value = Bytes.toBytes("myValue");
     Configuration conf = new Configuration(false);
     conf.setBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, compressTags);
-    WALCellCodec codec = new WALCellCodec(conf, new CompressionContext(LRUDictionary.class,
-      false, compressTags));
+    WALCellCodec codec =
+      new WALCellCodec(conf, new CompressionContext(LRUDictionary.class, false, compressTags));
     ByteArrayOutputStream bos = new ByteArrayOutputStream(1024);
     Encoder encoder = codec.getEncoder(bos);
     if (offheapKV) {

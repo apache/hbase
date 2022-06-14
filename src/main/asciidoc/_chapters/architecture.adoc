@@ -1180,7 +1180,7 @@ In 0.94, HLog was the name of the implementation of the WAL.
 You will likely find references to the HLog in documentation tailored to these older versions.
 ====
 
-The WAL resides in HDFS in the _/hbase/WALs/_ directory, with subdirectories per region.
+The WAL resides in HDFS in the _/hbase/WALs/_ directory, with subdirectories per RegionServer.
 
 For more general information about the concept of write ahead logs, see the Wikipedia
 link:http://en.wikipedia.org/wiki/Write-ahead_logging[Write-Ahead Log] article.
@@ -2929,8 +2929,7 @@ Note how the META replication period is distinct from the user-space
 `hbase.regionserver.storefile.refresh.period` value.
 
 ==== Async WAL Replication for META table as of hbase-2.4.0+ ====
-Async WAL replication for META is added as a new feature in 2.4.0. It is still under
-active development. Use with caution. Set
+Async WAL replication for META is added as a new feature in 2.4.0. Set
 `hbase.region.replica.replication.catalog.enabled` to enable async WAL Replication
 for META region replicas. It is off by default.
 
@@ -2951,7 +2950,7 @@ table. And the ability to alter META table is also kept.
 
 ==== Load Balancing META table load ====
 
-hbase-2.4.0 also adds a *new* client-side `LoadBalance` mode. When enabled
+hbase-2.4.0 also adds a new client-side `LoadBalance` mode. When enabled
 client-side, clients will try to read META replicas first before falling back on
 the primary. Before this, the replica lookup mode -- now named `HedgedRead` in
 hbase-2.4.0 -- had clients read the primary and if no response after a
@@ -2968,8 +2967,6 @@ to "LoadBalance". Valid options for this configuration are `None`, `HedgedRead`,
 through to `HedgedRead`, the current default).  Do NOT put this configuration in any
 hbase server-side's configuration, Master or RegionServer (Master could make decisions
 based off stale state -- to be avoided).
-
-`LoadBalance` also is a new feature. Use with caution.
 
 === Memory accounting
 The secondary region replicas refer to the data files of the primary region replica, but they have their own memstores (in HBase-1.1+) and uses block cache as well. However, one distinction is that the secondary region replicas cannot flush the data when there is memory pressure for their memstores. They can only free up memstore memory when the primary region does a flush and this flush is replicated to the secondary. Since in a region server hosting primary replicas for some regions and secondaries for some others, the secondaries might cause extra flushes to the primary regions in the same host. In extreme situations, there can be no memory left for adding new writes coming from the primary via wal replication. For unblocking this situation (and since secondary cannot flush by itself), the secondary is allowed to do a “store file refresh” by doing a file system list operation to pick up new files from primary, and possibly dropping its memstore. This refresh will only be performed if the memstore size of the biggest secondary region replica is at least `hbase.region.replica.storefile.refresh.memstore.multiplier` (default 4) times bigger than the biggest memstore of a primary replica. One caveat is that if this is performed, the secondary can observe partial row updates across column families (since column families are flushed independently). The default should be good to not do this operation frequently. You can set this value to a large number to disable this feature if desired, but be warned that it might cause the replication to block forever.
@@ -3014,20 +3011,6 @@ Instead you can change the number of region replicas per table to increase or de
       Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also requires disabling the replication peer using shell or Admin java class. Replication to secondary region replicas works over standard inter-cluster replication.
     </description>
 </property>
-<property>
-  <name>hbase.region.replica.replication.memstore.enabled</name>
-  <value>true</value>
-  <description>
-    If you set this to `false`, replicas do not receive memstore updates from
-    the primary RegionServer. If you set this to `true`, you can still disable
-    memstore replication on a per-table basis, by setting the table's
-    `REGION_MEMSTORE_REPLICATION` configuration property to `false`. If
-    memstore replication is disabled, the secondaries will only receive
-    updates for events like flushes and bulkloads, and will not have access to
-    data which the primary has not yet flushed. This preserves the guarantee
-    of row-level consistency, even when the read requests `Consistency.TIMELINE`.
-  </description>
-</property>
 
 <property>
     <name>hbase.master.hfilecleaner.ttl</name>
@@ -3048,7 +3031,7 @@ Instead you can change the number of region replicas per table to increase or de
  <name>hbase.region.replica.wait.for.primary.flush</name>
     <value>true</value>
     <description>
-      Whether to wait for observing a full flush cycle from the primary before start serving data in a secondary. Disabling this might cause the secondary region replicas to go back in time for reads between region movements.
+      Whether to wait for observing a full flush cycle from the primary before start serving data in a secondary. Disabling this might cause the secondary region replicas to go back in time for reads between region movements.Please note that if you set per-table property `REGION_MEMSTORE_REPLICATION` to false,`hbase.region.replica.wait.for.primary.flush` will be ignored.
     </description>
 </property>
 ----
@@ -3113,6 +3096,9 @@ You can also see the replica ids shown explicitly in the UI.
 Region replication is a per-table property.
 All tables have `REGION_REPLICATION = 1` by default, which means that there is only one replica per region.
 You can set and change the number of replicas per region of a table by supplying the `REGION_REPLICATION` property in the table descriptor.
+
+There is another per-table property `REGION_MEMSTORE_REPLICATION`.All tables have `REGION_MEMSTORE_REPLICATION = true`
+by default, which means the new data written to the primary region should be replicated. If you set this to `false`, replicas do not receive memstore updates from the primary RegionServer,they will only receive updates for events like flushes and bulkloads, and will not have access to data which the primary has not yet flushed. Please note that if you set `REGION_MEMSTORE_REPLICATION` to false,`hbase.region.replica.wait.for.primary.flush` will be ignored.
 
 
 ==== Shell

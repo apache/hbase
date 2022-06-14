@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.protobuf;
 
 import java.util.ArrayList;
@@ -24,8 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
 import org.apache.hbase.thirdparty.com.google.gson.JsonElement;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
@@ -36,6 +35,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferExce
 import org.apache.hbase.thirdparty.com.google.protobuf.MessageOrBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.util.JsonFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.util.JsonFormat.TypeRegistry;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
@@ -45,8 +45,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * <ul>
  * <li>JSON string: {@link #toJsonElement(MessageOrBuilder)}</li>
  * <li>JSON object (gson): {@link #toJsonElement(MessageOrBuilder)}</li>
- * <li>Java objects (Boolean, Number, String, List, Map):
- * {@link #toJavaObject(JsonElement)}</li>
+ * <li>Java objects (Boolean, Number, String, List, Map): {@link #toJavaObject(JsonElement)}</li>
  * </ul>
  */
 @InterfaceAudience.Private
@@ -57,33 +56,29 @@ public class ProtobufMessageConverter {
 
   static {
     TypeRegistry.Builder builder = TypeRegistry.newBuilder();
-    builder
-      .add(BytesValue.getDescriptor())
-      .add(LockServiceProtos.getDescriptor().getMessageTypes())
+    builder.add(BytesValue.getDescriptor()).add(LockServiceProtos.getDescriptor().getMessageTypes())
       .add(MasterProcedureProtos.getDescriptor().getMessageTypes())
       .add(ProcedureProtos.getDescriptor().getMessageTypes());
     TypeRegistry typeRegistry = builder.build();
-    jsonPrinter = JsonFormat.printer()
-        .usingTypeRegistry(typeRegistry)
-        .omittingInsignificantWhitespace();
+    jsonPrinter =
+      JsonFormat.printer().usingTypeRegistry(typeRegistry).omittingInsignificantWhitespace();
   }
 
   private ProtobufMessageConverter() {
   }
 
   public static String toJsonString(MessageOrBuilder messageOrBuilder)
-      throws InvalidProtocolBufferException {
+    throws InvalidProtocolBufferException {
     return jsonPrinter.print(messageOrBuilder);
   }
 
   private static void removeTypeFromJson(JsonElement json) {
     if (json.isJsonArray()) {
-      for (JsonElement child: json.getAsJsonArray()) {
+      for (JsonElement child : json.getAsJsonArray()) {
         removeTypeFromJson(child);
       }
     } else if (json.isJsonObject()) {
-      Iterator<Entry<String, JsonElement>> iterator =
-          json.getAsJsonObject().entrySet().iterator();
+      Iterator<Entry<String, JsonElement>> iterator = json.getAsJsonObject().entrySet().iterator();
 
       while (iterator.hasNext()) {
         Entry<String, JsonElement> entry = iterator.next();
@@ -97,12 +92,12 @@ public class ProtobufMessageConverter {
   }
 
   public static JsonElement toJsonElement(MessageOrBuilder messageOrBuilder)
-      throws InvalidProtocolBufferException {
+    throws InvalidProtocolBufferException {
     return toJsonElement(messageOrBuilder, true);
   }
 
-  public static JsonElement toJsonElement(MessageOrBuilder messageOrBuilder,
-      boolean removeType) throws InvalidProtocolBufferException {
+  public static JsonElement toJsonElement(MessageOrBuilder messageOrBuilder, boolean removeType)
+    throws InvalidProtocolBufferException {
     String jsonString = toJsonString(messageOrBuilder);
     JsonParser parser = new JsonParser();
     JsonElement element = parser.parse(jsonString);
@@ -140,7 +135,7 @@ public class ProtobufMessageConverter {
       JsonObject object = element.getAsJsonObject();
       Map<String, Object> map = new LinkedHashMap<>();
 
-      for (Entry<String, JsonElement> entry: object.entrySet()) {
+      for (Entry<String, JsonElement> entry : object.entrySet()) {
         Object javaObject = toJavaObject(entry.getValue());
         map.put(entry.getKey(), javaObject);
       }
@@ -152,7 +147,7 @@ public class ProtobufMessageConverter {
   }
 
   public static Object toJavaObject(MessageOrBuilder messageOrBuilder)
-      throws InvalidProtocolBufferException {
+    throws InvalidProtocolBufferException {
     JsonElement element = toJsonElement(messageOrBuilder);
     return toJavaObject(element);
   }

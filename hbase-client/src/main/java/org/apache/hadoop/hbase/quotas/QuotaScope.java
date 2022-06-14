@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,22 +20,21 @@ package org.apache.hadoop.hbase.quotas;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Describe the Scope of the quota rules.
- * The quota can be enforced at the cluster level or at machine level.
+ * Describe the Scope of the quota rules. The quota can be enforced at the cluster level or at
+ * machine level.
  */
 @InterfaceAudience.Public
 public enum QuotaScope {
   /**
-   * The specified throttling rules will be applied at the cluster level.
-   * A limit of 100req/min means 100req/min in total.
-   * If you execute 50req on a machine and then 50req on another machine
+   * The specified throttling rules will be applied at the cluster level. A limit of 100req/min
+   * means 100req/min in total. If you execute 50req on a machine and then 50req on another machine
    * then you have to wait your quota to fill up.
    */
   CLUSTER,
 
   /**
-   * The specified throttling rules will be applied on the machine level.
-   * A limit of 100req/min means that each machine can execute 100req/min.
+   * The specified throttling rules will be applied on the machine level. A limit of 100req/min
+   * means that each machine can execute 100req/min.
    */
   MACHINE,
 }

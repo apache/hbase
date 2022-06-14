@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase;
 
 /**
@@ -19,21 +36,20 @@ package org.apache.hadoop.hbase;
  */
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Counters kept by the distributed WAL split log process.
- * Used by master and regionserver packages.
+ * Counters kept by the distributed WAL split log process. Used by master and regionserver packages.
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALManager
+ *             distributed WAL splitter, see SplitWALManager
  */
 @Deprecated
 @InterfaceAudience.Private
 public class SplitLogCounters {
-  private SplitLogCounters() {}
+  private SplitLogCounters() {
+  }
 
-  //Spnager counters
+  // Spnager counters
   public final static LongAdder tot_mgr_log_split_batch_start = new LongAdder();
   public final static LongAdder tot_mgr_log_split_batch_success = new LongAdder();
   public final static LongAdder tot_mgr_log_split_batch_err = new LongAdder();
@@ -92,7 +108,7 @@ public class SplitLogCounters {
     for (Field fld : cl.getDeclaredFields()) {
       /* Guard against source instrumentation. */
       if ((!fld.isSynthetic()) && (LongAdder.class.isAssignableFrom(fld.getType()))) {
-        ((LongAdder)fld.get(null)).reset();
+        ((LongAdder) fld.get(null)).reset();
       }
     }
   }

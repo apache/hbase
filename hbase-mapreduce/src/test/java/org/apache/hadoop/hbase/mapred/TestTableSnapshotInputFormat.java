@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,12 +53,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableSnapshotInputFormat.class);
+    HBaseClassTestRule.forClass(TestTableSnapshotInputFormat.class);
 
   private static final byte[] aaa = Bytes.toBytes("aaa");
   private static final byte[] after_zzz = Bytes.toBytes("zz{"); // 'z' + 1 => '{'
@@ -79,25 +79,24 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   static class TestTableSnapshotMapper extends MapReduceBase
-      implements TableMap<ImmutableBytesWritable, NullWritable> {
+    implements TableMap<ImmutableBytesWritable, NullWritable> {
     @Override
     public void map(ImmutableBytesWritable key, Result value,
-        OutputCollector<ImmutableBytesWritable, NullWritable> collector, Reporter reporter)
-        throws IOException {
+      OutputCollector<ImmutableBytesWritable, NullWritable> collector, Reporter reporter)
+      throws IOException {
       verifyRowFromMap(key, value);
       collector.collect(key, NullWritable.get());
     }
   }
 
   public static class TestTableSnapshotReducer extends MapReduceBase
-      implements Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
+    implements Reducer<ImmutableBytesWritable, NullWritable, NullWritable, NullWritable> {
     HBaseTestingUtil.SeenRowTracker rowTracker =
       new HBaseTestingUtil.SeenRowTracker(aaa, after_zzz);
 
     @Override
     public void reduce(ImmutableBytesWritable key, Iterator<NullWritable> values,
-        OutputCollector<NullWritable, NullWritable> collector, Reporter reporter)
-        throws IOException {
+      OutputCollector<NullWritable, NullWritable> collector, Reporter reporter) throws IOException {
       rowTracker.addRow(key.get());
     }
 
@@ -117,19 +116,17 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       JobConf job = new JobConf(UTIL.getConfiguration());
       Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
 
-      TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-        COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-        NullWritable.class, job, false, tmpTableDir);
+      TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
+        tmpTableDir);
 
       // TODO: would be better to examine directly the cache instance that results from this
       // config. Currently this is not possible because BlockCache initialization is static.
-      Assert.assertEquals(
-        "Snapshot job should be configured for default LruBlockCache.",
+      Assert.assertEquals("Snapshot job should be configured for default LruBlockCache.",
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
         job.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01);
-      Assert.assertEquals(
-        "Snapshot job should not use BucketCache.",
-        0, job.getFloat("hbase.bucketcache.size", -1), 0.01);
+      Assert.assertEquals("Snapshot job should not use BucketCache.", 0,
+        job.getFloat("hbase.bucketcache.size", -1), 0.01);
     } finally {
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
@@ -142,10 +139,9 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   @Test
   @Override
   public void testWithMockedMapReduceMultiRegion() throws Exception {
-    testWithMockedMapReduce(
-        UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 10, true);
-        // It does not matter whether true or false is given to setLocalityEnabledTo,
-        // because it is not read in testWithMockedMapReduce().
+    testWithMockedMapReduce(UTIL, "testWithMockedMapReduceMultiRegion", 10, 1, 10, true);
+    // It does not matter whether true or false is given to setLocalityEnabledTo,
+    // because it is not read in testWithMockedMapReduce().
   }
 
   @Test
@@ -163,21 +159,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Override
   public void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
-      String snapshotName, Path tmpTableDir) throws Exception {
+    String snapshotName, Path tmpTableDir) throws Exception {
     JobConf job = new JobConf(UTIL.getConfiguration());
-    TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-      COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-      NullWritable.class, job, false, tmpTableDir);
+    TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS, TestTableSnapshotMapper.class,
+      ImmutableBytesWritable.class, NullWritable.class, job, false, tmpTableDir);
   }
 
   @Override
-  protected void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName,
-      int numRegions, int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo)
-      throws Exception {
+  protected void testWithMockedMapReduce(HBaseTestingUtil util, String snapshotName, int numRegions,
+    int numSplitsPerRegion, int expectedNumSplits, boolean setLocalityEnabledTo) throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     try {
-      createTableAndSnapshot(
-        util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
+      createTableAndSnapshot(util, tableName, snapshotName, getStartRow(), getEndRow(), numRegions);
 
       JobConf job = new JobConf(util.getConfiguration());
       // setLocalityEnabledTo is ignored no matter what is specified, so as to test the case that
@@ -186,14 +179,13 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       Path tmpTableDir = util.getDataTestDirOnTestFS(snapshotName);
 
       if (numSplitsPerRegion > 1) {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-                COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, job, false, tmpTableDir, new RegionSplitter.UniformSplit(),
-                numSplitsPerRegion);
+        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
+          TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job,
+          false, tmpTableDir, new RegionSplitter.UniformSplit(), numSplitsPerRegion);
       } else {
-        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName,
-                COLUMNS, TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, job, false, tmpTableDir);
+        TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
+          TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job,
+          false, tmpTableDir);
       }
 
       // mapred doesn't support start and end keys? o.O
@@ -206,7 +198,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
   }
 
   private void verifyWithMockedMapReduce(JobConf job, int numRegions, int expectedNumSplits,
-      byte[] startRow, byte[] stopRow) throws IOException, InterruptedException {
+    byte[] startRow, byte[] stopRow) throws IOException, InterruptedException {
     TableSnapshotInputFormat tsif = new TableSnapshotInputFormat();
     InputSplit[] splits = tsif.getSplits(job, 0);
 
@@ -226,7 +218,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       if (localityEnabled) {
         // When localityEnabled is true, meant to verify split.getLocations()
         // by the following statement:
-        //   Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
+        // Assert.assertTrue(split.getLocations() != null && split.getLocations().length != 0);
         // However, getLocations() of some splits could return an empty array (length is 0),
         // so drop the verification on length.
         // TODO: investigate how to verify split.getLocations() when localityEnabled is true
@@ -257,18 +249,18 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
   @Override
   protected void testWithMapReduceImpl(HBaseTestingUtil util, TableName tableName,
-      String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
-      int expectedNumSplits, boolean shutdownCluster) throws Exception {
+    String snapshotName, Path tableDir, int numRegions, int numSplitsPerRegion,
+    int expectedNumSplits, boolean shutdownCluster) throws Exception {
     doTestWithMapReduce(util, tableName, snapshotName, getStartRow(), getEndRow(), tableDir,
       numRegions, numSplitsPerRegion, expectedNumSplits, shutdownCluster);
   }
 
   // this is also called by the IntegrationTestTableSnapshotInputFormat
   public static void doTestWithMapReduce(HBaseTestingUtil util, TableName tableName,
-      String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
-      int numSplitsPerRegion,int expectedNumSplits, boolean shutdownCluster) throws Exception {
+    String snapshotName, byte[] startRow, byte[] endRow, Path tableDir, int numRegions,
+    int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
 
-    //create the table and snapshot
+    // create the table and snapshot
     createTableAndSnapshot(util, tableName, snapshotName, startRow, endRow, numRegions);
 
     if (shutdownCluster) {
@@ -283,15 +275,14 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJarsForClasses(jobConf,
         TestTableSnapshotInputFormat.class);
 
-      if(numSplitsPerRegion > 1) {
+      if (numSplitsPerRegion > 1) {
         TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
-                TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, jobConf, true, tableDir, new RegionSplitter.UniformSplit(),
-                numSplitsPerRegion);
+          TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, jobConf,
+          true, tableDir, new RegionSplitter.UniformSplit(), numSplitsPerRegion);
       } else {
         TableMapReduceUtil.initTableSnapshotMapJob(snapshotName, COLUMNS,
-                TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
-                NullWritable.class, jobConf, true, tableDir);
+          TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, jobConf,
+          true, tableDir);
       }
 
       jobConf.setReducerClass(TestTableSnapshotInputFormat.TestTableSnapshotReducer.class);

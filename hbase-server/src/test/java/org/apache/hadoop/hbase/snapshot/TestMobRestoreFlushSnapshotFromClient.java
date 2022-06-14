@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,17 +33,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test clone/restore snapshots from the client
- *
- * TODO This is essentially a clone of TestRestoreSnapshotFromClient.  This is worth refactoring
- * this because there will be a few more flavors of snapshots that need to run these tests.
+ * Test clone/restore snapshots from the client TODO This is essentially a clone of
+ * TestRestoreSnapshotFromClient. This is worth refactoring this because there will be a few more
+ * flavors of snapshots that need to run these tests.
  */
-@Category({ClientTests.class,LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestMobRestoreFlushSnapshotFromClient extends TestRestoreFlushSnapshotFromClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobRestoreFlushSnapshotFromClient.class);
+    HBaseClassTestRule.forClass(TestMobRestoreFlushSnapshotFromClient.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -65,7 +64,7 @@ public class TestMobRestoreFlushSnapshotFromClient extends TestRestoreFlushSnaps
 
   @Override
   protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
-      long expectedRows) throws IOException {
+    long expectedRows) throws IOException {
     MobSnapshotTestingUtils.verifyMobRowCount(util, tableName, expectedRows);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -35,24 +33,21 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
-    implements MetricsRegionAggregateSource {
+  implements MetricsRegionAggregateSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionAggregateSourceImpl.class);
 
   private final MetricsExecutorImpl executor = new MetricsExecutorImpl();
 
   private final Set<MetricsRegionSource> regionSources =
-      Collections.newSetFromMap(new ConcurrentHashMap<MetricsRegionSource, Boolean>());
+    Collections.newSetFromMap(new ConcurrentHashMap<MetricsRegionSource, Boolean>());
 
   public MetricsRegionAggregateSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-
-  public MetricsRegionAggregateSourceImpl(String metricsName,
-                                          String metricsDescription,
-                                          String metricsContext,
-                                          String metricsJmxContext) {
+  public MetricsRegionAggregateSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // Every few mins clean the JMX cache.
@@ -76,9 +71,8 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     } catch (Exception e) {
       // Ignored. If this errors out it means that someone is double
       // closing the region source and the region is already nulled out.
-      LOG.info(
-          "Error trying to remove " + toRemove + " from " + this.getClass().getSimpleName(),
-          e);
+      LOG.info("Error trying to remove " + toRemove + " from " + this.getClass().getSimpleName(),
+        e);
     }
     clearCache();
   }
@@ -88,10 +82,9 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
   }
 
   /**
-   * Yes this is a get function that doesn't return anything.  Thanks Hadoop for breaking all
-   * expectations of java programmers.  Instead of returning anything Hadoop metrics expects
+   * Yes this is a get function that doesn't return anything. Thanks Hadoop for breaking all
+   * expectations of java programmers. Instead of returning anything Hadoop metrics expects
    * getMetrics to push the metrics into the collector.
-   *
    * @param collector the collector
    * @param all       get all the metrics regardless of when they last changed.
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.rest.ScannerResultGenerator;
 import org.apache.hadoop.hbase.testclassification.RestTests;
@@ -32,11 +31,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestScannerModel extends TestModelBase<ScannerModel> {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerModel.class);
+    HBaseClassTestRule.forClass(TestScannerModel.class);
 
   private static final String PRIVATE = "private";
   private static final String PUBLIC = "public";
@@ -63,11 +62,10 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","
       + "\"endTime\":1245393318192,\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\","
       + "\"startTime\":1245219839331,\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"],"
-      +"\"labels\":[\"private\",\"public\"],"
-      +"\"limit\":10000}";
+      + "\"labels\":[\"private\",\"public\"]," + "\"limit\":10000}";
 
     AS_PB = "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mfJDj"
-      +"/////B0joB1IHcHJpdmF0ZVIGcHVibGljWABgkE4=";
+      + "/////B0joB1IHcHJpdmF0ZVIGcHVibGljWABgkE4=";
   }
 
   @Override

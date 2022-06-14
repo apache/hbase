@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.factories;
 
 import org.apache.hadoop.hbase.chaos.actions.Action;
@@ -26,8 +25,8 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 
 /**
- * A chaos monkey to kill the active master periodically. Can be run in single master
- * or multi master setup.
+ * A chaos monkey to kill the active master periodically. Can be run in single master or multi
+ * master setup.
  */
 public class MasterKillingMonkeyFactory extends MonkeyFactory {
 
@@ -41,30 +40,27 @@ public class MasterKillingMonkeyFactory extends MonkeyFactory {
     loadProperties();
 
     // Destructive actions to mess things around.
-    Action[] actions1 = new Action[] {
-        new RestartActiveMasterAction(restartActiveMasterSleepTime),
-    };
+    Action[] actions1 =
+      new Action[] { new RestartActiveMasterAction(restartActiveMasterSleepTime), };
 
     // Action to log more info for debugging
-    Action[] actions2 = new Action[] {
-        new DumpClusterStatusAction()
-    };
+    Action[] actions2 = new Action[] { new DumpClusterStatusAction() };
 
     return new PolicyBasedChaosMonkey(properties, util,
-        new PeriodicRandomActionPolicy(action1Period, actions1),
-        new PeriodicRandomActionPolicy(action2Period, actions2));
+      new PeriodicRandomActionPolicy(action1Period, actions1),
+      new PeriodicRandomActionPolicy(action2Period, actions2));
   }
 
   private void loadProperties() {
 
-      action1Period = Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.PERIODIC_ACTION1_PERIOD,
+    action1Period =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
         MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-      action2Period = Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.PERIODIC_ACTION2_PERIOD,
+    action2Period =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION2_PERIOD,
         MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-      restartActiveMasterSleepTime = Long.parseLong(this.properties.getProperty(
-        MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
+    restartActiveMasterSleepTime =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
   }
 

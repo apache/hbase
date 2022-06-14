@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -78,7 +77,7 @@ public class TestCompactor {
 
   // StoreFile.Writer has private ctor and is unwieldy, so this has to be convoluted.
   public static class StoreFileWritersCapture
-      implements Answer<StoreFileWriter>, StripeMultiFileWriter.WriterFactory {
+    implements Answer<StoreFileWriter>, StripeMultiFileWriter.WriterFactory {
     public static class Writer {
       public ArrayList<KeyValue> kvs = new ArrayList<>();
       public TreeMap<byte[], byte[]> data = new TreeMap<>(Bytes.BYTES_COMPARATOR);

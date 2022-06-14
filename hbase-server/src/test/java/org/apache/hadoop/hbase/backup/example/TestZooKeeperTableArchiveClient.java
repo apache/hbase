@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,12 +74,12 @@ import org.slf4j.LoggerFactory;
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
  * specified via the {@link ZKTableArchiveClient}.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestZooKeeperTableArchiveClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZooKeeperTableArchiveClient.class);
+    HBaseClassTestRule.forClass(TestZooKeeperTableArchiveClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZooKeeperTableArchiveClient.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -119,7 +119,7 @@ public class TestZooKeeperTableArchiveClient {
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
     ZKUtil.createWithParents(watcher, archivingZNode);
     rss = mock(RegionServerServices.class);
-    POOL= DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   private static void setupConf(Configuration conf) {
@@ -133,7 +133,7 @@ public class TestZooKeeperTableArchiveClient {
       FileSystem fs = UTIL.getTestFileSystem();
       // cleanup each of the files/directories registered
       for (Path file : toCleanup) {
-      // remove the table and archive directories
+        // remove the table and archive directories
         CommonFSUtils.delete(fs, file, true);
       }
     } catch (IOException e) {
@@ -164,8 +164,7 @@ public class TestZooKeeperTableArchiveClient {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue("Archving didn't get turned on", archivingClient
-        .getArchivingEnabled(TABLE_NAME));
+    assertTrue("Archving didn't get turned on", archivingClient.getArchivingEnabled(TABLE_NAME));
 
     // 2. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup();
@@ -173,8 +172,7 @@ public class TestZooKeeperTableArchiveClient {
 
     // 3. Check enable/disable on a single table
     archivingClient.enableHFileBackupAsync(TABLE_NAME);
-    assertTrue("Archving didn't get turned on", archivingClient
-        .getArchivingEnabled(TABLE_NAME));
+    assertTrue("Archving didn't get turned on", archivingClient.getArchivingEnabled(TABLE_NAME));
 
     // 4. Turn off archiving and make sure its off
     archivingClient.disableHFileBackup(TABLE_NAME);
@@ -205,7 +203,7 @@ public class TestZooKeeperTableArchiveClient {
     regions.add(region);
     Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
-        new CompactedHFilesDischarger(100, stop, rss, false);
+      new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
     compactionCleaner.chore();
     // get the current hfiles in the archive directory
@@ -258,7 +256,7 @@ public class TestZooKeeperTableArchiveClient {
     regions.add(region);
     Mockito.doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
-        new CompactedHFilesDischarger(100, stop, rss, false);
+      new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
     compactionCleaner.chore();
     // create the another table that we don't archive
@@ -267,12 +265,12 @@ public class TestZooKeeperTableArchiveClient {
     regions = new ArrayList<>();
     regions.add(otherRegion);
     Mockito.doReturn(regions).when(rss).getRegions();
-    final CompactedHFilesDischarger compactionCleaner1 = new CompactedHFilesDischarger(100, stop,
-        rss, false);
+    final CompactedHFilesDischarger compactionCleaner1 =
+      new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
     compactionCleaner1.chore();
     // get the current hfiles in the archive directory
-    // Should  be archived
+    // Should be archived
     List<Path> files = getAllFiles(fs, archiveDir);
     if (files == null) {
       CommonFSUtils.logFileSystemState(fs, archiveDir, LOG);
@@ -308,7 +306,7 @@ public class TestZooKeeperTableArchiveClient {
     // know the cleaner ran, so now check all the files again to make sure they are still there
     List<Path> archivedFiles = getAllFiles(fs, archiveDir);
     int archivedForPrimary = 0;
-    for(Path file: archivedFiles) {
+    for (Path file : archivedFiles) {
       String tableName = file.getParent().getParent().getParent().getName();
       // ensure we don't have files from the non-archived table
       assertFalse("Have a file from the non-archived table: " + file, tableName.equals(otherTable));
@@ -318,15 +316,14 @@ public class TestZooKeeperTableArchiveClient {
     }
 
     assertEquals("Not all archived files for the primary table were retained.",
-        initialCountForPrimary, archivedForPrimary);
+      initialCountForPrimary, archivedForPrimary);
 
     // but we still have the archive directory
     assertTrue("Archive directory was deleted via archiver", fs.exists(archiveDir));
   }
 
-
   private void createArchiveDirectory() throws IOException {
-    //create the archive and test directory
+    // create the archive and test directory
     FileSystem fs = UTIL.getTestFileSystem();
     Path archiveDir = getArchiveDir();
     fs.mkdirs(archiveDir);
@@ -343,7 +340,7 @@ public class TestZooKeeperTableArchiveClient {
   }
 
   private HFileCleaner setupAndCreateCleaner(Configuration conf, FileSystem fs, Path archiveDir,
-      Stoppable stop) {
+    Stoppable stop) {
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       LongTermArchivingHFileCleaner.class.getCanonicalName());
     return new HFileCleaner(1000, stop, conf, fs, archiveDir, POOL);
@@ -352,14 +349,14 @@ public class TestZooKeeperTableArchiveClient {
   /**
    * Start archiving table for given hfile cleaner
    * @param tableName table to archive
-   * @param cleaner cleaner to check to make sure change propagated
+   * @param cleaner   cleaner to check to make sure change propagated
    * @return underlying {@link LongTermArchivingHFileCleaner} that is managing archiving
-   * @throws IOException on failure
+   * @throws IOException     on failure
    * @throws KeeperException on failure
    */
   @SuppressWarnings("checkstyle:EmptyBlock")
   private List<BaseHFileCleanerDelegate> turnOnArchiving(String tableName, HFileCleaner cleaner)
-      throws IOException, KeeperException {
+    throws IOException, KeeperException {
     // turn on hfile retention
     LOG.debug("----Starting archiving for table:" + tableName);
     archivingClient.enableHFileBackupAsync(Bytes.toBytes(tableName));
@@ -381,7 +378,7 @@ public class TestZooKeeperTableArchiveClient {
    *         least the expected number of times.
    */
   private CountDownLatch setupCleanerWatching(LongTermArchivingHFileCleaner cleaner,
-      List<BaseHFileCleanerDelegate> cleaners, final int expected) {
+    List<BaseHFileCleanerDelegate> cleaners, final int expected) {
     // replace the cleaner with one that we can can check
     BaseHFileCleanerDelegate delegateSpy = Mockito.spy(cleaner);
     final int[] counter = new int[] { 0 };
@@ -392,7 +389,7 @@ public class TestZooKeeperTableArchiveClient {
       public Iterable<FileStatus> answer(InvocationOnMock invocation) throws Throwable {
         counter[0]++;
         LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to getDeletableFiles for files: "
-            + invocation.getArgument(0));
+          + invocation.getArgument(0));
 
         @SuppressWarnings("unchecked")
         Iterable<FileStatus> ret = (Iterable<FileStatus>) invocation.callRealMethod();
@@ -453,7 +450,7 @@ public class TestZooKeeperTableArchiveClient {
 
   /**
    * Create a new hfile in the passed region
-   * @param region region to operate on
+   * @param region       region to operate on
    * @param columnFamily family for which to add data
    * @throws IOException if doing the put or flush fails
    */
@@ -470,7 +467,7 @@ public class TestZooKeeperTableArchiveClient {
    * @param cleaner the cleaner to use
    */
   private void runCleaner(HFileCleaner cleaner, CountDownLatch finished, Stoppable stop)
-      throws InterruptedException {
+    throws InterruptedException {
     final ChoreService choreService = new ChoreService("CLEANER_SERVER_NAME");
     // run the cleaner
     choreService.scheduleChore(cleaner);

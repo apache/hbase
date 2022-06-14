@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +19,10 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -57,7 +56,7 @@ import org.slf4j.LoggerFactory;
 public class TestRegionReplicaSplit {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicaSplit.class);
+    HBaseClassTestRule.forClass(TestRegionReplicaSplit.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaSplit.class);
 
   private static final int NB_SERVERS = 4;
@@ -120,8 +119,7 @@ public class TestRegionReplicaSplit {
           for (Region r : rs.getRegionServer().getRegions(table.getName())) {
             // Make sure that every region has some data (even for split daughter regions).
             if (RegionReplicaUtil.isDefaultReplica(r.getRegionInfo())) {
-              assertTrue(r.getStore(f).hasReferences() ||
-                r.getStore(f).getStorefiles().size() > 0);
+              assertTrue(r.getStore(f).hasReferences() || r.getStore(f).getStorefiles().size() > 0);
             }
             count++;
           }
@@ -145,10 +143,9 @@ public class TestRegionReplicaSplit {
     Table table = null;
     try {
       table = createTableAndLoadData(tn);
-      final RegionInfo fakeHri =
-        RegionInfoBuilder.newBuilder(table.getName()).setStartKey(Bytes.toBytes("a"))
-          .setEndKey(Bytes.toBytes("b")).setReplicaId(1)
-          .setRegionId(EnvironmentEdgeManager.currentTime()).build();
+      final RegionInfo fakeHri = RegionInfoBuilder.newBuilder(table.getName())
+        .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).setReplicaId(1)
+        .setRegionId(EnvironmentEdgeManager.currentTime()).build();
 
       // To test AssignProcedure can defend this case.
       HTU.getMiniHBaseCluster().getMaster().getAssignmentManager().assign(fakeHri);

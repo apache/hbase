@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -12,7 +10,6 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
-
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -50,7 +47,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
@@ -88,21 +84,21 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 
 /**
- * BucketCache uses {@link BucketAllocator} to allocate/free blocks, and uses
- * BucketCache#ramCache and BucketCache#backingMap in order to
- * determine if a given element is in the cache. The bucket cache can use on-heap or
- * off-heap memory {@link ByteBufferIOEngine} or in a file {@link FileIOEngine} to
- * store/read the block data.
- *
- * <p>Eviction is via a similar algorithm as used in
+ * BucketCache uses {@link BucketAllocator} to allocate/free blocks, and uses BucketCache#ramCache
+ * and BucketCache#backingMap in order to determine if a given element is in the cache. The bucket
+ * cache can use off-heap memory {@link ByteBufferIOEngine} or mmap
+ * {@link ExclusiveMemoryMmapIOEngine} or pmem {@link SharedMemoryMmapIOEngine} or local files
+ * {@link FileIOEngine} to store/read the block data.
+ * <p>
+ * Eviction is via a similar algorithm as used in
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache}
- *
- * <p>BucketCache can be used as mainly a block cache (see
- * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with
- * a BlockCache to decrease CMS GC and heap fragmentation.
- *
- * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
- * blocks) to enlarge cache space via a victim cache.
+ * <p>
+ * BucketCache can be used as mainly a block cache (see
+ * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with a BlockCache to
+ * decrease CMS GC and heap fragmentation.
+ * <p>
+ * It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store blocks) to
+ * enlarge cache space via a victim cache.
  */
 @InterfaceAudience.Private
 public class BucketCache implements BlockCache, HeapSize {
@@ -147,18 +143,17 @@ public class BucketCache implements BlockCache, HeapSize {
   transient ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMap;
 
   /**
-   * Flag if the cache is enabled or not... We shut it off if there are IO
-   * errors for some time, so that Bucket IO exceptions/errors don't bring down
-   * the HBase server.
+   * Flag if the cache is enabled or not... We shut it off if there are IO errors for some time, so
+   * that Bucket IO exceptions/errors don't bring down the HBase server.
    */
   private volatile boolean cacheEnabled;
 
   /**
-   * A list of writer queues.  We have a queue per {@link WriterThread} we have running.
-   * In other words, the work adding blocks to the BucketCache is divided up amongst the
-   * running WriterThreads.  Its done by taking hash of the cache key modulo queue count.
-   * WriterThread when it runs takes whatever has been recently added and 'drains' the entries
-   * to the BucketCache.  It then updates the ramCache and backingMap accordingly.
+   * A list of writer queues. We have a queue per {@link WriterThread} we have running. In other
+   * words, the work adding blocks to the BucketCache is divided up amongst the running
+   * WriterThreads. Its done by taking hash of the cache key modulo queue count. WriterThread when
+   * it runs takes whatever has been recently added and 'drains' the entries to the BucketCache. It
+   * then updates the ramCache and backingMap accordingly.
    */
   transient final ArrayList<BlockingQueue<RAMQueueEntry>> writerQueues = new ArrayList<>();
   transient final WriterThread[] writerThreads;
@@ -178,9 +173,9 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
   /**
-   * Used in tests. If this flag is false and the cache speed is very fast,
-   * bucket cache will skip some blocks when caching. If the flag is true, we
-   * will wait until blocks are flushed to IOEngine.
+   * Used in tests. If this flag is false and the cache speed is very fast, bucket cache will skip
+   * some blocks when caching. If the flag is true, we will wait until blocks are flushed to
+   * IOEngine.
    */
   boolean wait_when_cache = false;
 
@@ -201,8 +196,8 @@ public class BucketCache implements BlockCache, HeapSize {
   private volatile long ioErrorStartTime = -1;
 
   /**
-   * A ReentrantReadWriteLock to lock on a particular block identified by offset.
-   * The purpose of this is to avoid freeing the block which is being read.
+   * A ReentrantReadWriteLock to lock on a particular block identified by offset. The purpose of
+   * this is to avoid freeing the block which is being read.
    * <p>
    */
   transient final IdReadWriteLock<Long> offsetLock;
@@ -229,7 +224,10 @@ public class BucketCache implements BlockCache, HeapSize {
   /** Minimum threshold of cache (when evicting, evict until size < min) */
   private float minFactor;
 
-  /** Free this floating point factor of extra blocks when evicting. For example free the number of blocks requested * (1 + extraFreeFactor) */
+  /**
+   * Free this floating point factor of extra blocks when evicting. For example free the number of
+   * blocks requested * (1 + extraFreeFactor)
+   */
   private float extraFreeFactor;
 
   /** Single access bucket size */
@@ -246,9 +244,9 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
   /**
-   * Use {@link java.security.MessageDigest} class's encryption algorithms to check
-   * persistent file integrity, default algorithm is MD5
-   * */
+   * Use {@link java.security.MessageDigest} class's encryption algorithms to check persistent file
+   * integrity, default algorithm is MD5
+   */
   private String algorithm;
 
   /* Tracing failed Bucket Cache allocations. */
@@ -256,14 +254,14 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final int ALLOCATION_FAIL_LOG_TIME_PERIOD = 60000; // Default 1 minute.
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
+    int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
     this(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-        persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, HBaseConfiguration.create());
+      persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, HBaseConfiguration.create());
   }
 
   public BucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
-      Configuration conf) throws IOException {
+    int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration,
+    Configuration conf) throws IOException {
     boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
     if (useStrongRef) {
       this.offsetLock = new IdReadWriteLockStrongRef<>();
@@ -288,9 +286,10 @@ public class BucketCache implements BlockCache, HeapSize {
 
     sanityCheckConfigs();
 
-    LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor + ", minFactor: " + minFactor +
-        ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: " + singleFactor + ", multiFactor: " + multiFactor +
-        ", memoryFactor: " + memoryFactor + ", useStrongRef: " + useStrongRef);
+    LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor
+      + ", minFactor: " + minFactor + ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: "
+      + singleFactor + ", multiFactor: " + multiFactor + ", memoryFactor: " + memoryFactor
+      + ", useStrongRef: " + useStrongRef);
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
@@ -326,27 +325,34 @@ public class BucketCache implements BlockCache, HeapSize {
     startWriterThreads();
 
     // Run the statistics thread periodically to print the cache statistics log
-    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
+    // TODO: Add means of turning this off. Bit obnoxious running thread just to make a log
     // every five minutes.
-    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
-        statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
-    LOG.info("Started bucket cache; ioengine=" + ioEngineName +
-        ", capacity=" + StringUtils.byteDesc(capacity) +
-      ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
-        writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
-      persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
+    this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), statThreadPeriod,
+      statThreadPeriod, TimeUnit.SECONDS);
+    LOG.info("Started bucket cache; ioengine=" + ioEngineName + ", capacity="
+      + StringUtils.byteDesc(capacity) + ", blockSize=" + StringUtils.byteDesc(blockSize)
+      + ", writerThreadNum=" + writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath="
+      + persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
   }
 
   private void sanityCheckConfigs() {
-    Preconditions.checkArgument(acceptableFactor <= 1 && acceptableFactor >= 0, ACCEPT_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
-    Preconditions.checkArgument(minFactor <= 1 && minFactor >= 0, MIN_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
-    Preconditions.checkArgument(minFactor <= acceptableFactor, MIN_FACTOR_CONFIG_NAME + " must be <= " + ACCEPT_FACTOR_CONFIG_NAME);
-    Preconditions.checkArgument(extraFreeFactor >= 0, EXTRA_FREE_FACTOR_CONFIG_NAME + " must be greater than 0.0");
-    Preconditions.checkArgument(singleFactor <= 1 && singleFactor >= 0, SINGLE_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
-    Preconditions.checkArgument(multiFactor <= 1 && multiFactor >= 0, MULTI_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
-    Preconditions.checkArgument(memoryFactor <= 1 && memoryFactor >= 0, MEMORY_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
-    Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1, SINGLE_FACTOR_CONFIG_NAME + ", " +
-        MULTI_FACTOR_CONFIG_NAME + ", and " + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
+    Preconditions.checkArgument(acceptableFactor <= 1 && acceptableFactor >= 0,
+      ACCEPT_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(minFactor <= 1 && minFactor >= 0,
+      MIN_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(minFactor <= acceptableFactor,
+      MIN_FACTOR_CONFIG_NAME + " must be <= " + ACCEPT_FACTOR_CONFIG_NAME);
+    Preconditions.checkArgument(extraFreeFactor >= 0,
+      EXTRA_FREE_FACTOR_CONFIG_NAME + " must be greater than 0.0");
+    Preconditions.checkArgument(singleFactor <= 1 && singleFactor >= 0,
+      SINGLE_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(multiFactor <= 1 && multiFactor >= 0,
+      MULTI_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument(memoryFactor <= 1 && memoryFactor >= 0,
+      MEMORY_FACTOR_CONFIG_NAME + " must be between 0.0 and 1.0");
+    Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1,
+      SINGLE_FACTOR_CONFIG_NAME + ", " + MULTI_FACTOR_CONFIG_NAME + ", and "
+        + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
   }
 
   /**
@@ -373,21 +379,16 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Get the IOEngine from the IO engine name
-   * @param ioEngineName
-   * @param capacity
-   * @param persistencePath
-   * @return the IOEngine
-   * @throws IOException
+   * Get the IOEngine from the IO engine name nnn * @return the IOEngine n
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity, String persistencePath)
-      throws IOException {
+    throws IOException {
     if (ioEngineName.startsWith("file:") || ioEngineName.startsWith("files:")) {
       // In order to make the usage simple, we only need the prefix 'files:' in
       // document whether one or multiple file(s), but also support 'file:' for
       // the compatibility
-      String[] filePaths = ioEngineName.substring(ioEngineName.indexOf(":") + 1)
-          .split(FileIOEngine.FILE_DELIMITER);
+      String[] filePaths =
+        ioEngineName.substring(ioEngineName.indexOf(":") + 1).split(FileIOEngine.FILE_DELIMITER);
       return new FileIOEngine(capacity, persistencePath != null, filePaths);
     } else if (ioEngineName.startsWith("offheap")) {
       return new ByteBufferIOEngine(capacity);
@@ -403,14 +404,14 @@ public class BucketCache implements BlockCache, HeapSize {
       return new SharedMemoryMmapIOEngine(ioEngineName.substring(5), capacity);
     } else {
       throw new IllegalArgumentException(
-          "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
+        "Don't understand io engine name for cache- prefix with file:, files:, mmap: or offheap");
     }
   }
 
   /**
    * Cache the block with the specified name and buffer.
    * @param cacheKey block's cache key
-   * @param buf block buffer
+   * @param buf      block buffer
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
@@ -419,9 +420,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Cache the block with the specified name and buffer.
-   * @param cacheKey block's cache key
+   * @param cacheKey   block's cache key
    * @param cachedItem block buffer
-   * @param inMemory if block is in-memory
+   * @param inMemory   if block is in-memory
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
@@ -430,13 +431,13 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Cache the block to ramCache
-   * @param cacheKey block's cache key
+   * @param cacheKey   block's cache key
    * @param cachedItem block buffer
-   * @param inMemory if block is in-memory
-   * @param wait if true, blocking wait when queue is full
+   * @param inMemory   if block is in-memory
+   * @param wait       if true, blocking wait when queue is full
    */
   public void cacheBlockWithWait(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
-      boolean wait) {
+    boolean wait) {
     if (cacheEnabled) {
       if (backingMap.containsKey(cacheKey) || ramCache.containsKey(cacheKey)) {
         if (shouldReplaceExistingCacheBlock(cacheKey, cachedItem)) {
@@ -458,14 +459,14 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   protected void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
-      boolean inMemory, boolean wait) {
+    boolean inMemory, boolean wait) {
     if (!cacheEnabled) {
       return;
     }
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
-        new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory);
+      new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory);
     /**
      * Don't use ramCache.put(cacheKey, re) here. because there may be a existing entry with same
      * key in ramCache, the heap size of bucket cache need to update if replacing entry from
@@ -499,15 +500,15 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Get the buffer of the block with the specified key.
-   * @param key block's cache key
-   * @param caching true if the caller caches blocks on cache misses
-   * @param repeat Whether this is a repeat lookup for the same block
+   * @param key                block's cache key
+   * @param caching            true if the caller caches blocks on cache misses
+   * @param repeat             Whether this is a repeat lookup for the same block
    * @param updateCacheMetrics Whether we should update cache metrics or not
    * @return buffer of specified cache key, or null if not in cache
    */
   @Override
   public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
-      boolean updateCacheMetrics) {
+    boolean updateCacheMetrics) {
     if (!cacheEnabled) {
       return null;
     }
@@ -609,7 +610,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * {@link BucketCache#ramCache}. <br/>
    * NOTE:When Evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
    * {@link BucketEntry} could be removed.
-   * @param cacheKey {@link BlockCacheKey} to evict.
+   * @param cacheKey    {@link BlockCacheKey} to evict.
    * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
    * @return true to indicate whether we've evicted successfully or not.
    */
@@ -676,7 +677,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * NOTE:When evict from {@link BucketCache#backingMap},only the matched {@link BlockCacheKey} and
    * {@link BucketEntry} could be removed.
    * @param blockCacheKey {@link BlockCacheKey} to evict.
-   * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
+   * @param bucketEntry   {@link BucketEntry} matched {@link BlockCacheKey} to evict.
    * @return true to indicate whether we've evicted successfully or not.
    */
   boolean evictBucketEntryIfNoRpcReferenced(BlockCacheKey blockCacheKey, BucketEntry bucketEntry) {
@@ -696,7 +697,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /*
-   * Statistics thread.  Periodically output cache statistics to the log.
+   * Statistics thread. Periodically output cache statistics to the log.
    */
   private static class StatisticsThread extends Thread {
     private final BucketCache bucketCache;
@@ -718,25 +719,24 @@ public class BucketCache implements BlockCache, HeapSize {
     long usedSize = bucketAllocator.getUsedSize();
     long freeSize = totalSize - usedSize;
     long cacheSize = getRealCacheSize();
-    LOG.info("failedBlockAdditions=" + cacheStats.getFailedInserts() + ", " +
-        "totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
-        "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
-        "usedSize=" + StringUtils.byteDesc(usedSize) +", " +
-        "cacheSize=" + StringUtils.byteDesc(cacheSize) +", " +
-        "accesses=" + cacheStats.getRequestCount() + ", " +
-        "hits=" + cacheStats.getHitCount() + ", " +
-        "IOhitsPerSecond=" + cacheStats.getIOHitsPerSecond() + ", " +
-        "IOTimePerHit=" + String.format("%.2f", cacheStats.getIOTimePerHit())+ ", " +
-        "hitRatio=" + (cacheStats.getHitCount() == 0 ? "0," :
-          (StringUtils.formatPercent(cacheStats.getHitRatio(), 2)+ ", ")) +
-        "cachingAccesses=" + cacheStats.getRequestCachingCount() + ", " +
-        "cachingHits=" + cacheStats.getHitCachingCount() + ", " +
-        "cachingHitsRatio=" +(cacheStats.getHitCachingCount() == 0 ? "0," :
-          (StringUtils.formatPercent(cacheStats.getHitCachingRatio(), 2)+ ", ")) +
-        "evictions=" + cacheStats.getEvictionCount() + ", " +
-        "evicted=" + cacheStats.getEvictedCount() + ", " +
-        "evictedPerRun=" + cacheStats.evictedPerEviction() + ", " +
-        "allocationFailCount=" + cacheStats.getAllocationFailCount());
+    LOG.info("failedBlockAdditions=" + cacheStats.getFailedInserts() + ", " + "totalSize="
+      + StringUtils.byteDesc(totalSize) + ", " + "freeSize=" + StringUtils.byteDesc(freeSize) + ", "
+      + "usedSize=" + StringUtils.byteDesc(usedSize) + ", " + "cacheSize="
+      + StringUtils.byteDesc(cacheSize) + ", " + "accesses=" + cacheStats.getRequestCount() + ", "
+      + "hits=" + cacheStats.getHitCount() + ", " + "IOhitsPerSecond="
+      + cacheStats.getIOHitsPerSecond() + ", " + "IOTimePerHit="
+      + String.format("%.2f", cacheStats.getIOTimePerHit()) + ", " + "hitRatio="
+      + (cacheStats.getHitCount() == 0
+        ? "0,"
+        : (StringUtils.formatPercent(cacheStats.getHitRatio(), 2) + ", "))
+      + "cachingAccesses=" + cacheStats.getRequestCachingCount() + ", " + "cachingHits="
+      + cacheStats.getHitCachingCount() + ", " + "cachingHitsRatio="
+      + (cacheStats.getHitCachingCount() == 0
+        ? "0,"
+        : (StringUtils.formatPercent(cacheStats.getHitCachingRatio(), 2) + ", "))
+      + "evictions=" + cacheStats.getEvictionCount() + ", " + "evicted="
+      + cacheStats.getEvictedCount() + ", " + "evictedPerRun=" + cacheStats.evictedPerEviction()
+      + ", " + "allocationFailCount=" + cacheStats.getAllocationFailCount());
     cacheStats.reset();
   }
 
@@ -769,12 +769,10 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * This method will find the buckets that are minimally occupied
-   * and are not reference counted and will free them completely
-   * without any constraint on the access times of the elements,
-   * and as a process will completely free at most the number of buckets
-   * passed, sometimes it might not due to changing refCounts
-   *
+   * This method will find the buckets that are minimally occupied and are not reference counted and
+   * will free them completely without any constraint on the access times of the elements, and as a
+   * process will completely free at most the number of buckets passed, sometimes it might not due
+   * to changing refCounts
    * @param completelyFreeBucketsNeeded number of buckets to free
    **/
   private void freeEntireBuckets(int completelyFreeBucketsNeeded) {
@@ -788,7 +786,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       });
       Set<Integer> candidateBuckets =
-          bucketAllocator.getLeastFilledBuckets(inUseBuckets, completelyFreeBucketsNeeded);
+        bucketAllocator.getLeastFilledBuckets(inUseBuckets, completelyFreeBucketsNeeded);
       for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
         if (candidateBuckets.contains(bucketAllocator.getBucketIndex(entry.getValue().offset()))) {
           evictBucketEntryIfNoRpcReferenced(entry.getKey(), entry.getValue());
@@ -798,9 +796,9 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Free the space if the used size reaches acceptableSize() or one size block
-   * couldn't be allocated. When freeing the space, we use the LRU algorithm and
-   * ensure there must be some blocks evicted
+   * Free the space if the used size reaches acceptableSize() or one size block couldn't be
+   * allocated. When freeing the space, we use the LRU algorithm and ensure there must be some
+   * blocks evicted
    * @param why Why we are being called
    */
   private void freeSpace(final String why) {
@@ -812,7 +810,7 @@ public class BucketCache implements BlockCache, HeapSize {
       freeInProgress = true;
       long bytesToFreeWithoutExtra = 0;
       // Calculate free byte for each bucketSizeinfo
-      StringBuilder msgBuffer = LOG.isDebugEnabled()? new StringBuilder(): null;
+      StringBuilder msgBuffer = LOG.isDebugEnabled() ? new StringBuilder() : null;
       BucketAllocator.IndexStatistics[] stats = bucketAllocator.getIndexStatistics();
       long[] bytesToFreeForBucket = new long[stats.length];
       for (int i = 0; i < stats.length; i++) {
@@ -838,21 +836,22 @@ public class BucketCache implements BlockCache, HeapSize {
       long currentSize = bucketAllocator.getUsedSize();
       long totalSize = bucketAllocator.getTotalSize();
       if (LOG.isDebugEnabled() && msgBuffer != null) {
-        LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString() +
-          " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize=" +
-          StringUtils.byteDesc(realCacheSize.sum()) + ", total=" + StringUtils.byteDesc(totalSize));
+        LOG.debug("Free started because \"" + why + "\"; " + msgBuffer.toString()
+          + " of current used=" + StringUtils.byteDesc(currentSize) + ", actual cacheSize="
+          + StringUtils.byteDesc(realCacheSize.sum()) + ", total="
+          + StringUtils.byteDesc(totalSize));
       }
 
-      long bytesToFreeWithExtra = (long) Math.floor(bytesToFreeWithoutExtra
-          * (1 + extraFreeFactor));
+      long bytesToFreeWithExtra =
+        (long) Math.floor(bytesToFreeWithoutExtra * (1 + extraFreeFactor));
 
       // Instantiate priority buckets
-      BucketEntryGroup bucketSingle = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, getPartitionSize(singleFactor));
-      BucketEntryGroup bucketMulti = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, getPartitionSize(multiFactor));
-      BucketEntryGroup bucketMemory = new BucketEntryGroup(bytesToFreeWithExtra,
-          blockSize, getPartitionSize(memoryFactor));
+      BucketEntryGroup bucketSingle =
+        new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(singleFactor));
+      BucketEntryGroup bucketMulti =
+        new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(multiFactor));
+      BucketEntryGroup bucketMemory =
+        new BucketEntryGroup(bytesToFreeWithExtra, blockSize, getPartitionSize(memoryFactor));
 
       // Scan entire map putting bucket entry into appropriate bucket entry
       // group
@@ -873,8 +872,8 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
 
-      PriorityQueue<BucketEntryGroup> bucketQueue = new PriorityQueue<>(3,
-          Comparator.comparingLong(BucketEntryGroup::overflow));
+      PriorityQueue<BucketEntryGroup> bucketQueue =
+        new PriorityQueue<>(3, Comparator.comparingLong(BucketEntryGroup::overflow));
 
       bucketQueue.add(bucketSingle);
       bucketQueue.add(bucketMulti);
@@ -887,8 +886,8 @@ public class BucketCache implements BlockCache, HeapSize {
       while ((bucketGroup = bucketQueue.poll()) != null) {
         long overflow = bucketGroup.overflow();
         if (overflow > 0) {
-          long bucketBytesToFree = Math.min(overflow,
-              (bytesToFreeWithoutExtra - bytesFreed) / remainingBuckets);
+          long bucketBytesToFree =
+            Math.min(overflow, (bytesToFreeWithoutExtra - bytesFreed) / remainingBuckets);
           bytesFreed += bucketGroup.free(bucketBytesToFree);
         }
         remainingBuckets--;
@@ -915,8 +914,7 @@ public class BucketCache implements BlockCache, HeapSize {
       // there might be some buckets where the occupancy is very sparse and thus are not
       // yielding the free for the other bucket sizes, the fix for this to evict some
       // of the buckets, we do this by evicting the buckets that are least fulled
-      freeEntireBuckets(DEFAULT_FREE_ENTIRE_BLOCK_FACTOR *
-          bucketSizesAboveThresholdCount(1.0f));
+      freeEntireBuckets(DEFAULT_FREE_ENTIRE_BLOCK_FACTOR * bucketSizesAboveThresholdCount(1.0f));
 
       if (LOG.isDebugEnabled()) {
         long single = bucketSingle.totalSize();
@@ -924,11 +922,9 @@ public class BucketCache implements BlockCache, HeapSize {
         long memory = bucketMemory.totalSize();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Bucket cache free space completed; " + "freed="
-            + StringUtils.byteDesc(bytesFreed) + ", " + "total="
-            + StringUtils.byteDesc(totalSize) + ", " + "single="
-            + StringUtils.byteDesc(single) + ", " + "multi="
-            + StringUtils.byteDesc(multi) + ", " + "memory="
-            + StringUtils.byteDesc(memory));
+            + StringUtils.byteDesc(bytesFreed) + ", " + "total=" + StringUtils.byteDesc(totalSize)
+            + ", " + "single=" + StringUtils.byteDesc(single) + ", " + "multi="
+            + StringUtils.byteDesc(multi) + ", " + "memory=" + StringUtils.byteDesc(memory));
         }
       }
 
@@ -945,6 +941,7 @@ public class BucketCache implements BlockCache, HeapSize {
   class WriterThread extends Thread {
     private final BlockingQueue<RAMQueueEntry> inputQueue;
     private volatile boolean writerEnabled = true;
+    private final ByteBuffer metaBuff = ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE);
 
     WriterThread(BlockingQueue<RAMQueueEntry> queue) {
       super("BucketCacheWriterThread");
@@ -970,7 +967,7 @@ public class BucketCache implements BlockCache, HeapSize {
                 break;
               }
             }
-            doDrain(entries);
+            doDrain(entries, metaBuff);
           } catch (Exception ioe) {
             LOG.error("WriterThread encountered error", ioe);
           }
@@ -991,7 +988,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * bucketAllocator do not free its memory.
    * @see BlockCacheUtil#shouldReplaceExistingCacheBlock(BlockCache blockCache,BlockCacheKey
    *      cacheKey, Cacheable newBlock)
-   * @param key Block cache key
+   * @param key         Block cache key
    * @param bucketEntry Bucket entry to put into backingMap.
    */
   protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
@@ -1007,11 +1004,11 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Prepare and return a warning message for Bucket Allocator Exception
    * @param fle The exception
-   * @param re The RAMQueueEntry for which the exception was thrown.
+   * @param re  The RAMQueueEntry for which the exception was thrown.
    * @return A warning message created from the input RAMQueueEntry object.
    */
   private static String getAllocationFailWarningMessage(final BucketAllocatorException fle,
-      final RAMQueueEntry re) {
+    final RAMQueueEntry re) {
     final StringBuilder sb = new StringBuilder();
     sb.append("Most recent failed allocation after ");
     sb.append(ALLOCATION_FAIL_LOG_TIME_PERIOD);
@@ -1044,9 +1041,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * are passed in even if failure being sure to remove from ramCache else we'll never undo the
    * references and we'll OOME.
    * @param entries Presumes list passed in here will be processed by this invocation only. No
-   *          interference expected.
+   *                interference expected.
    */
-  void doDrain(final List<RAMQueueEntry> entries) throws InterruptedException {
+  void doDrain(final List<RAMQueueEntry> entries, ByteBuffer metaBuff) throws InterruptedException {
     if (entries.isEmpty()) {
       return;
     }
@@ -1074,9 +1071,14 @@ public class BucketCache implements BlockCache, HeapSize {
         if (ramCache.containsKey(cacheKey)) {
           blocksByHFile.add(cacheKey);
         }
-
-        BucketEntry bucketEntry = re.writeToCache(ioEngine, bucketAllocator, realCacheSize,
-          this::createRecycler);
+        // Reset the position for reuse.
+        // It should be guaranteed that the data in the metaBuff has been transferred to the
+        // ioEngine safely. Otherwise, this reuse is problematic. Fortunately, the data is already
+        // transferred with our current IOEngines. Should take care, when we have new kinds of
+        // IOEngine in the future.
+        metaBuff.clear();
+        BucketEntry bucketEntry =
+          re.writeToCache(ioEngine, bucketAllocator, realCacheSize, this::createRecycler, metaBuff);
         // Successfully added. Up index and add bucketEntry. Clear io exceptions.
         bucketEntries[index] = bucketEntry;
         if (ioErrorStartTime > 0) {
@@ -1086,7 +1088,9 @@ public class BucketCache implements BlockCache, HeapSize {
       } catch (BucketAllocatorException fle) {
         long currTs = EnvironmentEdgeManager.currentTime();
         cacheStats.allocationFailed(); // Record the warning.
-        if (allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD) {
+        if (
+          allocFailLogPrevTs == 0 || (currTs - allocFailLogPrevTs) > ALLOCATION_FAIL_LOG_TIME_PERIOD
+        ) {
           LOG.warn(getAllocationFailWarningMessage(fle, re));
           allocFailLogPrevTs = currTs;
         }
@@ -1159,12 +1163,12 @@ public class BucketCache implements BlockCache, HeapSize {
    * Blocks until elements available in {@code q} then tries to grab as many as possible before
    * returning.
    * @param receptacle Where to stash the elements taken from queue. We clear before we use it just
-   *          in case.
-   * @param q The queue to take from.
+   *                   in case.
+   * @param q          The queue to take from.
    * @return {@code receptacle} laden with elements taken from the queue or empty if none found.
    */
   static List<RAMQueueEntry> getRAMQueueEntries(BlockingQueue<RAMQueueEntry> q,
-      List<RAMQueueEntry> receptacle) throws InterruptedException {
+    List<RAMQueueEntry> receptacle) throws InterruptedException {
     // Clear sets all entries to null and sets size to 0. We retain allocations. Presume it
     // ok even if list grew to accommodate thousands.
     receptacle.clear();
@@ -1176,7 +1180,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * @see #retrieveFromFile(int[])
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="OBL_UNSATISFIED_OBLIGATION",
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
   private void persistToFile() throws IOException {
     assert !cacheEnabled;
@@ -1205,13 +1209,13 @@ public class BucketCache implements BlockCache, HeapSize {
       int read = in.read(pbuf);
       if (read != pblen) {
         throw new IOException("Incorrect number of bytes read while checking for protobuf magic "
-            + "number. Requested=" + pblen + ", Received= " + read + ", File=" + persistencePath);
+          + "number. Requested=" + pblen + ", Received= " + read + ", File=" + persistencePath);
       }
-      if (! ProtobufMagic.isPBMagicPrefix(pbuf)) {
+      if (!ProtobufMagic.isPBMagicPrefix(pbuf)) {
         // In 3.0 we have enough flexibility to dump the old cache data.
         // TODO: In 2.x line, this might need to be filled in to support reading the old format
-        throw new IOException("Persistence file does not start with protobuf magic number. " +
-            persistencePath);
+        throw new IOException(
+          "Persistence file does not start with protobuf magic number. " + persistencePath);
       }
       parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
@@ -1222,6 +1226,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * Create an input stream that deletes the file after reading it. Use in try-with-resources to
    * avoid this pattern where an exception thrown from a finally block may mask earlier exceptions:
+   *
    * <pre>
    *   File f = ...
    *   try (FileInputStream fis = new FileInputStream(f)) {
@@ -1230,6 +1235,7 @@ public class BucketCache implements BlockCache, HeapSize {
    *     if (!f.delete()) throw new IOException("failed to delete");
    *   }
    * </pre>
+   *
    * @param file the file to read and delete
    * @return a FileInputStream for the given file
    * @throws IOException if there is a problem creating the stream
@@ -1237,10 +1243,12 @@ public class BucketCache implements BlockCache, HeapSize {
   private FileInputStream deleteFileOnClose(final File file) throws IOException {
     return new FileInputStream(file) {
       private File myFile;
+
       private FileInputStream init(File file) {
         myFile = file;
         return this;
       }
+
       @Override
       public void close() throws IOException {
         // close() will be called during try-with-resources and it will be
@@ -1260,19 +1268,18 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void verifyCapacityAndClasses(long capacitySize, String ioclass, String mapclass)
-      throws IOException {
+    throws IOException {
     if (capacitySize != cacheCapacity) {
-      throw new IOException("Mismatched cache capacity:"
-          + StringUtils.byteDesc(capacitySize) + ", expected: "
-          + StringUtils.byteDesc(cacheCapacity));
+      throw new IOException("Mismatched cache capacity:" + StringUtils.byteDesc(capacitySize)
+        + ", expected: " + StringUtils.byteDesc(cacheCapacity));
     }
     if (!ioEngine.getClass().getName().equals(ioclass)) {
-      throw new IOException("Class name for IO engine mismatch: " + ioclass
-          + ", expected:" + ioEngine.getClass().getName());
+      throw new IOException("Class name for IO engine mismatch: " + ioclass + ", expected:"
+        + ioEngine.getClass().getName());
     }
     if (!backingMap.getClass().getName().equals(mapclass)) {
-      throw new IOException("Class name for cache map mismatch: " + mapclass
-          + ", expected:" + backingMap.getClass().getName());
+      throw new IOException("Class name for cache map mismatch: " + mapclass + ", expected:"
+        + backingMap.getClass().getName());
     }
   }
 
@@ -1290,9 +1297,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Check whether we tolerate IO error this time. If the duration of IOEngine
-   * throwing errors exceeds ioErrorsDurationTimeTolerated, we will disable the
-   * cache
+   * Check whether we tolerate IO error this time. If the duration of IOEngine throwing errors
+   * exceeds ioErrorsDurationTimeTolerated, we will disable the cache
    */
   private void checkIOErrorIsTolerated() {
     long now = EnvironmentEdgeManager.currentTime();
@@ -1300,8 +1306,8 @@ public class BucketCache implements BlockCache, HeapSize {
     long ioErrorStartTimeTmp = this.ioErrorStartTime;
     if (ioErrorStartTimeTmp > 0) {
       if (cacheEnabled && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
-        LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +
-          "ms, disabling cache, please check your IOEngine");
+        LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration
+          + "ms, disabling cache, please check your IOEngine");
         disableCache();
       }
     } else {
@@ -1317,7 +1323,8 @@ public class BucketCache implements BlockCache, HeapSize {
     cacheEnabled = false;
     ioEngine.shutdown();
     this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < writerThreads.length; ++i) writerThreads[i].interrupt();
+    for (int i = 0; i < writerThreads.length; ++i)
+      writerThreads[i].interrupt();
     this.ramCache.clear();
     if (!ioEngine.isPersistent() || persistencePath == null) {
       // If persistent ioengine and a path, we will serialize out the backingMap.
@@ -1333,8 +1340,8 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public void shutdown() {
     disableCache();
-    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent()
-        + "; path to write=" + persistencePath);
+    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
+      + persistencePath);
     if (ioEngine.isPersistent() && persistencePath != null) {
       try {
         join();
@@ -1399,19 +1406,17 @@ public class BucketCache implements BlockCache, HeapSize {
    * Evicts all blocks for a specific HFile.
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
-   *
    * @return the number of blocks evicted
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    Set<BlockCacheKey> keySet = blocksByHFile.subSet(
-        new BlockCacheKey(hfileName, Long.MIN_VALUE), true,
-        new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
+    Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
+      true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
-          ++numEvicted;
+        ++numEvicted;
       }
     }
 
@@ -1419,10 +1424,9 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Used to group bucket entries into priority buckets. There will be a
-   * BucketEntryGroup for each priority (single, multi, memory). Once bucketed,
-   * the eviction algorithm takes the appropriate number of elements out of each
-   * according to configuration parameters and their relative sizes.
+   * Used to group bucket entries into priority buckets. There will be a BucketEntryGroup for each
+   * priority (single, multi, memory). Once bucketed, the eviction algorithm takes the appropriate
+   * number of elements out of each according to configuration parameters and their relative sizes.
    */
   private class BucketEntryGroup {
 
@@ -1504,8 +1508,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public BucketEntry writeToCache(final IOEngine ioEngine, final BucketAllocator alloc,
-        final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler)
-        throws IOException {
+      final LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler,
+      ByteBuffer metaBuff) throws IOException {
       int len = data.getSerializedLength();
       // This cacheable thing can't be serialized
       if (len == 0) {
@@ -1516,15 +1520,15 @@ public class BucketCache implements BlockCache, HeapSize {
       BucketEntry bucketEntry = null;
       try {
         bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory, createRecycler,
-            getByteBuffAllocator());
+          getByteBuffAllocator());
         bucketEntry.setDeserializerReference(data.getDeserializer());
         if (data instanceof HFileBlock) {
           // If an instance of HFileBlock, save on some allocations.
           HFileBlock block = (HFileBlock) data;
           ByteBuff sliceBuf = block.getBufferReadOnly();
-          ByteBuffer metadata = block.getMetaData();
+          block.getMetaData(metaBuff);
           ioEngine.write(sliceBuf, offset);
-          ioEngine.write(metadata, offset + len - metadata.limit());
+          ioEngine.write(metaBuff, offset + len - metaBuff.limit());
         } else {
           // Only used for testing.
           ByteBuffer bb = ByteBuffer.allocate(len);
@@ -1543,8 +1547,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Only used in test
-   * @throws InterruptedException
+   * Only used in test n
    */
   void stopWriterThreads() throws InterruptedException {
     for (WriterThread writerThread : writerThreads) {
@@ -1557,8 +1560,7 @@ public class BucketCache implements BlockCache, HeapSize {
   @Override
   public Iterator<CachedBlock> iterator() {
     // Don't bother with ramcache since stuff is in here only a little while.
-    final Iterator<Map.Entry<BlockCacheKey, BucketEntry>> i =
-        this.backingMap.entrySet().iterator();
+    final Iterator<Map.Entry<BlockCacheKey, BucketEntry>> i = this.backingMap.entrySet().iterator();
     return new Iterator<CachedBlock>() {
       private final long now = System.nanoTime();
 
@@ -1583,7 +1585,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
           @Override
           public BlockType getBlockType() {
-            // Not held by BucketEntry.  Could add it if wanted on BucketEntry creation.
+            // Not held by BucketEntry. Could add it if wanted on BucketEntry creation.
             return null;
           }
 
@@ -1615,8 +1617,8 @@ public class BucketCache implements BlockCache, HeapSize {
             diff = Long.compare(this.getOffset(), other.getOffset());
             if (diff != 0) return diff;
             if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
-              throw new IllegalStateException("" + this.getCachedTime() + ", " +
-                other.getCachedTime());
+              throw new IllegalStateException(
+                "" + this.getCachedTime() + ", " + other.getCachedTime());
             }
             return Long.compare(other.getCachedTime(), this.getCachedTime());
           }
@@ -1629,7 +1631,7 @@ public class BucketCache implements BlockCache, HeapSize {
           @Override
           public boolean equals(Object obj) {
             if (obj instanceof CachedBlock) {
-              CachedBlock cb = (CachedBlock)obj;
+              CachedBlock cb = (CachedBlock) obj;
               return compareTo(cb) == 0;
             } else {
               return false;
@@ -1689,11 +1691,11 @@ public class BucketCache implements BlockCache, HeapSize {
     /**
      * Defined the map as {@link ConcurrentHashMap} explicitly here, because in
      * {@link RAMCache#get(BlockCacheKey)} and
-     * {@link RAMCache#putIfAbsent(BlockCacheKey, BucketCache.RAMQueueEntry)} , we need to
-     * guarantee the atomicity of map#computeIfPresent(key, func) and map#putIfAbsent(key, func).
-     * Besides, the func method can execute exactly once only when the key is present(or absent)
-     * and under the lock context. Otherwise, the reference count of block will be messed up.
-     * Notice that the {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+     * {@link RAMCache#putIfAbsent(BlockCacheKey, BucketCache.RAMQueueEntry)} , we need to guarantee
+     * the atomicity of map#computeIfPresent(key, func) and map#putIfAbsent(key, func). Besides, the
+     * func method can execute exactly once only when the key is present(or absent) and under the
+     * lock context. Otherwise, the reference count of block will be messed up. Notice that the
+     * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
      */
     final ConcurrentHashMap<BlockCacheKey, RAMQueueEntry> delegate = new ConcurrentHashMap<>();
 
@@ -1727,7 +1729,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
     public boolean remove(BlockCacheKey key) {
-      return remove(key, re->{});
+      return remove(key, re -> {
+      });
     }
 
     /**

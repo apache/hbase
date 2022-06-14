@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -62,7 +62,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
   Timeout periodicFlushTask;
 
   AsyncBufferedMutatorImpl(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
+    long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
     this.periodicalFlushTimer = periodicalFlushTimer;
     this.table = table;
     this.writeBufferSize = writeBufferSize;
@@ -117,7 +117,7 @@ class AsyncBufferedMutatorImpl implements AsyncBufferedMutator {
     for (Mutation mutation : mutations) {
       heapSize += mutation.heapSize();
       if (mutation instanceof Put) {
-        validatePut((Put)mutation, maxKeyValueSize);
+        validatePut((Put) mutation, maxKeyValueSize);
       }
     }
     synchronized (this) {

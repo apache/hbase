@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellComparator;
@@ -41,8 +40,8 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface Store {
 
   /**
-   * The default priority for user-specified compaction requests.
-   * The user gets top priority unless we have blocking compactions. (Pri <= 0)
+   * The default priority for user-specified compaction requests. The user gets top priority unless
+   * we have blocking compactions. (Pri <= 0)
    */
   int PRIORITY_USER = 1;
   int NO_PRIORITY = Integer.MIN_VALUE;
@@ -94,8 +93,8 @@ public interface Store {
 
   /**
    * @return The amount of memory we could flush from this memstore; usually this is equal to
-   * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
-   * outstanding snapshots.
+   *         {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the
+   *         size of outstanding snapshots.
    */
   MemStoreSize getFlushableSize();
 
@@ -143,17 +142,17 @@ public interface Store {
   OptionalLong getMinStoreFileAge();
 
   /**
-   *  @return Average age of store files in this store
+   * @return Average age of store files in this store
    */
   OptionalDouble getAvgStoreFileAge();
 
   /**
-   *  @return Number of reference files in this store
+   * @return Number of reference files in this store
    */
   long getNumReferenceFiles();
 
   /**
-   *  @return Number of HFiles in this store
+   * @return Number of HFiles in this store
    */
   long getNumHFiles();
 
@@ -200,9 +199,8 @@ public interface Store {
   boolean areWritesEnabled();
 
   /**
-   * @return The smallest mvcc readPoint across all the scanners in this
-   * region. Writes older than this readPoint, are included  in every
-   * read operation.
+   * @return The smallest mvcc readPoint across all the scanners in this region. Writes older than
+   *         this readPoint, are included in every read operation.
    */
   long getSmallestReadPoint();
 
@@ -253,8 +251,7 @@ public interface Store {
   /**
    * Checks the underlying store files, and opens the files that have not been opened, and removes
    * the store file readers for store files no longer available. Mainly used by secondary region
-   * replicas to keep up to date with the primary region files.
-   * @throws IOException
+   * replicas to keep up to date with the primary region files. n
    */
   void refreshStoreFiles() throws IOException;
 

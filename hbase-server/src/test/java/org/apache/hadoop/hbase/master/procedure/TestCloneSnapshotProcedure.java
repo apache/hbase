@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -48,12 +49,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCloneSnapshotProcedure.class);
+    HBaseClassTestRule.forClass(TestCloneSnapshotProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCloneSnapshotProcedure.class);
 
@@ -95,8 +96,11 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     return 1;
   }
 
-  public static TableDescriptor createTableDescriptor(TableName tableName, byte[]... family) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
+  private static TableDescriptor createTableDescriptor(TableName tableName, byte[]... family) {
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableName).setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+        UTIL.getConfiguration().get(StoreFileTrackerFactory.TRACKER_IMPL,
+          StoreFileTrackerFactory.Trackers.DEFAULT.name()));
     Stream.of(family).map(ColumnFamilyDescriptorBuilder::of)
       .forEachOrdered(builder::setColumnFamily);
     return builder.build();
@@ -111,11 +115,10 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     // take the snapshot
     SnapshotProtos.SnapshotDescription snapshotDesc = getSnapshot();
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
-    MasterProcedureTestingUtility.validateTableIsEnabled(
-      UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
       clonedTableName);
   }
 
@@ -128,13 +131,12 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     final TableName clonedTableName = TableName.valueOf(snapshotDesc.getTable());
     final TableDescriptor htd = createTableDescriptor(clonedTableName, CF);
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
     Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
     LOG.debug("Clone snapshot failed with exception: " + result.getException());
-    assertTrue(
-      ProcedureTestingUtility.getExceptionCause(result) instanceof TableExistsException);
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableExistsException);
   }
 
   @Test
@@ -152,14 +154,13 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Clone snapshot procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
+    long procId = procExec
+      .submitProcedure(new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
     // Restart the executor and execute the step twice
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
-    MasterProcedureTestingUtility.validateTableIsEnabled(
-      UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
       clonedTableName);
   }
 
@@ -183,7 +184,7 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
-    CloneSnapshotProcedure result = (CloneSnapshotProcedure)procExec.getResult(procId);
+    CloneSnapshotProcedure result = (CloneSnapshotProcedure) procExec.getResult(procId);
     // check whether the 'restoreAcl' flag is true after deserialization from Pb.
     assertEquals(true, result.getRestoreAcl());
   }
@@ -201,13 +202,13 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Clone snapshot procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
+    long procId = procExec
+      .submitProcedure(new CloneSnapshotProcedure(procExec.getEnvironment(), htd, snapshotDesc));
 
     int lastStep = 2; // failing before CLONE_SNAPSHOT_WRITE_FS_LAYOUT
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, lastStep);
 
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), clonedTableName);
+    MasterProcedureTestingUtility.validateTableDeletion(UTIL.getHBaseCluster().getMaster(),
+      clonedTableName);
   }
 }

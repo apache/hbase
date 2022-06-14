@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,16 +19,19 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
@@ -42,47 +45,42 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.hamcrest.MatcherAssert;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SmallTests.class, ClientTests.class})
-public class TestResult extends TestCase {
+@Category({ SmallTests.class, ClientTests.class })
+public class TestResult {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResult.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestResult.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestResult.class.getName());
 
-  static KeyValue[] genKVs(final byte[] row, final byte[] family,
-                           final byte[] value,
-                    final long timestamp,
-                    final int cols) {
-    KeyValue [] kvs = new KeyValue[cols];
+  static KeyValue[] genKVs(final byte[] row, final byte[] family, final byte[] value,
+    final long timestamp, final int cols) {
+    KeyValue[] kvs = new KeyValue[cols];
 
-    for (int i = 0; i < cols ; i++) {
-      kvs[i] = new KeyValue(
-          row, family, Bytes.toBytes(i),
-          timestamp,
-          Bytes.add(value, Bytes.toBytes(i)));
+    for (int i = 0; i < cols; i++) {
+      kvs[i] =
+        new KeyValue(row, family, Bytes.toBytes(i), timestamp, Bytes.add(value, Bytes.toBytes(i)));
     }
     return kvs;
   }
 
-  static final byte [] row = Bytes.toBytes("row");
-  static final byte [] family = Bytes.toBytes("family");
-  static final byte [] value = Bytes.toBytes("value");
-  static final byte [] qual = Bytes.toBytes("qual");
+  static final byte[] row = Bytes.toBytes("row");
+  static final byte[] family = Bytes.toBytes("family");
+  static final byte[] value = Bytes.toBytes("value");
+  static final byte[] qual = Bytes.toBytes("qual");
 
   /**
    * Run some tests to ensure Result acts like a proper CellScanner.
-   * @throws IOException
    */
+  @Test
   public void testResultAsCellScanner() throws IOException {
-    Cell [] cells = genKVs(row, family, value, 1, 10);
+    Cell[] cells = genKVs(row, family, value, 1, 10);
     Arrays.sort(cells, CellComparator.getInstance());
     Result r = Result.create(cells);
     assertSame(r, cells);
@@ -93,7 +91,7 @@ public class TestResult extends TestCase {
     assertTrue(r == r.cellScanner());
   }
 
-  private void assertSame(final CellScanner cellScanner, final Cell [] cells) throws IOException {
+  private void assertSame(final CellScanner cellScanner, final Cell[] cells) throws IOException {
     int count = 0;
     while (cellScanner.advance()) {
       assertTrue(cells[count].equals(cellScanner.current()));
@@ -102,8 +100,9 @@ public class TestResult extends TestCase {
     assertEquals(cells.length, count);
   }
 
+  @Test
   public void testBasicGetColumn() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -119,28 +118,29 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testCurrentOnEmptyCell() throws IOException {
     Result r = Result.create(new Cell[0]);
     assertFalse(r.advance());
     assertNull(r.current());
   }
 
-  public void testAdvanceTwiceOnEmptyCell() throws IOException {
+  @Test
+  public void testAdvanceMultipleOnEmptyCell() throws IOException {
     Result r = Result.create(new Cell[0]);
-    assertFalse(r.advance());
-    try {
-      r.advance();
-      fail("NoSuchElementException should have been thrown!");
-    } catch (NoSuchElementException ex) {
-      LOG.debug("As expected: " + ex.getMessage());
+    // After HBASE-26688, advance of result with empty cell list will always return false.
+    // Here 10 is an arbitrary number to test the logic.
+    for (int i = 0; i < 10; i++) {
+      assertFalse(r.advance());
     }
   }
 
+  @Test
   public void testMultiVersionGetColumn() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -158,8 +158,9 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testBasicGetValue() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -173,11 +174,12 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testMultiVersionGetValue() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -192,8 +194,9 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testBasicLoadValue() throws Exception {
-    KeyValue [] kvs = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs = genKVs(row, family, value, 1, 100);
 
     Arrays.sort(kvs, CellComparator.getInstance());
 
@@ -208,15 +211,16 @@ public class TestResult extends TestCase {
       loadValueBuffer.flip();
       assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
-          r.getValueAsByteBuffer(family, qf));
+        r.getValueAsByteBuffer(family, qf));
     }
   }
 
+  @Test
   public void testMultiVersionLoadValue() throws Exception {
-    KeyValue [] kvs1 = genKVs(row, family, value, 1, 100);
-    KeyValue [] kvs2 = genKVs(row, family, value, 200, 100);
+    KeyValue[] kvs1 = genKVs(row, family, value, 1, 100);
+    KeyValue[] kvs2 = genKVs(row, family, value, 200, 100);
 
-    KeyValue [] kvs = new KeyValue[kvs1.length+kvs2.length];
+    KeyValue[] kvs = new KeyValue[kvs1.length + kvs2.length];
     System.arraycopy(kvs1, 0, kvs, 0, kvs1.length);
     System.arraycopy(kvs2, 0, kvs, kvs1.length, kvs2.length);
 
@@ -233,22 +237,23 @@ public class TestResult extends TestCase {
       loadValueBuffer.flip();
       assertEquals(loadValueBuffer, ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))));
       assertEquals(ByteBuffer.wrap(Bytes.add(value, Bytes.toBytes(i))),
-          r.getValueAsByteBuffer(family, qf));
+        r.getValueAsByteBuffer(family, qf));
     }
   }
 
   /**
    * Verify that Result.compareResults(...) behaves correctly.
    */
+  @Test
   public void testCompareResults() throws Exception {
-    byte [] value1 = Bytes.toBytes("value1");
-    byte [] qual = Bytes.toBytes("qual");
+    byte[] value1 = Bytes.toBytes("value1");
+    byte[] qual = Bytes.toBytes("qual");
 
     KeyValue kv1 = new KeyValue(row, family, qual, value);
     KeyValue kv2 = new KeyValue(row, family, qual, value1);
 
-    Result r1 = Result.create(new KeyValue[] {kv1});
-    Result r2 = Result.create(new KeyValue[] {kv2});
+    Result r1 = Result.create(new KeyValue[] { kv1 });
+    Result r2 = Result.create(new KeyValue[] { kv2 });
     // no exception thrown
     Result.compareResults(r1, r1);
     try {
@@ -260,6 +265,7 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testCompareResultsWithTags() throws Exception {
     Tag t1 = new ArrayBackedTag((byte) 1, Bytes.toBytes("TAG1"));
     Tag t2 = new ArrayBackedTag((byte) 2, Bytes.toBytes("TAG2"));
@@ -374,6 +380,7 @@ public class TestResult extends TestCase {
     }
   }
 
+  @Test
   public void testCompareResultMemoryUsage() {
     List<Cell> cells1 = new ArrayList<>();
     for (long i = 0; i < 100; i++) {
@@ -392,7 +399,7 @@ public class TestResult extends TestCase {
       fail();
     } catch (Exception x) {
       assertTrue(x.getMessage().startsWith("This result was different:"));
-      assertThat(x.getMessage().length(), is(greaterThan(100)));
+      assertThat(x.getMessage().length(), greaterThan(100));
     }
 
     try {
@@ -400,7 +407,7 @@ public class TestResult extends TestCase {
       fail();
     } catch (Exception x) {
       assertEquals("This result was different: row=row", x.getMessage());
-      assertThat(x.getMessage().length(), is(lessThan(100)));
+      assertThat(x.getMessage().length(), lessThan(100));
     }
   }
 
@@ -409,9 +416,8 @@ public class TestResult extends TestCase {
     if (tag != null) {
       tags = Arrays.asList(tag);
     }
-    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
-      value, tags);
-    return Result.create(new Cell[] {kvCell});
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put, value, tags);
+    return Result.create(new Cell[] { kvCell });
   }
 
   private Result getByteBufferBackedTagResult(Tag tag) {
@@ -419,16 +425,17 @@ public class TestResult extends TestCase {
     if (tag != null) {
       tags = Arrays.asList(tag);
     }
-    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put,
-        value, tags);
+    KeyValue kvCell = new KeyValue(row, family, qual, 0L, KeyValue.Type.Put, value, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
     ByteBufferKeyValue bbKV = new ByteBufferKeyValue(buf, 0, buf.capacity(), 0L);
-    return Result.create(new Cell[] {bbKV});
+    return Result.create(new Cell[] { bbKV });
   }
+
   /**
    * Verifies that one can't modify instance of EMPTY_RESULT.
    */
+  @Test
   public void testEmptyResultIsReadonly() {
     Result emptyResult = Result.EMPTY_RESULT;
     Result otherResult = new Result();
@@ -449,8 +456,7 @@ public class TestResult extends TestCase {
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
-   *
-   * @throws Exception
+   * n
    */
   public void doReadBenchmark() throws Exception {
 
@@ -459,16 +465,16 @@ public class TestResult extends TestCase {
 
     StringBuilder valueSB = new StringBuilder();
     for (int i = 0; i < 100; i++) {
-      valueSB.append((byte)(Math.random() * 10));
+      valueSB.append((byte) (Math.random() * 10));
     }
 
     StringBuilder rowSB = new StringBuilder();
     for (int i = 0; i < 50; i++) {
-      rowSB.append((byte)(Math.random() * 10));
+      rowSB.append((byte) (Math.random() * 10));
     }
 
-    KeyValue [] kvs = genKVs(Bytes.toBytes(rowSB.toString()), family,
-        Bytes.toBytes(valueSB.toString()), 1, n);
+    KeyValue[] kvs =
+      genKVs(Bytes.toBytes(rowSB.toString()), family, Bytes.toBytes(valueSB.toString()), 1, n);
     Arrays.sort(kvs, CellComparator.getInstance());
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
     Result r = Result.create(kvs);
@@ -512,9 +518,7 @@ public class TestResult extends TestCase {
   }
 
   /**
-   * Calls non-functional test methods.
-   *
-   * @param args
+   * Calls non-functional test methods. n
    */
   public static void main(String[] args) {
     TestResult testResult = new TestResult();

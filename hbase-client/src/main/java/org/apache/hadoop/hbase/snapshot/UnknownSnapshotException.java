@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,7 +34,7 @@ public class UnknownSnapshotException extends HBaseSnapshotException {
 
   /**
    * @param message full information about the failure
-   * @param e the actual cause of the exception
+   * @param e       the actual cause of the exception
    */
   public UnknownSnapshotException(String message, Exception e) {
     super(message, e);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -25,29 +24,20 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop2 implementation of MetricsMasterSource.
- *
- * Implements BaseSource through BaseSourceImpl, following the pattern
+ * Hadoop2 implementation of MetricsMasterSource. Implements BaseSource through BaseSourceImpl,
+ * following the pattern
  */
 @InterfaceAudience.Private
-public class MetricsMasterProcSourceImpl
-    extends BaseSourceImpl implements MetricsMasterProcSource {
+public class MetricsMasterProcSourceImpl extends BaseSourceImpl implements MetricsMasterProcSource {
 
   private final MetricsMasterWrapper masterWrapper;
 
   public MetricsMasterProcSourceImpl(MetricsMasterWrapper masterWrapper) {
-    this(METRICS_NAME,
-        METRICS_DESCRIPTION,
-        METRICS_CONTEXT,
-        METRICS_JMX_CONTEXT,
-        masterWrapper);
+    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, masterWrapper);
   }
 
-  public MetricsMasterProcSourceImpl(String metricsName,
-                                     String metricsDescription,
-                                     String metricsContext,
-                                     String metricsJmxContext,
-                                     MetricsMasterWrapper masterWrapper) {
+  public MetricsMasterProcSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext, MetricsMasterWrapper masterWrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.masterWrapper = masterWrapper;
 
@@ -64,13 +54,12 @@ public class MetricsMasterProcSourceImpl
 
     // masterWrapper can be null because this function is called inside of init.
     if (masterWrapper != null) {
-      metricsRecordBuilder
-          .addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
-              masterWrapper.getNumWALFiles());
+      metricsRecordBuilder.addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
+        masterWrapper.getNumWALFiles());
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);
-    if(metricsAdapter != null) {
+    if (metricsAdapter != null) {
       metricsAdapter.snapshotAllMetrics(registry, metricsRecordBuilder);
     }
   }

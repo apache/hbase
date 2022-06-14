@@ -22,9 +22,8 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This is the metric source for table level replication metrics.
- * We can easy monitor some useful table level replication metrics such as
- * ageOfLastShippedOp and shippedBytes
+ * This is the metric source for table level replication metrics. We can easy monitor some useful
+ * table level replication metrics such as ageOfLastShippedOp and shippedBytes
  */
 @InterfaceAudience.Private
 public class MetricsReplicationTableSourceImpl implements MetricsReplicationTableSource {
@@ -45,7 +44,7 @@ public class MetricsReplicationTableSourceImpl implements MetricsReplicationTabl
     this.keyPrefix = "source." + this.tableName + ".";
 
     ageOfLastShippedOpKey = this.keyPrefix + "ageOfLastShippedOp";
-    ageOfLastShippedOpHist = rms.getMetricsRegistry().getHistogram(ageOfLastShippedOpKey);
+    ageOfLastShippedOpHist = rms.getMetricsRegistry().newTimeHistogram(ageOfLastShippedOpKey);
 
     shippedBytesKey = this.keyPrefix + "shippedBytes";
     shippedBytesCounter = rms.getMetricsRegistry().getCounter(shippedBytesKey, 0L);

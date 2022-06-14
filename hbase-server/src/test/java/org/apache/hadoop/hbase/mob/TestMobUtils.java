@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
 
@@ -43,9 +44,7 @@ public class TestMobUtils {
   @Test
   public void serializeSingleMobFileRefs() {
     ImmutableSetMultimap<TableName, String> mobRefSet =
-      ImmutableSetMultimap.<TableName, String>builder()
-        .putAll(TEST_TABLE_1, "file1a")
-        .build();
+      ImmutableSetMultimap.<TableName, String> builder().putAll(TEST_TABLE_1, "file1a").build();
     byte[] result = MobUtils.serializeMobFileRefs(mobRefSet);
     assertEquals("testTable1/file1a", Bytes.toString(result));
   }
@@ -53,11 +52,8 @@ public class TestMobUtils {
   @Test
   public void serializeMultipleMobFileRefs() {
     ImmutableSetMultimap<TableName, String> mobRefSet =
-      ImmutableSetMultimap.<TableName, String>builder()
-        .putAll(TEST_TABLE_1, "file1a", "file1b")
-        .putAll(TEST_TABLE_2, "file2a")
-        .putAll(TEST_TABLE_3, "file3a", "file3b")
-        .build();
+      ImmutableSetMultimap.<TableName, String> builder().putAll(TEST_TABLE_1, "file1a", "file1b")
+        .putAll(TEST_TABLE_2, "file2a").putAll(TEST_TABLE_3, "file3a", "file3b").build();
     byte[] result = MobUtils.serializeMobFileRefs(mobRefSet);
     assertEquals("testTable1/file1a,file1b//testTable2/file2a//testTable3/file3a,file3b",
       Bytes.toString(result));
@@ -75,9 +71,11 @@ public class TestMobUtils {
 
   @Test
   public void deserializeMultipleMobFileRefs() {
-    ImmutableSetMultimap<TableName, String> mobRefSet =
-      MobUtils.deserializeMobFileRefs(Bytes.toBytes(
-        "testTable1/file1a,file1b//testTable2/file2a//testTable3/file3a,file3b")).build();
+    ImmutableSetMultimap<TableName,
+      String> mobRefSet = MobUtils
+        .deserializeMobFileRefs(
+          Bytes.toBytes("testTable1/file1a,file1b//testTable2/file2a//testTable3/file3a,file3b"))
+        .build();
     assertEquals(5, mobRefSet.size());
     ImmutableSet<String> testTable1Refs = mobRefSet.get(TEST_TABLE_1);
     ImmutableSet<String> testTable2Refs = mobRefSet.get(TEST_TABLE_2);

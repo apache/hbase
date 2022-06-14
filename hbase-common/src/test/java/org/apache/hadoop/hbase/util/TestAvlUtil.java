@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -37,12 +39,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestAvlUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAvlUtil.class);
+    HBaseClassTestRule.forClass(TestAvlUtil.class);
 
   private static final TestAvlKeyComparator KEY_COMPARATOR = new TestAvlKeyComparator();
 
@@ -54,7 +56,7 @@ public class TestAvlUtil {
     final TreeMap<Integer, Object> treeMap = new TreeMap<>();
     TestAvlNode root = null;
 
-    final Random rand = new Random();
+    Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < NELEM; ++i) {
       int key = rand.nextInt(MAX_KEY);
       if (AvlTree.get(root, key, KEY_COMPARATOR) != null) {
@@ -63,7 +65,7 @@ public class TestAvlUtil {
       }
       root = AvlTree.insert(root, new TestAvlNode(key));
       treeMap.put(key, null);
-      for (Integer keyX: treeMap.keySet()) {
+      for (Integer keyX : treeMap.keySet()) {
         TestAvlNode node = AvlTree.get(root, keyX, KEY_COMPARATOR);
         assertNotNull(node);
         assertEquals(keyX.intValue(), node.getKey());
@@ -80,7 +82,7 @@ public class TestAvlUtil {
       treeMap.remove(key);
       assertEquals(key, node.getKey());
       root = AvlTree.remove(root, key, KEY_COMPARATOR);
-      for (Integer keyX: treeMap.keySet()) {
+      for (Integer keyX : treeMap.keySet()) {
         node = AvlTree.get(root, keyX, KEY_COMPARATOR);
         assertNotNull(node);
         assertEquals(keyX.intValue(), node.getKey());
@@ -100,6 +102,7 @@ public class TestAvlUtil {
 
     AvlTree.visit(root, new AvlNodeVisitor<TestAvlNode>() {
       private int prevKey = -1;
+
       @Override
       public boolean visitNode(TestAvlNode node) {
         assertEquals(prevKey, node.getKey() - 1);
@@ -260,7 +263,7 @@ public class TestAvlUtil {
   private static class TestAvlKeyComparator implements AvlKeyComparator<TestAvlNode> {
     @Override
     public int compareKey(TestAvlNode node, Object key) {
-      return node.getKey() - (int)key;
+      return node.getKey() - (int) key;
     }
   }
 }

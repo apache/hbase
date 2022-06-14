@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
@@ -77,11 +76,11 @@ public class IncrementalBackupManager extends BackupManager {
       LOG.debug("StartCode " + savedStartCode + "for backupID " + backupInfo.getBackupId());
     }
     // get all new log files from .logs and .oldlogs after last TS and before new timestamp
-    if (savedStartCode == null || previousTimestampMins == null
-        || previousTimestampMins.isEmpty()) {
-      throw new IOException(
-          "Cannot read any previous back up timestamps from backup system table. "
-              + "In order to create an incremental backup, at least one full backup is needed.");
+    if (
+      savedStartCode == null || previousTimestampMins == null || previousTimestampMins.isEmpty()
+    ) {
+      throw new IOException("Cannot read any previous back up timestamps from backup system table. "
+        + "In order to create an incremental backup, at least one full backup is needed.");
     }
 
     LOG.info("Execute roll log procedure for incremental backup ...");
@@ -103,9 +102,9 @@ public class IncrementalBackupManager extends BackupManager {
 
   private List<String> excludeProcV2WALs(List<String> logList) {
     List<String> list = new ArrayList<>();
-    for (int i=0; i < logList.size(); i++) {
+    for (int i = 0; i < logList.size(); i++) {
       Path p = new Path(logList.get(i));
-      String name  = p.getName();
+      String name = p.getName();
 
       if (name.startsWith(WALProcedureStore.LOG_PREFIX)) {
         continue;
@@ -119,18 +118,18 @@ public class IncrementalBackupManager extends BackupManager {
   /**
    * For each region server: get all log files newer than the last timestamps but not newer than the
    * newest timestamps.
-   * @param olderTimestamps the timestamp for each region server of the last backup.
+   * @param olderTimestamps  the timestamp for each region server of the last backup.
    * @param newestTimestamps the timestamp for each region server that the backup should lead to.
-   * @param conf the Hadoop and Hbase configuration
-   * @param savedStartCode the startcode (timestamp) of last successful backup.
+   * @param conf             the Hadoop and Hbase configuration
+   * @param savedStartCode   the startcode (timestamp) of last successful backup.
    * @return a list of log files to be backed up
    * @throws IOException exception
    */
   private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
-      Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
-      throws IOException {
+    Map<String, Long> newestTimestamps, Configuration conf, String savedStartCode)
+    throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
-        + "\n newestTimestamps: " + newestTimestamps);
+      + "\n newestTimestamps: " + newestTimestamps);
 
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
     Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
@@ -191,10 +190,10 @@ public class IncrementalBackupManager extends BackupManager {
         // or RS is down (was decommisioned). In any case, we treat this
         // log file as eligible for inclusion into incremental backup log list
         Long ts = newestTimestamps.get(host);
-        if (ts ==  null) {
+        if (ts == null) {
           LOG.warn("ORPHAN log found: " + log + " host=" + host);
           LOG.debug("Known hosts (from newestTimestamps):");
-          for (String s: newestTimestamps.keySet()) {
+          for (String s : newestTimestamps.keySet()) {
             LOG.debug(s);
           }
         }

@@ -145,8 +145,8 @@ public class TestCatalogJanitor {
     Path rootdir = this.masterServices.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
     Path parentdir = new Path(tabledir, parent.getEncodedName());
-    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, splita,
-      td.getColumnFamilies()[0].getName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, splita, td.getColumnFamilies()[0].getName());
     Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
     long now = EnvironmentEdgeManager.currentTime();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
@@ -201,7 +201,7 @@ public class TestCatalogJanitor {
   /**
    * Make sure parent with specified end key gets cleaned up even if daughter is cleaned up before
    * it.
-   * @param rootDir the test case name, used as the HBase testing utility root
+   * @param rootDir    the test case name, used as the HBase testing utility root
    * @param lastEndKey the end key of the split parent
    */
   private void parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(final String rootDir,
@@ -327,7 +327,7 @@ public class TestCatalogJanitor {
     final Map<RegionInfo, Result> mergedRegions = new TreeMap<>();
     CatalogJanitor spy = spy(this.janitor);
 
-    Report report = new Report();
+    CatalogJanitorReport report = new CatalogJanitorReport();
     report.count = 10;
     report.mergedRegions.putAll(mergedRegions);
     report.splitParents.putAll(splitParents);
@@ -354,8 +354,7 @@ public class TestCatalogJanitor {
   }
 
   /**
-   * Test that we correctly archive all the storefiles when a region is deleted
-   * @throws Exception
+   * Test that we correctly archive all the storefiles when a region is deleted n
    */
   @Test
   public void testSplitParentFirstComparator() {
@@ -447,8 +446,8 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     CommonFSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
-    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, parent,
-      td.getColumnFamilies()[0].getName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, parent, td.getColumnFamilies()[0].getName());
     Path storeArchive = HFileArchiveUtil.getStoreArchivePath(this.masterServices.getConfiguration(),
       parent, tabledir, td.getColumnFamilies()[0].getName());
     LOG.debug("Table dir:" + tabledir);
@@ -488,7 +487,7 @@ public class TestCatalogJanitor {
 
   /**
    * @param description description of the files for logging
-   * @param storeFiles the status of the files to log
+   * @param storeFiles  the status of the files to log
    */
   private void logFiles(String description, FileStatus[] storeFiles) {
     LOG.debug("Current " + description + ": ");
@@ -522,8 +521,8 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     CommonFSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = CommonFSUtils.getTableDir(rootdir, parent.getTable());
-    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, parent,
-      td.getColumnFamilies()[0].getName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, parent, td.getColumnFamilies()[0].getName());
     LOG.info("Old root:" + rootdir);
     LOG.info("Old table:" + tabledir);
     LOG.info("Old store:" + storedir);
@@ -617,8 +616,8 @@ public class TestCatalogJanitor {
     throws IOException {
     Path rootdir = services.getMasterFileSystem().getRootDir();
     Path tabledir = CommonFSUtils.getTableDir(rootdir, parent.getTable());
-    Path storedir = HRegionFileSystem.getStoreHomedir(tabledir, daughter,
-      td.getColumnFamilies()[0].getName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, daughter, td.getColumnFamilies()[0].getName());
     Reference ref =
       top ? Reference.createTopReference(midkey) : Reference.createBottomReference(midkey);
     long now = EnvironmentEdgeManager.currentTime();

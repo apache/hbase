@@ -49,17 +49,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestBlocksScanned {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlocksScanned.class);
+    HBaseClassTestRule.forClass(TestBlocksScanned.class);
 
-  private static byte [] FAMILY = Bytes.toBytes("family");
-  private static byte [] COL = Bytes.toBytes("col");
-  private static byte [] START_KEY = Bytes.toBytes("aaa");
-  private static byte [] END_KEY = Bytes.toBytes("zzz");
+  private static byte[] FAMILY = Bytes.toBytes("family");
+  private static byte[] COL = Bytes.toBytes("col");
+  private static byte[] START_KEY = Bytes.toBytes("aaa");
+  private static byte[] END_KEY = Bytes.toBytes("zzz");
   private static int BLOCK_SIZE = 70;
 
   private static HBaseTestingUtil TEST_UTIL = null;
@@ -99,9 +99,8 @@ public class TestBlocksScanned {
 
   private void _testBlocksScanned(TableDescriptor td) throws Exception {
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    RegionInfo regionInfo =
-        RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY).setEndKey(END_KEY)
-            .build();
+    RegionInfo regionInfo = RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY)
+      .setEndKey(END_KEY).build();
     HRegion r = HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
     addContent(r, FAMILY, COL);
     r.flush(true);
@@ -110,26 +109,27 @@ public class TestBlocksScanned {
     long before = stats.getHitCount() + stats.getMissCount();
     // Do simple test of getting one row only first.
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))
-        .setReadType(Scan.ReadType.PREAD);
+      .setReadType(Scan.ReadType.PREAD);
     scan.addColumn(FAMILY, COL);
     scan.readVersions(1);
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<>();
-    while (s.next(results));
+    while (s.next(results))
+      ;
     s.close();
 
     int expectResultSize = 'z' - 'a';
     assertEquals(expectResultSize, results.size());
 
-    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE /
-        (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
+    int kvPerBlock = (int) Math
+      .ceil(BLOCK_SIZE / (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
     assertEquals(2, kvPerBlock);
 
     long expectDataBlockRead = (long) Math.ceil(expectResultSize / (double) kvPerBlock);
     long expectIndexBlockRead = expectDataBlockRead;
 
     assertEquals(expectIndexBlockRead + expectDataBlockRead,
-        stats.getHitCount() + stats.getMissCount() - before);
+      stats.getHitCount() + stats.getMissCount() - before);
   }
 }

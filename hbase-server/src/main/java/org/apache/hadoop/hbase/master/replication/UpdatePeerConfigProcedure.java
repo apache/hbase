@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,7 +70,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
   }
 
   private void addToList(List<String> encodedRegionNames, String encodedRegionName,
-      ReplicationQueueStorage queueStorage) throws ReplicationException {
+    ReplicationQueueStorage queueStorage) throws ReplicationException {
     encodedRegionNames.add(encodedRegionName);
     if (encodedRegionNames.size() >= UPDATE_LAST_SEQ_ID_BATCH_SIZE) {
       queueStorage.removeLastSequenceIds(peerId, encodedRegionNames);
@@ -105,7 +105,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void updateLastPushedSequenceIdForSerialPeer(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     if (!oldPeerConfig.isSerial()) {
       assert peerConfig.isSerial();
       // change to serial
@@ -190,7 +190,7 @@ public class UpdatePeerConfigProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void postPeerModification(MasterProcedureEnv env)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     if (oldPeerConfig.isSerial() && !peerConfig.isSerial()) {
       env.getReplicationPeerManager().removeAllLastPushedSeqIds(peerId);
     }

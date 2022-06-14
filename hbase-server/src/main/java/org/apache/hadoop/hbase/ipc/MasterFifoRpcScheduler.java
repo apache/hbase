@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,20 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A special {@code }RpcScheduler} only used for master. This scheduler separates RegionServerReport
@@ -49,7 +48,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
    * is "hbase.regionserver.handler.count" value minus RSReport handlers count, but at least 1 too.
    */
   public static final String MASTER_SERVER_REPORT_HANDLER_COUNT =
-      "hbase.master.server.report.handler.count";
+    "hbase.master.server.report.handler.count";
   private static final String REGION_SERVER_REPORT = "RegionServerReport";
   private final int rsReportHandlerCount;
   private final int rsRsreportMaxQueueLength;
@@ -57,7 +56,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   private ThreadPoolExecutor rsReportExecutor;
 
   public MasterFifoRpcScheduler(Configuration conf, int callHandlerCount,
-      int rsReportHandlerCount) {
+    int rsReportHandlerCount) {
     super(conf, callHandlerCount);
     this.rsReportHandlerCount = rsReportHandlerCount;
     this.rsRsreportMaxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
@@ -68,7 +67,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   public void start() {
     LOG.info(
       "Using {} as call queue; handlerCount={}; maxQueueLength={}; rsReportHandlerCount={}; "
-          + "rsReportMaxQueueLength={}",
+        + "rsReportMaxQueueLength={}",
       this.getClass().getSimpleName(), handlerCount, maxQueueLength, rsReportHandlerCount,
       rsRsreportMaxQueueLength);
     this.executor = new ThreadPoolExecutor(handlerCount, handlerCount, 60, TimeUnit.SECONDS,
@@ -90,7 +89,7 @@ public class MasterFifoRpcScheduler extends FifoRpcScheduler {
   }
 
   @Override
-  public boolean dispatch(final CallRunner task) throws IOException, InterruptedException {
+  public boolean dispatch(final CallRunner task) {
     String method = getCallMethod(task);
     if (rsReportExecutor != null && method != null && method.equals(REGION_SERVER_REPORT)) {
       return executeRpcCall(rsReportExecutor, rsReportQueueSize, task);

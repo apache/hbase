@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -51,16 +50,16 @@ import org.mockito.stubbing.Answer;
 /**
  * Basic test for {@link FileIOEngine}
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestFileIOEngine {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFileIOEngine.class);
+    HBaseClassTestRule.forClass(TestFileIOEngine.class);
 
   private static final long TOTAL_CAPACITY = 6 * 1024 * 1024; // 6 MB
-  private static final String[] FILE_PATHS = {"testFileIOEngine1", "testFileIOEngine2",
-      "testFileIOEngine3"};
+  private static final String[] FILE_PATHS =
+    { "testFileIOEngine1", "testFileIOEngine2", "testFileIOEngine3" };
   private static final long SIZE_PER_FILE = TOTAL_CAPACITY / FILE_PATHS.length; // 2 MB per File
   private final static List<Long> boundaryStartPositions = new ArrayList<Long>();
   private final static List<Long> boundaryStopPositions = new ArrayList<Long>();
@@ -145,7 +144,7 @@ public class TestFileIOEngine {
       @Override
       public ByteBuff answer(InvocationOnMock invocation) throws Throwable {
         int len = invocation.getArgument(0);
-        return ByteBuff.wrap(new ByteBuffer[]{ByteBuffer.allocate(len + 1)}, refCnt);
+        return ByteBuff.wrap(new ByteBuffer[] { ByteBuffer.allocate(len + 1) }, refCnt);
       }
     });
     int len = 10;

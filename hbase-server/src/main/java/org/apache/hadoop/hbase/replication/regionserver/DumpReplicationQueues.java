@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.zookeeper.ZKDump;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
@@ -59,10 +60,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AtomicLongM
 
 /**
  * Provides information about the existing states of replication, replication peers and queues.
- *
  * Usage: hbase org.apache.hadoop.hbase.replication.regionserver.DumpReplicationQueues [args]
- * Arguments: --distributed    Polls each RS to dump information about the queue
- *            --hdfs           Reports HDFS usage by the replication queues (note: can be overestimated).
+ * Arguments: --distributed Polls each RS to dump information about the queue --hdfs Reports HDFS
+ * usage by the replication queues (note: can be overestimated).
  */
 @InterfaceAudience.Private
 public class DumpReplicationQueues extends Configured implements Tool {
@@ -95,7 +95,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
       this.distributed = that.distributed;
     }
 
-    boolean isHdfs () {
+    boolean isHdfs() {
       return hdfs;
     }
 
@@ -103,7 +103,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
       return distributed;
     }
 
-    void setHdfs (boolean hdfs) {
+    void setHdfs(boolean hdfs) {
       this.hdfs = hdfs;
     }
 
@@ -135,7 +135,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
         printUsageAndExit("ERROR: Unrecognized option/command: " + cmd, -1);
       }
       // check that --distributed is present when --hdfs is in the arguments
-      if (!opts.isDistributed()  && opts.isHdfs()) {
+      if (!opts.isDistributed() && opts.isHdfs()) {
         printUsageAndExit("ERROR: --hdfs option can only be used with --distributed: " + cmd, -1);
       }
     }
@@ -143,10 +143,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
   }
 
   /**
-   * Main
-   *
-   * @param args
-   * @throws Exception
+   * Main nn
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
@@ -189,10 +186,10 @@ public class DumpReplicationQueues extends Configured implements Tool {
     System.err.println("General Options:");
     System.err.println(" -h|--h|--help  Show this help and exit.");
     System.err.println(" --distributed  Poll each RS and print its own replication queue. "
-        + "Default only polls ZooKeeper");
+      + "Default only polls ZooKeeper");
     System.err.println(" --hdfs         Use HDFS to calculate usage of WALs by replication."
-        + " It could be overestimated if replicating to multiple peers."
-        + " --distributed flag is also needed.");
+      + " It could be overestimated if replicating to multiple peers."
+      + " --distributed flag is also needed.");
   }
 
   protected static void printUsageAndExit(final String message, final int exitCode) {
@@ -205,9 +202,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     Connection connection = ConnectionFactory.createConnection(conf);
     Admin admin = connection.getAdmin();
 
-    ZKWatcher zkw = new ZKWatcher(conf, "DumpReplicationQueues" +
-        EnvironmentEdgeManager.currentTime(),
-      new WarnOnlyAbortable(), true);
+    ZKWatcher zkw =
+      new ZKWatcher(conf, "DumpReplicationQueues" + EnvironmentEdgeManager.currentTime(),
+        new WarnOnlyAbortable(), true);
 
     try {
       // Our zk watcher
@@ -215,7 +212,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
       List<TableCFs> replicatedTableCFs = admin.listReplicatedTableCFs();
       if (replicatedTableCFs.isEmpty()) {
         LOG.info("No tables with a configured replication peer were found.");
-        return(0);
+        return (0);
       } else {
         LOG.info("Replicated Tables: " + replicatedTableCFs);
       }
@@ -231,14 +228,14 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
       if (opts.isDistributed()) {
         LOG.info("Found [--distributed], will poll each RegionServer.");
-        Set<String> peerIds = peers.stream().map((peer) -> peer.getPeerId())
-            .collect(Collectors.toSet());
+        Set<String> peerIds =
+          peers.stream().map((peer) -> peer.getPeerId()).collect(Collectors.toSet());
         System.out.println(dumpQueues(zkw, peerIds, opts.isHdfs()));
         System.out.println(dumpReplicationSummary());
       } else {
         // use ZK instead
         System.out.print("Dumping replication znodes via ZooKeeper:");
-        System.out.println(ZKUtil.getReplicationZnodesDump(zkw));
+        System.out.println(ZKDump.getReplicationZnodesDump(zkw));
       }
       return (0);
     } catch (IOException e) {
@@ -252,14 +249,14 @@ public class DumpReplicationQueues extends Configured implements Tool {
     StringBuilder sb = new StringBuilder();
     if (!deletedQueues.isEmpty()) {
       sb.append("Found " + deletedQueues.size() + " deleted queues"
-          + ", run hbck -fixReplication in order to remove the deleted replication queues\n");
+        + ", run hbck -fixReplication in order to remove the deleted replication queues\n");
       for (String deletedQueue : deletedQueues) {
         sb.append("    " + deletedQueue + "\n");
       }
     }
     if (!deadRegionServers.isEmpty()) {
       sb.append("Found " + deadRegionServers.size() + " dead regionservers"
-          + ", restart one regionserver to transfer the queues of dead regionservers\n");
+        + ", restart one regionserver to transfer the queues of dead regionservers\n");
       for (String deadRs : deadRegionServers) {
         sb.append("    " + deadRs + "\n");
       }
@@ -267,7 +264,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
     if (!peersQueueSize.isEmpty()) {
       sb.append("Dumping all peers's number of WALs in replication queue\n");
       for (Map.Entry<String, Long> entry : peersQueueSize.asMap().entrySet()) {
-        sb.append("    PeerId: " + entry.getKey() + " , sizeOfLogQueue: " + entry.getValue() + "\n");
+        sb.append(
+          "    PeerId: " + entry.getKey() + " , sizeOfLogQueue: " + entry.getValue() + "\n");
       }
     }
     sb.append("    Total size of WALs on HDFS: " + StringUtils.humanSize(totalSizeOfWALs) + "\n");
@@ -331,8 +329,8 @@ public class DumpReplicationQueues extends Configured implements Tool {
   }
 
   private String formatQueue(ServerName regionserver, ReplicationQueueStorage queueStorage,
-      ReplicationQueueInfo queueInfo, String queueId, List<String> wals, boolean isDeleted,
-      boolean hdfs) throws Exception {
+    ReplicationQueueInfo queueInfo, String queueId, List<String> wals, boolean isDeleted,
+    boolean hdfs) throws Exception {
     StringBuilder sb = new StringBuilder();
 
     List<ServerName> deadServers;
@@ -353,23 +351,23 @@ public class DumpReplicationQueues extends Configured implements Tool {
 
     for (String wal : wals) {
       long position = queueStorage.getWALPosition(regionserver, queueInfo.getPeerId(), wal);
-      sb.append("    Replication position for " + wal + ": " + (position > 0 ? position : "0"
-          + " (not started or nothing to replicate)") + "\n");
+      sb.append("    Replication position for " + wal + ": "
+        + (position > 0 ? position : "0" + " (not started or nothing to replicate)") + "\n");
     }
 
     if (hdfs) {
       FileSystem fs = FileSystem.get(getConf());
       sb.append("    Total size of WALs on HDFS for this queue: "
-          + StringUtils.humanSize(getTotalWALSize(fs, wals, regionserver)) + "\n");
+        + StringUtils.humanSize(getTotalWALSize(fs, wals, regionserver)) + "\n");
     }
     return sb.toString();
   }
 
   /**
-   *  return total size in bytes from a list of WALs
+   * return total size in bytes from a list of WALs
    */
   private long getTotalWALSize(FileSystem fs, List<String> wals, ServerName server)
-      throws IOException {
+    throws IOException {
     long size = 0;
     FileStatus fileStatus;
 

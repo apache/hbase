@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.RegionMover;
 import org.apache.hadoop.util.Shell;
@@ -29,8 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Gracefully restarts every regionserver in a rolling fashion. At each step, it unloads,
- * restarts the loads every rs server sleeping randomly (0-sleepTime) in between servers.
+ * Gracefully restarts every regionserver in a rolling fashion. At each step, it unloads, restarts
+ * the loads every rs server sleeping randomly (0-sleepTime) in between servers.
  */
 public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(GracefulRollingRestartRsAction.class);
@@ -39,7 +39,8 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
     super(sleepTime);
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -47,14 +48,13 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
   public void perform() throws Exception {
     getLogger().info("Performing action: Rolling restarting non-master region servers");
     List<ServerName> selectedServers = selectServers();
-
     getLogger().info("Disabling balancer to make unloading possible");
     setBalancer(false, true);
-
+    Random rand = ThreadLocalRandom.current();
     for (ServerName server : selectedServers) {
       String rsName = server.getAddress().toString();
-      try (RegionMover rm =
-          new RegionMover.RegionMoverBuilder(rsName, getConf()).ack(true).build()) {
+      try (
+        RegionMover rm = new RegionMover.RegionMoverBuilder(rsName, getConf()).ack(true).build()) {
         getLogger().info("Unloading {}", server);
         rm.unload();
         getLogger().info("Restarting {}", server);
@@ -63,8 +63,10 @@ public class GracefulRollingRestartRsAction extends RestartActionBaseAction {
         rm.load();
       } catch (Shell.ExitCodeException e) {
         getLogger().info("Problem restarting but presume successful; code={}", e.getExitCode(), e);
+      } catch (Exception e) {
+        getLogger().info("Exception but continuing...", e);
       }
-      sleep(RandomUtils.nextInt(0, (int)sleepTime));
+      sleep(rand.nextInt((int) sleepTime));
     }
     getLogger().info("Enabling balancer");
     setBalancer(true, true);

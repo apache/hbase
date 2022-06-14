@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import javax.security.sasl.SaslClient;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-
-import javax.security.sasl.SaslClient;
-
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Unwrap sasl messages. Should be placed after a

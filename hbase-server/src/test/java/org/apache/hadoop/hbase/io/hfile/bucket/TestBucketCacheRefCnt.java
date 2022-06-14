@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -55,13 +54,13 @@ public class TestBucketCacheRefCnt {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBucketCacheRefCnt.class);
+    HBaseClassTestRule.forClass(TestBucketCacheRefCnt.class);
 
   private static final String IO_ENGINE = "offheap";
   private static final long CAPACITY_SIZE = 32 * 1024 * 1024;
   private static final int BLOCK_SIZE = 1024;
   private static final int[] BLOCK_SIZE_ARRAY =
-      new int[] { 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+    new int[] { 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
   private static final String PERSISTENCE_PATH = null;
   private static final HFileContext CONTEXT = new HFileContextBuilder().build();
 
@@ -69,19 +68,19 @@ public class TestBucketCacheRefCnt {
 
   private static BucketCache create(int writerSize, int queueSize) throws IOException {
     return new BucketCache(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
-        queueSize, PERSISTENCE_PATH);
+      queueSize, PERSISTENCE_PATH);
   }
 
   private static MyBucketCache createMyBucketCache(int writerSize, int queueSize)
-      throws IOException {
+    throws IOException {
     return new MyBucketCache(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
-        queueSize, PERSISTENCE_PATH);
+      queueSize, PERSISTENCE_PATH);
   }
 
   private static MyBucketCache2 createMyBucketCache2(int writerSize, int queueSize)
-      throws IOException {
+    throws IOException {
     return new MyBucketCache2(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, writerSize,
-        queueSize, PERSISTENCE_PATH);
+      queueSize, PERSISTENCE_PATH);
   }
 
   private static HFileBlock createBlock(int offset, int size) {
@@ -90,7 +89,7 @@ public class TestBucketCacheRefCnt {
 
   private static HFileBlock createBlock(int offset, int size, ByteBuffAllocator alloc) {
     return new HFileBlock(BlockType.DATA, size, size, -1, ByteBuff.wrap(ByteBuffer.allocate(size)),
-        HFileBlock.FILL_HEADER, offset, 52, size, CONTEXT, alloc);
+      HFileBlock.FILL_HEADER, offset, 52, size, CONTEXT, alloc);
   }
 
   private static BlockCacheKey createKey(String hfileName, long offset) {
@@ -106,7 +105,8 @@ public class TestBucketCacheRefCnt {
     }
   }
 
-  @org.junit.Ignore @Test // Disabled by HBASE-24079. Reenable issue HBASE-24082
+  @org.junit.Ignore
+  @Test // Disabled by HBASE-24079. Reenable issue HBASE-24082
   // Flakey TestBucketCacheRefCnt.testBlockInRAMCache:121 expected:<3> but was:<2>
   public void testBlockInRAMCache() throws IOException {
     cache = create(1, 1000);
@@ -153,9 +153,11 @@ public class TestBucketCacheRefCnt {
   }
 
   private static void waitUntilFlushedToCache(BucketCache bucketCache, BlockCacheKey blockCacheKey)
-      throws InterruptedException {
-    while (!bucketCache.backingMap.containsKey(blockCacheKey)
-        || bucketCache.ramCache.containsKey(blockCacheKey)) {
+    throws InterruptedException {
+    while (
+      !bucketCache.backingMap.containsKey(blockCacheKey)
+        || bucketCache.ramCache.containsKey(blockCacheKey)
+    ) {
       Thread.sleep(100);
     }
     Thread.sleep(1000);
@@ -317,12 +319,13 @@ public class TestBucketCacheRefCnt {
    *    by Thread2 and the content of Block1 would be overwritten after it is freed, which may
    *    cause a serious error.
    * </pre>
-   * @throws Exception
+   *
+   * n
    */
   @Test
   public void testReplacingBlockAndGettingBlockConcurrently() throws Exception {
     ByteBuffAllocator byteBuffAllocator =
-        ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+      ByteBuffAllocator.create(HBaseConfiguration.create(), true);
     final MyBucketCache myBucketCache = createMyBucketCache(1, 1000);
     try {
       HFileBlock hfileBlock = createBlock(200, 1020, byteBuffAllocator);
@@ -404,13 +407,13 @@ public class TestBucketCacheRefCnt {
   @Test
   public void testEvictingBlockCachingBlockGettingBlockConcurrently() throws Exception {
     ByteBuffAllocator byteBuffAllocator =
-        ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+      ByteBuffAllocator.create(HBaseConfiguration.create(), true);
     final MyBucketCache2 myBucketCache2 = createMyBucketCache2(1, 1000);
     try {
       final HFileBlock hfileBlock = createBlock(200, 1020, byteBuffAllocator);
       final BlockCacheKey blockCacheKey = createKey("testThreeThreadConcurrent", 200);
       final AtomicReference<Throwable> cacheBlockThreadExceptionRef =
-          new AtomicReference<Throwable>();
+        new AtomicReference<Throwable>();
       Thread cacheBlockThread = new Thread(() -> {
         try {
           myBucketCache2.cacheBlock(blockCacheKey, hfileBlock);
@@ -426,7 +429,7 @@ public class TestBucketCacheRefCnt {
       cacheBlockThread.start();
 
       final AtomicReference<Throwable> evictBlockThreadExceptionRef =
-          new AtomicReference<Throwable>();
+        new AtomicReference<Throwable>();
       Thread evictBlockThread = new Thread(() -> {
         try {
           myBucketCache2.evictBlock(blockCacheKey);
@@ -492,9 +495,9 @@ public class TestBucketCacheRefCnt {
     private ByteBuff overwiteByteBuff = null;
 
     public MyBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-        int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
+      int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-          persistencePath);
+        persistencePath);
     }
 
     /**
@@ -508,7 +511,7 @@ public class TestBucketCacheRefCnt {
 
     @Override
     public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
-        boolean updateCacheMetrics) {
+      boolean updateCacheMetrics) {
       if (Thread.currentThread().getName().equals(GET_BLOCK_THREAD_NAME)) {
         /**
          * Wait the first cyclicBarrier.await() in {@link MyBucketCache#cacheBlockWithWaitInternal},
@@ -527,7 +530,7 @@ public class TestBucketCacheRefCnt {
 
     @Override
     protected void cacheBlockWithWaitInternal(BlockCacheKey cacheKey, Cacheable cachedItem,
-        boolean inMemory, boolean wait) {
+      boolean inMemory, boolean wait) {
       if (Thread.currentThread().getName().equals(CACHE_BLOCK_THREAD_NAME)) {
         /**
          * Wait the cyclicBarrier.await() in {@link MyBucketCache#getBlock}
@@ -555,7 +558,7 @@ public class TestBucketCacheRefCnt {
 
     @Override
     void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry,
-        boolean decrementBlockNumber) {
+      boolean decrementBlockNumber) {
       blockEvictCounter.incrementAndGet();
       super.blockEvicted(cacheKey, bucketEntry, decrementBlockNumber);
     }
@@ -596,9 +599,9 @@ public class TestBucketCacheRefCnt {
     private ByteBuff overwiteByteBuff = null;
 
     public MyBucketCache2(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-        int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
+      int writerThreadNum, int writerQLen, String persistencePath) throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
-          persistencePath);
+        persistencePath);
     }
 
     @Override
@@ -627,8 +630,8 @@ public class TestBucketCacheRefCnt {
     }
 
     @Override
-    void doDrain(List<RAMQueueEntry> entries) throws InterruptedException {
-      super.doDrain(entries);
+    void doDrain(List<RAMQueueEntry> entries, ByteBuffer metaBuff) throws InterruptedException {
+      super.doDrain(entries, metaBuff);
       if (entries.size() > 0) {
         /**
          * Caching Block completed,release {@link #GET_BLOCK_THREAD_NAME} and
@@ -645,7 +648,7 @@ public class TestBucketCacheRefCnt {
 
     @Override
     public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
-        boolean updateCacheMetrics) {
+      boolean updateCacheMetrics) {
       if (Thread.currentThread().getName().equals(GET_BLOCK_THREAD_NAME)) {
         /**
          * Wait for second getCyclicBarrier.await in {@link MyBucketCache2#removeFromRamCache} after
@@ -707,7 +710,7 @@ public class TestBucketCacheRefCnt {
 
     @Override
     void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry,
-        boolean decrementBlockNumber) {
+      boolean decrementBlockNumber) {
       /**
        * This is only invoked by {@link BucketCache.WriterThread}. {@link MyMyBucketCache2} create
        * only one {@link BucketCache.WriterThread}.

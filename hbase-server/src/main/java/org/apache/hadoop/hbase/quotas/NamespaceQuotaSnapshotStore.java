@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,9 +45,10 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
 
   private final Connection conn;
   private final QuotaObserverChore chore;
-  private Map<RegionInfo,Long> regionUsage;
+  private Map<RegionInfo, Long> regionUsage;
 
-  public NamespaceQuotaSnapshotStore(Connection conn, QuotaObserverChore chore, Map<RegionInfo,Long> regionUsage) {
+  public NamespaceQuotaSnapshotStore(Connection conn, QuotaObserverChore chore,
+    Map<RegionInfo, Long> regionUsage) {
     this.conn = Objects.requireNonNull(conn);
     this.chore = Objects.requireNonNull(chore);
     this.regionUsage = Objects.requireNonNull(regionUsage);
@@ -75,20 +77,21 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   }
 
   @Override
-  public SpaceQuotaSnapshot getTargetState(
-      String subject, SpaceQuota spaceQuota) throws IOException {
+  public SpaceQuotaSnapshot getTargetState(String subject, SpaceQuota spaceQuota)
+    throws IOException {
     rlock.lock();
     try {
       final long sizeLimitInBytes = spaceQuota.getSoftLimit();
       long sum = 0L;
-      for (Entry<RegionInfo,Long> entry : filterBySubject(subject)) {
+      for (Entry<RegionInfo, Long> entry : filterBySubject(subject)) {
         sum += entry.getValue();
       }
       // Add in the size for any snapshots against this table
       sum += QuotaTableUtil.getNamespaceSnapshotSize(conn, subject);
       // Observance is defined as the size of the table being less than the limit
-      SpaceQuotaStatus status = sum <= sizeLimitInBytes ? SpaceQuotaStatus.notInViolation()
-          : new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
+      SpaceQuotaStatus status = sum <= sizeLimitInBytes
+        ? SpaceQuotaStatus.notInViolation()
+        : new SpaceQuotaStatus(ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
       return new SpaceQuotaSnapshot(status, sum, sizeLimitInBytes);
     } finally {
       rlock.unlock();
@@ -114,7 +117,7 @@ public class NamespaceQuotaSnapshotStore implements QuotaSnapshotStore<String> {
   }
 
   @Override
-  public void setRegionUsage(Map<RegionInfo,Long> regionUsage) {
+  public void setRegionUsage(Map<RegionInfo, Long> regionUsage) {
     wlock.lock();
     try {
       this.regionUsage = Objects.requireNonNull(regionUsage);

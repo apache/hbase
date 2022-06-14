@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,17 +27,16 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The following class is an abstraction class to provide a common interface to support different
@@ -72,7 +71,7 @@ abstract class OutputSink {
   protected final CompletionService<Void> closeCompletionService;
 
   public OutputSink(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-      int numWriters) {
+    int numWriters) {
     this.numThreads = numWriters;
     this.controller = controller;
     this.entryBuffers = entryBuffers;
@@ -103,7 +102,6 @@ abstract class OutputSink {
 
   /**
    * Wait for writer threads to dump all info to the sink
-   *
    * @return true when there is no error
    */
   boolean finishWriterThreads() throws IOException {
@@ -183,7 +181,7 @@ abstract class OutputSink {
     private OutputSink outputSink = null;
 
     WriterThread(WALSplitter.PipelineController controller, EntryBuffers entryBuffers,
-        OutputSink sink, int i) {
+      OutputSink sink, int i) {
       super(Thread.currentThread().getName() + "-Writer-" + i);
       this.controller = controller;
       this.entryBuffers = entryBuffers;
@@ -191,7 +189,7 @@ abstract class OutputSink {
     }
 
     @Override
-    public void run()  {
+    public void run() {
       try {
         doRun();
       } catch (Throwable t) {

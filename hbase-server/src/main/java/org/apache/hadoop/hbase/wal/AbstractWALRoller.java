@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,17 +48,28 @@ import org.slf4j.LoggerFactory;
  * NOTE: This class extends Thread rather than Chore because the sleep time can be interrupted when
  * there is something to do, rather than the Chore sleep time which is invariant.
  * <p/>
- * The {@link #scheduleFlush(String, List)} is abstract here,
- * as sometimes we hold a region without a region server but we still want to roll its WAL.
+ * The {@link #scheduleFlush(String, List)} is abstract here, as sometimes we hold a region without
+ * a region server but we still want to roll its WAL.
  * <p/>
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-public abstract class AbstractWALRoller<T extends Abortable> extends Thread
-  implements Closeable {
+public abstract class AbstractWALRoller<T extends Abortable> extends Thread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(AbstractWALRoller.class);
 
   protected static final String WAL_ROLL_PERIOD_KEY = "hbase.regionserver.logroll.period";
+
+  /**
+   * Configure for the timeout of log rolling retry.
+   */
+  public static final String WAL_ROLL_WAIT_TIMEOUT = "hbase.regionserver.logroll.wait.timeout.ms";
+  public static final long DEFAULT_WAL_ROLL_WAIT_TIMEOUT = 30000;
+
+  /**
+   * Configure for the max count of log rolling retry. The real retry count is also limited by the
+   * timeout of log rolling via {@link #WAL_ROLL_WAIT_TIMEOUT}
+   */
+  protected static final String WAL_ROLL_RETRIES = "hbase.regionserver.logroll.retries";
 
   protected final ConcurrentMap<WAL, RollController> wals = new ConcurrentHashMap<>();
   protected final T abortable;
@@ -67,6 +78,10 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   private final int threadWakeFrequency;
   // The interval to check low replication on hlog's pipeline
   private final long checkLowReplicationInterval;
+  // Wait period for roll log
+  private final long rollWaitTimeout;
+  // Max retry for roll log
+  private final int maxRollRetry;
 
   private volatile boolean running = true;
 
@@ -114,6 +129,9 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.checkLowReplicationInterval =
       conf.getLong("hbase.regionserver.hlog.check.lowreplication.interval", 30 * 1000);
+    this.rollWaitTimeout = conf.getLong(WAL_ROLL_WAIT_TIMEOUT, DEFAULT_WAL_ROLL_WAIT_TIMEOUT);
+    // retry rolling does not have to be the default behavior, so the default value is 0 here
+    this.maxRollRetry = conf.getInt(WAL_ROLL_RETRIES, 0);
   }
 
   /**
@@ -170,32 +188,51 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
         }
       }
       try {
-        for (Iterator<Entry<WAL, RollController>> iter = wals.entrySet().iterator();
-             iter.hasNext();) {
+        for (Iterator<Entry<WAL, RollController>> iter = wals.entrySet().iterator(); iter
+          .hasNext();) {
           Entry<WAL, RollController> entry = iter.next();
           WAL wal = entry.getKey();
           RollController controller = entry.getValue();
           if (controller.isRollRequested()) {
             // WAL roll requested, fall through
             LOG.debug("WAL {} roll requested", wal);
-          } else if (controller.needsPeriodicRoll(now)){
+          } else if (controller.needsPeriodicRoll(now)) {
             // Time for periodic roll, fall through
             LOG.debug("WAL {} roll period {} ms elapsed", wal, this.rollPeriod);
           } else {
             continue;
           }
-          try {
-            // Force the roll if the logroll.period is elapsed or if a roll was requested.
-            // The returned value is an collection of actual region and family names.
-            Map<byte[], List<byte[]>> regionsToFlush = controller.rollWal(now);
-            if (regionsToFlush != null) {
-              for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
-                scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
+          Map<byte[], List<byte[]>> regionsToFlush = null;
+          int nAttempts = 0;
+          long startWaiting = EnvironmentEdgeManager.currentTime();
+          do {
+            try {
+              // Force the roll if the logroll.period is elapsed or if a roll was requested.
+              // The returned value is an collection of actual region and family names.
+              regionsToFlush = controller.rollWal(EnvironmentEdgeManager.currentTime());
+              break;
+            } catch (IOException ioe) {
+              if (ioe instanceof WALClosedException) {
+                LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", ioe);
+                iter.remove();
+                break;
+              }
+              long waitingTime = EnvironmentEdgeManager.currentTime() - startWaiting;
+              if (waitingTime < rollWaitTimeout && nAttempts < maxRollRetry) {
+                nAttempts++;
+                LOG.warn("Retry to roll log, nAttempts={}, waiting time={}ms, sleeping 1s to retry,"
+                  + " last exception", nAttempts, waitingTime, ioe);
+                sleep(1000);
+              } else {
+                LOG.error("Roll wal failed and waiting timeout, will not retry", ioe);
+                throw ioe;
               }
             }
-          } catch (WALClosedException e) {
-            LOG.warn("WAL has been closed. Skipping rolling of writer and just remove it", e);
-            iter.remove();
+          } while (EnvironmentEdgeManager.currentTime() - startWaiting < rollWaitTimeout);
+          if (regionsToFlush != null) {
+            for (Map.Entry<byte[], List<byte[]>> r : regionsToFlush.entrySet()) {
+              scheduleFlush(Bytes.toString(r.getKey()), r.getValue());
+            }
           }
         }
       } catch (FailedLogCloseException | ConnectException e) {
@@ -217,7 +254,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
 
   /**
    * @param encodedRegionName Encoded name of region to flush.
-   * @param families stores of region to flush.
+   * @param families          stores of region to flush.
    */
   protected abstract void scheduleFlush(String encodedRegionName, List<byte[]> families);
 
@@ -232,8 +269,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   public boolean walRollFinished() {
     // TODO add a status field of roll in RollController
     return wals.values().stream()
-        .noneMatch(rc -> rc.needsRoll(EnvironmentEdgeManager.currentTime()))
-      && isWaiting();
+      .noneMatch(rc -> rc.needsRoll(EnvironmentEdgeManager.currentTime())) && isWaiting();
   }
 
   /**
@@ -252,8 +288,8 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread
   }
 
   /**
-   * Independently control the roll of each wal. When use multiwal,
-   * can avoid all wal roll together. see HBASE-24665 for detail
+   * Independently control the roll of each wal. When use multiwal, can avoid all wal roll together.
+   * see HBASE-24665 for detail
    */
   protected class RollController {
     private final WAL wal;

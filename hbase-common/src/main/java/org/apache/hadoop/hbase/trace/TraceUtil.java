@@ -24,8 +24,8 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
-import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.apache.hadoop.hbase.Version;
@@ -79,12 +79,10 @@ public final class TraceUtil {
   /**
    * Trace an asynchronous operation for a table.
    */
-  public static <T> CompletableFuture<T> tracedFuture(
-    Supplier<CompletableFuture<T>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
+    Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
-    try (Scope scope = span.makeCurrent()) {
+    try (Scope ignored = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
       endSpan(future, span);
       return future;
@@ -97,7 +95,7 @@ public final class TraceUtil {
   public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
     String spanName) {
     Span span = createSpan(spanName);
-    try (Scope scope = span.makeCurrent()) {
+    try (Scope ignored = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
       endSpan(future, span);
       return future;
@@ -108,12 +106,10 @@ public final class TraceUtil {
    * Trace an asynchronous operation, and finish the create {@link Span} when all the given
    * {@code futures} are completed.
    */
-  public static <T> List<CompletableFuture<T>> tracedFutures(
-    Supplier<List<CompletableFuture<T>>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> List<CompletableFuture<T>>
+    tracedFutures(Supplier<List<CompletableFuture<T>>> action, Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
-    try (Scope scope = span.makeCurrent()) {
+    try (Scope ignored = span.makeCurrent()) {
       List<CompletableFuture<T>> futures = action.get();
       endSpan(CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])), span);
       return futures;
@@ -139,51 +135,85 @@ public final class TraceUtil {
     });
   }
 
-  public static void trace(Runnable action, String spanName) {
-    trace(action, () -> createSpan(spanName));
+  /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable, final String spanName) {
+    return tracedRunnable(runnable, () -> createSpan(spanName));
   }
 
-  public static void trace(Runnable action, Supplier<Span> creator) {
-    Span span = creator.get();
-    try (Scope scope = span.makeCurrent()) {
-      action.run();
-      span.setStatus(StatusCode.OK);
-    } catch (Throwable e) {
-      setError(span, e);
-      throw e;
-    } finally {
-      span.end();
-    }
+  /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable,
+    final Supplier<Span> spanSupplier) {
+    // N.B. This method name follows the convention of this class, i.e., tracedFuture, rather than
+    // the convention of the OpenTelemetry classes, i.e., Context#wrap.
+    return () -> {
+      final Span span = spanSupplier.get();
+      try (final Scope ignored = span.makeCurrent()) {
+        runnable.run();
+        span.setStatus(StatusCode.OK);
+      } finally {
+        span.end();
+      }
+    };
   }
 
-  public static <T> T trace(Supplier<T> action, String spanName) {
-    Span span = createSpan(spanName);
-    try (Scope scope = span.makeCurrent()) {
-      T ret = action.get();
-      span.setStatus(StatusCode.OK);
-      return ret;
-    } catch (Throwable e) {
-      setError(span, e);
-      throw e;
-    } finally {
-      span.end();
-    }
-  }
-
+  /**
+   * A {@link Runnable} that may also throw.
+   * @param <T> the type of {@link Throwable} that can be produced.
+   */
   @FunctionalInterface
-  public interface IOExceptionCallable<V> {
-    V call() throws IOException;
+  public interface ThrowingRunnable<T extends Throwable> {
+    void run() throws T;
   }
 
-  public static <T> T trace(IOExceptionCallable<T> callable, String spanName) throws IOException {
+  /**
+   * Trace the execution of {@code runnable}.
+   */
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
+    final String spanName) throws T {
+    trace(runnable, () -> createSpan(spanName));
+  }
+
+  /**
+   * Trace the execution of {@code runnable}.
+   */
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
+    final Supplier<Span> spanSupplier) throws T {
+    Span span = spanSupplier.get();
+    try (Scope ignored = span.makeCurrent()) {
+      runnable.run();
+      span.setStatus(StatusCode.OK);
+    } catch (Throwable e) {
+      setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
+  /**
+   * A {@link Callable} that may also throw.
+   * @param <R> the result type of method call.
+   * @param <T> the type of {@link Throwable} that can be produced.
+   */
+  @FunctionalInterface
+  public interface ThrowingCallable<R, T extends Throwable> {
+    R call() throws T;
+  }
+
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final String spanName) throws T {
     return trace(callable, () -> createSpan(spanName));
   }
 
-  public static <T> T trace(IOExceptionCallable<T> callable, Supplier<Span> creator)
-    throws IOException {
-    Span span = creator.get();
-    try (Scope scope = span.makeCurrent()) {
-      T ret = callable.call();
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final Supplier<Span> spanSupplier) throws T {
+    Span span = spanSupplier.get();
+    try (Scope ignored = span.makeCurrent()) {
+      final R ret = callable.call();
       span.setStatus(StatusCode.OK);
       return ret;
     } catch (Throwable e) {

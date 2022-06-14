@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,10 +44,9 @@ public class TestHelloHBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHelloHBase.class);
+    HBaseClassTestRule.forClass(TestHelloHBase.class);
 
-  private static final HBaseTestingUtil TEST_UTIL
-          = new HBaseTestingUtil();
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -67,13 +66,11 @@ public class TestHelloHBase {
     Admin admin = TEST_UTIL.getAdmin();
 
     exists = HelloHBase.namespaceExists(admin, NONEXISTENT_NAMESPACE);
-    assertEquals("#namespaceExists failed: found nonexistent namespace.",
-            false, exists);
+    assertEquals("#namespaceExists failed: found nonexistent namespace.", false, exists);
 
     admin.createNamespace(NamespaceDescriptor.create(EXISTING_NAMESPACE).build());
     exists = HelloHBase.namespaceExists(admin, EXISTING_NAMESPACE);
-    assertEquals("#namespaceExists failed: did NOT find existing namespace.",
-            true, exists);
+    assertEquals("#namespaceExists failed: did NOT find existing namespace.", true, exists);
     admin.deleteNamespace(EXISTING_NAMESPACE);
   }
 
@@ -82,14 +79,11 @@ public class TestHelloHBase {
     Admin admin = TEST_UTIL.getAdmin();
     HelloHBase.createNamespaceAndTable(admin);
 
-    boolean namespaceExists
-            = HelloHBase.namespaceExists(admin, HelloHBase.MY_NAMESPACE_NAME);
-    assertEquals("#createNamespaceAndTable failed to create namespace.",
-            true, namespaceExists);
+    boolean namespaceExists = HelloHBase.namespaceExists(admin, HelloHBase.MY_NAMESPACE_NAME);
+    assertEquals("#createNamespaceAndTable failed to create namespace.", true, namespaceExists);
 
     boolean tableExists = admin.tableExists(HelloHBase.MY_TABLE_NAME);
-    assertEquals("#createNamespaceAndTable failed to create table.",
-            true, tableExists);
+    assertEquals("#createNamespaceAndTable failed to create table.", true, tableExists);
 
     admin.disableTable(HelloHBase.MY_TABLE_NAME);
     admin.deleteTable(HelloHBase.MY_TABLE_NAME);
@@ -100,8 +94,7 @@ public class TestHelloHBase {
   public void testPutRowToTable() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     admin.createNamespace(NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
-    Table table
-            = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
+    Table table = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
 
     HelloHBase.putRowToTable(table);
     Result row = table.get(new Get(HelloHBase.MY_ROW_ID));
@@ -115,13 +108,10 @@ public class TestHelloHBase {
   public void testDeleteRow() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     admin.createNamespace(NamespaceDescriptor.create(HelloHBase.MY_NAMESPACE_NAME).build());
-    Table table
-            = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
+    Table table = TEST_UTIL.createTable(HelloHBase.MY_TABLE_NAME, HelloHBase.MY_COLUMN_FAMILY_NAME);
 
-    table.put(new Put(HelloHBase.MY_ROW_ID).
-            addColumn(HelloHBase.MY_COLUMN_FAMILY_NAME,
-                    HelloHBase.MY_FIRST_COLUMN_QUALIFIER,
-                    Bytes.toBytes("xyz")));
+    table.put(new Put(HelloHBase.MY_ROW_ID).addColumn(HelloHBase.MY_COLUMN_FAMILY_NAME,
+      HelloHBase.MY_FIRST_COLUMN_QUALIFIER, Bytes.toBytes("xyz")));
     HelloHBase.deleteRow(table);
     Result row = table.get(new Get(HelloHBase.MY_ROW_ID));
     assertEquals("#deleteRow failed to delete row.", true, row.isEmpty());

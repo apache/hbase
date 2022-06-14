@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import java.util.Random;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -45,19 +44,18 @@ public class TestMobDataBlockEncoding {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
+    HBaseClassTestRule.forClass(TestMobDataBlockEncoding.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private final static byte [] row1 = Bytes.toBytes("row1");
-  private final static byte [] family = Bytes.toBytes("family");
-  private final static byte [] qf1 = Bytes.toBytes("qualifier1");
-  private final static byte [] qf2 = Bytes.toBytes("qualifier2");
+  private final static byte[] row1 = Bytes.toBytes("row1");
+  private final static byte[] family = Bytes.toBytes("family");
+  private final static byte[] qf1 = Bytes.toBytes("qualifier1");
+  private final static byte[] qf2 = Bytes.toBytes("qualifier2");
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
   private static Table table;
   private static Admin admin;
   private static ColumnFamilyDescriptor columnFamilyDescriptor;
   private static TableDescriptor tableDescriptor;
-  private static Random random = new Random();
   private static long defaultThreshold = 10;
 
   @BeforeClass
@@ -70,8 +68,7 @@ public class TestMobDataBlockEncoding {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public void setUp(long threshold, String TN, DataBlockEncoding encoding)
-      throws Exception {
+  public void setUp(long threshold, String TN, DataBlockEncoding encoding) throws Exception {
     columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
       .setMobThreshold(threshold).setMaxVersions(4).setDataBlockEncoding(encoding).build();
     tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(TN))
@@ -84,13 +81,12 @@ public class TestMobDataBlockEncoding {
 
   /**
    * Generate the mob value.
-   *
    * @param size the size of the value
    * @return the mob value generated
    */
   private static byte[] generateMobValue(int size) {
     byte[] mobVal = new byte[size];
-    random.nextBytes(mobVal);
+    Bytes.random(mobVal);
     return mobVal;
   }
 

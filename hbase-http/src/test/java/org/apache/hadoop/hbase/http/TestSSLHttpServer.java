@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -43,19 +45,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This testcase issues SSL certificates configures the HttpServer to serve
- * HTTPS using the created certficates and calls an echo servlet using the
- * corresponding HTTPS URL.
+ * This testcase issues SSL certificates configures the HttpServer to serve HTTPS using the created
+ * certficates and calls an echo servlet using the corresponding HTTPS URL.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSSLHttpServer.class);
+    HBaseClassTestRule.forClass(TestSSLHttpServer.class);
 
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();
+  private static final String BASEDIR = System.getProperty("test.build.dir", "target/test-dir")
+    + "/" + TestSSLHttpServer.class.getSimpleName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration serverConf;
@@ -73,6 +74,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     serverConf = HTU.getConfiguration();
 
     serverConf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
+    serverConf.setBoolean(ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY, true);
 
     keystoresDir = new File(HTU.getDataTestDir("keystore").toString());
     keystoresDir.mkdirs();
@@ -84,26 +86,24 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     clientConf.addResource(serverConf.get(SSLFactory.SSL_CLIENT_CONF_KEY));
     serverConf.addResource(serverConf.get(SSLFactory.SSL_SERVER_CONF_KEY));
     clientConf.set(SSLFactory.SSL_CLIENT_CONF_KEY, serverConf.get(SSLFactory.SSL_CLIENT_CONF_KEY));
-    
+
     clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, clientConf);
     clientSslFactory.init();
 
-    server = new HttpServer.Builder()
-      .setName("test")
-      .addEndpoint(new URI("https://localhost"))
+    server = new HttpServer.Builder().setName("test").addEndpoint(new URI("https://localhost"))
       .setConf(serverConf)
-      .keyPassword(HBaseConfiguration.getPassword(serverConf, "ssl.server.keystore.keypassword",
-        null))
+      .keyPassword(
+        HBaseConfiguration.getPassword(serverConf, "ssl.server.keystore.keypassword", null))
       .keyStore(serverConf.get("ssl.server.keystore.location"),
         HBaseConfiguration.getPassword(serverConf, "ssl.server.keystore.password", null),
         clientConf.get("ssl.server.keystore.type", "jks"))
       .trustStore(serverConf.get("ssl.server.truststore.location"),
         HBaseConfiguration.getPassword(serverConf, "ssl.server.truststore.password", null),
-        serverConf.get("ssl.server.truststore.type", "jks")).build();
+        serverConf.get("ssl.server.truststore.type", "jks"))
+      .build();
     server.addUnprivilegedServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
-    baseUrl = new URL("https://"
-      + NetUtils.getHostPortString(server.getConnectorAddress(0)));
+    baseUrl = new URL("https://" + NetUtils.getHostPortString(server.getConnectorAddress(0)));
     LOG.info("HTTP server started: " + baseUrl);
   }
 
@@ -118,8 +118,18 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   @Test
   public void testEcho() throws Exception {
     assertEquals("a:b\nc:d\n", readOut(new URL(baseUrl, "/echo?a=b&c=d")));
-    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOut(new URL(baseUrl,
-        "/echo?a=b&c<=d&e=>")));
+    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOut(new URL(baseUrl, "/echo?a=b&c<=d&e=>")));
+  }
+
+  @Test
+  public void testSecurityHeaders() throws IOException, GeneralSecurityException {
+    HttpsURLConnection conn = (HttpsURLConnection) baseUrl.openConnection();
+    conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
+    assertEquals(HttpsURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals("max-age=63072000;includeSubDomains;preload",
+      conn.getHeaderField("Strict-Transport-Security"));
+    assertEquals("default-src https: data: 'unsafe-inline' 'unsafe-eval'",
+      conn.getHeaderField("Content-Security-Policy"));
   }
 
   private static String readOut(URL url) throws Exception {

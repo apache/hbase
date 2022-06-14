@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,7 +58,7 @@ public class TestShutdownWhileWALBroken {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestShutdownWhileWALBroken.class);
+    HBaseClassTestRule.forClass(TestShutdownWhileWALBroken.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestShutdownWhileWALBroken.class);
 
@@ -86,7 +86,7 @@ public class TestShutdownWhileWALBroken {
 
     @Override
     protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
-        throws IOException {
+      throws IOException {
       try {
         super.tryRegionServerReport(reportStartTime, reportEndTime);
       } catch (YouAreDeadException e) {

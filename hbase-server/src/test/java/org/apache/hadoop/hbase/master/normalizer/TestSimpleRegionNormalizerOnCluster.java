@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,14 +78,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestSimpleRegionNormalizerOnCluster {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSimpleRegionNormalizerOnCluster.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleRegionNormalizerOnCluster.class);
+    HBaseClassTestRule.forClass(TestSimpleRegionNormalizerOnCluster.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("fam");
@@ -134,10 +135,9 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   /**
-   * Test that disabling normalizer via table configuration is honored. There's
-   * no side-effect to look for (other than a log message), so normalize two
-   * tables, one with the disabled setting, and look for change in one and no
-   * change in the other.
+   * Test that disabling normalizer via table configuration is honored. There's no side-effect to
+   * look for (other than a log message), so normalize two tables, one with the disabled setting,
+   * and look for change in one and no change in the other.
    */
   @Test
   public void testHonorsNormalizerTableSetting() throws Exception {
@@ -157,17 +157,11 @@ public class TestSimpleRegionNormalizerOnCluster {
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn2RegionCount number of regions because normalizer has not been enabled on it.
       // tn3 has tn3RegionCount number of regions because two plans are run:
-      //    1. split one region to two
-      //    2. merge two regions into one
+      // 1. split one region to two
+      // 2. merge two regions into one
       // and hence, total number of regions for tn3 remains same
-      assertEquals(
-        tn1 + " should have split.",
-        tn1RegionCount + 1,
-        getRegionCount(tn1));
-      assertEquals(
-        tn2 + " should not have split.",
-        tn2RegionCount,
-        getRegionCount(tn2));
+      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
+      assertEquals(tn2 + " should not have split.", tn2RegionCount, getRegionCount(tn2));
       LOG.debug("waiting for t3 to settle...");
       waitForTableRegionCount(tn3, comparesEqualTo(tn3RegionCount));
     } finally {
@@ -183,7 +177,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-    public void testRegionNormalizationSplitWithQuotaLimit() throws Exception {
+  public void testRegionNormalizationSplitWithQuotaLimit() throws Exception {
     testRegionNormalizationSplit(true);
   }
 
@@ -195,21 +189,17 @@ public class TestSimpleRegionNormalizerOnCluster {
         : TableName.valueOf(name.getMethodName());
 
       final int currentRegionCount = createTableBegsSplit(tableName, true, false);
-      final long existingSkippedSplitCount = master.getRegionNormalizerManager()
-        .getSkippedCount(PlanType.SPLIT);
+      final long existingSkippedSplitCount =
+        master.getRegionNormalizerManager().getSkippedCount(PlanType.SPLIT);
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize().get());
       if (limitedByQuota) {
         waitForSkippedSplits(master, existingSkippedSplitCount);
-        assertEquals(
-          tableName + " should not have split.",
-          currentRegionCount,
+        assertEquals(tableName + " should not have split.", currentRegionCount,
           getRegionCount(tableName));
       } else {
         waitForTableRegionCount(tableName, greaterThanOrEqualTo(currentRegionCount + 1));
-        assertEquals(
-          tableName + " should have split.",
-          currentRegionCount + 1,
+        assertEquals(tableName + " should have split.", currentRegionCount + 1,
           getRegionCount(tableName));
       }
     } finally {
@@ -225,9 +215,7 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize().get());
       waitForTableRegionCount(tableName, lessThanOrEqualTo(currentRegionCount - 1));
-      assertEquals(
-        tableName + " should have merged.",
-        currentRegionCount - 1,
+      assertEquals(tableName + " should have merged.", currentRegionCount - 1,
         getRegionCount(tableName));
     } finally {
       dropIfExists(tableName);
@@ -244,9 +232,8 @@ public class TestSimpleRegionNormalizerOnCluster {
       admin.createNamespace(namespaceDescriptor).get();
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
       final int tn2RegionCount = createTableBegsSplit(tn2, true, false);
-      final NormalizeTableFilterParams ntfp = new NormalizeTableFilterParams.Builder()
-        .namespace("ns")
-        .build();
+      final NormalizeTableFilterParams ntfp =
+        new NormalizeTableFilterParams.Builder().namespace("ns").build();
 
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize(ntfp).get());
@@ -254,10 +241,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn2RegionCount number of regions because it's not a member of the target namespace.
-      assertEquals(
-        tn1 + " should have split.",
-        tn1RegionCount + 1,
-        getRegionCount(tn1));
+      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -273,9 +257,8 @@ public class TestSimpleRegionNormalizerOnCluster {
     try {
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
       final int tn2RegionCount = createTableBegsSplit(tn2, true, false);
-      final NormalizeTableFilterParams ntfp = new NormalizeTableFilterParams.Builder()
-        .regex(".*[1]")
-        .build();
+      final NormalizeTableFilterParams ntfp =
+        new NormalizeTableFilterParams.Builder().regex(".*[1]").build();
 
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize(ntfp).get());
@@ -283,10 +266,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn2RegionCount number of regions because it fails filter.
-      assertEquals(
-        tn1 + " should have split.",
-        tn1RegionCount + 1,
-        getRegionCount(tn1));
+      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -302,9 +282,8 @@ public class TestSimpleRegionNormalizerOnCluster {
     try {
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
       final int tn2RegionCount = createTableBegsSplit(tn2, true, false);
-      final NormalizeTableFilterParams ntfp = new NormalizeTableFilterParams.Builder()
-        .tableNames(Collections.singletonList(tn1))
-        .build();
+      final NormalizeTableFilterParams ntfp =
+        new NormalizeTableFilterParams.Builder().tableNames(Collections.singletonList(tn1)).build();
 
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize(ntfp).get());
@@ -312,10 +291,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn3RegionCount number of regions because it fails filter:
-      assertEquals(
-        tn1 + " should have split.",
-        tn1RegionCount + 1,
-        getRegionCount(tn1));
+      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -334,10 +310,9 @@ public class TestSimpleRegionNormalizerOnCluster {
       final int tnRegionCount = createTableTargetOfSplitAndMerge(tn);
       assertFalse(admin.normalizerSwitch(true).get());
       assertTrue(admin.normalize().get());
-      TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new MatcherPredicate<>(
-        "expected " + tn + " to split or merge (probably split)",
-        () -> getRegionCountUnchecked(tn),
-        not(comparesEqualTo(tnRegionCount))));
+      TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5),
+        new MatcherPredicate<>("expected " + tn + " to split or merge (probably split)",
+          () -> getRegionCountUnchecked(tn), not(comparesEqualTo(tnRegionCount))));
     } finally {
       dropIfExists(tn);
     }
@@ -346,8 +321,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static TableName buildTableNameForQuotaTest(final String methodName) throws Exception {
     String nsp = "np2";
     NamespaceDescriptor nspDesc =
-      NamespaceDescriptor.create(nsp)
-        .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
+      NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "5")
         .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2").build();
     admin.createNamespace(nspDesc).get();
     return TableName.valueOf(nsp, methodName);
@@ -355,18 +329,17 @@ public class TestSimpleRegionNormalizerOnCluster {
 
   private static void waitForSkippedSplits(final HMaster master,
     final long existingSkippedSplitCount) {
-    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new MatcherPredicate<>(
-      "waiting to observe split attempt and skipped.",
-      () -> master.getRegionNormalizerManager().getSkippedCount(PlanType.SPLIT),
-      Matchers.greaterThan(existingSkippedSplitCount)));
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5),
+      new MatcherPredicate<>("waiting to observe split attempt and skipped.",
+        () -> master.getRegionNormalizerManager().getSkippedCount(PlanType.SPLIT),
+        Matchers.greaterThan(existingSkippedSplitCount)));
   }
 
   private static void waitForTableRegionCount(final TableName tableName,
     Matcher<? super Integer> matcher) {
-    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new MatcherPredicate<>(
-      "region count for table " + tableName + " does not match expected",
-      () -> getRegionCountUnchecked(tableName),
-      matcher));
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5),
+      new MatcherPredicate<>("region count for table " + tableName + " does not match expected",
+        () -> getRegionCountUnchecked(tableName), matcher));
   }
 
   private static List<HRegion> generateTestData(final TableName tableName,
@@ -407,13 +380,10 @@ public class TestSimpleRegionNormalizerOnCluster {
 
   private static double getRegionSizeMB(final MasterServices masterServices,
     final RegionInfo regionInfo) {
-    final ServerName sn = masterServices.getAssignmentManager()
-      .getRegionStates()
-      .getRegionServerOfRegion(regionInfo);
-    final RegionMetrics regionLoad = masterServices.getServerManager()
-      .getLoad(sn)
-      .getRegionMetrics()
-      .get(regionInfo.getRegionName());
+    final ServerName sn =
+      masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo);
+    final RegionMetrics regionLoad = masterServices.getServerManager().getLoad(sn)
+      .getRegionMetrics().get(regionInfo.getRegionName());
     if (regionLoad == null) {
       LOG.debug("{} was not found in RegionsLoad", regionInfo.getRegionNameAsString());
       return -1;
@@ -422,38 +392,37 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   /**
-   * create a table with 5 regions, having region sizes so as to provoke a split
-   * of the largest region.
+   * create a table with 5 regions, having region sizes so as to provoke a split of the largest
+   * region.
    * <ul>
-   *   <li>total table size: 12</li>
-   *   <li>average region size: 2.4</li>
-   *   <li>split threshold: 2.4 * 2 = 4.8</li>
+   * <li>total table size: 12</li>
+   * <li>average region size: 2.4</li>
+   * <li>split threshold: 2.4 * 2 = 4.8</li>
    * </ul>
    */
   private static int createTableBegsSplit(final TableName tableName,
-      final boolean normalizerEnabled, final boolean isMergeEnabled)
-    throws Exception {
+    final boolean normalizerEnabled, final boolean isMergeEnabled) throws Exception {
     final List<HRegion> generatedRegions = generateTestData(tableName, 1, 1, 2, 3, 5);
     assertEquals(5, getRegionCount(tableName));
     admin.flush(tableName).get();
 
-    final TableDescriptor td = TableDescriptorBuilder
-      .newBuilder(admin.getDescriptor(tableName).get())
-      .setNormalizationEnabled(normalizerEnabled)
-      .setMergeEnabled(isMergeEnabled)
-      .build();
+    final TableDescriptor td =
+      TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).get())
+        .setNormalizationEnabled(normalizerEnabled).setMergeEnabled(isMergeEnabled).build();
     admin.modifyTable(td).get();
 
     // make sure relatively accurate region statistics are available for the test table. use
     // the last/largest region as clue.
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new ExplainingPredicate<IOException>() {
-      @Override public String explainFailure() {
+      @Override
+      public String explainFailure() {
         return "expected largest region to be >= 4mb.";
       }
-      @Override public boolean evaluate() {
+
+      @Override
+      public boolean evaluate() {
         return generatedRegions.stream()
-          .mapToDouble(val -> getRegionSizeMB(master, val.getRegionInfo()))
-          .allMatch(val -> val > 0)
+          .mapToDouble(val -> getRegionSizeMB(master, val.getRegionInfo())).allMatch(val -> val > 0)
           && getRegionSizeMB(master, generatedRegions.get(4).getRegionInfo()) >= 4.0;
       }
     });
@@ -461,12 +430,12 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   /**
-   * create a table with 5 regions, having region sizes so as to provoke a merge
-   * of the smallest regions.
+   * create a table with 5 regions, having region sizes so as to provoke a merge of the smallest
+   * regions.
    * <ul>
-   *   <li>total table size: 13</li>
-   *   <li>average region size: 2.6</li>
-   *   <li>sum of sizes of first two regions < average</li>
+   * <li>total table size: 13</li>
+   * <li>average region size: 2.6</li>
+   * <li>sum of sizes of first two regions < average</li>
    * </ul>
    */
   private static int createTableBegsMerge(final TableName tableName) throws Exception {
@@ -476,22 +445,22 @@ public class TestSimpleRegionNormalizerOnCluster {
     admin.flush(tableName).get();
 
     final TableDescriptor td = TableDescriptorBuilder
-      .newBuilder(admin.getDescriptor(tableName).get())
-      .setNormalizationEnabled(true)
-      .build();
+      .newBuilder(admin.getDescriptor(tableName).get()).setNormalizationEnabled(true).build();
     admin.modifyTable(td).get();
 
     // make sure relatively accurate region statistics are available for the test table. use
     // the last/largest region as clue.
     LOG.debug("waiting for region statistics to settle.");
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new ExplainingPredicate<IOException>() {
-      @Override public String explainFailure() {
+      @Override
+      public String explainFailure() {
         return "expected largest region to be >= 4mb.";
       }
-      @Override public boolean evaluate() {
+
+      @Override
+      public boolean evaluate() {
         return generatedRegions.stream()
-          .mapToDouble(val -> getRegionSizeMB(master, val.getRegionInfo()))
-          .allMatch(val -> val > 0)
+          .mapToDouble(val -> getRegionSizeMB(master, val.getRegionInfo())).allMatch(val -> val > 0)
           && getRegionSizeMB(master, generatedRegions.get(4).getRegionInfo()) >= 4.0;
       }
     });
@@ -502,8 +471,8 @@ public class TestSimpleRegionNormalizerOnCluster {
    * Create a table with 4 regions, having region sizes so as to provoke a split of the largest
    * region and a merge of an empty region into the largest.
    * <ul>
-   *   <li>total table size: 14</li>
-   *   <li>average region size: 3.5</li>
+   * <li>total table size: 14</li>
+   * <li>average region size: 3.5</li>
    * </ul>
    */
   private static int createTableTargetOfSplitAndMerge(final TableName tableName) throws Exception {
@@ -513,19 +482,20 @@ public class TestSimpleRegionNormalizerOnCluster {
     admin.flush(tableName).get();
 
     final TableDescriptor td = TableDescriptorBuilder
-      .newBuilder(admin.getDescriptor(tableName).get())
-      .setNormalizationEnabled(true)
-      .build();
+      .newBuilder(admin.getDescriptor(tableName).get()).setNormalizationEnabled(true).build();
     admin.modifyTable(td).get();
 
     // make sure relatively accurate region statistics are available for the test table. use
     // the last/largest region as clue.
     LOG.debug("waiting for region statistics to settle.");
     TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), new ExplainingPredicate<IOException>() {
-      @Override public String explainFailure() {
+      @Override
+      public String explainFailure() {
         return "expected largest region to be >= 10mb.";
       }
-      @Override public boolean evaluate() {
+
+      @Override
+      public boolean evaluate() {
         for (int i = 0; i < generatedRegions.size(); i++) {
           final RegionInfo regionInfo = generatedRegions.get(i).getRegionInfo();
           if (!(getRegionSizeMB(master, regionInfo) >= regionSizesMb[i])) {

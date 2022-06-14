@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestMutation {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMutation.class);
+    HBaseClassTestRule.forClass(TestMutation.class);
 
   @Test
   public void testAppendCopyConstructor() throws IOException {
@@ -50,20 +50,16 @@ public class TestMutation {
     origin.setPriority(100);
     byte[] family = Bytes.toBytes("CF-01");
 
-    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-      .setRow(origin.getRow())
-      .setFamily(family)
-      .setQualifier(Bytes.toBytes("q"))
-      .setType(Type.Put)
-      .setValue(Bytes.toBytes(100))
-      .build());
+    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Type.Put)
+      .setValue(Bytes.toBytes(100)).build());
     origin.addColumn(family, Bytes.toBytes("q0"), Bytes.toBytes("value"));
     origin.setTimeRange(100, 1000);
     Append clone = new Append(origin);
     assertEquals(origin, clone);
     origin.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("value"));
 
-    //They should have different cell lists
+    // They should have different cell lists
     assertNotEquals(origin.getCellList(family), clone.getCellList(family));
   }
 
@@ -73,20 +69,16 @@ public class TestMutation {
     origin.setPriority(100);
     byte[] family = Bytes.toBytes("CF-01");
 
-    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-      .setRow(origin.getRow())
-      .setFamily(family)
-      .setQualifier(Bytes.toBytes("q"))
-      .setType(Cell.Type.Put)
-      .setValue(Bytes.toBytes(100))
-      .build());
+    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Cell.Type.Put)
+      .setValue(Bytes.toBytes(100)).build());
     origin.addColumn(family, Bytes.toBytes("q0"), 4);
     origin.setTimeRange(100, 1000);
     Increment clone = new Increment(origin);
     assertEquals(origin, clone);
     origin.addColumn(family, Bytes.toBytes("q1"), 3);
 
-    //They should have different cell lists
+    // They should have different cell lists
     assertNotEquals(origin.getCellList(family), clone.getCellList(family));
   }
 
@@ -96,12 +88,8 @@ public class TestMutation {
     origin.setPriority(100);
     byte[] family = Bytes.toBytes("CF-01");
 
-    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-      .setRow(origin.getRow())
-      .setFamily(family)
-      .setQualifier(Bytes.toBytes("q"))
-      .setType(Type.Delete)
-      .build());
+    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Type.Delete).build());
     origin.addColumn(family, Bytes.toBytes("q0"));
     origin.addColumns(family, Bytes.toBytes("q1"));
     origin.addFamily(family);
@@ -111,7 +99,7 @@ public class TestMutation {
     assertEquals(origin, clone);
     origin.addColumn(family, Bytes.toBytes("q3"));
 
-    //They should have different cell lists
+    // They should have different cell lists
     assertNotEquals(origin.getCellList(family), clone.getCellList(family));
   }
 
@@ -121,20 +109,16 @@ public class TestMutation {
     origin.setPriority(100);
     byte[] family = Bytes.toBytes("CF-01");
 
-    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-      .setRow(origin.getRow())
-      .setFamily(family)
-      .setQualifier(Bytes.toBytes("q"))
-      .setType(Cell.Type.Put)
-      .setValue(Bytes.toBytes("value"))
-      .build());
+    origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Cell.Type.Put)
+      .setValue(Bytes.toBytes("value")).build());
     origin.addColumn(family, Bytes.toBytes("q0"), Bytes.toBytes("V-01"));
     origin.addColumn(family, Bytes.toBytes("q1"), 100, Bytes.toBytes("V-01"));
     Put clone = new Put(origin);
     assertEquals(origin, clone);
     origin.addColumn(family, Bytes.toBytes("q2"), Bytes.toBytes("V-02"));
 
-    //They should have different cell lists
+    // They should have different cell lists
     assertNotEquals(origin.getCellList(family), clone.getCellList(family));
   }
 
@@ -160,10 +144,10 @@ public class TestMutation {
     Assert.assertEquals(origin.getTimestamp(), clone.getTimestamp());
     Assert.assertEquals(origin.getPriority(), clone.getPriority());
     if (origin instanceof Append) {
-      assertEquals(((Append)origin).getTimeRange(), ((Append)clone).getTimeRange());
+      assertEquals(((Append) origin).getTimeRange(), ((Append) clone).getTimeRange());
     }
     if (origin instanceof Increment) {
-      assertEquals(((Increment)origin).getTimeRange(), ((Increment)clone).getTimeRange());
+      assertEquals(((Increment) origin).getTimeRange(), ((Increment) clone).getTimeRange());
     }
   }
 
@@ -179,65 +163,55 @@ public class TestMutation {
 
     // Test when row key is immutable
     Put putRowIsImmutable = new Put(rowKey, true);
-    assertTrue(rowKey == putRowIsImmutable.getRow());  // No local copy is made
+    assertTrue(rowKey == putRowIsImmutable.getRow()); // No local copy is made
 
     // Test when row key is not immutable
     Put putRowIsNotImmutable = new Put(rowKey, 1000L, false);
-    assertTrue(rowKey != putRowIsNotImmutable.getRow());  // A local copy is made
+    assertTrue(rowKey != putRowIsNotImmutable.getRow()); // A local copy is made
   }
 
   // HBASE-14882
   @Test
   public void testAddImmutableToPut() throws IOException {
-    byte[] row        = Bytes.toBytes("immutable-row");
-    byte[] family     = Bytes.toBytes("immutable-family");
+    byte[] row = Bytes.toBytes("immutable-row");
+    byte[] family = Bytes.toBytes("immutable-family");
 
     byte[] qualifier0 = Bytes.toBytes("immutable-qualifier-0");
-    byte[] value0     = Bytes.toBytes("immutable-value-0");
+    byte[] value0 = Bytes.toBytes("immutable-value-0");
 
     byte[] qualifier1 = Bytes.toBytes("immutable-qualifier-1");
-    byte[] value1     = Bytes.toBytes("immutable-value-1");
-    long   ts1        = 5000L;
+    byte[] value1 = Bytes.toBytes("immutable-value-1");
+    long ts1 = 5000L;
 
     // "true" indicates that the input row is immutable
     Put put = new Put(row, true);
-    put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier0)
-            .setTimestamp(put.getTimestamp())
-            .setType(Type.Put)
-            .setValue(value0)
-            .build())
-        .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-            .setRow(row)
-            .setFamily(family)
-            .setQualifier(qualifier1)
-            .setTimestamp(ts1)
-            .setType(Type.Put)
-            .setValue(value1)
-            .build());
+    put
+      .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row).setFamily(family)
+        .setQualifier(qualifier0).setTimestamp(put.getTimestamp()).setType(Type.Put)
+        .setValue(value0).build())
+      .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row).setFamily(family)
+        .setQualifier(qualifier1).setTimestamp(ts1).setType(Type.Put).setValue(value1).build());
 
     // Verify the cell of family:qualifier0
     Cell cell0 = put.get(family, qualifier0).get(0);
 
     // Verify no local copy is made for family, qualifier or value
-    assertTrue(cell0.getFamilyArray()    == family);
+    assertTrue(cell0.getFamilyArray() == family);
     assertTrue(cell0.getQualifierArray() == qualifier0);
-    assertTrue(cell0.getValueArray()     == value0);
+    assertTrue(cell0.getValueArray() == value0);
 
     // Verify timestamp
-    assertTrue(cell0.getTimestamp()      == put.getTimestamp());
+    assertTrue(cell0.getTimestamp() == put.getTimestamp());
 
     // Verify the cell of family:qualifier1
     Cell cell1 = put.get(family, qualifier1).get(0);
 
     // Verify no local copy is made for family, qualifier or value
-    assertTrue(cell1.getFamilyArray()    == family);
+    assertTrue(cell1.getFamilyArray() == family);
     assertTrue(cell1.getQualifierArray() == qualifier1);
-    assertTrue(cell1.getValueArray()     == value1);
+    assertTrue(cell1.getValueArray() == value1);
 
     // Verify timestamp
-    assertTrue(cell1.getTimestamp()      == ts1);
+    assertTrue(cell1.getTimestamp() == ts1);
   }
 }

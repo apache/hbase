@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -61,12 +60,12 @@ public class ProcedureEvent<T> {
   }
 
   /**
-   * Wakes up the suspended procedures by pushing them back into scheduler queues and sets the
-   * event as ready.
-   * See {@link #wakeInternal(AbstractProcedureScheduler)} for why this is not synchronized.
+   * Wakes up the suspended procedures by pushing them back into scheduler queues and sets the event
+   * as ready. See {@link #wakeInternal(AbstractProcedureScheduler)} for why this is not
+   * synchronized.
    */
   public void wake(AbstractProcedureScheduler procedureScheduler) {
-    procedureScheduler.wakeEvents(new ProcedureEvent[]{this});
+    procedureScheduler.wakeEvents(new ProcedureEvent[] { this });
   }
 
   /**
@@ -77,7 +76,7 @@ public class ProcedureEvent<T> {
    * event.
    */
   public synchronized boolean wakeIfSuspended(AbstractProcedureScheduler procedureScheduler,
-      Procedure<?> proc) {
+    Procedure<?> proc) {
     if (suspendedProcedures.stream().anyMatch(p -> p.getProcId() == proc.getProcId())) {
       wake(procedureScheduler);
       return true;
@@ -89,22 +88,19 @@ public class ProcedureEvent<T> {
    * Wakes up all the given events and puts the procedures waiting on them back into
    * ProcedureScheduler queues.
    */
-  public static void wakeEvents(AbstractProcedureScheduler scheduler, ProcedureEvent ... events) {
+  public static void wakeEvents(AbstractProcedureScheduler scheduler, ProcedureEvent... events) {
     scheduler.wakeEvents(events);
   }
 
   /**
-   * Only to be used by ProcedureScheduler implementations.
-   * Reason: To wake up multiple events, locking sequence is
-   * schedLock --> synchronized (event)
-   * To wake up an event, both schedLock() and synchronized(event) are required.
-   * The order is schedLock() --> synchronized(event) because when waking up multiple events
-   * simultaneously, we keep the scheduler locked until all procedures suspended on these events
-   * have been added back to the queue (Maybe it's not required? Evaluate!)
-   * To avoid deadlocks, we want to keep the locking order same even when waking up single event.
-   * That's why, {@link #wake(AbstractProcedureScheduler)} above uses the same code path as used
-   * when waking up multiple events.
-   * Access should remain package-private.
+   * Only to be used by ProcedureScheduler implementations. Reason: To wake up multiple events,
+   * locking sequence is schedLock --> synchronized (event) To wake up an event, both schedLock()
+   * and synchronized(event) are required. The order is schedLock() --> synchronized(event) because
+   * when waking up multiple events simultaneously, we keep the scheduler locked until all
+   * procedures suspended on these events have been added back to the queue (Maybe it's not
+   * required? Evaluate!) To avoid deadlocks, we want to keep the locking order same even when
+   * waking up single event. That's why, {@link #wake(AbstractProcedureScheduler)} above uses the
+   * same code path as used when waking up multiple events. Access should remain package-private.
    */
   public synchronized void wakeInternal(AbstractProcedureScheduler procedureScheduler) {
     if (ready && !suspendedProcedures.isEmpty()) {
@@ -122,16 +118,16 @@ public class ProcedureEvent<T> {
   }
 
   /**
-   * Access to suspendedProcedures is 'synchronized' on this object, but it's fine to return it
-   * here for tests.
+   * Access to suspendedProcedures is 'synchronized' on this object, but it's fine to return it here
+   * for tests.
    */
   public ProcedureDeque getSuspendedProcedures() {
     return suspendedProcedures;
   }
 
   @Override
-  public String toString() {
-    return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() +
-        ", " + suspendedProcedures;
+  public synchronized String toString() {
+    return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() + ", "
+      + suspendedProcedures;
   }
 }

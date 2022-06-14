@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,6 +29,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,15 +65,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavor
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 
 /**
- * A tool that is used for manipulating and viewing favored nodes information
- * for regions. Run with -h to get a list of the options
+ * A tool that is used for manipulating and viewing favored nodes information for regions. Run with
+ * -h to get a list of the options
  */
 @InterfaceAudience.Private
 // TODO: Remove? Unused. Partially implemented only.
 public class RegionPlacementMaintainer implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(RegionPlacementMaintainer.class
-      .getName());
-  //The cost of a placement that should never be assigned.
+  private static final Logger LOG =
+    LoggerFactory.getLogger(RegionPlacementMaintainer.class.getName());
+  // The cost of a placement that should never be assigned.
   private static final float MAX_COST = Float.POSITIVE_INFINITY;
 
   // The cost of a placement that is undesirable but acceptable.
@@ -101,7 +102,7 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   public RegionPlacementMaintainer(Configuration conf, boolean enforceLocality,
-      boolean enforceMinAssignmentMove) {
+    boolean enforceMinAssignmentMove) {
     this.conf = conf;
     this.enforceLocality = enforceLocality;
     this.enforceMinAssignmentMove = enforceMinAssignmentMove;
@@ -111,10 +112,10 @@ public class RegionPlacementMaintainer implements Closeable {
 
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
-        "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes " +
-        "-diff>" +
-        " [-l false] [-m false] [-d] [-tables t1,t2,...tn] [-zk zk1,zk2,zk3]" +
-        " [-fs hdfs://a.b.c.d:9000] [-hbase_root /HBASE]", opt);
+      "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes "
+        + "-diff>" + " [-l false] [-m false] [-d] [-tables t1,t2,...tn] [-zk zk1,zk2,zk3]"
+        + " [-fs hdfs://a.b.c.d:9000] [-hbase_root /HBASE]",
+      opt);
   }
 
   private AsyncClusterConnection getConnection() throws IOException {
@@ -146,9 +147,9 @@ public class RegionPlacementMaintainer implements Closeable {
    * Verify the region placement is consistent with the assignment plan
    */
   public List<AssignmentVerificationReport> verifyRegionPlacement(boolean isDetailMode)
-      throws IOException {
-    System.out.println("Start to verify the region assignment and " +
-        "generate the verification report");
+    throws IOException {
+    System.out
+      .println("Start to verify the region assignment and " + "generate the verification report");
     // Get the region assignment snapshot
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
 
@@ -163,8 +164,7 @@ public class RegionPlacementMaintainer implements Closeable {
     List<AssignmentVerificationReport> reports = new ArrayList<>();
     // Iterate all the tables to fill up the verification report
     for (TableName table : tables) {
-      if (!this.targetTableSet.isEmpty() &&
-          !this.targetTableSet.contains(table)) {
+      if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
         continue;
       }
       AssignmentVerificationReport report = new AssignmentVerificationReport();
@@ -176,24 +176,17 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   /**
-   * Generate the assignment plan for the existing table
-   *
-   * @param tableName
-   * @param assignmentSnapshot
-   * @param regionLocalityMap
-   * @param plan
-   * @param munkresForSecondaryAndTertiary if set on true the assignment plan
-   * for the tertiary and secondary will be generated with Munkres algorithm,
-   * otherwise will be generated using placeSecondaryAndTertiaryRS
-   * @throws IOException
+   * Generate the assignment plan for the existing table nnnn * @param
+   * munkresForSecondaryAndTertiary if set on true the assignment plan for the tertiary and
+   * secondary will be generated with Munkres algorithm, otherwise will be generated using
+   * placeSecondaryAndTertiaryRS n
    */
   private void genAssignmentPlan(TableName tableName,
     SnapshotOfRegionAssignmentFromMeta assignmentSnapshot,
     Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan plan,
     boolean munkresForSecondaryAndTertiary) throws IOException {
     // Get the all the regions for the current table
-    List<RegionInfo> regions =
-      assignmentSnapshot.getTableToRegionMap().get(tableName);
+    List<RegionInfo> regions = assignmentSnapshot.getTableToRegionMap().get(tableName);
     int numRegions = regions.size();
 
     // Get the current assignment map
@@ -204,12 +197,10 @@ public class RegionPlacementMaintainer implements Closeable {
     List<ServerName> servers = new ArrayList<>();
     servers.addAll(FutureUtils.get(getConnection().getAdmin().getRegionServers()));
 
-    LOG.info("Start to generate assignment plan for " + numRegions +
-        " regions from table " + tableName + " with " +
-        servers.size() + " region servers");
+    LOG.info("Start to generate assignment plan for " + numRegions + " regions from table "
+      + tableName + " with " + servers.size() + " region servers");
 
-    int slotsPerServer = (int) Math.ceil((float) numRegions /
-        servers.size());
+    int slotsPerServer = (int) Math.ceil((float) numRegions / servers.size());
     int regionSlots = slotsPerServer * servers.size();
 
     // Compute the primary, secondary and tertiary costs for each region/server
@@ -225,7 +216,7 @@ public class RegionPlacementMaintainer implements Closeable {
       float[][] localityPerServer = new float[numRegions][regionSlots];
       for (int i = 0; i < numRegions; i++) {
         Map<String, Float> serverLocalityMap =
-            regionLocalityMap.get(regions.get(i).getEncodedName());
+          regionLocalityMap.get(regions.get(i).getEncodedName());
         if (serverLocalityMap == null) {
           continue;
         }
@@ -269,18 +260,16 @@ public class RegionPlacementMaintainer implements Closeable {
       for (int i = 0; i < numRegions; i++) {
         for (int j = 0; j < regionSlots; j++) {
           String rack = rackManager.getRack(servers.get(j / slotsPerServer));
-          Float totalRackLocalityObj =
-              rackRegionLocality.get(rack).get(regions.get(i));
-          float totalRackLocality = totalRackLocalityObj == null ?
-              0 : totalRackLocalityObj.floatValue();
+          Float totalRackLocalityObj = rackRegionLocality.get(rack).get(regions.get(i));
+          float totalRackLocality =
+            totalRackLocalityObj == null ? 0 : totalRackLocalityObj.floatValue();
 
           // Primary cost aims to favor servers with high node locality and low
           // rack locality, so that secondaries and tertiaries can be chosen for
           // nodes with high rack locality. This might give primaries with
           // slightly less locality at first compared to a cost which only
           // considers the node locality, but should be better in the long run.
-          primaryCost[i][j] = 1 - (2 * localityPerServer[i][j] -
-              totalRackLocality);
+          primaryCost[i][j] = 1 - (2 * localityPerServer[i][j] - totalRackLocality);
 
           // Secondary cost aims to favor servers with high node locality and high
           // rack locality since the tertiary will be chosen from the same rack as
@@ -301,8 +290,7 @@ public class RegionPlacementMaintainer implements Closeable {
       for (int i = 0; i < numRegions; i++) {
         for (int j = 0; j < servers.size(); j++) {
           ServerName currentAddress = currentAssignmentMap.get(regions.get(i));
-          if (currentAddress != null &&
-              !currentAddress.equals(servers.get(j))) {
+          if (currentAddress != null && !currentAddress.equals(servers.get(j))) {
             for (int k = 0; k < slotsPerServer; k++) {
               primaryCost[i][j * slotsPerServer + k] += NOT_CURRENT_HOST_PENALTY;
             }
@@ -322,8 +310,7 @@ public class RegionPlacementMaintainer implements Closeable {
       }
     }
 
-    RandomizedMatrix randomizedMatrix = new RandomizedMatrix(numRegions,
-        regionSlots);
+    RandomizedMatrix randomizedMatrix = new RandomizedMatrix(numRegions, regionSlots);
     primaryCost = randomizedMatrix.transform(primaryCost);
     int[] primaryAssignment = new MunkresAssignment(primaryCost).solve();
     primaryAssignment = randomizedMatrix.invertIndices(primaryAssignment);
@@ -389,69 +376,64 @@ public class RegionPlacementMaintainer implements Closeable {
       tertiaryAssignment = randomizedMatrix.invertIndices(tertiaryAssignment);
 
       for (int i = 0; i < numRegions; i++) {
-        List<ServerName> favoredServers
-          = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+        List<ServerName> favoredServers =
+          new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
         ServerName s = servers.get(primaryAssignment[i] / slotsPerServer);
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
 
         s = servers.get(secondaryAssignment[i] / slotsPerServer);
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
 
         s = servers.get(tertiaryAssignment[i] / slotsPerServer);
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
         // Update the assignment plan
         plan.updateFavoredNodesMap(regions.get(i), favoredServers);
       }
-      LOG.info("Generated the assignment plan for " + numRegions +
-          " regions from table " + tableName + " with " +
-          servers.size() + " region servers");
-      LOG.info("Assignment plan for secondary and tertiary generated " +
-          "using MunkresAssignment");
+      LOG.info("Generated the assignment plan for " + numRegions + " regions from table "
+        + tableName + " with " + servers.size() + " region servers");
+      LOG.info("Assignment plan for secondary and tertiary generated " + "using MunkresAssignment");
     } else {
       Map<RegionInfo, ServerName> primaryRSMap = new HashMap<>();
       for (int i = 0; i < numRegions; i++) {
         primaryRSMap.put(regions.get(i), servers.get(primaryAssignment[i] / slotsPerServer));
       }
       FavoredNodeAssignmentHelper favoredNodeHelper =
-          new FavoredNodeAssignmentHelper(servers, conf);
+        new FavoredNodeAssignmentHelper(servers, conf);
       favoredNodeHelper.initialize();
       Map<RegionInfo, ServerName[]> secondaryAndTertiaryMap =
-          favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
+        favoredNodeHelper.placeSecondaryAndTertiaryWithRestrictions(primaryRSMap);
       for (int i = 0; i < numRegions; i++) {
-        List<ServerName> favoredServers
-          = new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
+        List<ServerName> favoredServers =
+          new ArrayList<>(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM);
         RegionInfo currentRegion = regions.get(i);
         ServerName s = primaryRSMap.get(currentRegion);
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
 
-        ServerName[] secondaryAndTertiary =
-            secondaryAndTertiaryMap.get(currentRegion);
+        ServerName[] secondaryAndTertiary = secondaryAndTertiaryMap.get(currentRegion);
         s = secondaryAndTertiary[0];
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
 
         s = secondaryAndTertiary[1];
-        favoredServers.add(ServerName.valueOf(s.getHostname(), s.getPort(),
-            ServerName.NON_STARTCODE));
+        favoredServers
+          .add(ServerName.valueOf(s.getHostname(), s.getPort(), ServerName.NON_STARTCODE));
         // Update the assignment plan
         plan.updateFavoredNodesMap(regions.get(i), favoredServers);
       }
-      LOG.info("Generated the assignment plan for " + numRegions +
-          " regions from table " + tableName + " with " +
-          servers.size() + " region servers");
-      LOG.info("Assignment plan for secondary and tertiary generated " +
-          "using placeSecondaryAndTertiaryWithRestrictions method");
+      LOG.info("Generated the assignment plan for " + numRegions + " regions from table "
+        + tableName + " with " + servers.size() + " region servers");
+      LOG.info("Assignment plan for secondary and tertiary generated "
+        + "using placeSecondaryAndTertiaryWithRestrictions method");
     }
   }
 
   public FavoredNodesPlan getNewAssignmentPlan() throws IOException {
     // Get the current region assignment snapshot by scanning from the META
-    SnapshotOfRegionAssignmentFromMeta assignmentSnapshot =
-      this.getRegionAssignmentSnapshot();
+    SnapshotOfRegionAssignmentFromMeta assignmentSnapshot = this.getRegionAssignmentSnapshot();
 
     // Get the region locality map
     Map<String, Map<String, Float>> regionLocalityMap = null;
@@ -462,26 +444,24 @@ public class RegionPlacementMaintainer implements Closeable {
     FavoredNodesPlan plan = new FavoredNodesPlan();
 
     // Get the table to region mapping
-    Map<TableName, List<RegionInfo>> tableToRegionMap =
-      assignmentSnapshot.getTableToRegionMap();
-    LOG.info("Start to generate the new assignment plan for the " +
-         + tableToRegionMap.keySet().size() + " tables" );
+    Map<TableName, List<RegionInfo>> tableToRegionMap = assignmentSnapshot.getTableToRegionMap();
+    LOG.info("Start to generate the new assignment plan for the "
+      + +tableToRegionMap.keySet().size() + " tables");
     for (TableName table : tableToRegionMap.keySet()) {
       try {
-        if (!this.targetTableSet.isEmpty() &&
-            !this.targetTableSet.contains(table)) {
+        if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
           continue;
         }
         // TODO: maybe run the placement in parallel for each table
         genAssignmentPlan(table, assignmentSnapshot, regionLocalityMap, plan,
-            USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY);
+          USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY);
       } catch (Exception e) {
-        LOG.error("Get some exceptions for placing primary region server" +
-            "for table " + table + " because " + e);
+        LOG.error("Get some exceptions for placing primary region server" + "for table " + table
+          + " because " + e);
       }
     }
-    LOG.info("Finish to generate the new assignment plan for the " +
-        + tableToRegionMap.keySet().size() + " tables" );
+    LOG.info("Finish to generate the new assignment plan for the "
+      + +tableToRegionMap.keySet().size() + " tables");
     return plan;
   }
 
@@ -491,17 +471,14 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   /**
-   * Some algorithms for solving the assignment problem may traverse workers or
-   * jobs in linear order which may result in skewing the assignments of the
-   * first jobs in the matrix toward the last workers in the matrix if the
-   * costs are uniform. To avoid this kind of clumping, we can randomize the
-   * rows and columns of the cost matrix in a reversible way, such that the
-   * solution to the assignment problem can be interpreted in terms of the
-   * original untransformed cost matrix. Rows and columns are transformed
-   * independently such that the elements contained in any row of the input
-   * matrix are the same as the elements in the corresponding output matrix,
-   * and each row has its elements transformed in the same way. Similarly for
-   * columns.
+   * Some algorithms for solving the assignment problem may traverse workers or jobs in linear order
+   * which may result in skewing the assignments of the first jobs in the matrix toward the last
+   * workers in the matrix if the costs are uniform. To avoid this kind of clumping, we can
+   * randomize the rows and columns of the cost matrix in a reversible way, such that the solution
+   * to the assignment problem can be interpreted in terms of the original untransformed cost
+   * matrix. Rows and columns are transformed independently such that the elements contained in any
+   * row of the input matrix are the same as the elements in the corresponding output matrix, and
+   * each row has its elements transformed in the same way. Similarly for columns.
    */
   protected static class RandomizedMatrix {
     private final int rows;
@@ -519,7 +496,7 @@ public class RegionPlacementMaintainer implements Closeable {
     public RandomizedMatrix(int rows, int cols) {
       this.rows = rows;
       this.cols = cols;
-      Random random = new Random();
+      Random random = ThreadLocalRandom.current();
       rowTransform = new int[rows];
       rowInverse = new int[rows];
       for (int i = 0; i < rows; i++) {
@@ -556,9 +533,8 @@ public class RegionPlacementMaintainer implements Closeable {
     }
 
     /**
-     * Copy a given matrix into a new matrix, transforming each row index and
-     * each column index according to the randomization scheme that was created
-     * at construction time.
+     * Copy a given matrix into a new matrix, transforming each row index and each column index
+     * according to the randomization scheme that was created at construction time.
      * @param matrix the cost matrix to transform
      * @return a new matrix with row and column indices transformed
      */
@@ -573,9 +549,8 @@ public class RegionPlacementMaintainer implements Closeable {
     }
 
     /**
-     * Copy a given matrix into a new matrix, transforming each row index and
-     * each column index according to the inverse of the randomization scheme
-     * that was created at construction time.
+     * Copy a given matrix into a new matrix, transforming each row index and each column index
+     * according to the inverse of the randomization scheme that was created at construction time.
      * @param matrix the cost matrix to be inverted
      * @return a new matrix with row and column indices inverted
      */
@@ -590,9 +565,9 @@ public class RegionPlacementMaintainer implements Closeable {
     }
 
     /**
-     * Given an array where each element {@code indices[i]} represents the
-     * randomized column index corresponding to randomized row index {@code i},
-     * create a new array with the corresponding inverted indices.
+     * Given an array where each element {@code indices[i]} represents the randomized column index
+     * corresponding to randomized row index {@code i}, create a new array with the corresponding
+     * inverted indices.
      * @param indices an array of transformed indices to be inverted
      * @return an array of inverted indices
      */
@@ -606,8 +581,7 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   /**
-   * Print the assignment plan to the system output stream
-   * @param plan
+   * Print the assignment plan to the system output stream n
    */
   public static void printAssignmentPlan(FavoredNodesPlan plan) {
     if (plan == null) return;
@@ -619,7 +593,7 @@ public class RegionPlacementMaintainer implements Closeable {
 
       String serverList = FavoredNodeAssignmentHelper.getFavoredNodesAsString(entry.getValue());
       String regionName = entry.getKey();
-      LOG.info("Region: " + regionName );
+      LOG.info("Region: " + regionName);
       LOG.info("Its favored nodes: " + serverList);
     }
     LOG.info("========== Finish to print the assignment plan ================");
@@ -630,8 +604,7 @@ public class RegionPlacementMaintainer implements Closeable {
    * @param plan the assignments plan to be updated into hbase:meta
    * @throws IOException if cannot update assignment plan in hbase:meta
    */
-  public void updateAssignmentPlanToMeta(FavoredNodesPlan plan)
-  throws IOException {
+  public void updateAssignmentPlanToMeta(FavoredNodesPlan plan) throws IOException {
     try {
       LOG.info("Start to update the hbase:meta with the new assignment plan");
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
@@ -645,18 +618,15 @@ public class RegionPlacementMaintainer implements Closeable {
       FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(planToUpdate, conf);
       LOG.info("Updated the hbase:meta with the new assignment plan");
     } catch (Exception e) {
-      LOG.error("Failed to update hbase:meta with the new assignment" +
-          "plan because " + e.getMessage());
+      LOG.error(
+        "Failed to update hbase:meta with the new assignment" + "plan because " + e.getMessage());
     }
   }
 
   /**
-   * Update the assignment plan to all the region servers
-   * @param plan
-   * @throws IOException
+   * Update the assignment plan to all the region servers nn
    */
-  private void updateAssignmentPlanToRegionServers(FavoredNodesPlan plan)
-  throws IOException{
+  private void updateAssignmentPlanToRegionServers(FavoredNodesPlan plan) throws IOException {
     LOG.info("Start to update the region servers with the new assignment plan");
     // Get the region to region server map
     Map<ServerName, List<RegionInfo>> currentAssignment =
@@ -666,8 +636,7 @@ public class RegionPlacementMaintainer implements Closeable {
     int succeededNum = 0;
     Map<ServerName, Exception> failedUpdateMap = new HashMap<>();
 
-    for (Map.Entry<ServerName, List<RegionInfo>> entry :
-      currentAssignment.entrySet()) {
+    for (Map.Entry<ServerName, List<RegionInfo>> entry : currentAssignment.entrySet()) {
       List<Pair<RegionInfo, List<ServerName>>> regionUpdateInfos = new ArrayList<>();
       try {
         // Keep track of the favored updates for the current region server
@@ -675,8 +644,10 @@ public class RegionPlacementMaintainer implements Closeable {
         // Find out all the updates for the current region server
         for (RegionInfo region : entry.getValue()) {
           List<ServerName> favoredServerList = plan.getFavoredNodes(region);
-          if (favoredServerList != null &&
-              favoredServerList.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+          if (
+            favoredServerList != null
+              && favoredServerList.size() == FavoredNodeAssignmentHelper.FAVORED_NODES_NUM
+          ) {
             // Create the single server plan if necessary
             if (singleServerPlan == null) {
               singleServerPlan = new FavoredNodesPlan();
@@ -693,11 +664,11 @@ public class RegionPlacementMaintainer implements Closeable {
             RequestConverter.buildUpdateFavoredNodesRequest(regionUpdateInfos);
           UpdateFavoredNodesResponse updateFavoredNodesResponse =
             FutureUtils.get(rsAdmin.updateFavoredNodes(request));
-          LOG.info("Region server " +
-            FutureUtils.get(rsAdmin.getServerInfo(RequestConverter.buildGetServerInfoRequest()))
-              .getServerInfo() +
-            " has updated " + updateFavoredNodesResponse.getResponse() + " / " +
-            singleServerPlan.size() + " regions with the assignment plan");
+          LOG.info("Region server "
+            + FutureUtils.get(rsAdmin.getServerInfo(RequestConverter.buildGetServerInfoRequest()))
+              .getServerInfo()
+            + " has updated " + updateFavoredNodesResponse.getResponse() + " / "
+            + singleServerPlan.size() + " regions with the assignment plan");
           succeededNum++;
         }
       } catch (Exception e) {
@@ -705,53 +676,45 @@ public class RegionPlacementMaintainer implements Closeable {
       }
     }
     // log the succeeded updates
-    LOG.info("Updated " + succeededNum + " region servers with " +
-            "the new assignment plan");
+    LOG.info("Updated " + succeededNum + " region servers with " + "the new assignment plan");
 
     // log the failed updates
     int failedNum = failedUpdateMap.size();
     if (failedNum != 0) {
-      LOG.error("Failed to update the following + " + failedNum +
-          " region servers with its corresponding favored nodes");
-      for (Map.Entry<ServerName, Exception> entry :
-        failedUpdateMap.entrySet() ) {
-        LOG.error("Failed to update " + entry.getKey().getAddress() +
-            " because of " + entry.getValue().getMessage());
+      LOG.error("Failed to update the following + " + failedNum
+        + " region servers with its corresponding favored nodes");
+      for (Map.Entry<ServerName, Exception> entry : failedUpdateMap.entrySet()) {
+        LOG.error("Failed to update " + entry.getKey().getAddress() + " because of "
+          + entry.getValue().getMessage());
       }
     }
   }
 
-  public void updateAssignmentPlan(FavoredNodesPlan plan)
-      throws IOException {
-    LOG.info("Start to update the new assignment plan for the hbase:meta table and" +
-        " the region servers");
+  public void updateAssignmentPlan(FavoredNodesPlan plan) throws IOException {
+    LOG.info("Start to update the new assignment plan for the hbase:meta table and"
+      + " the region servers");
     // Update the new assignment plan to META
     updateAssignmentPlanToMeta(plan);
     // Update the new assignment plan to Region Servers
     updateAssignmentPlanToRegionServers(plan);
-    LOG.info("Finish to update the new assignment plan for the hbase:meta table and" +
-        " the region servers");
+    LOG.info("Finish to update the new assignment plan for the hbase:meta table and"
+      + " the region servers");
   }
 
   /**
-   * Return how many regions will move per table since their primary RS will
-   * change
-   *
+   * Return how many regions will move per table since their primary RS will change
    * @param newPlan - new AssignmentPlan
    * @return how many primaries will move per table
    */
-  public Map<TableName, Integer> getRegionsMovement(FavoredNodesPlan newPlan)
-      throws IOException {
+  public Map<TableName, Integer> getRegionsMovement(FavoredNodesPlan newPlan) throws IOException {
     Map<TableName, Integer> movesPerTable = new HashMap<>();
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
-    Map<TableName, List<RegionInfo>> tableToRegions = snapshot
-        .getTableToRegionMap();
+    Map<TableName, List<RegionInfo>> tableToRegions = snapshot.getTableToRegionMap();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
     for (TableName table : tables) {
       int movedPrimaries = 0;
-      if (!this.targetTableSet.isEmpty()
-          && !this.targetTableSet.contains(table)) {
+      if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
         continue;
       }
       List<RegionInfo> regions = tableToRegions.get(table);
@@ -772,17 +735,15 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   /**
-   * Compares two plans and check whether the locality dropped or increased
-   * (prints the information as a string) also prints the baseline locality
-   *
-   * @param movesPerTable - how many primary regions will move per table
+   * Compares two plans and check whether the locality dropped or increased (prints the information
+   * as a string) also prints the baseline locality
+   * @param movesPerTable     - how many primary regions will move per table
    * @param regionLocalityMap - locality map from FS
-   * @param newPlan - new assignment plan
-   * @throws IOException
+   * @param newPlan           - new assignment plan n
    */
   public void checkDifferencesWithOldPlan(Map<TableName, Integer> movesPerTable,
-      Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan newPlan)
-          throws IOException {
+    Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan newPlan)
+    throws IOException {
     // localities for primary, secondary and tertiary
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan oldPlan = snapshot.getExistingAssignmentPlan();
@@ -791,26 +752,24 @@ public class RegionPlacementMaintainer implements Closeable {
     for (TableName table : tables) {
       float[] deltaLocality = new float[3];
       float[] locality = new float[3];
-      if (!this.targetTableSet.isEmpty()
-          && !this.targetTableSet.contains(table)) {
+      if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
         continue;
       }
       List<RegionInfo> regions = tableToRegionsMap.get(table);
       System.out.println("==================================================");
       System.out.println("Assignment Plan Projection Report For Table: " + table);
       System.out.println("\t Total regions: " + regions.size());
-      System.out.println("\t" + movesPerTable.get(table)
-          + " primaries will move due to their primary has changed");
+      System.out.println(
+        "\t" + movesPerTable.get(table) + " primaries will move due to their primary has changed");
       for (RegionInfo currentRegion : regions) {
-        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
-            .getEncodedName());
+        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion.getEncodedName());
         if (regionLocality == null) {
           continue;
         }
         List<ServerName> oldServers = oldPlan.getFavoredNodes(currentRegion);
         List<ServerName> newServers = newPlan.getFavoredNodes(currentRegion);
         if (newServers != null && oldServers != null) {
-          int i=0;
+          int i = 0;
           for (FavoredNodesPlan.Position p : FavoredNodesPlan.Position.values()) {
             ServerName newServer = newServers.get(p.ordinal());
             ServerName oldServer = oldServers.get(p.ordinal());
@@ -831,7 +790,7 @@ public class RegionPlacementMaintainer implements Closeable {
           }
         }
       }
-      DecimalFormat df = new java.text.DecimalFormat( "#.##");
+      DecimalFormat df = new java.text.DecimalFormat("#.##");
       for (int i = 0; i < deltaLocality.length; i++) {
         System.out.print("\t\t Baseline locality for ");
         if (i == 0) {
@@ -843,8 +802,7 @@ public class RegionPlacementMaintainer implements Closeable {
         }
         System.out.println(df.format(100 * locality[i] / regions.size()) + "%");
         System.out.print("\t\t Locality will change with the new plan: ");
-        System.out.println(df.format(100 * deltaLocality[i] / regions.size())
-            + "%");
+        System.out.println(df.format(100 * deltaLocality[i] / regions.size()) + "%");
       }
       System.out.println("\t Baseline dispersion");
       printDispersionScores(table, snapshot, regions.size(), null, true);
@@ -853,9 +811,8 @@ public class RegionPlacementMaintainer implements Closeable {
     }
   }
 
-  public void printDispersionScores(TableName table,
-      SnapshotOfRegionAssignmentFromMeta snapshot, int numRegions, FavoredNodesPlan newPlan,
-      boolean simplePrint) {
+  public void printDispersionScores(TableName table, SnapshotOfRegionAssignmentFromMeta snapshot,
+    int numRegions, FavoredNodesPlan newPlan, boolean simplePrint) {
     if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
       return;
     }
@@ -864,33 +821,29 @@ public class RegionPlacementMaintainer implements Closeable {
     List<Float> dispersion = report.getDispersionInformation();
     if (simplePrint) {
       DecimalFormat df = new java.text.DecimalFormat("#.##");
-      System.out.println("\tAvg dispersion score: "
-          + df.format(dispersion.get(0)) + " hosts;\tMax dispersion score: "
-          + df.format(dispersion.get(1)) + " hosts;\tMin dispersion score: "
-          + df.format(dispersion.get(2)) + " hosts;");
+      System.out.println("\tAvg dispersion score: " + df.format(dispersion.get(0))
+        + " hosts;\tMax dispersion score: " + df.format(dispersion.get(1))
+        + " hosts;\tMin dispersion score: " + df.format(dispersion.get(2)) + " hosts;");
     } else {
       LOG.info("For Table: " + table + " ; #Total Regions: " + numRegions
-          + " ; The average dispersion score is " + dispersion.get(0));
+        + " ; The average dispersion score is " + dispersion.get(0));
     }
   }
 
   public void printLocalityAndDispersionForCurrentPlan(
-      Map<String, Map<String, Float>> regionLocalityMap) throws IOException {
+    Map<String, Map<String, Float>> regionLocalityMap) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot = this.getRegionAssignmentSnapshot();
     FavoredNodesPlan assignmentPlan = snapshot.getExistingAssignmentPlan();
     Set<TableName> tables = snapshot.getTableSet();
-    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot
-        .getTableToRegionMap();
+    Map<TableName, List<RegionInfo>> tableToRegionsMap = snapshot.getTableToRegionMap();
     for (TableName table : tables) {
       float[] locality = new float[3];
-      if (!this.targetTableSet.isEmpty()
-          && !this.targetTableSet.contains(table)) {
+      if (!this.targetTableSet.isEmpty() && !this.targetTableSet.contains(table)) {
         continue;
       }
       List<RegionInfo> regions = tableToRegionsMap.get(table);
       for (RegionInfo currentRegion : regions) {
-        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion
-            .getEncodedName());
+        Map<String, Float> regionLocality = regionLocalityMap.get(currentRegion.getEncodedName());
         if (regionLocality == null) {
           continue;
         }
@@ -912,17 +865,17 @@ public class RegionPlacementMaintainer implements Closeable {
         }
       }
       for (int i = 0; i < locality.length; i++) {
-        String copy =  null;
+        String copy = null;
         if (i == 0) {
           copy = "primary";
         } else if (i == 1) {
           copy = "secondary";
         } else if (i == 2) {
-          copy = "tertiary" ;
+          copy = "tertiary";
         }
         float avgLocality = 100 * locality[i] / regions.size();
         LOG.info("For Table: " + table + " ; #Total Regions: " + regions.size()
-            + " ; The average locality for " + copy+ " is " + avgLocality + " %");
+          + " ; The average locality for " + copy + " is " + avgLocality + " %");
       }
       printDispersionScores(table, snapshot, regions.size(), null, false);
     }
@@ -934,8 +887,7 @@ public class RegionPlacementMaintainer implements Closeable {
    */
   public static List<ServerName> getFavoredNodeList(String favoredNodesStr) {
     String[] favoredNodesArray = StringUtils.split(favoredNodesStr, ",");
-    if (favoredNodesArray == null)
-      return null;
+    if (favoredNodesArray == null) return null;
 
     List<ServerName> serverList = new ArrayList<>();
     for (String hostNameAndPort : favoredNodesArray) {
@@ -948,34 +900,30 @@ public class RegionPlacementMaintainer implements Closeable {
     Options opt = new Options();
     opt.addOption("w", "write", false, "write the assignments to hbase:meta only");
     opt.addOption("u", "update", false,
-        "update the assignments to hbase:meta and RegionServers together");
+      "update the assignments to hbase:meta and RegionServers together");
     opt.addOption("n", "dry-run", false, "do not write assignments to META");
     opt.addOption("v", "verify", false, "verify current assignments against META");
     opt.addOption("p", "print", false, "print the current assignment plan in META");
     opt.addOption("h", "help", false, "print usage");
-    opt.addOption("d", "verification-details", false,
-        "print the details of verification report");
+    opt.addOption("d", "verification-details", false, "print the details of verification report");
 
     opt.addOption("zk", true, "to set the zookeeper quorum");
     opt.addOption("fs", true, "to set HDFS");
     opt.addOption("hbase_root", true, "to set hbase_root directory");
 
-    opt.addOption("overwrite", false,
-        "overwrite the favored nodes for a single region," +
-        "for example: -update -r regionName -f server1:port,server2:port,server3:port");
+    opt.addOption("overwrite", false, "overwrite the favored nodes for a single region,"
+      + "for example: -update -r regionName -f server1:port,server2:port,server3:port");
     opt.addOption("r", true, "The region name that needs to be updated");
     opt.addOption("f", true, "The new favored nodes");
 
     opt.addOption("tables", true,
-        "The list of table names splitted by ',' ;" +
-        "For example: -tables: t1,t2,...,tn");
+      "The list of table names splitted by ',' ;" + "For example: -tables: t1,t2,...,tn");
     opt.addOption("l", "locality", true, "enforce the maximum locality");
     opt.addOption("m", "min-move", true, "enforce minimum assignment move");
     opt.addOption("diff", false, "calculate difference between assignment plans");
-    opt.addOption("munkres", false,
-        "use munkres to place secondaries and tertiaries");
-    opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion " +
-        "information for current plan");
+    opt.addOption("munkres", false, "use munkres to place secondaries and tertiaries");
+    opt.addOption("ld", "locality-dispersion", false,
+      "print locality and dispersion " + "information for current plan");
     try {
       CommandLine cmd = new GnuParser().parse(opt, args);
       Configuration conf = HBaseConfiguration.create();
@@ -985,17 +933,17 @@ public class RegionPlacementMaintainer implements Closeable {
       boolean verificationDetails = false;
 
       // Read all the options
-      if ((cmd.hasOption("l") &&
-          cmd.getOptionValue("l").equalsIgnoreCase("false")) ||
-          (cmd.hasOption("locality") &&
-              cmd.getOptionValue("locality").equalsIgnoreCase("false"))) {
+      if (
+        (cmd.hasOption("l") && cmd.getOptionValue("l").equalsIgnoreCase("false"))
+          || (cmd.hasOption("locality") && cmd.getOptionValue("locality").equalsIgnoreCase("false"))
+      ) {
         enforceLocality = false;
       }
 
-      if ((cmd.hasOption("m") &&
-          cmd.getOptionValue("m").equalsIgnoreCase("false")) ||
-          (cmd.hasOption("min-move") &&
-              cmd.getOptionValue("min-move").equalsIgnoreCase("false"))) {
+      if (
+        (cmd.hasOption("m") && cmd.getOptionValue("m").equalsIgnoreCase("false"))
+          || (cmd.hasOption("min-move") && cmd.getOptionValue("min-move").equalsIgnoreCase("false"))
+      ) {
         enforceMinAssignmentMove = false;
       }
 
@@ -1077,14 +1025,14 @@ public class RegionPlacementMaintainer implements Closeable {
           printAssignmentPlan(plan);
         } else if (cmd.hasOption("overwrite")) {
           if (!cmd.hasOption("f") || !cmd.hasOption("r")) {
-            throw new IllegalArgumentException("Please specify: " +
-              " -update -r regionName -f server1:port,server2:port,server3:port");
+            throw new IllegalArgumentException("Please specify: "
+              + " -update -r regionName -f server1:port,server2:port,server3:port");
           }
 
           String regionName = cmd.getOptionValue("r");
           String favoredNodesStr = cmd.getOptionValue("f");
-          LOG.info("Going to update the region " + regionName + " with the new favored nodes " +
-            favoredNodesStr);
+          LOG.info("Going to update the region " + regionName + " with the new favored nodes "
+            + favoredNodesStr);
           List<ServerName> favoredNodes = null;
           RegionInfo regionInfo =
             rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);

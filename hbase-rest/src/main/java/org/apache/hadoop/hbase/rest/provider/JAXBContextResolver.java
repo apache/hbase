@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.provider;
 
 import java.util.Arrays;
@@ -44,10 +42,9 @@ import org.apache.hbase.thirdparty.javax.ws.rs.ext.ContextResolver;
 import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
- * Plumbing for hooking up Jersey's JSON entity body encoding and decoding
- * support to JAXB. Modify how the context is created (by using e.g. a 
- * different configuration builder) to control how JSON is processed and
- * created.
+ * Plumbing for hooking up Jersey's JSON entity body encoding and decoding support to JAXB. Modify
+ * how the context is created (by using e.g. a different configuration builder) to control how JSON
+ * is processed and created.
  */
 @Provider
 @InterfaceAudience.Private
@@ -57,23 +54,11 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
   private final Set<Class<?>> types;
 
-  private final Class<?>[] cTypes = {
-    CellModel.class,
-    CellSetModel.class,
-    ColumnSchemaModel.class,
-    NamespacesModel.class,
-    NamespacesInstanceModel.class,
-    RowModel.class,
-    ScannerModel.class,
-    StorageClusterStatusModel.class,
-    StorageClusterVersionModel.class,
-    TableInfoModel.class,
-    TableListModel.class,
-    TableModel.class,
-    TableRegionModel.class,
-    TableSchemaModel.class,
-    VersionModel.class
-  };
+  private final Class<?>[] cTypes = { CellModel.class, CellSetModel.class, ColumnSchemaModel.class,
+    NamespacesModel.class, NamespacesInstanceModel.class, RowModel.class, ScannerModel.class,
+    StorageClusterStatusModel.class, StorageClusterVersionModel.class, TableInfoModel.class,
+    TableListModel.class, TableModel.class, TableRegionModel.class, TableSchemaModel.class,
+    VersionModel.class };
 
   @SuppressWarnings("unchecked")
   public JAXBContextResolver() throws Exception {

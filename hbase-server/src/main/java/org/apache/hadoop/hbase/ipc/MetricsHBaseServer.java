@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.quotas.QuotaExceededException;
-import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +45,7 @@ public class MetricsHBaseServer {
   public MetricsHBaseServer(String serverName, MetricsHBaseServerWrapper wrapper) {
     serverWrapper = wrapper;
     source = CompatibilitySingletonFactory.getInstance(MetricsHBaseServerSourceFactory.class)
-                                          .create(serverName, wrapper);
+      .create(serverName, wrapper);
   }
 
   void authorizationSuccess() {
@@ -77,9 +76,13 @@ public class MetricsHBaseServer {
     source.receivedBytes(count);
   }
 
-  void sentResponse(long count) { source.sentResponse(count); }
+  void sentResponse(long count) {
+    source.sentResponse(count);
+  }
 
-  void receivedRequest(long count) { source.receivedRequest(count); }
+  void receivedRequest(long count) {
+    source.receivedRequest(count);
+  }
 
   void dequeuedCall(int qTime) {
     source.dequeuedCall(qTime);
@@ -97,12 +100,9 @@ public class MetricsHBaseServer {
     source.exception();
 
     /**
-     * Keep some metrics for commonly seen exceptions
-     *
-     * Try and  put the most common types first.
-     * Place child types before the parent type that they extend.
-     *
-     * If this gets much larger we might have to go to a hashmap
+     * Keep some metrics for commonly seen exceptions Try and put the most common types first. Place
+     * child types before the parent type that they extend. If this gets much larger we might have
+     * to go to a hashmap
      */
     if (throwable != null) {
       if (throwable instanceof OutOfOrderScannerNextException) {
@@ -129,10 +129,19 @@ public class MetricsHBaseServer {
         source.rpcThrottlingException();
       } else if (throwable instanceof CallDroppedException) {
         source.callDroppedException();
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Unknown exception type", throwable);
+      } else if (throwable instanceof RequestTooBigException) {
+        source.requestTooBigException();
+      } else {
+        source.otherExceptions();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Unknown exception type", throwable);
+        }
       }
     }
+  }
+
+  void callTimedOut() {
+    source.callTimedOut();
   }
 
   public MetricsHBaseServerSource getMetricsSource() {

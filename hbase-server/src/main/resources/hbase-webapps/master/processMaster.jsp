@@ -49,7 +49,7 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
 </jsp:include>
 
 <div class="container-fluid content">
-  <div class="row">
+  <div class="row top_header">
       <div class="page-header">
           <h1><%= JSONMetricUtil.getCommmand().split(" ")[0] %></h1>
       </div>

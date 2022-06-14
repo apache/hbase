@@ -48,16 +48,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.Aggrega
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateService;
 
 /**
- * A concrete AggregateProtocol implementation. Its system level coprocessor
- * that computes the aggregate function at a region level.
- * {@link ColumnInterpreter} is used to interpret column value. This class is
- * parameterized with the following (these are the types with which the {@link ColumnInterpreter}
- * is parameterized, and for more description on these, refer to {@link ColumnInterpreter}):
- * @param T Cell value data type
- * @param S Promoted data type
- * @param P PB message that is used to transport initializer specific bytes
- * @param Q PB message that is used to transport Cell (&lt;T&gt;) instance
- * @param R PB message that is used to transport Promoted (&lt;S&gt;) instance
+ * A concrete AggregateProtocol implementation. Its system level coprocessor that computes the
+ * aggregate function at a region level. {@link ColumnInterpreter} is used to interpret column
+ * value. This class is parameterized with the following (these are the types with which the
+ * {@link ColumnInterpreter} is parameterized, and for more description on these, refer to
+ * {@link ColumnInterpreter}):
+ * @param <T> Cell value data type
+ * @param <S> Promoted data type
+ * @param <P> PB message that is used to transport initializer specific bytes
+ * @param <Q> PB message that is used to transport Cell (&lt;T&gt;) instance
+ * @param <R> PB message that is used to transport Promoted (&lt;S&gt;) instance
  */
 @InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message>
@@ -66,15 +66,14 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
   private RegionCoprocessorEnvironment env;
 
   /**
-   * Gives the maximum for a given combination of column qualifier and column
-   * family, in the given row range as defined in the Scan object. In its
-   * current implementation, it takes one column family and one column qualifier
-   * (if provided). In case of null column qualifier, maximum value for the
-   * entire column family will be returned.
+   * Gives the maximum for a given combination of column qualifier and column family, in the given
+   * row range as defined in the Scan object. In its current implementation, it takes one column
+   * family and one column qualifier (if provided). In case of null column qualifier, maximum value
+   * for the entire column family will be returned.
    */
   @Override
   public void getMax(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
     T max = null;
@@ -112,24 +111,24 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     log.info("Maximum from this region is "
-        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + max);
+      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + max);
     done.run(response);
   }
 
   /**
-   * Gives the minimum for a given combination of column qualifier and column
-   * family, in the given row range as defined in the Scan object. In its
-   * current implementation, it takes one column family and one column qualifier
-   * (if provided). In case of null column qualifier, minimum value for the
-   * entire column family will be returned.
+   * Gives the minimum for a given combination of column qualifier and column family, in the given
+   * row range as defined in the Scan object. In its current implementation, it takes one column
+   * family and one column qualifier (if provided). In case of null column qualifier, minimum value
+   * for the entire column family will be returned.
    */
   @Override
   public void getMin(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     T min = null;
@@ -156,8 +155,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         results.clear();
       } while (hasMoreRows);
       if (min != null) {
-        response = AggregateResponse.newBuilder().addFirstPart(
-          ci.getProtoForCellType(min).toByteString()).build();
+        response = AggregateResponse.newBuilder()
+          .addFirstPart(ci.getProtoForCellType(min).toByteString()).build();
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -165,24 +164,24 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     log.info("Minimum from this region is "
-        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + min);
+      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + min);
     done.run(response);
   }
 
   /**
-   * Gives the sum for a given combination of column qualifier and column
-   * family, in the given row range as defined in the Scan object. In its
-   * current implementation, it takes one column family and one column qualifier
-   * (if provided). In case of null column qualifier, sum for the entire column
-   * family will be returned.
+   * Gives the sum for a given combination of column qualifier and column family, in the given row
+   * range as defined in the Scan object. In its current implementation, it takes one column family
+   * and one column qualifier (if provided). In case of null column qualifier, sum for the entire
+   * column family will be returned.
    */
   @Override
   public void getSum(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     long sum = 0L;
@@ -212,8 +211,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         results.clear();
       } while (hasMoreRows);
       if (sumVal != null) {
-        response = AggregateResponse.newBuilder().addFirstPart(
-          ci.getProtoForPromotedType(sumVal).toByteString()).build();
+        response = AggregateResponse.newBuilder()
+          .addFirstPart(ci.getProtoForPromotedType(sumVal).toByteString()).build();
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -221,21 +220,22 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
-    log.debug("Sum from this region is "
-        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + sum);
+    log.debug("Sum from this region is " + env.getRegion().getRegionInfo().getRegionNameAsString()
+      + ": " + sum);
     done.run(response);
   }
 
   /**
-   * Gives the row count for the given column family and column qualifier, in
-   * the given row range as defined in the Scan object.
+   * Gives the row count for the given column family and column qualifier, in the given row range as
+   * defined in the Scan object.
    */
   @Override
   public void getRowNum(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     long counter = 0L;
     List<Cell> results = new ArrayList<>();
@@ -244,8 +244,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       Scan scan = ProtobufUtil.toScan(request.getScan());
       byte[][] colFamilies = scan.getFamilies();
       byte[] colFamily = colFamilies != null ? colFamilies[0] : null;
-      NavigableSet<byte[]> qualifiers = colFamilies != null ?
-          scan.getFamilyMap().get(colFamily) : null;
+      NavigableSet<byte[]> qualifiers =
+        colFamilies != null ? scan.getFamilyMap().get(colFamily) : null;
       byte[] qualifier = null;
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
@@ -264,38 +264,35 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       } while (hasMoreRows);
       ByteBuffer bb = ByteBuffer.allocate(8).putLong(counter);
       bb.rewind();
-      response = AggregateResponse.newBuilder().addFirstPart(
-          ByteString.copyFrom(bb)).build();
+      response = AggregateResponse.newBuilder().addFirstPart(ByteString.copyFrom(bb)).build();
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     log.info("Row counter from this region is "
-        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + counter);
+      + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + counter);
     done.run(response);
   }
 
   /**
-   * Gives a Pair with first object as Sum and second object as row count,
-   * computed for a given combination of column qualifier and column family in
-   * the given row range as defined in the Scan object. In its current
-   * implementation, it takes one column family and one column qualifier (if
-   * provided). In case of null column qualifier, an aggregate sum over all the
-   * entire column family will be returned.
+   * Gives a Pair with first object as Sum and second object as row count, computed for a given
+   * combination of column qualifier and column family in the given row range as defined in the Scan
+   * object. In its current implementation, it takes one column family and one column qualifier (if
+   * provided). In case of null column qualifier, an aggregate sum over all the entire column family
+   * will be returned.
    * <p>
-   * The average is computed in
-   * AggregationClient#avg(byte[], ColumnInterpreter, Scan) by
-   * processing results from all regions, so its "ok" to pass sum and a Long
-   * type.
+   * The average is computed in AggregationClient#avg(byte[], ColumnInterpreter, Scan) by processing
+   * results from all regions, so its "ok" to pass sum and a Long type.
    */
   @Override
   public void getAvg(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
@@ -318,8 +315,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
-          sumVal = ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily,
-              qualifier, results.get(i))));
+          sumVal =
+            ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily, qualifier, results.get(i))));
         }
         rowCountVal++;
       } while (hasMoreRows);
@@ -338,24 +335,24 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     done.run(response);
   }
 
   /**
-   * Gives a Pair with first object a List containing Sum and sum of squares,
-   * and the second object as row count. It is computed for a given combination of
-   * column qualifier and column family in the given row range as defined in the
-   * Scan object. In its current implementation, it takes one column family and
-   * one column qualifier (if provided). The idea is get the value of variance first:
-   * the average of the squares less the square of the average a standard
-   * deviation is square root of variance.
+   * Gives a Pair with first object a List containing Sum and sum of squares, and the second object
+   * as row count. It is computed for a given combination of column qualifier and column family in
+   * the given row range as defined in the Scan object. In its current implementation, it takes one
+   * column family and one column qualifier (if provided). The idea is get the value of variance
+   * first: the average of the squares less the square of the average a standard deviation is square
+   * root of variance.
    */
   @Override
   public void getStd(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
     try {
@@ -379,8 +376,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         hasMoreRows = scanner.next(results);
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
-          tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
-              qualifier, results.get(i))));
+          tempVal =
+            ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily, qualifier, results.get(i))));
         }
         results.clear();
         sumVal = ci.add(sumVal, tempVal);
@@ -404,23 +401,22 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     done.run(response);
   }
 
   /**
-   * Gives a List containing sum of values and sum of weights.
-   * It is computed for the combination of column
-   * family and column qualifier(s) in the given row range as defined in the
-   * Scan object. In its current implementation, it takes one column family and
-   * two column qualifiers. The first qualifier is for values column and
-   * the second qualifier (optional) is for weight column.
+   * Gives a List containing sum of values and sum of weights. It is computed for the combination of
+   * column family and column qualifier(s) in the given row range as defined in the Scan object. In
+   * its current implementation, it takes one column family and two column qualifiers. The first
+   * qualifier is for values column and the second qualifier (optional) is for weight column.
    */
   @Override
   public void getMedian(RpcController controller, AggregateRequest request,
-          RpcCallback<AggregateResponse> done) {
+    RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
     try {
@@ -447,11 +443,10 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           Cell kv = results.get(i);
-          tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
-              valQualifier, kv)));
+          tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily, valQualifier, kv)));
           if (weightQualifier != null) {
-            tempWeight = ci.add(tempWeight,
-                ci.castToReturnType(ci.getValue(colFamily, weightQualifier, kv)));
+            tempWeight =
+              ci.add(tempWeight, ci.castToReturnType(ci.getValue(colFamily, weightQualifier, kv)));
           }
         }
         results.clear();
@@ -471,7 +466,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     done.run(response);
@@ -479,11 +475,11 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
 
   @SuppressWarnings("unchecked")
   // Used server-side too by Aggregation Coprocesor Endpoint. Undo this interdependence. TODO.
-  ColumnInterpreter<T,S,P,Q,R> constructColumnInterpreterFromRequest(
-      AggregateRequest request) throws IOException {
+  ColumnInterpreter<T, S, P, Q, R> constructColumnInterpreterFromRequest(AggregateRequest request)
+    throws IOException {
     String className = request.getInterpreterClassName();
     try {
-      ColumnInterpreter<T,S,P,Q,R> ci;
+      ColumnInterpreter<T, S, P, Q, R> ci;
       Class<?> cls = Class.forName(className);
       ci = (ColumnInterpreter<T, S, P, Q, R>) cls.getDeclaredConstructor().newInstance();
 
@@ -493,8 +489,8 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
         ci.initialize(initMsg);
       }
       return ci;
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
-        NoSuchMethodException | InvocationTargetException e) {
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+      | NoSuchMethodException | InvocationTargetException e) {
       throw new IOException(e);
     }
   }
@@ -507,17 +503,17 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
   /**
    * Stores a reference to the coprocessor environment provided by the
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost} from the region where this
-   * coprocessor is loaded.  Since this is a coprocessor endpoint, it always expects to be loaded
-   * on a table region, so always expects this to be an instance of
+   * coprocessor is loaded. Since this is a coprocessor endpoint, it always expects to be loaded on
+   * a table region, so always expects this to be an instance of
    * {@link RegionCoprocessorEnvironment}.
    * @param env the environment provided by the coprocessor host
    * @throws IOException if the provided environment is not an instance of
-   * {@code RegionCoprocessorEnvironment}
+   *                     {@code RegionCoprocessorEnvironment}
    */
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment) {
-      this.env = (RegionCoprocessorEnvironment)env;
+      this.env = (RegionCoprocessorEnvironment) env;
     } else {
       throw new CoprocessorException("Must be loaded on a table region!");
     }

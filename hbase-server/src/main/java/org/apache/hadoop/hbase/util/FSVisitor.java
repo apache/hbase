@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +36,7 @@ public final class FSVisitor {
 
   public interface StoreFileVisitor {
     void storeFile(final String region, final String family, final String hfileName)
-       throws IOException;
+      throws IOException;
   }
 
   private FSVisitor() {
@@ -46,15 +45,15 @@ public final class FSVisitor {
 
   /**
    * Iterate over the table store files
-   *
-   * @param fs {@link FileSystem}
+   * @param fs       {@link FileSystem}
    * @param tableDir {@link Path} to the table directory
-   * @param visitor callback object to get the store files
+   * @param visitor  callback object to get the store files
    * @throws IOException if an error occurred while scanning the directory
    */
   public static void visitTableStoreFiles(final FileSystem fs, final Path tableDir,
-      final StoreFileVisitor visitor) throws IOException {
-    List<FileStatus> regions = FSUtils.listStatusWithStatusFilter(fs, tableDir, new FSUtils.RegionDirFilter(fs));
+    final StoreFileVisitor visitor) throws IOException {
+    List<FileStatus> regions =
+      FSUtils.listStatusWithStatusFilter(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No regions under directory:" + tableDir);
@@ -62,22 +61,22 @@ public final class FSVisitor {
       return;
     }
 
-    for (FileStatus region: regions) {
+    for (FileStatus region : regions) {
       visitRegionStoreFiles(fs, region.getPath(), visitor);
     }
   }
 
   /**
    * Iterate over the region store files
-   *
-   * @param fs {@link FileSystem}
+   * @param fs        {@link FileSystem}
    * @param regionDir {@link Path} to the region directory
-   * @param visitor callback object to get the store files
+   * @param visitor   callback object to get the store files
    * @throws IOException if an error occurred while scanning the directory
    */
   public static void visitRegionStoreFiles(final FileSystem fs, final Path regionDir,
-      final StoreFileVisitor visitor) throws IOException {
-    List<FileStatus> families = FSUtils.listStatusWithStatusFilter(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
+    final StoreFileVisitor visitor) throws IOException {
+    List<FileStatus> families =
+      FSUtils.listStatusWithStatusFilter(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
     if (families == null) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("No families under region directory:" + regionDir);
@@ -86,7 +85,7 @@ public final class FSVisitor {
     }
 
     PathFilter fileFilter = new FSUtils.FileFilter(fs);
-    for (FileStatus family: families) {
+    for (FileStatus family : families) {
       Path familyDir = family.getPath();
       String familyName = familyDir.getName();
 
@@ -99,7 +98,7 @@ public final class FSVisitor {
         continue;
       }
 
-      for (FileStatus hfile: storeFiles) {
+      for (FileStatus hfile : storeFiles) {
         Path hfilePath = hfile.getPath();
         visitor.storeFile(regionDir.getName(), familyName, hfilePath.getName());
       }

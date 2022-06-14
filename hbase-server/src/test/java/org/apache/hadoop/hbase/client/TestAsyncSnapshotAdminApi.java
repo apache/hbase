@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncSnapshotAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncSnapshotAdminApi.class);
 
   private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
@@ -180,12 +180,15 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     assertEquals(3, admin.listSnapshots(Pattern.compile("snapshotName(\\d+)")).get().size());
     assertEquals(2, admin.listSnapshots(Pattern.compile("snapshotName[1|3]")).get().size());
     assertEquals(3, admin.listSnapshots(Pattern.compile("snapshot(.*)")).get().size());
-    assertEquals(3, admin.listTableSnapshots(Pattern.compile("testListSnapshots"),
-        Pattern.compile("s(.*)")).get().size());
-    assertEquals(0, admin.listTableSnapshots(Pattern.compile("fakeTableName"),
-            Pattern.compile("snap(.*)")).get().size());
-    assertEquals(2, admin.listTableSnapshots(Pattern.compile("test(.*)"),
-            Pattern.compile("snap(.*)[1|3]")).get().size());
+    assertEquals(3,
+      admin.listTableSnapshots(Pattern.compile("testListSnapshots"), Pattern.compile("s(.*)")).get()
+        .size());
+    assertEquals(0,
+      admin.listTableSnapshots(Pattern.compile("fakeTableName"), Pattern.compile("snap(.*)")).get()
+        .size());
+    assertEquals(2,
+      admin.listTableSnapshots(Pattern.compile("test(.*)"), Pattern.compile("snap(.*)[1|3]")).get()
+        .size());
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category({ FilterTests.class, SmallTests.class })
 public class TestComparatorSerialization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestComparatorSerialization.class);
+    HBaseClassTestRule.forClass(TestComparatorSerialization.class);
 
   @Test
   public void testBinaryComparator() throws Exception {
@@ -95,8 +95,8 @@ public class TestComparatorSerialization {
   public void testBigDecimalComparator() throws Exception {
     BigDecimal bigDecimal = new BigDecimal(Double.MIN_VALUE);
     BigDecimalComparator bigDecimalComparator = new BigDecimalComparator(bigDecimal);
-    assertTrue(bigDecimalComparator.areSerializedFieldsEqual(ProtobufUtil.toComparator(ProtobufUtil
-        .toComparator(bigDecimalComparator))));
+    assertTrue(bigDecimalComparator.areSerializedFieldsEqual(
+      ProtobufUtil.toComparator(ProtobufUtil.toComparator(bigDecimalComparator))));
   }
 
 }

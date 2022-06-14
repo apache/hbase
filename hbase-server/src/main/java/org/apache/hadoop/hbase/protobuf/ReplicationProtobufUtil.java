@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,16 +45,16 @@ public class ReplicationProtobufUtil {
 
   /**
    * A helper to replicate a list of WAL entries using region server admin
-   * @param admin the region server admin
-   * @param entries Array of WAL entries to be replicated
-   * @param replicationClusterId Id which will uniquely identify source cluster FS client
-   *          configurations in the replication configuration directory
+   * @param admin                  the region server admin
+   * @param entries                Array of WAL entries to be replicated
+   * @param replicationClusterId   Id which will uniquely identify source cluster FS client
+   *                               configurations in the replication configuration directory
    * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
-   * @param sourceHFileArchiveDir Path to the source cluster hfile archive directory
+   * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
    */
   public static void replicateWALEntry(AsyncRegionServerAdmin admin, Entry[] entries,
-      String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
-      int timeout) throws IOException {
+    String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    int timeout) throws IOException {
     Pair<ReplicateWALEntryRequest, CellScanner> p = buildReplicateWALEntryRequest(entries, null,
       replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
     FutureUtils.get(admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout));
@@ -66,31 +65,31 @@ public class ReplicationProtobufUtil {
    * @param entries the WAL entries to be replicated
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
-  public static Pair<ReplicateWALEntryRequest, CellScanner> buildReplicateWALEntryRequest(
-      final Entry[] entries) {
+  public static Pair<ReplicateWALEntryRequest, CellScanner>
+    buildReplicateWALEntryRequest(final Entry[] entries) {
     return buildReplicateWALEntryRequest(entries, null, null, null, null);
   }
 
   /**
    * Create a new ReplicateWALEntryRequest from a list of WAL entries
-   * @param entries the WAL entries to be replicated
-   * @param encodedRegionName alternative region name to use if not null
-   * @param replicationClusterId Id which will uniquely identify source cluster FS client
-   *          configurations in the replication configuration directory
+   * @param entries                the WAL entries to be replicated
+   * @param encodedRegionName      alternative region name to use if not null
+   * @param replicationClusterId   Id which will uniquely identify source cluster FS client
+   *                               configurations in the replication configuration directory
    * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
-   * @param sourceHFileArchiveDir Path to the source cluster hfile archive directory
+   * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values found.
    */
   public static Pair<ReplicateWALEntryRequest, CellScanner> buildReplicateWALEntryRequest(
-      final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
-      Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
+    final Entry[] entries, byte[] encodedRegionName, String replicationClusterId,
+    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir) {
     // Accumulate all the Cells seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<>(entries.length);
     int size = 0;
     WALEntry.Builder entryBuilder = WALEntry.newBuilder();
     ReplicateWALEntryRequest.Builder builder = ReplicateWALEntryRequest.newBuilder();
 
-    for (Entry entry: entries) {
+    for (Entry entry : entries) {
       entryBuilder.clear();
       WALProtos.WALKey.Builder keyBuilder;
       try {
@@ -99,15 +98,14 @@ public class ReplicationProtobufUtil {
         throw new AssertionError(
           "There should not throw exception since NoneCompressor do not throw any exceptions", e);
       }
-      if(encodedRegionName != null){
-        keyBuilder.setEncodedRegionName(
-            UnsafeByteOperations.unsafeWrap(encodedRegionName));
+      if (encodedRegionName != null) {
+        keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(encodedRegionName));
       }
       entryBuilder.setKey(keyBuilder.build());
       WALEdit edit = entry.getEdit();
       List<Cell> cells = edit.getCells();
-      // Add up the size.  It is used later serializing out the kvs.
-      for (Cell cell: cells) {
+      // Add up the size. It is used later serializing out the kvs.
+      for (Cell cell : cells) {
         size += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       // Collect up the cells
@@ -127,13 +125,11 @@ public class ReplicationProtobufUtil {
       builder.setSourceHFileArchiveDirPath(sourceHFileArchiveDir.toString());
     }
 
-    return new Pair<>(builder.build(),
-      getCellScanner(allCells, size));
+    return new Pair<>(builder.build(), getCellScanner(allCells, size));
   }
 
   /**
-   * @param cells
-   * @return <code>cells</code> packaged as a CellScanner
+   * n * @return <code>cells</code> packaged as a CellScanner
    */
   static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
     return new SizedCellScanner() {

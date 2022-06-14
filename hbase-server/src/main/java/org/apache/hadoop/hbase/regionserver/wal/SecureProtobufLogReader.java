@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
@@ -23,20 +22,20 @@ import java.security.Key;
 import java.security.KeyException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EncryptionTest;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureProtobufLogReader extends ProtobufLogReader {
@@ -59,7 +58,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
 
   @Override
   protected WALHdrContext readHeader(WALHeader.Builder builder, FSDataInputStream stream)
-      throws IOException {
+    throws IOException {
     WALHdrContext hdrCtxt = super.readHeader(builder, stream);
     WALHdrResult result = hdrCtxt.getResult();
     // We need to unconditionally handle the case where the WAL has a key in
@@ -89,8 +88,8 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
         }
       }
       if (key == null) {
-        String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-          User.getCurrent().getShortName());
+        String masterKeyName =
+          conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName());
         try {
           // Then, try the cluster master key
           key = EncryptionUtil.unwrapWALKey(conf, masterKeyName, keyBytes);
@@ -100,8 +99,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
           }
-          String alternateKeyName =
-            conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
+          String alternateKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
           if (alternateKeyName != null) {
             try {
               key = EncryptionUtil.unwrapWALKey(conf, alternateKeyName, keyBytes);

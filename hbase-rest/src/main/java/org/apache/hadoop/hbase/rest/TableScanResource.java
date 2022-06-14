@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,7 +47,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.StreamingOutput;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.UriInfo;
 
 @InterfaceAudience.Private
-public class TableScanResource  extends ResourceBase {
+public class TableScanResource extends ResourceBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableScanResource.class);
 
   TableResource tableResource;
@@ -93,7 +92,7 @@ public class TableScanResource  extends ResourceBase {
             List<Cell> kvs = rs.listCells();
             for (Cell kv : kvs) {
               rModel.addCell(new CellModel(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
-                  kv.getTimestamp(), CellUtil.cloneValue(kv)));
+                kv.getTimestamp(), CellUtil.cloneValue(kv)));
             }
             count--;
             if (count == 0) {
@@ -108,18 +107,16 @@ public class TableScanResource  extends ResourceBase {
 
   @GET
   @Produces({ Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF })
-  public Response getProtobuf(
-      final @Context UriInfo uriInfo,
-      final @HeaderParam("Accept") String contentType) {
+  public Response getProtobuf(final @Context UriInfo uriInfo,
+    final @HeaderParam("Accept") String contentType) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " +
-              MIMETYPE_BINARY);
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " + MIMETYPE_BINARY);
     }
     servlet.getMetrics().incrementRequests(1);
     try {
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);
-      StreamingOutput stream = new ProtobufStreamingOutput(this.results, contentType,
-          userRequestedLimit, fetchSize);
+      StreamingOutput stream =
+        new ProtobufStreamingOutput(this.results, contentType, userRequestedLimit, fetchSize);
       servlet.getMetrics().incrementSucessfulScanRequests(1);
       ResponseBuilder response = Response.ok(stream);
       response.header("content-type", contentType);

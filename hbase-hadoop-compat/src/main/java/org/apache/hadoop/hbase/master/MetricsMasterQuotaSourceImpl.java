@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +19,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
-        implements MetricsMasterQuotaSource {
+  implements MetricsMasterQuotaSource {
   private final MetricsMasterWrapper wrapper;
   private final MutableGaugeLong spaceQuotasGauge;
   private final MutableGaugeLong tablesViolatingQuotasGauge;
@@ -48,30 +48,29 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
   }
 
-  public MetricsMasterQuotaSourceImpl(
-      String metricsName, String metricsDescription, String metricsContext,
-      String metricsJmxContext, MetricsMasterWrapper wrapper) {
+  public MetricsMasterQuotaSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext, MetricsMasterWrapper wrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.wrapper = wrapper;
 
-    spaceQuotasGauge = getMetricsRegistry().newGauge(
-        NUM_SPACE_QUOTAS_NAME, NUM_SPACE_QUOTAS_DESC, 0L);
-    tablesViolatingQuotasGauge = getMetricsRegistry().newGauge(
-        NUM_TABLES_QUOTA_VIOLATIONS_NAME, NUM_TABLES_QUOTA_VIOLATIONS_DESC, 0L);
-    namespacesViolatingQuotasGauge = getMetricsRegistry().newGauge(
-        NUM_NS_QUOTA_VIOLATIONS_NAME, NUM_NS_QUOTA_VIOLATIONS_DESC, 0L);
-    regionSpaceReportsGauge = getMetricsRegistry().newGauge(
-        NUM_REGION_SIZE_REPORTS_NAME, NUM_REGION_SIZE_REPORTS_DESC, 0L);
+    spaceQuotasGauge =
+      getMetricsRegistry().newGauge(NUM_SPACE_QUOTAS_NAME, NUM_SPACE_QUOTAS_DESC, 0L);
+    tablesViolatingQuotasGauge = getMetricsRegistry().newGauge(NUM_TABLES_QUOTA_VIOLATIONS_NAME,
+      NUM_TABLES_QUOTA_VIOLATIONS_DESC, 0L);
+    namespacesViolatingQuotasGauge =
+      getMetricsRegistry().newGauge(NUM_NS_QUOTA_VIOLATIONS_NAME, NUM_NS_QUOTA_VIOLATIONS_DESC, 0L);
+    regionSpaceReportsGauge =
+      getMetricsRegistry().newGauge(NUM_REGION_SIZE_REPORTS_NAME, NUM_REGION_SIZE_REPORTS_DESC, 0L);
 
-    quotaObserverTimeHisto = getMetricsRegistry().newTimeHistogram(
-        QUOTA_OBSERVER_CHORE_TIME_NAME, QUOTA_OBSERVER_CHORE_TIME_DESC);
-    snapshotObserverTimeHisto = getMetricsRegistry().newTimeHistogram(
-        SNAPSHOT_OBSERVER_CHORE_TIME_NAME, SNAPSHOT_OBSERVER_CHORE_TIME_DESC);
+    quotaObserverTimeHisto = getMetricsRegistry().newTimeHistogram(QUOTA_OBSERVER_CHORE_TIME_NAME,
+      QUOTA_OBSERVER_CHORE_TIME_DESC);
+    snapshotObserverTimeHisto = getMetricsRegistry()
+      .newTimeHistogram(SNAPSHOT_OBSERVER_CHORE_TIME_NAME, SNAPSHOT_OBSERVER_CHORE_TIME_DESC);
 
     snapshotObserverSizeComputationTimeHisto = getMetricsRegistry().newTimeHistogram(
-        SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_NAME, SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_DESC);
-    snapshotObserverSnapshotFetchTimeHisto = getMetricsRegistry().newTimeHistogram(
-        SNAPSHOT_OBSERVER_FETCH_TIME_NAME, SNAPSHOT_OBSERVER_FETCH_TIME_DESC);
+      SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_NAME, SNAPSHOT_OBSERVER_SIZE_COMPUTATION_TIME_DESC);
+    snapshotObserverSnapshotFetchTimeHisto = getMetricsRegistry()
+      .newTimeHistogram(SNAPSHOT_OBSERVER_FETCH_TIME_NAME, SNAPSHOT_OBSERVER_FETCH_TIME_DESC);
   }
 
   @Override
@@ -109,7 +108,7 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
     MetricsRecordBuilder record = metricsCollector.addRecord(metricsRegistry.info());
     if (wrapper != null) {
       // Summarize the tables
-      Map<String,Entry<Long,Long>> tableUsages = wrapper.getTableSpaceUtilization();
+      Map<String, Entry<Long, Long>> tableUsages = wrapper.getTableSpaceUtilization();
       String tableSummary = "[]";
       if (tableUsages != null && !tableUsages.isEmpty()) {
         tableSummary = generateJsonQuotaSummary(tableUsages.entrySet(), "table");
@@ -118,7 +117,7 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
 
       // Summarize the namespaces
       String nsSummary = "[]";
-      Map<String,Entry<Long,Long>> namespaceUsages = wrapper.getNamespaceSpaceUtilization();
+      Map<String, Entry<Long, Long>> namespaceUsages = wrapper.getNamespaceSpaceUtilization();
       if (namespaceUsages != null && !namespaceUsages.isEmpty()) {
         nsSummary = generateJsonQuotaSummary(namespaceUsages.entrySet(), "namespace");
       }
@@ -130,10 +129,10 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
   /**
    * Summarizes the usage and limit for many targets (table or namespace) into JSON.
    */
-  private String generateJsonQuotaSummary(
-      Iterable<Entry<String,Entry<Long,Long>>> data, String target) {
+  private String generateJsonQuotaSummary(Iterable<Entry<String, Entry<Long, Long>>> data,
+    String target) {
     StringBuilder sb = new StringBuilder();
-    for (Entry<String,Entry<Long,Long>> tableUsage : data) {
+    for (Entry<String, Entry<Long, Long>> tableUsage : data) {
       String tableName = tableUsage.getKey();
       long usage = tableUsage.getValue().getKey();
       long limit = tableUsage.getValue().getValue();
@@ -141,7 +140,7 @@ public class MetricsMasterQuotaSourceImpl extends BaseSourceImpl
         sb.append(", ");
       }
       sb.append("{").append(target).append("=").append(tableName).append(", usage=").append(usage)
-          .append(", limit=").append(limit).append("}");
+        .append(", limit=").append(limit).append("}");
     }
     sb.insert(0, "[").append("]");
     return sb.toString();

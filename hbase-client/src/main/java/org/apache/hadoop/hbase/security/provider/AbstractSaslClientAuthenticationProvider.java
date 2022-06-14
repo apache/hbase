@@ -27,10 +27,9 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
-public abstract class AbstractSaslClientAuthenticationProvider implements
-        SaslClientAuthenticationProvider {
+public abstract class AbstractSaslClientAuthenticationProvider
+  implements SaslClientAuthenticationProvider {
   public static final String AUTH_TOKEN_TYPE = "HBASE_AUTH_TOKEN";
-
 
   @Override
   public final String getTokenKind() {

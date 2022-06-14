@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Connection;
@@ -46,11 +45,11 @@ class HFileArchiveManager {
   private volatile boolean stopped = false;
 
   public HFileArchiveManager(Connection connection, Configuration conf)
-      throws ZooKeeperConnectionException, IOException {
-    this.zooKeeper = new ZKWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
-        connection);
-    this.archiveZnode = ZKTableArchiveClient.getArchiveZNode(this.zooKeeper.getConfiguration(),
-      this.zooKeeper);
+    throws ZooKeeperConnectionException, IOException {
+    this.zooKeeper =
+      new ZKWatcher(conf, "hfileArchiveManager-on-" + connection.toString(), connection);
+    this.archiveZnode =
+      ZKTableArchiveClient.getArchiveZNode(this.zooKeeper.getConfiguration(), this.zooKeeper);
   }
 
   /**
@@ -101,7 +100,7 @@ class HFileArchiveManager {
    * No attempt is made to make sure that backups are successfully created - it is inherently an
    * <b>asynchronous operation</b>.
    * @param zooKeeper watcher connection to zk cluster
-   * @param table table name on which to enable archiving
+   * @param table     table name on which to enable archiving
    * @throws KeeperException if a ZooKeeper operation fails
    */
   private void enable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {
@@ -119,7 +118,7 @@ class HFileArchiveManager {
    * <p>
    * Inherently an <b>asynchronous operation</b>.
    * @param zooKeeper watcher for the ZK cluster
-   * @param table name of the table to disable
+   * @param table     name of the table to disable
    * @throws KeeperException if an unexpected ZK connection issues occurs
    */
   private void disable(ZKWatcher zooKeeper, byte[] table) throws KeeperException {

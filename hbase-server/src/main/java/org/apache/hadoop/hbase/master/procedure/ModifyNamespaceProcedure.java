@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.M
  */
 @InterfaceAudience.Private
 public class ModifyNamespaceProcedure
-    extends AbstractStateMachineNamespaceProcedure<ModifyNamespaceState> {
+  extends AbstractStateMachineNamespaceProcedure<ModifyNamespaceState> {
   private static final Logger LOG = LoggerFactory.getLogger(ModifyNamespaceProcedure.class);
 
   private NamespaceDescriptor oldNsDescriptor;
@@ -47,12 +47,12 @@ public class ModifyNamespaceProcedure
   }
 
   public ModifyNamespaceProcedure(final MasterProcedureEnv env,
-      final NamespaceDescriptor newNsDescriptor) {
+    final NamespaceDescriptor newNsDescriptor) {
     this(env, newNsDescriptor, null);
   }
 
   public ModifyNamespaceProcedure(final MasterProcedureEnv env,
-      final NamespaceDescriptor newNsDescriptor, final ProcedurePrepareLatch latch) {
+    final NamespaceDescriptor newNsDescriptor, final ProcedurePrepareLatch latch) {
     super(env, latch);
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
@@ -60,7 +60,7 @@ public class ModifyNamespaceProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final ModifyNamespaceState state)
-      throws InterruptedException {
+    throws InterruptedException {
     LOG.trace("{} execute state={}", this, state);
     try {
       switch (state) {
@@ -86,8 +86,8 @@ public class ModifyNamespaceProcedure
       if (isRollbackSupported(state)) {
         setFailure("master-modify-namespace", e);
       } else {
-        LOG.warn("Retriable error trying to modify namespace=" + newNsDescriptor.getName() +
-          " (in state=" + state + ")", e);
+        LOG.warn("Retriable error trying to modify namespace=" + newNsDescriptor.getName()
+          + " (in state=" + state + ")", e);
       }
     }
     return Flow.HAS_MORE_STATE;
@@ -95,7 +95,7 @@ public class ModifyNamespaceProcedure
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final ModifyNamespaceState state)
-      throws IOException {
+    throws IOException {
     if (state == ModifyNamespaceState.MODIFY_NAMESPACE_PREPARE) {
       // nothing to rollback, pre-modify is just checks.
       // TODO: coprocessor rollback semantic is still undefined.
@@ -183,9 +183,10 @@ public class ModifyNamespaceProcedure
 
     // This is used for rollback
     oldNsDescriptor = getTableNamespaceManager(env).get(newNsDescriptor.getName());
-    if (!Objects.equals(
-      oldNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP),
-      newNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))) {
+    if (
+      !Objects.equals(oldNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP),
+        newNsDescriptor.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))
+    ) {
       checkNamespaceRSGroup(env, newNsDescriptor);
     }
     return true;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...)
- * must implement this interface to allow the system handle the lock/concurrency problems.
+ * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...) must implement
+ * this interface to allow the system handle the lock/concurrency problems.
  */
 @InterfaceAudience.Private
 public interface TableProcedureInterface {
@@ -34,9 +34,21 @@ public interface TableProcedureInterface {
   public static final TableName DUMMY_NAMESPACE_TABLE_NAME = TableName.NAMESPACE_TABLE_NAME;
 
   public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
-    REGION_EDIT, REGION_SPLIT, REGION_MERGE, REGION_ASSIGN, REGION_UNASSIGN,
-      REGION_GC, MERGED_REGIONS_GC/* region operations */
+    CREATE,
+    DELETE,
+    DISABLE,
+    EDIT,
+    ENABLE,
+    READ,
+    SNAPSHOT,
+    REGION_SNAPSHOT,
+    REGION_EDIT,
+    REGION_SPLIT,
+    REGION_MERGE,
+    REGION_ASSIGN,
+    REGION_UNASSIGN,
+    REGION_GC,
+    MERGED_REGIONS_GC/* region operations */
   }
 
   /**
@@ -45,9 +57,9 @@ public interface TableProcedureInterface {
   TableName getTableName();
 
   /**
-   * Given an operation type we can take decisions about what to do with pending operations.
-   * e.g. if we get a delete and we have some table operation pending (e.g. add column)
-   * we can abort those operations.
+   * Given an operation type we can take decisions about what to do with pending operations. e.g. if
+   * we get a delete and we have some table operation pending (e.g. add column) we can abort those
+   * operations.
    * @return the operation type that the procedure is executing.
    */
   TableOperationType getTableOperationType();

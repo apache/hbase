@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,41 +19,31 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.util.Iterator;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Write to table each key, record pair
  */
 @InterfaceAudience.Public
-public class IdentityTableReduce
-extends MapReduceBase
-implements TableReduce<ImmutableBytesWritable, Put> {
+public class IdentityTableReduce extends MapReduceBase
+  implements TableReduce<ImmutableBytesWritable, Put> {
   @SuppressWarnings("unused")
-  private static final Logger LOG =
-    LoggerFactory.getLogger(IdentityTableReduce.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(IdentityTableReduce.class.getName());
 
   /**
-   * No aggregation, output pairs of (key, record)
-   * @param key
-   * @param values
-   * @param output
-   * @param reporter
-   * @throws IOException
+   * No aggregation, output pairs of (key, record) nnnnn
    */
   public void reduce(ImmutableBytesWritable key, Iterator<Put> values,
-      OutputCollector<ImmutableBytesWritable, Put> output,
-      Reporter reporter)
-      throws IOException {
+    OutputCollector<ImmutableBytesWritable, Put> output, Reporter reporter) throws IOException {
 
-    while(values.hasNext()) {
+    while (values.hasNext()) {
       output.collect(key, values.next());
     }
   }
