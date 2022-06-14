@@ -601,7 +601,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           this.rpcServices.stop();
         }
         closeZooKeeper();
-        closeTableDescriptors();
         span.setStatus(StatusCode.OK);
       } finally {
         span.end();

@@ -231,10 +231,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
-    int tableDescriptorParallelLoadThreads =
-      conf.getInt("hbase.tabledescriptor.parallel.load.threads", 0);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor(), tableDescriptorParallelLoadThreads);
+      !canUpdateTableDescriptor(), cacheTableDescriptor());
   }
 
   public HBaseServerBase(Configuration conf, String name) throws IOException {
@@ -465,17 +463,6 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     if (this.zooKeeper != null) {
       LOG.info("Close zookeeper");
       this.zooKeeper.close();
-    }
-  }
-
-  protected final void closeTableDescriptors() {
-    if (this.tableDescriptors != null) {
-      LOG.info("Close table descriptors");
-      try {
-        this.tableDescriptors.close();
-      } catch (IOException e) {
-        LOG.debug("Failed to close table descriptors gracefully", e);
-      }
     }
   }
 

@@ -21,7 +21,6 @@ import com.google.errorprone.annotations.RestrictedApi;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -29,12 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -62,7 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the passed filesystem. It
@@ -87,8 +79,6 @@ public class FSTableDescriptors implements TableDescriptors {
   private final boolean fsreadonly;
   private final boolean usecache;
   private volatile boolean fsvisited;
-  private boolean tableDescriptorParallelLoadEnable = false;
-  private ThreadPoolExecutor executor;
 
   long cachehits = 0;
   long invocations = 0;
@@ -118,23 +108,10 @@ public class FSTableDescriptors implements TableDescriptors {
 
   public FSTableDescriptors(final FileSystem fs, final Path rootdir, final boolean fsreadonly,
     final boolean usecache) {
-    this(fs, rootdir, fsreadonly, usecache, 0);
-  }
-
-  public FSTableDescriptors(final FileSystem fs, final Path rootdir, final boolean fsreadonly,
-    final boolean usecache, final int tableDescriptorParallelLoadThreads) {
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
-    if (tableDescriptorParallelLoadThreads > 0) {
-      tableDescriptorParallelLoadEnable = true;
-      executor = new ThreadPoolExecutor(tableDescriptorParallelLoadThreads,
-        tableDescriptorParallelLoadThreads, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-        new ThreadFactoryBuilder().setNameFormat("FSTableDescriptorLoad-pool-%d").setDaemon(true)
-          .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
-      executor.allowCoreThreadTimeOut(true);
-    }
   }
 
   public static void tryUpdateMetaTableDescriptor(Configuration conf) throws IOException {
@@ -258,54 +235,25 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   @Override
   public Map<String, TableDescriptor> getAll() throws IOException {
-    Map<String, TableDescriptor> tds = new ConcurrentSkipListMap<>();
+    Map<String, TableDescriptor> tds = new TreeMap<>();
     if (fsvisited) {
       for (Map.Entry<TableName, TableDescriptor> entry : this.cache.entrySet()) {
         tds.put(entry.getKey().getNameWithNamespaceInclAsString(), entry.getValue());
       }
     } else {
-      LOG.info("Fetching table descriptors from the filesystem.");
-      final long startTime = EnvironmentEdgeManager.currentTime();
-      AtomicBoolean allvisited = new AtomicBoolean(usecache);
-      List<Path> tableDirs = FSUtils.getTableDirs(fs, rootdir);
-      if (!tableDescriptorParallelLoadEnable) {
-        for (Path dir : tableDirs) {
-          internalGet(dir, tds, allvisited);
-        }
-      } else {
-        CountDownLatch latch = new CountDownLatch(tableDirs.size());
-        for (Path dir : tableDirs) {
-          executor.submit(new Runnable() {
-            @Override
-            public void run() {
-              try {
-                internalGet(dir, tds, allvisited);
-              } finally {
-                latch.countDown();
-              }
-            }
-          });
-        }
-        try {
-          latch.await();
-        } catch (InterruptedException ie) {
-          throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
+      LOG.trace("Fetching table descriptors from the filesystem.");
+      boolean allvisited = usecache;
+      for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
+        TableDescriptor htd = get(CommonFSUtils.getTableName(d));
+        if (htd == null) {
+          allvisited = false;
+        } else {
+          tds.put(htd.getTableName().getNameWithNamespaceInclAsString(), htd);
         }
       }
-      fsvisited = allvisited.get();
-      LOG.info("Fetched table descriptors(size=" + tds.size() + ") cost "
-        + (EnvironmentEdgeManager.currentTime() - startTime) + "ms.");
+      fsvisited = allvisited;
     }
     return tds;
-  }
-
-  private void internalGet(Path dir, Map<String, TableDescriptor> tds, AtomicBoolean allvisited) {
-    TableDescriptor htd = get(CommonFSUtils.getTableName(dir));
-    if (htd == null) {
-      allvisited.set(false);
-    } else {
-      tds.put(htd.getTableName().getNameWithNamespaceInclAsString(), htd);
-    }
   }
 
   /**
@@ -429,14 +377,6 @@ public class FSTableDescriptors implements TableDescriptors {
       d /= 10;
     }
     return Bytes.toString(b);
-  }
-
-  @Override
-  public void close() throws IOException {
-    // Close the executor when parallel loading enabled.
-    if (tableDescriptorParallelLoadEnable) {
-      this.executor.shutdown();
-    }
   }
 
   static final class SequenceIdAndFileLength {
