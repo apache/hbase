@@ -201,6 +201,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -1375,6 +1377,18 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public FlushMasterStoreResponse flushMasterStore(RpcController controller,
+    FlushMasterStoreRequest request) throws ServiceException {
+    rpcPreCheck("flushMasterStore");
+    try {
+      master.flushMasterStore();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return FlushMasterStoreResponse.newBuilder().build();
   }
 
   @Override

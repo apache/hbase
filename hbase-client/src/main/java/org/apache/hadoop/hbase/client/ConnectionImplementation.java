@@ -119,6 +119,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DecommissionRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
@@ -1921,6 +1923,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         RpcController controller, ModifyColumnStoreFileTrackerRequest request)
         throws ServiceException {
         return stub.modifyColumnStoreFileTracker(controller, request);
+      }
+
+      @Override
+      public FlushMasterStoreResponse flushMasterStore(RpcController controller,
+        FlushMasterStoreRequest request) throws ServiceException {
+        return stub.flushMasterStore(controller, request);
       }
     };
   }
