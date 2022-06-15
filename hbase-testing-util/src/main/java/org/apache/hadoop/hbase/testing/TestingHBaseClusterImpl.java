@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.testing;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -46,6 +49,10 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
 
   private final StartMiniClusterOption option;
 
+  private final String externalDfsUri;
+
+  private final String externalZkConnectString;
+
   private final ExecutorService executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder()
     .setNameFormat(getClass().getSuperclass() + "-%d").setDaemon(true).build());
 
@@ -56,6 +63,8 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   TestingHBaseClusterImpl(TestingHBaseClusterOption option) {
     this.util = new HBaseTestingUtility(option.conf());
     this.option = option.convert();
+    this.externalDfsUri = option.getExternalDfsUri();
+    this.externalZkConnectString = option.getExternalZkConnectString();
   }
 
   @Override
@@ -137,7 +146,20 @@ class TestingHBaseClusterImpl implements TestingHBaseCluster {
   @Override
   public void start() throws Exception {
     Preconditions.checkState(!miniClusterRunning, "Cluster has already been started");
-    util.startMiniCluster(option);
+    if (externalZkConnectString == null) {
+      util.startMiniZKCluster();
+    } else {
+      Configuration conf = util.getConfiguration();
+      conf.set(HConstants.ZOOKEEPER_QUORUM, externalZkConnectString);
+      conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + UUID.randomUUID().toString());
+    }
+    if (externalDfsUri == null) {
+      util.startMiniDFSCluster(option.getNumDataNodes(), option.getDataNodeHosts());
+    } else {
+      Configuration conf = util.getConfiguration();
+      conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, externalDfsUri);
+    }
+    util.startMiniHBaseCluster(option);
     miniClusterRunning = true;
     miniHBaseClusterRunning = true;
   }
