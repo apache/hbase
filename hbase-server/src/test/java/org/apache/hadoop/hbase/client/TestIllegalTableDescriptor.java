@@ -177,7 +177,7 @@ public class TestIllegalTableDescriptor {
 
     // check the conf settings to disable sanity checks
     builder.setMemStoreFlushSize(0);
-    builder.setCoprocessor("nonexisting.coproc.class");
+
     // Check that logs warn on invalid table but allow it.
     builder.setValue(TableDescriptorChecker.TABLE_SANITY_CHECKS, Boolean.FALSE.toString());
     checkTableIsLegal(builder.build());
@@ -185,7 +185,6 @@ public class TestIllegalTableDescriptor {
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
       + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
       + "cause very frequent flushing."));
-    verify(LOGGER).warn(contains("Class nonexisting.coproc.class cannot be loaded"));
   }
 
   private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {

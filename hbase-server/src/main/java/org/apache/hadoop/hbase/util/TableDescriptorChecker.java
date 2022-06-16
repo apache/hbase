@@ -80,7 +80,7 @@ public final class TableDescriptorChecker {
     CompoundConfiguration conf = new CompoundConfiguration().add(c).addBytesMap(td.getValues());
 
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(c, td);
+    boolean logWarn = !shouldSanityCheck(conf, td);
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
@@ -320,7 +320,7 @@ public final class TableDescriptorChecker {
     try {
       RegionSplitPolicy.getSplitPolicyClass(td, conf);
       RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
-    } catch (IOException e) {
+    } catch (Exception e) {
       warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
   }
