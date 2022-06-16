@@ -87,12 +87,12 @@ public class ReplicationSinkTrackerTableCreator {
     boolean replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
       REPLICATION_SINK_TRACKER_ENABLED_DEFAULT);
     if (!replicationSinkTrackerEnabled) {
-      LOG.info("replication sink tracker requests logging to system table "
-        + REPLICATION_SINK_TRACKER_TABLE_NAME_STR + " is disabled. Quitting.");
+      LOG.info("replication sink tracker requests logging to table {} is disabled."
+          + " Quitting.", REPLICATION_SINK_TRACKER_TABLE_NAME_STR);
       return;
     }
     if (!masterServices.getTableDescriptors().exists(REPLICATION_SINK_TRACKER_TABLE_NAME)) {
-      LOG.info(REPLICATION_SINK_TRACKER_TABLE_NAME_STR + " table not found. Creating.");
+      LOG.info("{} table not found. Creating.", REPLICATION_SINK_TRACKER_TABLE_NAME_STR);
       masterServices.createTable(TABLE_DESCRIPTOR_BUILDER.build(), null, 0L, NO_NONCE);
     }
   }
