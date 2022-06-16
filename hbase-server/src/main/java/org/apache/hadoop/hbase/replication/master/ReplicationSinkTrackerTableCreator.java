@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * hbase.regionserver.replication.sink.tracker.enabled config key is enabled and table not created
  **/
 @InterfaceAudience.Private
-public class ReplicationSinkTrackerTableCreator {
+public final class ReplicationSinkTrackerTableCreator {
   private static final Logger LOG =
     LoggerFactory.getLogger(ReplicationSinkTrackerTableCreator.class);
   private static final Long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
