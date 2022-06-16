@@ -189,6 +189,8 @@ public class TestMasterObserver {
     private boolean postRequestLockCalled;
     private boolean preLockHeartbeatCalled;
     private boolean postLockHeartbeatCalled;
+    private boolean preMasterStoreFlushCalled;
+    private boolean postMasterStoreFlushCalled;
 
     public void resetStates() {
       preCreateTableRegionInfosCalled = false;
@@ -280,6 +282,8 @@ public class TestMasterObserver {
       postRequestLockCalled = false;
       preLockHeartbeatCalled = false;
       postLockHeartbeatCalled = false;
+      preMasterStoreFlushCalled = false;
+      postMasterStoreFlushCalled = false;
     }
 
     @Override
@@ -1046,6 +1050,18 @@ public class TestMasterObserver {
     }
 
     @Override
+    public void preMasterStoreFlush(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+      preMasterStoreFlushCalled = true;
+    }
+
+    @Override
+    public void postMasterStoreFlush(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+      postMasterStoreFlushCalled = true;
+    }
+
+    @Override
     public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final String userName, final GlobalQuotaSettings quotas) throws IOException {
     }
@@ -1679,5 +1695,24 @@ public class TestMasterObserver {
 
     ProcedureTestingUtility.waitNoProcedureRunning(master.getMasterProcedureExecutor());
     ProcedureTestingUtility.assertProcNotFailed(master.getMasterProcedureExecutor(), procId);
+  }
+
+  @Test
+  public void testMasterStoreOperations() throws Exception {
+    SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
+    CPMasterObserver cp = host.findCoprocessor(CPMasterObserver.class);
+    cp.resetStates();
+    assertFalse("No master store flush call", cp.preMasterStoreFlushCalled);
+    assertFalse("No master store flush call", cp.postMasterStoreFlushCalled);
+
+    try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+      Admin admin = connection.getAdmin()) {
+      admin.flushMasterStore();
+
+      assertTrue("Master store flush called", cp.preMasterStoreFlushCalled);
+      assertTrue("Master store flush called", cp.postMasterStoreFlushCalled);
+    }
   }
 }

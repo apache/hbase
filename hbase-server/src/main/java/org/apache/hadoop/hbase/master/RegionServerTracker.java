@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
@@ -29,6 +32,7 @@ import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -184,22 +188,28 @@ public class RegionServerTracker extends ZKListener {
 
   private synchronized void refresh() {
     List<String> names;
-    try {
-      names = ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.getZNodePaths().rsZNode);
-    } catch (KeeperException e) {
-      // here we need to abort as we failed to set watcher on the rs node which means that we can
-      // not track the node deleted event any more.
-      server.abort("Unexpected zk exception getting RS nodes", e);
-      return;
+    final Span span = TraceUtil.createSpan("RegionServerTracker.refresh");
+    try (final Scope ignored = span.makeCurrent()) {
+      try {
+        names = ZKUtil.listChildrenAndWatchForNewChildren(watcher, watcher.getZNodePaths().rsZNode);
+      } catch (KeeperException e) {
+        // here we need to abort as we failed to set watcher on the rs node which means that we can
+        // not track the node deleted event any more.
+        server.abort("Unexpected zk exception getting RS nodes", e);
+        return;
+      }
+      Set<ServerName> newServers = CollectionUtils.isEmpty(names)
+        ? Collections.emptySet()
+        : names.stream().map(ServerName::parseServerName)
+          .collect(Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
+      if (active) {
+        processAsActiveMaster(newServers);
+      }
+      this.regionServers = newServers;
+      span.setStatus(StatusCode.OK);
+    } finally {
+      span.end();
     }
-    Set<ServerName> newServers = CollectionUtils.isEmpty(names)
-      ? Collections.emptySet()
-      : names.stream().map(ServerName::parseServerName)
-        .collect(Collectors.collectingAndThen(Collectors.toSet(), Collections::unmodifiableSet));
-    if (active) {
-      processAsActiveMaster(newServers);
-    }
-    this.regionServers = newServers;
   }
 
   @Override

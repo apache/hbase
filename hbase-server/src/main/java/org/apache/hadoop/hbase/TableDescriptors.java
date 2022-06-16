@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -26,13 +27,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Get, remove and modify table descriptors.
  */
 @InterfaceAudience.Private
-public interface TableDescriptors {
+public interface TableDescriptors extends Closeable {
 
   /**
    * Test whether a given table exists, i.e, has a table descriptor.
    */
   default boolean exists(TableName tableName) throws IOException {
     return get(tableName) != null;
+  }
+
+  @Override
+  default void close() throws IOException {
+    // do nothing by default
   }
 
   /**

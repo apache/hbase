@@ -136,6 +136,31 @@ public final class TraceUtil {
   }
 
   /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable, final String spanName) {
+    return tracedRunnable(runnable, () -> createSpan(spanName));
+  }
+
+  /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable,
+    final Supplier<Span> spanSupplier) {
+    // N.B. This method name follows the convention of this class, i.e., tracedFuture, rather than
+    // the convention of the OpenTelemetry classes, i.e., Context#wrap.
+    return () -> {
+      final Span span = spanSupplier.get();
+      try (final Scope ignored = span.makeCurrent()) {
+        runnable.run();
+        span.setStatus(StatusCode.OK);
+      } finally {
+        span.end();
+      }
+    };
+  }
+
+  /**
    * A {@link Runnable} that may also throw.
    * @param <T> the type of {@link Throwable} that can be produced.
    */
@@ -144,11 +169,17 @@ public final class TraceUtil {
     void run() throws T;
   }
 
+  /**
+   * Trace the execution of {@code runnable}.
+   */
   public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
     final String spanName) throws T {
     trace(runnable, () -> createSpan(spanName));
   }
 
+  /**
+   * Trace the execution of {@code runnable}.
+   */
   public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
     final Supplier<Span> spanSupplier) throws T {
     Span span = spanSupplier.get();

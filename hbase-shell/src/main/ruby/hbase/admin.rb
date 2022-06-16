@@ -1043,6 +1043,7 @@ module Hbase
       else
         puts "1 active master, #{cluster_metrics.getBackupMasterNames.size} backup masters,
               #{cluster_metrics.getLiveServerMetrics.size} servers,
+              #{cluster_metrics.getDecommissionedServerNames.size} decommissioned,
               #{cluster_metrics.getDeadServerNames.size} dead,
               #{format('%.4f', cluster_metrics.getAverageLoad)} average load"
       end
@@ -1867,10 +1868,16 @@ module Hbase
       @admin.modifyTableStoreFileTracker(tableName, sft)
     end
 
-     #----------------------------------------------------------------------------------------------
+    #----------------------------------------------------------------------------------------------
     # Change table column family's sft
     def modify_table_family_sft(tableName, family_bytes, sft)
       @admin.modifyColumnFamilyStoreFileTracker(tableName, family_bytes, sft)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Flush master local region
+    def flush_master_store()
+      @admin.flushMasterStore()
     end
   end
   # rubocop:enable Metrics/ClassLength

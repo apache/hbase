@@ -26,7 +26,6 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.EventData;
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.sdk.trace.data.StatusData;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.time.Duration;
 import java.util.Objects;
@@ -144,21 +143,18 @@ public final class SpanDataMatchers {
     };
   }
 
-  public static Matcher<SpanData> hasStatusWithCode(StatusCode statusCode) {
-    final Matcher<StatusCode> matcher = is(equalTo(statusCode));
-    return new TypeSafeMatcher<SpanData>() {
+  public static Matcher<SpanData> hasStatusWithCode(Matcher<StatusCode> matcher) {
+    return new FeatureMatcher<SpanData, StatusCode>(matcher, "SpanData with StatusCode that",
+      "statusWithCode") {
       @Override
-      protected boolean matchesSafely(SpanData item) {
-        final StatusData statusData = item.getStatus();
-        return statusData != null && statusData.getStatusCode() != null
-          && matcher.matches(statusData.getStatusCode());
-      }
-
-      @Override
-      public void describeTo(Description description) {
-        description.appendText("SpanData with StatusCode that ").appendDescriptionOf(matcher);
+      protected StatusCode featureValueOf(SpanData actual) {
+        return actual.getStatus().getStatusCode();
       }
     };
+  }
+
+  public static Matcher<SpanData> hasStatusWithCode(StatusCode statusCode) {
+    return hasStatusWithCode(is(equalTo(statusCode)));
   }
 
   public static Matcher<SpanData> hasTraceId(String traceId) {
