@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -209,6 +210,24 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
       convertedData.put(entry.getKey(), convertSnapshot(entry.getValue()));
     }
     return convertedData;
+  }
+
+  @Override
+  public long getNumberOfCompletedProcs(){
+    ProcedureExecutor procedureExecutor = master.getMasterProcedureExecutor();
+    return procedureExecutor.getCompletedSize();
+  }
+
+  @Override
+  public long getNumberOfActiveProcs(){
+    ProcedureExecutor procedureExecutor = master.getMasterProcedureExecutor();
+    return procedureExecutor.getActiveExecutorCount();
+  }
+
+  @Override
+  public long getLatestProcId(){
+    ProcedureExecutor procedureExecutor = master.getMasterProcedureExecutor();
+    return procedureExecutor.getLastProcId();
   }
 
   Entry<Long, Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {

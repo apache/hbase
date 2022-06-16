@@ -1316,7 +1316,7 @@ public class ProcedureExecutor<TEnvironment> {
     return procId;
   }
 
-  protected long getLastProcId() {
+  public long getLastProcId() {
     return lastProcId.get();
   }
 
@@ -1922,7 +1922,7 @@ public class ProcedureExecutor<TEnvironment> {
     return scheduler;
   }
 
-  int getCompletedSize() {
+  public int getCompletedSize() {
     return completed.size();
   }
 
