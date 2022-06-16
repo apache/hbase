@@ -60,7 +60,6 @@ public final class TableDescriptorChecker {
   private TableDescriptorChecker() {
   }
 
-
   private static boolean shouldSanityCheck(final Configuration conf, final TableDescriptor td) {
     if (conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
       return true;
@@ -71,6 +70,7 @@ public final class TableDescriptorChecker {
     }
     return false;
   }
+
   /**
    * Checks whether the table conforms to some sane limits, and configured values (compression, etc)
    * work. Throws an exception if something is wrong.
@@ -284,7 +284,8 @@ public final class TableDescriptorChecker {
     }
   }
 
-  public static void checkCompression(final Configuration conf, final TableDescriptor td) throws IOException {
+  public static void checkCompression(final Configuration conf, final TableDescriptor td)
+    throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
     boolean logWarn = !shouldSanityCheck(conf, td);
     try {
