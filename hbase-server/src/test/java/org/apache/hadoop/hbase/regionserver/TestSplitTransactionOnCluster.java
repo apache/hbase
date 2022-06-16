@@ -1505,7 +1505,8 @@ public class TestSplitTransactionOnCluster {
         insertData(tableName, admin, t);
       }
 
-      // Move test table to rs2 that is different from the RS of meta region. This will cause the problem
+      // Move test table to rs2 that is different from the RS of meta region.
+      // This will cause the problem.
       List<HRegion> regions = cluster.getRegions(tableName);
       final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(rs2.getServerName()));
