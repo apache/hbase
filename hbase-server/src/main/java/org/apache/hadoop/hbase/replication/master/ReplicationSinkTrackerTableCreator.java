@@ -87,8 +87,8 @@ public class ReplicationSinkTrackerTableCreator {
     boolean replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
       REPLICATION_SINK_TRACKER_ENABLED_DEFAULT);
     if (!replicationSinkTrackerEnabled) {
-      LOG.info("replication sink tracker requests logging to table {} is disabled."
-          + " Quitting.", REPLICATION_SINK_TRACKER_TABLE_NAME_STR);
+      LOG.info("replication sink tracker requests logging to table {} is disabled." + " Quitting.",
+        REPLICATION_SINK_TRACKER_TABLE_NAME_STR);
       return;
     }
     if (!masterServices.getTableDescriptors().exists(REPLICATION_SINK_TRACKER_TABLE_NAME)) {
