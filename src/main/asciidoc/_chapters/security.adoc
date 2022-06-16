@@ -1111,7 +1111,7 @@ The following example shows how to grant access at the table level.
 
 [source,java]
 ----
-public static void grantOnTable(final HBaseTestingUtility util, final String user,
+public static void grantOnTable(final HBaseTestingUtil util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
@@ -1157,7 +1157,7 @@ The correct way to apply cell-level permissions is to do so in the application c
 ====
 [source,java]
 ----
-public static void revokeFromTable(final HBaseTestingUtility util, final String user,
+public static void revokeFromTable(final HBaseTestingUtil util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
