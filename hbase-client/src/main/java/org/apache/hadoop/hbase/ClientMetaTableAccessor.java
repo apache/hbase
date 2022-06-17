@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.Closeable;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncTable;
@@ -257,7 +259,37 @@ public final class ClientMetaTableAccessor {
     }
 
     CompletableFuture<Void> future = new CompletableFuture<Void>();
-    metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+    // Get the region locator's meta replica mode.
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(metaTable.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    if (metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+      addListener(metaTable.getDescriptor(), (desc, error) -> {
+        if (error != null) {
+          LOG.error("Failed to get meta table descriptor, error: ", error);
+          future.completeExceptionally(error);
+          return;
+        }
+
+        int numOfReplicas = desc.getRegionReplication();
+        if (numOfReplicas > 1) {
+          int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+          // When the replicaId is 0, do not set to Consistency.TIMELINE
+          if (replicaId > 0) {
+            scan.setReplicaId(replicaId);
+            scan.setConsistency(Consistency.TIMELINE);
+          }
+        }
+        metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+      });
+    } else {
+      if (metaReplicaMode == CatalogReplicaMode.HEDGED_READ) {
+        scan.setConsistency(Consistency.TIMELINE);
+      }
+      metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+    }
+
     return future;
   }
 

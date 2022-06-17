@@ -130,23 +130,49 @@ JVM. When selecting your JDK distribution, please take this into consideration.
 ====
 
 .Java support by release line
-[cols="3*^.^", options="header"]
+[cols="5*^.^", options="header"]
 |===
-|Java Version
-|HBase 1.4+
+|HBase Version
+|JDK 6
+|JDK 7
+|JDK 8
+|JDK 11
+
 |HBase 2.3+
-
-|JDK7
-|icon:check-circle[role="green"]
 |icon:times-circle[role="red"]
-
-|JDK8
-|icon:check-circle[role="green"]
-|icon:check-circle[role="green"]
-
-|JDK11
 |icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
 |icon:exclamation-circle[role="yellow"]*
+
+|HBase 2.0-2.2
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:times-circle[role="red"]
+
+|HBase 1.2+
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:times-circle[role="red"]
+
+|HBase 1.0-1.1
+|icon:times-circle[role="red"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"]
+|icon:times-circle[role="red"]
+
+|HBase 0.98
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:exclamation-circle[role="yellow"]
+|icon:times-circle[role="red"]
+
+|HBase 0.94
+|icon:check-circle[role="green"]
+|icon:check-circle[role="green"]
+|icon:times-circle[role="red"]
+|icon:times-circle[role="red"]
 
 |===
 
@@ -280,14 +306,14 @@ to different HBase versions.
 Hadoop 3.x is still in early access releases and has not yet been sufficiently tested by the HBase community for production use cases.
 ====
 
-Use the following legend to interpret this table:
-
-.Hadoop version support matrix
+Use the following legend to interpret these tables:
 
 * icon:check-circle[role="green"] = Tested to be fully-functional
 * icon:times-circle[role="red"] = Known to not be fully-functional, or there are
 link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in newer minor releases
 * icon:exclamation-circle[role="yellow"] = Not tested, may/may-not function
+
+.Hadoop version support matrix for active release lines
 
 [cols="1,3*^.^", options="header"]
 |===
@@ -297,6 +323,69 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 |Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |Hadoop-3.2.x | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |Hadoop-3.3.x | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|===
+
+.Hadoop version support matrix for EOM 2.x release lines
+
+[cols="1,3*^.^", options="header"]
+|===
+| | HBase-2.0.x | HBase-2.1.x | HBase-2.2.x
+| Hadoop-2.6.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"] |  icon:times-circle[role="red"]
+| Hadoop-2.7.[0-6] | icon:times-circle[role="red"] | icon:times-circle[role="red"] |  icon:times-circle[role="red"]
+| Hadoop-2.7.7+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] |  icon:times-circle[role="red"]
+| Hadoop-2.8.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] |  icon:times-circle[role="red"]
+| Hadoop-2.8.[3-4] | icon:check-circle[role="green"] | icon:check-circle[role="green"] |  icon:times-circle[role="red"]
+| Hadoop-2.8.5+ | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.9.[0-1] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.9.2+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
+| Hadoop-3.0.[0-2] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-3.0.3+ | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-3.1.1+ | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|===
+
+.Hadoop version support matrix for EOM 1.5+ release lines
+
+[cols="1,2*^.^", options="header"]
+|===
+| | HBase-1.5.x | HBase-1.6.x
+| Hadoop-2.7.7+ | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-2.8.[0-4] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.8.5+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.9.[0-1] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.9.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.10.x | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"]
+|===
+
+.Hadoop version support matrix for EOM 1.x release lines
+
+[cols="1,5*^.^", options="header"]
+|===
+| | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x | HBase-1.3.x | HBase-1.4.x
+| Hadoop-2.4.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-2.5.x | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-2.6.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.6.1+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-2.7.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.7.1+ | icon:exclamation-circle[role="yellow"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|===
+
+.Hadoop version support matrix for EOM pre-1.0 release lines
+
+[cols="1,4*^.^", options="header"]
+|===
+| | HBase-0.92.x | HBase-0.94.x | HBase-0.96.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.)
+| Hadoop-0.20.205 | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-0.22.x | icon:check-circle[role="green"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-1.0.x | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-1.1.x | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"]
+| Hadoop-0.23.x | icon:times-circle[role="red"] | icon:check-circle[role="green"] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"]
+| Hadoop-2.0.x-alpha | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:times-circle[role="red"] | icon:times-circle[role="red"]
+| Hadoop-2.1.0-beta | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+| Hadoop-2.2.0 | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.3.x | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.4.x | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| Hadoop-2.5.x | icon:times-circle[role="red"] | icon:exclamation-circle[role="yellow"] | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |===
 
 .Hadoop 2.y.0 Releases

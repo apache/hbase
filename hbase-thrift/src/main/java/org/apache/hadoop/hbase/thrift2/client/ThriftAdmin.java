@@ -1309,4 +1309,9 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException(
       "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
   }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
+  }
 }

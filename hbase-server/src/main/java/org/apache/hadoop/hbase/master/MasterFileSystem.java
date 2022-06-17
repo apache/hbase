@@ -331,16 +331,15 @@ public class MasterFileSystem {
           throw new IOException("HBase directory '" + p + "' creation failure.");
         }
       }
-    } else {
-      if (isSecurityEnabled && !dirPerms.equals(fs.getFileStatus(p).getPermission())) {
-        // check whether the permission match
-        LOG.warn("Found HBase directory permissions NOT matching expected permissions for "
-          + p.toString() + " permissions=" + fs.getFileStatus(p).getPermission() + ", expecting "
-          + dirPerms + ". Automatically setting the permissions. "
-          + "You can change the permissions by setting \"" + dirPermsConfName
-          + "\" in hbase-site.xml " + "and restarting the master");
-        fs.setPermission(p, dirPerms);
-      }
+    }
+    if (isSecurityEnabled && !dirPerms.equals(fs.getFileStatus(p).getPermission())) {
+      // check whether the permission match
+      LOG.warn("Found HBase directory permissions NOT matching expected permissions for "
+        + p.toString() + " permissions=" + fs.getFileStatus(p).getPermission() + ", expecting "
+        + dirPerms + ". Automatically setting the permissions. "
+        + "You can change the permissions by setting \"" + dirPermsConfName
+        + "\" in hbase-site.xml " + "and restarting the master");
+      fs.setPermission(p, dirPerms);
     }
   }
 
@@ -355,9 +354,9 @@ public class MasterFileSystem {
         if (!this.fs.mkdirs(p, HiddenDirPerms)) {
           throw new IOException("Failed to create staging directory " + p.toString());
         }
-      } else {
-        this.fs.setPermission(p, HiddenDirPerms);
       }
+      this.fs.setPermission(p, HiddenDirPerms);
+
     } catch (IOException e) {
       LOG.error("Failed to create or set permission on staging directory " + p.toString());
       throw new IOException(

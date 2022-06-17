@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
-import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasExceptionWithType;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasException;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
@@ -128,7 +128,8 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
   }
 
   @Override
-  protected void assertTraceError(Matcher<String> exceptionTypeNameMatcher) {
+  protected void
+    assertTraceError(Matcher<io.opentelemetry.api.common.Attributes> exceptionMatcher) {
     final String parentSpanName = testName.getMethodName();
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
@@ -146,7 +147,7 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
-        hasExceptionWithType(exceptionTypeNameMatcher), hasEnded());
+        hasException(exceptionMatcher), hasEnded());
     assertThat(spans, hasItem(scanOperationSpanMatcher));
   }
 }

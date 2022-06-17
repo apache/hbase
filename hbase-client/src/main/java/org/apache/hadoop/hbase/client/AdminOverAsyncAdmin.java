@@ -1078,4 +1078,9 @@ class AdminOverAsyncAdmin implements Admin {
     ServerType serverType, int limit, Map<String, Object> filterParams) throws IOException {
     return get(admin.getLogEntries(serverNames, logType, serverType, limit, filterParams));
   }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    get(admin.flushMasterStore());
+  }
 }

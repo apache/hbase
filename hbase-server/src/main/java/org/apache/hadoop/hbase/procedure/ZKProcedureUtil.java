@@ -262,7 +262,7 @@ public abstract class ZKProcedureUtil extends ZKListener implements Closeable {
   }
 
   public void clearZNodes(String procedureName) throws KeeperException {
-    LOG.info("Clearing all znodes for procedure " + procedureName + "including nodes "
+    LOG.info("Clearing all znodes for procedure " + procedureName + " including nodes "
       + acquiredZnode + " " + reachedZnode + " " + abortZnode);
 
     // Make sure we trigger the watches on these nodes by creating them. (HBASE-13885)

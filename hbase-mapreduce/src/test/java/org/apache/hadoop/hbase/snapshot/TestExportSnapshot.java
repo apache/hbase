@@ -24,9 +24,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -230,6 +233,37 @@ public class TestExportSnapshot {
     testExportFileSystemState(tableName, snapshotName, targetName, tableNumFiles);
   }
 
+  @Test
+  public void testExportWithResetTtl() throws Exception {
+    String name = "testExportWithResetTtl";
+    TableName tableName = TableName.valueOf(name);
+    String snapshotName = "snaptb-" + name;
+    Long ttl = 100000L;
+
+    try {
+      // create Table
+      createTable(tableName);
+      SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50, FAMILY);
+      int tableNumFiles = admin.getRegions(tableName).size();
+      // take a snapshot with TTL
+      Map<String, Object> props = new HashMap<>();
+      props.put("TTL", ttl);
+      admin.snapshot(snapshotName, tableName, props);
+      Optional<Long> ttlOpt =
+        admin.listSnapshots().stream().filter(s -> s.getName().equals(snapshotName))
+          .map(org.apache.hadoop.hbase.client.SnapshotDescription::getTtl).findAny();
+      assertTrue(ttlOpt.isPresent());
+      assertEquals(ttl, ttlOpt.get());
+
+      testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles,
+        getHdfsDestinationDir(), false, true);
+    } catch (Exception e) {
+      throw e;
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
   private void testExportFileSystemState(final TableName tableName, final String snapshotName,
     final String targetName, int filesExpected) throws Exception {
     testExportFileSystemState(tableName, snapshotName, targetName, filesExpected,
@@ -238,8 +272,15 @@ public class TestExportSnapshot {
 
   protected void testExportFileSystemState(final TableName tableName, final String snapshotName,
     final String targetName, int filesExpected, Path copyDir, boolean overwrite) throws Exception {
+    testExportFileSystemState(tableName, snapshotName, targetName, filesExpected, copyDir,
+      overwrite, false);
+  }
+
+  protected void testExportFileSystemState(final TableName tableName, final String snapshotName,
+    final String targetName, int filesExpected, Path copyDir, boolean overwrite, boolean resetTtl)
+    throws Exception {
     testExportFileSystemState(TEST_UTIL.getConfiguration(), tableName, snapshotName, targetName,
-      filesExpected, TEST_UTIL.getDefaultRootDirPath(), copyDir, overwrite,
+      filesExpected, TEST_UTIL.getDefaultRootDirPath(), copyDir, overwrite, resetTtl,
       getBypassRegionPredicate(), true);
   }
 
@@ -249,7 +290,8 @@ public class TestExportSnapshot {
   protected static void testExportFileSystemState(final Configuration conf,
     final TableName tableName, final String snapshotName, final String targetName,
     final int filesExpected, final Path srcDir, Path rawTgtDir, final boolean overwrite,
-    final RegionPredicate bypassregionPredicate, boolean success) throws Exception {
+    final boolean resetTtl, final RegionPredicate bypassregionPredicate, boolean success)
+    throws Exception {
     FileSystem tgtFs = rawTgtDir.getFileSystem(conf);
     FileSystem srcFs = srcDir.getFileSystem(conf);
     Path tgtDir = rawTgtDir.makeQualified(tgtFs.getUri(), tgtFs.getWorkingDirectory());
@@ -266,6 +308,9 @@ public class TestExportSnapshot {
     }
     if (overwrite) {
       opts.add("--overwrite");
+    }
+    if (resetTtl) {
+      opts.add("--reset-ttl");
     }
 
     // Export Snapshot
@@ -295,7 +340,7 @@ public class TestExportSnapshot {
     final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, targetName);
     verifySnapshotDir(srcFs, new Path(srcDir, snapshotDir), tgtFs, new Path(tgtDir, targetDir));
     Set<String> snapshotFiles =
-      verifySnapshot(conf, tgtFs, tgtDir, tableName, targetName, bypassregionPredicate);
+      verifySnapshot(conf, tgtFs, tgtDir, tableName, targetName, resetTtl, bypassregionPredicate);
     assertEquals(filesExpected, snapshotFiles.size());
   }
 
@@ -312,7 +357,7 @@ public class TestExportSnapshot {
    */
   protected static Set<String> verifySnapshot(final Configuration conf, final FileSystem fs,
     final Path rootDir, final TableName tableName, final String snapshotName,
-    final RegionPredicate bypassregionPredicate) throws IOException {
+    final boolean resetTtl, final RegionPredicate bypassregionPredicate) throws IOException {
     final Path exportedSnapshot =
       new Path(rootDir, new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
     final Set<String> snapshotFiles = new HashSet<>();
@@ -354,6 +399,9 @@ public class TestExportSnapshot {
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, exportedSnapshot);
     assertTrue(desc.getName().equals(snapshotName));
     assertTrue(desc.getTable().equals(tableName.getNameAsString()));
+    if (resetTtl) {
+      assertEquals(HConstants.DEFAULT_SNAPSHOT_TTL, desc.getTtl());
+    }
     return snapshotFiles;
   }
 

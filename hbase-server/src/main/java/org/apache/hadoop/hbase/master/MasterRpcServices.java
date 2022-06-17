@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.MetaFixer;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -228,6 +230,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -874,7 +878,9 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     boolean prevValue =
       server.getLogCleaner().getEnabled() && server.getHFileCleaner().getEnabled();
     server.getLogCleaner().setEnabled(req.getOn());
-    server.getHFileCleaner().setEnabled(req.getOn());
+    for (HFileCleaner hFileCleaner : server.getHFileCleaners()) {
+      hFileCleaner.setEnabled(req.getOn());
+    }
     return SetCleanerChoreRunningResponse.newBuilder().setPrevValue(prevValue).build();
   }
 
@@ -3464,5 +3470,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public ReplicateWALEntryResponse replicateToReplica(RpcController controller,
     ReplicateWALEntryRequest request) throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public FlushMasterStoreResponse flushMasterStore(RpcController controller,
+    FlushMasterStoreRequest request) throws ServiceException {
+    rpcPreCheck("flushMasterStore");
+    try {
+      server.flushMasterStore();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return FlushMasterStoreResponse.newBuilder().build();
   }
 }
