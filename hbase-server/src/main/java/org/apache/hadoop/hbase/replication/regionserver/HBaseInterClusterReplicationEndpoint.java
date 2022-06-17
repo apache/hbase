@@ -614,10 +614,6 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   /**
    * Replicate entries to peer cluster by async API.
-   * @param entries
-   * @param batchIndex
-   * @param timeout
-   * @return
    */
   protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int batchIndex,
     int timeout) {
