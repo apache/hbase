@@ -153,8 +153,8 @@ public class RegionServerAccounting {
   }
 
   /**
-   * Return true if we are above the memstore high water mark
-   * @return the flushtype
+   * Return the FlushType if we are above the memstore high water mark
+   * @return the FlushType
    */
   public FlushType isAboveHighWaterMark() {
     // for onheap memstore we check if the global memstore size and the
@@ -185,7 +185,8 @@ public class RegionServerAccounting {
   }
 
   /**
-   * Return true if we're above the low watermark
+   * Return the FlushType if we're above the low watermark
+   * @return the FlushType
    */
   public FlushType isAboveLowWaterMark() {
     // for onheap memstore we check if the global memstore size and the
