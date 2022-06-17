@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.apache.hadoop.hbase.mob.MobConstants.DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
+import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
@@ -331,20 +334,30 @@ public final class MobUtils {
           }
           filesToClean
             .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
+          if (
+            filesToClean.size() >= conf.getInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND,
+              DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND)
+          ) {
+            if (
+              removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(),
+                filesToClean)
+            ) {
+              deletedFileCount += filesToClean.size();
+            }
+            filesToClean.clear();
+          }
         }
       } catch (Exception e) {
         LOG.error("Cannot parse the fileName " + fileName, e);
       }
     }
-    if (!filesToClean.isEmpty()) {
-      try {
-        removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(), filesToClean);
-        deletedFileCount = filesToClean.size();
-      } catch (IOException e) {
-        LOG.error("Failed to delete the mob files " + filesToClean, e);
-      }
+    if (
+      !filesToClean.isEmpty() && removeMobFiles(conf, fs, tableName, mobTableDir,
+        columnDescriptor.getName(), filesToClean)
+    ) {
+      deletedFileCount += filesToClean.size();
     }
-    LOG.info(deletedFileCount + " expired mob files are deleted");
+    LOG.info("Table {} {} expired mob files in total are deleted", tableName, deletedFileCount);
   }
 
   /**
@@ -487,10 +500,17 @@ public final class MobUtils {
    * @param family     The name of the column family.
    * @param storeFiles The files to be deleted.
    */
-  public static void removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
-    Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) throws IOException {
-    HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
-      storeFiles);
+  public static boolean removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
+    Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) {
+    try {
+      HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
+        storeFiles);
+      LOG.info("Table {} {} expired mob files are deleted", tableName, storeFiles.size());
+      return true;
+    } catch (IOException e) {
+      LOG.error("Failed to delete the mob files, table {}", tableName, e);
+    }
+    return false;
   }
 
   /**
