@@ -755,7 +755,7 @@ public final class ZKUtil {
   }
 
   /**
-   * Creates the specified node containing specified data, iff the node does not exist. Does not set
+   * Creates the specified node containing specified data, if the node does not exist. Does not set
    * a watch and fails silently if the node already exists. The node created is persistent and open
    * access.
    * @param zkw   zk reference
