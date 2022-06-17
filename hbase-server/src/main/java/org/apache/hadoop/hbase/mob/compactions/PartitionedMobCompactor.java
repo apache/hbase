@@ -365,14 +365,14 @@ public class PartitionedMobCompactor extends MobCompactor {
         + "table='{}' and column='{}'", tableName, column.getNameAsString());
       for (CompactionDelPartition delPartition : request.getDelPartitions()) {
         LOG.info(Objects.toString(delPartition.listDelFiles()));
-        try {
-          MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
-            delPartition.getStoreFiles());
-        } catch (IOException e) {
+        if (
+          !MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
+            delPartition.getStoreFiles())
+        ) {
           LOG.error(
             "Failed to archive the del files {} for partition {} table='{}' and " + "column='{}'",
-            delPartition.getStoreFiles(), delPartition.getId(), tableName, column.getNameAsString(),
-            e);
+            delPartition.getStoreFiles(), delPartition.getId(), tableName,
+            column.getNameAsString());
         }
       }
     }
@@ -695,14 +695,10 @@ public class PartitionedMobCompactor extends MobCompactor {
       }
 
       // archive the old mob files, do not archive the del files.
-      try {
-        closeStoreFileReaders(mobFilesToCompact);
-        closeReaders = false;
-        MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
-          mobFilesToCompact);
-      } catch (IOException e) {
-        LOG.error("Failed to archive the files " + mobFilesToCompact, e);
-      }
+      closeStoreFileReaders(mobFilesToCompact);
+      closeReaders = false;
+      MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(),
+        mobFilesToCompact);
     } finally {
       if (closeReaders) {
         closeStoreFileReaders(mobFilesToCompact);
@@ -811,11 +807,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     // commit the new del file
     Path path = MobUtils.commitFile(conf, fs, filePath, mobFamilyDir, compactionCacheConfig);
     // archive the old del files
-    try {
-      MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), delFiles);
-    } catch (IOException e) {
-      LOG.error("Failed to archive the old del files " + delFiles, e);
-    }
+    MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), delFiles);
     return path;
   }
 
