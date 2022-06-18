@@ -57,7 +57,7 @@ public class JSONBean {
   private static final String COMMA = ",";
   private static final String ASTERICK = "*";
   private static final Logger LOG = LoggerFactory.getLogger(JSONBean.class);
-  private static final Gson GSON = GsonUtil.createGson().create();
+  private static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   /**
    * Use dumping out mbeans as JSON.
