@@ -46,6 +46,9 @@ public final class MobConstants {
   public static final String MOB_CACHE_EVICT_REMAIN_RATIO = "hbase.mob.cache.evict.remain.ratio";
   public static final Tag MOB_REF_TAG =
     new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE, HConstants.EMPTY_BYTE_ARRAY);
+  public static final String MOB_CLEANER_BATCH_SIZE_UPPER_BOUND =
+    "hbase.master.mob.cleaner.batch.size.upper.bound";
+  public static final int DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND = 10000;
 
   public static final float DEFAULT_EVICT_REMAIN_RATIO = 0.5f;
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600L;
