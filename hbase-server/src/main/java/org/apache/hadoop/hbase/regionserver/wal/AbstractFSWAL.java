@@ -695,11 +695,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   protected void archive(final Pair<Path, Long> log) {
+    totalLogSize.addAndGet(-log.getSecond());
     int retry = 1;
     while (true) {
       try {
         archiveLogFile(log.getFirst());
-        totalLogSize.addAndGet(-log.getSecond());
         // successful
         break;
       } catch (Throwable e) {
