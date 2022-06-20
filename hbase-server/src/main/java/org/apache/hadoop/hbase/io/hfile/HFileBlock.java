@@ -1705,7 +1705,7 @@ public class HFileBlock implements Cacheable {
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
         }
-        LOG.trace("Read {} in {} ns", hFileBlock, duration);
+        LOG.trace("Read {} in {} ms", hFileBlock, duration);
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
           cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(), onDiskBlock,
