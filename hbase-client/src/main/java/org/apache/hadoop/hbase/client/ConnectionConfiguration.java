@@ -71,6 +71,11 @@ public class ConnectionConfiguration {
       HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED);
   }
 
+  public static final String HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY =
+    "hbase.client.meta.read.rpc.timeout";
+  public static final String HBASE_CLIENT_META_SCANNER_TIMEOUT =
+    "hbase.client.meta.scanner.timeout.period";
+
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
   private final long writeBufferPeriodicFlushTimerTickMs;
@@ -85,6 +90,7 @@ public class ConnectionConfiguration {
   private final int maxKeyValueSize;
   private final int rpcTimeout;
   private final int readRpcTimeout;
+  private final int metaReadRpcTimeout;
   private final int writeRpcTimeout;
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
@@ -140,6 +146,8 @@ public class ConnectionConfiguration {
     this.readRpcTimeout = conf.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
 
+    this.metaReadRpcTimeout = conf.getInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeout);
+
     this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
 
@@ -178,6 +186,7 @@ public class ConnectionConfiguration {
     this.clientScannerAsyncPrefetch = Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.metaReadRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.pauseMs = DEFAULT_HBASE_CLIENT_PAUSE;
@@ -186,6 +195,10 @@ public class ConnectionConfiguration {
 
   public int getReadRpcTimeout() {
     return readRpcTimeout;
+  }
+
+  public int getMetaReadRpcTimeout() {
+    return metaReadRpcTimeout;
   }
 
   public int getWriteRpcTimeout() {

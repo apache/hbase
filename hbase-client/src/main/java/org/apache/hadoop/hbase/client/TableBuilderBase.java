@@ -45,7 +45,8 @@ abstract class TableBuilderBase implements TableBuilder {
       ? connConf.getMetaOperationTimeout()
       : connConf.getOperationTimeout();
     this.rpcTimeout = connConf.getRpcTimeout();
-    this.readRpcTimeout = connConf.getReadRpcTimeout();
+    this.readRpcTimeout =
+      tableName.isSystemTable() ? connConf.getMetaReadRpcTimeout() : connConf.getReadRpcTimeout();
     this.writeRpcTimeout = connConf.getWriteRpcTimeout();
   }
 
