@@ -149,9 +149,9 @@ public class TestExpiredMobFileCleaner {
     String f2 = secondFiles[1].getPath().getName();
     String secondFile = f1.equals(firstFile) ? f2 : f1;
 
-    ts = EnvironmentEdgeManager.currentTime() - 4 * secondsOfDay() * 1000; // 4 days before
+    ts = System.currentTimeMillis() - 4 * secondsOfDay() * 1000; // 4 days before
     putKVAndFlush(table, row3, dummyData, ts);
-    ts = EnvironmentEdgeManager.currentTime() - 4 * secondsOfDay() * 1000; // 4 days before
+    ts = System.currentTimeMillis() - 4 * secondsOfDay() * 1000; // 4 days before
     putKVAndFlush(table, row3, dummyData, ts);
     FileStatus[] thirdFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     // now there are 4 mob files
