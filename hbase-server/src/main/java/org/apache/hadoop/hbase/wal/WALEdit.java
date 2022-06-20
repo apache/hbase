@@ -194,6 +194,19 @@ public class WALEdit implements HeapSize {
     cells = new ArrayList<>(cellCount);
   }
 
+  /**
+   * Create a new WALEdit from a existing {@link WALEdit}.
+   */
+  public WALEdit(WALEdit walEdit) {
+    this.replay = walEdit.replay;
+    cells = new ArrayList<>(walEdit.cells);
+    if (walEdit.families != null) {
+      this.families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      this.families.addAll(walEdit.families);
+    }
+
+  }
+
   private Set<byte[]> getOrCreateFamilies() {
     if (this.families == null) {
       this.families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
@@ -252,6 +265,17 @@ public class WALEdit implements HeapSize {
     // We clone Family each time we add a Cell. Expensive but safe. For CPU savings, use
     // add(Map) or add(Cell, family).
     return add(cell, CellUtil.cloneFamily(cell));
+  }
+
+  @InterfaceAudience.Private
+  public WALEdit add(List<Cell> cells) {
+    if (cells == null || cells.isEmpty()) {
+      return this;
+    }
+    for (Cell cell : cells) {
+      add(cell);
+    }
+    return this;
   }
 
   public boolean isEmpty() {

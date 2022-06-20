@@ -21,6 +21,9 @@ import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 
 import com.google.errorprone.annotations.RestrictedApi;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.management.MemoryType;
 import java.net.BindException;
@@ -57,6 +60,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -227,64 +231,74 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
+    int tableDescriptorParallelLoadThreads =
+      conf.getInt("hbase.tabledescriptor.parallel.load.threads", 0);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+      !canUpdateTableDescriptor(), cacheTableDescriptor(), tableDescriptorParallelLoadThreads);
   }
 
-  public HBaseServerBase(Configuration conf, String name)
-    throws ZooKeeperConnectionException, IOException {
+  public HBaseServerBase(Configuration conf, String name) throws IOException {
     super(name); // thread name
-    this.conf = conf;
-    this.eventLoopGroupConfig =
-      NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
-    this.startcode = EnvironmentEdgeManager.currentTime();
-    this.userProvider = UserProvider.instantiate(conf);
-    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
-    this.sleeper = new Sleeper(this.msgInterval, this);
-    this.namedQueueRecorder = createNamedQueueRecord();
-    this.rpcServices = createRpcServices();
-    useThisHostnameInstead = getUseThisHostnameInstead(conf);
-    InetSocketAddress addr = rpcServices.getSocketAddress();
-    String hostName = StringUtils.isBlank(useThisHostnameInstead)
-      ? addr.getHostName()
-      : this.useThisHostnameInstead;
-    serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
-    // login the zookeeper client principal (if using security)
-    ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
-      HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
-    // login the server principal (if using secure Hadoop)
-    login(userProvider, hostName);
-    // init superusers and add the server principal (if using security)
-    // or process owner as default super user.
-    Superusers.initialize(conf);
-    zooKeeper =
-      new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
+    final Span span = TraceUtil.createSpan("HBaseServerBase.cxtor");
+    try (Scope ignored = span.makeCurrent()) {
+      this.conf = conf;
+      this.eventLoopGroupConfig =
+        NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
+      this.startcode = EnvironmentEdgeManager.currentTime();
+      this.userProvider = UserProvider.instantiate(conf);
+      this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
+      this.sleeper = new Sleeper(this.msgInterval, this);
+      this.namedQueueRecorder = createNamedQueueRecord();
+      this.rpcServices = createRpcServices();
+      useThisHostnameInstead = getUseThisHostnameInstead(conf);
+      InetSocketAddress addr = rpcServices.getSocketAddress();
+      String hostName = StringUtils.isBlank(useThisHostnameInstead)
+        ? addr.getHostName()
+        : this.useThisHostnameInstead;
+      serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
+      // login the zookeeper client principal (if using security)
+      ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+        HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
+      // login the server principal (if using secure Hadoop)
+      login(userProvider, hostName);
+      // init superusers and add the server principal (if using security)
+      // or process owner as default super user.
+      Superusers.initialize(conf);
+      zooKeeper =
+        new ZKWatcher(conf, getProcessName() + ":" + addr.getPort(), this, canCreateBaseZNode());
 
-    this.configurationManager = new ConfigurationManager();
-    setupWindows(conf, configurationManager);
+      this.configurationManager = new ConfigurationManager();
+      setupWindows(conf, configurationManager);
 
-    initializeFileSystem();
+      initializeFileSystem();
 
-    this.choreService = new ChoreService(getName(), true);
-    this.executorService = new ExecutorService(getName());
+      this.choreService = new ChoreService(getName(), true);
+      this.executorService = new ExecutorService(getName());
 
-    this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
+      this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
 
-    if (clusterMode()) {
-      if (
-        conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
-      ) {
-        csm = new ZkCoordinatedStateManager(this);
+      if (clusterMode()) {
+        if (
+          conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+        ) {
+          csm = new ZkCoordinatedStateManager(this);
+        } else {
+          csm = null;
+        }
+        clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
+        clusterStatusTracker.start();
       } else {
         csm = null;
+        clusterStatusTracker = null;
       }
-      clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
-      clusterStatusTracker.start();
-    } else {
-      csm = null;
-      clusterStatusTracker = null;
+      putUpWebUI();
+      span.setStatus(StatusCode.OK);
+    } catch (Throwable t) {
+      TraceUtil.setError(span, t);
+      throw t;
+    } finally {
+      span.end();
     }
-    putUpWebUI();
   }
 
   /**
@@ -451,6 +465,17 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     if (this.zooKeeper != null) {
       LOG.info("Close zookeeper");
       this.zooKeeper.close();
+    }
+  }
+
+  protected final void closeTableDescriptors() {
+    if (this.tableDescriptors != null) {
+      LOG.info("Close table descriptors");
+      try {
+        this.tableDescriptors.close();
+      } catch (IOException e) {
+        LOG.debug("Failed to close table descriptors gracefully", e);
+      }
     }
   }
 

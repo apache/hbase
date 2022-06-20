@@ -132,6 +132,12 @@ public class TestClientClusterMetrics {
     Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
     Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
     Assert.assertEquals(ADMIN.getRegionServers().size(), defaults.getServersName().size());
+    // We decommission the first online region server and verify the metrics.
+    List<ServerName> serverNames = origin.getServersName().subList(0, 1);
+    ADMIN.decommissionRegionServers(serverNames, false);
+    Assert.assertEquals(1, ADMIN.getClusterMetrics().getDecommissionedServerNames().size());
+    Assert.assertEquals(ADMIN.getClusterMetrics().getDecommissionedServerNames().get(0),
+      serverNames.get(0));
   }
 
   @Test

@@ -415,6 +415,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         ColumnFamilyDescriptorBuilder.newBuilder(familyName);
       cfBuilder.setDataBlockEncoding(opts.blockEncoding);
       cfBuilder.setCompressionType(opts.compression);
+      cfBuilder.setEncryptionType(opts.encryption);
       cfBuilder.setBloomFilterType(opts.bloomType);
       cfBuilder.setBlocksize(opts.blockSize);
       if (opts.inMemoryCF) {
@@ -707,6 +708,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int replicas = TableDescriptorBuilder.DEFAULT_REGION_REPLICATION;
     String splitPolicy = null;
     Compression.Algorithm compression = Compression.Algorithm.NONE;
+    String encryption = null;
     BloomType bloomType = BloomType.ROW;
     int blockSize = HConstants.DEFAULT_BLOCKSIZE;
     DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
@@ -762,6 +764,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.replicas = that.replicas;
       this.splitPolicy = that.splitPolicy;
       this.compression = that.compression;
+      this.encryption = that.encryption;
       this.blockEncoding = that.blockEncoding;
       this.filterAll = that.filterAll;
       this.bloomType = that.bloomType;
@@ -951,6 +954,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.compression = compression;
     }
 
+    public void setEncryption(String encryption) {
+      this.encryption = encryption;
+    }
+
     public void setBloomType(BloomType bloomType) {
       this.bloomType = bloomType;
     }
@@ -1061,6 +1068,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public Compression.Algorithm getCompression() {
       return compression;
+    }
+
+    public String getEncryption() {
+      return encryption;
     }
 
     public DataBlockEncoding getBlockEncoding() {
@@ -2617,6 +2628,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + " use size to specify the end range and --rows"
         + " specifies the number of rows within that range. " + "Default: 1.0.");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
+    System.err.println(" encryption      Encryption type to use (AES, ...). Default: 'NONE'");
     System.err.println(
       " flushCommits    Used to determine if the test should flush the table. " + "Default: false");
     System.err.println(" valueZipf       Set if we should vary value size between 0 and "
@@ -2739,6 +2751,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String compress = "--compress=";
       if (cmd.startsWith(compress)) {
         opts.compression = Compression.Algorithm.valueOf(cmd.substring(compress.length()));
+        continue;
+      }
+
+      final String encryption = "--encryption=";
+      if (cmd.startsWith(encryption)) {
+        opts.encryption = cmd.substring(encryption.length());
         continue;
       }
 

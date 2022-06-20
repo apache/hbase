@@ -1785,4 +1785,9 @@ public interface AsyncAdmin {
    */
   CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
     ServerType serverType, int limit, Map<String, Object> filterParams);
+
+  /**
+   * Flush master local region
+   */
+  CompletableFuture<Void> flushMasterStore();
 }

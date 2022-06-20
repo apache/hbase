@@ -180,7 +180,7 @@ class MasterRegionFlusherAndCompactor implements Closeable {
   }
 
   private void flushLoop() {
-    lastFlushTime = EnvironmentEdgeManager.currentTime();
+    recordLastFlushTime();
     while (!closed) {
       flushLock.lock();
       try {
@@ -202,10 +202,10 @@ class MasterRegionFlusherAndCompactor implements Closeable {
         flushLock.unlock();
       }
       assert flushRequest;
-      changesAfterLastFlush.set(0);
+      resetChangesAfterLastFlush();
       try {
         region.flush(true);
-        lastFlushTime = EnvironmentEdgeManager.currentTime();
+        recordLastFlushTime();
       } catch (IOException e) {
         LOG.error(HBaseMarkers.FATAL, "Failed to flush master local region, aborting...", e);
         abortable.abort("Failed to flush master local region", e);
@@ -261,6 +261,14 @@ class MasterRegionFlusherAndCompactor implements Closeable {
     } finally {
       flushLock.unlock();
     }
+  }
+
+  void resetChangesAfterLastFlush() {
+    changesAfterLastFlush.set(0);
+  }
+
+  void recordLastFlushTime() {
+    lastFlushTime = EnvironmentEdgeManager.currentTime();
   }
 
   @Override
