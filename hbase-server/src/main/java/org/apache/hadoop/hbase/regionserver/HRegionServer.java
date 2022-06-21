@@ -131,6 +131,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
@@ -552,6 +553,8 @@ public class HRegionServer extends Thread
   protected final ConfigurationManager configurationManager;
 
   private BrokenStoreFileCleaner brokenStoreFileCleaner;
+
+  private RSMobFileCleanerChore rsMobFileCleanerChore;
 
   @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
@@ -2181,6 +2184,10 @@ public class HRegionServer extends Thread
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
 
+    if (this.rsMobFileCleanerChore != null) {
+      choreService.scheduleChore(rsMobFileCleanerChore);
+    }
+
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
     Threads.setDaemonThreadRunning(this.leaseManager, getName() + ".leaseChecker",
@@ -2276,6 +2283,8 @@ public class HRegionServer extends Thread
     this.brokenStoreFileCleaner =
       new BrokenStoreFileCleaner((int) (brokenStoreFileCleanerDelay + jitterValue),
         brokenStoreFileCleanerPeriod, this, conf, this);
+
+    this.rsMobFileCleanerChore = new RSMobFileCleanerChore(this);
 
     registerConfigurationObservers();
   }
@@ -2759,6 +2768,7 @@ public class HRegionServer extends Thread
       shutdownChore(storefileRefresher);
       shutdownChore(fsUtilizationChore);
       shutdownChore(slowLogTableOpsChore);
+      shutdownChore(rsMobFileCleanerChore);
       // cancel the remaining scheduled chores (in case we missed out any)
       // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any
       choreService.shutdown();
@@ -4021,5 +4031,10 @@ public class HRegionServer extends Thread
   @InterfaceAudience.Private
   public BrokenStoreFileCleaner getBrokenStoreFileCleaner() {
     return brokenStoreFileCleaner;
+  }
+
+  @InterfaceAudience.Private
+  public RSMobFileCleanerChore getRSMobFileCleanerChore() {
+    return rsMobFileCleanerChore;
   }
 }

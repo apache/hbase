@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
@@ -40,12 +38,13 @@ public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
 
-  @BeforeClass
-  public static void configureOptimizedCompaction() throws InterruptedException, IOException {
-    HTU.shutdownMiniHBaseCluster();
+  public TestMobCompactionOptMode(Boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
+
+  protected void additonalConfigSetup() {
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
-    HTU.startMiniHBaseCluster();
   }
 
   @Override

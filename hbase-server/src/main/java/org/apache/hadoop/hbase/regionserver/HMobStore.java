@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -184,7 +185,27 @@ public class HMobStore extends HStore {
     }
     Path path = getTempDir();
     return createWriterInTmp(MobUtils.formatDate(date), path, maxKeyCount, compression, startKey,
-      isCompaction);
+      isCompaction, null);
+  }
+
+  /**
+   * Creates the writer for the mob file in the mob family directory.
+   * @param date         The latest date of written cells.
+   * @param maxKeyCount  The key count.
+   * @param compression  The compression algorithm.
+   * @param startKey     The start key.
+   * @param isCompaction If the writer is used in compaction.
+   * @return The writer for the mob file. n
+   */
+  public StoreFileWriter createWriter(Date date, long maxKeyCount,
+    Compression.Algorithm compression, byte[] startKey, boolean isCompaction,
+    Consumer<Path> writerCreationTracker) throws IOException {
+    if (startKey == null) {
+      startKey = HConstants.EMPTY_START_ROW;
+    }
+    Path path = getPath();
+    return createWriterInTmp(MobUtils.formatDate(date), path, maxKeyCount, compression, startKey,
+      isCompaction, writerCreationTracker);
   }
 
   /**
@@ -198,11 +219,13 @@ public class HMobStore extends HStore {
    * @return The writer for the mob file. n
    */
   public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
-    Compression.Algorithm compression, byte[] startKey, boolean isCompaction) throws IOException {
+    Compression.Algorithm compression, byte[] startKey, boolean isCompaction,
+    Consumer<Path> writerCreationTracker) throws IOException {
     MobFileName mobFileName =
       MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""),
         getHRegion().getRegionInfo().getEncodedName());
-    return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction);
+    return createWriterInTmp(mobFileName, basePath, maxKeyCount, compression, isCompaction,
+      writerCreationTracker);
   }
 
   /**
@@ -214,13 +237,15 @@ public class HMobStore extends HStore {
    * @param isCompaction If the writer is used in compaction.
    * @return The writer for the mob file. n
    */
+
   public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath, long maxKeyCount,
-    Compression.Algorithm compression, boolean isCompaction) throws IOException {
+    Compression.Algorithm compression, boolean isCompaction, Consumer<Path> writerCreationTracker)
+    throws IOException {
     return MobUtils.createWriter(conf, getFileSystem(), getColumnFamilyDescriptor(),
       new Path(basePath, mobFileName.getFileName()), maxKeyCount, compression, getCacheConfig(),
       getStoreContext().getEncryptionContext(), StoreUtils.getChecksumType(conf),
       StoreUtils.getBytesPerChecksum(conf), getStoreContext().getBlockSize(), BloomType.NONE,
-      isCompaction);
+      isCompaction, writerCreationTracker);
   }
 
   /**
@@ -234,6 +259,10 @@ public class HMobStore extends HStore {
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(sourceFile);
+    if (sourceFile.equals(targetPath)) {
+      LOG.info("File is already in the destination dir: {}", sourceFile);
+      return;
+    }
     LOG.info(" FLUSH Renaming flushed file from {} to {}", sourceFile, dstPath);
     Path parent = dstPath.getParent();
     if (!getFileSystem().exists(parent)) {
