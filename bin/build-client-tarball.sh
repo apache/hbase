@@ -112,9 +112,10 @@ copy_hadoop_artifacts() {
   local HADOOP_HOME=$(hadoop envvars | fgrep HADOOP_COMMON_HOME | cut -d= -f2 | tr -d "'")
   local JARS_TO_INCLUDE=("gcs-connector-shaded.jar" "hadoop-annotations.jar" "hadoop-auth.jar" "hadoop-aws.jar"
     "hadoop-azure.jar" "hadoop-azure-datalake.jar" "hadoop-common.jar" "lib/commons-logging*.jar" "lib/asm-*.jar"
-    "lib/azure-data-lake-store-sdk-*.jar" "lib/aws-java-sdk-bundle-*.jar" "lib/wildfly-openssl-*.jar")
+    "lib/azure-data-lake-store-sdk-*.jar" "lib/aws-java-sdk-bundle-*.jar" "lib/wildfly-openssl-*.jar"
+    "lib/jersey-core-*.jar" "client/jersey-client-*.jar")
   for jar in "${JARS_TO_INCLUDE[@]}"; do
-    cp -L "$HADOOP_HOME/"$jar "$clientTarballDir/lib"
+    cp -L "$HADOOP_HOME/"$jar "$clientTarballDir/lib" || true
   done
 }
 
@@ -122,7 +123,7 @@ copy_hdfs_artifacts() {
   local HDFS_HOME=$(hdfs envvars | fgrep HADOOP_HDFS_HOME | cut -d= -f2 | tr -d "'")
   local JARS_TO_INCLUDE=("hadoop-hdfs.jar" "hadoop-hdfs-client.jar")
   for jar in "${JARS_TO_INCLUDE[@]}"; do
-    cp -L "$HDFS_HOME/"$jar "$clientTarballDir/lib"
+    cp -L "$HDFS_HOME/"$jar "$clientTarballDir/lib" || true
   done
 }
 
@@ -131,7 +132,7 @@ copy_yarn_artifacts() {
   local JARS_TO_INCLUDE=("hadoop-yarn-api.jar" "hadoop-yarn-client.jar" "hadoop-yarn-common.jar"
   "hadoop-yarn-registry.jar" "hadoop-yarn-server-common.jar")
   for jar in "${JARS_TO_INCLUDE[@]}"; do
-    cp -L "$YARN_HOME/$jar" "$clientTarballDir/lib"
+    cp -L "$YARN_HOME/$jar" "$clientTarballDir/lib" || true
   done
 }
 
@@ -141,11 +142,11 @@ copy_mapreduce_artifacts() {
     "forbiddenapis-*.jar" "gateway-cloud-bindings.jar" "gateway-i18n.jar" "gateway-shell.jar" "gateway-util-common.jar"
     "google-extensions-*.jar" "hadoop-distcp.jar" "hadoop-mapreduce-client-app.jar" "hadoop-mapreduce-client-common.jar"
     "hadoop-mapreduce-client-core.jar" "hadoop-mapreduce-client-jobclient.jar" "hadoop-mapreduce-client-nativetask.jar"
-    "hadoop-mapreduce-client-shuffle.jar" "hadoop-mapreduce-examples.jar" "hadoop-streaming.jar" "jdom-*.jar" "lz4-*.jar")
+    "hadoop-mapreduce-client-shuffle.jar" "hadoop-mapreduce-examples.jar" "hadoop-streaming.jar" "lz4-*.jar"
+    "ranger-raz-*.jar")
   for jar in "${JARS_TO_INCLUDE[@]}"; do
-    cp -L "$MAPREDUCE_HOME/"$jar "$clientTarballDir/lib"
+    cp -L "$MAPREDUCE_HOME/"$jar "$clientTarballDir/lib" || true
   done
-
 }
 
 copy_hbase_artifacts
