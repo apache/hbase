@@ -152,6 +152,8 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       "Number of mappers to use during the copy (mapreduce.job.maps).");
     static final Option BANDWIDTH =
       new Option(null, "bandwidth", true, "Limit bandwidth to this value in MB/second.");
+    static final Option RESET_TTL =
+      new Option(null, "reset-ttl", false, "Do not copy TTL for the snapshot");
   }
 
   // Export Map-Reduce Counters, to keep track of the progress
@@ -917,6 +919,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
   private int bandwidthMB = Integer.MAX_VALUE;
   private int filesMode = 0;
   private int mappers = 0;
+  private boolean resetTtl = false;
 
   @Override
   protected void processOptions(CommandLine cmd) {
@@ -938,6 +941,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     verifyChecksum = !cmd.hasOption(Options.NO_CHECKSUM_VERIFY.getLongOpt());
     verifyTarget = !cmd.hasOption(Options.NO_TARGET_VERIFY.getLongOpt());
     verifySource = !cmd.hasOption(Options.NO_SOURCE_VERIFY.getLongOpt());
+    resetTtl = cmd.hasOption(Options.RESET_TTL.getLongOpt());
   }
 
   /**
@@ -1075,11 +1079,19 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
       }
     }
 
-    // Write a new .snapshotinfo if the target name is different from the source name
-    if (!targetName.equals(snapshotName)) {
-      SnapshotDescription snapshotDesc = SnapshotDescriptionUtils
-        .readSnapshotInfo(inputFs, snapshotDir).toBuilder().setName(targetName).build();
-      SnapshotDescriptionUtils.writeSnapshotInfo(snapshotDesc, initialOutputSnapshotDir, outputFs);
+    // Write a new .snapshotinfo if the target name is different from the source name or we want to
+    // reset TTL for target snapshot.
+    if (!targetName.equals(snapshotName) || resetTtl) {
+      SnapshotDescription.Builder snapshotDescBuilder =
+        SnapshotDescriptionUtils.readSnapshotInfo(inputFs, snapshotDir).toBuilder();
+      if (!targetName.equals(snapshotName)) {
+        snapshotDescBuilder.setName(targetName);
+      }
+      if (resetTtl) {
+        snapshotDescBuilder.setTtl(HConstants.DEFAULT_SNAPSHOT_TTL);
+      }
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshotDescBuilder.build(),
+        initialOutputSnapshotDir, outputFs);
       if (filesUser != null || filesGroup != null) {
         outputFs.setOwner(
           new Path(initialOutputSnapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE), filesUser,
@@ -1155,6 +1167,7 @@ public class ExportSnapshot extends AbstractHBaseTool implements Tool {
     addOption(Options.CHMOD);
     addOption(Options.MAPPERS);
     addOption(Options.BANDWIDTH);
+    addOption(Options.RESET_TTL);
   }
 
   public static void main(String[] args) {
