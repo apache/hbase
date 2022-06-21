@@ -1224,6 +1224,24 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preMasterStoreFlush() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.preMasterStoreFlush(this);
+      }
+    });
+  }
+
+  public void postMasterStoreFlush() throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
+      @Override
+      public void call(MasterObserver observer) throws IOException {
+        observer.postMasterStoreFlush(this);
+      }
+    });
+  }
+
   public void preSetUserQuota(final String user, final GlobalQuotaSettings quotas)
     throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {

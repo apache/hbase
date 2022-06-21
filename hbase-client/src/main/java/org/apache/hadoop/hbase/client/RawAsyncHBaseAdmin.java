@@ -174,6 +174,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -3998,5 +4000,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       default:
         return CompletableFuture.completedFuture(Collections.emptyList());
     }
+  }
+
+  @Override
+  public CompletableFuture<Void> flushMasterStore() {
+    FlushMasterStoreRequest.Builder request = FlushMasterStoreRequest.newBuilder();
+    return this.<Void> newMasterCaller()
+      .action(((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
+        Void> call(controller, stub, request.build(),
+          (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null)))
+      .call();
   }
 }
