@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -584,6 +585,33 @@ public final class MobUtils {
     CacheConfig cacheConfig, Encryption.Context cryptoContext, ChecksumType checksumType,
     int bytesPerChecksum, int blocksize, BloomType bloomType, boolean isCompaction)
     throws IOException {
+    return createWriter(conf, fs, family, path, maxKeyCount, compression, cacheConfig,
+      cryptoContext, checksumType, bytesPerChecksum, blocksize, bloomType, isCompaction, null);
+  }
+
+  /**
+   * Creates a writer for the mob file in temp directory.
+   * @param conf                  The current configuration.
+   * @param fs                    The current file system.
+   * @param family                The descriptor of the current column family.
+   * @param path                  The path for a temp directory.
+   * @param maxKeyCount           The key count.
+   * @param compression           The compression algorithm.
+   * @param cacheConfig           The current cache config.
+   * @param cryptoContext         The encryption context.
+   * @param checksumType          The checksum type.
+   * @param bytesPerChecksum      The bytes per checksum.
+   * @param blocksize             The HFile block size.
+   * @param bloomType             The bloom filter type.
+   * @param isCompaction          If the writer is used in compaction.
+   * @param writerCreationTracker to track the current writer in the store
+   * @return The writer for the mob file.
+   */
+  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
+    ColumnFamilyDescriptor family, Path path, long maxKeyCount, Compression.Algorithm compression,
+    CacheConfig cacheConfig, Encryption.Context cryptoContext, ChecksumType checksumType,
+    int bytesPerChecksum, int blocksize, BloomType bloomType, boolean isCompaction,
+    Consumer<Path> writerCreationTracker) throws IOException {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
@@ -602,7 +630,8 @@ public final class MobUtils {
       .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
     StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs).withFilePath(path)
-      .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+      .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext)
+      .withWriterCreationTracker(writerCreationTracker).build();
     return w;
   }
 
@@ -737,20 +766,20 @@ public final class MobUtils {
       StringBuilder sb = new StringBuilder(100 + mobRefSet.size() * 105);
       boolean doubleSlash = false;
       for (TableName tableName : mobRefSet.keySet()) {
+        if (doubleSlash) {
+          sb.append("//");
+        } else {
+          doubleSlash = true;
+        }
         sb.append(tableName).append("/");
         boolean comma = false;
         for (String refs : mobRefSet.get(tableName)) {
-          sb.append(refs);
           if (comma) {
             sb.append(",");
           } else {
             comma = true;
           }
-        }
-        if (doubleSlash) {
-          sb.append("//");
-        } else {
-          doubleSlash = true;
+          sb.append(refs);
         }
       }
       return Bytes.toBytes(sb.toString());

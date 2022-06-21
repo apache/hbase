@@ -294,20 +294,20 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * @param cleanSeqId           When true, remove seqId(used to be mvcc) value which is <=
    *                             smallestReadPoint
    * @param throughputController The compaction throughput controller.
-   * @param major                Is a major compaction.
-   * @param numofFilesToCompact  the number of files to compact
+   * @param request              compaction request.
    * @param progress             Progress reporter.
    * @return Whether compaction ended; false if it was interrupted for any reason.
    */
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
     long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-    boolean major, int numofFilesToCompact, CompactionProgress progress) throws IOException {
+    CompactionRequestImpl request, CompactionProgress progress) throws IOException {
     long bytesWrittenProgressForLog = 0;
     long bytesWrittenProgressForShippedCall = 0;
     // Clear old mob references
     mobRefSet.get().clear();
     boolean isUserRequest = userRequest.get();
+    boolean major = request.isAllFiles();
     boolean compactMOBs = major && isUserRequest;
     boolean discardMobMiss = conf.getBoolean(MobConstants.MOB_UNSAFE_DISCARD_MISS_KEY,
       MobConstants.DEFAULT_MOB_DISCARD_MISS);
@@ -351,12 +351,12 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
     long shippedCallSizeLimit =
-      (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
 
     Cell mobCell = null;
     try {
 
-      mobFileWriter = newMobWriter(fd, major);
+      mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
 
       do {
@@ -426,7 +426,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                       LOG.debug("Closing output MOB File, length={} file={}, store={}", len,
                         mobFileWriter.getPath().getName(), getStoreInfo());
                       commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                      mobFileWriter = newMobWriter(fd, major);
+                      mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                       mobCells = 0;
                     }
@@ -470,7 +470,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   long len = mobFileWriter.getPos();
                   if (len > maxMobFileSize) {
                     commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                    mobFileWriter = newMobWriter(fd, major);
+                    mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
                     fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                     mobCells = 0;
                   }
@@ -522,7 +522,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               long len = mobFileWriter.getPos();
               if (len > maxMobFileSize) {
                 commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                mobFileWriter = newMobWriter(fd, major);
+                mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
                 fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                 mobCells = 0;
               }
@@ -608,11 +608,16 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     }
   }
 
-  private StoreFileWriter newMobWriter(FileDetails fd, boolean major) throws IOException {
+  private StoreFileWriter newMobWriter(FileDetails fd, boolean major,
+    Consumer<Path> writerCreationTracker) throws IOException {
     try {
-      StoreFileWriter mobFileWriter = mobStore.createWriterInTmp(new Date(fd.latestPutTs),
-        fd.maxKeyCount, major ? majorCompactionCompression : minorCompactionCompression,
-        store.getRegionInfo().getStartKey(), true);
+      StoreFileWriter mobFileWriter = mobStore.getStoreEngine().requireWritingToTmpDirFirst()
+        ? mobStore.createWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
+          major ? majorCompactionCompression : minorCompactionCompression,
+          store.getRegionInfo().getStartKey(), true)
+        : mobStore.createWriter(new Date(fd.latestPutTs), fd.maxKeyCount,
+          major ? majorCompactionCompression : minorCompactionCompression,
+          store.getRegionInfo().getStartKey(), true, writerCreationTracker);
       LOG.debug("New MOB writer created={} store={}", mobFileWriter.getPath().getName(),
         getStoreInfo());
       // Add reference we get for compact MOB
