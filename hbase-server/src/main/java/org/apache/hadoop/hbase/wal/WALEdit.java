@@ -139,8 +139,7 @@ public class WALEdit implements HeapSize {
    * org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceWALReader will populate the
    * Replication Marker edit with region_server_name, wal_name and wal_offset encoded in
    * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.ReplicationMarkerDescriptor}
-   * object.
-   * {@link org.apache.hadoop.hbase.replication.regionserver.Replication} will change the
+   * object. {@link org.apache.hadoop.hbase.replication.regionserver.Replication} will change the
    * REPLICATION_SCOPE for this edit to GLOBAL so that it can replicate. On the sink cluster,
    * {@link org.apache.hadoop.hbase.replication.regionserver.ReplicationSink} will convert the
    * ReplicationMarkerDescriptor into a Put mutation to REPLICATION_SINK_TRACKER_TABLE_NAME_STR
