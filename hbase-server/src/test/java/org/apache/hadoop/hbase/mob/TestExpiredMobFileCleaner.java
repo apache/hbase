@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -55,6 +56,7 @@ public class TestExpiredMobFileCleaner {
   private final static String family = "family";
   private final static byte[] row1 = Bytes.toBytes("row1");
   private final static byte[] row2 = Bytes.toBytes("row2");
+  private final static byte[] row3 = Bytes.toBytes("row3");
   private final static byte[] qf = Bytes.toBytes("qf");
 
   private static BufferedMutator table;
@@ -63,6 +65,7 @@ public class TestExpiredMobFileCleaner {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    TEST_UTIL.getConfiguration().setInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND, 2);
   }
 
   @AfterClass
@@ -146,6 +149,14 @@ public class TestExpiredMobFileCleaner {
     String f2 = secondFiles[1].getPath().getName();
     String secondFile = f1.equals(firstFile) ? f2 : f1;
 
+    ts = EnvironmentEdgeManager.currentTime() - 4 * secondsOfDay() * 1000; // 4 days before
+    putKVAndFlush(table, row3, dummyData, ts);
+    ts = EnvironmentEdgeManager.currentTime() - 4 * secondsOfDay() * 1000; // 4 days before
+    putKVAndFlush(table, row3, dummyData, ts);
+    FileStatus[] thirdFiles = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
+    // now there are 4 mob files
+    assertEquals("Before cleanup without delay 3", 4, thirdFiles.length);
+
     modifyColumnExpiryDays(2); // ttl = 2, make the first row expired
 
     // run the cleaner
@@ -156,7 +167,7 @@ public class TestExpiredMobFileCleaner {
 
     FileStatus[] filesAfterClean = TEST_UTIL.getTestFileSystem().listStatus(mobDirPath);
     String lastFile = filesAfterClean[0].getPath().getName();
-    // the first mob fie is removed
+    // there are 4 mob files in total, but only 3 need to be cleaned
     assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
     assertEquals("After cleanup without delay 2", secondFile, lastFile);
   }
