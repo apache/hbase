@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,6 +58,7 @@ public interface NamedQueueService {
   /**
    * Add all in memory queue records to system table. The implementors can use system table or
    * direct HDFS file or ZK as persistence system.
+   * @param connection connection
    */
-  void persistAll();
+  void persistAll(Connection connection);
 }

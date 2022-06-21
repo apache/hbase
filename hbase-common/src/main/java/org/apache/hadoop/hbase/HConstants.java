@@ -1552,6 +1552,14 @@ public final class HConstants {
     "hbase.regionserver.slowlog.systable.enabled";
   public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
 
+  @Deprecated
+  // since <need to know the version number> and will be removed in <version number>
+  // Instead use hbase.regionserver.named.queue.chore.duration config property
+  public static final String SLOW_LOG_SYS_TABLE_CHORE_DURATION_KEY =
+    "hbase.slowlog.systable.chore.duration";
+  // Default 10 mins.
+  public static final int DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
+
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";
 
@@ -1566,6 +1574,22 @@ public final class HConstants {
    * Default value of {@link #BATCH_ROWS_THRESHOLD_NAME}
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
+
+  public static final String WAL_EVENT_TRACKER_ENABLED_KEY =
+    "hbase.regionserver.wal.event.tracker.enabled";
+  public static final boolean WAL_EVENT_TRACKER_ENABLED_DEFAULT = false;
+
+  public static final String NAMED_QUEUE_CHORE_DURATION_KEY =
+    "hbase.regionserver.named.queue.chore.duration";
+  // 10 mins default.
+  public static final int NAMED_QUEUE_CHORE_DURATION_DEFAULT = 10 * 60 * 1000;
+
+  /** The walEventTracker info family as a string */
+  private static final String WAL_EVENT_TRACKER_INFO_FAMILY_STR = "info";
+
+  /** The walEventTracker info family in array of bytes */
+  public static final byte[] WAL_EVENT_TRACKER_INFO_FAMILY =
+    Bytes.toBytes(WAL_EVENT_TRACKER_INFO_FAMILY_STR);
 
   private HConstants() {
     // Can't be instantiated with this ctor.
