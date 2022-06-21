@@ -143,5 +143,4 @@ public class NamedQueueRecorder {
       this.logEventHandler.persistAll(namedQueueEvent, connection);
     }
   }
-
 }
