@@ -25,6 +25,10 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.NAMED_QUEUE_CHORE_DURATION_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.HConstants.WAL_EVENT_TRACKER_ENABLED_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import io.opentelemetry.api.trace.Span;
@@ -141,6 +145,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -476,6 +481,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private RegionReplicationBufferManager regionReplicationBufferManager;
 
+  /*
+   * Chore that creates replication marker rows.
+   */
+  private ReplicationMarkerChore replicationMarkerChore;
+
   /**
    * Starts a HRegionServer at the default location.
    * <p/>
@@ -759,6 +769,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   public boolean isClusterUp() {
     return this.masterless
       || (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
+  }
+
+  private void initializeReplicationMarkerChore() {
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+    // If replication or replication marker is not enabled then return immediately.
+    if (replicationMarkerEnabled) {
+      int period = conf.getInt(REPLICATION_MARKER_CHORE_DURATION_KEY,
+        REPLICATION_MARKER_CHORE_DURATION_DEFAULT);
+      replicationMarkerChore = new ReplicationMarkerChore(this, this, period, conf);
+    }
   }
 
   /**
@@ -1920,9 +1941,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.brokenStoreFileCleaner != null) {
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
-
     if (this.rsMobFileCleanerChore != null) {
       choreService.scheduleChore(rsMobFileCleanerChore);
+    }
+    if (replicationMarkerChore != null) {
+      LOG.info("Starting replication marker chore");
+      choreService.scheduleChore(replicationMarkerChore);
     }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -2036,6 +2060,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     this.rsMobFileCleanerChore = new RSMobFileCleanerChore(this);
 
     registerConfigurationObservers();
+    initializeReplicationMarkerChore();
   }
 
   private void registerConfigurationObservers() {
@@ -3607,6 +3632,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(namedQueueServiceChore);
     shutdownChore(brokenStoreFileCleaner);
     shutdownChore(rsMobFileCleanerChore);
+    shutdownChore(replicationMarkerChore);
   }
 
   @Override
