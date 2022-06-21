@@ -1449,6 +1449,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public void flushMasterStore() throws IOException {
+    throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> modifyColumnFamilyStoreFileTrackerAsync(TableName tableName, byte[] family,
     String dstSFT) throws IOException {
     throw new NotImplementedException(

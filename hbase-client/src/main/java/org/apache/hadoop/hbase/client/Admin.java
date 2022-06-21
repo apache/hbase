@@ -3212,4 +3212,9 @@ public interface Admin extends Abortable, Closeable {
    */
   List<LogEntry> getLogEntries(Set<ServerName> serverNames, String logType, ServerType serverType,
     int limit, Map<String, Object> filterParams) throws IOException;
+
+  /**
+   * Flush master local region
+   */
+  void flushMasterStore() throws IOException;
 }

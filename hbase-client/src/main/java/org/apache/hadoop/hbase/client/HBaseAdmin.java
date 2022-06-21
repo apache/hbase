@@ -165,6 +165,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
@@ -4399,6 +4400,18 @@ public class HBaseAdmin implements Admin {
       return getBalancerRejections(limit);
     }
     return Collections.emptyList();
+  }
+
+  @Override
+  public void flushMasterStore() throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Void rpcCall() throws Exception {
+        FlushMasterStoreRequest request = FlushMasterStoreRequest.newBuilder().build();
+        master.flushMasterStore(getRpcController(), request);
+        return null;
+      }
+    });
   }
 
   private List<LogEntry> getBalancerDecisions(final int limit) throws IOException {

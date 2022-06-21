@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -743,5 +745,11 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public ModifyColumnStoreFileTrackerResponse modifyColumnStoreFileTracker(RpcController controller,
     ModifyColumnStoreFileTrackerRequest request) throws ServiceException {
     return stub.modifyColumnStoreFileTracker(controller, request);
+  }
+
+  @Override
+  public FlushMasterStoreResponse flushMasterStore(RpcController controller,
+    FlushMasterStoreRequest request) throws ServiceException {
+    return stub.flushMasterStore(controller, request);
   }
 }
