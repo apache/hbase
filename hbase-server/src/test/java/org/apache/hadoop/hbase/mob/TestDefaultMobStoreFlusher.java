@@ -17,30 +17,37 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestDefaultMobStoreFlusher {
 
@@ -60,41 +67,52 @@ public class TestDefaultMobStoreFlusher {
   @Rule
   public TestName name = new TestName();
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  protected Boolean useFileBasedSFT;
+
+  public TestDefaultMobStoreFlusher(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = { false, true };
+    return Arrays.asList(data);
+  }
+
+  @Before
+  public void setUpBefore() throws Exception {
+    if (useFileBasedSFT) {
+      TEST_UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void tearDownAfter() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testFlushNonMobFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMaxVersions(4);
-    desc.addFamily(hcd);
-
-    testFlushFile(desc);
+    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(name));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build())
+      .build();
+    testFlushFile(tableDescriptor);
   }
 
   @Test
   public void testFlushMobFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
-    hcd.setMaxVersions(4);
-    desc.addFamily(hcd);
-
-    testFlushFile(desc);
+    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(name));
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
+        .setMobThreshold(3L).setMaxVersions(4).build())
+      .build();
+    testFlushFile(tableDescriptor);
   }
 
-  private void testFlushFile(HTableDescriptor htd) throws Exception {
+  private void testFlushFile(TableDescriptor htd) throws Exception {
     Table table = null;
     try {
       table = TEST_UTIL.createTable(htd, null);
