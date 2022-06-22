@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_INFO_FAMILY;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -107,15 +109,15 @@ public final class WALEventTrackerTableAccessor {
       // TODO Do we need to SKIP_WAL ?
       put.setPriority(HConstants.NORMAL_QOS);
       put
-        .addColumn(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(RS_COLUMN),
+        .addColumn(WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(RS_COLUMN),
           Bytes.toBytes(payload.getRsName()))
-        .addColumn(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_NAME_COLUMN),
+        .addColumn(WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_NAME_COLUMN),
           Bytes.toBytes(payload.getWalName()))
-        .addColumn(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(TIMESTAMP_COLUMN),
+        .addColumn(WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(TIMESTAMP_COLUMN),
           Bytes.toBytes(payload.getTimeStamp()))
-        .addColumn(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_STATE_COLUMN),
+        .addColumn(WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_STATE_COLUMN),
           Bytes.toBytes(payload.getState()))
-        .addColumn(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_LENGTH_COLUMN),
+        .addColumn(WAL_EVENT_TRACKER_INFO_FAMILY, Bytes.toBytes(WAL_LENGTH_COLUMN),
           Bytes.toBytes(payload.getWalLength()));
       puts.add(put);
     }

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,14 +39,25 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class WALEventTrackerTableCreator {
   private static final Logger LOG = LoggerFactory.getLogger(WALEventTrackerTableCreator.class);
+
+  public static final String WAL_EVENT_TRACKER_ENABLED_KEY =
+    "hbase.regionserver.wal.event.tracker.enabled";
+  public static final boolean WAL_EVENT_TRACKER_ENABLED_DEFAULT = false;
+
+  /** The walEventTracker info family as a string */
+  private static final String WAL_EVENT_TRACKER_INFO_FAMILY_STR = "info";
+
+  /** The walEventTracker info family in array of bytes */
+  public static final byte[] WAL_EVENT_TRACKER_INFO_FAMILY =
+    Bytes.toBytes(WAL_EVENT_TRACKER_INFO_FAMILY_STR);
+
   private static final Long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
 
-  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER =
-    TableDescriptorBuilder.newBuilder(WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME)
-      .setRegionReplication(1).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.newBuilder(HConstants.WAL_EVENT_TRACKER_INFO_FAMILY)
-          .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false)
-          .setMaxVersions(1).setTimeToLive(TTL.intValue()).build());
+  private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
+    .newBuilder(WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME).setRegionReplication(1)
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(WAL_EVENT_TRACKER_INFO_FAMILY)
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
+      .setTimeToLive(TTL.intValue()).build());
 
   /* Private default constructor */
   private WALEventTrackerTableCreator() {
@@ -57,8 +69,8 @@ public final class WALEventTrackerTableCreator {
    */
   public static void createIfNeededAndNotExists(Configuration conf, MasterServices masterServices)
     throws IOException {
-    boolean walEventTrackerEnabled = conf.getBoolean(HConstants.WAL_EVENT_TRACKER_ENABLED_KEY,
-      HConstants.WAL_EVENT_TRACKER_ENABLED_DEFAULT);
+    boolean walEventTrackerEnabled =
+      conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT);
     if (!walEventTrackerEnabled) {
       LOG.info("wal event tracker requests logging to table " + WAL_EVENT_TRACKER_TABLE_NAME_STR
         + " is disabled. Quitting.");

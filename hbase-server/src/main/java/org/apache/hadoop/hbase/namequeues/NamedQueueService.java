@@ -58,7 +58,6 @@ public interface NamedQueueService {
   /**
    * Add all in memory queue records to system table. The implementors can use system table or
    * direct HDFS file or ZK as persistence system.
-   * @param connection connection
    */
   void persistAll(Connection connection);
 }

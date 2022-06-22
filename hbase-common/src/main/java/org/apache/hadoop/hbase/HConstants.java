@@ -1575,22 +1575,6 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
-  public static final String WAL_EVENT_TRACKER_ENABLED_KEY =
-    "hbase.regionserver.wal.event.tracker.enabled";
-  public static final boolean WAL_EVENT_TRACKER_ENABLED_DEFAULT = false;
-
-  public static final String NAMED_QUEUE_CHORE_DURATION_KEY =
-    "hbase.regionserver.named.queue.chore.duration";
-  // 10 mins default.
-  public static final int NAMED_QUEUE_CHORE_DURATION_DEFAULT = 10 * 60 * 1000;
-
-  /** The walEventTracker info family as a string */
-  private static final String WAL_EVENT_TRACKER_INFO_FAMILY_STR = "info";
-
-  /** The walEventTracker info family in array of bytes */
-  public static final byte[] WAL_EVENT_TRACKER_INFO_FAMILY =
-    Bytes.toBytes(WAL_EVENT_TRACKER_INFO_FAMILY_STR);
-
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

@@ -31,6 +31,10 @@ import org.slf4j.LoggerFactory;
 public class NamedQueueServiceChore extends ScheduledChore {
 
   private static final Logger LOG = LoggerFactory.getLogger(NamedQueueServiceChore.class);
+  public static final String NAMED_QUEUE_CHORE_DURATION_KEY =
+    "hbase.regionserver.named.queue.chore.duration";
+  // 10 mins default.
+  public static final int NAMED_QUEUE_CHORE_DURATION_DEFAULT = 10 * 60 * 1000;
 
   private final NamedQueueRecorder namedQueueRecorder;
   private final Connection connection;

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_KEY;
+import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_KEY;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.RS_COLUMN;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME;
@@ -37,7 +39,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
@@ -73,9 +74,9 @@ public class TestWALEventTracker {
   @BeforeClass
   public static void setup() throws Exception {
     CONF = HBaseConfiguration.create();
-    CONF.setBoolean(HConstants.WAL_EVENT_TRACKER_ENABLED_KEY, true);
+    CONF.setBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, true);
     // Set the chore for less than a second.
-    CONF.setInt(HConstants.NAMED_QUEUE_CHORE_DURATION_KEY, 900);
+    CONF.setInt(NAMED_QUEUE_CHORE_DURATION_KEY, 900);
     CONF.setLong(WALEventTrackerTableAccessor.SLEEP_INTERVAL_KEY, 100);
     TEST_UTIL = new HBaseTestingUtil(CONF);
     TEST_UTIL.startMiniCluster();

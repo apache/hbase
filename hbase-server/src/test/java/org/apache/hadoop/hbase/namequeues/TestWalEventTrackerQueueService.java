@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
@@ -29,7 +30,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -63,7 +63,7 @@ public class TestWalEventTrackerQueueService {
     WALEventTrackerPayload payload =
       new WALEventTrackerPayload(rsName, walName, timeStamp, walState, walLength);
     Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean(HConstants.WAL_EVENT_TRACKER_ENABLED_KEY, true);
+    conf.setBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, true);
     conf.setLong(WALEventTrackerTableAccessor.SLEEP_INTERVAL_KEY, 100);
     MetricsWALEventTrackerSourceImpl source = new MetricsWALEventTrackerSourceImpl(
       name.getMethodName(), name.getMethodName(), name.getMethodName(), name.getMethodName());
