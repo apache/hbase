@@ -20,6 +20,90 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.13 - Unreleased (as of 2022-06-22)
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27018](https://issues.apache.org/jira/browse/HBASE-27018) | Add a tool command list\_liveservers |  Major | . |
+| [HBASE-26617](https://issues.apache.org/jira/browse/HBASE-26617) | Use spotless to reduce the pain on fixing checkstyle issues |  Major | build, community |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26923](https://issues.apache.org/jira/browse/HBASE-26923) | PerformanceEvaluation support encryption option |  Minor | PE |
+| [HBASE-27095](https://issues.apache.org/jira/browse/HBASE-27095) | HbckChore should produce a report |  Major | hbck2, master |
+| [HBASE-27046](https://issues.apache.org/jira/browse/HBASE-27046) | The filenum in AbstractFSWAL should be monotone increasing |  Major | . |
+| [HBASE-27093](https://issues.apache.org/jira/browse/HBASE-27093) | AsyncNonMetaRegionLocator：put Complete CompletableFuture outside lock block |  Major | asyncclient, Client |
+| [HBASE-27080](https://issues.apache.org/jira/browse/HBASE-27080) | Optimize debug output log of ConstantSizeRegionSplitPolicy class. |  Minor | logging |
+| [HBASE-26649](https://issues.apache.org/jira/browse/HBASE-26649) | Support meta replica LoadBalance mode for RegionLocator#getAllRegionLocations() |  Major | meta replicas |
+| [HBASE-25465](https://issues.apache.org/jira/browse/HBASE-25465) | Use javac --release option for supporting cross version compilation |  Minor | create-release |
+| [HBASE-27003](https://issues.apache.org/jira/browse/HBASE-27003) | Optimize log format for PerformanceEvaluation |  Minor | . |
+| [HBASE-26990](https://issues.apache.org/jira/browse/HBASE-26990) | Add default implementation for BufferedMutator interface setters |  Minor | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27143](https://issues.apache.org/jira/browse/HBASE-27143) | Add hbase-unsafe as a dependency for a MR job triggered by hbase shell |  Major | integration tests, mapreduce |
+| [HBASE-27099](https://issues.apache.org/jira/browse/HBASE-27099) | In the HFileBlock class, the log printing fspread/fsread cost time unit should be milliseconds |  Minor | HFile |
+| [HBASE-27128](https://issues.apache.org/jira/browse/HBASE-27128) | when open archiveRetries totalLogSize calculation mistake |  Minor | wal |
+| [HBASE-27117](https://issues.apache.org/jira/browse/HBASE-27117) | Update the method comments for RegionServerAccounting |  Minor | . |
+| [HBASE-26856](https://issues.apache.org/jira/browse/HBASE-26856) | BufferedDataBlockEncoder.OnheapDecodedCell value can get corrupted |  Major | . |
+| [HBASE-27038](https://issues.apache.org/jira/browse/HBASE-27038) | CellComparator should extend Serializable |  Minor | . |
+| [HBASE-26985](https://issues.apache.org/jira/browse/HBASE-26985) | SecureBulkLoadManager will set wrong permission if umask too strict |  Major | regionserver |
+| [HBASE-27079](https://issues.apache.org/jira/browse/HBASE-27079) | Lower some DEBUG level logs in ReplicationSourceWALReader to TRACE |  Minor | . |
+| [HBASE-27030](https://issues.apache.org/jira/browse/HBASE-27030) | Fix undefined local variable error in draining\_servers.rb |  Major | jruby, shell |
+| [HBASE-27047](https://issues.apache.org/jira/browse/HBASE-27047) | Fix typo for metric drainingRegionServers |  Minor | metrics |
+| [HBASE-27027](https://issues.apache.org/jira/browse/HBASE-27027) | Deprecated jetty SslContextFactory cause HMaster startup failure due to multiple certificates in KeyStores |  Major | security |
+| [HBASE-27032](https://issues.apache.org/jira/browse/HBASE-27032) | The draining region servers metric description is incorrect |  Minor | . |
+| [HBASE-26994](https://issues.apache.org/jira/browse/HBASE-26994) | MasterFileSystem create directory without permission check |  Major | master |
+| [HBASE-26963](https://issues.apache.org/jira/browse/HBASE-26963) | ReplicationSource#removePeer hangs if we try to remove bad peer. |  Major | regionserver, Replication |
+| [HBASE-27000](https://issues.apache.org/jira/browse/HBASE-27000) | Block cache stats (Misses Caching) display error in RS web UI |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27051](https://issues.apache.org/jira/browse/HBASE-27051) | TestReplicationSource.testReplicationSourceInitializingMetric is flaky |  Minor | test |
+| [HBASE-27039](https://issues.apache.org/jira/browse/HBASE-27039) | Some methods of MasterRegion should be annotated for testing only |  Minor | master |
+| [HBASE-27054](https://issues.apache.org/jira/browse/HBASE-27054) | TestStochasticLoadBalancerRegionReplicaLargeCluster.testRegionReplicasOnLargeCluster is flaky |  Major | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26933](https://issues.apache.org/jira/browse/HBASE-26933) | Remove all ref guide stuff on branch other than master |  Major | documentation |
+| [HBASE-27006](https://issues.apache.org/jira/browse/HBASE-27006) | cordon off large ci worker nodes |  Major | . |
+| [HBASE-26855](https://issues.apache.org/jira/browse/HBASE-26855) | Delete unnecessary dependency on jaxb-runtime jar |  Major | . |
+| [HBASE-27024](https://issues.apache.org/jira/browse/HBASE-27024) | The User API and Developer API links are broken on hbase.apache.org |  Major | website |
+| [HBASE-27045](https://issues.apache.org/jira/browse/HBASE-27045) | Disable TestClusterScopeQuotaThrottle |  Major | test |
+| [HBASE-26995](https://issues.apache.org/jira/browse/HBASE-26995) | Remove ref guide check in pre commit and nightly for branches other than master |  Major | build, scripts |
+| [HBASE-26899](https://issues.apache.org/jira/browse/HBASE-26899) | Run spotless:apply |  Major | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27141](https://issues.apache.org/jira/browse/HBASE-27141) | Upgrade hbase-thirdparty dependency to 4.1.1 |  Critical | dependencies, security, thirdparty |
+| [HBASE-27108](https://issues.apache.org/jira/browse/HBASE-27108) | Revert HBASE-25709 |  Blocker | . |
+| [HBASE-27102](https://issues.apache.org/jira/browse/HBASE-27102) | Vacate the .idea folder in order to simplify spotless configuration |  Major | build |
+| [HBASE-27023](https://issues.apache.org/jira/browse/HBASE-27023) | Add protobuf to NOTICE file |  Major | . |
+| [HBASE-26912](https://issues.apache.org/jira/browse/HBASE-26912) | Bump checkstyle from 8.28 to 8.29 |  Minor | test |
+| [HBASE-26523](https://issues.apache.org/jira/browse/HBASE-26523) | Upgrade hbase-thirdparty dependency to 4.0.1 |  Blocker | thirdparty |
+| [HBASE-27033](https://issues.apache.org/jira/browse/HBASE-27033) | Backport "HBASE-27013 Introduce read all bytes when using pread for prefetch" to branch-2.4 |  Major | . |
+| [HBASE-26892](https://issues.apache.org/jira/browse/HBASE-26892) | Add spotless:check in our pre commit general check |  Major | jenkins |
+
+
 ## Release 2.4.12 - Unreleased (as of 2022-04-30)
 
 

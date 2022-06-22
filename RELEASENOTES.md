@@ -20,6 +20,86 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.13 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27108](https://issues.apache.org/jira/browse/HBASE-27108) | *Blocker* | **Revert HBASE-25709**
+
+HBASE-25709 caused a regression for scans that result in a large number of rows and has been reverted in this release.
+
+
+---
+
+* [HBASE-26923](https://issues.apache.org/jira/browse/HBASE-26923) | *Minor* | **PerformanceEvaluation support encryption option**
+
+Add a new command line argument: --encryption to enable encryptopn in PerformanceEvaluation tool.
+
+Usage:
+ encryption          Encryption type to use (AES, ...). Default: 'NONE'"
+
+Examples:
+ To run a AES encryption sequentialWrite:
+ $ bin/hbase org.apache.hadoop.hbase.PerformanceEvaluation --table=xxx --encryption='AES' sequentialWrite 10
+
+
+---
+
+* [HBASE-26649](https://issues.apache.org/jira/browse/HBASE-26649) | *Major* | **Support meta replica LoadBalance mode for RegionLocator#getAllRegionLocations()**
+
+When setting 'hbase.locator.meta.replicas.mode' to "LoadBalance" at HBase client, RegionLocator#getAllRegionLocations() now load balances across all Meta Replica Regions. Please note,  results from non-primary meta replica regions may contain stale data.
+
+
+---
+
+* [HBASE-27047](https://issues.apache.org/jira/browse/HBASE-27047) | *Minor* | **Fix typo for metric drainingRegionServers**
+
+Fix typo for metric drainingRegionServers. Change metric name from draininigRegionServers to drainingRegionServers.
+
+
+---
+
+* [HBASE-25465](https://issues.apache.org/jira/browse/HBASE-25465) | *Minor* | **Use javac --release option for supporting cross version compilation**
+
+When compiling with java 11 and above, we will use --release 8 to maintain java 8 compatibility.
+Also upgrade jackson to 2.13.1 because in hbase-thirdparty 4.1.0 we shade jackson 2.13.1.
+
+
+---
+
+* [HBASE-27024](https://issues.apache.org/jira/browse/HBASE-27024) | *Major* | **The User API and Developer API links are broken on hbase.apache.org**
+
+Upgrade maven-site-plugin to 3.12.0, maven-javadoc-plugin to 3.4.0.
+
+
+---
+
+* [HBASE-27033](https://issues.apache.org/jira/browse/HBASE-27033) | *Major* | **Backport "HBASE-27013 Introduce read all bytes when using pread for prefetch" to branch-2.4**
+
+see detail in HBASE-27013
+
+
+---
+
+* [HBASE-26899](https://issues.apache.org/jira/browse/HBASE-26899) | *Major* | **Run spotless:apply**
+
+Run spotless:apply to format our code base.
+When viewing 'git blame', you may find a file has a large amount lines are modified by the commit of HBASE-26899, so you need to go back to the commit before this commit, and viewing 'git blame' again.
+
+
+---
+
+* [HBASE-26617](https://issues.apache.org/jira/browse/HBASE-26617) | *Major* | **Use spotless to reduce the pain on fixing checkstyle issues**
+
+Use spotless to format our java file and pom file, using the hbase\_eclipse\_formatter.xml and eclipse.importerorder file under our dev-support directory.
+On all branches, the ratchetFrom is set the commit just before the commit which introduces the spotless plugin, so we will only format the files which are touched in later commits.
+From now on, you should type mvn spotless:apply before generating a PR, the spotless plugin will fix most of the format issues for you.
+
+
+
 # HBASE  2.4.12 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
