@@ -158,7 +158,7 @@ public class TestMasterHbckServlet {
     doReturn(services).when(master).getMasterRpcServices();
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
   public void testHbckServletWithMocks() throws Exception {
     // Set up request and response mocks
@@ -206,33 +206,30 @@ public class TestMasterHbckServlet {
     assertEquals(FAKE_START_TIMESTAMP, startTimestamp);
     long endTimestamp = ((Double) result.get(MasterHbckServlet.END_TIMESTAMP)).longValue();
     assertEquals(FAKE_END_TIMESTAMP, endTimestamp);
-    Map<String, Pair<ServerName, List<ServerName>>> inconsistentRegions = (Map<String,
-      Pair<ServerName, List<ServerName>>>) result.get(MasterHbckServlet.INCONSISTENT_REGIONS);
+    Map<String, Object> inconsistentRegions =
+      (Map<String, Object>) result.get(MasterHbckServlet.INCONSISTENT_REGIONS);
     assertNotNull(inconsistentRegions);
     assertEquals(1, inconsistentRegions.size());
     assertNotNull(inconsistentRegions.get(FAKE_HRI.getEncodedName()));
     assertNull(inconsistentRegions.get(FAKE_HRI_3.getEncodedName()));
-    Map<String, ServerName> orphanRegionsOnRS =
-      (Map<String, ServerName>) result.get(MasterHbckServlet.ORPHAN_REGIONS_ON_RS);
+    Map<String, Object> orphanRegionsOnRS =
+      (Map<String, Object>) result.get(MasterHbckServlet.ORPHAN_REGIONS_ON_RS);
     assertNull(orphanRegionsOnRS);
-    Map<String, Path> orphanRegionsOnFS =
-      (Map<String, Path>) result.get(MasterHbckServlet.ORPHAN_REGIONS_ON_FS);
+    Map<String, String> orphanRegionsOnFS =
+      (Map<String, String>) result.get(MasterHbckServlet.ORPHAN_REGIONS_ON_FS);
     assertNotNull(orphanRegionsOnFS);
     assertEquals(1, orphanRegionsOnFS.size());
     assertNull(orphanRegionsOnFS.get(FAKE_HRI.getEncodedName()));
     assertNotNull(orphanRegionsOnFS.get(FAKE_HRI_3.getEncodedName()));
-    List<Pair<RegionInfo, RegionInfo>> holes =
-      (List<Pair<RegionInfo, RegionInfo>>) result.get(MasterHbckServlet.HOLES);
+    List holes = (List) result.get(MasterHbckServlet.HOLES);
     assertNull(holes);
-    List<Pair<RegionInfo, RegionInfo>> overlaps =
-      (List<Pair<RegionInfo, RegionInfo>>) result.get(MasterHbckServlet.OVERLAPS);
+    List overlaps = (List) result.get(MasterHbckServlet.OVERLAPS);
     assertNotNull(overlaps);
     assertEquals(1, overlaps.size());
-    List<Pair<RegionInfo, ServerName>> unknownServers =
-      (List<Pair<RegionInfo, ServerName>>) result.get(MasterHbckServlet.UNKNOWN_SERVERS);
+    List unknownServers = (List) result.get(MasterHbckServlet.UNKNOWN_SERVERS);
     assertNotNull(unknownServers);
     assertEquals(1, unknownServers.size());
-    List<byte[]> emptyRegionInfo = (List<byte[]>) result.get(MasterHbckServlet.EMPTY_REGIONINFO);
+    List emptyRegionInfo = (List) result.get(MasterHbckServlet.EMPTY_REGIONINFO);
     assertNotNull(emptyRegionInfo);
     assertEquals(1, emptyRegionInfo.size());
   }
