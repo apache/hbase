@@ -311,7 +311,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
   /**
    * Whether to reject rows with size > threshold defined by
-   * {@link RSRpcServices#BATCH_ROWS_THRESHOLD_NAME}
+   * {@link HConstants#BATCH_ROWS_THRESHOLD_NAME}
    */
   private static final String REJECT_BATCH_ROWS_OVER_THRESHOLD =
     "hbase.rpc.rows.size.threshold.reject";
