@@ -567,9 +567,9 @@
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.13.1</jackson.version>
-    <jackson.databind.version>2.13.1</jackson.databind.version>
-    <jaxb-api.version>2.3.1</jaxb-api.version>
+    <jackson.version>2.10.5</jackson.version>
+    <jackson.databind.version>2.10.5.1</jackson.databind.version>
+    <jaxb-api.version>2.2.12</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
