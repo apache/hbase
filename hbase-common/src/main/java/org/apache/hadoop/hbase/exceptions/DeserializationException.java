@@ -22,7 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Failed deserialization.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @SuppressWarnings("serial")
 public class DeserializationException extends HBaseException {
   public DeserializationException() {
