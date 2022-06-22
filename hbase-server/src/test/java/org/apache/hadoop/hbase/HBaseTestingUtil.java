@@ -143,6 +143,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -202,6 +204,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   public static final boolean PRESPLIT_TEST_TABLE = true;
 
   private MiniDFSCluster dfsCluster = null;
+  private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;
 
   private volatile HBaseClusterInterface hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
@@ -571,6 +574,56 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
   }
 
+  // Workaround to avoid IllegalThreadStateException
+  // See HBASE-27148 for more details
+  private static final class FsDatasetAsyncDiskServiceFixer extends Thread {
+
+    private volatile boolean stopped = false;
+
+    private final MiniDFSCluster cluster;
+
+    FsDatasetAsyncDiskServiceFixer(MiniDFSCluster cluster) {
+      super("FsDatasetAsyncDiskServiceFixer");
+      setDaemon(true);
+      this.cluster = cluster;
+    }
+
+    @Override
+    public void run() {
+      while (!stopped) {
+        try {
+          Thread.sleep(30000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          continue;
+        }
+        // we could add new datanodes during tests, so here we will check every 30 seconds, as the
+        // timeout of the thread pool executor is 60 seconds by default.
+        try {
+          for (DataNode dn : cluster.getDataNodes()) {
+            FsDatasetSpi<?> dataset = dn.getFSDataset();
+            Field service = dataset.getClass().getDeclaredField("asyncDiskService");
+            service.setAccessible(true);
+            Object asyncDiskService = service.get(dataset);
+            Field group = asyncDiskService.getClass().getDeclaredField("threadGroup");
+            group.setAccessible(true);
+            ThreadGroup threadGroup = (ThreadGroup) group.get(asyncDiskService);
+            if (threadGroup.isDaemon()) {
+              threadGroup.setDaemon(false);
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn("failed to reset thread pool timeout for FsDatasetAsyncDiskService", e);
+        }
+      }
+    }
+
+    void shutdown() {
+      stopped = true;
+      interrupt();
+    }
+  }
+
   public MiniDFSCluster startMiniDFSCluster(int servers, final String[] racks, String[] hosts)
     throws Exception {
     createDirsAndSetProperties();
@@ -582,7 +635,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       "ERROR");
     this.dfsCluster =
       new MiniDFSCluster(0, this.conf, servers, true, true, true, null, racks, hosts, null);
-
+    this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
+    this.dfsClusterFixer.start();
     // Set this just-started cluster as our filesystem.
     setFs();
 
@@ -606,6 +660,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       "ERROR");
     dfsCluster =
       new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+    this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
+    this.dfsClusterFixer.start();
     return dfsCluster;
   }
 
@@ -728,6 +784,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
       dfsCluster = null;
+      // It is possible that the dfs cluster is set through setDFSCluster method, where we will not
+      // have a fixer
+      if (dfsClusterFixer != null) {
+        this.dfsClusterFixer.shutdown();
+        dfsClusterFixer = null;
+      }
       dataTestDirOnTestFS = null;
       CommonFSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
