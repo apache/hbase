@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -228,15 +228,15 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
-      int timeout) {
-      return replicateEntries(entries, ordinal, timeout).whenComplete((response, exception) -> {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
+      return () -> {
+        int batchIndex = replicateEntries(entries, ordinal, timeout);
         entriesCount += entries.size();
         int count = batchCount.incrementAndGet();
         LOG.info(
           "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
-      });
-
+        return batchIndex;
+      };
     }
   }
 
@@ -245,23 +245,20 @@ public class TestReplicator extends TestReplicationBase {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override
-    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
-      int timeout) {
-
-      if (failNext.compareAndSet(false, true)) {
-        return replicateEntries(entries, ordinal, timeout).whenComplete((response, exception) -> {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
+      return () -> {
+        if (failNext.compareAndSet(false, true)) {
+          int batchIndex = replicateEntries(entries, ordinal, timeout);
           entriesCount += entries.size();
           int count = batchCount.incrementAndGet();
           LOG.info(
             "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
-        });
-      } else if (failNext.compareAndSet(true, false)) {
-        CompletableFuture<Integer> future = new CompletableFuture<Integer>();
-        future.completeExceptionally(new ServiceException("Injected failure"));
-        return future;
-      }
-      return CompletableFuture.completedFuture(ordinal);
-
+          return batchIndex;
+        } else if (failNext.compareAndSet(true, false)) {
+          throw new ServiceException("Injected failure");
+        }
+        return ordinal;
+      };
     }
   }
 }
