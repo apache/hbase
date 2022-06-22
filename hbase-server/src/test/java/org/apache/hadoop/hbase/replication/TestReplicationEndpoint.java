@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -556,16 +556,15 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
-      int timeout) {
+    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
       // Fail only once, we don't want to slow down the test.
       if (failedOnce) {
-        return CompletableFuture.completedFuture(ordinal);
+        return () -> ordinal;
       } else {
         failedOnce = true;
-        CompletableFuture<Integer> future = new CompletableFuture<Integer>();
-        future.completeExceptionally(new IOException("Sample Exception: Failed to replicate."));
-        return future;
+        return () -> {
+          throw new IOException("Sample Exception: Failed to replicate.");
+        };
       }
     }
   }

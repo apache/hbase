@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -37,7 +37,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
@@ -53,12 +52,12 @@ public class ReplicationProtobufUtil {
    * @param sourceBaseNamespaceDir Path to source cluster base namespace directory
    * @param sourceHFileArchiveDir  Path to the source cluster hfile archive directory
    */
-  public static CompletableFuture<ReplicateWALEntryResponse> replicateWALEntry(
-    AsyncRegionServerAdmin admin, Entry[] entries, String replicationClusterId,
-    Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir, int timeout) {
+  public static void replicateWALEntry(AsyncRegionServerAdmin admin, Entry[] entries,
+    String replicationClusterId, Path sourceBaseNamespaceDir, Path sourceHFileArchiveDir,
+    int timeout) throws IOException {
     Pair<ReplicateWALEntryRequest, CellScanner> p = buildReplicateWALEntryRequest(entries, null,
       replicationClusterId, sourceBaseNamespaceDir, sourceHFileArchiveDir);
-    return admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout);
+    FutureUtils.get(admin.replicateWALEntry(p.getFirst(), p.getSecond(), timeout));
   }
 
   /**
