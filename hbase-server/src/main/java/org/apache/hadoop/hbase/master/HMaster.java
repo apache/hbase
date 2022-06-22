@@ -137,6 +137,7 @@ import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
+import org.apache.hadoop.hbase.master.http.MasterHbckServlet;
 import org.apache.hadoop.hbase.master.http.MasterRedirectServlet;
 import org.apache.hadoop.hbase.master.http.MasterStatusServlet;
 import org.apache.hadoop.hbase.master.http.api_v1.ResourceConfigFactory;
@@ -724,6 +725,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   protected void configureInfoServer(InfoServer infoServer) {
     infoServer.addUnprivilegedServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.addUnprivilegedServlet("api_v1", "/api/v1/*", buildApiV1Servlet());
+    infoServer.addUnprivilegedServlet("hbck", "/hbck", MasterHbckServlet.class);
 
     infoServer.setAttribute(MASTER, this);
   }
