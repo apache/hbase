@@ -27,7 +27,10 @@ public final class Constants {
   private Constants() {
   }
 
-  public static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
+  // Jetty's max header size is Character.MAX_VALUE - 1, See ArrayTernaryTrie for more details
+  // And in newer jetty version, they add a check when creating a server so we must follow this
+  // limitation otherwise the UTs will fail
+  public static final int DEFAULT_HTTP_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
   public static final String SERVER_TYPE_CONF_KEY = "hbase.regionserver.thrift.server.type";
 
