@@ -108,7 +108,10 @@ public class HttpServer implements FilterContainer {
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   private static final String EMPTY_STRING = "";
 
-  private static final int DEFAULT_MAX_HEADER_SIZE = 64 * 1024; // 64K
+  // Jetty's max header size is Character.MAX_VALUE - 1, See ArrayTernaryTrie for more details
+  // And in newer jetty version, they add a check when creating a server so we must follow this
+  // limitation otherwise the UTs will fail
+  private static final int DEFAULT_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
   static final String FILTER_INITIALIZERS_PROPERTY = "hbase.http.filter.initializers";
   static final String HTTP_MAX_THREADS = "hbase.http.max.threads";
