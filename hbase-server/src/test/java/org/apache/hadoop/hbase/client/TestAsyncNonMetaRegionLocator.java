@@ -494,8 +494,9 @@ public class TestAsyncNonMetaRegionLocator {
     regionLocator.clearRegionLocationCache();
     regionLocator.getAllRegionLocations().get();
 
+    int tries = 3;
     // expect all to be non-null at first
-    checkRegions(conn, regions, null);
+    checkRegionsWithRetries(conn, regions, null, tries);
 
     // clear servername from region info
     Put put = MetaTableAccessor.makePutFromRegionInfo(chosen, EnvironmentEdgeManager.currentTime());
@@ -511,7 +512,23 @@ public class TestAsyncNonMetaRegionLocator {
     }
 
     // expect all but chosen to be non-null. chosen should be null because serverName was null
-    checkRegions(conn, regions, chosen);
+    checkRegionsWithRetries(conn, regions, chosen, tries);
+  }
+
+  // caching of getAllRegionLocations is async. so we give it a couple tries
+  private void checkRegionsWithRetries(AsyncConnectionImpl conn, List<RegionInfo> regions,
+    RegionInfo chosen, int retries) throws InterruptedException {
+    while (true) {
+      try {
+        checkRegions(conn, regions, chosen);
+        break;
+      } catch (AssertionError e) {
+        if (retries-- <= 0) {
+          throw e;
+        }
+        Thread.sleep(500);
+      }
+    }
   }
 
   private void checkRegions(AsyncConnectionImpl conn, List<RegionInfo> regions, RegionInfo chosen) {
