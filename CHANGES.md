@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.4.13 - Unreleased (as of 2022-06-22)
+## Release 2.4.13 - Unreleased (as of 2022-06-23)
 
 
 
@@ -51,11 +51,11 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-27151](https://issues.apache.org/jira/browse/HBASE-27151) | TestMultiRespectsLimits.testBlockMultiLimits repeatable failure |  Major | . |
 | [HBASE-27143](https://issues.apache.org/jira/browse/HBASE-27143) | Add hbase-unsafe as a dependency for a MR job triggered by hbase shell |  Major | integration tests, mapreduce |
 | [HBASE-27099](https://issues.apache.org/jira/browse/HBASE-27099) | In the HFileBlock class, the log printing fspread/fsread cost time unit should be milliseconds |  Minor | HFile |
 | [HBASE-27128](https://issues.apache.org/jira/browse/HBASE-27128) | when open archiveRetries totalLogSize calculation mistake |  Minor | wal |
 | [HBASE-27117](https://issues.apache.org/jira/browse/HBASE-27117) | Update the method comments for RegionServerAccounting |  Minor | . |
-| [HBASE-26856](https://issues.apache.org/jira/browse/HBASE-26856) | BufferedDataBlockEncoder.OnheapDecodedCell value can get corrupted |  Major | . |
 | [HBASE-27038](https://issues.apache.org/jira/browse/HBASE-27038) | CellComparator should extend Serializable |  Minor | . |
 | [HBASE-26985](https://issues.apache.org/jira/browse/HBASE-26985) | SecureBulkLoadManager will set wrong permission if umask too strict |  Major | regionserver |
 | [HBASE-27079](https://issues.apache.org/jira/browse/HBASE-27079) | Lower some DEBUG level logs in ReplicationSourceWALReader to TRACE |  Minor | . |
@@ -75,6 +75,7 @@
 | [HBASE-27051](https://issues.apache.org/jira/browse/HBASE-27051) | TestReplicationSource.testReplicationSourceInitializingMetric is flaky |  Minor | test |
 | [HBASE-27039](https://issues.apache.org/jira/browse/HBASE-27039) | Some methods of MasterRegion should be annotated for testing only |  Minor | master |
 | [HBASE-27054](https://issues.apache.org/jira/browse/HBASE-27054) | TestStochasticLoadBalancerRegionReplicaLargeCluster.testRegionReplicasOnLargeCluster is flaky |  Major | test |
+| [HBASE-27050](https://issues.apache.org/jira/browse/HBASE-27050) | Support unit test pattern matching again |  Minor | test |
 
 
 ### SUB-TASKS:
