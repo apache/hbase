@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client.trace.hamcrest;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -54,6 +55,10 @@ public final class AttributesMatchers {
     return containsEntry(AttributeKey.stringKey(key), value);
   }
 
+  public static Matcher<Attributes> containsEntry(String key, long value) {
+    return containsEntry(AttributeKey.longKey(key), value);
+  }
+
   public static Matcher<Attributes> containsEntryWithStringValuesOf(String key, String... values) {
     return containsEntry(AttributeKey.stringArrayKey(key), Arrays.asList(values));
   }
@@ -61,6 +66,10 @@ public final class AttributesMatchers {
   public static Matcher<Attributes> containsEntryWithStringValuesOf(String key,
     Matcher<Iterable<? extends String>> matcher) {
     return new IsAttributesContaining<>(equalTo(AttributeKey.stringArrayKey(key)), matcher);
+  }
+
+  public static Matcher<Attributes> isEmpty() {
+    return hasProperty("empty", is(true));
   }
 
   private static final class IsAttributesContaining<T> extends TypeSafeMatcher<Attributes> {
