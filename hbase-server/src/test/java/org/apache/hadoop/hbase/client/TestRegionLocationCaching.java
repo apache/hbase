@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -98,10 +100,10 @@ public class TestRegionLocationCaching {
     checkRegions(conn, regions, chosen);
   }
 
-  private void checkRegions(ConnectionImplementation conn, List<RegionInfo> regions, RegionInfo chosen) {
+  private void checkRegions(ConnectionImplementation conn, List<RegionInfo> regions,
+    RegionInfo chosen) {
     for (RegionInfo region : regions) {
-      RegionLocations fromCache =
-        conn.getCachedLocation(TABLE_NAME, region.getStartKey());
+      RegionLocations fromCache = conn.getCachedLocation(TABLE_NAME, region.getStartKey());
       if (region.equals(chosen)) {
         assertNull(fromCache);
       } else {

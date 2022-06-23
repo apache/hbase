@@ -28,6 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,6 +66,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -514,9 +516,9 @@ public class TestAsyncNonMetaRegionLocator {
   }
 
   // caching of getAllRegionLocations is async. so we give it a couple tries
-  private void checkRegionsWithRetries(AsyncConnectionImpl conn, List<RegionInfo> regions, RegionInfo chosen, int retries)
-    throws InterruptedException {
-    while(true) {
+  private void checkRegionsWithRetries(AsyncConnectionImpl conn, List<RegionInfo> regions,
+    RegionInfo chosen, int retries) throws InterruptedException {
+    while (true) {
       try {
         checkRegions(conn, regions, chosen);
         break;
@@ -531,9 +533,8 @@ public class TestAsyncNonMetaRegionLocator {
 
   private void checkRegions(AsyncConnectionImpl conn, List<RegionInfo> regions, RegionInfo chosen) {
     for (RegionInfo region : regions) {
-      RegionLocations fromCache =
-        conn.getLocator().getNonMetaRegionLocator()
-          .getRegionLocationInCache(TABLE_NAME, region.getStartKey());
+      RegionLocations fromCache = conn.getLocator().getNonMetaRegionLocator()
+        .getRegionLocationInCache(TABLE_NAME, region.getStartKey());
       if (region.equals(chosen)) {
         assertNull(fromCache);
       } else {
