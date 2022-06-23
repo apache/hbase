@@ -17,12 +17,23 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,21 +41,28 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -60,6 +78,9 @@ public class TestPrefetch {
   private CacheConfig cacheConf;
   private FileSystem fs;
   private BlockCache blockCache;
+
+  @Rule
+  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
   public void setUp() throws IOException {
@@ -82,8 +103,23 @@ public class TestPrefetch {
 
   @Test
   public void testPrefetch() throws Exception {
-    Path storeFile = writeStoreFile("TestPrefetch");
-    readStoreFile(storeFile);
+    TraceUtil.trace(() -> {
+      Path storeFile = writeStoreFile("TestPrefetch");
+      readStoreFile(storeFile);
+    }, "testPrefetch");
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<>(otelRule::getSpans,
+      hasItems(hasName("testPrefetch"), hasName("PrefetchExecutor.request"))));
+    final List<SpanData> spans = otelRule.getSpans();
+    if (LOG.isDebugEnabled()) {
+      StringTraceRenderer renderer = new StringTraceRenderer(spans);
+      renderer.render(LOG::debug);
+    }
+
+    final SpanData testSpan = spans.stream().filter(hasName("testPrefetch")::matches).findFirst()
+      .orElseThrow(AssertionError::new);
+    assertThat("prefetch spans happen on their own threads, detached from file open.", spans,
+      hasItem(allOf(hasName("PrefetchExecutor.request"), not(hasParentSpanId(testSpan)))));
   }
 
   @Test
