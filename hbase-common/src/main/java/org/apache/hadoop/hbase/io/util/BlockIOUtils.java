@@ -17,13 +17,22 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DIRECT_BYTES_READ_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.HEAP_BYTES_READ_KEY;
+
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.io.hfile.trace.HFileContextAttributesBuilderConsumer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -76,33 +85,48 @@ public final class BlockIOUtils {
    * @throws IOException exception to throw if any error happen
    */
   public static void readFully(ByteBuff buf, FSDataInputStream dis, int length) throws IOException {
+    final Span span = Span.current();
+    final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
     if (!isByteBufferReadable(dis)) {
       // If InputStream does not support the ByteBuffer read, just read to heap and copy bytes to
       // the destination ByteBuff.
       byte[] heapBuf = new byte[length];
       IOUtils.readFully(dis, heapBuf, 0, length);
+      annotateHeapBytesRead(attributesBuilder, length);
+      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
       copyToByteBuff(heapBuf, 0, length, buf);
       return;
     }
+    int directBytesRead = 0, heapBytesRead = 0;
     ByteBuffer[] buffers = buf.nioByteBuffers();
     int remain = length;
     int idx = 0;
     ByteBuffer cur = buffers[idx];
-    while (remain > 0) {
-      while (!cur.hasRemaining()) {
-        if (++idx >= buffers.length) {
-          throw new IOException(
-            "Not enough ByteBuffers to read the reminding " + remain + " " + "bytes");
+    try {
+      while (remain > 0) {
+        while (!cur.hasRemaining()) {
+          if (++idx >= buffers.length) {
+            throw new IOException(
+              "Not enough ByteBuffers to read the reminding " + remain + " " + "bytes");
+          }
+          cur = buffers[idx];
         }
-        cur = buffers[idx];
+        cur.limit(cur.position() + Math.min(remain, cur.remaining()));
+        int bytesRead = dis.read(cur);
+        if (bytesRead < 0) {
+          throw new IOException(
+            "Premature EOF from inputStream, but still need " + remain + " " + "bytes");
+        }
+        remain -= bytesRead;
+        if (cur.isDirect()) {
+          directBytesRead += bytesRead;
+        } else {
+          heapBytesRead += bytesRead;
+        }
       }
-      cur.limit(cur.position() + Math.min(remain, cur.remaining()));
-      int bytesRead = dis.read(cur);
-      if (bytesRead < 0) {
-        throw new IOException(
-          "Premature EOF from inputStream, but still need " + remain + " " + "bytes");
-      }
-      remain -= bytesRead;
+    } finally {
+      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
     }
   }
 
@@ -116,19 +140,28 @@ public final class BlockIOUtils {
    */
   public static void readFullyWithHeapBuffer(InputStream in, ByteBuff out, int length)
     throws IOException {
-    byte[] buffer = new byte[1024];
     if (length < 0) {
       throw new IllegalArgumentException("Length must not be negative: " + length);
     }
+    int heapBytesRead = 0;
     int remain = length, count;
-    while (remain > 0) {
-      count = in.read(buffer, 0, Math.min(remain, buffer.length));
-      if (count < 0) {
-        throw new IOException(
-          "Premature EOF from inputStream, but still need " + remain + " bytes");
+    byte[] buffer = new byte[1024];
+    try {
+      while (remain > 0) {
+        count = in.read(buffer, 0, Math.min(remain, buffer.length));
+        if (count < 0) {
+          throw new IOException(
+            "Premature EOF from inputStream, but still need " + remain + " bytes");
+        }
+        out.put(buffer, 0, count);
+        remain -= count;
+        heapBytesRead += count;
       }
-      out.put(buffer, 0, count);
-      remain -= count;
+    } finally {
+      final Span span = Span.current();
+      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
+      span.addEvent("BlockIOUtils.readFullyWithHeapBuffer", attributesBuilder.build());
     }
   }
 
@@ -147,20 +180,29 @@ public final class BlockIOUtils {
    */
   private static boolean readWithExtraOnHeap(InputStream in, byte[] buf, int bufOffset,
     int necessaryLen, int extraLen) throws IOException {
+    int heapBytesRead = 0;
     int bytesRemaining = necessaryLen + extraLen;
-    while (bytesRemaining > 0) {
-      int ret = in.read(buf, bufOffset, bytesRemaining);
-      if (ret < 0) {
-        if (bytesRemaining <= extraLen) {
-          // We could not read the "extra data", but that is OK.
-          break;
+    try {
+      while (bytesRemaining > 0) {
+        int ret = in.read(buf, bufOffset, bytesRemaining);
+        if (ret < 0) {
+          if (bytesRemaining <= extraLen) {
+            // We could not read the "extra data", but that is OK.
+            break;
+          }
+          throw new IOException("Premature EOF from inputStream (read " + "returned " + ret
+            + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+            + " extra bytes, " + "successfully read " + (necessaryLen + extraLen - bytesRemaining));
         }
-        throw new IOException("Premature EOF from inputStream (read " + "returned " + ret
-          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
-          + " extra bytes, " + "successfully read " + (necessaryLen + extraLen - bytesRemaining));
+        bufOffset += ret;
+        bytesRemaining -= ret;
+        heapBytesRead += ret;
       }
-      bufOffset += ret;
-      bytesRemaining -= ret;
+    } finally {
+      final Span span = Span.current();
+      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
+      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
     }
     return bytesRemaining <= 0;
   }
@@ -186,27 +228,41 @@ public final class BlockIOUtils {
       copyToByteBuff(heapBuf, 0, heapBuf.length, buf);
       return ret;
     }
+    int directBytesRead = 0, heapBytesRead = 0;
     ByteBuffer[] buffers = buf.nioByteBuffers();
     int bytesRead = 0;
     int remain = necessaryLen + extraLen;
     int idx = 0;
     ByteBuffer cur = buffers[idx];
-    while (bytesRead < necessaryLen) {
-      while (!cur.hasRemaining()) {
-        if (++idx >= buffers.length) {
-          throw new IOException("Not enough ByteBuffers to read the reminding " + remain + "bytes");
+    try {
+      while (bytesRead < necessaryLen) {
+        while (!cur.hasRemaining()) {
+          if (++idx >= buffers.length) {
+            throw new IOException(
+              "Not enough ByteBuffers to read the reminding " + remain + "bytes");
+          }
+          cur = buffers[idx];
         }
-        cur = buffers[idx];
+        cur.limit(cur.position() + Math.min(remain, cur.remaining()));
+        int ret = dis.read(cur);
+        if (ret < 0) {
+          throw new IOException("Premature EOF from inputStream (read returned " + ret
+            + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+            + " extra bytes, successfully read " + bytesRead);
+        }
+        bytesRead += ret;
+        remain -= ret;
+        if (cur.isDirect()) {
+          directBytesRead += ret;
+        } else {
+          heapBytesRead += ret;
+        }
       }
-      cur.limit(cur.position() + Math.min(remain, cur.remaining()));
-      int ret = dis.read(cur);
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream (read returned " + ret
-          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
-          + " extra bytes, successfully read " + bytesRead);
-      }
-      bytesRead += ret;
-      remain -= ret;
+    } finally {
+      final Span span = Span.current();
+      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
     }
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
   }
@@ -264,15 +320,22 @@ public final class BlockIOUtils {
     byte[] buf = new byte[remain];
     int bytesRead = 0;
     int lengthMustRead = readAllBytes ? remain : necessaryLen;
-    while (bytesRead < lengthMustRead) {
-      int ret = dis.read(position + bytesRead, buf, bytesRead, remain);
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream (positional read returned " + ret
-          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
-          + " extra bytes, successfully read " + bytesRead);
+    try {
+      while (bytesRead < lengthMustRead) {
+        int ret = dis.read(position + bytesRead, buf, bytesRead, remain);
+        if (ret < 0) {
+          throw new IOException("Premature EOF from inputStream (positional read returned " + ret
+            + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+            + " extra bytes, successfully read " + bytesRead);
+        }
+        bytesRead += ret;
+        remain -= ret;
       }
-      bytesRead += ret;
-      remain -= ret;
+    } finally {
+      final Span span = Span.current();
+      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+      annotateHeapBytesRead(attributesBuilder, bytesRead);
+      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
     }
     copyToByteBuff(buf, 0, bytesRead, buff);
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -280,39 +343,53 @@ public final class BlockIOUtils {
 
   private static boolean preadWithExtraDirectly(ByteBuff buff, FSDataInputStream dis, long position,
     int necessaryLen, int extraLen, boolean readAllBytes) throws IOException {
+    int directBytesRead = 0, heapBytesRead = 0;
     int remain = necessaryLen + extraLen, bytesRead = 0, idx = 0;
     ByteBuffer[] buffers = buff.nioByteBuffers();
     ByteBuffer cur = buffers[idx];
     int lengthMustRead = readAllBytes ? remain : necessaryLen;
-    while (bytesRead < lengthMustRead) {
-      int ret;
-      while (!cur.hasRemaining()) {
-        if (++idx >= buffers.length) {
-          throw new IOException("Not enough ByteBuffers to read the reminding " + remain + "bytes");
+    try {
+      while (bytesRead < lengthMustRead) {
+        int ret;
+        while (!cur.hasRemaining()) {
+          if (++idx >= buffers.length) {
+            throw new IOException(
+              "Not enough ByteBuffers to read the reminding " + remain + "bytes");
+          }
+          cur = buffers[idx];
         }
-        cur = buffers[idx];
+        cur.limit(cur.position() + Math.min(remain, cur.remaining()));
+        try {
+          ret = (Integer) byteBufferPositionedReadMethod.invoke(dis, position + bytesRead, cur);
+        } catch (IllegalAccessException e) {
+          throw new IOException("Unable to invoke ByteBuffer positioned read when trying to read "
+            + bytesRead + " bytes from position " + position, e);
+        } catch (InvocationTargetException e) {
+          throw new IOException("Encountered an exception when invoking ByteBuffer positioned read"
+            + " when trying to read " + bytesRead + " bytes from position " + position, e);
+        } catch (NullPointerException e) {
+          throw new IOException("something is null");
+        } catch (Exception e) {
+          throw e;
+        }
+        if (ret < 0) {
+          throw new IOException("Premature EOF from inputStream (positional read returned " + ret
+            + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
+            + " extra bytes, successfully read " + bytesRead);
+        }
+        bytesRead += ret;
+        remain -= ret;
+        if (cur.isDirect()) {
+          directBytesRead += bytesRead;
+        } else {
+          heapBytesRead += bytesRead;
+        }
       }
-      cur.limit(cur.position() + Math.min(remain, cur.remaining()));
-      try {
-        ret = (Integer) byteBufferPositionedReadMethod.invoke(dis, position + bytesRead, cur);
-      } catch (IllegalAccessException e) {
-        throw new IOException("Unable to invoke ByteBuffer positioned read when trying to read "
-          + bytesRead + " bytes from position " + position, e);
-      } catch (InvocationTargetException e) {
-        throw new IOException("Encountered an exception when invoking ByteBuffer positioned read"
-          + " when trying to read " + bytesRead + " bytes from position " + position, e);
-      } catch (NullPointerException e) {
-        throw new IOException("something is null");
-      } catch (Exception e) {
-        throw e;
-      }
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream (positional read returned " + ret
-          + ", was trying to read " + necessaryLen + " necessary bytes and " + extraLen
-          + " extra bytes, successfully read " + bytesRead);
-      }
-      bytesRead += ret;
-      remain -= ret;
+    } finally {
+      final Span span = Span.current();
+      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
+      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
     }
 
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -339,5 +416,39 @@ public final class BlockIOUtils {
       offset += copyLen;
     }
     return len;
+  }
+
+  /**
+   * Construct a fresh {@link AttributesBuilder} from the provided {@link Context}, populated with
+   * relevant attributes populated by {@link HFileContextAttributesBuilderConsumer#CONTEXT_KEY}.
+   */
+  private static AttributesBuilder builderFromContext(Context context) {
+    final AttributesBuilder attributesBuilder = Attributes.builder();
+    Optional.ofNullable(context)
+      .map(val -> val.get(HFileContextAttributesBuilderConsumer.CONTEXT_KEY))
+      .ifPresent(c -> c.accept(attributesBuilder));
+    return attributesBuilder;
+  }
+
+  /**
+   * Conditionally annotate {@code span} with the appropriate attribute when value is non-zero.
+   */
+  private static void annotateHeapBytesRead(AttributesBuilder attributesBuilder,
+    int heapBytesRead) {
+    annotateBytesRead(attributesBuilder, 0, heapBytesRead);
+  }
+
+  /**
+   * Conditionally annotate {@code attributesBuilder} with appropriate attributes when values are
+   * non-zero.
+   */
+  private static void annotateBytesRead(AttributesBuilder attributesBuilder, long directBytesRead,
+    long heapBytesRead) {
+    if (directBytesRead > 0) {
+      attributesBuilder.put(DIRECT_BYTES_READ_KEY, directBytesRead);
+    }
+    if (heapBytesRead > 0) {
+      attributesBuilder.put(HEAP_BYTES_READ_KEY, heapBytesRead);
+    }
   }
 }
