@@ -67,12 +67,12 @@ public class WorkerAssigner implements ServerListener {
     currentWorkers.compute(serverName, (k, v) -> v == null ? null : v + 1);
   }
 
-  public void suspend(Procedure<?> proc) {
+  public synchronized void suspend(Procedure<?> proc) {
     event.suspend();
     event.suspendIfNotReady(proc);
   }
 
-  public void wake(MasterProcedureScheduler scheduler) {
+  public synchronized void wake(MasterProcedureScheduler scheduler) {
     if (!event.isReady()) {
       event.wake(scheduler);
     }
