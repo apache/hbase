@@ -1191,4 +1191,32 @@ public final class ByteBufferUtils {
   public static String toStringBinary(final ByteBuffer b) {
     return toStringBinary(b, 0, b.capacity());
   }
+
+  /**
+   * Find index of passed delimiter.
+   * @return Index of delimiter having started from start of <code>b</code> moving rightward.
+   */
+  public static int searchDelimiterIndex(ByteBuffer b, int offset, final int length,
+    final int delimiter) {
+    for (int i = offset, n = offset + length; i < n; i++) {
+      if (b.get(i) == delimiter) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Find index of passed delimiter walking from end of buffer backwards.
+   * @return Index of delimiter
+   */
+  public static int searchDelimiterIndexInReverse(ByteBuffer b, int offset, int length,
+    int delimiter) {
+    for (int i = offset + length - 1; i >= offset; i--) {
+      if (b.get(i) == delimiter) {
+        return i;
+      }
+    }
+    return -1;
+  }
 }
