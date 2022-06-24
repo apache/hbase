@@ -28,12 +28,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -350,24 +351,29 @@ public class QuotaCache implements Stoppable {
      */
     private void updateQuotaFactors() {
       // Update machine quota factor
+      ClusterMetrics clusterMetrics;
       try {
-        int rsSize = rsServices.getConnection().getAdmin()
-          .getClusterMetrics(EnumSet.of(Option.SERVERS_NAME)).getServersName().size();
-        if (rsSize != 0) {
-          // TODO if use rs group, the cluster limit should be shared by the rs group
-          machineQuotaFactor = 1.0 / rsSize;
-        }
+        clusterMetrics = rsServices.getConnection().getAdmin()
+          .getClusterMetrics(EnumSet.of(Option.SERVERS_NAME, Option.TABLE_TO_REGIONS_COUNT));
       } catch (IOException e) {
-        LOG.warn("Get live region servers failed", e);
+        LOG.warn("Failed to get cluster metrics needed for updating quotas", e);
+        return;
       }
+
+      int rsSize = clusterMetrics.getServersName().size();
+      if (rsSize != 0) {
+        // TODO if use rs group, the cluster limit should be shared by the rs group
+        machineQuotaFactor = 1.0 / rsSize;
+      }
+
+      Map<TableName, RegionStatesCount> tableRegionStatesCount =
+        clusterMetrics.getTableRegionStatesCount();
 
       // Update table machine quota factors
       for (TableName tableName : tableQuotaCache.keySet()) {
         double factor = 1;
         try {
-          long regionSize =
-            MetaTableAccessor.getTableRegions(rsServices.getConnection(), tableName, true).stream()
-              .filter(regionInfo -> !regionInfo.isOffline()).count();
+          long regionSize = tableRegionStatesCount.get(tableName).getOpenRegions();
           if (regionSize == 0) {
             factor = 0;
           } else {

@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-build-configuration</artifactId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <version>3.0.0-alpha-3</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-protocol-shaded</artifactId>
@@ -34,7 +34,7 @@
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>3.17.3</internal.protobuf.version>
+    <internal.protobuf.version>3.21.1</internal.protobuf.version>
   </properties>
   <dependencies>
     <!--BE CAREFUL! Any dependency added here needs to be

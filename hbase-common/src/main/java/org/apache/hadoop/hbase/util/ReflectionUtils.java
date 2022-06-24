@@ -63,6 +63,31 @@ public class ReflectionUtils {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(String className, Object... params) {
+    Class<T> type;
+    try {
+      type = (Class<T>) getClassLoader().loadClass(className);
+    } catch (ClassNotFoundException | ClassCastException e) {
+      throw new UnsupportedOperationException("Unable to load specified class " + className, e);
+    }
+    return instantiate(type.getName(), findConstructor(type, params), params);
+  }
+
+  public static ClassLoader getClassLoader() {
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      cl = ReflectionUtils.class.getClassLoader();
+    }
+    if (cl == null) {
+      cl = ClassLoader.getSystemClassLoader();
+    }
+    if (cl == null) {
+      throw new RuntimeException("A ClassLoader could not be found");
+    }
+    return cl;
+  }
+
   public static <T> T newInstance(Class<T> type, Object... params) {
     return instantiate(type.getName(), findConstructor(type, params), params);
   }

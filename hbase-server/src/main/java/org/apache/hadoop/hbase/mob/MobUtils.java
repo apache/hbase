@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.apache.hadoop.hbase.mob.MobConstants.DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
+import static org.apache.hadoop.hbase.mob.MobConstants.MOB_CLEANER_BATCH_SIZE_UPPER_BOUND;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,6 +33,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -314,20 +318,30 @@ public final class MobUtils {
           }
           filesToClean
             .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true));
+          if (
+            filesToClean.size() >= conf.getInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND,
+              DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND)
+          ) {
+            if (
+              removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(),
+                filesToClean)
+            ) {
+              deletedFileCount += filesToClean.size();
+            }
+            filesToClean.clear();
+          }
         }
       } catch (Exception e) {
         LOG.error("Cannot parse the fileName " + fileName, e);
       }
     }
-    if (!filesToClean.isEmpty()) {
-      try {
-        removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(), filesToClean);
-        deletedFileCount = filesToClean.size();
-      } catch (IOException e) {
-        LOG.error("Failed to delete the mob files " + filesToClean, e);
-      }
+    if (
+      !filesToClean.isEmpty() && removeMobFiles(conf, fs, tableName, mobTableDir,
+        columnDescriptor.getName(), filesToClean)
+    ) {
+      deletedFileCount += filesToClean.size();
     }
-    LOG.info("{} expired mob files are deleted", deletedFileCount);
+    LOG.info("Table {} {} expired mob files in total are deleted", tableName, deletedFileCount);
   }
 
   /**
@@ -459,10 +473,17 @@ public final class MobUtils {
    * @param family     The name of the column family.
    * @param storeFiles The files to be deleted.
    */
-  public static void removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
-    Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) throws IOException {
-    HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
-      storeFiles);
+  public static boolean removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
+    Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) {
+    try {
+      HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
+        storeFiles);
+      LOG.info("Table {} {} expired mob files are deleted", tableName, storeFiles.size());
+      return true;
+    } catch (IOException e) {
+      LOG.error("Failed to delete the mob files, table {}", tableName, e);
+    }
+    return false;
   }
 
   /**
@@ -564,6 +585,33 @@ public final class MobUtils {
     CacheConfig cacheConfig, Encryption.Context cryptoContext, ChecksumType checksumType,
     int bytesPerChecksum, int blocksize, BloomType bloomType, boolean isCompaction)
     throws IOException {
+    return createWriter(conf, fs, family, path, maxKeyCount, compression, cacheConfig,
+      cryptoContext, checksumType, bytesPerChecksum, blocksize, bloomType, isCompaction, null);
+  }
+
+  /**
+   * Creates a writer for the mob file in temp directory.
+   * @param conf                  The current configuration.
+   * @param fs                    The current file system.
+   * @param family                The descriptor of the current column family.
+   * @param path                  The path for a temp directory.
+   * @param maxKeyCount           The key count.
+   * @param compression           The compression algorithm.
+   * @param cacheConfig           The current cache config.
+   * @param cryptoContext         The encryption context.
+   * @param checksumType          The checksum type.
+   * @param bytesPerChecksum      The bytes per checksum.
+   * @param blocksize             The HFile block size.
+   * @param bloomType             The bloom filter type.
+   * @param isCompaction          If the writer is used in compaction.
+   * @param writerCreationTracker to track the current writer in the store
+   * @return The writer for the mob file.
+   */
+  public static StoreFileWriter createWriter(Configuration conf, FileSystem fs,
+    ColumnFamilyDescriptor family, Path path, long maxKeyCount, Compression.Algorithm compression,
+    CacheConfig cacheConfig, Encryption.Context cryptoContext, ChecksumType checksumType,
+    int bytesPerChecksum, int blocksize, BloomType bloomType, boolean isCompaction,
+    Consumer<Path> writerCreationTracker) throws IOException {
     if (compression == null) {
       compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
     }
@@ -582,7 +630,8 @@ public final class MobUtils {
       .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
     StoreFileWriter w = new StoreFileWriter.Builder(conf, writerCacheConf, fs).withFilePath(path)
-      .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+      .withBloomType(bloomType).withMaxKeyCount(maxKeyCount).withFileContext(hFileContext)
+      .withWriterCreationTracker(writerCreationTracker).build();
     return w;
   }
 

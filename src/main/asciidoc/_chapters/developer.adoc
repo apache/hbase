@@ -1153,6 +1153,8 @@ If you are writing code for `hbase-server`, see <<hbase.unittests,hbase.unittest
 These tests can spin up a minicluster and will need to be categorized.
 For any other module, for example `hbase-common`, the tests must be strict unit tests and just test the class under test - no use of the HBaseTestingUtility or minicluster is allowed (or even possible given the dependency tree).
 
+Starting from 3.0.0, HBaseTestingUtility is renamed to HBaseTestingUtil and marked as IA.Private. Of course the API is still the same.
+
 [[hbase.moduletest.shell]]
 ==== Testing the HBase Shell
 

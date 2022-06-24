@@ -2432,7 +2432,7 @@ public class HStore
    * {@link BrokenStoreFileCleaner} to prevent deleting the these files as they are not present in
    * SFT yet.
    */
-  Set<Path> getStoreFilesBeingWritten() {
+  public Set<Path> getStoreFilesBeingWritten() {
     return storeFileWriterCreationTrackers.stream().flatMap(t -> t.get().stream())
       .collect(Collectors.toSet());
   }
