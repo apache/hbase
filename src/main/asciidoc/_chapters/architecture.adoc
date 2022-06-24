@@ -2955,7 +2955,10 @@ client-side, clients will try to read META replicas first before falling back on
 the primary. Before this, the replica lookup mode -- now named `HedgedRead` in
 hbase-2.4.0 -- had clients read the primary and if no response after a
 configurable amount of time had elapsed, it would start up reads against the
-replicas.
+replicas. Starting from hbase-2.4.12(and all higher minor versions), with
+client-side `LoadBalance` mode, clients load balance META scan requests across
+all META replica regions, including the primary META region. In case of exceptions
+such as NotServingRegionException, it will fall back on the primary META region.
 
 The new 'LoadBalance' mode helps alleviate hotspotting on the META
 table distributing META read load.
