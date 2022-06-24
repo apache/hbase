@@ -2576,7 +2576,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * nn * @return Index of delimiter having started from start of <code>b</code> moving rightward.
+   * Find index of passed delimiter.
+   * @return Index of delimiter having started from start of <code>b</code> moving rightward.
    */
   public static int searchDelimiterIndex(final byte[] b, int offset, final int length,
     final int delimiter) {
@@ -2594,8 +2595,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Find index of passed delimiter walking from end of buffer backwards. nn * @return Index of
-   * delimiter
+   * Find index of passed delimiter walking from end of buffer backwards.
+   * @return Index of delimiter
    */
   public static int searchDelimiterIndexInReverse(final byte[] b, final int offset,
     final int length, final int delimiter) {
