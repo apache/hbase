@@ -79,7 +79,11 @@ public class HRegionLocator implements RegionLocator {
       for (HRegionLocation location : locations.getRegionLocations()) {
         regions.add(location);
       }
-      connection.cacheLocation(tableName, locations);
+      RegionLocations cleaned = locations.removeElementsWithNullLocation();
+      // above can return null if all locations had null location
+      if (cleaned != null) {
+        connection.cacheLocation(tableName, cleaned);
+      }
     }
     return regions;
   }
