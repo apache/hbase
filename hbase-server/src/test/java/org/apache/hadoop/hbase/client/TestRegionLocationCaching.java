@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -26,15 +27,23 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MediumTests.class, ClientTests.class })
 public class TestRegionLocationCaching {
@@ -50,6 +59,9 @@ public class TestRegionLocationCaching {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
 
+  @Rule
+  public final TestName name = new TestName();
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
@@ -60,6 +72,53 @@ public class TestRegionLocationCaching {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations() throws Exception {
+    TableName tableName = TableName.valueOf(name.getMethodName());
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(tableName);
+    RegionInfo chosen = regions.get(0);
+
+    // re-populate region cache
+    RegionLocator regionLocator = TEST_UTIL.getConnection().getRegionLocator(tableName);
+    regionLocator.clearRegionLocationCache();
+    regionLocator.getAllRegionLocations();
+
+    // expect all to be non-null at first
+    checkRegions(tableName, conn, regions, null);
+
+    // clear servername from region info
+    Put put = MetaTableAccessor.makePutFromRegionInfo(chosen, EnvironmentEdgeManager.currentTime());
+    MetaTableAccessor.addEmptyLocation(put, 0);
+    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Lists.newArrayList(put));
+
+    // re-populate region cache again. check that we succeeded in nulling the servername
+    regionLocator.clearRegionLocationCache();
+    for (HRegionLocation loc : regionLocator.getAllRegionLocations()) {
+      if (loc.getRegion().equals(chosen)) {
+        assertNull(loc.getServerName());
+      }
+    }
+
+    // expect all but chosen to be non-null. chosen should be null because serverName was null
+    checkRegions(tableName, conn, regions, chosen);
+  }
+
+  private void checkRegions(TableName tableName, ConnectionImplementation conn,
+    List<RegionInfo> regions, RegionInfo chosen) {
+    for (RegionInfo region : regions) {
+      RegionLocations fromCache = conn.getCachedLocation(tableName, region.getStartKey());
+      if (region.equals(chosen)) {
+        assertNull(fromCache);
+      } else {
+        assertNotNull(fromCache);
+      }
+    }
   }
 
   @Test
