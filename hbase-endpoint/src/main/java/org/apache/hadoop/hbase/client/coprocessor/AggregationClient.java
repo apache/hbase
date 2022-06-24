@@ -78,6 +78,7 @@ public class AggregationClient implements Closeable {
   // TODO: This class is not used. Move to examples?
   private static final Logger log = LoggerFactory.getLogger(AggregationClient.class);
   private final Connection connection;
+  private final boolean manageConnection;
 
   /**
    * An RpcController implementation for use here in this endpoint.
@@ -127,23 +128,71 @@ public class AggregationClient implements Closeable {
   }
 
   /**
-   * Constructor with Conf object
-   * @param cfg Configuration to use
+   * Creates AggregationClient with no underlying Connection. Users of this constructor should limit
+   * themselves to methods here which take a {@link Table} argument, such as
+   * {@link #rowCount(Table, ColumnInterpreter, Scan)}. Use of methods which instead take a
+   * TableName, such as {@link #rowCount(TableName, ColumnInterpreter, Scan)}, will throw an
+   * IOException.
+   */
+  public AggregationClient() {
+    this(null, false);
+  }
+
+  /**
+   * Creates AggregationClient using the passed in Connection, which will be used by methods taking
+   * a {@link TableName} to create the necessary {@link Table} for the call. The Connection is
+   * externally managed by the caller and will not be closed if {@link #close()} is called. There is
+   * no need to call {@link #close()} for AggregationClients created this way.
+   * @param connection the connection to use
+   */
+  public AggregationClient(Connection connection) {
+    this(connection, false);
+  }
+
+  /**
+   * Creates AggregationClient with internally managed Connection, which will be used by methods
+   * taking a {@link TableName} to create the necessary {@link Table} for the call. The Connection
+   * will immediately be created will be closed when {@link #close()} is called. It's important to
+   * call {@link #close()} when done with this AggregationClient and to otherwise treat it as a
+   * shared Singleton.
+   * @param cfg Configuration to use to create connection
    */
   public AggregationClient(Configuration cfg) {
+    // Create a connection on construction. Will use it making each of the calls below.
+    this(createConnection(cfg), true);
+  }
+
+  private static Connection createConnection(Configuration cfg) {
     try {
-      // Create a connection on construction. Will use it making each of the calls below.
-      this.connection = ConnectionFactory.createConnection(cfg);
+      return ConnectionFactory.createConnection(cfg);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
+  private AggregationClient(Connection connection, boolean manageConnection) {
+    this.connection = connection;
+    this.manageConnection = manageConnection;
+  }
+
   @Override
   public void close() throws IOException {
-    if (this.connection != null && !this.connection.isClosed()) {
+    if (manageConnection && this.connection != null && !this.connection.isClosed()) {
       this.connection.close();
     }
+  }
+
+  // visible for tests
+  boolean isClosed() {
+    return manageConnection && this.connection != null && this.connection.isClosed();
+  }
+
+  private Connection getConnection() throws IOException {
+    if (connection == null) {
+      throw new IOException(
+        "Connection not initialized. Use the correct constructor, or use the methods taking a Table");
+    }
+    return connection;
   }
 
   /**
@@ -159,7 +208,7 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> R
     max(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return max(table, ci, scan);
     }
   }
@@ -226,7 +275,7 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> R
     min(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return min(table, ci, scan);
     }
   }
@@ -298,7 +347,7 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> long
     rowCount(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return rowCount(table, ci, scan);
     }
   }
@@ -368,7 +417,7 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> S
     sum(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return sum(table, ci, scan);
     }
   }
@@ -437,7 +486,7 @@ public class AggregationClient implements Closeable {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
     final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
     throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return getAvgArgs(table, ci, scan);
     }
   }
@@ -623,7 +672,7 @@ public class AggregationClient implements Closeable {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double std(
     final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return std(table, ci, scan);
     }
   }
@@ -727,7 +776,7 @@ public class AggregationClient implements Closeable {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R median(
     final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    try (Table table = getConnection().getTable(tableName)) {
       return median(table, ci, scan);
     }
   }
