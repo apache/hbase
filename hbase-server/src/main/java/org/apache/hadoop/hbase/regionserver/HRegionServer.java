@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
 import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
@@ -437,6 +438,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   final ServerNonceManager nonceManager;
 
   private BrokenStoreFileCleaner brokenStoreFileCleaner;
+
+  private RSMobFileCleanerChore rsMobFileCleanerChore;
 
   @InterfaceAudience.Private
   CompactedHFilesDischarger compactedFileDischarger;
@@ -977,6 +980,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       ZNodeClearer.deleteMyEphemeralNodeOnDisk();
 
       closeZooKeeper();
+      closeTableDescriptors();
       LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
       span.setStatus(StatusCode.OK);
     } finally {
@@ -1897,6 +1901,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
 
+    if (this.rsMobFileCleanerChore != null) {
+      choreService.scheduleChore(rsMobFileCleanerChore);
+    }
+
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
     Threads.setDaemonThreadRunning(this.leaseManager, getName() + ".leaseChecker",
@@ -1992,6 +2000,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     this.brokenStoreFileCleaner =
       new BrokenStoreFileCleaner((int) (brokenStoreFileCleanerDelay + jitterValue),
         brokenStoreFileCleanerPeriod, this, conf, this);
+
+    this.rsMobFileCleanerChore = new RSMobFileCleanerChore(this);
 
     registerConfigurationObservers();
   }
@@ -3549,6 +3559,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return brokenStoreFileCleaner;
   }
 
+  @InterfaceAudience.Private
+  public RSMobFileCleanerChore getRSMobFileCleanerChore() {
+    return rsMobFileCleanerChore;
+  }
+
   RSSnapshotVerifier getRsSnapshotVerifier() {
     return rsSnapshotVerifier;
   }
@@ -3565,6 +3580,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(fsUtilizationChore);
     shutdownChore(slowLogTableOpsChore);
     shutdownChore(brokenStoreFileCleaner);
+    shutdownChore(rsMobFileCleanerChore);
   }
 
   @Override

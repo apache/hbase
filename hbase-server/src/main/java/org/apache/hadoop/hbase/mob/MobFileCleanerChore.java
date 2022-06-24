@@ -160,14 +160,15 @@ public class MobFileCleanerChore extends ScheduledChore {
           maxCreationTimeToArchive, table);
       }
 
+      FileSystem fs = FileSystem.get(conf);
+      Set<String> regionNames = new HashSet<>();
       Path rootDir = CommonFSUtils.getRootDir(conf);
       Path tableDir = CommonFSUtils.getTableDir(rootDir, table);
-      // How safe is this call?
-      List<Path> regionDirs = FSUtils.getRegionDirs(FileSystem.get(conf), tableDir);
+      List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
 
       Set<String> allActiveMobFileName = new HashSet<String>();
-      FileSystem fs = FileSystem.get(conf);
       for (Path regionPath : regionDirs) {
+        regionNames.add(regionPath.getName());
         for (ColumnFamilyDescriptor hcd : list) {
           String family = hcd.getNameAsString();
           Path storePath = new Path(regionPath, family);
@@ -195,13 +196,26 @@ public class MobFileCleanerChore extends ScheduledChore {
               for (Path pp : storeFiles) {
                 currentPath = pp;
                 LOG.trace("Store file: {}", pp);
-                HStoreFile sf =
-                  new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
-                sf.initReader();
-                byte[] mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
-                byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
-                // close store file to avoid memory leaks
-                sf.closeStoreFile(true);
+                HStoreFile sf = null;
+                byte[] mobRefData = null;
+                byte[] bulkloadMarkerData = null;
+                try {
+                  sf = new HStoreFile(fs, pp, conf, CacheConfig.DISABLED, BloomType.NONE, true);
+                  sf.initReader();
+                  mobRefData = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+                  bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
+                  // close store file to avoid memory leaks
+                  sf.closeStoreFile(true);
+                } catch (IOException ex) {
+                  // When FileBased SFT is active the store dir can contain corrupted or incomplete
+                  // files. So read errors are expected. We just skip these files.
+                  if (ex instanceof FileNotFoundException) {
+                    throw ex;
+                  }
+                  LOG.debug("Failed to get mob data from file: {} due to error.", pp.toString(),
+                    ex);
+                  continue;
+                }
                 if (mobRefData == null) {
                   if (bulkloadMarkerData == null) {
                     LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
@@ -256,9 +270,11 @@ public class MobFileCleanerChore extends ScheduledChore {
         while (rit.hasNext()) {
           LocatedFileStatus lfs = rit.next();
           Path p = lfs.getPath();
-          if (!allActiveMobFileName.contains(p.getName())) {
-            // MOB is not in a list of active references, but it can be too
-            // fresh, skip it in this case
+          String[] mobParts = p.getName().split("_");
+          String regionName = mobParts[mobParts.length - 1];
+
+          if (!regionNames.contains(regionName)) {
+            // MOB belonged to a region no longer hosted
             long creationTime = fs.getFileStatus(p).getModificationTime();
             if (creationTime < maxCreationTimeToArchive) {
               LOG.trace("Archiving MOB file {} creation time={}", p,
@@ -269,7 +285,7 @@ public class MobFileCleanerChore extends ScheduledChore {
                 fs.getFileStatus(p).getModificationTime());
             }
           } else {
-            LOG.trace("Keeping active MOB file: {}", p);
+            LOG.trace("Keeping MOB file with existing region: {}", p);
           }
         }
         LOG.info(" MOB Cleaner found {} files to archive for table={} family={}", toArchive.size(),

@@ -432,14 +432,14 @@ public class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Return true if global memory usage is above the high watermark
+   * Return the FlushType if global memory usage is above the high watermark
    */
   private FlushType isAboveHighWaterMark() {
     return server.getRegionServerAccounting().isAboveHighWaterMark();
   }
 
   /**
-   * Return true if we're above the low watermark
+   * Return the FlushType if we're above the low watermark
    */
   private FlushType isAboveLowWaterMark() {
     return server.getRegionServerAccounting().isAboveLowWaterMark();

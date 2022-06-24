@@ -31,6 +31,9 @@ This chapter discusses unit testing your HBase application using JUnit, Mockito,
 Much of the information comes from link:http://blog.cloudera.com/blog/2013/09/how-to-test-hbase-applications-using-popular-tools/[a community blog post about testing HBase applications].
 For information on unit tests for HBase itself, see <<hbase.tests,hbase.tests>>.
 
+Starting from HBase 2.5.0, HBaseTestingUtility is deprecated and should only be used when writing UTs inside HBase.
+End users should use org.apache.hadoop.hbase.testing.TestingHBaseCluster instead.
+
 == JUnit
 
 HBase uses link:http://junit.org[JUnit] for unit tests
@@ -321,11 +324,68 @@ public class MyHBaseIntegrationTest {
 }
 ----
 
+Starting from HBase 2.5.0, it is recommended to use TestingHBaseCluster instead.
+
+[source,java]
+----
+public class MyHBaseIntegrationTest {
+
+  private TestingHBaseCluster cluster;
+
+  private Connection conn;
+
+  private Admin admin;
+
+  private TableName tableName = TableName.valueOf("MyTest");
+
+  byte[] CF = "CF".getBytes();
+  byte[] CQ1 = "CQ-1".getBytes();
+  byte[] CQ2 = "CQ-2".getBytes();
+
+  @Before
+  public void setUp() throws Exception {
+    cluster = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().build());
+    cluster.start();
+    conn = ConnectionFactory.createConnection(cluster.getConf());
+    admin = conn.getAdmin();
+    admin.createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    admin.close();
+    conn.close();
+    cluster.stop();
+  }
+
+  @Test
+  public void testInsert() throws Exception {
+    try (Table table = conn.getTable(tableName)) {
+      HBaseTestObj obj = new HBaseTestObj();
+      obj.setRowKey("ROWKEY-1");
+      obj.setData1("DATA-1");
+      obj.setData2("DATA-2");
+      MyHBaseDAO.insertRecord(table, obj);
+      Get get1 = new Get(Bytes.toBytes(obj.getRowKey()));
+      get1.addColumn(CF, CQ1);
+      Result result1 = table.get(get1);
+      assertEquals(Bytes.toString(result1.getRow()), obj.getRowKey());
+      assertEquals(Bytes.toString(result1.value()), obj.getData1());
+      Get get2 = new Get(Bytes.toBytes(obj.getRowKey()));
+      get2.addColumn(CF, CQ2);
+      Result result2 = table.get(get2);
+      assertEquals(Bytes.toString(result2.getRow()), obj.getRowKey());
+      assertEquals(Bytes.toString(result2.value()), obj.getData2());
+    }
+  }
+}
+----
+
 This code creates an HBase mini-cluster and starts it.
 Next, it creates a table called `MyTest` with one column family, `CF`.
 A record is inserted, a Get is performed from the same table, and the insertion is verified.
 
 NOTE: Starting the mini-cluster takes about 20-30 seconds, but that should be appropriate for integration testing.
 
-See the paper at link:http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and
-                Development] (2010) for more information about HBaseTestingUtility.
+See the paper at link:http://blog.sematext.com/2010/08/30/hbase-case-study-using-hbasetestingutility-for-local-testing-development/[HBase Case-Study: Using HBaseTestingUtility for Local Testing and Development] (2010) for more information about HBaseTestingUtility.
