@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -75,7 +77,7 @@ public class TestRegionLocationCaching {
   @Test
   public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations() throws Exception {
     TableName tableName = TableName.valueOf(name.getMethodName());
-    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY});
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
     ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
@@ -107,8 +109,8 @@ public class TestRegionLocationCaching {
     checkRegions(tableName, conn, regions, chosen);
   }
 
-  private void checkRegions(TableName tableName, ConnectionImplementation conn, List<RegionInfo> regions,
-    RegionInfo chosen) {
+  private void checkRegions(TableName tableName, ConnectionImplementation conn,
+    List<RegionInfo> regions, RegionInfo chosen) {
     for (RegionInfo region : regions) {
       RegionLocations fromCache = conn.getCachedLocation(tableName, region.getStartKey());
       if (region.equals(chosen)) {
