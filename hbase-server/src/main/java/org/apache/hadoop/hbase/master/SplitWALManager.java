@@ -153,12 +153,11 @@ public class SplitWALManager {
    */
   public ServerName acquireSplitWALWorker(Procedure<?> procedure)
     throws ProcedureSuspendedException {
-    Optional<ServerName> worker = splitWorkerAssigner.acquire();
+    Optional<ServerName> worker = splitWorkerAssigner.acquire(procedure);
     if (worker.isPresent()) {
       LOG.debug("Acquired split WAL worker={}", worker.get());
       return worker.get();
     }
-    splitWorkerAssigner.suspend(procedure);
     throw new ProcedureSuspendedException();
   }
 
@@ -168,10 +167,9 @@ public class SplitWALManager {
    * @param worker    worker which is about to release
    * @param scheduler scheduler which is to wake up the procedure event
    */
-  public void releaseSplitWALWorker(ServerName worker, MasterProcedureScheduler scheduler) {
+  public void releaseSplitWALWorker(ServerName worker) {
     LOG.debug("Release split WAL worker={}", worker);
     splitWorkerAssigner.release(worker);
-    splitWorkerAssigner.wake(scheduler);
   }
 
   /**

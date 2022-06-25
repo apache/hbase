@@ -51,7 +51,7 @@ public class WorkerAssigner implements ServerListener {
     }
   }
 
-  public synchronized Optional<ServerName> acquire() {
+  public synchronized Optional<ServerName> acquire(Procedure<?> proc) {
     List<ServerName> serverList = master.getServerManager().getOnlineServersList();
     Collections.shuffle(serverList);
     Optional<ServerName> worker = serverList.stream()
@@ -60,27 +60,23 @@ public class WorkerAssigner implements ServerListener {
       .findAny();
     worker.ifPresent(name -> currentWorkers.compute(name, (serverName,
       availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1));
+    event.suspend();
+    event.suspendIfNotReady(proc);
     return worker;
   }
 
   public synchronized void release(ServerName serverName) {
     currentWorkers.compute(serverName, (k, v) -> v == null ? null : v + 1);
-  }
-
-  public synchronized void suspend(Procedure<?> proc) {
-    event.suspend();
-    event.suspendIfNotReady(proc);
-  }
-
-  public synchronized void wake(MasterProcedureScheduler scheduler) {
     if (!event.isReady()) {
-      event.wake(scheduler);
+      event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
     }
   }
 
   @Override
   public void serverAdded(ServerName worker) {
-    this.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+    if (!event.isReady()) {
+      event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+    }
   }
 
   public synchronized void addUsedWorker(ServerName worker) {
