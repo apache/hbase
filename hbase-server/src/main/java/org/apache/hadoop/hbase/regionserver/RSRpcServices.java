@@ -3234,30 +3234,43 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     // Set the time limit to be half of the more restrictive timeout value (one of the
     // timeout values must be positive). In the event that both values are positive, the
     // more restrictive of the two is used to calculate the limit.
-    if (allowHeartbeatMessages && (scannerLeaseTimeoutPeriod > 0 || rpcTimeout > 0)) {
-      long timeLimitDelta;
-      if (scannerLeaseTimeoutPeriod > 0 && rpcTimeout > 0) {
-        timeLimitDelta = Math.min(scannerLeaseTimeoutPeriod, rpcTimeout);
-      } else {
-        timeLimitDelta = scannerLeaseTimeoutPeriod > 0 ? scannerLeaseTimeoutPeriod : rpcTimeout;
-      }
-      if (controller != null && controller.getCallTimeout() > 0) {
-        timeLimitDelta = Math.min(timeLimitDelta, controller.getCallTimeout());
-      }
+    if (allowHeartbeatMessages) {
       long now = EnvironmentEdgeManager.currentTime();
-      // if we can, subtract time already spent in rpc queue. otherwise we may still timeout
-      if (rpcCall != null) {
-        timeLimitDelta -= (now - rpcCall.getReceiveTime());
+      long remainingTimeout = getRemainingRpcTimeout(rpcCall, controller, now);
+      if (scannerLeaseTimeoutPeriod > 0 || remainingTimeout > 0) {
+        long timeLimitDelta;
+        if (scannerLeaseTimeoutPeriod > 0 && remainingTimeout > 0) {
+          timeLimitDelta = Math.min(scannerLeaseTimeoutPeriod, remainingTimeout);
+        } else {
+          timeLimitDelta =
+            scannerLeaseTimeoutPeriod > 0 ? scannerLeaseTimeoutPeriod : remainingTimeout;
+        }
+
+        // Use half of whichever timeout value was more restrictive... But don't allow
+        // the time limit to be less than the allowable minimum (could cause an
+        // immediate timeout before scanning any data).
+        timeLimitDelta = Math.max(timeLimitDelta / 2, minimumScanTimeLimitDelta);
+        return now + timeLimitDelta;
       }
-      // Use half of whichever timeout value was more restrictive... But don't allow
-      // the time limit to be less than the allowable minimum (could cause an
-      // immediatate timeout before scanning any data).
-      timeLimitDelta = Math.max(timeLimitDelta / 2, minimumScanTimeLimitDelta);
-      return now + timeLimitDelta;
     }
     // Default value of timeLimit is negative to indicate no timeLimit should be
     // enforced.
     return -1L;
+  }
+
+  private long getRemainingRpcTimeout(RpcCall call, HBaseRpcController controller, long now) {
+    long timeout;
+    if (controller != null && controller.getCallTimeout() > 0) {
+      timeout = controller.getCallTimeout();
+    } else if (rpcTimeout > 0) {
+      timeout = rpcTimeout;
+    } else {
+      return -1;
+    }
+    if (call != null) {
+      timeout -= (now - call.getReceiveTime());
+    }
+    return Math.max(0, timeout);
   }
 
   private void checkLimitOfRows(int numOfCompleteRows, int limitOfRows, boolean moreRows,
