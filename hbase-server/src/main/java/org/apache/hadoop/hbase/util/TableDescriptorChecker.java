@@ -61,11 +61,12 @@ public final class TableDescriptorChecker {
   }
 
   private static boolean shouldSanityCheck(final Configuration conf, final TableDescriptor td) {
-    if (conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
-      return true;
-    }
     String tableVal = td.getValue(TABLE_SANITY_CHECKS);
-    if (tableVal != null && Boolean.valueOf(tableVal)) {
+    // If table descriptor is explicitly overriding, return the same
+    if (tableVal != null) {
+      return Boolean.valueOf(tableVal);
+    }
+    if (conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
       return true;
     }
     return false;
@@ -124,11 +125,7 @@ public final class TableDescriptorChecker {
     }
 
     // Verify compaction policy
-    try {
-      checkCompactionPolicy(conf, td);
-    } catch (IOException e) {
-      warnOrThrowExceptionForFailure(false, e.getMessage(), e);
-    }
+    checkCompactionPolicy(conf, td);
     // check that we have at least 1 CF
     if (td.getColumnFamilyCount() == 0) {
       String message = "Table should have at least one column family.";
@@ -146,6 +143,12 @@ public final class TableDescriptorChecker {
     if (td.isReadOnly() && TableName.isMetaTableName(td.getTableName())) {
       warnOrThrowExceptionForFailure(false, "Meta table can't be set as read only.", null);
     }
+
+    // check replication scope
+    checkReplicationScope(conf, td);
+
+    // check bloom filter type
+    checkBloomFilterType(conf, td);
 
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
       if (hcd.getTimeToLive() <= 0) {
@@ -177,20 +180,6 @@ public final class TableDescriptorChecker {
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
 
-      // check replication scope
-      try {
-        checkReplicationScope(hcd);
-      } catch (IOException e) {
-        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-      }
-
-      // check bloom filter type
-      try {
-        checkBloomFilterType(hcd);
-      } catch (IOException e) {
-        warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
-      }
-
       // check data replication factor, it can be 0(default value) when user has not explicitly
       // set the value, in this case we use default replication factor set in the file system.
       if (hcd.getDFSReplication() < 0) {
@@ -208,79 +197,104 @@ public final class TableDescriptorChecker {
     }
   }
 
-  private static void checkReplicationScope(final ColumnFamilyDescriptor cfd) throws IOException {
-    // check replication scope
-    WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(cfd.getScope());
-    if (scop == null) {
-      String message = "Replication scope for column family " + cfd.getNameAsString() + " is "
-        + cfd.getScope() + " which is invalid.";
+  private static void checkReplicationScope(final Configuration conf, final TableDescriptor td)
+    throws IOException {
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
+    try {
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        // check replication scope
+        WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(cfd.getScope());
+        if (scop == null) {
+          String message = "Replication scope for column family " + cfd.getNameAsString() + " is "
+            + cfd.getScope() + " which is invalid.";
 
-      throw new DoNotRetryIOException(message);
+          throw new DoNotRetryIOException(message);
+        }
+      }
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
+
   }
 
-  private static void checkCompactionPolicy(Configuration conf, TableDescriptor td)
+  private static void checkCompactionPolicy(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // FIFO compaction has some requirements
-    // Actually FCP ignores periodic major compactions
-    String className = td.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
-    if (className == null) {
-      className = conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-        ExploringCompactionPolicy.class.getName());
-    }
-
-    int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
-    String sv = td.getValue(HStore.BLOCKING_STOREFILES_KEY);
-    if (sv != null) {
-      blockingFileCount = Integer.parseInt(sv);
-    } else {
-      blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
-    }
-
-    for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
-      String compactionPolicy =
-        hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
-      if (compactionPolicy == null) {
-        compactionPolicy = className;
-      }
-      if (!compactionPolicy.equals(FIFOCompactionPolicy.class.getName())) {
-        continue;
-      }
-      // FIFOCompaction
-      String message = null;
-
-      // 1. Check TTL
-      if (hcd.getTimeToLive() == ColumnFamilyDescriptorBuilder.DEFAULT_TTL) {
-        message = "Default TTL is not supported for FIFO compaction";
-        throw new IOException(message);
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
+    try {
+      // FIFO compaction has some requirements
+      // Actually FCP ignores periodic major compactions
+      String className = td.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+      if (className == null) {
+        className = conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+          ExploringCompactionPolicy.class.getName());
       }
 
-      // 2. Check min versions
-      if (hcd.getMinVersions() > 0) {
-        message = "MIN_VERSION > 0 is not supported for FIFO compaction";
-        throw new IOException(message);
-      }
-
-      // 3. blocking file count
-      sv = hcd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+      int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
+      String sv = td.getValue(HStore.BLOCKING_STOREFILES_KEY);
       if (sv != null) {
         blockingFileCount = Integer.parseInt(sv);
+      } else {
+        blockingFileCount = conf.getInt(HStore.BLOCKING_STOREFILES_KEY, blockingFileCount);
       }
-      if (blockingFileCount < 1000) {
-        message =
-          "Blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
-            + " is below recommended minimum of 1000 for column family " + hcd.getNameAsString();
-        throw new IOException(message);
+
+      for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
+        String compactionPolicy =
+          hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+        if (compactionPolicy == null) {
+          compactionPolicy = className;
+        }
+        if (!compactionPolicy.equals(FIFOCompactionPolicy.class.getName())) {
+          continue;
+        }
+        // FIFOCompaction
+        String message = null;
+
+        // 1. Check TTL
+        if (hcd.getTimeToLive() == ColumnFamilyDescriptorBuilder.DEFAULT_TTL) {
+          message = "Default TTL is not supported for FIFO compaction";
+          throw new IOException(message);
+        }
+
+        // 2. Check min versions
+        if (hcd.getMinVersions() > 0) {
+          message = "MIN_VERSION > 0 is not supported for FIFO compaction";
+          throw new IOException(message);
+        }
+
+        // 3. blocking file count
+        sv = hcd.getConfigurationValue(HStore.BLOCKING_STOREFILES_KEY);
+        if (sv != null) {
+          blockingFileCount = Integer.parseInt(sv);
+        }
+        if (blockingFileCount < 1000) {
+          message =
+            "Blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
+              + " is below recommended minimum of 1000 for column family " + hcd.getNameAsString();
+          throw new IOException(message);
+        }
       }
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
   }
 
-  private static void checkBloomFilterType(ColumnFamilyDescriptor cfd) throws IOException {
-    Configuration conf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
+  private static void checkBloomFilterType(final Configuration conf, final TableDescriptor td)
+    throws IOException {
+    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
+    boolean logWarn = !shouldSanityCheck(conf, td);
     try {
-      BloomFilterUtil.getBloomFilterParam(cfd.getBloomFilterType(), conf);
-    } catch (IllegalArgumentException e) {
-      throw new DoNotRetryIOException("Failed to get bloom filter param", e);
+      for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
+        Configuration cfdConf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
+        try {
+          BloomFilterUtil.getBloomFilterParam(cfd.getBloomFilterType(), cfdConf);
+        } catch (IllegalArgumentException e) {
+          throw new DoNotRetryIOException("Failed to get bloom filter param", e);
+        }
+      }
+    } catch (IOException e) {
+      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
     }
   }
 
