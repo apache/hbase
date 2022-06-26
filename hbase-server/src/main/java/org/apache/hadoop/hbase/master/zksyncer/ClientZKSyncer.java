@@ -196,12 +196,16 @@ public abstract class ClientZKSyncer extends ZKListener {
       LOG.debug("Delete remote " + node + ", client zk wather: " + clientZkWatcher);
       try {
         ZKUtil.deleteNode(clientZkWatcher, node);
+        break;
       } catch (KeeperException e) {
+        if (e.code() == KeeperException.Code.NONODE) {
+          LOG.debug("Node is already deleted, give up", e);
+          break;
+        }
         LOG.debug("Failed to delete node from client ZK, will retry later", e);
         if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
           reconnectAfterExpiration();
         }
-
       }
     }
   }
