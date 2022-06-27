@@ -76,7 +76,7 @@ public final class ReplicationSinkTrackerTableCreator {
     .newBuilder(REPLICATION_SINK_TRACKER_TABLE_NAME).setRegionReplication(1)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(REPLICATION_SINK_TRACKER_INFO_FAMILY)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
-      .setTimeToLive((int)TTL).build());
+      .setTimeToLive((int) TTL).build());
 
   /*
    * We will create this table only if hbase.regionserver.replication.sink.tracker.enabled is

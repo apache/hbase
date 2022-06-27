@@ -57,7 +57,7 @@ public final class WALEventTrackerTableCreator {
     .newBuilder(WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME).setRegionReplication(1)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(WAL_EVENT_TRACKER_INFO_FAMILY)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
-      .setTimeToLive((int)TTL).build());
+      .setTimeToLive((int) TTL).build());
 
   /* Private default constructor */
   private WALEventTrackerTableCreator() {
