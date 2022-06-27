@@ -3270,7 +3270,9 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     if (call != null) {
       timeout -= (now - call.getReceiveTime());
     }
-    return Math.max(0, timeout);
+    // getTimeLimit ignores values <= 0, but timeout may now be negative if queue time was high.
+    // return minimum value here in that case so we count this in calculating the final delta.
+    return Math.max(minimumScanTimeLimitDelta, timeout);
   }
 
   private void checkLimitOfRows(int numOfCompleteRows, int limitOfRows, boolean moreRows,
