@@ -24,13 +24,15 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
@@ -63,7 +65,7 @@ public class TestClientScannerTimeouts {
     HBaseClassTestRule.forClass(TestClientScannerTimeouts.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerTimeouts.class);
-  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static AsyncConnection ASYNC_CONN;
   private static Connection CONN;
@@ -80,8 +82,7 @@ public class TestClientScannerTimeouts {
   private static final int metaScanTimeout = 6 * rpcTimeout;
   private static final int CLIENT_RETRIES_NUMBER = 3;
 
-  private static Table table;
-  private static AsyncTable<AdvancedScanResultConsumer> asyncTable;
+  private static TableName tableName;
 
   @Rule
   public TestName name = new TestName();
@@ -101,7 +102,7 @@ public class TestClientScannerTimeouts {
     conf.setInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, metaScanTimeout);
     conf.setInt(HBASE_CLIENT_META_SCANNER_TIMEOUT, metaScanTimeout);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(conf).get();
-    CONN = ASYNC_CONN.toConnection();
+    CONN = ConnectionFactory.createConnection(conf);
   }
 
   @AfterClass
@@ -118,11 +119,10 @@ public class TestClientScannerTimeouts {
     if (isSystemTable) {
       nameAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR + ":" + nameAsString;
     }
-    final TableName tableName = TableName.valueOf(nameAsString);
-
+    tableName = TableName.valueOf(nameAsString);
     TEST_UTIL.createTable(tableName, FAMILY);
-    table = CONN.getTable(tableName);
-    asyncTable = ASYNC_CONN.getTable(tableName);
+
+    Table table = CONN.getTable(tableName);
     putToTable(table, ROW0);
     putToTable(table, ROW1);
     putToTable(table, ROW2);
@@ -157,7 +157,7 @@ public class TestClientScannerTimeouts {
    */
   @Test
   public void testRetryOutOfOrderScannerNextException() throws IOException {
-    expectRetryOutOfOrderScannerNext(this::getScanner);
+    expectRetryOutOfOrderScannerNext(() -> getScanner(CONN));
   }
 
   /**
@@ -169,13 +169,21 @@ public class TestClientScannerTimeouts {
   }
 
   /**
-   * verify that we honor the {@link HConstants#HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD} for normal
-   * scans.
+   * verify that we honor the {@link HConstants#HBASE_RPC_READ_TIMEOUT_KEY} for normal scans. Use a
+   * special connection which has retries disabled, because otherwise the scanner will retry the
+   * timed out next() call and mess up the test.
    */
   @Test
   public void testNormalScanTimeoutOnNext() throws IOException {
     setup(false);
-    expectTimeoutOnNext(scanTimeout, this::getScanner);
+    // Unlike AsyncTable, Table's ResultScanner.next() call uses rpcTimeout and
+    // will retry until scannerTimeout. This makes it more difficult to test the timeouts
+    // of normal next() calls. So we use a separate connection here which has retries disabled.
+    Configuration confNoRetries = new Configuration(CONN.getConfiguration());
+    confNoRetries.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    try (Connection conn = ConnectionFactory.createConnection(confNoRetries)) {
+      expectTimeoutOnNext(rpcTimeout, () -> getScanner(conn));
+    }
   }
 
   /**
@@ -326,7 +334,8 @@ public class TestClientScannerTimeouts {
       scanner.next();
       fail("Expected CallTimeoutException");
     } catch (RetriesExhaustedException e) {
-      assertTrue("Expected CallTimeoutException", e.getCause() instanceof CallTimeoutException);
+      assertTrue("Expected CallTimeoutException", e.getCause() instanceof CallTimeoutException
+        || e.getCause() instanceof SocketTimeoutException);
     }
     expectTimeout(start, timeout);
   }
@@ -339,24 +348,31 @@ public class TestClientScannerTimeouts {
     long start = System.nanoTime();
     try {
       scannerSupplier.get().next();
-      fail("Expected CallTimeoutException");
+      fail("Expected SocketTimeoutException or CallTimeoutException");
     } catch (RetriesExhaustedException e) {
-      assertTrue("Expected CallTimeoutException, but was " + e.getCause(),
-        e.getCause() instanceof CallTimeoutException);
+      LOG.info("Got error", e);
+      assertTrue("Expected SocketTimeoutException or CallTimeoutException, but was " + e.getCause(),
+        e.getCause() instanceof CallTimeoutException
+          || e.getCause() instanceof SocketTimeoutException);
     }
     expectTimeout(start, timeout);
   }
 
   private void expectTimeout(long start, int timeout) {
-    long duration = System.nanoTime() - start;
+    long duration = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+    LOG.info("Expected duration >= {}, and got {}", timeout, duration);
     assertTrue("Expected duration >= " + timeout + ", but was " + duration, duration >= timeout);
   }
 
   private ResultScanner getScanner() {
+    return getScanner(CONN);
+  }
+
+  private ResultScanner getScanner(Connection conn) {
     Scan scan = new Scan();
     scan.setCaching(1);
     try {
-      return table.getScanner(scan);
+      return conn.getTable(tableName).getScanner(scan);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -365,7 +381,7 @@ public class TestClientScannerTimeouts {
   private ResultScanner getAsyncScanner() {
     Scan scan = new Scan();
     scan.setCaching(1);
-    return asyncTable.getScanner(scan);
+    return ASYNC_CONN.getTable(tableName).getScanner(scan);
   }
 
   private void putToTable(Table ht, byte[] rowkey) throws IOException {
@@ -374,7 +390,8 @@ public class TestClientScannerTimeouts {
     ht.put(put);
   }
 
-  private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
+  private static class RegionServerWithScanTimeout
+    extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
     public RegionServerWithScanTimeout(Configuration conf)
       throws IOException, InterruptedException {
       super(conf);
@@ -424,6 +441,7 @@ public class TestClientScannerTimeouts {
     public ScanResponse scan(final RpcController controller, final ScanRequest request)
       throws ServiceException {
       if (request.hasScannerId()) {
+        LOG.info("Got request {}", request);
         ScanResponse scanResponse = super.scan(controller, request);
         if (tableScannerId != request.getScannerId() || request.getCloseScanner()) {
           return scanResponse;

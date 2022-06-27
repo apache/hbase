@@ -35,6 +35,8 @@ abstract class TableBuilderBase implements TableBuilder {
   protected int readRpcTimeout;
 
   protected int writeRpcTimeout;
+  protected final int scanReadRpcTimeout;
+  protected int scanTimeout;
 
   TableBuilderBase(TableName tableName, ConnectionConfiguration connConf) {
     if (tableName == null) {
@@ -45,8 +47,11 @@ abstract class TableBuilderBase implements TableBuilder {
       ? connConf.getMetaOperationTimeout()
       : connConf.getOperationTimeout();
     this.rpcTimeout = connConf.getRpcTimeout();
-    this.readRpcTimeout =
-      tableName.isSystemTable() ? connConf.getMetaReadRpcTimeout() : connConf.getReadRpcTimeout();
+    this.readRpcTimeout = connConf.getReadRpcTimeout();
+    this.scanReadRpcTimeout =
+      tableName.isSystemTable() ? connConf.getMetaReadRpcTimeout() : readRpcTimeout;
+    this.scanTimeout =
+      tableName.isSystemTable() ? connConf.getMetaScanTimeout() : connConf.getScanTimeout();
     this.writeRpcTimeout = connConf.getWriteRpcTimeout();
   }
 
