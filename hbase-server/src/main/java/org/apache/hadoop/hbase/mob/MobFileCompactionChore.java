@@ -145,7 +145,7 @@ public class MobFileCompactionChore extends ScheduledChore {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*(/src/test/.*|MobFileCompactionChore).java")
   public void performMajorCompactionInBatches(Admin admin, TableDescriptor htd,
     ColumnFamilyDescriptor hcd) throws IOException, InterruptedException {
 
