@@ -51,13 +51,13 @@ public final class WALEventTrackerTableCreator {
   public static final byte[] WAL_EVENT_TRACKER_INFO_FAMILY =
     Bytes.toBytes(WAL_EVENT_TRACKER_INFO_FAMILY_STR);
 
-  private static final Long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
+  private static final long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
 
   private static final TableDescriptorBuilder TABLE_DESCRIPTOR_BUILDER = TableDescriptorBuilder
     .newBuilder(WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME).setRegionReplication(1)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(WAL_EVENT_TRACKER_INFO_FAMILY)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
-      .setTimeToLive(TTL.intValue()).build());
+      .setTimeToLive((int)TTL).build());
 
   /* Private default constructor */
   private WALEventTrackerTableCreator() {

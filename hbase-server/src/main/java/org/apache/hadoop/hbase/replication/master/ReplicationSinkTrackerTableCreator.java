@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 public final class ReplicationSinkTrackerTableCreator {
   private static final Logger LOG =
     LoggerFactory.getLogger(ReplicationSinkTrackerTableCreator.class);
-  private static final Long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
+  private static final long TTL = TimeUnit.DAYS.toSeconds(365); // 1 year in seconds
 
   public static final byte[] RS_COLUMN = Bytes.toBytes("region_server_name");
   public static final byte[] WAL_NAME_COLUMN = Bytes.toBytes("wal_name");
@@ -76,7 +76,7 @@ public final class ReplicationSinkTrackerTableCreator {
     .newBuilder(REPLICATION_SINK_TRACKER_TABLE_NAME).setRegionReplication(1)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(REPLICATION_SINK_TRACKER_INFO_FAMILY)
       .setScope(HConstants.REPLICATION_SCOPE_LOCAL).setBlockCacheEnabled(false).setMaxVersions(1)
-      .setTimeToLive(TTL.intValue()).build());
+      .setTimeToLive((int)TTL).build());
 
   /*
    * We will create this table only if hbase.regionserver.replication.sink.tracker.enabled is
