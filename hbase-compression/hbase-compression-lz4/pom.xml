@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-compression</artifactId>
-    <version>3.0.0-alpha-3</version>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-compression-lz4</artifactId>
