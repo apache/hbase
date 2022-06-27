@@ -220,8 +220,6 @@ public final class TableDescriptorChecker {
 
   private static void checkCompactionPolicy(final Configuration conf, final TableDescriptor td)
     throws IOException {
-    // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
     try {
       // FIFO compaction has some requirements
       // Actually FCP ignores periodic major compactions
@@ -276,7 +274,7 @@ public final class TableDescriptorChecker {
         }
       }
     } catch (IOException e) {
-      warnOrThrowExceptionForFailure(logWarn, e.getMessage(), e);
+      warnOrThrowExceptionForFailure(false, e.getMessage(), e);
     }
   }
 
