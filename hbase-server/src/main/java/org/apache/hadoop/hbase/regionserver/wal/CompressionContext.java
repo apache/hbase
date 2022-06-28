@@ -71,7 +71,7 @@ public class CompressionContext {
    */
   static class ValueCompressor {
 
-    static final int IO_BUFFER_SIZE = 4096;
+    static final int IO_BUFFER_SIZE = 64 * 1024; // bigger buffer improves large edit compress ratio
 
     private final Compression.Algorithm algorithm;
     private Compressor compressor;
@@ -97,12 +97,12 @@ public class CompressionContext {
           compressor = algorithm.getCompressor();
         }
         compressedOut = algorithm.createCompressionStream(lowerOut, compressor, IO_BUFFER_SIZE);
-      } else {
-        lowerOut.reset();
       }
       compressedOut.write(valueArray, valueOffset, valueLength);
       compressedOut.flush();
-      return lowerOut.toByteArray();
+      final byte[] compressed = lowerOut.toByteArray();
+      lowerOut.reset(); // Reset now to minimize the overhead of keeping around the BAOS
+      return compressed;
     }
 
     public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
