@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -73,7 +72,7 @@ public class WorkerAssigner implements ServerListener {
   }
 
   @Override
-  public void serverAdded(ServerName worker) {
+  public synchronized void serverAdded(ServerName worker) {
     if (!event.isReady()) {
       event.wake(master.getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
     }

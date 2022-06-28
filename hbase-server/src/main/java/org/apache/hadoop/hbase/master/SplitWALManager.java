@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.SplitWALProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
@@ -165,7 +164,6 @@ public class SplitWALManager {
    * After the worker finished the split WAL task, it will release the worker, and wake up all the
    * suspend procedures in the ProcedureEvent
    * @param worker    worker which is about to release
-   * @param scheduler scheduler which is to wake up the procedure event
    */
   public void releaseSplitWALWorker(ServerName worker) {
     LOG.debug("Release split WAL worker={}", worker);
