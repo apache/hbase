@@ -63,7 +63,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
    */
   private static final List<byte[]> UNDELETABLE_META_COLUMNFAMILIES =
     Collections.unmodifiableList(Arrays.asList(HConstants.CATALOG_FAMILY, HConstants.TABLE_FAMILY,
-      HConstants.REPLICATION_BARRIER_FAMILY));
+      HConstants.REPLICATION_BARRIER_FAMILY, HConstants.NAMESPACE_FAMILY));
 
   public ModifyTableProcedure() {
     super();
