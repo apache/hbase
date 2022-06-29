@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" xmlns="https://maven.apache.org/POM/4.0.0" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -33,7 +32,7 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>23</version>
-    <relativePath/>
+    <relativePath />
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
@@ -41,7 +40,7 @@
   <version>2.4.6.7.2.16.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
-  <description>Apache HBase is the Hadoop database. Use it when you need
+  <description>Apache HBase&#153; is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.</description>
@@ -630,7 +629,7 @@
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.22.2</spotless.version>
-    <hbase-thirdparty.version>4.1.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.1.7.2.16.0-SNAPSHOT</hbase-thirdparty.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
@@ -2251,9 +2250,9 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
-            <trimTrailingWhitespace/>
-            <endWithNewline/>
-            <removeUnusedImports/>
+            <trimTrailingWhitespace />
+            <endWithNewline />
+            <removeUnusedImports />
           </java>
           <pom>
             <sortPom>
@@ -2279,8 +2278,8 @@
                 <exclude>**/dependency-reduced-pom.xml</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
-              <trimTrailingWhitespace/>
-              <endWithNewline/>
+              <trimTrailingWhitespace />
+              <endWithNewline />
             </format>
             <format>
               <!--
