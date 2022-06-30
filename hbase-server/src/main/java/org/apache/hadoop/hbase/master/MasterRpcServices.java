@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
@@ -1753,10 +1752,15 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       byte[] regionName = request.getRegion().getValue().toByteArray();
       TableName tableName = RegionInfo.getTable(regionName);
+      // TODO: support CompactType.MOB
       // if the region is a mob region, do the mob file compaction.
       if (MobUtils.isMobRegionName(tableName, regionName)) {
         checkHFileFormatVersionForMob();
-        return compactMob(request, tableName);
+        // TODO: support CompactType.MOB
+        // HBASE-23571
+        LOG.warn("CompactType.MOB is not supported yet, will run regular compaction."
+          + " Refer to HBASE-23571.");
+        return super.compactRegion(controller, request);
       } else {
         return super.compactRegion(controller, request);
       }
@@ -1815,56 +1819,6 @@ public class MasterRpcServices extends RSRpcServices
       }
     }
     return builder.build();
-  }
-
-  /**
-   * Compacts the mob files in the current table.
-   * @param request   the request.
-   * @param tableName the current table name.
-   * @return The response of the mob file compaction. n
-   */
-  private CompactRegionResponse compactMob(final CompactRegionRequest request, TableName tableName)
-    throws IOException {
-    if (!master.getTableStateManager().isTableState(tableName, TableState.State.ENABLED)) {
-      throw new DoNotRetryIOException("Table " + tableName + " is not enabled");
-    }
-    boolean allFiles = false;
-    List<ColumnFamilyDescriptor> compactedColumns = new ArrayList<>();
-    ColumnFamilyDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
-    byte[] family = null;
-    if (request.hasFamily()) {
-      family = request.getFamily().toByteArray();
-      for (ColumnFamilyDescriptor hcd : hcds) {
-        if (Bytes.equals(family, hcd.getName())) {
-          if (!hcd.isMobEnabled()) {
-            LOG.error("Column family " + hcd.getNameAsString() + " is not a mob column family");
-            throw new DoNotRetryIOException(
-              "Column family " + hcd.getNameAsString() + " is not a mob column family");
-          }
-          compactedColumns.add(hcd);
-        }
-      }
-    } else {
-      for (ColumnFamilyDescriptor hcd : hcds) {
-        if (hcd.isMobEnabled()) {
-          compactedColumns.add(hcd);
-        }
-      }
-    }
-    if (compactedColumns.isEmpty()) {
-      LOG.error("No mob column families are assigned in the mob compaction");
-      throw new DoNotRetryIOException("No mob column families are assigned in the mob compaction");
-    }
-    if (request.hasMajor() && request.getMajor()) {
-      allFiles = true;
-    }
-    String familyLogMsg = (family != null) ? Bytes.toString(family) : "";
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("User-triggered mob compaction requested for table: " + tableName.getNameAsString()
-        + " for column family: " + familyLogMsg);
-    }
-    master.requestMobCompaction(tableName, compactedColumns, allFiles);
-    return CompactRegionResponse.newBuilder().build();
   }
 
   @Override

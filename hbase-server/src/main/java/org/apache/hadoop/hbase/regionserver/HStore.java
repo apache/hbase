@@ -1567,7 +1567,7 @@ public class HStore
     finishCompactionRequest(compaction.getRequest());
   }
 
-  private void finishCompactionRequest(CompactionRequestImpl cr) {
+  protected void finishCompactionRequest(CompactionRequestImpl cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);

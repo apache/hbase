@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -57,16 +58,6 @@ public class StoreFileInfo implements Configurable {
 
   /** Regex that will work for hfiles */
   private static final Pattern HFILE_NAME_PATTERN = Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
-
-  /**
-   * A non-capture group, for del files, so that this can be embedded. A del file has (_del) as
-   * suffix.
-   */
-  public static final String DELFILE_NAME_REGEX = "[0-9a-f]+(?:_del)";
-
-  /** Regex that will work for del files */
-  private static final Pattern DELFILE_NAME_PATTERN =
-    Pattern.compile("^(" + DELFILE_NAME_REGEX + ")");
 
   /**
    * Regex that will work for straight reference names ({@code <hfile>.<parentEncRegion>}) and
@@ -159,7 +150,7 @@ public class StoreFileInfo implements Configurable {
         this.link = null;
       }
       LOG.trace("{} is a {} reference to {}", p, reference.getFileRegion(), referencePath);
-    } else if (isHFile(p)) {
+    } else if (isHFile(p) || isMobFile(p) || isMobRefFile(p)) {
       // HFile
       if (fileStatus != null) {
         this.createdTimestamp = fileStatus.getModificationTime();
@@ -444,20 +435,38 @@ public class StoreFileInfo implements Configurable {
   }
 
   /**
-   * @param path Path to check.
-   * @return True if the path has format of a del file.
+   * Checks if the file is a MOB file
+   * @param path path to a file
+   * @return true, if - yes, false otherwise
    */
-  public static boolean isDelFile(final Path path) {
-    return isDelFile(path.getName());
+  public static boolean isMobFile(final Path path) {
+    String fileName = path.getName();
+    String[] parts = fileName.split(MobUtils.SEP);
+    if (parts.length != 2) {
+      return false;
+    }
+    Matcher m = HFILE_NAME_PATTERN.matcher(parts[0]);
+    Matcher mm = HFILE_NAME_PATTERN.matcher(parts[1]);
+    return m.matches() && mm.matches();
   }
 
   /**
-   * @param fileName Sting version of path to validate.
-   * @return True if the file name has format of a del file.
+   * Checks if the file is a MOB reference file, created by snapshot
+   * @param path path to a file
+   * @return true, if - yes, false otherwise
    */
-  public static boolean isDelFile(final String fileName) {
-    Matcher m = DELFILE_NAME_PATTERN.matcher(fileName);
-    return m.matches() && m.groupCount() > 0;
+  public static boolean isMobRefFile(final Path path) {
+    String fileName = path.getName();
+    int lastIndex = fileName.lastIndexOf(MobUtils.SEP);
+    if (lastIndex < 0) {
+      return false;
+    }
+    String[] parts = new String[2];
+    parts[0] = fileName.substring(0, lastIndex);
+    parts[1] = fileName.substring(lastIndex + 1);
+    String name = parts[0] + "." + parts[1];
+    Matcher m = REF_NAME_PATTERN.matcher(name);
+    return m.matches() && m.groupCount() > 1;
   }
 
   /**
@@ -575,10 +584,16 @@ public class StoreFileInfo implements Configurable {
 
   @Override
   public boolean equals(Object that) {
-    if (this == that) return true;
-    if (that == null) return false;
+    if (this == that) {
+      return true;
+    }
+    if (that == null) {
+      return false;
+    }
 
-    if (!(that instanceof StoreFileInfo)) return false;
+    if (!(that instanceof StoreFileInfo)) {
+      return false;
+    }
 
     StoreFileInfo o = (StoreFileInfo) that;
     if (initialPath != null && o.initialPath == null) return false;
@@ -591,9 +606,15 @@ public class StoreFileInfo implements Configurable {
     if (reference != o.reference && reference != null && !reference.equals(o.reference))
       return false;
 
-    if (link != null && o.link == null) return false;
-    if (link == null && o.link != null) return false;
-    if (link != o.link && link != null && !link.equals(o.link)) return false;
+    if (link != null && o.link == null) {
+      return false;
+    }
+    if (link == null && o.link != null) {
+      return false;
+    }
+    if (link != o.link && link != null && !link.equals(o.link)) {
+      return false;
+    }
 
     return true;
   };

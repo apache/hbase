@@ -209,6 +209,11 @@ public class HFileWriterImpl implements HFile.Writer {
     HFile.updateWriteLatency(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
+  public long getPos() throws IOException {
+    return outputStream.getPos();
+
+  }
+
   /**
    * Checks that the given Cell's key does not violate the key order.
    * @param cell Cell whose key to check.

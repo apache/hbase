@@ -389,7 +389,7 @@ public class BaseTestHBaseFsck {
     String startKey = mobFileName.getStartKey();
     String date = mobFileName.getDate();
     return MobFileName
-      .create(startKey, date, TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""))
+      .create(startKey, date, TEST_UTIL.getRandomUUID().toString().replaceAll("-", ""), "abcdef")
       .getFileName();
   }
 
