@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -66,6 +68,13 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
   private long mobCellValueSizeThreshold = 0;
   private Path targetPath;
   private HMobStore mobStore;
+  // MOB file reference set
+  static ThreadLocal<Set<String>> mobRefSet = new ThreadLocal<Set<String>>() {
+    @Override
+    protected Set<String> initialValue() {
+      return new HashSet<String>();
+    }
+  };
 
   public DefaultMobStoreFlusher(Configuration conf, HStore store) throws IOException {
     super(conf, store);
@@ -183,6 +192,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       throughputController.start(flushName);
     }
     IOException ioe = null;
+    // Clear all past MOB references
+    mobRefSet.get().clear();
     try {
       do {
         hasMore = scanner.next(cells, scannerContext);
@@ -201,7 +212,6 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
               mobFileWriter.append(c);
               mobSize += c.getValueLength();
               mobCount++;
-
               // append the tags to the KeyValue.
               // The key is same, the value is the filename of the mob file
               Cell reference =
@@ -241,9 +251,12 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       status.setStatus("Flushing mob file " + store + ": closing flushed file");
       mobFileWriter.close();
       mobStore.commitFile(mobFileWriter.getPath(), targetPath);
+      LOG.debug("Flush store file: {}, store: {}", writer.getPath(), getStoreInfo());
       mobStore.updateMobFlushCount();
       mobStore.updateMobFlushedCellsCount(mobCount);
       mobStore.updateMobFlushedCellsSize(mobSize);
+      // Add mob reference to store file metadata
+      mobRefSet.get().add(mobFileWriter.getPath().getName());
     } else {
       try {
         status.setStatus("Flushing mob file " + store + ": no mob cells, closing flushed file");
@@ -254,5 +267,23 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         LOG.error("Failed to delete the temp mob file", e);
       }
     }
+  }
+
+  @Override
+  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum, MonitoredTask status)
+    throws IOException {
+    // Write out the log sequence number that corresponds to this output
+    // hfile. Also write current time in metadata as minFlushTime.
+    // The hfile is current up to and including cacheFlushSeqNum.
+    status.setStatus("Flushing " + store + ": appending metadata");
+    writer.appendMetadata(cacheFlushSeqNum, false);
+    writer.appendMobMetadata(mobRefSet.get());
+    status.setStatus("Flushing " + store + ": closing flushed file");
+    writer.close();
+  }
+
+  private String getStoreInfo() {
+    return String.format("[table=%s family=%s region=%s]", store.getTableName().getNameAsString(),
+      store.getColumnFamilyName(), store.getRegionInfo().getEncodedName());
   }
 }

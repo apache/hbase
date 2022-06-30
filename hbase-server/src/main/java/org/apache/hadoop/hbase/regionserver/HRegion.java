@@ -1974,7 +1974,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.htableDescriptor;
   }
 
-  void setTableDescriptor(TableDescriptor desc) {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setTableDescriptor(TableDescriptor desc) {
     htableDescriptor = desc;
   }
 
