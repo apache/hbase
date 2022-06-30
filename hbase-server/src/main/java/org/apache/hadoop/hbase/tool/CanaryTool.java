@@ -146,6 +146,7 @@ public class CanaryTool implements Tool, Canary {
   public int checkRegions(String[] targets) throws Exception {
     String configuredReadTableTimeoutsStr = conf.get(HBASE_CANARY_REGION_READ_TABLE_TIMEOUT);
     try {
+      LOG.info("Canary tool is running in Region mode");
       if (configuredReadTableTimeoutsStr != null) {
         populateReadTableTimeoutsMap(configuredReadTableTimeoutsStr);
       }
@@ -159,12 +160,14 @@ public class CanaryTool implements Tool, Canary {
   @Override
   public int checkRegionServers(String[] targets) throws Exception {
     regionServerMode = true;
+    LOG.info("Canary tool is running in RegionServer mode");
     return runMonitor(targets);
   }
 
   @Override
   public int checkZooKeeper() throws Exception {
     zookeeperMode = true;
+    LOG.info("Canary tool is running in ZooKeeper mode");
     return runMonitor(null);
   }
 
