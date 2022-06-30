@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -100,6 +101,24 @@ public class TestSeparateClientZKCluster {
     FileUtils.deleteDirectory(clientZkDir);
   }
 
+  @Before
+  public void setUp() throws IOException {
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      waitForNewMasterUpAndAddressSynced(admin);
+    }
+  }
+
+  private void waitForNewMasterUpAndAddressSynced(Admin admin) {
+    TEST_UTIL.waitFor(30000, () -> {
+      try {
+        return admin.listNamespaces().length > 0;
+      } catch (Exception e) {
+        LOG.warn("failed to list namespaces", e);
+        return false;
+      }
+    });
+  }
+
   @Test
   public void testBasicOperation() throws Exception {
     TableName tn = name.getTableName();
@@ -139,7 +158,7 @@ public class TestSeparateClientZKCluster {
         () -> cluster.getMaster() != null && cluster.getMaster().isInitialized());
       LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
-      assertTrue(admin.balance(BalanceRequest.defaultInstance()).isBalancerRan());
+      waitForNewMasterUpAndAddressSynced(admin);
     }
   }
 
