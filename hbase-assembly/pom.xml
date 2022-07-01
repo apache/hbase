@@ -230,7 +230,6 @@
     <dependency>
       <groupId>io.opentelemetry.javaagent</groupId>
       <artifactId>opentelemetry-javaagent</artifactId>
-      <classifier>all</classifier>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
