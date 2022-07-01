@@ -23,6 +23,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.util.AbstractReferenceCounted;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetectorFactory;
+import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakTracker;
 
 /**
  * Maintain an reference count integer inside to track life cycle of {@link ByteBuff}, if the
@@ -31,7 +34,10 @@ import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
 @InterfaceAudience.Private
 public class RefCnt extends AbstractReferenceCounted {
 
-  private Recycler recycler = ByteBuffAllocator.NONE;
+  private static final ResourceLeakDetector<RefCnt> detector =
+    ResourceLeakDetectorFactory.instance().newResourceLeakDetector(RefCnt.class);
+  private final Recycler recycler;
+  private final ResourceLeakTracker<RefCnt> leak;
 
   /**
    * Create an {@link RefCnt} with an initial reference count = 1. If the reference count become
@@ -49,15 +55,65 @@ public class RefCnt extends AbstractReferenceCounted {
 
   public RefCnt(Recycler recycler) {
     this.recycler = recycler;
+    this.leak = recycler == ByteBuffAllocator.NONE ? null : detector.track(this);
+  }
+
+  @Override
+  public ReferenceCounted retain() {
+    maybeRecord();
+    return super.retain();
+  }
+
+  @Override
+  public ReferenceCounted retain(int increment) {
+    maybeRecord();
+    return super.retain(increment);
+  }
+
+  @Override
+  public boolean release() {
+    maybeRecord();
+    return super.release();
+  }
+
+  @Override
+  public boolean release(int decrement) {
+    maybeRecord();
+    return super.release(decrement);
   }
 
   @Override
   protected final void deallocate() {
     this.recycler.free();
+    if (leak != null) {
+      this.leak.close(this);
+    }
+  }
+
+  @Override
+  public RefCnt touch() {
+    maybeRecord();
+    return this;
   }
 
   @Override
   public final ReferenceCounted touch(Object hint) {
-    throw new UnsupportedOperationException();
+    maybeRecord(hint);
+    return this;
+  }
+
+  // Visible for testing
+  public Recycler getRecycler() {
+    return recycler;
+  }
+
+  private void maybeRecord() {
+    maybeRecord(null);
+  }
+
+  private void maybeRecord(Object hint) {
+    if (leak != null) {
+      leak.record(hint);
+    }
   }
 }

@@ -548,6 +548,27 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   }
 
   /**
+   * Calling this method in strategic locations where ByteBuffs are referenced may help diagnose
+   * potential buffer leaks. We pass the buffer itself as a default hint, but one can use
+   * {@link #touch(Object)} to pass their own hint as well.
+   */
+  @Override
+  public ByteBuff touch() {
+    return touch(this);
+  }
+
+  @Override
+  public ByteBuff touch(Object hint) {
+    refCnt.touch(hint);
+    return this;
+  }
+
+  // Visible for testing
+  public RefCnt getRefCnt() {
+    return refCnt;
+  }
+
+  /**
    * Make this private because we don't want to expose the refCnt related wrap method to upstream.
    */
   private static ByteBuff wrap(List<ByteBuffer> buffers, RefCnt refCnt) {

@@ -418,6 +418,22 @@ public class HFileBlock implements Cacheable {
     return buf.release();
   }
 
+  /**
+   * Calling this method in strategic locations where HFileBlocks are referenced may help diagnose
+   * potential buffer leaks. We pass the block itself as a default hint, but one can use
+   * {@link #touch(Object)} to pass their own hint as well.
+   */
+  @Override
+  public HFileBlock touch() {
+    return touch(this);
+  }
+
+  @Override
+  public HFileBlock touch(Object hint) {
+    buf.touch(hint);
+    return this;
+  }
+
   /** @return get data block encoding id that was used to encode this block */
   short getDataBlockEncodingId() {
     if (blockType != BlockType.ENCODED_DATA) {
@@ -616,8 +632,9 @@ public class HFileBlock implements Cacheable {
       return this;
     }
 
-    ByteBuff newBuf = allocateBuffer(); // allocates space for the decompressed block
+    ByteBuff newBuf = allocateBufferForUnpacking(); // allocates space for the decompressed block
     HFileBlock unpacked = shallowClone(this, newBuf);
+
     boolean succ = false;
     try {
       HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
@@ -643,7 +660,7 @@ public class HFileBlock implements Cacheable {
    * Always allocates a new buffer of the correct size. Copies header bytes from the existing
    * buffer. Does not change header fields. Reserve room to keep checksum bytes too.
    */
-  private ByteBuff allocateBuffer() {
+  private ByteBuff allocateBufferForUnpacking() {
     int cksumBytes = totalChecksumBytes();
     int headerSize = headerSize();
     int capacityNeeded = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
@@ -1998,6 +2015,15 @@ public class HFileBlock implements Cacheable {
       + onDiskDataSizeWithHeader;
   }
 
+  /**
+   * Creates a new HFileBlockBuilder from the existing block and a new ByteBuff. The builder will be
+   * loaded with all of the original fields from blk, except now using the newBuff and setting
+   * isSharedMem based on the source of the passed in newBuff. An existing HFileBlock may have been
+   * an {@link ExclusiveMemHFileBlock}, but the new buffer might call for a
+   * {@link SharedMemHFileBlock}. Or vice versa.
+   * @param blk     the block to clone from
+   * @param newBuff the new buffer to use
+   */
   private static HFileBlockBuilder createBuilder(HFileBlock blk, ByteBuff newBuff) {
     return new HFileBlockBuilder().withBlockType(blk.blockType)
       .withOnDiskSizeWithoutHeader(blk.onDiskSizeWithoutHeader)
@@ -2014,7 +2040,6 @@ public class HFileBlock implements Cacheable {
 
   static HFileBlock deepCloneOnHeap(HFileBlock blk) {
     ByteBuff deepCloned = ByteBuff.wrap(ByteBuffer.wrap(blk.buf.toBytes(0, blk.buf.limit())));
-    return createBuilder(blk, blk.buf.duplicate()).withByteBuff(deepCloned).withShared(false)
-      .build();
+    return createBuilder(blk, deepCloned).withShared(false).build();
   }
 }
