@@ -25,6 +25,7 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -50,7 +51,7 @@ public class WorkerAssigner implements ServerListener {
     }
   }
 
-  public synchronized Optional<ServerName> acquire(Procedure<?> proc) {
+  public synchronized ServerName acquire(Procedure<?> proc) throws ProcedureSuspendedException {
     List<ServerName> serverList = master.getServerManager().getOnlineServersList();
     Collections.shuffle(serverList);
     Optional<ServerName> worker = serverList.stream()
@@ -59,9 +60,16 @@ public class WorkerAssigner implements ServerListener {
       .findAny();
     worker.ifPresent(name -> currentWorkers.compute(name, (serverName,
       availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1));
-    event.suspend();
-    event.suspendIfNotReady(proc);
-    return worker;
+    if (worker.isPresent()) {
+      ServerName sn = worker.get();
+      currentWorkers.compute(sn, (serverName,
+        availableWorker) -> availableWorker == null ? maxTasks - 1 : availableWorker - 1);
+      return sn;
+    } else {
+      event.suspend();
+      event.suspendIfNotReady(proc);
+      throw new ProcedureSuspendedException();
+    }
   }
 
   public synchronized void release(ServerName serverName) {

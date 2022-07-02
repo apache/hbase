@@ -152,12 +152,9 @@ public class SplitWALManager {
    */
   public ServerName acquireSplitWALWorker(Procedure<?> procedure)
     throws ProcedureSuspendedException {
-    Optional<ServerName> worker = splitWorkerAssigner.acquire(procedure);
-    if (worker.isPresent()) {
-      LOG.debug("Acquired split WAL worker={}", worker.get());
-      return worker.get();
-    }
-    throw new ProcedureSuspendedException();
+    ServerName worker = splitWorkerAssigner.acquire(procedure);
+    LOG.debug("Acquired split WAL worker={}", worker);
+    return worker;
   }
 
   /**

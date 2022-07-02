@@ -1418,12 +1418,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   public ServerName acquireSnapshotVerifyWorker(SnapshotVerifyProcedure procedure)
     throws ProcedureSuspendedException {
-    Optional<ServerName> worker = verifyWorkerAssigner.acquire(procedure);
-    if (worker.isPresent()) {
-      LOG.debug("{} Acquired verify snapshot worker={}", procedure, worker.get());
-      return worker.get();
-    }
-    throw new ProcedureSuspendedException();
+    ServerName worker = verifyWorkerAssigner.acquire(procedure);
+    LOG.debug("{} Acquired verify snapshot worker={}", procedure, worker);
+    return worker;
   }
 
   public void releaseSnapshotVerifyWorker(SnapshotVerifyProcedure procedure, ServerName worker) {
