@@ -125,15 +125,14 @@ public class TestFlushWithThroughputController {
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       long startTime = System.nanoTime();
-      hbtu.getHBaseCluster().getRegions(tableName).stream()
-        .findFirst().ifPresent(r -> {
-          try {
-            r.flush(true);
-          } catch (IOException e) {
-            LOG.error("Failed flush region {}", r, e);
-            fail("Failed flush region " + r.getRegionInfo().getRegionNameAsString());
-          }
-        });
+      hbtu.getHBaseCluster().getRegions(tableName).stream().findFirst().ifPresent(r -> {
+        try {
+          r.flush(true);
+        } catch (IOException e) {
+          LOG.error("Failed flush region {}", r, e);
+          fail("Failed flush region " + r.getRegionInfo().getRegionNameAsString());
+        }
+      });
       duration += System.nanoTime() - startTime;
     }
     HStore store = getStoreWithName(tableName);

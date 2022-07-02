@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionParameter;
 
@@ -53,8 +54,8 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
       if (columnFamily == null) {
         res = region.flush(true);
       } else {
-        res = region.flushcache(Collections.singletonList(columnFamily),
-          false, FlushLifeCycleTracker.DUMMY);
+        res = region.flushcache(Collections.singletonList(columnFamily), false,
+          FlushLifeCycleTracker.DUMMY);
       }
       if (res.getResult() == HRegion.FlushResult.Result.CANNOT_FLUSH) {
         region.waitForFlushes();

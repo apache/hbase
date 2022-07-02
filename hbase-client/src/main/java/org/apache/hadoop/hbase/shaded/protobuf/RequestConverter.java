@@ -748,7 +748,7 @@ public final class RequestConverter {
   }
 
   public static FlushTableRequest buildFlushTableRequest(final TableName tableName,
-      final byte[] columnFamily, final long nonceGroup, final long nonce) {
+    final byte[] columnFamily, final long nonceGroup, final long nonce) {
     FlushTableRequest.Builder builder = FlushTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (columnFamily != null) {

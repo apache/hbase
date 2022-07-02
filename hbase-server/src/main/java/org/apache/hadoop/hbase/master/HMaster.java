@@ -2693,24 +2693,25 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   @Override
-  public long flushTable(TableName tableName,
-      byte[] columnFamily, long nonceGroup, long nonce) throws IOException {
+  public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
+    throws IOException {
     checkInitialized();
 
-    if (!getConfiguration().getBoolean(
-        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
-        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)) {
+    if (
+      !getConfiguration().getBoolean(MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
+        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)
+    ) {
       throw new DoNotRetryIOException("FlushProcedure is DISABLED");
     }
 
-    return MasterProcedureUtil.submitProcedure(
-      new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
           getMaster().getMasterCoprocessorHost().preTableFlush(tableName);
           LOG.info(getClientIdAuditPrefix() + " flush " + tableName);
-          submitProcedure(new FlushTableProcedure(procedureExecutor.getEnvironment(),
-            tableName, columnFamily));
+          submitProcedure(
+            new FlushTableProcedure(procedureExecutor.getEnvironment(), tableName, columnFamily));
           getMaster().getMasterCoprocessorHost().postTableFlush(tableName);
         }
 

@@ -295,7 +295,6 @@ public enum EventType {
 
   /**
    * RS flush regions.<br>
-   *
    * RS_FLUSH_OPERATIONS
    */
   RS_FLUSH_REGIONS(89, ExecutorType.RS_FLUSH_OPERATIONS);

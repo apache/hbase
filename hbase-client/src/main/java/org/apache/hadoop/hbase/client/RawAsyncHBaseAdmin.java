@@ -932,12 +932,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     // If the server version is lower than the client version, it's possible that the
     // flushTable method is not present in the server side, if so, we need to fall back
     // to the old implementation.
-    FlushTableRequest request = RequestConverter
-      .buildFlushTableRequest(tableName, columnFamily, ng.getNonceGroup(), ng.newNonce());
-    CompletableFuture<Void> procFuture =
-      this.<FlushTableRequest, FlushTableResponse>procedureCall(tableName, request,
-        (s, c, req, done) -> s.flushTable(c, req, done), (resp) -> resp.getProcId(),
-        new FlushTableProcedureBiConsumer(tableName));
+    FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamily,
+      ng.getNonceGroup(), ng.newNonce());
+    CompletableFuture<Void> procFuture = this.<FlushTableRequest, FlushTableResponse> procedureCall(
+      tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
+      (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
     // here we use another new CompletableFuture because the
     // procFuture is not fully controlled by ourselves.
     CompletableFuture<Void> future = new CompletableFuture<>();
@@ -959,8 +958,8 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  private void legacyFlush(CompletableFuture<Void> future,
-      TableName tableName, byte[] columnFamily) {
+  private void legacyFlush(CompletableFuture<Void> future, TableName tableName,
+    byte[] columnFamily) {
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
         future.completeExceptionally(err);

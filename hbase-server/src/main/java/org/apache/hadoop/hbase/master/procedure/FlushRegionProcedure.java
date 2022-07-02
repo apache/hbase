@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,9 @@ import org.apache.hadoop.hbase.regionserver.FlushRegionCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionParameter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionProcedureStateData;
@@ -57,7 +59,7 @@ public class FlushRegionProcedure extends IdempotentRegionRemoteProcedureBase {
 
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     RegionStateNode regionNode =
       env.getAssignmentManager().getRegionStates().getRegionStateNode(region);
     if (!regionNode.isInState(State.OPEN) || regionNode.isInTransition()) {

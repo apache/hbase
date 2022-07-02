@@ -3487,8 +3487,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
-  public FlushTableResponse flushTable(RpcController controller,
-    FlushTableRequest req) throws ServiceException {
+  public FlushTableResponse flushTable(RpcController controller, FlushTableRequest req)
+    throws ServiceException {
     TableName tableName = ProtobufUtil.toTableName(req.getTableName());
     byte[] columnFamily = req.hasColumnFamily() ? req.getColumnFamily().toByteArray() : null;
     try {

@@ -1866,9 +1866,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         .setCorePoolSize(rsSnapshotOperationThreads));
     final int rsFlushOperationThreads =
       conf.getInt("hbase.regionserver.executor.flush.operations.threads", 3);
-    executorService.startExecutorService(
-      executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_FLUSH_OPERATIONS)
-        .setCorePoolSize(rsFlushOperationThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_FLUSH_OPERATIONS).setCorePoolSize(rsFlushOperationThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);

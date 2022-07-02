@@ -521,7 +521,7 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
-      throws IOException {
+    throws IOException {
     return 0;
   }
 }

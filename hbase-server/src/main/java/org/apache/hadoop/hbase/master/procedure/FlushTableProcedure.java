@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,14 +28,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushTableProcedureStateData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushTableState;
 
 @InterfaceAudience.Private
-public class FlushTableProcedure
-      extends AbstractStateMachineTableProcedure<FlushTableState> {
+public class FlushTableProcedure extends AbstractStateMachineTableProcedure<FlushTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(FlushTableProcedure.class);
 
   private TableName tableName;
@@ -71,7 +72,7 @@ public class FlushTableProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, FlushTableState state)
-      throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
+    throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     LOG.info("{} execute state={}", this, state);
 
     try {
@@ -94,7 +95,7 @@ public class FlushTableProcedure
 
   @Override
   protected void rollbackState(MasterProcedureEnv env, FlushTableState flushTableState)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
   }
 
   @Override
@@ -144,17 +145,15 @@ public class FlushTableProcedure
   }
 
   private FlushRegionProcedure[] createFlushRegionProcedures(MasterProcedureEnv env) {
-    return env.getAssignmentManager().getTableRegions(getTableName(), true)
-      .stream().filter(r -> RegionReplicaUtil.isDefaultReplica(r))
-      .map(r -> new FlushRegionProcedure(r, columnFamily))
-      .toArray(FlushRegionProcedure[]::new);
+    return env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
+      .filter(r -> RegionReplicaUtil.isDefaultReplica(r))
+      .map(r -> new FlushRegionProcedure(r, columnFamily)).toArray(FlushRegionProcedure[]::new);
   }
 
   @Override
   public void toStringClassDetails(StringBuilder builder) {
-    builder.append(getClass().getName())
-      .append(", id=").append(getProcId())
-      .append(", table=").append(tableName);
+    builder.append(getClass().getName()).append(", id=").append(getProcId()).append(", table=")
+      .append(tableName);
     if (columnFamily != null) {
       builder.append(", columnFamily=").append(Bytes.toString(columnFamily));
     }
@@ -162,9 +161,11 @@ public class FlushTableProcedure
 
   @Override
   protected void afterReplay(MasterProcedureEnv env) {
-    if (!env.getMasterConfiguration().getBoolean(
-          MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
-          MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)) {
+    if (
+      !env.getMasterConfiguration().getBoolean(
+        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
+        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)
+    ) {
       setFailure("master-flush-table", new IOException("FlushProcedure is DISABLED"));
     }
   }

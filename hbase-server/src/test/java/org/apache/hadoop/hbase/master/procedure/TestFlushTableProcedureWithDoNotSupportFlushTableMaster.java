@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestFlushTableProcedureWithDoNotSupportFlushTableMaster
-    extends TestFlushTableProcedure {
+  extends TestFlushTableProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -58,8 +58,8 @@ public class TestFlushTableProcedureWithDoNotSupportFlushTableMaster
     }
 
     @Override
-    public long flushTable(TableName tableName, byte[] columnFamily,
-        long nonceGroup, long nonce) throws IOException {
+    public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
+      throws IOException {
       throw new DoNotRetryIOException("UnsupportedOperation: flushTable");
     }
   }

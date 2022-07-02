@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-
 @Category({ MasterTests.class, MediumTests.class })
 public class TestFlushTableProcedure {
 
@@ -66,14 +65,14 @@ public class TestFlushTableProcedure {
   }
 
   protected void assertTableMemStoreNotEmpty() {
-    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)
-      .stream().mapToLong(HRegion::getMemStoreDataSize).sum();
+    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
+      .mapToLong(HRegion::getMemStoreDataSize).sum();
     Assert.assertTrue(totalSize > 0);
   }
 
   protected void assertTableMemStoreEmpty() {
-    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME)
-      .stream().mapToLong(HRegion::getMemStoreDataSize).sum();
+    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
+      .mapToLong(HRegion::getMemStoreDataSize).sum();
     Assert.assertEquals(0, totalSize);
   }
 

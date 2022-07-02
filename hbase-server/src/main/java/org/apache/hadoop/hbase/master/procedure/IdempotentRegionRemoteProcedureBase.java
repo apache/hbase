@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,21 +37,21 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
- *  The base class for the remote procedures for normal operations, like flush or snapshot.
- *  Normal operations do not change the region state. This is the difference between
- *  {@link org.apache.hadoop.hbase.master.assignment.RegionRemoteProcedureBase} and
- *  {@link IdempotentRegionRemoteProcedureBase}.
- *  It requires that the state of the region must be OPEN. If region is in transition state,
- *  the procedure will suspend and retry later.
+ * The base class for the remote procedures for normal operations, like flush or snapshot. Normal
+ * operations do not change the region state. This is the difference between
+ * {@link org.apache.hadoop.hbase.master.assignment.RegionRemoteProcedureBase} and
+ * {@link IdempotentRegionRemoteProcedureBase}. It requires that the state of the region must be
+ * OPEN. If region is in transition state, the procedure will suspend and retry later.
  */
 @InterfaceAudience.Private
 public abstract class IdempotentRegionRemoteProcedureBase extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
-  private static final Logger LOG = LoggerFactory
-    .getLogger(IdempotentRegionRemoteProcedureBase.class);
+  implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+  private static final Logger LOG =
+    LoggerFactory.getLogger(IdempotentRegionRemoteProcedureBase.class);
 
   protected RegionInfo region;
 
@@ -69,7 +69,7 @@ public abstract class IdempotentRegionRemoteProcedureBase extends Procedure<Mast
 
   @Override
   protected Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     if (dispatched) {
       if (succ) {
         return null;
@@ -93,8 +93,8 @@ public abstract class IdempotentRegionRemoteProcedureBase extends Procedure<Mast
       }
       ServerName targetServer = regionNode.getRegionLocation();
       if (targetServer == null) {
-        setTimeoutForSuspend(env, String.format("target server of region %s is null",
-          region.getRegionNameAsString()));
+        setTimeoutForSuspend(env,
+          String.format("target server of region %s is null", region.getRegionNameAsString()));
         throw new ProcedureSuspendedException();
       }
       ServerState serverState = regionStates.getServerNode(targetServer).getState();

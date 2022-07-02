@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -70,12 +70,11 @@ public class TestFlushTableProcedureBasicFlush extends TestFlushTableProcedure {
   public void testSkipRIT() throws IOException {
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).get(0);
 
-    TEST_UTIL.getHBaseCluster().getMaster()
-      .getAssignmentManager().getRegionStates()
+    TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
       .getRegionStateNode(region.getRegionInfo())
       .setState(RegionState.State.CLOSING, RegionState.State.OPEN);
 
-    FlushRegionProcedure proc =  new FlushRegionProcedure(region.getRegionInfo());
+    FlushRegionProcedure proc = new FlushRegionProcedure(region.getRegionInfo());
     TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().submitProcedure(proc);
 
     // wait for a time which is shorter than RSProcedureDispatcher delays
