@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,12 +55,12 @@ import org.junit.runners.Parameterized;
  * Class to test asynchronous replication admin operations when more than 1 cluster
  */
 @RunWith(Parameterized.class)
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncReplicationAdminApiWithClusters.class);
+    HBaseClassTestRule.forClass(TestAsyncReplicationAdminApiWithClusters.class);
 
   private final static String ID_SECOND = "2";
 
@@ -83,12 +83,11 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     TEST_UTIL2 = new HBaseTestingUtil(conf2);
     TEST_UTIL2.startMiniCluster();
 
-    connection =
-      ConnectionFactory.createAsyncConnection(TEST_UTIL2.getConfiguration()).get();
+    connection = ConnectionFactory.createAsyncConnection(TEST_UTIL2.getConfiguration()).get();
     admin2 = connection.getAdmin();
 
-    ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-      .setClusterKey(TEST_UTIL2.getClusterKey()).build();
+    ReplicationPeerConfig rpc =
+      ReplicationPeerConfig.newBuilder().setClusterKey(TEST_UTIL2.getClusterKey()).build();
     ASYNC_CONN.getAdmin().addReplicationPeer(ID_SECOND, rpc).join();
   }
 
@@ -157,9 +156,9 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     createTableWithDefaultConf(admin, tableName);
     createTableWithDefaultConf(admin2, tableName);
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).get());
-    builder.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("newFamily"))
-        .build());
+      TableDescriptorBuilder.newBuilder(admin.getDescriptor(tableName).get());
+    builder.setColumnFamily(
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("newFamily")).build());
     admin2.disableTable(tableName).join();
     admin2.modifyTable(builder.build()).join();
     admin2.enableTable(tableName).join();
@@ -227,23 +226,21 @@ public class TestAsyncReplicationAdminApiWithClusters extends TestAsyncAdminBase
     // Only create table in source cluster
     createTableWithDefaultConf(tableName);
     createTableWithDefaultConf(tableName2);
-    assertFalse("Table should not exists in the peer cluster",
-      admin2.tableExists(tableName).get());
+    assertFalse("Table should not exists in the peer cluster", admin2.tableExists(tableName).get());
     assertFalse("Table should not exists in the peer cluster",
       admin2.tableExists(tableName2).get());
 
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, null);
-    ReplicationPeerConfigBuilder rpcBuilder = ReplicationPeerConfig
-      .newBuilder(admin.getReplicationPeerConfig(ID_SECOND).get())
-      .setReplicateAllUserTables(false)
-      .setTableCFsMap(tableCfs);
+    ReplicationPeerConfigBuilder rpcBuilder =
+      ReplicationPeerConfig.newBuilder(admin.getReplicationPeerConfig(ID_SECOND).get())
+        .setReplicateAllUserTables(false).setTableCFsMap(tableCfs);
     try {
       // Only add tableName to replication peer config
       admin.updateReplicationPeerConfig(ID_SECOND, rpcBuilder.build()).join();
       admin.enableTableReplication(tableName2).join();
       assertFalse("Table should not be created if user has set table cfs explicitly for the "
-          + "peer and this is not part of that collection", admin2.tableExists(tableName2).get());
+        + "peer and this is not part of that collection", admin2.tableExists(tableName2).get());
 
       // Add tableName2 to replication peer config, too
       tableCfs.put(tableName2, null);

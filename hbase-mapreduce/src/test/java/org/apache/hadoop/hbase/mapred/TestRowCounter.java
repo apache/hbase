@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,12 +45,12 @@ import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({ MapReduceTests.class, MediumTests.class })
 public class TestRowCounter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRowCounter.class);
+    HBaseClassTestRule.forClass(TestRowCounter.class);
 
   @Test
   @SuppressWarnings("deprecation")
@@ -68,8 +68,7 @@ public class TestRowCounter {
 
   @Test
   @SuppressWarnings("deprecation")
-  public void shouldExitAndPrintUsageSinceParameterNumberLessThanThree()
-      throws Exception {
+  public void shouldExitAndPrintUsageSinceParameterNumberLessThanThree() throws Exception {
     final String[] args = new String[] { "one", "two" };
     String line = "ERROR: Wrong number of parameters: " + args.length;
     String result = new OutputReader(System.err) {
@@ -90,10 +89,9 @@ public class TestRowCounter {
     Reporter reporter = mock(Reporter.class);
     for (int i = 0; i < iterationNumber; i++)
       mapper.map(mock(ImmutableBytesWritable.class), mock(Result.class),
-          mock(OutputCollector.class), reporter);
+        mock(OutputCollector.class), reporter);
 
-    Mockito.verify(reporter, times(iterationNumber)).incrCounter(
-        any(), anyLong());
+    Mockito.verify(reporter, times(iterationNumber)).incrCounter(any(), anyLong());
   }
 
   @Test
@@ -101,8 +99,7 @@ public class TestRowCounter {
   public void shouldCreateAndRunSubmittableJob() throws Exception {
     RowCounter rCounter = new RowCounter();
     rCounter.setConf(HBaseConfiguration.create());
-    String[] args = new String[] { "\temp", "tableA", "column1", "column2",
-        "column3" };
+    String[] args = new String[] { "\temp", "tableA", "column1", "column2", "column3" };
     JobConf jobConfig = rCounter.createSubmittableJob(args);
 
     assertNotNull(jobConfig);
@@ -110,13 +107,14 @@ public class TestRowCounter {
     assertEquals("rowcounter", jobConfig.getJobName());
     assertEquals(jobConfig.getMapOutputValueClass(), Result.class);
     assertEquals(jobConfig.getMapperClass(), RowCounterMapper.class);
-    assertEquals(jobConfig.get(TableInputFormat.COLUMN_LIST), Joiner.on(' ')
-        .join("column1", "column2", "column3"));
+    assertEquals(jobConfig.get(TableInputFormat.COLUMN_LIST),
+      Joiner.on(' ').join("column1", "column2", "column3"));
     assertEquals(jobConfig.getMapOutputKeyClass(), ImmutableBytesWritable.class);
   }
 
   enum Outs {
-    OUT, ERR
+    OUT,
+    ERR
   }
 
   private static abstract class OutputReader {
@@ -147,17 +145,16 @@ public class TestRowCounter {
         return new String(outBytes.toByteArray());
       } finally {
         switch (outs) {
-        case OUT: {
-          System.setOut(oldPrintStream);
-          break;
-        }
-        case ERR: {
-          System.setErr(oldPrintStream);
-          break;
-        }
-        default:
-          throw new IllegalStateException(
-              "OutputReader: unsupported PrintStream");
+          case OUT: {
+            System.setOut(oldPrintStream);
+            break;
+          }
+          case ERR: {
+            System.setErr(oldPrintStream);
+            break;
+          }
+          default:
+            throw new IllegalStateException("OutputReader: unsupported PrintStream");
         }
       }
     }

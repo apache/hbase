@@ -31,57 +31,58 @@ import java.util.List;
 import org.junit.rules.ExternalResource;
 
 /**
- * <p>Like {@link OpenTelemetryRule}, except modeled after the junit5 implementation
+ * <p>
+ * Like {@link OpenTelemetryRule}, except modeled after the junit5 implementation
  * {@code OpenTelemetryExtension}. Use this class when you need to make asserts on {@link SpanData}
  * created on a MiniCluster. Make sure this rule initialized before the MiniCluster so that it can
  * register its instance of {@link OpenTelemetry} as the global instance before any server-side
- * component can call {@link TraceUtil#getGlobalTracer()}.</p>
- * <p>For example:</p>
- * <pre>{@code
- * public class TestMyClass {
- *   private static final OpenTelemetryClassRule otelClassRule =
- *     OpenTelemetryClassRule.create();
- *   private static final MiniClusterRule miniClusterRule =
- *     MiniClusterRule.newBuilder().build();
- *   protected static final ConnectionRule connectionRule =
- *     new ConnectionRule(miniClusterRule::createConnection);
+ * component can call {@link TraceUtil#getGlobalTracer()}.
+ * </p>
+ * <p>
+ * For example:
+ * </p>
  *
- *   @ClassRule
- *   public static final TestRule classRule = RuleChain.outerRule(otelClassRule)
- *     .around(miniClusterRule)
- *     .around(connectionRule);
+ * <pre>
+ * {
+ *   &#64;code
+ *   public class TestMyClass {
+ *     private static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
+ *     private static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
+ *     protected static final ConnectionRule connectionRule =
+ *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
  *
- *   @Rule
- *   public final OpenTelemetryTestRule otelTestRule =
- *     new OpenTelemetryTestRule(otelClassRule);
+ *     &#64;ClassRule
+ *     public static final TestRule classRule =
+ *       RuleChain.outerRule(otelClassRule).around(miniClusterRule).around(connectionRule);
  *
- *   @Test
- *   public void myTest() {
- *     // ...
- *     // do something that makes spans
- *     final List<SpanData> spans = otelClassRule.getSpans();
- *     // make assertions on them
+ *     &#64;Rule
+ *     public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
+ *
+ *     &#64;Test
+ *     public void myTest() {
+ *       // ...
+ *       // do something that makes spans
+ *       final List<SpanData> spans = otelClassRule.getSpans();
+ *       // make assertions on them
+ *     }
  *   }
  * }
- * }</pre>
+ * </pre>
  *
- * @see <a href="https://github.com/open-telemetry/opentelemetry-java/blob/9a330d0/sdk/testing/src/main/java/io/opentelemetry/sdk/testing/junit5/OpenTelemetryExtension.java">junit5/OpenTelemetryExtension.java</a>
+ * @see <a href=
+ *      "https://github.com/open-telemetry/opentelemetry-java/blob/9a330d0/sdk/testing/src/main/java/io/opentelemetry/sdk/testing/junit5/OpenTelemetryExtension.java">junit5/OpenTelemetryExtension.java</a>
  */
 public final class OpenTelemetryClassRule extends ExternalResource {
 
   public static OpenTelemetryClassRule create() {
     InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
 
-    SdkTracerProvider tracerProvider =
-      SdkTracerProvider.builder()
-        .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
-        .build();
+    SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+      .addSpanProcessor(SimpleSpanProcessor.create(spanExporter)).build();
 
-    OpenTelemetrySdk openTelemetry =
-      OpenTelemetrySdk.builder()
-        .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-        .setTracerProvider(tracerProvider)
-        .build();
+    OpenTelemetrySdk openTelemetry = OpenTelemetrySdk.builder()
+      .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+      .setTracerProvider(tracerProvider).build();
 
     return new OpenTelemetryClassRule(openTelemetry, spanExporter);
   }
@@ -89,10 +90,8 @@ public final class OpenTelemetryClassRule extends ExternalResource {
   private final OpenTelemetrySdk openTelemetry;
   private final InMemorySpanExporter spanExporter;
 
-  private OpenTelemetryClassRule(
-    final OpenTelemetrySdk openTelemetry,
-    final InMemorySpanExporter spanExporter
-  ) {
+  private OpenTelemetryClassRule(final OpenTelemetrySdk openTelemetry,
+    final InMemorySpanExporter spanExporter) {
     this.openTelemetry = openTelemetry;
     this.spanExporter = spanExporter;
   }

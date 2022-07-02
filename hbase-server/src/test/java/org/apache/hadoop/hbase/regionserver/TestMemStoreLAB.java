@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+
 import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.CHUNK_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.MAX_ALLOC_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -50,17 +52,18 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestMemStoreLAB {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMemStoreLAB.class);
+    HBaseClassTestRule.forClass(TestMemStoreLAB.class);
 
   private final static Configuration conf = new Configuration();
 
@@ -77,8 +80,8 @@ public class TestMemStoreLAB {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     long globalMemStoreLimit =
-        (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
-            * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+      (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
+        * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
     ChunkCreator.initialize(MemStoreLABImpl.CHUNK_SIZE_DEFAULT, false, globalMemStoreLimit, 0.2f,
       MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
@@ -112,7 +115,7 @@ public class TestMemStoreLAB {
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          newKv.getOffset() + size <= newKv.getBuffer().capacity());
+        newKv.getOffset() + size <= newKv.getBuffer().capacity());
       expectedOff += size;
     }
   }
@@ -126,14 +129,12 @@ public class TestMemStoreLAB {
   }
 
   /**
-   * Test allocation from lots of threads, making sure the results don't
-   * overlap in any way
+   * Test allocation from lots of threads, making sure the results don't overlap in any way
    */
   @Test
   public void testLABThreading() throws Exception {
     Configuration conf = new Configuration();
-    MultithreadedTestUtil.TestContext ctx =
-      new MultithreadedTestUtil.TestContext(conf);
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(conf);
 
     final AtomicInteger totalAllocated = new AtomicInteger();
 
@@ -159,14 +160,13 @@ public class TestMemStoreLAB {
     }
 
     ctx.startThreads();
-    while (totalAllocated.get() < 50*1024*1000 && ctx.shouldRun()) {
+    while (totalAllocated.get() < 50 * 1024 * 1000 && ctx.shouldRun()) {
       Thread.sleep(10);
     }
     ctx.stop();
     // Partition the allocations by the actual byte[] they point into,
     // make sure offsets are unique for each chunk
-    Map<ByteBuffer, Map<Integer, AllocRecord>> mapsByChunk =
-      Maps.newHashMap();
+    Map<ByteBuffer, Map<Integer, AllocRecord>> mapsByChunk = Maps.newHashMap();
 
     int sizeCounted = 0;
     for (AllocRecord rec : Iterables.concat(allocations)) {
@@ -174,15 +174,13 @@ public class TestMemStoreLAB {
       if (rec.size == 0) {
         continue;
       }
-      Map<Integer, AllocRecord> mapForThisByteArray =
-        mapsByChunk.get(rec.alloc);
+      Map<Integer, AllocRecord> mapForThisByteArray = mapsByChunk.get(rec.alloc);
       if (mapForThisByteArray == null) {
         mapForThisByteArray = Maps.newTreeMap();
         mapsByChunk.put(rec.alloc, mapForThisByteArray);
       }
       AllocRecord oldVal = mapForThisByteArray.put(rec.offset, rec);
-      assertNull("Already had an entry " + oldVal + " for allocation " + rec,
-          oldVal);
+      assertNull("Already had an entry " + oldVal + " for allocation " + rec, oldVal);
     }
     assertEquals("Sanity check test", sizeCounted, totalAllocated.get());
 
@@ -194,7 +192,7 @@ public class TestMemStoreLAB {
       for (AllocRecord alloc : allocsInChunk.values()) {
         assertEquals(expectedOff, alloc.offset);
         assertTrue("Allocation overruns buffer",
-            alloc.offset + alloc.size <= alloc.alloc.capacity());
+          alloc.offset + alloc.size <= alloc.alloc.capacity());
         expectedOff += alloc.size;
       }
     }
@@ -220,17 +218,18 @@ public class TestMemStoreLAB {
       // set chunk size to default max alloc size, so we could easily trigger chunk retirement
       conf.setLong(CHUNK_SIZE_KEY, MemStoreLABImpl.MAX_ALLOC_DEFAULT);
       // reconstruct mslab
-      long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
-          .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
-      ChunkCreator.initialize(MemStoreLABImpl.MAX_ALLOC_DEFAULT, false,
-        globalMemStoreLimit, 0.1f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-        null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      long globalMemStoreLimit =
+        (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
+          * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+      ChunkCreator.initialize(MemStoreLABImpl.MAX_ALLOC_DEFAULT, false, globalMemStoreLimit, 0.1f,
+        MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null,
+        MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
       ChunkCreator.clearDisableFlag();
       mslab = new MemStoreLABImpl(conf);
       // launch multiple threads to trigger frequent chunk retirement
       List<Thread> threads = new ArrayList<>();
       final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
-          new byte[MemStoreLABImpl.MAX_ALLOC_DEFAULT - 32]);
+        new byte[MemStoreLABImpl.MAX_ALLOC_DEFAULT - 32]);
       for (int i = 0; i < 10; i++) {
         threads.add(getChunkQueueTestThread(mslab, "testLABChunkQueue-" + i, kv));
       }
@@ -258,16 +257,17 @@ public class TestMemStoreLAB {
       }
       // none of the chunkIds would have been returned back
       assertTrue("All the chunks must have been cleared",
-          ChunkCreator.instance.numberOfMappedChunks() != 0);
+        ChunkCreator.instance.numberOfMappedChunks() != 0);
       Set<Integer> chunkIds = new HashSet<Integer>(mslab.chunks);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
       // make sure all chunks where reclaimed back to pool
       int queueLength = mslab.getNumOfChunksReturnedToPool(chunkIds);
-      assertTrue("All chunks in chunk queue should be reclaimed or removed"
-          + " after mslab closed but actually: " + (pooledChunksNum-queueLength),
-          pooledChunksNum-queueLength == 0);
+      assertTrue(
+        "All chunks in chunk queue should be reclaimed or removed"
+          + " after mslab closed but actually: " + (pooledChunksNum - queueLength),
+        pooledChunksNum - queueLength == 0);
     } finally {
       ChunkCreator.instance = oldInstance;
     }
@@ -289,14 +289,14 @@ public class TestMemStoreLAB {
     byte[] qualify = Bytes.toBytes("qualify");
     byte[] smallValue = new byte[chunkSize / 2];
     byte[] bigValue = new byte[chunkSize];
-    KeyValue smallKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
-      .currentTime(), smallValue);
+    KeyValue smallKV =
+      new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager.currentTime(), smallValue);
 
     assertEquals(smallKV.getSerializedSize(),
       mslab.forceCopyOfBigCellInto(smallKV).getSerializedSize());
 
-    KeyValue bigKV = new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager
-      .currentTime(), bigValue);
+    KeyValue bigKV =
+      new KeyValue(row, columnFamily, qualify, EnvironmentEdgeManager.currentTime(), bigValue);
     assertEquals(bigKV.getSerializedSize(),
       mslab.forceCopyOfBigCellInto(bigKV).getSerializedSize());
 
@@ -333,7 +333,7 @@ public class TestMemStoreLAB {
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
-      Cell cellToCopyInto) {
+    Cell cellToCopyInto) {
     Thread thread = new Thread() {
       volatile boolean stopped = false;
 
@@ -355,7 +355,7 @@ public class TestMemStoreLAB {
     return thread;
   }
 
-  private static class AllocRecord implements Comparable<AllocRecord>{
+  private static class AllocRecord implements Comparable<AllocRecord> {
     private final ByteBuffer alloc;
     private final int offset;
     private final int size;
@@ -381,4 +381,3 @@ public class TestMemStoreLAB {
     }
   }
 }
-

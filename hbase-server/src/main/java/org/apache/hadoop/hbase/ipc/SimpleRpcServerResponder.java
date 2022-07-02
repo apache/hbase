@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -43,7 +42,7 @@ class SimpleRpcServerResponder extends Thread {
   private final SimpleRpcServer simpleRpcServer;
   private final Selector writeSelector;
   private final Set<SimpleServerRpcConnection> writingCons =
-      Collections.newSetFromMap(new ConcurrentHashMap<>());
+    Collections.newSetFromMap(new ConcurrentHashMap<>());
 
   SimpleRpcServerResponder(SimpleRpcServer simpleRpcServer) throws IOException {
     this.simpleRpcServer = simpleRpcServer;
@@ -152,7 +151,7 @@ class SimpleRpcServerResponder extends Thread {
         }
       } catch (Exception e) {
         SimpleRpcServer.LOG
-            .warn(getName() + ": exception in Responder " + StringUtils.stringifyException(e), e);
+          .warn(getName() + ": exception in Responder " + StringUtils.stringifyException(e), e);
       }
     }
     SimpleRpcServer.LOG.info(getName() + ": stopped");
@@ -176,8 +175,10 @@ class SimpleRpcServerResponder extends Thread {
         if (connection == null) {
           throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
         }
-        if (connection.lastSentTime > 0 &&
-            now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
+        if (
+          connection.lastSentTime > 0
+            && now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout
+        ) {
           conWithOldCalls.add(connection);
         }
       }
@@ -218,17 +219,15 @@ class SimpleRpcServerResponder extends Thread {
   /**
    * Process the response for this call. You need to have the lock on
    * {@link org.apache.hadoop.hbase.ipc.SimpleServerRpcConnection#responseWriteLock}
-   * @return true if we proceed the call fully, false otherwise.
-   * @throws IOException
+   * @return true if we proceed the call fully, false otherwise. n
    */
   private boolean processResponse(SimpleServerRpcConnection conn, RpcResponse resp)
-      throws IOException {
+    throws IOException {
     boolean error = true;
     BufferChain buf = resp.getResponse();
     try {
       // Send as much data as we can in the non-blocking fashion
-      long numBytes =
-          this.simpleRpcServer.channelWrite(conn.channel, buf);
+      long numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);
       if (numBytes < 0) {
         throw new HBaseIOException("Error writing on the socket " + conn);
       }
@@ -256,11 +255,10 @@ class SimpleRpcServerResponder extends Thread {
   /**
    * Process all the responses for this connection
    * @return true if all the calls were processed or that someone else is doing it. false if there *
-   *         is still some work to do. In this case, we expect the caller to delay us.
-   * @throws IOException
+   *         is still some work to do. In this case, we expect the caller to delay us. n
    */
   private boolean processAllResponses(final SimpleServerRpcConnection connection)
-      throws IOException {
+    throws IOException {
     // We want only one writer on the channel for a connection at a time.
     connection.responseWriteLock.lock();
     try {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
@@ -44,8 +42,7 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.UriInfo;
 
 @InterfaceAudience.Private
 public class ScannerInstanceResource extends ResourceBase {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(ScannerInstanceResource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ScannerInstanceResource.class);
 
   static CacheControl cacheControl;
   static {
@@ -58,29 +55,28 @@ public class ScannerInstanceResource extends ResourceBase {
   String id = null;
   int batch = 1;
 
-  public ScannerInstanceResource() throws IOException { }
+  public ScannerInstanceResource() throws IOException {
+  }
 
-  public ScannerInstanceResource(String table, String id,
-      ResultGenerator generator, int batch) throws IOException {
+  public ScannerInstanceResource(String table, String id, ResultGenerator generator, int batch)
+    throws IOException {
     this.id = id;
     this.generator = generator;
     this.batch = batch;
   }
 
   @GET
-  @Produces({MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF,
-    MIMETYPE_PROTOBUF_IETF})
-  public Response get(final @Context UriInfo uriInfo,
-      @QueryParam("n") int maxRows, final @QueryParam("c") int maxValues) {
+  @Produces({ MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF, MIMETYPE_PROTOBUF_IETF })
+  public Response get(final @Context UriInfo uriInfo, @QueryParam("n") int maxRows,
+    final @QueryParam("c") int maxValues) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
     if (generator == null) {
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.NOT_FOUND)
-        .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-        .build();
+      return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+        .entity("Not found" + CRLF).build();
     } else {
       // Updated the connection access time for each client next() call
       RESTServlet.getInstance().getConnectionCache().updateConnectionAccessTime();
@@ -104,15 +100,13 @@ public class ScannerInstanceResource extends ResourceBase {
           servlet.getMetrics().incrementFailedDeleteRequests(1);
         }
         servlet.getMetrics().incrementFailedGetRequests(1);
-        return Response.status(Response.Status.GONE)
-          .type(MIMETYPE_TEXT).entity("Gone" + CRLF)
+        return Response.status(Response.Status.GONE).type(MIMETYPE_TEXT).entity("Gone" + CRLF)
           .build();
       } catch (IllegalArgumentException e) {
         Throwable t = e.getCause();
         if (t instanceof TableNotFoundException) {
-          return Response.status(Response.Status.NOT_FOUND)
-              .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
-              .build();
+          return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+            .entity("Not found" + CRLF).build();
         }
         throw e;
       }
@@ -144,9 +138,8 @@ public class ScannerInstanceResource extends ResourceBase {
         rowKey = CellUtil.cloneRow(value);
         rowModel = new RowModel(rowKey);
       }
-      rowModel.addCell(
-        new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
-          value.getTimestamp(), CellUtil.cloneValue(value)));
+      rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
+        value.getTimestamp(), CellUtil.cloneValue(value)));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
@@ -159,8 +152,7 @@ public class ScannerInstanceResource extends ResourceBase {
   @Produces(MIMETYPE_BINARY)
   public Response getBinary(final @Context UriInfo uriInfo) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " +
-        MIMETYPE_BINARY);
+      LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " + MIMETYPE_BINARY);
     }
     servlet.getMetrics().incrementRequests(1);
     try {
@@ -173,10 +165,10 @@ public class ScannerInstanceResource extends ResourceBase {
       }
       ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));
       response.cacheControl(cacheControl);
-      response.header("X-Row", Bytes.toString(Base64.getEncoder().encode(
-          CellUtil.cloneRow(value))));
-      response.header("X-Column", Bytes.toString(Base64.getEncoder().encode(
-          CellUtil.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value)))));
+      response.header("X-Row",
+        Bytes.toString(Base64.getEncoder().encode(CellUtil.cloneRow(value))));
+      response.header("X-Column", Bytes.toString(Base64.getEncoder()
+        .encode(CellUtil.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value)))));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
@@ -187,8 +179,7 @@ public class ScannerInstanceResource extends ResourceBase {
         servlet.getMetrics().incrementFailedDeleteRequests(1);
       }
       servlet.getMetrics().incrementFailedGetRequests(1);
-      return Response.status(Response.Status.GONE)
-        .type(MIMETYPE_TEXT).entity("Gone" + CRLF)
+      return Response.status(Response.Status.GONE).type(MIMETYPE_TEXT).entity("Gone" + CRLF)
         .build();
     }
   }
@@ -200,9 +191,8 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
-      return Response.status(Response.Status.FORBIDDEN)
-        .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
-        .build();
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+        .entity("Forbidden" + CRLF).build();
     }
     if (ScannerResource.delete(id)) {
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);

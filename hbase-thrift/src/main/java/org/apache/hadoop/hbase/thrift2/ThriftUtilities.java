@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -121,25 +120,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 @InterfaceAudience.Private
 public final class ThriftUtilities {
 
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
+  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[] {};
   private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
   private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
-
-
 
   private ThriftUtilities() {
     throw new UnsupportedOperationException("Can't initialize class");
   }
 
   /**
-   * Creates a {@link Get} (HBase) from a {@link TGet} (Thrift).
-   *
-   * This ignores any timestamps set on {@link TColumn} objects.
-   *
+   * Creates a {@link Get} (HBase) from a {@link TGet} (Thrift). This ignores any timestamps set on
+   * {@link TColumn} objects.
    * @param in the <code>TGet</code> to convert
-   *
    * @return <code>Get</code> object
-   *
    * @throws IOException if an invalid time range or max version parameter is given
    */
   public static Get getFromThrift(TGet in) throws IOException {
@@ -162,7 +155,7 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetAttributes()) {
-      addAttributes(out,in.getAttributes());
+      addAttributes(out, in.getAttributes());
     }
 
     if (in.isSetAuthorizations()) {
@@ -208,11 +201,8 @@ public final class ThriftUtilities {
 
   /**
    * Converts multiple {@link TGet}s (Thrift) into a list of {@link Get}s (HBase).
-   *
    * @param in list of <code>TGet</code>s to convert
-   *
    * @return list of <code>Get</code> objects
-   *
    * @throws IOException if an invalid time range or max version parameter is given
    * @see #getFromThrift(TGet)
    */
@@ -226,9 +216,7 @@ public final class ThriftUtilities {
 
   /**
    * Creates a {@link TResult} (Thrift) from a {@link Result} (HBase).
-   *
    * @param in the <code>Result</code> to convert
-   *
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
@@ -261,11 +249,8 @@ public final class ThriftUtilities {
 
   /**
    * Converts multiple {@link Result}s (HBase) into a list of {@link TResult}s (Thrift).
-   *
    * @param in array of <code>Result</code>s to convert
-   *
    * @return list of converted <code>TResult</code>s
-   *
    * @see #resultFromHBase(Result)
    */
   public static List<TResult> resultsFromHBase(Result[] in) {
@@ -278,9 +263,7 @@ public final class ThriftUtilities {
 
   /**
    * Creates a {@link Put} (HBase) from a {@link TPut} (Thrift)
-   *
    * @param in the <code>TPut</code> to convert
-   *
    * @return converted <code>Put</code>
    */
   public static Put putFromThrift(TPut in) {
@@ -299,23 +282,15 @@ public final class ThriftUtilities {
     for (TColumnValue columnValue : in.getColumnValues()) {
       try {
         if (columnValue.isSetTimestamp()) {
-          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setRow(out.getRow())
-              .setFamily(columnValue.getFamily())
-              .setQualifier(columnValue.getQualifier())
-              .setTimestamp(columnValue.getTimestamp())
-              .setType(Cell.Type.Put)
-              .setValue(columnValue.getValue())
-              .build());
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(out.getRow())
+            .setFamily(columnValue.getFamily()).setQualifier(columnValue.getQualifier())
+            .setTimestamp(columnValue.getTimestamp()).setType(Cell.Type.Put)
+            .setValue(columnValue.getValue()).build());
         } else {
-          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-              .setRow(out.getRow())
-              .setFamily(columnValue.getFamily())
-              .setQualifier(columnValue.getQualifier())
-              .setTimestamp(out.getTimestamp())
-              .setType(Cell.Type.Put)
-              .setValue(columnValue.getValue())
-              .build());
+          out.add(CellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(out.getRow())
+            .setFamily(columnValue.getFamily()).setQualifier(columnValue.getQualifier())
+            .setTimestamp(out.getTimestamp()).setType(Cell.Type.Put)
+            .setValue(columnValue.getValue()).build());
         }
       } catch (IOException e) {
         throw new IllegalArgumentException((e));
@@ -323,7 +298,7 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetAttributes()) {
-      addAttributes(out,in.getAttributes());
+      addAttributes(out, in.getAttributes());
     }
 
     if (in.getCellVisibility() != null) {
@@ -335,11 +310,8 @@ public final class ThriftUtilities {
 
   /**
    * Converts multiple {@link TPut}s (Thrift) into a list of {@link Put}s (HBase).
-   *
    * @param in list of <code>TPut</code>s to convert
-   *
    * @return list of converted <code>Put</code>s
-   *
    * @see #putFromThrift(TPut)
    */
   public static List<Put> putsFromThrift(List<TPut> in) {
@@ -352,9 +324,7 @@ public final class ThriftUtilities {
 
   /**
    * Creates a {@link Delete} (HBase) from a {@link TDelete} (Thrift).
-   *
    * @param in the <code>TDelete</code> to convert
-   *
    * @return converted <code>Delete</code>
    */
   public static Delete deleteFromThrift(TDelete in) {
@@ -391,7 +361,7 @@ public final class ThriftUtilities {
                 out.addFamilyVersion(column.getFamily(), column.getTimestamp());
               } else {
                 throw new IllegalArgumentException(
-                    "Timestamp is required for TDelete with DeleteFamilyVersion type");
+                  "Timestamp is required for TDelete with DeleteFamilyVersion type");
               }
               break;
             default:
@@ -410,7 +380,7 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetAttributes()) {
-      addAttributes(out,in.getAttributes());
+      addAttributes(out, in.getAttributes());
     }
 
     if (in.isSetDurability()) {
@@ -422,11 +392,8 @@ public final class ThriftUtilities {
 
   /**
    * Converts multiple {@link TDelete}s (Thrift) into a list of {@link Delete}s (HBase).
-   *
    * @param in list of <code>TDelete</code>s to convert
-   *
    * @return list of converted <code>Delete</code>s
-   *
    * @see #deleteFromThrift(TDelete)
    */
 
@@ -440,12 +407,18 @@ public final class ThriftUtilities {
 
   public static TDeleteType deleteTypeFromHBase(Cell.Type type) {
     switch (type) {
-      case Delete: return TDeleteType.DELETE_COLUMN;
-      case DeleteColumn: return TDeleteType.DELETE_COLUMNS;
-      case DeleteFamily: return TDeleteType.DELETE_FAMILY;
-      case DeleteFamilyVersion: return TDeleteType.DELETE_FAMILY_VERSION;
-      default: throw new IllegalArgumentException("Unknow delete type " + type);
-    }  }
+      case Delete:
+        return TDeleteType.DELETE_COLUMN;
+      case DeleteColumn:
+        return TDeleteType.DELETE_COLUMNS;
+      case DeleteFamily:
+        return TDeleteType.DELETE_FAMILY;
+      case DeleteFamilyVersion:
+        return TDeleteType.DELETE_FAMILY_VERSION;
+      default:
+        throw new IllegalArgumentException("Unknow delete type " + type);
+    }
+  }
 
   public static TDelete deleteFromHBase(Delete in) {
     TDelete out = new TDelete(ByteBuffer.wrap(in.getRow()));
@@ -458,9 +431,9 @@ public final class ThriftUtilities {
 
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
-    if (in.getDurability() != Durability.USE_DEFAULT)  {
+    if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
     // Delete the whole row
@@ -468,17 +441,16 @@ public final class ThriftUtilities {
       return out;
     }
     TDeleteType type = null;
-    for (Map.Entry<byte[], List<Cell>> familyEntry:
-        in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> familyEntry : in.getFamilyCellMap().entrySet()) {
       byte[] family = familyEntry.getKey();
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
-      for (Cell cell: familyEntry.getValue()) {
+      for (Cell cell : familyEntry.getValue()) {
         TDeleteType cellDeleteType = deleteTypeFromHBase(cell.getType());
         if (type == null) {
           type = cellDeleteType;
-        } else if (type != cellDeleteType){
+        } else if (type != cellDeleteType) {
           throw new RuntimeException("Only the same delete type is supported, but two delete type "
-              + "is founded, one is " + type + " the other one is " + cellDeleteType);
+            + "is founded, one is " + type + " the other one is " + cellDeleteType);
         }
         byte[] qualifier = CellUtil.cloneQualifier(cell);
         long timestamp = cell.getTimestamp();
@@ -500,9 +472,7 @@ public final class ThriftUtilities {
 
   /**
    * Creates a {@link RowMutations} (HBase) from a {@link TRowMutations} (Thrift)
-   *
    * @param in the <code>TRowMutations</code> to convert
-   *
    * @return converted <code>RowMutations</code>
    */
   public static RowMutations rowMutationsFromThrift(TRowMutations in) throws IOException {
@@ -546,8 +516,7 @@ public final class ThriftUtilities {
     }
 
     TTimeRange timeRange = in.getTimeRange();
-    if (timeRange != null &&
-        timeRange.isSetMinStamp() && timeRange.isSetMaxStamp()) {
+    if (timeRange != null && timeRange.isSetMinStamp() && timeRange.isSetMaxStamp()) {
       out.setTimeRange(timeRange.getMinStamp(), timeRange.getMaxStamp());
     }
 
@@ -561,7 +530,7 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetAttributes()) {
-      addAttributes(out,in.getAttributes());
+      addAttributes(out, in.getAttributes());
     }
 
     if (in.isSetAuthorizations()) {
@@ -581,7 +550,7 @@ public final class ThriftUtilities {
       if (MapUtils.isNotEmpty(colFamTimeRangeMap)) {
         for (Map.Entry<ByteBuffer, TTimeRange> entry : colFamTimeRangeMap.entrySet()) {
           out.setColumnFamilyTimeRange(Bytes.toBytes(entry.getKey()),
-              entry.getValue().getMinStamp(), entry.getValue().getMaxStamp());
+            entry.getValue().getMinStamp(), entry.getValue().getMaxStamp());
         }
       }
     }
@@ -615,7 +584,7 @@ public final class ThriftUtilities {
   }
 
   public static Filter filterFromThrift(byte[] filterBytes) throws IOException {
-    FilterProtos.Filter filterPB  = FilterProtos.Filter.parseFrom(filterBytes);
+    FilterProtos.Filter filterPB = FilterProtos.Filter.parseFrom(filterBytes);
     return ProtobufUtil.toFilter(filterPB);
   }
 
@@ -647,7 +616,7 @@ public final class ThriftUtilities {
 
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
 
     try {
@@ -691,14 +660,14 @@ public final class ThriftUtilities {
     }
 
     if (in.isSetAttributes()) {
-      addAttributes(out,in.getAttributes());
+      addAttributes(out, in.getAttributes());
     }
 
     if (in.isSetDurability()) {
       out.setDurability(durabilityFromThrift(in.getDurability()));
     }
 
-    if(in.getCellVisibility() != null) {
+    if (in.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(in.getCellVisibility().getExpression()));
     }
 
@@ -723,7 +692,7 @@ public final class ThriftUtilities {
       out.setDurability(durabilityFromThrift(append.getDurability()));
     }
 
-    if(append.getCellVisibility() != null) {
+    if (append.getCellVisibility() != null) {
       out.setCellVisibility(new CellVisibility(append.getCellVisibility().getExpression()));
     }
 
@@ -761,7 +730,7 @@ public final class ThriftUtilities {
 
   public static List<THRegionLocation> regionLocationsFromHBase(List<HRegionLocation> locations) {
     List<THRegionLocation> tlocations = new ArrayList<>(locations.size());
-    for (HRegionLocation hrl:locations) {
+    for (HRegionLocation hrl : locations) {
       tlocations.add(regionLocationFromHBase(hrl));
     }
     return tlocations;
@@ -771,64 +740,89 @@ public final class ThriftUtilities {
    * Adds all the attributes into the Operation object
    */
   private static void addAttributes(OperationWithAttributes op,
-                                    Map<ByteBuffer, ByteBuffer> attributes) {
+    Map<ByteBuffer, ByteBuffer> attributes) {
     if (attributes == null || attributes.isEmpty()) {
       return;
     }
     for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {
       String name = Bytes.toStringBinary(getBytes(entry.getKey()));
-      byte[] value =  getBytes(entry.getValue());
+      byte[] value = getBytes(entry.getValue());
       op.setAttribute(name, value);
     }
   }
 
   private static Durability durabilityFromThrift(TDurability tDurability) {
     switch (tDurability.getValue()) {
-      case 0: return Durability.USE_DEFAULT;
-      case 1: return Durability.SKIP_WAL;
-      case 2: return Durability.ASYNC_WAL;
-      case 3: return Durability.SYNC_WAL;
-      case 4: return Durability.FSYNC_WAL;
-      default: return Durability.USE_DEFAULT;
+      case 0:
+        return Durability.USE_DEFAULT;
+      case 1:
+        return Durability.SKIP_WAL;
+      case 2:
+        return Durability.ASYNC_WAL;
+      case 3:
+        return Durability.SYNC_WAL;
+      case 4:
+        return Durability.FSYNC_WAL;
+      default:
+        return Durability.USE_DEFAULT;
     }
   }
 
   public static CompareOperator compareOpFromThrift(TCompareOperator tCompareOp) {
     switch (tCompareOp.getValue()) {
-      case 0: return CompareOperator.LESS;
-      case 1: return CompareOperator.LESS_OR_EQUAL;
-      case 2: return CompareOperator.EQUAL;
-      case 3: return CompareOperator.NOT_EQUAL;
-      case 4: return CompareOperator.GREATER_OR_EQUAL;
-      case 5: return CompareOperator.GREATER;
-      case 6: return CompareOperator.NO_OP;
-      default: return null;
+      case 0:
+        return CompareOperator.LESS;
+      case 1:
+        return CompareOperator.LESS_OR_EQUAL;
+      case 2:
+        return CompareOperator.EQUAL;
+      case 3:
+        return CompareOperator.NOT_EQUAL;
+      case 4:
+        return CompareOperator.GREATER_OR_EQUAL;
+      case 5:
+        return CompareOperator.GREATER;
+      case 6:
+        return CompareOperator.NO_OP;
+      default:
+        return null;
     }
   }
 
   private static ReadType readTypeFromThrift(TReadType tReadType) {
     switch (tReadType.getValue()) {
-      case 1: return ReadType.DEFAULT;
-      case 2: return ReadType.STREAM;
-      case 3: return ReadType.PREAD;
-      default: return null;
+      case 1:
+        return ReadType.DEFAULT;
+      case 2:
+        return ReadType.STREAM;
+      case 3:
+        return ReadType.PREAD;
+      default:
+        return null;
     }
   }
 
   private static TReadType readTypeFromHBase(ReadType readType) {
     switch (readType) {
-      case DEFAULT: return TReadType.DEFAULT;
-      case STREAM: return TReadType.STREAM;
-      case PREAD: return TReadType.PREAD;
-      default: return TReadType.DEFAULT;
+      case DEFAULT:
+        return TReadType.DEFAULT;
+      case STREAM:
+        return TReadType.STREAM;
+      case PREAD:
+        return TReadType.PREAD;
+      default:
+        return TReadType.DEFAULT;
     }
   }
 
   private static Consistency consistencyFromThrift(TConsistency tConsistency) {
     switch (tConsistency.getValue()) {
-      case 1: return Consistency.STRONG;
-      case 2: return Consistency.TIMELINE;
-      default: return Consistency.STRONG;
+      case 1:
+        return Consistency.STRONG;
+      case 2:
+        return Consistency.TIMELINE;
+      default:
+        return Consistency.STRONG;
     }
   }
 
@@ -890,51 +884,73 @@ public final class ThriftUtilities {
 
   public static BloomType bloomFilterFromThrift(TBloomFilterType in) {
     switch (in.getValue()) {
-      case 0: return BloomType.NONE;
-      case 1: return BloomType.ROW;
-      case 2: return BloomType.ROWCOL;
-      case 3: return BloomType.ROWPREFIX_FIXED_LENGTH;
-      default: return BloomType.ROW;
+      case 0:
+        return BloomType.NONE;
+      case 1:
+        return BloomType.ROW;
+      case 2:
+        return BloomType.ROWCOL;
+      case 3:
+        return BloomType.ROWPREFIX_FIXED_LENGTH;
+      default:
+        return BloomType.ROW;
     }
   }
 
   public static Compression.Algorithm compressionAlgorithmFromThrift(TCompressionAlgorithm in) {
     switch (in.getValue()) {
-      case 0: return Compression.Algorithm.LZO;
-      case 1: return Compression.Algorithm.GZ;
-      case 2: return Compression.Algorithm.NONE;
-      case 3: return Compression.Algorithm.SNAPPY;
-      case 4: return Compression.Algorithm.LZ4;
-      case 5: return Compression.Algorithm.BZIP2;
-      case 6: return Compression.Algorithm.ZSTD;
-      default: return Compression.Algorithm.NONE;
+      case 0:
+        return Compression.Algorithm.LZO;
+      case 1:
+        return Compression.Algorithm.GZ;
+      case 2:
+        return Compression.Algorithm.NONE;
+      case 3:
+        return Compression.Algorithm.SNAPPY;
+      case 4:
+        return Compression.Algorithm.LZ4;
+      case 5:
+        return Compression.Algorithm.BZIP2;
+      case 6:
+        return Compression.Algorithm.ZSTD;
+      default:
+        return Compression.Algorithm.NONE;
     }
   }
 
   public static DataBlockEncoding dataBlockEncodingFromThrift(TDataBlockEncoding in) {
     switch (in.getValue()) {
-      case 0: return DataBlockEncoding.NONE;
-      case 2: return DataBlockEncoding.PREFIX;
-      case 3: return DataBlockEncoding.DIFF;
-      case 4: return DataBlockEncoding.FAST_DIFF;
-      case 7: return DataBlockEncoding.ROW_INDEX_V1;
-      default: return DataBlockEncoding.NONE;
+      case 0:
+        return DataBlockEncoding.NONE;
+      case 2:
+        return DataBlockEncoding.PREFIX;
+      case 3:
+        return DataBlockEncoding.DIFF;
+      case 4:
+        return DataBlockEncoding.FAST_DIFF;
+      case 7:
+        return DataBlockEncoding.ROW_INDEX_V1;
+      default:
+        return DataBlockEncoding.NONE;
     }
   }
 
   public static KeepDeletedCells keepDeletedCellsFromThrift(TKeepDeletedCells in) {
     switch (in.getValue()) {
-      case 0: return KeepDeletedCells.FALSE;
-      case 1: return KeepDeletedCells.TRUE;
-      case 2: return KeepDeletedCells.TTL;
-      default: return KeepDeletedCells.FALSE;
+      case 0:
+        return KeepDeletedCells.FALSE;
+      case 1:
+        return KeepDeletedCells.TRUE;
+      case 2:
+        return KeepDeletedCells.TTL;
+      default:
+        return KeepDeletedCells.FALSE;
     }
   }
 
-  public static ColumnFamilyDescriptor columnFamilyDescriptorFromThrift(
-      TColumnFamilyDescriptor in) {
-    ColumnFamilyDescriptorBuilder builder = ColumnFamilyDescriptorBuilder
-        .newBuilder(in.getName());
+  public static ColumnFamilyDescriptor
+    columnFamilyDescriptorFromThrift(TColumnFamilyDescriptor in) {
+    ColumnFamilyDescriptorBuilder builder = ColumnFamilyDescriptorBuilder.newBuilder(in.getName());
 
     if (in.isSetAttributes()) {
       for (Map.Entry<ByteBuffer, ByteBuffer> attribute : in.getAttributes().entrySet()) {
@@ -998,7 +1014,6 @@ public final class ThriftUtilities {
       builder.setInMemory(in.isInMemory());
     }
 
-
     return builder.build();
   }
 
@@ -1021,8 +1036,7 @@ public final class ThriftUtilities {
     return out;
   }
 
-  public static List<TNamespaceDescriptor> namespaceDescriptorsFromHBase(
-      NamespaceDescriptor[] in) {
+  public static List<TNamespaceDescriptor> namespaceDescriptorsFromHBase(NamespaceDescriptor[] in) {
     List<TNamespaceDescriptor> out = new ArrayList<>(in.length);
     for (NamespaceDescriptor descriptor : in) {
       out.add(namespaceDescriptorFromHBase(descriptor));
@@ -1031,8 +1045,8 @@ public final class ThriftUtilities {
   }
 
   public static TableDescriptor tableDescriptorFromThrift(TTableDescriptor in) {
-    TableDescriptorBuilder builder = TableDescriptorBuilder
-        .newBuilder(tableNameFromThrift(in.getTableName()));
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(tableNameFromThrift(in.getTableName()));
     for (TColumnFamilyDescriptor column : in.getColumns()) {
       builder.setColumnFamily(columnFamilyDescriptorFromThrift(column));
     }
@@ -1057,12 +1071,18 @@ public final class ThriftUtilities {
 
   private static TDurability durabilityFromHBase(Durability durability) {
     switch (durability) {
-      case USE_DEFAULT: return TDurability.USE_DEFAULT;
-      case SKIP_WAL: return TDurability.SKIP_WAL;
-      case ASYNC_WAL: return TDurability.ASYNC_WAL;
-      case SYNC_WAL: return TDurability.SYNC_WAL;
-      case FSYNC_WAL: return TDurability.FSYNC_WAL;
-      default: return null;
+      case USE_DEFAULT:
+        return TDurability.USE_DEFAULT;
+      case SKIP_WAL:
+        return TDurability.SKIP_WAL;
+      case ASYNC_WAL:
+        return TDurability.ASYNC_WAL;
+      case SYNC_WAL:
+        return TDurability.SYNC_WAL;
+      case FSYNC_WAL:
+        return TDurability.FSYNC_WAL;
+      default:
+        return null;
     }
   }
 
@@ -1072,7 +1092,7 @@ public final class ThriftUtilities {
     Map<Bytes, Bytes> attributes = in.getValues();
     for (Map.Entry<Bytes, Bytes> attribute : attributes.entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
-          ByteBuffer.wrap(attribute.getValue().get()));
+        ByteBuffer.wrap(attribute.getValue().get()));
     }
     for (ColumnFamilyDescriptor column : in.getColumnFamilies()) {
       out.addToColumns(columnFamilyDescriptorFromHBase(column));
@@ -1097,57 +1117,78 @@ public final class ThriftUtilities {
     return out;
   }
 
-
   public static TBloomFilterType bloomFilterFromHBase(BloomType in) {
     switch (in) {
-      case NONE: return TBloomFilterType.NONE;
-      case ROW: return TBloomFilterType.ROW;
-      case ROWCOL: return TBloomFilterType.ROWCOL;
-      case ROWPREFIX_FIXED_LENGTH: return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
-      default: return TBloomFilterType.ROW;
+      case NONE:
+        return TBloomFilterType.NONE;
+      case ROW:
+        return TBloomFilterType.ROW;
+      case ROWCOL:
+        return TBloomFilterType.ROWCOL;
+      case ROWPREFIX_FIXED_LENGTH:
+        return TBloomFilterType.ROWPREFIX_FIXED_LENGTH;
+      default:
+        return TBloomFilterType.ROW;
     }
   }
 
   public static TCompressionAlgorithm compressionAlgorithmFromHBase(Compression.Algorithm in) {
     switch (in) {
-      case LZO: return TCompressionAlgorithm.LZO;
-      case GZ: return TCompressionAlgorithm.GZ;
-      case NONE: return TCompressionAlgorithm.NONE;
-      case SNAPPY: return TCompressionAlgorithm.SNAPPY;
-      case LZ4: return TCompressionAlgorithm.LZ4;
-      case BZIP2: return TCompressionAlgorithm.BZIP2;
-      case ZSTD: return TCompressionAlgorithm.ZSTD;
-      default: return TCompressionAlgorithm.NONE;
+      case LZO:
+        return TCompressionAlgorithm.LZO;
+      case GZ:
+        return TCompressionAlgorithm.GZ;
+      case NONE:
+        return TCompressionAlgorithm.NONE;
+      case SNAPPY:
+        return TCompressionAlgorithm.SNAPPY;
+      case LZ4:
+        return TCompressionAlgorithm.LZ4;
+      case BZIP2:
+        return TCompressionAlgorithm.BZIP2;
+      case ZSTD:
+        return TCompressionAlgorithm.ZSTD;
+      default:
+        return TCompressionAlgorithm.NONE;
     }
   }
 
   public static TDataBlockEncoding dataBlockEncodingFromHBase(DataBlockEncoding in) {
     switch (in) {
-      case NONE: return TDataBlockEncoding.NONE;
-      case PREFIX: return TDataBlockEncoding.PREFIX;
-      case DIFF: return TDataBlockEncoding.DIFF;
-      case FAST_DIFF: return TDataBlockEncoding.FAST_DIFF;
-      case ROW_INDEX_V1: return TDataBlockEncoding.ROW_INDEX_V1;
-      default: return TDataBlockEncoding.NONE;
+      case NONE:
+        return TDataBlockEncoding.NONE;
+      case PREFIX:
+        return TDataBlockEncoding.PREFIX;
+      case DIFF:
+        return TDataBlockEncoding.DIFF;
+      case FAST_DIFF:
+        return TDataBlockEncoding.FAST_DIFF;
+      case ROW_INDEX_V1:
+        return TDataBlockEncoding.ROW_INDEX_V1;
+      default:
+        return TDataBlockEncoding.NONE;
     }
   }
 
   public static TKeepDeletedCells keepDeletedCellsFromHBase(KeepDeletedCells in) {
     switch (in) {
-      case FALSE: return TKeepDeletedCells.FALSE;
-      case TRUE: return TKeepDeletedCells.TRUE;
-      case TTL: return TKeepDeletedCells.TTL;
-      default: return TKeepDeletedCells.FALSE;
+      case FALSE:
+        return TKeepDeletedCells.FALSE;
+      case TRUE:
+        return TKeepDeletedCells.TRUE;
+      case TTL:
+        return TKeepDeletedCells.TTL;
+      default:
+        return TKeepDeletedCells.FALSE;
     }
   }
 
-  public static TColumnFamilyDescriptor columnFamilyDescriptorFromHBase(
-      ColumnFamilyDescriptor in) {
+  public static TColumnFamilyDescriptor columnFamilyDescriptorFromHBase(ColumnFamilyDescriptor in) {
     TColumnFamilyDescriptor out = new TColumnFamilyDescriptor();
     out.setName(in.getName());
     for (Map.Entry<Bytes, Bytes> attribute : in.getValues().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(attribute.getKey().get()),
-          ByteBuffer.wrap(attribute.getValue().get()));
+        ByteBuffer.wrap(attribute.getValue().get()));
     }
     for (Map.Entry<String, String> conf : in.getConfiguration().entrySet()) {
       out.putToConfiguration(conf.getKey(), conf.getValue());
@@ -1172,12 +1213,14 @@ public final class ThriftUtilities {
     return out;
   }
 
-
   private static TConsistency consistencyFromHBase(Consistency consistency) {
     switch (consistency) {
-      case STRONG: return TConsistency.STRONG;
-      case TIMELINE: return TConsistency.TIMELINE;
-      default: return TConsistency.STRONG;
+      case STRONG:
+        return TConsistency.STRONG;
+      case TIMELINE:
+        return TConsistency.TIMELINE;
+      default:
+        return TConsistency.STRONG;
     }
   }
 
@@ -1192,7 +1235,7 @@ public final class ThriftUtilities {
 
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
     try {
       Authorizations authorizations = in.getAuthorizations();
@@ -1236,28 +1279,17 @@ public final class ThriftUtilities {
   }
 
   public static Cell toCell(ExtendedCellBuilder cellBuilder, byte[] row, TColumnValue columnValue) {
-    return cellBuilder.clear()
-        .setRow(row)
-        .setFamily(columnValue.getFamily())
-        .setQualifier(columnValue.getQualifier())
-        .setTimestamp(columnValue.getTimestamp())
-        .setType(columnValue.getType())
-        .setValue(columnValue.getValue())
-        .setTags(columnValue.getTags())
-        .build();
+    return cellBuilder.clear().setRow(row).setFamily(columnValue.getFamily())
+      .setQualifier(columnValue.getQualifier()).setTimestamp(columnValue.getTimestamp())
+      .setType(columnValue.getType()).setValue(columnValue.getValue())
+      .setTags(columnValue.getTags()).build();
   }
-
-
-
-
-
-
 
   public static Result resultFromThrift(TResult in) {
     if (in == null) {
       return null;
     }
-    if (!in.isSetColumnValues() || in.getColumnValues().isEmpty()){
+    if (!in.isSetColumnValues() || in.getColumnValues().isEmpty()) {
       return in.isStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
     List<Cell> cells = new ArrayList<>(in.getColumnValues().size());
@@ -1277,15 +1309,13 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
       byte[] family = entry.getKey();
       for (Cell cell : entry.getValue()) {
         TColumnValue columnValue = new TColumnValue();
-        columnValue.setFamily(family)
-            .setQualifier(CellUtil.cloneQualifier(cell))
-            .setType(cell.getType().getCode())
-            .setTimestamp(cell.getTimestamp())
-            .setValue(CellUtil.cloneValue(cell));
+        columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell))
+          .setType(cell.getType().getCode()).setTimestamp(cell.getTimestamp())
+          .setValue(CellUtil.cloneValue(cell));
         if (cell.getTagsLength() != 0) {
           columnValue.setTags(PrivateCellUtil.cloneTags(cell));
         }
@@ -1294,7 +1324,7 @@ public final class ThriftUtilities {
     }
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
     try {
       CellVisibility cellVisibility = in.getCellVisibility();
@@ -1317,8 +1347,8 @@ public final class ThriftUtilities {
     return out;
   }
 
-  public static NamespaceDescriptor[] namespaceDescriptorsFromThrift(
-      List<TNamespaceDescriptor> in) {
+  public static NamespaceDescriptor[]
+    namespaceDescriptorsFromThrift(List<TNamespaceDescriptor> in) {
     NamespaceDescriptor[] out = new NamespaceDescriptor[in.size()];
     int index = 0;
     for (TNamespaceDescriptor descriptor : in) {
@@ -1342,15 +1372,13 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
       byte[] family = entry.getKey();
       for (Cell cell : entry.getValue()) {
         TColumnValue columnValue = new TColumnValue();
-        columnValue.setFamily(family)
-            .setQualifier(CellUtil.cloneQualifier(cell))
-            .setType(cell.getType().getCode())
-            .setTimestamp(cell.getTimestamp())
-            .setValue(CellUtil.cloneValue(cell));
+        columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell))
+          .setType(cell.getType().getCode()).setTimestamp(cell.getTimestamp())
+          .setValue(CellUtil.cloneValue(cell));
         if (cell.getTagsLength() != 0) {
           columnValue.setTags(PrivateCellUtil.cloneTags(cell));
         }
@@ -1359,7 +1387,7 @@ public final class ThriftUtilities {
     }
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
     try {
       CellVisibility cellVisibility = in.getCellVisibility();
@@ -1382,19 +1410,19 @@ public final class ThriftUtilities {
     if (in.getDurability() != Durability.USE_DEFAULT) {
       out.setDurability(durabilityFromHBase(in.getDurability()));
     }
-    for (Map.Entry<byte [], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte[], List<Cell>> entry : in.getFamilyCellMap().entrySet()) {
       byte[] family = entry.getKey();
       for (Cell cell : entry.getValue()) {
         TColumnIncrement columnValue = new TColumnIncrement();
         columnValue.setFamily(family).setQualifier(CellUtil.cloneQualifier(cell));
         columnValue.setAmount(
-            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         out.addToColumns(columnValue);
       }
     }
     for (Map.Entry<String, byte[]> attribute : in.getAttributesMap().entrySet()) {
       out.putToAttributes(ByteBuffer.wrap(Bytes.toBytes(attribute.getKey())),
-          ByteBuffer.wrap(attribute.getValue()));
+        ByteBuffer.wrap(attribute.getValue()));
     }
     try {
       CellVisibility cellVisibility = in.getCellVisibility();
@@ -1416,12 +1444,12 @@ public final class ThriftUtilities {
     for (Mutation mutation : in.getMutations()) {
       TMutation tMutation = new TMutation();
       if (mutation instanceof Put) {
-        tMutation.setPut(ThriftUtilities.putFromHBase((Put)mutation));
+        tMutation.setPut(ThriftUtilities.putFromHBase((Put) mutation));
       } else if (mutation instanceof Delete) {
-        tMutation.setDeleteSingle(ThriftUtilities.deleteFromHBase((Delete)mutation));
+        tMutation.setDeleteSingle(ThriftUtilities.deleteFromHBase((Delete) mutation));
       } else {
         throw new IllegalArgumentException(
-            "Only Put and Delete is supported in mutateRow, but muation=" + mutation);
+          "Only Put and Delete is supported in mutateRow, but muation=" + mutation);
       }
       tRowMutations.addToMutations(tMutation);
     }
@@ -1430,16 +1458,25 @@ public final class ThriftUtilities {
 
   public static TCompareOperator compareOpFromHBase(CompareOperator compareOp) {
     switch (compareOp) {
-      case LESS: return TCompareOperator.LESS;
-      case LESS_OR_EQUAL: return TCompareOperator.LESS_OR_EQUAL;
-      case EQUAL: return TCompareOperator.EQUAL;
-      case NOT_EQUAL: return TCompareOperator.NOT_EQUAL;
-      case GREATER_OR_EQUAL: return TCompareOperator.GREATER_OR_EQUAL;
-      case GREATER: return TCompareOperator.GREATER;
-      case NO_OP: return TCompareOperator.NO_OP;
-      default: return null;
+      case LESS:
+        return TCompareOperator.LESS;
+      case LESS_OR_EQUAL:
+        return TCompareOperator.LESS_OR_EQUAL;
+      case EQUAL:
+        return TCompareOperator.EQUAL;
+      case NOT_EQUAL:
+        return TCompareOperator.NOT_EQUAL;
+      case GREATER_OR_EQUAL:
+        return TCompareOperator.GREATER_OR_EQUAL;
+      case GREATER:
+        return TCompareOperator.GREATER;
+      case NO_OP:
+        return TCompareOperator.NO_OP;
+      default:
+        return null;
     }
   }
+
   public static List<ByteBuffer> splitKeyFromHBase(byte[][] in) {
     if (in == null || in.length == 0) {
       return null;
@@ -1485,15 +1522,11 @@ public final class ThriftUtilities {
     if (CollectionUtils.isEmpty(tServerNames)) {
       return Collections.emptySet();
     }
-    return tServerNames.stream().map(tServerName ->
-      ServerName.valueOf(tServerName.getHostName(),
-        tServerName.getPort(),
-        tServerName.getStartCode()))
-      .collect(Collectors.toSet());
+    return tServerNames.stream().map(tServerName -> ServerName.valueOf(tServerName.getHostName(),
+      tServerName.getPort(), tServerName.getStartCode())).collect(Collectors.toSet());
   }
 
-  public static TLogQueryFilter getSlowLogQueryFromHBase(
-      LogQueryFilter logQueryFilter) {
+  public static TLogQueryFilter getSlowLogQueryFromHBase(LogQueryFilter logQueryFilter) {
     TLogQueryFilter tLogQueryFilter = new TLogQueryFilter();
     tLogQueryFilter.setRegionName(logQueryFilter.getRegionName());
     tLogQueryFilter.setClientAddress(logQueryFilter.getClientAddress());
@@ -1543,8 +1576,7 @@ public final class ThriftUtilities {
     return tFilterByOperator;
   }
 
-  public static LogQueryFilter getSlowLogQueryFromThrift(
-      TLogQueryFilter tLogQueryFilter) {
+  public static LogQueryFilter getSlowLogQueryFromThrift(TLogQueryFilter tLogQueryFilter) {
     LogQueryFilter logQueryFilter = new LogQueryFilter();
     logQueryFilter.setRegionName(tLogQueryFilter.getRegionName());
     logQueryFilter.setClientAddress(tLogQueryFilter.getClientAddress());
@@ -1558,8 +1590,8 @@ public final class ThriftUtilities {
     return logQueryFilter;
   }
 
-  private static LogQueryFilter.Type getLogTypeFromThrift(
-      final TLogQueryFilter tSlowLogQueryFilter) {
+  private static LogQueryFilter.Type
+    getLogTypeFromThrift(final TLogQueryFilter tSlowLogQueryFilter) {
     LogQueryFilter.Type type;
     switch (tSlowLogQueryFilter.getLogType()) {
       case SLOW_LOG: {
@@ -1577,8 +1609,8 @@ public final class ThriftUtilities {
     return type;
   }
 
-  private static LogQueryFilter.FilterByOperator getFilterByFromThrift(
-      final TLogQueryFilter tLogQueryFilter) {
+  private static LogQueryFilter.FilterByOperator
+    getFilterByFromThrift(final TLogQueryFilter tLogQueryFilter) {
     LogQueryFilter.FilterByOperator filterByOperator;
     switch (tLogQueryFilter.getFilterByOperator()) {
       case AND: {
@@ -1596,34 +1628,33 @@ public final class ThriftUtilities {
     return filterByOperator;
   }
 
-  public static List<TOnlineLogRecord> getSlowLogRecordsFromHBase(
-      List<OnlineLogRecord> onlineLogRecords) {
+  public static List<TOnlineLogRecord>
+    getSlowLogRecordsFromHBase(List<OnlineLogRecord> onlineLogRecords) {
     if (CollectionUtils.isEmpty(onlineLogRecords)) {
       return Collections.emptyList();
     }
-    return onlineLogRecords.stream()
-      .map(slowLogRecord -> {
-        TOnlineLogRecord tOnlineLogRecord = new TOnlineLogRecord();
-        tOnlineLogRecord.setCallDetails(slowLogRecord.getCallDetails());
-        tOnlineLogRecord.setClientAddress(slowLogRecord.getClientAddress());
-        tOnlineLogRecord.setMethodName(slowLogRecord.getMethodName());
-        tOnlineLogRecord.setMultiGetsCount(slowLogRecord.getMultiGetsCount());
-        tOnlineLogRecord.setMultiMutationsCount(slowLogRecord.getMultiMutationsCount());
-        tOnlineLogRecord.setMultiServiceCalls(slowLogRecord.getMultiServiceCalls());
-        tOnlineLogRecord.setParam(slowLogRecord.getParam());
-        tOnlineLogRecord.setProcessingTime(slowLogRecord.getProcessingTime());
-        tOnlineLogRecord.setQueueTime(slowLogRecord.getQueueTime());
-        tOnlineLogRecord.setRegionName(slowLogRecord.getRegionName());
-        tOnlineLogRecord.setResponseSize(slowLogRecord.getResponseSize());
-        tOnlineLogRecord.setServerClass(slowLogRecord.getServerClass());
-        tOnlineLogRecord.setStartTime(slowLogRecord.getStartTime());
-        tOnlineLogRecord.setUserName(slowLogRecord.getUserName());
-        return tOnlineLogRecord;
-      }).collect(Collectors.toList());
+    return onlineLogRecords.stream().map(slowLogRecord -> {
+      TOnlineLogRecord tOnlineLogRecord = new TOnlineLogRecord();
+      tOnlineLogRecord.setCallDetails(slowLogRecord.getCallDetails());
+      tOnlineLogRecord.setClientAddress(slowLogRecord.getClientAddress());
+      tOnlineLogRecord.setMethodName(slowLogRecord.getMethodName());
+      tOnlineLogRecord.setMultiGetsCount(slowLogRecord.getMultiGetsCount());
+      tOnlineLogRecord.setMultiMutationsCount(slowLogRecord.getMultiMutationsCount());
+      tOnlineLogRecord.setMultiServiceCalls(slowLogRecord.getMultiServiceCalls());
+      tOnlineLogRecord.setParam(slowLogRecord.getParam());
+      tOnlineLogRecord.setProcessingTime(slowLogRecord.getProcessingTime());
+      tOnlineLogRecord.setQueueTime(slowLogRecord.getQueueTime());
+      tOnlineLogRecord.setRegionName(slowLogRecord.getRegionName());
+      tOnlineLogRecord.setResponseSize(slowLogRecord.getResponseSize());
+      tOnlineLogRecord.setServerClass(slowLogRecord.getServerClass());
+      tOnlineLogRecord.setStartTime(slowLogRecord.getStartTime());
+      tOnlineLogRecord.setUserName(slowLogRecord.getUserName());
+      return tOnlineLogRecord;
+    }).collect(Collectors.toList());
   }
 
-  public static List<OnlineLogRecord> getSlowLogRecordsFromThrift(
-      List<TOnlineLogRecord> tOnlineLogRecords) {
+  public static List<OnlineLogRecord>
+    getSlowLogRecordsFromThrift(List<TOnlineLogRecord> tOnlineLogRecords) {
     if (CollectionUtils.isEmpty(tOnlineLogRecords)) {
       return Collections.emptyList();
     }
@@ -1635,15 +1666,11 @@ public final class ThriftUtilities {
         .setMultiGetsCount(tSlowLogRecord.getMultiGetsCount())
         .setMultiMutationsCount(tSlowLogRecord.getMultiMutationsCount())
         .setMultiServiceCalls(tSlowLogRecord.getMultiServiceCalls())
-        .setParam(tSlowLogRecord.getParam())
-        .setProcessingTime(tSlowLogRecord.getProcessingTime())
-        .setQueueTime(tSlowLogRecord.getQueueTime())
-        .setRegionName(tSlowLogRecord.getRegionName())
+        .setParam(tSlowLogRecord.getParam()).setProcessingTime(tSlowLogRecord.getProcessingTime())
+        .setQueueTime(tSlowLogRecord.getQueueTime()).setRegionName(tSlowLogRecord.getRegionName())
         .setResponseSize(tSlowLogRecord.getResponseSize())
-        .setServerClass(tSlowLogRecord.getServerClass())
-        .setStartTime(tSlowLogRecord.getStartTime())
-        .setUserName(tSlowLogRecord.getUserName())
-        .build())
+        .setServerClass(tSlowLogRecord.getServerClass()).setStartTime(tSlowLogRecord.getStartTime())
+        .setUserName(tSlowLogRecord.getUserName()).build())
       .collect(Collectors.toList());
   }
 
@@ -1651,12 +1678,23 @@ public final class ThriftUtilities {
     Set<Permission.Action> actions = new HashSet<>();
     for (char c : permission_actions.toCharArray()) {
       switch (c) {
-        case 'R': actions.add(Permission.Action.READ);   break;
-        case 'W': actions.add(Permission.Action.WRITE);  break;
-        case 'C': actions.add(Permission.Action.CREATE); break;
-        case 'X': actions.add(Permission.Action.EXEC);   break;
-        case 'A': actions.add(Permission.Action.ADMIN);  break;
-        default:                                         break;
+        case 'R':
+          actions.add(Permission.Action.READ);
+          break;
+        case 'W':
+          actions.add(Permission.Action.WRITE);
+          break;
+        case 'C':
+          actions.add(Permission.Action.CREATE);
+          break;
+        case 'X':
+          actions.add(Permission.Action.EXEC);
+          break;
+        case 'A':
+          actions.add(Permission.Action.ADMIN);
+          break;
+        default:
+          break;
       }
     }
     return actions.toArray(new Permission.Action[0]);

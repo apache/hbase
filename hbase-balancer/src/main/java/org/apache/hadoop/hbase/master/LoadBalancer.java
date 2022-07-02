@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -82,7 +81,6 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   void updateClusterMetrics(ClusterMetrics metrics);
 
-
   /**
    * Set the cluster info provider. Usually it is just a wrapper of master.
    */
@@ -103,7 +101,7 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
-      List<ServerName> servers) throws IOException;
+    List<ServerName> servers) throws IOException;
 
   /**
    * Assign regions to the previously hosting region server
@@ -111,7 +109,7 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
-      List<ServerName> servers) throws IOException;
+    List<ServerName> servers) throws IOException;
 
   /**
    * Get a random region server from the list
@@ -145,15 +143,15 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
    */
   void postMasterStartupInitialize();
 
-  /*Updates balancer status tag reported to JMX*/
+  /* Updates balancer status tag reported to JMX */
   void updateBalancerStatus(boolean status);
 
   /**
    * In some scenarios, Balancer needs to update internal status or information according to the
    * current tables load
-   *
    * @param loadOfAllTable region load of servers for all table
    */
-  default void updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>>
-    loadOfAllTable){}
+  default void
+    updateBalancerLoadInfo(Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable) {
+  }
 }

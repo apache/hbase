@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
@@ -36,16 +34,15 @@ public final class PrettyPrinter {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrettyPrinter.class);
 
-  private static final String INTERVAL_REGEX = "((\\d+)\\s*SECONDS?\\s*\\()?\\s*" +
-          "((\\d+)\\s*DAYS?)?\\s*((\\d+)\\s*HOURS?)?\\s*" +
-          "((\\d+)\\s*MINUTES?)?\\s*((\\d+)\\s*SECONDS?)?\\s*\\)?";
-  private static final Pattern INTERVAL_PATTERN = Pattern.compile(INTERVAL_REGEX,
-          Pattern.CASE_INSENSITIVE);
-  private static final String SIZE_REGEX = "((\\d+)\\s*B?\\s*\\()?\\s*" +
-    "((\\d+)\\s*TB?)?\\s*((\\d+)\\s*GB?)?\\s*" +
-    "((\\d+)\\s*MB?)?\\s*((\\d+)\\s*KB?)?\\s*((\\d+)\\s*B?)?\\s*\\)?";
-  private static final Pattern SIZE_PATTERN = Pattern.compile(SIZE_REGEX,
-    Pattern.CASE_INSENSITIVE);
+  private static final String INTERVAL_REGEX =
+    "((\\d+)\\s*SECONDS?\\s*\\()?\\s*" + "((\\d+)\\s*DAYS?)?\\s*((\\d+)\\s*HOURS?)?\\s*"
+      + "((\\d+)\\s*MINUTES?)?\\s*((\\d+)\\s*SECONDS?)?\\s*\\)?";
+  private static final Pattern INTERVAL_PATTERN =
+    Pattern.compile(INTERVAL_REGEX, Pattern.CASE_INSENSITIVE);
+  private static final String SIZE_REGEX =
+    "((\\d+)\\s*B?\\s*\\()?\\s*" + "((\\d+)\\s*TB?)?\\s*((\\d+)\\s*GB?)?\\s*"
+      + "((\\d+)\\s*MB?)?\\s*((\\d+)\\s*KB?)?\\s*((\\d+)\\s*B?)?\\s*\\)?";
+  private static final Pattern SIZE_PATTERN = Pattern.compile(SIZE_REGEX, Pattern.CASE_INSENSITIVE);
 
   public enum Unit {
     TIME_INTERVAL,
@@ -80,10 +77,8 @@ public final class PrettyPrinter {
 
   /**
    * Convert a human readable string to its value.
-   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
-   * @param pretty
-   * @param unit
-   * @return the value corresponding to the human readable string
+   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit) nn * @return the value
+   *      corresponding to the human readable string
    */
   public static String valueOf(final String pretty, final Unit unit) throws HBaseException {
     StringBuilder value = new StringBuilder();
@@ -100,9 +95,9 @@ public final class PrettyPrinter {
     return value.toString();
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
-      justification="Will not overflow")
-  private static String humanReadableTTL(final long interval){
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
+      justification = "Will not overflow")
+  private static String humanReadableTTL(final long interval) {
     StringBuilder sb = new StringBuilder();
     int days, hours, minutes, seconds;
 
@@ -117,12 +112,13 @@ public final class PrettyPrinter {
       return sb.toString();
     }
 
-    days  =   (int) (interval / HConstants.DAY_IN_SECONDS);
-    hours =   (int) (interval - HConstants.DAY_IN_SECONDS * days) / HConstants.HOUR_IN_SECONDS;
-    minutes = (int) (interval - HConstants.DAY_IN_SECONDS * days
-        - HConstants.HOUR_IN_SECONDS * hours) / HConstants.MINUTE_IN_SECONDS;
+    days = (int) (interval / HConstants.DAY_IN_SECONDS);
+    hours = (int) (interval - HConstants.DAY_IN_SECONDS * days) / HConstants.HOUR_IN_SECONDS;
+    minutes =
+      (int) (interval - HConstants.DAY_IN_SECONDS * days - HConstants.HOUR_IN_SECONDS * hours)
+        / HConstants.MINUTE_IN_SECONDS;
     seconds = (int) (interval - HConstants.DAY_IN_SECONDS * days
-        - HConstants.HOUR_IN_SECONDS * hours - HConstants.MINUTE_IN_SECONDS * minutes);
+      - HConstants.HOUR_IN_SECONDS * hours - HConstants.MINUTE_IN_SECONDS * minutes);
 
     sb.append(interval);
     sb.append(" SECONDS (");
@@ -156,22 +152,20 @@ public final class PrettyPrinter {
   }
 
   /**
-   * Convert a human readable time interval to seconds. Examples of the human readable
-   * time intervals are: 50 DAYS 1 HOUR 30 MINUTES , 25000 SECONDS etc.
-   * The units of time specified can be in uppercase as well as lowercase. Also, if a
-   * single number is specified without any time unit, it is assumed to be in seconds.
-   * @param humanReadableInterval
-   * @return value in seconds
+   * Convert a human readable time interval to seconds. Examples of the human readable time
+   * intervals are: 50 DAYS 1 HOUR 30 MINUTES , 25000 SECONDS etc. The units of time specified can
+   * be in uppercase as well as lowercase. Also, if a single number is specified without any time
+   * unit, it is assumed to be in seconds. n * @return value in seconds
    */
   private static long humanReadableIntervalToSec(final String humanReadableInterval)
-          throws HBaseException {
+    throws HBaseException {
     if (humanReadableInterval == null || humanReadableInterval.equalsIgnoreCase("FOREVER")) {
       return HConstants.FOREVER;
     }
 
     try {
       return Long.parseLong(humanReadableInterval);
-    } catch(NumberFormatException ex) {
+    } catch (NumberFormatException ex) {
       LOG.debug("Given interval value is not a number, parsing for human readable format");
     }
 
@@ -191,21 +185,21 @@ public final class PrettyPrinter {
       seconds = matcher.group(10);
     }
     ttl = 0;
-    ttl += days != null ? Long.parseLong(days)*HConstants.DAY_IN_SECONDS:0;
-    ttl += hours != null ? Long.parseLong(hours)*HConstants.HOUR_IN_SECONDS:0;
-    ttl += minutes != null ? Long.parseLong(minutes)*HConstants.MINUTE_IN_SECONDS:0;
-    ttl += seconds != null ? Long.parseLong(seconds):0;
+    ttl += days != null ? Long.parseLong(days) * HConstants.DAY_IN_SECONDS : 0;
+    ttl += hours != null ? Long.parseLong(hours) * HConstants.HOUR_IN_SECONDS : 0;
+    ttl += minutes != null ? Long.parseLong(minutes) * HConstants.MINUTE_IN_SECONDS : 0;
+    ttl += seconds != null ? Long.parseLong(seconds) : 0;
 
     if (expectedTtl != null && Long.parseLong(expectedTtl) != ttl) {
-      throw new HBaseException("Malformed TTL string: TTL values in seconds and human readable" +
-              "format do not match");
+      throw new HBaseException(
+        "Malformed TTL string: TTL values in seconds and human readable" + "format do not match");
     }
     return ttl;
   }
 
   /**
-   * Convert a long size to a human readable string.
-   * Example: 10763632640 -> 10763632640 B (10GB 25MB)
+   * Convert a long size to a human readable string. Example: 10763632640 -> 10763632640 B (10GB
+   * 25MB)
    * @param size the size in bytes
    * @return human readable string
    */
@@ -221,8 +215,8 @@ public final class PrettyPrinter {
 
     tb = size / HConstants.TB_IN_BYTES;
     gb = (size - HConstants.TB_IN_BYTES * tb) / HConstants.GB_IN_BYTES;
-    mb = (size - HConstants.TB_IN_BYTES * tb
-      - HConstants.GB_IN_BYTES * gb) / HConstants.MB_IN_BYTES;
+    mb =
+      (size - HConstants.TB_IN_BYTES * tb - HConstants.GB_IN_BYTES * gb) / HConstants.MB_IN_BYTES;
     kb = (size - HConstants.TB_IN_BYTES * tb - HConstants.GB_IN_BYTES * gb
       - HConstants.MB_IN_BYTES * mb) / HConstants.KB_IN_BYTES;
     b = (size - HConstants.TB_IN_BYTES * tb - HConstants.GB_IN_BYTES * gb
@@ -263,23 +257,21 @@ public final class PrettyPrinter {
   }
 
   /**
-   * Convert a human readable size to bytes.
-   * Examples of the human readable size are: 50 GB 20 MB 1 KB , 25000 B etc.
-   * The units of size specified can be in uppercase as well as lowercase. Also, if a
-   * single number is specified without any time unit, it is assumed to be in bytes.
+   * Convert a human readable size to bytes. Examples of the human readable size are: 50 GB 20 MB 1
+   * KB , 25000 B etc. The units of size specified can be in uppercase as well as lowercase. Also,
+   * if a single number is specified without any time unit, it is assumed to be in bytes.
    * @param humanReadableSize human readable size
-   * @return value in bytes
-   * @throws HBaseException
+   * @return value in bytes n
    */
   private static long humanReadableSizeToBytes(final String humanReadableSize)
-      throws HBaseException {
+    throws HBaseException {
     if (humanReadableSize == null) {
       return -1;
     }
 
     try {
       return Long.parseLong(humanReadableSize);
-    } catch(NumberFormatException ex) {
+    } catch (NumberFormatException ex) {
       LOG.debug("Given size value is not a number, parsing for human readable format");
     }
 
@@ -300,15 +292,15 @@ public final class PrettyPrinter {
       kb = matcher.group(10);
       b = matcher.group(12);
     }
-    size += tb != null ? Long.parseLong(tb)*HConstants.TB_IN_BYTES:0;
-    size += gb != null ? Long.parseLong(gb)*HConstants.GB_IN_BYTES:0;
-    size += mb != null ? Long.parseLong(mb)*HConstants.MB_IN_BYTES:0;
-    size += kb != null ? Long.parseLong(kb)*HConstants.KB_IN_BYTES:0;
-    size += b != null ? Long.parseLong(b):0;
+    size += tb != null ? Long.parseLong(tb) * HConstants.TB_IN_BYTES : 0;
+    size += gb != null ? Long.parseLong(gb) * HConstants.GB_IN_BYTES : 0;
+    size += mb != null ? Long.parseLong(mb) * HConstants.MB_IN_BYTES : 0;
+    size += kb != null ? Long.parseLong(kb) * HConstants.KB_IN_BYTES : 0;
+    size += b != null ? Long.parseLong(b) : 0;
 
     if (expectedSize != null && Long.parseLong(expectedSize) != size) {
-      throw new HBaseException("Malformed size string: values in byte and human readable" +
-        "format do not match");
+      throw new HBaseException(
+        "Malformed size string: values in byte and human readable" + "format do not match");
     }
     return size;
   }
@@ -321,7 +313,7 @@ public final class PrettyPrinter {
    */
   public static String toString(Collection<?> collection) {
     List<String> stringList = new ArrayList<>();
-    for (Object o: collection) {
+    for (Object o : collection) {
       stringList.add(Objects.toString(o));
     }
     return "[" + String.join(",", stringList) + "]";

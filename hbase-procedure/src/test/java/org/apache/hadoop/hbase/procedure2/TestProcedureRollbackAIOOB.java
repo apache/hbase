@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ import org.junit.rules.TestName;
 public class TestProcedureRollbackAIOOB {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureRollbackAIOOB.class);
+    HBaseClassTestRule.forClass(TestProcedureRollbackAIOOB.class);
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
@@ -53,7 +53,7 @@ public class TestProcedureRollbackAIOOB {
 
     @Override
     protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       latch.await();
       if (scheduled) {
         return null;
@@ -67,7 +67,7 @@ public class TestProcedureRollbackAIOOB {
 
     @Override
     protected Procedure[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       setFailure("Inject error", new RuntimeException("Inject error"));
       return null;
     }

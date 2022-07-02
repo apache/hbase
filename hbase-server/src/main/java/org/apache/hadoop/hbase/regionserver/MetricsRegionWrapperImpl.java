@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
@@ -27,7 +26,6 @@ import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -68,8 +66,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     this.region = region;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
-    this.regionMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, PERIOD,
-      PERIOD, TimeUnit.SECONDS);
+    this.regionMetricsUpdateTask =
+      this.executor.scheduleWithFixedDelay(this.runnable, PERIOD, PERIOD, TimeUnit.SECONDS);
   }
 
   @Override
@@ -89,7 +87,6 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     }
     return tableDesc.getTableName().getNamespaceAsString();
   }
-
 
   @Override
   public String getRegionName() {
@@ -268,19 +265,23 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           int currentStoreRefCount = store.getStoreRefCount();
           tempStoreRefCount += currentStoreRefCount;
           int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
-          tempMaxCompactedStoreFileRefCount = Math.max(tempMaxCompactedStoreFileRefCount,
-            currentMaxCompactedStoreFileRefCount);
+          tempMaxCompactedStoreFileRefCount =
+            Math.max(tempMaxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
           tempMemstoreSize += store.getMemStoreSize().getDataSize();
           tempStoreFileSize += store.getStorefilesSize();
           OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
-          if (storeMaxStoreFileAge.isPresent() &&
-              storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+          if (
+            storeMaxStoreFileAge.isPresent()
+              && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
+          ) {
             tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
           }
 
           OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
-          if (storeMinStoreFileAge.isPresent() &&
-              storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+          if (
+            storeMinStoreFileAge.isPresent()
+              && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
+          ) {
             tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
           }
 
@@ -292,7 +293,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           if (storeAvgStoreFileAge.isPresent()) {
             avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
           }
-          if(mixedReadsOnStore == null) {
+          if (mixedReadsOnStore == null) {
             mixedReadsOnStore = new HashMap<String, Long>();
           }
           Long tempVal = mixedReadsOnStore.get(store.getColumnFamilyName());

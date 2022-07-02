@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
@@ -53,6 +52,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -94,26 +94,25 @@ public class TestSnapshotVerifyProcedure {
       workingDirFs.mkdirs(workingDir);
     }
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(snapshot.getName());
-    SnapshotManifest manifest = SnapshotManifest
-      .create(conf, workingDirFs, workingDir, snapshotProto, monitor);
-    manifest.addTableDescriptor(TEST_UTIL.getHBaseCluster()
-      .getMaster().getTableDescriptors().get(tableName));
+    SnapshotManifest manifest =
+      SnapshotManifest.create(conf, workingDirFs, workingDir, snapshotProto, monitor);
+    manifest.addTableDescriptor(
+      TEST_UTIL.getHBaseCluster().getMaster().getTableDescriptors().get(tableName));
     SnapshotDescriptionUtils.writeSnapshotInfo(snapshotProto, workingDir, workingDirFs);
-    TEST_UTIL.getHBaseCluster()
-      .getRegions(tableName).forEach(r -> {
-        try {
-          r.addRegionToSnapshot(snapshotProto, monitor);
-        } catch (IOException e) {
-          LOG.warn("Failed snapshot region {}", r.getRegionInfo());
-        }
-      });
+    TEST_UTIL.getHBaseCluster().getRegions(tableName).forEach(r -> {
+      try {
+        r.addRegionToSnapshot(snapshotProto, monitor);
+      } catch (IOException e) {
+        LOG.warn("Failed snapshot region {}", r.getRegionInfo());
+      }
+    });
     manifest.consolidate();
   }
 
   @Test
   public void testSimpleVerify() throws Exception {
-    Optional<HRegion> regionOpt = TEST_UTIL.getHBaseCluster().getRegions(tableName)
-      .stream().filter(r -> !r.getStore(cf).getStorefiles().isEmpty()).findFirst();
+    Optional<HRegion> regionOpt = TEST_UTIL.getHBaseCluster().getRegions(tableName).stream()
+      .filter(r -> !r.getStore(cf).getStorefiles().isEmpty()).findFirst();
     Assert.assertTrue(regionOpt.isPresent());
     HRegion region = regionOpt.get();
     SnapshotVerifyProcedure p1 = new SnapshotVerifyProcedure(snapshotProto, region.getRegionInfo());
@@ -152,8 +151,8 @@ public class TestSnapshotVerifyProcedure {
 
     // restore used worker
     master = TEST_UTIL.getHBaseCluster().getMaster();
-    SnapshotVerifyProcedure svp2 = master.getMasterProcedureExecutor()
-      .getProcedure(SnapshotVerifyProcedure.class, procId);
+    SnapshotVerifyProcedure svp2 =
+      master.getMasterProcedureExecutor().getProcedure(SnapshotVerifyProcedure.class, procId);
     Assert.assertNotNull(svp2);
     Assert.assertFalse(svp2.isFinished());
     Assert.assertNotNull(svp2.getServerName());

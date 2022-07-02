@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,14 +24,12 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Performs "normalization" of regions of a table, making sure that suboptimal
- * choice of split keys doesn't leave cluster in a situation when some regions are
- * substantially larger than others for considerable amount of time.
- *
- * Users who want to use this feature could either use default {@link SimpleRegionNormalizer}
- * or plug in their own implementation. Please note that overly aggressive normalization rules
- * (attempting to make all regions perfectly equal in size) could potentially lead to
- * "split/merge storms".
+ * Performs "normalization" of regions of a table, making sure that suboptimal choice of split keys
+ * doesn't leave cluster in a situation when some regions are substantially larger than others for
+ * considerable amount of time. Users who want to use this feature could either use default
+ * {@link SimpleRegionNormalizer} or plug in their own implementation. Please note that overly
+ * aggressive normalization rules (attempting to make all regions perfectly equal in size) could
+ * potentially lead to "split/merge storms".
  */
 @InterfaceAudience.Private
 interface RegionNormalizer extends Configurable {
@@ -47,8 +44,8 @@ interface RegionNormalizer extends Configurable {
    * Computes a list of normalizer actions to perform on the target table. This is the primary
    * entry-point from the Master driving a normalization activity.
    * @param tableDescriptor table descriptor for table which needs normalize
-   * @return A list of the normalization actions to perform, or an empty list
-   *   if there's nothing to do.
+   * @return A list of the normalization actions to perform, or an empty list if there's nothing to
+   *         do.
    */
   List<NormalizationPlan> computePlansForTable(TableDescriptor tableDescriptor);
 }

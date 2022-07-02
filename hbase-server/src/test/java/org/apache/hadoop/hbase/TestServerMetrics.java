@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,37 +36,36 @@ public class TestServerMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerMetrics.class);
+    HBaseClassTestRule.forClass(TestServerMetrics.class);
 
   @Test
   public void testRegionLoadAggregation() {
-    ServerMetrics metrics = ServerMetricsBuilder.toServerMetrics(
-        ServerName.valueOf("localhost,1,1"), createServerLoadProto());
+    ServerMetrics metrics = ServerMetricsBuilder
+      .toServerMetrics(ServerName.valueOf("localhost,1,1"), createServerLoadProto());
     assertEquals(13,
-        metrics.getRegionMetrics().values().stream().mapToInt(v -> v.getStoreCount()).sum());
+      metrics.getRegionMetrics().values().stream().mapToInt(v -> v.getStoreCount()).sum());
     assertEquals(114,
-        metrics.getRegionMetrics().values().stream().mapToInt(v -> v.getStoreFileCount()).sum());
+      metrics.getRegionMetrics().values().stream().mapToInt(v -> v.getStoreFileCount()).sum());
     assertEquals(129, metrics.getRegionMetrics().values().stream()
-        .mapToDouble(v -> v.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE)).sum(), 0);
+      .mapToDouble(v -> v.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE)).sum(), 0);
     assertEquals(504, metrics.getRegionMetrics().values().stream()
-        .mapToDouble(v -> v.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE)).sum(), 0);
+      .mapToDouble(v -> v.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE)).sum(), 0);
     assertEquals(820, metrics.getRegionMetrics().values().stream()
-        .mapToDouble(v -> v.getStoreFileSize().get(Size.Unit.MEGABYTE)).sum(), 0);
+      .mapToDouble(v -> v.getStoreFileSize().get(Size.Unit.MEGABYTE)).sum(), 0);
     assertEquals(82, metrics.getRegionMetrics().values().stream()
-        .mapToDouble(v -> v.getStoreFileIndexSize().get(Size.Unit.KILOBYTE)).sum(), 0);
+      .mapToDouble(v -> v.getStoreFileIndexSize().get(Size.Unit.KILOBYTE)).sum(), 0);
     assertEquals(((long) Integer.MAX_VALUE) * 2,
-        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
+      metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
     assertEquals(100,
-        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getCpRequestCount()).sum());
-    assertEquals(300,
-        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getFilteredReadRequestCount())
-            .sum());
+      metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getCpRequestCount()).sum());
+    assertEquals(300, metrics.getRegionMetrics().values().stream()
+      .mapToLong(v -> v.getFilteredReadRequestCount()).sum());
   }
 
   @Test
   public void testToString() {
-    ServerMetrics metrics = ServerMetricsBuilder.toServerMetrics(
-        ServerName.valueOf("localhost,1,1"), createServerLoadProto());
+    ServerMetrics metrics = ServerMetricsBuilder
+      .toServerMetrics(ServerName.valueOf("localhost,1,1"), createServerLoadProto());
     String slToString = metrics.toString();
     assertTrue(slToString.contains("numberOfStores=13"));
     assertTrue(slToString.contains("numberOfStorefiles=114"));
@@ -79,41 +78,36 @@ public class TestServerMetrics {
 
   @Test
   public void testRegionLoadWrapAroundAggregation() {
-    ServerMetrics metrics = ServerMetricsBuilder.toServerMetrics(
-        ServerName.valueOf("localhost,1,1"), createServerLoadProto());
+    ServerMetrics metrics = ServerMetricsBuilder
+      .toServerMetrics(ServerName.valueOf("localhost,1,1"), createServerLoadProto());
     long totalCount = ((long) Integer.MAX_VALUE) * 2;
     assertEquals(totalCount,
-        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
+      metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
     assertEquals(totalCount,
-        metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getWriteRequestCount())
-            .sum());
+      metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getWriteRequestCount()).sum());
   }
 
   private ClusterStatusProtos.ServerLoad createServerLoadProto() {
     HBaseProtos.RegionSpecifier rSpecOne = HBaseProtos.RegionSpecifier.newBuilder()
-        .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-        .setValue(ByteString.copyFromUtf8("ASDFGQWERT")).build();
+      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
+      .setValue(ByteString.copyFromUtf8("ASDFGQWERT")).build();
     HBaseProtos.RegionSpecifier rSpecTwo = HBaseProtos.RegionSpecifier.newBuilder()
-        .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-        .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
+      .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
+      .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
 
     ClusterStatusProtos.RegionLoad rlOne =
-        ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
-            .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
-            .setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
-            .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-            .build();
-    ClusterStatusProtos.RegionLoad rlTwo =
-        ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
-            .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
-            .setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
-            .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-            .setCpRequestsCount(100)
-            .build();
+      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
+        .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
+        .setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
+        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
+    ClusterStatusProtos.RegionLoad rlTwo = ClusterStatusProtos.RegionLoad.newBuilder()
+      .setRegionSpecifier(rSpecTwo).setStores(3).setStorefiles(13).setStoreUncompressedSizeMB(23)
+      .setStorefileSizeMB(300).setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40)
+      .setRootIndexSizeKB(303).setReadRequestsCount(Integer.MAX_VALUE)
+      .setWriteRequestsCount(Integer.MAX_VALUE).setCpRequestsCount(100).build();
 
-    ClusterStatusProtos.ServerLoad sl =
-        ClusterStatusProtos.ServerLoad.newBuilder().addRegionLoads(rlOne).
-            addRegionLoads(rlTwo).build();
+    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
+      .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();
     return sl;
   }
 

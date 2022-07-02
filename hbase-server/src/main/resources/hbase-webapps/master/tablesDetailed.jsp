@@ -36,7 +36,7 @@
 </jsp:include>
 
 <div class="container-fluid content">
-  <div class="row inner_header">
+  <div class="row inner_header top_header">
     <div class="page-header">
       <h1>User Tables</h1>
     </div>

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,15 +78,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Testing the sizing that HeapSize offers and compares to the size given by
- * ClassSize.
+ * Testing the sizing that HeapSize offers and compares to the size given by ClassSize.
  */
-@Category({IOTests.class, SmallTests.class})
-public class TestHeapSize  {
+@Category({ IOTests.class, SmallTests.class })
+public class TestHeapSize {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHeapSize.class);
+    HBaseClassTestRule.forClass(TestHeapSize.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHeapSize.class);
   // List of classes implementing HeapSize
@@ -120,7 +119,7 @@ public class TestHeapSize  {
     cl = ArrayList.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.ARRAYLIST;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -129,7 +128,7 @@ public class TestHeapSize  {
     cl = ByteBuffer.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.BYTE_BUFFER;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -138,26 +137,26 @@ public class TestHeapSize  {
     cl = Integer.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.INTEGER;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
 
     // Map.Entry
-    // Interface is public, all others are not.  Hard to size via ClassSize
-//    cl = Map.Entry.class;
-//    expected = ClassSize.estimateBase(cl, false);
-//    actual = ClassSize.MAP_ENTRY;
-//    if(expected != actual) {
-//      ClassSize.estimateBase(cl, true);
-//      assertEquals(expected, actual);
-//    }
+    // Interface is public, all others are not. Hard to size via ClassSize
+    // cl = Map.Entry.class;
+    // expected = ClassSize.estimateBase(cl, false);
+    // actual = ClassSize.MAP_ENTRY;
+    // if(expected != actual) {
+    // ClassSize.estimateBase(cl, true);
+    // assertEquals(expected, actual);
+    // }
 
     // Object
     cl = Object.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.align(ClassSize.OBJECT);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -166,7 +165,7 @@ public class TestHeapSize  {
     cl = TreeMap.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.TREEMAP;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -175,7 +174,7 @@ public class TestHeapSize  {
     cl = String.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.STRING;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -184,7 +183,7 @@ public class TestHeapSize  {
     cl = ConcurrentHashMap.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.CONCURRENT_HASHMAP;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -193,7 +192,7 @@ public class TestHeapSize  {
     cl = ConcurrentSkipListMap.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.CONCURRENT_SKIPLISTMAP;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -202,7 +201,7 @@ public class TestHeapSize  {
     cl = CellArrayMap.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.CELL_ARRAY_MAP;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -211,7 +210,7 @@ public class TestHeapSize  {
     cl = ReentrantReadWriteLock.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.REENTRANT_LOCK;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -220,7 +219,7 @@ public class TestHeapSize  {
     cl = AtomicLong.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.ATOMIC_LONG;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -229,7 +228,7 @@ public class TestHeapSize  {
     cl = AtomicInteger.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.ATOMIC_INTEGER;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -238,7 +237,7 @@ public class TestHeapSize  {
     cl = AtomicBoolean.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.ATOMIC_BOOLEAN;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -247,7 +246,7 @@ public class TestHeapSize  {
     cl = CopyOnWriteArraySet.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.COPYONWRITE_ARRAYSET;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -256,7 +255,7 @@ public class TestHeapSize  {
     cl = CopyOnWriteArrayList.class;
     expected = ClassSize.estimateBase(cl, false);
     actual = ClassSize.COPYONWRITE_ARRAYLIST;
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -290,10 +289,8 @@ public class TestHeapSize  {
   }
 
   /**
-   * Testing the classes that implements HeapSize and are a part of 0.20.
-   * Some are not tested here for example BlockIndex which is tested in
-   * TestHFile since it is a non public class
-   * @throws IOException
+   * Testing the classes that implements HeapSize and are a part of 0.20. Some are not tested here
+   * for example BlockIndex which is tested in TestHFile since it is a non public class n
    */
   @Test
   public void testSizes() throws IOException {
@@ -301,21 +298,21 @@ public class TestHeapSize  {
     long expected;
     long actual;
 
-    //KeyValue
+    // KeyValue
     cl = KeyValue.class;
     expected = ClassSize.estimateBase(cl, false);
     KeyValue kv = new KeyValue();
     actual = kv.heapSize();
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
 
-    //LruBlockCache Overhead
+    // LruBlockCache Overhead
     cl = LruBlockCache.class;
     actual = LruBlockCache.CACHE_FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -328,7 +325,7 @@ public class TestHeapSize  {
     expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(String.class, false);
     expected += ClassSize.estimateBase(ByteBuffer.class, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(String.class, true);
       ClassSize.estimateBase(ByteBuffer.class, true);
@@ -339,7 +336,7 @@ public class TestHeapSize  {
     cl = DefaultMemStore.class;
     actual = DefaultMemStore.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -359,8 +356,8 @@ public class TestHeapSize  {
     expected += ClassSize.estimateBase(AtomicBoolean.class, false);
     expected += ClassSize.estimateBase(AtomicBoolean.class, false);
     expected += ClassSize.estimateBase(CompactionPipeline.class, false);
-    expected += ClassSize.estimateBase(LinkedList.class, false); //inside CompactionPipeline
-    expected += ClassSize.estimateBase(LinkedList.class, false); //inside CompactionPipeline
+    expected += ClassSize.estimateBase(LinkedList.class, false); // inside CompactionPipeline
+    expected += ClassSize.estimateBase(LinkedList.class, false); // inside CompactionPipeline
     expected += ClassSize.estimateBase(MemStoreCompactor.class, false);
     expected += ClassSize.estimateBase(AtomicBoolean.class, false);// inside MemStoreCompactor
     if (expected != actual) {
@@ -388,7 +385,7 @@ public class TestHeapSize  {
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class,true);
+      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       assertEquals(expected, actual);
     }
 
@@ -409,10 +406,10 @@ public class TestHeapSize  {
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class,true);
+      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(SyncTimeRangeTracker.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
-      ClassSize.estimateBase(AtomicBoolean.class,true);
+      ClassSize.estimateBase(AtomicBoolean.class, true);
       assertEquals(expected, actual);
     }
 
@@ -431,7 +428,7 @@ public class TestHeapSize  {
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class,true);
+      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(NonSyncTimeRangeTracker.class, true);
       assertEquals(expected, actual);
     }
@@ -451,7 +448,7 @@ public class TestHeapSize  {
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class,true);
+      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(NonSyncTimeRangeTracker.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
       assertEquals(expected, actual);
@@ -471,7 +468,7 @@ public class TestHeapSize  {
       ClassSize.estimateBase(AtomicLong.class, true);
       ClassSize.estimateBase(AtomicReference.class, true);
       ClassSize.estimateBase(CellSet.class, true);
-      ClassSize.estimateBase(ReentrantReadWriteLock.class,true);
+      ClassSize.estimateBase(ReentrantReadWriteLock.class, true);
       ClassSize.estimateBase(NonSyncTimeRangeTracker.class, true);
       ClassSize.estimateBase(CellArrayMap.class, true);
       assertEquals(expected, actual);
@@ -481,7 +478,7 @@ public class TestHeapSize  {
     cl = HStore.class;
     actual = HStore.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
-    if(expected != actual) {
+    if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
@@ -507,7 +504,7 @@ public class TestHeapSize  {
     // size of strings is hard.
     cl = BlockCacheKey.class;
     actual = BlockCacheKey.FIXED_OVERHEAD;
-    expected  = ClassSize.estimateBase(cl, false);
+    expected = ClassSize.estimateBase(cl, false);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
@@ -516,7 +513,7 @@ public class TestHeapSize  {
     // Currently NOT testing Deep Overheads of many of these classes.
     // Deep overheads cover a vast majority of stuff, but will not be 100%
     // accurate because it's unclear when we're referencing stuff that's already
-    // accounted for.  But we have satisfied our two core requirements.
+    // accounted for. But we have satisfied our two core requirements.
     // Sizing is quite accurate now, and our tests will throw errors if
     // any of these classes are modified without updating overhead sizes.
   }
@@ -544,14 +541,14 @@ public class TestHeapSize  {
   }
 
   @Test
-  public void testMutations(){
+  public void testMutations() {
     Class<?> cl;
     long expected;
     long actual;
 
     cl = TimeRange.class;
     actual = ClassSize.TIMERANGE;
-    expected  = ClassSize.estimateBase(cl, false);
+    expected = ClassSize.estimateBase(cl, false);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
@@ -561,7 +558,7 @@ public class TestHeapSize  {
     cl = Put.class;
     actual = Mutation.MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected = ClassSize.estimateBase(cl, false);
-    //The actual TreeMap is not included in the above calculation
+    // The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);
     expected += ClassSize.align(ClassSize.INTEGER); // priority
     if (expected != actual) {
@@ -571,8 +568,8 @@ public class TestHeapSize  {
 
     cl = Delete.class;
     actual = Mutation.MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
-    expected  = ClassSize.estimateBase(cl, false);
-    //The actual TreeMap is not included in the above calculation
+    expected = ClassSize.estimateBase(cl, false);
+    // The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);
     expected += ClassSize.align(ClassSize.INTEGER); // priority
     if (expected != actual) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -87,12 +87,15 @@ public final class MasterRegionFactory {
 
   public static final byte[] PROC_FAMILY = Bytes.toBytes("proc");
 
+  public static final byte[] REGION_SERVER_FAMILY = Bytes.toBytes("rs");
+
   private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE_NAME)
     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
       .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS).setInMemory(true)
       .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE).setBloomFilterType(BloomType.ROWCOL)
       .setDataBlockEncoding(DataBlockEncoding.ROW_INDEX_V1).build())
-    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY)).build();
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(PROC_FAMILY))
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(REGION_SERVER_FAMILY)).build();
 
   private static TableDescriptor withTrackerConfigs(Configuration conf) {
     String trackerImpl = conf.get(TRACKER_IMPL, conf.get(StoreFileTrackerFactory.TRACKER_IMPL,
@@ -100,8 +103,8 @@ public final class MasterRegionFactory {
     Class<? extends StoreFileTracker> trackerClass =
       StoreFileTrackerFactory.getTrackerClass(trackerImpl);
     if (StoreFileTrackerFactory.isMigration(trackerClass)) {
-      throw new IllegalArgumentException("Should not set store file tracker to " +
-        StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
+      throw new IllegalArgumentException("Should not set store file tracker to "
+        + StoreFileTrackerFactory.Trackers.MIGRATION.name() + " for master local region");
     }
     StoreFileTracker tracker = ReflectionUtils.newInstance(trackerClass, conf, true, null);
     return tracker.updateWithTrackerConfigs(TableDescriptorBuilder.newBuilder(TABLE_DESC)).build();

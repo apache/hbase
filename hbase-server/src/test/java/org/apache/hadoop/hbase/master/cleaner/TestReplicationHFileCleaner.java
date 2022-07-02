@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -74,7 +73,7 @@ public class TestReplicationHFileCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationHFileCleaner.class);
+    HBaseClassTestRule.forClass(TestReplicationHFileCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationHFileCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -135,8 +134,7 @@ public class TestReplicationHFileCleaner {
     cleaner.setConf(conf);
     // 3. Assert that file as is should be deletable
     assertTrue("Cleaner should allow to delete this file as there is no hfile reference node "
-        + "for it in the queue.",
-      cleaner.isFileDeletable(fs.getFileStatus(file)));
+      + "for it in the queue.", cleaner.isFileDeletable(fs.getFileStatus(file)));
 
     List<Pair<Path, Path>> files = new ArrayList<>(1);
     files.add(new Pair<>(null, file));
@@ -144,8 +142,7 @@ public class TestReplicationHFileCleaner {
     rq.addHFileRefs(peerId, files);
     // 5. Assert file should not be deletable
     assertFalse("Cleaner should not allow to delete this file as there is a hfile reference node "
-        + "for it in the queue.",
-      cleaner.isFileDeletable(fs.getFileStatus(file)));
+      + "for it in the queue.", cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   @Test
@@ -181,7 +178,7 @@ public class TestReplicationHFileCleaner {
     // 5. Assert one file should not be deletable and it is present in the list returned
     if (i > 2) {
       fail("File " + notDeletablefile
-          + " should not be deletable as its hfile reference node is not added.");
+        + " should not be deletable as its hfile reference node is not added.");
     }
     assertTrue(deletableFilesIterator.next().getPath().equals(deletablefile));
   }
@@ -193,14 +190,12 @@ public class TestReplicationHFileCleaner {
   public void testZooKeeperAbort() throws Exception {
     ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
 
-    List<FileStatus> dummyFiles =
-      Lists.newArrayList(new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
-          new Path("hfile1")),
-        new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(),
-          new Path("hfile2")));
+    List<FileStatus> dummyFiles = Lists.newArrayList(
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("hfile1")),
+      new FileStatus(100, false, 3, 100, EnvironmentEdgeManager.currentTime(), new Path("hfile2")));
 
     FaultyZooKeeperWatcher faultyZK =
-        new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
+      new FaultyZooKeeperWatcher(conf, "testZooKeeperAbort-faulty", null);
     try {
       faultyZK.init();
       cleaner.setConf(conf, faultyZK);
@@ -249,15 +244,16 @@ public class TestReplicationHFileCleaner {
 
   static class FaultyZooKeeperWatcher extends ZKWatcher {
     private RecoverableZooKeeper zk;
+
     public FaultyZooKeeperWatcher(Configuration conf, String identifier, Abortable abortable)
-        throws ZooKeeperConnectionException, IOException {
+      throws ZooKeeperConnectionException, IOException {
       super(conf, identifier, abortable);
     }
 
     public void init() throws Exception {
       this.zk = spy(super.getRecoverableZooKeeper());
-      doThrow(new KeeperException.ConnectionLossException())
-          .when(zk).getData("/hbase/replication/hfile-refs", null, new Stat());
+      doThrow(new KeeperException.ConnectionLossException()).when(zk)
+        .getData("/hbase/replication/hfile-refs", null, new Stat());
     }
 
     @Override

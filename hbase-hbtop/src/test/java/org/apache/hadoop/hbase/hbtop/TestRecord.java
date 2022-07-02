@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,20 +28,17 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
 public class TestRecord {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecord.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestRecord.class);
 
   @Test
   public void testBuilder() {
-    Record actual1 = Record.builder().put(Field.TABLE, "tableName")
-      .put(entry(Field.REGION_COUNT, 3))
-      .put(Field.REQUEST_COUNT_PER_SECOND, Field.REQUEST_COUNT_PER_SECOND.newValue(100L))
-      .build();
+    Record actual1 =
+      Record.builder().put(Field.TABLE, "tableName").put(entry(Field.REGION_COUNT, 3))
+        .put(Field.REQUEST_COUNT_PER_SECOND, Field.REQUEST_COUNT_PER_SECOND.newValue(100L)).build();
 
     assertThat(actual1.size(), is(3));
     assertThat(actual1.get(Field.TABLE).asString(), is("tableName"));
@@ -58,11 +55,8 @@ public class TestRecord {
 
   @Test
   public void testOfEntries() {
-    Record actual = Record.ofEntries(
-      entry(Field.TABLE, "tableName"),
-      entry(Field.REGION_COUNT, 3),
-      entry(Field.REQUEST_COUNT_PER_SECOND, 100L)
-    );
+    Record actual = Record.ofEntries(entry(Field.TABLE, "tableName"), entry(Field.REGION_COUNT, 3),
+      entry(Field.REQUEST_COUNT_PER_SECOND, 100L));
 
     assertThat(actual.size(), is(3));
     assertThat(actual.get(Field.TABLE).asString(), is("tableName"));
@@ -72,17 +66,11 @@ public class TestRecord {
 
   @Test
   public void testCombine() {
-    Record record1 = Record.ofEntries(
-      entry(Field.TABLE, "tableName"),
-      entry(Field.REGION_COUNT, 3),
-      entry(Field.REQUEST_COUNT_PER_SECOND, 100L)
-    );
+    Record record1 = Record.ofEntries(entry(Field.TABLE, "tableName"), entry(Field.REGION_COUNT, 3),
+      entry(Field.REQUEST_COUNT_PER_SECOND, 100L));
 
-    Record record2 = Record.ofEntries(
-      entry(Field.TABLE, "tableName"),
-      entry(Field.REGION_COUNT, 5),
-      entry(Field.REQUEST_COUNT_PER_SECOND, 500L)
-    );
+    Record record2 = Record.ofEntries(entry(Field.TABLE, "tableName"), entry(Field.REGION_COUNT, 5),
+      entry(Field.REQUEST_COUNT_PER_SECOND, 500L));
 
     Record actual = record1.combine(record2);
 

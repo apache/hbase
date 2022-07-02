@@ -79,22 +79,94 @@ The release managers are link:https://hbase.apache.org/team-list.html[committers
 If you would like your feature or bug fix to be included in a given release, communicate with that release manager.
 If this list goes out of date or you can't reach the listed person, reach out to someone else on the list.
 
-NOTE: End-of-life releases are not included in this list.
 
 .Release Managers
-[cols="1,1", options="header"]
+[cols="1,1,1,1", options="header"]
 |===
 | Release
 | Release Manager
+| Latest Release
+| EOL
+
+| 0.94
+| Lars Hofhansl
+| 0.94.27
+| April 2017
+
+| 0.96
+| Michael Stack
+| 0.96.2
+| September 2014
+
+| 0.98
+| Andrew Purtell
+| 0.98.24
+| April 2017
+
+| 1.0
+| Enis Soztutar
+| 1.0.3
+| January 2016
+
+| 1.1
+| Nick Dimiduk
+| 1.1.13
+| December 2017
+
+| 1.2
+| Sean Busbey
+| 1.2.12
+| June 2019
+
+| 1.3
+| Mikhail Antonov
+| 1.3.6
+| August 2020
+
+| 1.4
+| Andrew Purtell
+| 1.4.14
+| October 2021
+
+| 1.5
+| Andrew Purtell
+| 1.5.0
+| October 2019
+
+| 1.6
+| Andrew Purtell
+| 1.6.0
+| February 2020
 
 | 1.7
 | Reid Chan
+| Check the https://hbase.apache.org/downloads.html[download] page
+| *NOT YET*
+
+| 2.0
+| Michael Stack
+| 2.0.6
+| September 2019
+
+| 2.1
+| Duo Zhang
+| 2.1.10
+| May 2020
+
+| 2.2
+| Guanghao Zhang
+| 2.2.7
+| April 2021
 
 | 2.3
 | Nick Dimiduk
+| 2.3.7
+| October 2021
 
 | 2.4
 | Andrew Purtell
+| Check the https://hbase.apache.org/downloads.html[download] page
+| *NOT YET*
 
 |===
 

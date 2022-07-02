@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -26,8 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that restarts an HRegionServer holding one of the regions of the table.
-*/
+ * Action that restarts an HRegionServer holding one of the regions of the table.
+ */
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
   private static final Logger LOG = LoggerFactory.getLogger(RestartRsHoldingTableAction.class);
 
@@ -38,17 +37,17 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
     this.locator = locator;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
   @Override
   public void perform() throws Exception {
-    getLogger().info(
-      "Performing action: Restart random RS holding table " + this.locator.getName());
+    getLogger()
+      .info("Performing action: Restart random RS holding table " + this.locator.getName());
     List<HRegionLocation> locations = locator.getAllRegionLocations();
-    restartRs(locations.get(ThreadLocalRandom.current().nextInt(locations.size()))
-        .getServerName(),
+    restartRs(locations.get(ThreadLocalRandom.current().nextInt(locations.size())).getServerName(),
       sleepTime);
   }
 }

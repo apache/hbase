@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.http.jmx;
 
 import java.io.IOException;
@@ -43,26 +43,21 @@ import org.slf4j.LoggerFactory;
 /**
  * Provides Read only web access to JMX.
  * <p>
- * This servlet generally will be placed under the /jmx URL for each
- * HttpServer.  It provides read only
- * access to JMX metrics.  The optional <code>qry</code> parameter
- * may be used to query only a subset of the JMX Beans.  This query
- * functionality is provided through the
- * {@link MBeanServer#queryNames(ObjectName, javax.management.QueryExp)}
- * method.
+ * This servlet generally will be placed under the /jmx URL for each HttpServer. It provides read
+ * only access to JMX metrics. The optional <code>qry</code> parameter may be used to query only a
+ * subset of the JMX Beans. This query functionality is provided through the
+ * {@link MBeanServer#queryNames(ObjectName, javax.management.QueryExp)} method.
  * </p>
  * <p>
- * For example <code>http://.../jmx?qry=Hadoop:*</code> will return
- * all hadoop metrics exposed through JMX.
+ * For example <code>http://.../jmx?qry=Hadoop:*</code> will return all hadoop metrics exposed
+ * through JMX.
  * </p>
  * <p>
- * The optional <code>get</code> parameter is used to query an specific
- * attribute of a JMX bean.  The format of the URL is
- * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
+ * The optional <code>get</code> parameter is used to query an specific attribute of a JMX bean. The
+ * format of the URL is <code>http://.../jmx?get=MXBeanName::AttributeName</code>
  * </p>
  * <p>
- * For example
- * <code>
+ * For example <code>
  * http://../jmx?get=Hadoop:service=NameNode,name=NameNodeInfo::ClusterId
  * </code> will return the cluster id of the namenode mxbean.
  * </p>
@@ -72,8 +67,7 @@ import org.slf4j.LoggerFactory;
  * <code>http://.../jmx?get=MXBeanName::*[RegExp1],*[RegExp2]</code>
  * </p>
  * <p>
- * For example
- * <code>
+ * For example <code>
  * <p>
  * http://../jmx?get=Hadoop:service=HBase,name=RegionServer,sub=Tables::[a-zA-z_0-9]*memStoreSize
  * </p>
@@ -82,17 +76,19 @@ import org.slf4j.LoggerFactory;
  * </p>
  * </code>
  * </p>
- * If the <code>qry</code> or the <code>get</code> parameter is not formatted
- * correctly then a 400 BAD REQUEST http response code will be returned.
+ * If the <code>qry</code> or the <code>get</code> parameter is not formatted correctly then a 400
+ * BAD REQUEST http response code will be returned.
  * </p>
  * <p>
- * If a resouce such as a mbean or attribute can not be found,
- * a 404 SC_NOT_FOUND http response code will be returned.
+ * If a resouce such as a mbean or attribute can not be found, a 404 SC_NOT_FOUND http response code
+ * will be returned.
  * </p>
  * <p>
  * The return format is JSON and in the form
  * </p>
- *  <pre><code>
+ *
+ * <pre>
+ * <code>
  *  {
  *    "beans" : [
  *      {
@@ -101,28 +97,18 @@ import org.slf4j.LoggerFactory;
  *      }
  *    ]
  *  }
- *  </code></pre>
- *  <p>
- *  The servlet attempts to convert the the JMXBeans into JSON. Each
- *  bean's attributes will be converted to a JSON object member.
- *
- *  If the attribute is a boolean, a number, a string, or an array
- *  it will be converted to the JSON equivalent.
- *
- *  If the value is a {@link CompositeData} then it will be converted
- *  to a JSON object with the keys as the name of the JSON member and
- *  the value is converted following these same rules.
- *
- *  If the value is a {@link TabularData} then it will be converted
- *  to an array of the {@link CompositeData} elements that it contains.
- *
- *  All other objects will be converted to a string and output as such.
- *
- *  The bean's name and modelerType will be returned for all beans.
- *
- *  Optional paramater "callback" should be used to deliver JSONP response.
+ *  </code>
+ * </pre>
+ * <p>
+ * The servlet attempts to convert the the JMXBeans into JSON. Each bean's attributes will be
+ * converted to a JSON object member. If the attribute is a boolean, a number, a string, or an array
+ * it will be converted to the JSON equivalent. If the value is a {@link CompositeData} then it will
+ * be converted to a JSON object with the keys as the name of the JSON member and the value is
+ * converted following these same rules. If the value is a {@link TabularData} then it will be
+ * converted to an array of the {@link CompositeData} elements that it contains. All other objects
+ * will be converted to a string and output as such. The bean's name and modelerType will be
+ * returned for all beans. Optional paramater "callback" should be used to deliver JSONP response.
  * </p>
- *
  */
 @InterfaceAudience.Private
 public class JMXJsonServlet extends HttpServlet {
@@ -156,12 +142,8 @@ public class JMXJsonServlet extends HttpServlet {
   }
 
   /**
-   * Process a GET request for the specified resource.
-   *
-   * @param request
-   *          The servlet request we are processing
-   * @param response
-   *          The servlet response we are creating
+   * Process a GET request for the specified resource. n * The servlet request we are processing n *
+   * The servlet response we are creating
    */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -199,8 +181,10 @@ public class JMXJsonServlet extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
           }
-          if (beanWriter.write(this.mBeanServer, new ObjectName(splitStrings[0]),
-              splitStrings[1], description) != 0) {
+          if (
+            beanWriter.write(this.mBeanServer, new ObjectName(splitStrings[0]), splitStrings[1],
+              description) != 0
+          ) {
             beanWriter.flush();
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
           }
@@ -215,8 +199,9 @@ public class JMXJsonServlet extends HttpServlet {
         String excl = request.getParameter("excl");
         ObjectName excluded = excl == null ? null : new ObjectName(excl);
 
-        if (beanWriter.write(this.mBeanServer, new ObjectName(qry),
-            null, description, excluded) != 0) {
+        if (
+          beanWriter.write(this.mBeanServer, new ObjectName(qry), null, description, excluded) != 0
+        ) {
           beanWriter.flush();
           response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
@@ -241,10 +226,9 @@ public class JMXJsonServlet extends HttpServlet {
   }
 
   /**
-   * Verifies that the callback property, if provided, is purely alphanumeric.
-   * This prevents a malicious callback name (that is javascript code) from being
-   * returned by the UI to an unsuspecting user.
-   *
+   * Verifies that the callback property, if provided, is purely alphanumeric. This prevents a
+   * malicious callback name (that is javascript code) from being returned by the UI to an
+   * unsuspecting user.
    * @param callbackName The callback name, can be null.
    * @return The callback name
    * @throws IOException If the name is disallowed.

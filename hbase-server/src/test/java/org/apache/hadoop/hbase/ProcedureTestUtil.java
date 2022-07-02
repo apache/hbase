@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public final class ProcedureTestUtil {
   }
 
   private static Optional<JsonObject> getProcedure(HBaseTestingUtil util,
-      Class<? extends Procedure<?>> clazz, JsonParser parser) throws IOException {
+    Class<? extends Procedure<?>> clazz, JsonParser parser) throws IOException {
     JsonArray array = parser.parse(util.getAdmin().getProcedures()).getAsJsonArray();
     Iterator<JsonElement> iterator = array.iterator();
     while (iterator.hasNext()) {
@@ -54,7 +54,7 @@ public final class ProcedureTestUtil {
   }
 
   public static void waitUntilProcedureWaitingTimeout(HBaseTestingUtil util,
-      Class<? extends Procedure<?>> clazz, long timeout) throws IOException {
+    Class<? extends Procedure<?>> clazz, long timeout) throws IOException {
     JsonParser parser = new JsonParser();
     util.waitFor(timeout,
       () -> getProcedure(util, clazz, parser)
@@ -63,7 +63,7 @@ public final class ProcedureTestUtil {
   }
 
   public static void waitUntilProcedureTimeoutIncrease(HBaseTestingUtil util,
-      Class<? extends Procedure<?>> clazz, int times) throws IOException, InterruptedException {
+    Class<? extends Procedure<?>> clazz, int times) throws IOException, InterruptedException {
     JsonParser parser = new JsonParser();
     long oldTimeout = 0;
     int timeoutIncrements = 0;

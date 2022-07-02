@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -109,17 +109,17 @@ public class TestSplitMerge {
 
   @Test
   public void testMergeRegionOrder() throws Exception {
-    int regionCount= 20;
+    int regionCount = 20;
 
     TableName tableName = TableName.valueOf("MergeRegionOrder");
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
 
-    byte[][] splitKeys = new byte[regionCount-1][];
+    byte[][] splitKeys = new byte[regionCount - 1][];
 
-    for (int c = 0; c < regionCount-1; c++) {
-      splitKeys[c] = Bytes.toBytes(c+1 * 1000);
+    for (int c = 0; c < regionCount - 1; c++) {
+      splitKeys[c] = Bytes.toBytes(c + 1 * 1000);
     }
 
     UTIL.getAdmin().createTable(td, splitKeys);
@@ -135,7 +135,7 @@ public class TestSplitMerge {
     UTIL.getAdmin().mergeRegionsAsync(regionNames, false).get(60, TimeUnit.SECONDS);
 
     List<RegionInfo> mergedRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+      MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
 
     assertEquals(1, mergedRegions.size());
 

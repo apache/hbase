@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import java.util.concurrent.BlockingQueue;
@@ -25,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A ThreadPoolExecutor customized for working with HBase thrift to update metrics before and
- * after the execution of a task.
+ * A ThreadPoolExecutor customized for working with HBase thrift to update metrics before and after
+ * the execution of a task.
  */
 
 @InterfaceAudience.Private
@@ -35,13 +34,13 @@ public class THBaseThreadPoolExecutor extends ThreadPoolExecutor {
   private ThriftMetrics metrics;
 
   public THBaseThreadPoolExecutor(int corePoolSize, int maxPoolSize, long keepAliveTime,
-      TimeUnit unit, BlockingQueue<Runnable> workQueue, ThriftMetrics metrics) {
+    TimeUnit unit, BlockingQueue<Runnable> workQueue, ThriftMetrics metrics) {
     this(corePoolSize, maxPoolSize, keepAliveTime, unit, workQueue, null, metrics);
   }
 
   public THBaseThreadPoolExecutor(int corePoolSize, int maxPoolSize, long keepAliveTime,
-      TimeUnit unit, BlockingQueue<Runnable> workQueue,
-      ThreadFactory threadFactory,ThriftMetrics metrics) {
+    TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory,
+    ThriftMetrics metrics) {
     super(corePoolSize, maxPoolSize, keepAliveTime, unit, workQueue);
     if (threadFactory != null) {
       setThreadFactory(threadFactory);

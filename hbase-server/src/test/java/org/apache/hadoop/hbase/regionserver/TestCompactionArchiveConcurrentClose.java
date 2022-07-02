@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,12 +59,12 @@ import org.mockito.Mockito;
  * Tests a race condition between archiving of compacted files in CompactedHFilesDischarger chore
  * and HRegion.close();
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestCompactionArchiveConcurrentClose {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionArchiveConcurrentClose.class);
+    HBaseClassTestRule.forClass(TestCompactionArchiveConcurrentClose.class);
 
   private HBaseTestingUtil testUtil;
 
@@ -94,7 +94,7 @@ public class TestCompactionArchiveConcurrentClose {
 
     TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
     HRegion region = initHRegion(htd, info);
     RegionServerServices rss = mock(RegionServerServices.class);
@@ -104,7 +104,7 @@ public class TestCompactionArchiveConcurrentClose {
 
     // Create the cleaner object
     CompactedHFilesDischarger cleaner =
-        new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
+      new CompactedHFilesDischarger(1000, (Stoppable) null, rss, false);
     // Add some data to the region and do some flushes
     int batchSize = 10;
     int fileCount = 10;
@@ -171,9 +171,9 @@ public class TestCompactionArchiveConcurrentClose {
     Path tableDir = CommonFSUtils.getTableDir(testDir, htd.getTableName());
 
     HRegionFileSystem fs =
-        new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
-    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0,
-      0, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      new WaitingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
+    ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     final Configuration walConf = new Configuration(conf);
     CommonFSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, "log_" + info.getEncodedName());
@@ -187,13 +187,13 @@ public class TestCompactionArchiveConcurrentClose {
   private class WaitingHRegionFileSystem extends HRegionFileSystem {
 
     public WaitingHRegionFileSystem(final Configuration conf, final FileSystem fs,
-        final Path tableDir, final RegionInfo regionInfo) {
+      final Path tableDir, final RegionInfo regionInfo) {
       super(conf, fs, tableDir, regionInfo);
     }
 
     @Override
     public void removeStoreFiles(String familyName, Collection<HStoreFile> storeFiles)
-        throws IOException {
+      throws IOException {
       super.removeStoreFiles(familyName, storeFiles);
       archived.set(true);
       synchronized (archived) {

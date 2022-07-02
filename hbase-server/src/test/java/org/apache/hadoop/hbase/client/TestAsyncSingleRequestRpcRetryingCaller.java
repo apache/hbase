@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,7 +73,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
     ConnectionRegistry registry =
-        ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
+      ConnectionRegistryFactory.getRegistry(TEST_UTIL.getConfiguration());
     CONN = new AsyncConnectionImpl(TEST_UTIL.getConfiguration(), registry,
       registry.getClusterId().get(), null, User.getCurrent());
   }
@@ -145,7 +145,7 @@ public class TestAsyncSingleRequestRpcRetryingCaller {
       new AsyncRegionLocator(CONN, AsyncConnectionImpl.RETRY_TIMER) {
         @Override
         CompletableFuture<HRegionLocation> getRegionLocation(TableName tableName, byte[] row,
-            int replicaId, RegionLocateType locateType, long timeoutNs) {
+          int replicaId, RegionLocateType locateType, long timeoutNs) {
           if (tableName.equals(TABLE_NAME)) {
             CompletableFuture<HRegionLocation> future = new CompletableFuture<>();
             if (count.getAndIncrement() == 0) {

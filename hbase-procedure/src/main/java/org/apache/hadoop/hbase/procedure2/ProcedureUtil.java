@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  */
 @InterfaceAudience.Private
 public final class ProcedureUtil {
-  private ProcedureUtil() { }
+  private ProcedureUtil() {
+  }
 
   // ==========================================================================
-  //  Reflection helpers to create/validate a Procedure object
+  // Reflection helpers to create/validate a Procedure object
   // ==========================================================================
   private static Procedure<?> newProcedure(String className) throws BadProcedureException {
     try {
@@ -85,18 +86,18 @@ public final class ProcedureUtil {
         throw new Exception("the " + clazz + " constructor is not public");
       }
     } catch (Exception e) {
-      throw new BadProcedureException("The procedure class " + proc.getClass().getName() +
-        " must be accessible and have an empty constructor", e);
+      throw new BadProcedureException("The procedure class " + proc.getClass().getName()
+        + " must be accessible and have an empty constructor", e);
     }
   }
 
   // ==========================================================================
-  //  convert to and from Procedure object
+  // convert to and from Procedure object
   // ==========================================================================
 
   /**
-   * A serializer for our Procedures. Instead of the previous serializer, it
-   * uses the stateMessage list to store the internal state of the Procedures.
+   * A serializer for our Procedures. Instead of the previous serializer, it uses the stateMessage
+   * list to store the internal state of the Procedures.
    */
   private static class StateSerializer implements ProcedureStateSerializer {
     private final ProcedureProtos.Procedure.Builder builder;
@@ -113,8 +114,7 @@ public final class ProcedureUtil {
     }
 
     @Override
-    public <M extends Message> M deserialize(Class<M> clazz)
-        throws IOException {
+    public <M extends Message> M deserialize(Class<M> clazz) throws IOException {
       if (deserializeIndex >= builder.getStateMessageCount()) {
         throw new IOException("Invalid state message index: " + deserializeIndex);
       }
@@ -129,8 +129,8 @@ public final class ProcedureUtil {
   }
 
   /**
-   * A serializer (deserializer) for those Procedures which were serialized
-   * before this patch. It deserializes the old, binary stateData field.
+   * A serializer (deserializer) for those Procedures which were serialized before this patch. It
+   * deserializes the old, binary stateData field.
    */
   private static class CompatStateSerializer implements ProcedureStateSerializer {
     private InputStream inputStream;
@@ -146,8 +146,7 @@ public final class ProcedureUtil {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <M extends Message> M deserialize(Class<M> clazz)
-        throws IOException {
+    public <M extends Message> M deserialize(Class<M> clazz) throws IOException {
       Parser<M> parser = (Parser<M>) Internal.getDefaultInstance(clazz).getParserForType();
       try {
         return parser.parseDelimitedFrom(inputStream);
@@ -163,16 +162,13 @@ public final class ProcedureUtil {
    * Used by ProcedureStore implementations.
    */
   public static ProcedureProtos.Procedure convertToProtoProcedure(Procedure<?> proc)
-      throws IOException {
+    throws IOException {
     Preconditions.checkArgument(proc != null);
     validateClass(proc);
 
     final ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder()
-      .setClassName(proc.getClass().getName())
-      .setProcId(proc.getProcId())
-      .setState(proc.getState())
-      .setSubmittedTime(proc.getSubmittedTime())
-      .setLastUpdate(proc.getLastUpdate());
+      .setClassName(proc.getClass().getName()).setProcId(proc.getProcId()).setState(proc.getState())
+      .setSubmittedTime(proc.getSubmittedTime()).setLastUpdate(proc.getLastUpdate());
 
     if (proc.hasParent()) {
       builder.setParentId(proc.getParentProcId());
@@ -232,7 +228,7 @@ public final class ProcedureUtil {
    * it by storing the data only on insert().
    */
   public static Procedure<?> convertToProcedure(ProcedureProtos.Procedure proto)
-      throws IOException {
+    throws IOException {
     // Procedure from class name
     Procedure<?> proc = newProcedure(proto.getClassName());
 
@@ -259,9 +255,9 @@ public final class ProcedureUtil {
     }
 
     if (proto.hasException()) {
-      assert proc.getState() == ProcedureProtos.ProcedureState.FAILED ||
-             proc.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK :
-             "The procedure must be failed (waiting to rollback) or rolledback";
+      assert proc.getState() == ProcedureProtos.ProcedureState.FAILED
+        || proc.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK
+        : "The procedure must be failed (waiting to rollback) or rolledback";
       proc.setFailure(RemoteProcedureException.fromProto(proto.getException()));
     }
 
@@ -298,11 +294,11 @@ public final class ProcedureUtil {
   }
 
   // ==========================================================================
-  //  convert from LockedResource object
+  // convert from LockedResource object
   // ==========================================================================
 
-  public static LockServiceProtos.LockedResourceType convertToProtoResourceType(
-      LockedResourceType resourceType) {
+  public static LockServiceProtos.LockedResourceType
+    convertToProtoResourceType(LockedResourceType resourceType) {
     return LockServiceProtos.LockedResourceType.valueOf(resourceType.name());
   }
 
@@ -310,29 +306,27 @@ public final class ProcedureUtil {
     return LockServiceProtos.LockType.valueOf(lockType.name());
   }
 
-  public static LockServiceProtos.LockedResource convertToProtoLockedResource(
-      LockedResource lockedResource) throws IOException {
+  public static LockServiceProtos.LockedResource
+    convertToProtoLockedResource(LockedResource lockedResource) throws IOException {
     LockServiceProtos.LockedResource.Builder builder =
-        LockServiceProtos.LockedResource.newBuilder();
+      LockServiceProtos.LockedResource.newBuilder();
 
-    builder
-        .setResourceType(convertToProtoResourceType(lockedResource.getResourceType()))
-        .setResourceName(lockedResource.getResourceName())
-        .setLockType(convertToProtoLockType(lockedResource.getLockType()));
+    builder.setResourceType(convertToProtoResourceType(lockedResource.getResourceType()))
+      .setResourceName(lockedResource.getResourceName())
+      .setLockType(convertToProtoLockType(lockedResource.getLockType()));
 
     Procedure<?> exclusiveLockOwnerProcedure = lockedResource.getExclusiveLockOwnerProcedure();
 
     if (exclusiveLockOwnerProcedure != null) {
       ProcedureProtos.Procedure exclusiveLockOwnerProcedureProto =
-          convertToProtoProcedure(exclusiveLockOwnerProcedure);
+        convertToProtoProcedure(exclusiveLockOwnerProcedure);
       builder.setExclusiveLockOwnerProcedure(exclusiveLockOwnerProcedureProto);
     }
 
     builder.setSharedLockCount(lockedResource.getSharedLockCount());
 
     for (Procedure<?> waitingProcedure : lockedResource.getWaitingProcedures()) {
-      ProcedureProtos.Procedure waitingProcedureProto =
-          convertToProtoProcedure(waitingProcedure);
+      ProcedureProtos.Procedure waitingProcedureProto = convertToProtoProcedure(waitingProcedure);
       builder.addWaitingProcedures(waitingProcedureProto);
     }
 

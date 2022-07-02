@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,12 +58,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLablesWithGroups {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLablesWithGroups.class);
+    HBaseClassTestRule.forClass(TestVisibilityLablesWithGroups.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -95,7 +95,7 @@ public class TestVisibilityLablesWithGroups {
     // 'admin' has super user permission because it is part of the 'supergroup'
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     // 'test' user will inherit 'testgroup' visibility labels
-    TESTUSER = User.createUserForTesting(conf, "test", new String[] {"testgroup" });
+    TESTUSER = User.createUserForTesting(conf, "test", new String[] { "testgroup" });
 
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
@@ -126,7 +126,7 @@ public class TestVisibilityLablesWithGroups {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Put put = new Put(ROW_1);
           put.addColumn(CF, Q1, HConstants.LATEST_TIMESTAMP, value1);
           put.setCellVisibility(new CellVisibility(SECRET));
@@ -148,7 +148,7 @@ public class TestVisibilityLablesWithGroups {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s = new Scan();
           ResultScanner scanner = table.getScanner(s);
           Result[] next = scanner.next(1);
@@ -159,7 +159,7 @@ public class TestVisibilityLablesWithGroups {
           cellScanner.advance();
           Cell current = cellScanner.current();
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q1, 0, Q1.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -167,7 +167,7 @@ public class TestVisibilityLablesWithGroups {
           cellScanner.advance();
           current = cellScanner.current();
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q2, 0, Q2.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -175,7 +175,7 @@ public class TestVisibilityLablesWithGroups {
           cellScanner.advance();
           current = cellScanner.current();
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q3, 0, Q3.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -210,7 +210,7 @@ public class TestVisibilityLablesWithGroups {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           // Test scan with no auth attribute
           Scan s = new Scan();
           ResultScanner scanner = table.getScanner(s);
@@ -222,7 +222,7 @@ public class TestVisibilityLablesWithGroups {
           Cell current = cellScanner.current();
           // test user can see value2 (CONFIDENTIAL) and value3 (no label)
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q2, 0, Q2.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -231,7 +231,7 @@ public class TestVisibilityLablesWithGroups {
           current = cellScanner.current();
           // test user can see value2 (CONFIDENTIAL) and value3 (no label)
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q3, 0, Q3.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -296,8 +296,7 @@ public class TestVisibilityLablesWithGroups {
       public Void run() throws Exception {
         VisibilityLabelsResponse response = null;
         try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          response = VisibilityClient.clearAuths(conn, new String[] {
-            CONFIDENTIAL }, "@testgroup");
+          response = VisibilityClient.clearAuths(conn, new String[] { CONFIDENTIAL }, "@testgroup");
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -305,7 +304,7 @@ public class TestVisibilityLablesWithGroups {
       }
     });
 
-    // Get testgroup's labels.  No label is returned.
+    // Get testgroup's labels. No label is returned.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -329,10 +328,10 @@ public class TestVisibilityLablesWithGroups {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           // test user is not entitled to 'CONFIDENTIAL' anymore since we dropped
-          // testgroup's label.  test user has no auth labels now.
+          // testgroup's label. test user has no auth labels now.
           // scan's labels will be dropped on the server side.
           s1.setAuthorizations(new Authorizations(new String[] { SECRET, CONFIDENTIAL }));
           ResultScanner scanner1 = table.getScanner(s1);

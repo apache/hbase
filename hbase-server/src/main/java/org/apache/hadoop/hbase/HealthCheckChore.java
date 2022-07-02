@@ -49,7 +49,7 @@ public class HealthCheckChore extends ScheduledChore {
     healthChecker.init(healthCheckScript, scriptTimeout);
     this.threshold = config.getInt(HConstants.HEALTH_FAILURE_THRESHOLD,
       HConstants.DEFAULT_HEALTH_FAILURE_THRESHOLD);
-    this.failureWindow = (long)this.threshold * (long)sleepTime;
+    this.failureWindow = (long) this.threshold * (long) sleepTime;
   }
 
   @Override
@@ -59,13 +59,12 @@ public class HealthCheckChore extends ScheduledChore {
     if (!isHealthy) {
       boolean needToStop = decideToStop();
       if (needToStop) {
-        this.getStopper().stop("The  node reported unhealthy " + threshold
-            + " number of times consecutively.");
+        this.getStopper()
+          .stop("The  node reported unhealthy " + threshold + " number of times consecutively.");
       }
       // Always log health report.
-      LOG.info("Health status at " +
-        StringUtils.formatTime(EnvironmentEdgeManager.currentTime()) + " : " +
-          report.getHealthReport());
+      LOG.info("Health status at " + StringUtils.formatTime(EnvironmentEdgeManager.currentTime())
+        + " : " + report.getHealthReport());
     }
   }
 

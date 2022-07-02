@@ -446,6 +446,7 @@ Shell.load_command_group(
     compact
     compaction_switch
     flush
+    flush_master_store
     get_balancer_decisions
     get_balancer_rejections
     get_slowlog_responses
@@ -473,6 +474,7 @@ Shell.load_command_group(
     splitormerge_enabled
     clear_compaction_queues
     list_deadservers
+    list_liveservers
     clear_deadservers
     clear_block_cache
     stop_master

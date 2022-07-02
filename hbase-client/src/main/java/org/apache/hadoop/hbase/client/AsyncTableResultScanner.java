@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcEstimatedSize;
 
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
@@ -58,6 +59,9 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private ScanResumer resumer;
 
+  // Used to pass the span instance to the `AsyncTableImpl` from its underlying `rawAsyncTable`.
+  private Span span = null;
+
   public AsyncTableResultScanner(TableName tableName, Scan scan, long maxCacheSize) {
     this.tableName = tableName;
     this.maxCacheSize = maxCacheSize;
@@ -71,12 +75,20 @@ class AsyncTableResultScanner implements ResultScanner, AdvancedScanResultConsum
 
   private void stopPrefetch(ScanController controller) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("{} stop prefetching when scanning {} as the cache size {}" +
-        " is greater than the maxCacheSize {}",
-        String.format("0x%x", System.identityHashCode(this)), tableName, cacheSize,
-        maxCacheSize);
+      LOG.debug(
+        "{} stop prefetching when scanning {} as the cache size {}"
+          + " is greater than the maxCacheSize {}",
+        String.format("0x%x", System.identityHashCode(this)), tableName, cacheSize, maxCacheSize);
     }
     resumer = controller.suspend();
+  }
+
+  Span getSpan() {
+    return span;
+  }
+
+  void setSpan(final Span span) {
+    this.span = span;
   }
 
   @Override

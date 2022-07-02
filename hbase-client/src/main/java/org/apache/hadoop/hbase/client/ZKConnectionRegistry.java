@@ -115,7 +115,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   private static void tryComplete(MutableInt remaining, HRegionLocation[] locs,
-      CompletableFuture<RegionLocations> future) {
+    CompletableFuture<RegionLocations> future) {
     remaining.decrement();
     if (remaining.intValue() > 0) {
       return;
@@ -123,8 +123,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
     future.complete(new RegionLocations(locs));
   }
 
-  private Pair<RegionState.State, ServerName> getStateAndServerName(
-      ZooKeeperProtos.MetaRegionServer proto) {
+  private Pair<RegionState.State, ServerName>
+    getStateAndServerName(ZooKeeperProtos.MetaRegionServer proto) {
     RegionState.State state;
     if (proto.hasState()) {
       state = RegionState.State.convert(proto.getState());
@@ -137,7 +137,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
   }
 
   private void getMetaRegionLocation(CompletableFuture<RegionLocations> future,
-      List<String> metaReplicaZNodes) {
+    List<String> metaReplicaZNodes) {
     if (metaReplicaZNodes.isEmpty()) {
       future.completeExceptionally(new IOException("No meta znode available"));
     }
@@ -178,8 +178,8 @@ class ZKConnectionRegistry implements ConnectionRegistry {
           } else {
             Pair<RegionState.State, ServerName> stateAndServerName = getStateAndServerName(proto);
             if (stateAndServerName.getFirst() != RegionState.State.OPEN) {
-              LOG.warn("Meta region for replica " + replicaId + " is in state " +
-                stateAndServerName.getFirst());
+              LOG.warn("Meta region for replica " + replicaId + " is in state "
+                + stateAndServerName.getFirst());
               locs[replicaId] = null;
             } else {
               locs[replicaId] =

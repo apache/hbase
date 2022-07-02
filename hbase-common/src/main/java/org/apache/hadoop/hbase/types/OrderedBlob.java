@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,6 @@ public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
   /**
    * Creates a new {@code byte[]} with variable length.
-   *
    * @param order the {@link Order} to use
    */
   public OrderedBlob(Order order) {
@@ -56,9 +55,9 @@ public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
   @Override
   public int encodedLength(byte[] val) {
-    return null == val ?
-      (Order.ASCENDING == order ? 1 : 2) :
-      (Order.ASCENDING == order ? val.length + 1 : val.length + 2);
+    return null == val
+      ? (Order.ASCENDING == order ? 1 : 2)
+      : (Order.ASCENDING == order ? val.length + 1 : val.length + 2);
   }
 
   @Override
@@ -78,8 +77,7 @@ public class OrderedBlob extends OrderedBytesBase<byte[]> {
 
   /**
    * Write a subset of {@code val} to {@code dst}.
-   *
-   * @param dst the {@link PositionedByteRange} to write to
+   * @param dst  the {@link PositionedByteRange} to write to
    * @param val  the value to write to {@code dst}
    * @param voff the offset in {@code dst} where to write {@code val} to
    * @param vlen the lenght of {@code val}

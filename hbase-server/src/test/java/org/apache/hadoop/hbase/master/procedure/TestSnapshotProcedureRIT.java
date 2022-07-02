@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.util.List;
@@ -46,16 +45,16 @@ public class TestSnapshotProcedureRIT extends TestSnapshotProcedure {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
     List<RegionInfo> regions = master.getAssignmentManager().getTableRegions(TABLE_NAME, true)
       .stream().sorted(RegionInfo.COMPARATOR).collect(Collectors.toList());
-    MergeTableRegionsProcedure mergeProc = new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), new RegionInfo[] {regions.get(0), regions.get(1)}, false);
+    MergeTableRegionsProcedure mergeProc = new MergeTableRegionsProcedure(procExec.getEnvironment(),
+      new RegionInfo[] { regions.get(0), regions.get(1) }, false);
     long mergeProcId = procExec.submitProcedure(mergeProc);
     // wait until merge region procedure running
-    TEST_UTIL.waitFor(10000, () ->
-      procExec.getProcedure(mergeProcId).getState() == ProcedureState.RUNNABLE);
+    TEST_UTIL.waitFor(10000,
+      () -> procExec.getProcedure(mergeProcId).getState() == ProcedureState.RUNNABLE);
     SnapshotProcedure sp = new SnapshotProcedure(procExec.getEnvironment(), snapshotProto);
     long snapshotProcId = procExec.submitProcedure(sp);
-    TEST_UTIL.waitFor(2000, 1000, () -> procExec.getProcedure(snapshotProcId) != null &&
-      procExec.getProcedure(snapshotProcId).getState() == ProcedureState.WAITING_TIMEOUT);
+    TEST_UTIL.waitFor(2000, 1000, () -> procExec.getProcedure(snapshotProcId) != null
+      && procExec.getProcedure(snapshotProcId).getState() == ProcedureState.WAITING_TIMEOUT);
     ProcedureTestingUtility.waitProcedure(procExec, snapshotProcId);
     SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
   }

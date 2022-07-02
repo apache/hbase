@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,14 +45,13 @@ public class TestBackupDelete extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupDelete.class);
+    HBaseClassTestRule.forClass(TestBackupDelete.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDelete.class);
 
   /**
    * Verify that full backup is created on a single table with data correctly. Verify that history
    * works as expected.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -80,7 +79,6 @@ public class TestBackupDelete extends TestBackupBase {
   /**
    * Verify that full backup is created on a single table with data correctly. Verify that history
    * works as expected.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -116,7 +114,7 @@ public class TestBackupDelete extends TestBackupBase {
       // time - 2 days
       @Override
       public long currentTime() {
-        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000 ;
+        return System.currentTimeMillis() - 2 * 24 * 3600 * 1000;
       }
     });
     String backupId = fullTableBackup(tableList);

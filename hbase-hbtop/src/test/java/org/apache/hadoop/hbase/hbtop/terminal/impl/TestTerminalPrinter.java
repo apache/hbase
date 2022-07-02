@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +18,9 @@
 package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
-
 
 public final class TestTerminalPrinter {
 
@@ -38,8 +36,8 @@ public final class TestTerminalPrinter {
       printer.print("Normal string").endOfLine();
       printer.startHighlight().print("Highlighted string").stopHighlight().endOfLine();
       printer.startBold().print("Bold string").stopBold().endOfLine();
-      printer.startHighlight().startBold().print("Highlighted bold string")
-          .stopBold().stopHighlight().endOfLine();
+      printer.startHighlight().startBold().print("Highlighted bold string").stopBold()
+        .stopHighlight().endOfLine();
       printer.endOfLine();
       printer.print("Press any key to finish").endOfLine();
 

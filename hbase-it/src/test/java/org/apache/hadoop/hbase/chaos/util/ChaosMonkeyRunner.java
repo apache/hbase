@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.chaos.util;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
@@ -56,8 +56,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     // in the usage output.
     addOptWithArg("c", "Name of extra configurations file to find on CLASSPATH");
     addOptWithArg("m", MONKEY_LONG_OPT, "Which chaos monkey to run");
-    addOptWithArg(CHAOS_MONKEY_PROPS, "The properties file for specifying chaos "
-        + "monkey properties.");
+    addOptWithArg(CHAOS_MONKEY_PROPS,
+      "The properties file for specifying chaos " + "monkey properties.");
     addOptWithArg(TABLE_NAME_OPT, "Table name in the test to run chaos monkey against");
     addOptWithArg(FAMILY_NAME_OPT, "Family name in the test to run chaos monkey against");
   }
@@ -72,8 +72,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
       String chaosMonkeyPropsFile = cmd.getOptionValue(CHAOS_MONKEY_PROPS);
       if (StringUtils.isNotEmpty(chaosMonkeyPropsFile)) {
         try {
-          monkeyProps.load(this.getClass().getClassLoader()
-              .getResourceAsStream(chaosMonkeyPropsFile));
+          monkeyProps
+            .load(this.getClass().getClassLoader().getResourceAsStream(chaosMonkeyPropsFile));
         } catch (IOException e) {
           LOG.warn(e.toString(), e);
           System.exit(EXIT_FAILURE);
@@ -122,7 +122,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
       util.checkNodeCount(1);// make sure there's at least 1 alive rs
     } else {
       throw new RuntimeException("ChaosMonkeyRunner must run against a distributed cluster,"
-          + " please check and point to the right configuration dir");
+        + " please check and point to the right configuration dir");
     }
     this.setConf(util.getConfiguration());
   }
@@ -137,9 +137,8 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     if (fact == null) {
       fact = getDefaultMonkeyFactory();
     }
-    monkey =
-        fact.setUtil(util).setTableName(getTablename()).setProperties(monkeyProps)
-            .setColumnFamilies(getColumnFamilies()).build();
+    monkey = fact.setUtil(util).setTableName(getTablename()).setProperties(monkeyProps)
+      .setColumnFamilies(getColumnFamilies()).build();
     monkey.start();
   }
 
@@ -169,26 +168,19 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
   }
 
   /*
-   * If caller wants to add config parameters from a file, the path to the conf file
-   * can be passed like this: -c <path-to-conf>. The file is presumed to have the Configuration
-   * file xml format and is added as a new Resource to the current Configuration.
-   * Use this mechanism to set Configuration such as what ClusterManager to use, etc.
-   * Here is an example file you might references that sets an alternate ClusterManager:
-   * {code}
-   * <?xml version="1.0" encoding="UTF-8"?>
-   * <configuration>
-   *   <property>
-   *     <name>hbase.it.clustermanager.class</name>
-   *     <value>org.apache.hadoop.hbase.MyCustomClusterManager</value>
-   *   </property>
-   * </configuration>
-   * {code}
-   * NOTE: The code searches for the file name passed on the CLASSPATH! Passing the path to a file
-   * will not work! Add the file to the CLASSPATH and then pass the filename as the '-c' arg.
+   * If caller wants to add config parameters from a file, the path to the conf file can be passed
+   * like this: -c <path-to-conf>. The file is presumed to have the Configuration file xml format
+   * and is added as a new Resource to the current Configuration. Use this mechanism to set
+   * Configuration such as what ClusterManager to use, etc. Here is an example file you might
+   * references that sets an alternate ClusterManager: {code} <?xml version="1.0" encoding="UTF-8"?>
+   * <configuration> <property> <name>hbase.it.clustermanager.class</name>
+   * <value>org.apache.hadoop.hbase.MyCustomClusterManager</value> </property> </configuration>
+   * {code} NOTE: The code searches for the file name passed on the CLASSPATH! Passing the path to a
+   * file will not work! Add the file to the CLASSPATH and then pass the filename as the '-c' arg.
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    String [] actualArgs = args;
+    String[] actualArgs = args;
     if (args.length > 0 && "-c".equals(args[0])) {
       int argCount = args.length - 2;
       if (argCount < 0) {

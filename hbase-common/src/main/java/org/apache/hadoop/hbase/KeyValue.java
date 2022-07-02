@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -49,8 +46,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * If being used client-side, the primary methods to access individual fields are
  * {@link #getRowArray()}, {@link #getFamilyArray()}, {@link #getQualifierArray()},
- * {@link #getTimestamp()}, and {@link #getValueArray()}. These methods allocate new byte arrays
- * and return copies. Avoid their use server-side.
+ * {@link #getTimestamp()}, and {@link #getValueArray()}. These methods allocate new byte arrays and
+ * return copies. Avoid their use server-side.
  * <p>
  * Instances of this class are immutable. They do not implement Comparable but Comparators are
  * provided. Comparators change with context, whether user table or a catalog table comparison. Its
@@ -79,36 +76,34 @@ public class KeyValue implements ExtendedCell, Cloneable {
   private static final Logger LOG = LoggerFactory.getLogger(KeyValue.class);
 
   public static final int FIXED_OVERHEAD = ClassSize.OBJECT + // the KeyValue object itself
-      ClassSize.REFERENCE + // pointer to "bytes"
-      2 * Bytes.SIZEOF_INT + // offset, length
-      Bytes.SIZEOF_LONG;// memstoreTS
+    ClassSize.REFERENCE + // pointer to "bytes"
+    2 * Bytes.SIZEOF_INT + // offset, length
+    Bytes.SIZEOF_LONG;// memstoreTS
 
   /**
    * Colon character in UTF-8
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
 
-  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY =
-    new byte[]{COLUMN_FAMILY_DELIMITER};
+  public static final byte[] COLUMN_FAMILY_DELIM_ARRAY = new byte[] { COLUMN_FAMILY_DELIMITER };
 
   /**
-   * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
-   * of KeyValue only.
-   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0,
-   *           remove for hbase 3.0.
+   * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion of
+   * KeyValue only.
+   * @deprecated Use {@link CellComparator#getInstance()} instead. Deprecated for hbase 2.0, remove
+   *             for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
-   * A {@link KVComparator} for <code>hbase:meta</code> catalog table
-   * {@link KeyValue}s.
-   * @deprecated Use {@link MetaCellComparator#META_COMPARATOR} instead.
-   *   Deprecated for hbase 2.0, remove for hbase 3.0.
+   * A {@link KVComparator} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
+   * @deprecated Use {@link MetaCellComparator#META_COMPARATOR} instead. Deprecated for hbase 2.0,
+   *             remove for hbase 3.0.
    */
   @Deprecated
   public static final KVComparator META_COMPARATOR = new MetaComparator();
 
-  /** Size of the key length field in bytes*/
+  /** Size of the key length field in bytes */
   public static final int KEY_LENGTH_SIZE = Bytes.SIZEOF_INT;
 
   /** Size of the key type field in bytes */
@@ -127,14 +122,13 @@ public class KeyValue implements ExtendedCell, Cloneable {
   public static final int TIMESTAMP_TYPE_SIZE = TIMESTAMP_SIZE + TYPE_SIZE;
 
   // Size of the length shorts and bytes in key.
-  public static final int KEY_INFRASTRUCTURE_SIZE = ROW_LENGTH_SIZE
-      + FAMILY_LENGTH_SIZE + TIMESTAMP_TYPE_SIZE;
+  public static final int KEY_INFRASTRUCTURE_SIZE =
+    ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + TIMESTAMP_TYPE_SIZE;
 
   // How far into the key the row starts at. First thing to read is the short
   // that says how long the row is.
   public static final int ROW_OFFSET =
-    Bytes.SIZEOF_INT /*keylength*/ +
-    Bytes.SIZEOF_INT /*valuelength*/;
+    Bytes.SIZEOF_INT /* keylength */ + Bytes.SIZEOF_INT /* valuelength */;
 
   public static final int ROW_KEY_OFFSET = ROW_OFFSET + ROW_LENGTH_SIZE;
 
@@ -149,49 +143,43 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up for its underlying data structure.
-   *
    * @param rlength row length
    * @param flength family length
    * @param qlength qualifier length
    * @param vlength value length
-   *
    * @return the <code>KeyValue</code> data structure length
    */
-  public static long getKeyValueDataStructureSize(int rlength,
-      int flength, int qlength, int vlength) {
+  public static long getKeyValueDataStructureSize(int rlength, int flength, int qlength,
+    int vlength) {
     return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
-        + getKeyDataStructureSize(rlength, flength, qlength) + vlength;
+      + getKeyDataStructureSize(rlength, flength, qlength) + vlength;
   }
 
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up for its underlying data structure.
-   *
-   * @param rlength row length
-   * @param flength family length
-   * @param qlength qualifier length
-   * @param vlength value length
+   * @param rlength    row length
+   * @param flength    family length
+   * @param qlength    qualifier length
+   * @param vlength    value length
    * @param tagsLength total length of the tags
-   *
    * @return the <code>KeyValue</code> data structure length
    */
   public static long getKeyValueDataStructureSize(int rlength, int flength, int qlength,
-      int vlength, int tagsLength) {
+    int vlength, int tagsLength) {
     if (tagsLength == 0) {
       return getKeyValueDataStructureSize(rlength, flength, qlength, vlength);
     }
     return KeyValue.KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE
-        + getKeyDataStructureSize(rlength, flength, qlength) + vlength + tagsLength;
+      + getKeyDataStructureSize(rlength, flength, qlength) + vlength + tagsLength;
   }
 
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up for its underlying data structure.
-   *
-   * @param klength key length
-   * @param vlength value length
+   * @param klength    key length
+   * @param vlength    value length
    * @param tagsLength total length of the tags
-   *
    * @return the <code>KeyValue</code> data structure length
    */
   public static long getKeyValueDataStructureSize(int klength, int vlength, int tagsLength) {
@@ -204,11 +192,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
    * characteristics would take up in its underlying data structure for the key.
-   *
    * @param rlength row length
    * @param flength family length
    * @param qlength qualifier length
-   *
    * @return the key data structure length
    */
   public static long getKeyDataStructureSize(int rlength, int flength, int qlength) {
@@ -216,21 +202,20 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Key type.
-   * Has space for other key types to be added later.  Cannot rely on
-   * enum ordinals . They change if item is removed or moved.  Do our own codes.
+   * Key type. Has space for other key types to be added later. Cannot rely on enum ordinals . They
+   * change if item is removed or moved. Do our own codes.
    */
   public static enum Type {
-    Minimum((byte)0),
-    Put((byte)4),
+    Minimum((byte) 0),
+    Put((byte) 4),
 
-    Delete((byte)8),
-    DeleteFamilyVersion((byte)10),
-    DeleteColumn((byte)12),
-    DeleteFamily((byte)14),
+    Delete((byte) 8),
+    DeleteFamilyVersion((byte) 10),
+    DeleteColumn((byte) 12),
+    DeleteFamily((byte) 14),
 
     // Maximum is used when searching; you look from maximum on down.
-    Maximum((byte)255);
+    Maximum((byte) 255);
 
     private final byte code;
 
@@ -260,8 +245,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * Cannot rely on enum ordinals . They change if item is removed or moved.
-     * Do our own codes.
+     * Cannot rely on enum ordinals . They change if item is removed or moved. Do our own codes.
      * @param b the kv serialized byte[] to process
      * @return Type associated with passed code.
      */
@@ -275,18 +259,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Lowest possible key.
-   * Makes a Key with highest possible Timestamp, empty row and column.  No
-   * key can be equal or lower than this one in memstore or in store file.
+   * Lowest possible key. Makes a Key with highest possible Timestamp, empty row and column. No key
+   * can be equal or lower than this one in memstore or in store file.
    */
   public static final KeyValue LOWESTKEY =
     new KeyValue(HConstants.EMPTY_BYTE_ARRAY, HConstants.LATEST_TIMESTAMP);
 
   ////
   // KeyValue core instance fields.
-  protected byte [] bytes = null;  // an immutable byte array that contains the KV
-  protected int offset = 0;  // offset into bytes buffer KV starts at
-  protected int length = 0;  // length of the KV starting from offset.
+  protected byte[] bytes = null; // an immutable byte array that contains the KV
+  protected int offset = 0; // offset into bytes buffer KV starts at
+  protected int length = 0; // length of the KV starting from offset.
 
   /** Here be dragons **/
 
@@ -303,39 +286,38 @@ public class KeyValue implements ExtendedCell, Cloneable {
     this.seqId = seqId;
   }
 
-  // multi-version concurrency control version.  default value is 0, aka do not care.
+  // multi-version concurrency control version. default value is 0, aka do not care.
   private long seqId = 0;
 
   /** Dragon time over, return to normal business */
 
-
   /** Writable Constructor -- DO NOT USE */
-  public KeyValue() {}
+  public KeyValue() {
+  }
 
   /**
-   * Creates a KeyValue from the start of the specified byte array.
-   * Presumes <code>bytes</code> content is formatted as a KeyValue blob.
+   * Creates a KeyValue from the start of the specified byte array. Presumes <code>bytes</code>
+   * content is formatted as a KeyValue blob.
    * @param bytes byte array
    */
-  public KeyValue(final byte [] bytes) {
+  public KeyValue(final byte[] bytes) {
     this(bytes, 0);
   }
 
   /**
-   * Creates a KeyValue from the specified byte array and offset.
-   * Presumes <code>bytes</code> content starting at <code>offset</code> is
-   * formatted as a KeyValue blob.
-   * @param bytes byte array
+   * Creates a KeyValue from the specified byte array and offset. Presumes <code>bytes</code>
+   * content starting at <code>offset</code> is formatted as a KeyValue blob.
+   * @param bytes  byte array
    * @param offset offset to start of KeyValue
    */
-  public KeyValue(final byte [] bytes, final int offset) {
+  public KeyValue(final byte[] bytes, final int offset) {
     this(bytes, offset, getLength(bytes, offset));
   }
 
   /**
-   * Creates a KeyValue from the specified byte array, starting at offset, and
-   * for length <code>length</code>.
-   * @param bytes byte array
+   * Creates a KeyValue from the specified byte array, starting at offset, and for length
+   * <code>length</code>.
+   * @param bytes  byte array
    * @param offset offset to start of the KeyValue
    * @param length length of the KeyValue
    */
@@ -347,13 +329,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Creates a KeyValue from the specified byte array, starting at offset, and
-   * for length <code>length</code>.
-   *
+   * Creates a KeyValue from the specified byte array, starting at offset, and for length
+   * <code>length</code>.
    * @param bytes  byte array
    * @param offset offset to start of the KeyValue
    * @param length length of the KeyValue
-   * @param ts timestamp
+   * @param ts     timestamp
    */
   public KeyValue(final byte[] bytes, final int offset, final int length, long ts) {
     this(bytes, offset, length, null, 0, 0, null, 0, 0, ts, Type.Maximum, null, 0, 0, null);
@@ -362,208 +343,194 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /** Constructors that build a new backing byte array from fields */
 
   /**
-   * Constructs KeyValue structure filled with null value.
-   * Sets type to {@link KeyValue.Type#Maximum}
-   * @param row - row key (arbitrary byte array)
+   * Constructs KeyValue structure filled with null value. Sets type to
+   * {@link KeyValue.Type#Maximum}
+   * @param row       - row key (arbitrary byte array)
    * @param timestamp version timestamp
    */
-  public KeyValue(final byte [] row, final long timestamp) {
+  public KeyValue(final byte[] row, final long timestamp) {
     this(row, null, null, timestamp, Type.Maximum, null);
   }
 
   /**
    * Constructs KeyValue structure filled with null value.
-   * @param row - row key (arbitrary byte array)
+   * @param row       - row key (arbitrary byte array)
    * @param timestamp version timestamp
    */
-  public KeyValue(final byte [] row, final long timestamp, Type type) {
+  public KeyValue(final byte[] row, final long timestamp, Type type) {
     this(row, null, null, timestamp, type, null);
   }
 
   /**
-   * Constructs KeyValue structure filled with null value.
-   * Sets type to {@link KeyValue.Type#Maximum}
-   * @param row - row key (arbitrary byte array)
-   * @param family family name
+   * Constructs KeyValue structure filled with null value. Sets type to
+   * {@link KeyValue.Type#Maximum}
+   * @param row       - row key (arbitrary byte array)
+   * @param family    family name
    * @param qualifier column qualifier
    */
-  public KeyValue(final byte [] row, final byte [] family,
-      final byte [] qualifier) {
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier) {
     this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
   }
 
   /**
-   * Constructs KeyValue structure as a put filled with specified values and
-   * LATEST_TIMESTAMP.
-   * @param row - row key (arbitrary byte array)
-   * @param family family name
+   * Constructs KeyValue structure as a put filled with specified values and LATEST_TIMESTAMP.
+   * @param row       - row key (arbitrary byte array)
+   * @param family    family name
    * @param qualifier column qualifier
    */
-  public KeyValue(final byte [] row, final byte [] family,
-      final byte [] qualifier, final byte [] value) {
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final byte[] value) {
     this(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Put, value);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param type key type
+   * @param type      key type
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type) {
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, Type type) {
     this(row, family, qualifier, timestamp, type, null);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param value column value
+   * @param value     column value
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, final byte[] value) {
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, final byte[] value) {
     this(row, family, qualifier, timestamp, Type.Put, value);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param value column value
-   * @param tags tags
+   * @param value     column value
+   * @param tags      tags
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, final byte[] value,
-      final Tag[] tags) {
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, final byte[] value, final Tag[] tags) {
     this(row, family, qualifier, timestamp, value, tags != null ? Arrays.asList(tags) : null);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param value column value
-   * @param tags tags non-empty list of tags or null
+   * @param value     column value
+   * @param tags      tags non-empty list of tags or null
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, final byte[] value,
-      final List<Tag> tags) {
-    this(row, 0, row==null ? 0 : row.length,
-      family, 0, family==null ? 0 : family.length,
-      qualifier, 0, qualifier==null ? 0 : qualifier.length,
-      timestamp, Type.Put,
-      value, 0, value==null ? 0 : value.length, tags);
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, final byte[] value, final List<Tag> tags) {
+    this(row, 0, row == null ? 0 : row.length, family, 0, family == null ? 0 : family.length,
+      qualifier, 0, qualifier == null ? 0 : qualifier.length, timestamp, Type.Put, value, 0,
+      value == null ? 0 : value.length, tags);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
+   * @param type      key type
+   * @param value     column value
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type,
-      final byte[] value) {
-    this(row, 0, len(row),   family, 0, len(family),   qualifier, 0, len(qualifier),
-        timestamp, type,   value, 0, len(value));
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, Type type, final byte[] value) {
+    this(row, 0, len(row), family, 0, len(family), qualifier, 0, len(qualifier), timestamp, type,
+      value, 0, len(value));
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
    * <p>
    * Column is split into two fields, family and qualifier.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
+   * @param type      key type
+   * @param value     column value
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type,
-      final byte[] value, final List<Tag> tags) {
-    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
-        timestamp, type, value, 0, value==null ? 0 : value.length, tags);
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, Type type, final byte[] value, final List<Tag> tags) {
+    this(row, family, qualifier, 0, qualifier == null ? 0 : qualifier.length, timestamp, type,
+      value, 0, value == null ? 0 : value.length, tags);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
+   * @param type      key type
+   * @param value     column value
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte[] row, final byte[] family,
-      final byte[] qualifier, final long timestamp, Type type,
-      final byte[] value, final byte[] tags) {
-    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
-        timestamp, type, value, 0, value==null ? 0 : value.length, tags);
+  public KeyValue(final byte[] row, final byte[] family, final byte[] qualifier,
+    final long timestamp, Type type, final byte[] value, final byte[] tags) {
+    this(row, family, qualifier, 0, qualifier == null ? 0 : qualifier.length, timestamp, type,
+      value, 0, value == null ? 0 : value.length, tags);
   }
 
   /**
    * Constructs KeyValue structure filled with specified values.
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(byte [] row, byte [] family,
-      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
-      byte [] value, int voffset, int vlength, List<Tag> tags) {
-    this(row, 0, row==null ? 0 : row.length,
-        family, 0, family==null ? 0 : family.length,
-        qualifier, qoffset, qlength, timestamp, type,
-        value, voffset, vlength, tags);
+  public KeyValue(byte[] row, byte[] family, byte[] qualifier, int qoffset, int qlength,
+    long timestamp, Type type, byte[] value, int voffset, int vlength, List<Tag> tags) {
+    this(row, 0, row == null ? 0 : row.length, family, 0, family == null ? 0 : family.length,
+      qualifier, qoffset, qlength, timestamp, type, value, voffset, vlength, tags);
   }
 
   /**
-   * @param row row key
-   * @param family family name
+   * @param row       row key
+   * @param family    family name
    * @param qualifier qualifier name
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @param tags tags
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
+   * @param tags      tags
    */
-  public KeyValue(byte [] row, byte [] family,
-      byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
-      byte [] value, int voffset, int vlength, byte[] tags) {
-    this(row, 0, row==null ? 0 : row.length,
-        family, 0, family==null ? 0 : family.length,
-        qualifier, qoffset, qlength, timestamp, type,
-        value, voffset, vlength, tags, 0, tags==null ? 0 : tags.length);
+  public KeyValue(byte[] row, byte[] family, byte[] qualifier, int qoffset, int qlength,
+    long timestamp, Type type, byte[] value, int voffset, int vlength, byte[] tags) {
+    this(row, 0, row == null ? 0 : row.length, family, 0, family == null ? 0 : family.length,
+      qualifier, qoffset, qlength, timestamp, type, value, voffset, vlength, tags, 0,
+      tags == null ? 0 : tags.length);
   }
 
   /**
@@ -573,13 +540,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param row row key
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength) {
-    this(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-      qlength, timestamp, type, value, voffset, vlength, null);
+  public KeyValue(final byte[] row, final int roffset, final int rlength, final byte[] family,
+    final int foffset, final int flength, final byte[] qualifier, final int qoffset,
+    final int qlength, final long timestamp, final Type type, final byte[] value, final int voffset,
+    final int vlength) {
+    this(row, roffset, rlength, family, foffset, flength, qualifier, qoffset, qlength, timestamp,
+      type, value, voffset, vlength, null);
   }
 
   /**
@@ -587,35 +553,33 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * data buffer.
    * <p>
    * Column is split into two fields, family and qualifier.
-   *
-   * @param buffer the bytes buffer to use
-   * @param boffset buffer offset
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param buffer    the bytes buffer to use
+   * @param boffset   buffer offset
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @param tags non-empty list of tags or null
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
+   * @param tags      non-empty list of tags or null
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
-   *           remaining in the buffer
+   *                                  remaining in the buffer
    */
   public KeyValue(byte[] buffer, final int boffset, final byte[] row, final int roffset,
     final int rlength, final byte[] family, final int foffset, final int flength,
     final byte[] qualifier, final int qoffset, final int qlength, final long timestamp,
     final Type type, final byte[] value, final int voffset, final int vlength, final Tag[] tags) {
     this.bytes = buffer;
-    this.length =
-      writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset, flength, qualifier,
-        qoffset, qlength, timestamp, type, value, voffset, vlength, tags);
+    this.length = writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset, flength,
+      qualifier, qoffset, qlength, timestamp, type, value, voffset, vlength, tags);
     this.offset = boffset;
   }
 
@@ -623,145 +587,131 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * Constructs KeyValue structure filled with specified values.
    * <p>
    * Column is split into two fields, family and qualifier.
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @param tags tags
-   * @throws IllegalArgumentException  an illegal value was passed
-   */
-  public KeyValue(final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength,
-      final List<Tag> tags) {
-    this.bytes = createByteArray(row, roffset, rlength,
-        family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, type, value, voffset, vlength, tags);
-    this.length = bytes.length;
-    this.offset = 0;
-  }
-
-  /**
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset fammily offset
-   * @param flength family length
-   * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   * @param tags input tags
-   */
-  public KeyValue(final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, final int vlength,
-      final byte[] tags, final int tagsOffset, final int tagsLength) {
-    this.bytes = createByteArray(row, roffset, rlength,
-        family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, type, value, voffset, vlength, tags, tagsOffset, tagsLength);
-    this.length = bytes.length;
-    this.offset = 0;
-  }
-
-  /**
-   * Constructs an empty KeyValue structure, with specified sizes.
-   * This can be used to partially fill up KeyValues.
-   * <p>
-   * Column is split into two fields, family and qualifier.
-   * @param rlength row length
-   * @param flength family length
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param vlength value length
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
+   * @param tags      tags
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final int rlength,
-      final int flength,
-      final int qlength,
-      final long timestamp, final Type type,
-      final int vlength) {
+  public KeyValue(final byte[] row, final int roffset, final int rlength, final byte[] family,
+    final int foffset, final int flength, final byte[] qualifier, final int qoffset,
+    final int qlength, final long timestamp, final Type type, final byte[] value, final int voffset,
+    final int vlength, final List<Tag> tags) {
+    this.bytes = createByteArray(row, roffset, rlength, family, foffset, flength, qualifier,
+      qoffset, qlength, timestamp, type, value, voffset, vlength, tags);
+    this.length = bytes.length;
+    this.offset = 0;
+  }
+
+  /**
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   fammily offset
+   * @param flength   family length
+   * @param qualifier column qualifier
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
+   * @param timestamp version timestamp
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
+   * @param tags      input tags
+   */
+  public KeyValue(final byte[] row, final int roffset, final int rlength, final byte[] family,
+    final int foffset, final int flength, final byte[] qualifier, final int qoffset,
+    final int qlength, final long timestamp, final Type type, final byte[] value, final int voffset,
+    final int vlength, final byte[] tags, final int tagsOffset, final int tagsLength) {
+    this.bytes = createByteArray(row, roffset, rlength, family, foffset, flength, qualifier,
+      qoffset, qlength, timestamp, type, value, voffset, vlength, tags, tagsOffset, tagsLength);
+    this.length = bytes.length;
+    this.offset = 0;
+  }
+
+  /**
+   * Constructs an empty KeyValue structure, with specified sizes. This can be used to partially
+   * fill up KeyValues.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   * @param rlength   row length
+   * @param flength   family length
+   * @param qlength   qualifier length
+   * @param timestamp version timestamp
+   * @param type      key type
+   * @param vlength   value length
+   * @throws IllegalArgumentException an illegal value was passed
+   */
+  public KeyValue(final int rlength, final int flength, final int qlength, final long timestamp,
+    final Type type, final int vlength) {
     this(rlength, flength, qlength, timestamp, type, vlength, 0);
   }
 
   /**
-   * Constructs an empty KeyValue structure, with specified sizes.
-   * This can be used to partially fill up KeyValues.
+   * Constructs an empty KeyValue structure, with specified sizes. This can be used to partially
+   * fill up KeyValues.
    * <p>
    * Column is split into two fields, family and qualifier.
-   * @param rlength row length
-   * @param flength family length
-   * @param qlength qualifier length
-   * @param timestamp version timestamp
-   * @param type key type
-   * @param vlength value length
+   * @param rlength    row length
+   * @param flength    family length
+   * @param qlength    qualifier length
+   * @param timestamp  version timestamp
+   * @param type       key type
+   * @param vlength    value length
    * @param tagsLength length of the tags
    * @throws IllegalArgumentException an illegal value was passed
    */
-  public KeyValue(final int rlength,
-      final int flength,
-      final int qlength,
-      final long timestamp, final Type type,
-      final int vlength, final int tagsLength) {
-    this.bytes = createEmptyByteArray(rlength, flength, qlength, timestamp, type, vlength,
-        tagsLength);
+  public KeyValue(final int rlength, final int flength, final int qlength, final long timestamp,
+    final Type type, final int vlength, final int tagsLength) {
+    this.bytes =
+      createEmptyByteArray(rlength, flength, qlength, timestamp, type, vlength, tagsLength);
     this.length = bytes.length;
     this.offset = 0;
   }
 
-
-  public KeyValue(byte[] row, int roffset, int rlength,
-                  byte[] family, int foffset, int flength,
-                  ByteBuffer qualifier, long ts, Type type, ByteBuffer value, List<Tag> tags) {
-    this.bytes = createByteArray(row, roffset, rlength, family, foffset, flength,
-        qualifier, 0, qualifier == null ? 0 : qualifier.remaining(), ts, type,
-        value, 0, value == null ? 0 : value.remaining(), tags);
+  public KeyValue(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
+    ByteBuffer qualifier, long ts, Type type, ByteBuffer value, List<Tag> tags) {
+    this.bytes = createByteArray(row, roffset, rlength, family, foffset, flength, qualifier, 0,
+      qualifier == null ? 0 : qualifier.remaining(), ts, type, value, 0,
+      value == null ? 0 : value.remaining(), tags);
     this.length = bytes.length;
     this.offset = 0;
   }
 
   public KeyValue(Cell c) {
-    this(c.getRowArray(), c.getRowOffset(), c.getRowLength(),
-        c.getFamilyArray(), c.getFamilyOffset(), c.getFamilyLength(),
-        c.getQualifierArray(), c.getQualifierOffset(), c.getQualifierLength(),
-        c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(),
-        c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    this(c.getRowArray(), c.getRowOffset(), c.getRowLength(), c.getFamilyArray(),
+      c.getFamilyOffset(), c.getFamilyLength(), c.getQualifierArray(), c.getQualifierOffset(),
+      c.getQualifierLength(), c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(),
+      c.getValueOffset(), c.getValueLength(), c.getTagsArray(), c.getTagsOffset(),
+      c.getTagsLength());
     this.seqId = c.getSequenceId();
   }
 
   /**
-   * Create an empty byte[] representing a KeyValue
-   * All lengths are preset and can be filled in later.
-   * @param rlength row length
-   * @param flength family length
-   * @param qlength qualifier length
+   * Create an empty byte[] representing a KeyValue All lengths are preset and can be filled in
+   * later.
+   * @param rlength   row length
+   * @param flength   family length
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param vlength value length
+   * @param type      key type
+   * @param vlength   value length
    * @return The newly created byte array.
    */
-  private static byte[] createEmptyByteArray(final int rlength, int flength,
-      int qlength, final long timestamp, final Type type, int vlength, int tagsLength) {
+  private static byte[] createEmptyByteArray(final int rlength, int flength, int qlength,
+    final long timestamp, final Type type, int vlength, int tagsLength) {
     if (rlength > Short.MAX_VALUE) {
       throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
     }
@@ -776,26 +726,24 @@ public class KeyValue implements ExtendedCell, Cloneable {
     // Key length
     long longkeylength = getKeyDataStructureSize(rlength, flength, qlength);
     if (longkeylength > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("keylength " + longkeylength + " > " +
-        Integer.MAX_VALUE);
+      throw new IllegalArgumentException("keylength " + longkeylength + " > " + Integer.MAX_VALUE);
     }
-    int keylength = (int)longkeylength;
+    int keylength = (int) longkeylength;
     // Value length
     if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) { // FindBugs INT_VACUOUS_COMPARISON
-      throw new IllegalArgumentException("Valuer > " +
-          HConstants.MAXIMUM_VALUE_LENGTH);
+      throw new IllegalArgumentException("Valuer > " + HConstants.MAXIMUM_VALUE_LENGTH);
     }
 
     // Allocate right-sized byte array.
-    byte[] bytes= new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
-        tagsLength)];
+    byte[] bytes =
+      new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength)];
     // Write the correct size markers
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keylength);
     pos = Bytes.putInt(bytes, pos, vlength);
-    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putShort(bytes, pos, (short) (rlength & 0x0000ffff));
     pos += rlength;
-    pos = Bytes.putByte(bytes, pos, (byte)(flength & 0x0000ff));
+    pos = Bytes.putByte(bytes, pos, (byte) (flength & 0x0000ff));
     pos += flength + qlength;
     pos = Bytes.putLong(bytes, pos, timestamp);
     pos = Bytes.putByte(bytes, pos, type.getCode());
@@ -808,19 +756,16 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Checks the parameters passed to a constructor.
-   *
-   * @param row row key
+   * @param row     row key
    * @param rlength row length
-   * @param family family name
+   * @param family  family name
    * @param flength family length
    * @param qlength qualifier length
    * @param vlength value length
-   *
    * @throws IllegalArgumentException an illegal value was passed
    */
-  static void checkParameters(final byte [] row, final int rlength,
-      final byte [] family, int flength, int qlength, int vlength)
-          throws IllegalArgumentException {
+  static void checkParameters(final byte[] row, final int rlength, final byte[] family, int flength,
+    int qlength, int vlength) throws IllegalArgumentException {
     if (rlength > Short.MAX_VALUE) {
       throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
     }
@@ -839,71 +784,65 @@ public class KeyValue implements ExtendedCell, Cloneable {
     // Key length
     long longKeyLength = getKeyDataStructureSize(rlength, flength, qlength);
     if (longKeyLength > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("keylength " + longKeyLength + " > " +
-          Integer.MAX_VALUE);
+      throw new IllegalArgumentException("keylength " + longKeyLength + " > " + Integer.MAX_VALUE);
     }
     // Value length
     if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) { // FindBugs INT_VACUOUS_COMPARISON
-      throw new IllegalArgumentException("Value length " + vlength + " > " +
-          HConstants.MAXIMUM_VALUE_LENGTH);
+      throw new IllegalArgumentException(
+        "Value length " + vlength + " > " + HConstants.MAXIMUM_VALUE_LENGTH);
     }
   }
 
   /**
    * Write KeyValue format into the provided byte array.
-   *
-   * @param buffer the bytes buffer to use
-   * @param boffset buffer offset
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param buffer    the bytes buffer to use
+   * @param boffset   buffer offset
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
-   *
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
    * @return The number of useful bytes in the buffer.
-   *
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
-   *           remaining in the buffer
+   *                                  remaining in the buffer
    */
-  public static int writeByteArray(byte [] buffer, final int boffset,
-      final byte [] row, final int roffset, final int rlength,
-      final byte [] family, final int foffset, int flength,
-      final byte [] qualifier, final int qoffset, int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset, int vlength, Tag[] tags) {
+  public static int writeByteArray(byte[] buffer, final int boffset, final byte[] row,
+    final int roffset, final int rlength, final byte[] family, final int foffset, int flength,
+    final byte[] qualifier, final int qoffset, int qlength, final long timestamp, final Type type,
+    final byte[] value, final int voffset, int vlength, Tag[] tags) {
 
     checkParameters(row, rlength, family, flength, qlength, vlength);
 
     // Calculate length of tags area
     int tagsLength = 0;
     if (tags != null && tags.length > 0) {
-      for (Tag t: tags) {
+      for (Tag t : tags) {
         tagsLength += t.getValueLength() + Tag.INFRASTRUCTURE_SIZE;
       }
     }
     RawCell.checkForTagsLength(tagsLength);
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
-    int keyValueLength = (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
-        tagsLength);
+    int keyValueLength =
+      (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength);
     if (keyValueLength > buffer.length - boffset) {
-      throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < " +
-          keyValueLength);
+      throw new IllegalArgumentException(
+        "Buffer size " + (buffer.length - boffset) + " < " + keyValueLength);
     }
 
     // Write key, value and key row length.
     int pos = boffset;
     pos = Bytes.putInt(buffer, pos, keyLength);
     pos = Bytes.putInt(buffer, pos, vlength);
-    pos = Bytes.putShort(buffer, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putShort(buffer, pos, (short) (rlength & 0x0000ffff));
     pos = Bytes.putBytes(buffer, pos, row, roffset, rlength);
     pos = Bytes.putByte(buffer, pos, (byte) (flength & 0x0000ff));
     if (flength != 0) {
@@ -933,46 +872,44 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Write KeyValue format into a byte array.
-   * @param row row key
-   * @param roffset row offset
-   * @param rlength row length
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param row       row key
+   * @param roffset   row offset
+   * @param rlength   row length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @param timestamp version timestamp
-   * @param type key type
-   * @param value column value
-   * @param voffset value offset
-   * @param vlength value length
+   * @param type      key type
+   * @param value     column value
+   * @param voffset   value offset
+   * @param vlength   value length
    * @return The newly created byte array.
    */
-  private static byte [] createByteArray(final byte [] row, final int roffset,
-      final int rlength, final byte [] family, final int foffset, int flength,
-      final byte [] qualifier, final int qoffset, int qlength,
-      final long timestamp, final Type type,
-      final byte [] value, final int voffset,
-      int vlength, byte[] tags, int tagsOffset, int tagsLength) {
+  private static byte[] createByteArray(final byte[] row, final int roffset, final int rlength,
+    final byte[] family, final int foffset, int flength, final byte[] qualifier, final int qoffset,
+    int qlength, final long timestamp, final Type type, final byte[] value, final int voffset,
+    int vlength, byte[] tags, int tagsOffset, int tagsLength) {
 
     checkParameters(row, rlength, family, flength, qlength, vlength);
     RawCell.checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
-    byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
-      tagsLength)];
+    byte[] bytes =
+      new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength)];
     // Write key, value and key row length.
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keyLength);
     pos = Bytes.putInt(bytes, pos, vlength);
-    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putShort(bytes, pos, (short) (rlength & 0x0000ffff));
     pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
-    pos = Bytes.putByte(bytes, pos, (byte)(flength & 0x0000ff));
-    if(flength != 0) {
+    pos = Bytes.putByte(bytes, pos, (byte) (flength & 0x0000ff));
+    if (flength != 0) {
       pos = Bytes.putBytes(bytes, pos, family, foffset, flength);
     }
-    if(qlength != 0) {
+    if (qlength != 0) {
       pos = Bytes.putBytes(bytes, pos, qualifier, qoffset, qlength);
     }
     pos = Bytes.putLong(bytes, pos, timestamp);
@@ -990,13 +927,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * @param qualifier can be a ByteBuffer or a byte[], or null.
-   * @param value can be a ByteBuffer or a byte[], or null.
+   * @param value     can be a ByteBuffer or a byte[], or null.
    */
-  private static byte [] createByteArray(final byte [] row, final int roffset,
-      final int rlength, final byte [] family, final int foffset, int flength,
-      final Object qualifier, final int qoffset, int qlength,
-      final long timestamp, final Type type,
-      final Object value, final int voffset, int vlength, List<Tag> tags) {
+  private static byte[] createByteArray(final byte[] row, final int roffset, final int rlength,
+    final byte[] family, final int foffset, int flength, final Object qualifier, final int qoffset,
+    int qlength, final long timestamp, final Type type, final Object value, final int voffset,
+    int vlength, List<Tag> tags) {
 
     checkParameters(row, rlength, family, flength, qlength, vlength);
 
@@ -1010,18 +946,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
     RawCell.checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
-    byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
-        tagsLength)];
+    byte[] bytes =
+      new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength)];
 
     // Write key, value and key row length.
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keyLength);
 
     pos = Bytes.putInt(bytes, pos, vlength);
-    pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putShort(bytes, pos, (short) (rlength & 0x0000ffff));
     pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
-    pos = Bytes.putByte(bytes, pos, (byte)(flength & 0x0000ff));
-    if(flength != 0) {
+    pos = Bytes.putByte(bytes, pos, (byte) (flength & 0x0000ff));
+    if (flength != 0) {
       pos = Bytes.putBytes(bytes, pos, family, foffset, flength);
     }
     if (qlength > 0) {
@@ -1055,14 +991,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Needed doing 'contains' on List.  Only compares the key portion, not the value.
+   * Needed doing 'contains' on List. Only compares the key portion, not the value.
    */
   @Override
   public boolean equals(Object other) {
     if (!(other instanceof Cell)) {
       return false;
     }
-    return CellUtil.equals(this, (Cell)other);
+    return CellUtil.equals(this, (Cell) other);
   }
 
   /**
@@ -1076,10 +1012,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
   private int calculateHashForKey(Cell cell) {
     // pre-calculate the 3 hashes made of byte ranges
     int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-    int familyHash = Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(),
-        cell.getFamilyLength());
+    int familyHash =
+      Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
     int qualifierHash = Bytes.hashCode(cell.getQualifierArray(), cell.getQualifierOffset(),
-        cell.getQualifierLength());
+      cell.getQualifierLength());
 
     // combine the 6 sub-hashes
     int hash = 31 * rowHash + familyHash;
@@ -1089,14 +1025,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return hash;
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   //
-  //  KeyValue cloning
+  // KeyValue cloning
   //
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   /**
-   * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
+   * Clones a KeyValue. This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
    * @throws CloneNotSupportedException if cloning of keyValue is not supported
    */
@@ -1124,11 +1060,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return shallowCopy;
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   //
-  //  String representation
+  // String representation
   //
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   @Override
   public String toString() {
@@ -1143,7 +1079,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param k Key portion of a KeyValue.
    * @return Key as a String, empty string if k is null.
    */
-  public static String keyToString(final byte [] k) {
+  public static String keyToString(final byte[] k) {
     if (k == null) {
       return "";
     }
@@ -1151,11 +1087,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Produces a string map for this key/value pair. Useful for programmatic use
-   * and manipulation of the data stored in an WALKey, for example, printing
-   * as JSON. Values are left out due to their tendency to be large. If needed,
-   * they can be added manually.
-   *
+   * Produces a string map for this key/value pair. Useful for programmatic use and manipulation of
+   * the data stored in an WALKey, for example, printing as JSON. Values are left out due to their
+   * tendency to be large. If needed, they can be added manually.
    * @return the Map&lt;String,?&gt; containing data from this key
    */
   public Map<String, Object> toStringMap() {
@@ -1185,7 +1119,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * @param l Length of key.
    * @return Key as a String.
    */
-  public static String keyToString(final byte [] b, final int o, final int l) {
+  public static String keyToString(final byte[] b, final int o, final int l) {
     if (b == null) {
       return "";
     }
@@ -1194,17 +1128,15 @@ public class KeyValue implements ExtendedCell, Cloneable {
     int columnoffset = o + Bytes.SIZEOF_SHORT + 1 + rowlength;
     int familylength = b[columnoffset - 1];
     int columnlength = l - ((columnoffset - o) + TIMESTAMP_TYPE_SIZE);
-    String family = familylength == 0? "":
-      Bytes.toStringBinary(b, columnoffset, familylength);
-    String qualifier = columnlength == 0? "":
-      Bytes.toStringBinary(b, columnoffset + familylength,
-      columnlength - familylength);
+    String family = familylength == 0 ? "" : Bytes.toStringBinary(b, columnoffset, familylength);
+    String qualifier = columnlength == 0
+      ? ""
+      : Bytes.toStringBinary(b, columnoffset + familylength, columnlength - familylength);
     long timestamp = Bytes.toLong(b, o + (l - TIMESTAMP_TYPE_SIZE));
     String timestampStr = humanReadableTimestamp(timestamp);
     byte type = b[o + l - 1];
-    return row + "/" + family +
-      (family != null && family.length() > 0? ":" :"") +
-      qualifier + "/" + timestampStr + "/" + Type.codeToType(type);
+    return row + "/" + family + (family != null && family.length() > 0 ? ":" : "") + qualifier + "/"
+      + timestampStr + "/" + Type.codeToType(type);
   }
 
   public static String humanReadableTimestamp(final long timestamp) {
@@ -1217,18 +1149,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return String.valueOf(timestamp);
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   //
-  //  Public Member Accessors
+  // Public Member Accessors
   //
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   /**
-   * To be used only in tests where the Cells are clearly assumed to be of type KeyValue
-   * and that we need access to the backing array to do some test case related assertions.
+   * To be used only in tests where the Cells are clearly assumed to be of type KeyValue and that we
+   * need access to the backing array to do some test case related assertions.
    * @return The byte array backing this KeyValue.
    */
-  public byte [] getBuffer() {
+  public byte[] getBuffer() {
     return this.bytes;
   }
 
@@ -1246,20 +1178,20 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return length;
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   //
-  //  Length and Offset Calculators
+  // Length and Offset Calculators
   //
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   /**
-   * Determines the total length of the KeyValue stored in the specified
-   * byte array and offset.  Includes all headers.
-   * @param bytes byte array
+   * Determines the total length of the KeyValue stored in the specified byte array and offset.
+   * Includes all headers.
+   * @param bytes  byte array
    * @param offset offset to start of the KeyValue
    * @return length of entire KeyValue, in bytes
    */
-  private static int getLength(byte [] bytes, int offset) {
+  private static int getLength(byte[] bytes, int offset) {
     int klength = ROW_OFFSET + Bytes.toInt(bytes, offset);
     int vlength = Bytes.toInt(bytes, offset + Bytes.SIZEOF_INT);
     return klength + vlength;
@@ -1410,7 +1342,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
    */
   @Override
   public int getQualifierLength() {
-    return getQualifierLength(getRowLength(),getFamilyLength());
+    return getQualifierLength(getRowLength(), getFamilyLength());
   }
 
   /**
@@ -1452,10 +1384,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * @param now Time to set into <code>this</code> IFF timestamp ==
-   * {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
+   *            {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
    * @return True is we modified this.
    */
-  public boolean updateLatestStamp(final byte [] now) {
+  public boolean updateLatestStamp(final byte[] now) {
     if (this.isLatestTimestamp()) {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
@@ -1475,11 +1407,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
     Bytes.putBytes(this.bytes, this.getTimestampOffset(), ts, 0, Bytes.SIZEOF_LONG);
   }
 
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   //
-  //  Methods that return copies of fields
+  // Methods that return copies of fields
   //
-  //---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   /**
    * Do not use unless you have to. Used internally for compacting and testing. Use
@@ -1487,16 +1419,15 @@ public class KeyValue implements ExtendedCell, Cloneable {
    * {@link #getValueArray()} if accessing a KeyValue client-side.
    * @return Copy of the key portion only.
    */
-  public byte [] getKey() {
+  public byte[] getKey() {
     int keylength = getKeyLength();
-    byte [] key = new byte[keylength];
+    byte[] key = new byte[keylength];
     System.arraycopy(getBuffer(), getKeyOffset(), key, 0, keylength);
     return key;
   }
 
   /**
-   *
-   * @return Timestamp
+   * n
    */
   @Override
   public long getTimestamp() {
@@ -1504,8 +1435,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param keylength Pass if you have it to save on a int creation.
-   * @return Timestamp
+   * @param keylength Pass if you have it to save on a int creation. n
    */
   long getTimestamp(final int keylength) {
     int tsOffset = getTimestampOffset(keylength);
@@ -1559,19 +1489,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Creates a new KeyValue that only contains the key portion (the value is
-   * set to be null).
-   *
-   * TODO only used by KeyOnlyFilter -- move there.
+   * Creates a new KeyValue that only contains the key portion (the value is set to be null). TODO
+   * only used by KeyOnlyFilter -- move there.
    * @param lenAsVal replace value with the actual value length (false=empty)
    */
   public KeyValue createKeyOnly(boolean lenAsVal) {
-    // KV format:  <keylen:4><valuelen:4><key:keylen><value:valuelen>
+    // KV format: <keylen:4><valuelen:4><key:keylen><value:valuelen>
     // Rebuild as: <keylen:4><0:4><key:keylen>
-    int dataLen = lenAsVal? Bytes.SIZEOF_INT : 0;
-    byte [] newBuffer = new byte[getKeyLength() + ROW_OFFSET + dataLen];
+    int dataLen = lenAsVal ? Bytes.SIZEOF_INT : 0;
+    byte[] newBuffer = new byte[getKeyLength() + ROW_OFFSET + dataLen];
     System.arraycopy(this.bytes, this.offset, newBuffer, 0,
-        Math.min(newBuffer.length,this.length));
+      Math.min(newBuffer.length, this.length));
     Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, dataLen);
     if (lenAsVal) {
       Bytes.putInt(newBuffer, newBuffer.length - dataLen, this.getValueLength());
@@ -1580,13 +1508,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param b the kv serialized byte[] to process
+   * @param b         the kv serialized byte[] to process
    * @param delimiter input delimeter to fetch index from start
-   * @return Index of delimiter having started from start of <code>b</code>
-   *           moving rightward.
+   * @return Index of delimiter having started from start of <code>b</code> moving rightward.
    */
-  public static int getDelimiter(final byte [] b, int offset, final int length,
-      final int delimiter) {
+  public static int getDelimiter(final byte[] b, int offset, final int length,
+    final int delimiter) {
     if (b == null) {
       throw new IllegalArgumentException("Passed buffer is null");
     }
@@ -1602,14 +1529,14 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
   /**
    * Find index of passed delimiter walking from end of buffer backwards.
-   * @param b the kv serialized byte[] to process
-   * @param offset the offset in the byte[]
-   * @param length the length in the byte[]
+   * @param b         the kv serialized byte[] to process
+   * @param offset    the offset in the byte[]
+   * @param length    the length in the byte[]
    * @param delimiter input delimeter to fetch index from end
    * @return Index of delimiter
    */
-  public static int getDelimiterInReverse(final byte [] b, final int offset,
-      final int length, final int delimiter) {
+  public static int getDelimiterInReverse(final byte[] b, final int offset, final int length,
+    final int delimiter) {
     if (b == null) {
       throw new IllegalArgumentException("Passed buffer is null");
     }
@@ -1624,21 +1551,18 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * A {@link KVComparator} for <code>hbase:meta</code> catalog table
-   * {@link KeyValue}s.
-   * @deprecated : {@link MetaCellComparator#META_COMPARATOR} to be used.
-   *   Deprecated for hbase 2.0, remove for hbase 3.0.
+   * A {@link KVComparator} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
+   * @deprecated : {@link MetaCellComparator#META_COMPARATOR} to be used. Deprecated for hbase 2.0,
+   *             remove for hbase 3.0.
    */
   @Deprecated
   public static class MetaComparator extends KVComparator {
     /**
-     * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code>
-     * table.
+     * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code> table.
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      return PrivateCellUtil.compareKeyIgnoresMvcc(MetaCellComparator.META_COMPARATOR, left,
-        right);
+      return PrivateCellUtil.compareKeyIgnoresMvcc(MetaCellComparator.META_COMPARATOR, left, right);
     }
 
     @Override
@@ -1647,15 +1571,13 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     @Override
-    public int compareRows(byte [] left, int loffset, int llength,
-        byte [] right, int roffset, int rlength) {
-      int leftDelimiter = getDelimiter(left, loffset, llength,
-          HConstants.DELIMITER);
-      int rightDelimiter = getDelimiter(right, roffset, rlength,
-          HConstants.DELIMITER);
+    public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+      int rlength) {
+      int leftDelimiter = getDelimiter(left, loffset, llength, HConstants.DELIMITER);
+      int rightDelimiter = getDelimiter(right, roffset, rlength, HConstants.DELIMITER);
       // Compare up to the delimiter
-      int lpart = (leftDelimiter < 0 ? llength :leftDelimiter - loffset);
-      int rpart = (rightDelimiter < 0 ? rlength :rightDelimiter - roffset);
+      int lpart = (leftDelimiter < 0 ? llength : leftDelimiter - loffset);
+      int rpart = (rightDelimiter < 0 ? rlength : rightDelimiter - roffset);
       int result = Bytes.compareTo(left, loffset, lpart, right, roffset, rpart);
       if (result != 0) {
         return result;
@@ -1673,17 +1595,16 @@ public class KeyValue implements ExtendedCell, Cloneable {
       leftDelimiter++;
       rightDelimiter++;
       int leftFarDelimiter = getDelimiterInReverse(left, leftDelimiter,
-          llength - (leftDelimiter - loffset), HConstants.DELIMITER);
-      int rightFarDelimiter = getDelimiterInReverse(right,
-          rightDelimiter, rlength - (rightDelimiter - roffset),
-          HConstants.DELIMITER);
+        llength - (leftDelimiter - loffset), HConstants.DELIMITER);
+      int rightFarDelimiter = getDelimiterInReverse(right, rightDelimiter,
+        rlength - (rightDelimiter - roffset), HConstants.DELIMITER);
       // Now compare middlesection of row.
-      lpart = (leftFarDelimiter < 0 ? llength + loffset: leftFarDelimiter) - leftDelimiter;
-      rpart = (rightFarDelimiter < 0 ? rlength + roffset: rightFarDelimiter)- rightDelimiter;
+      lpart = (leftFarDelimiter < 0 ? llength + loffset : leftFarDelimiter) - leftDelimiter;
+      rpart = (rightFarDelimiter < 0 ? rlength + roffset : rightFarDelimiter) - rightDelimiter;
       result = super.compareRows(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
       if (result != 0) {
         return result;
-      }  else {
+      } else {
         if (leftDelimiter < 0 && rightDelimiter >= 0) {
           return -1;
         } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
@@ -1696,7 +1617,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       leftFarDelimiter++;
       rightFarDelimiter++;
       result = Bytes.compareTo(left, leftFarDelimiter, llength - (leftFarDelimiter - loffset),
-          right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+        right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
       return result;
     }
 
@@ -1709,9 +1630,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
-     * instantiate the appropriate comparator.
-     * TODO: With V3 consider removing this.
+     * The HFileV2 file format's trailer contains this class name. We reinterpret this and
+     * instantiate the appropriate comparator. TODO: With V3 consider removing this.
      * @return legacy class name for FileFileTrailer#comparatorClassName
      */
     @Override
@@ -1740,18 +1660,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Compare KeyValues.  When we compare KeyValues, we only compare the Key
-   * portion.  This means two KeyValues with same Key but different Values are
-   * considered the same as far as this Comparator is concerned.
+   * Compare KeyValues. When we compare KeyValues, we only compare the Key portion. This means two
+   * KeyValues with same Key but different Values are considered the same as far as this Comparator
+   * is concerned.
    * @deprecated : Use {@link CellComparatorImpl}. Deprecated for hbase 2.0, remove for hbase 3.0.
    */
   @Deprecated
   public static class KVComparator implements RawComparator<Cell>, SamePrefixComparator<byte[]> {
 
     /**
-     * The HFileV2 file format's trailer contains this class name.  We reinterpret this and
-     * instantiate the appropriate comparator.
-     * TODO: With V3 consider removing this.
+     * The HFileV2 file format's trailer contains this class name. We reinterpret this and
+     * instantiate the appropriate comparator. TODO: With V3 consider removing this.
      * @return legacy class name for FileFileTrailer#comparatorClassName
      */
     public String getLegacyKeyComparatorName() {
@@ -1760,13 +1679,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     @Override // RawComparator
     public int compare(byte[] l, int loff, int llen, byte[] r, int roff, int rlen) {
-      return compareFlatKey(l,loff,llen, r,roff,rlen);
+      return compareFlatKey(l, loff, llen, r, roff, rlen);
     }
 
-
     /**
-     * Compares the only the user specified portion of a Key.  This is overridden by MetaComparator.
-     * @param left left cell to compare row key
+     * Compares the only the user specified portion of a Key. This is overridden by MetaComparator.
+     * @param left  left cell to compare row key
      * @param right right cell to compare row key
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
@@ -1775,23 +1693,23 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * Compares left to right assuming that left,loffset,llength and right,roffset,rlength are
-     * full KVs laid out in a flat byte[]s.
-     * @param left the left kv serialized byte[] to be compared with
+     * Compares left to right assuming that left,loffset,llength and right,roffset,rlength are full
+     * KVs laid out in a flat byte[]s.
+     * @param left    the left kv serialized byte[] to be compared with
      * @param loffset the offset in the left byte[]
      * @param llength the length in the left byte[]
-     * @param right the right kv serialized byte[] to be compared with
+     * @param right   the right kv serialized byte[] to be compared with
      * @param roffset the offset in the right byte[]
      * @param rlength the length in the right byte[]
-     * @return  0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
+     * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
-    public int compareFlatKey(byte[] left, int loffset, int llength,
-        byte[] right, int roffset, int rlength) {
+    public int compareFlatKey(byte[] left, int loffset, int llength, byte[] right, int roffset,
+      int rlength) {
       // Compare row
       short lrowlength = Bytes.toShort(left, loffset);
       short rrowlength = Bytes.toShort(right, roffset);
-      int compare = compareRows(left, loffset + Bytes.SIZEOF_SHORT,
-          lrowlength, right, roffset + Bytes.SIZEOF_SHORT, rrowlength);
+      int compare = compareRows(left, loffset + Bytes.SIZEOF_SHORT, lrowlength, right,
+        roffset + Bytes.SIZEOF_SHORT, rrowlength);
       if (compare != 0) {
         return compare;
       }
@@ -1799,8 +1717,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       // Compare the rest of the two KVs without making any assumptions about
       // the common prefix. This function will not compare rows anyway, so we
       // don't need to tell it that the common prefix includes the row.
-      return compareWithoutRow(0, left, loffset, llength, right, roffset,
-          rlength, rrowlength);
+      return compareWithoutRow(0, left, loffset, llength, right, roffset, rlength, rrowlength);
     }
 
     public int compareFlatKey(byte[] left, byte[] right) {
@@ -1808,15 +1725,11 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     // compare a key against row/fam/qual/ts/type
-    public int compareKey(Cell cell,
-        byte[] row, int roff, int rlen,
-        byte[] fam, int foff, int flen,
-        byte[] col, int coff, int clen,
-        long ts, byte type) {
+    public int compareKey(Cell cell, byte[] row, int roff, int rlen, byte[] fam, int foff, int flen,
+      byte[] col, int coff, int clen, long ts, byte type) {
 
-      int compare = compareRows(
-        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-        row, roff, rlen);
+      int compare =
+        compareRows(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), row, roff, rlen);
       if (compare != 0) {
         return compare;
       }
@@ -1825,24 +1738,24 @@ public class KeyValue implements ExtendedCell, Cloneable {
       // for specifying the last key/value in a given row, because there is no
       // "lexicographically last column" (it would be infinitely long). The
       // "maximum" key type does not need this behavior.
-      if (cell.getFamilyLength() + cell.getQualifierLength() == 0
-          && cell.getTypeByte() == Type.Minimum.getCode()) {
+      if (
+        cell.getFamilyLength() + cell.getQualifierLength() == 0
+          && cell.getTypeByte() == Type.Minimum.getCode()
+      ) {
         // left is "bigger", i.e. it appears later in the sorted order
         return 1;
       }
-      if (flen+clen == 0 && type == Type.Minimum.getCode()) {
+      if (flen + clen == 0 && type == Type.Minimum.getCode()) {
         return -1;
       }
 
-      compare = compareFamilies(
-        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        fam, foff, flen);
+      compare = compareFamilies(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength(), fam, foff, flen);
       if (compare != 0) {
         return compare;
       }
-      compare = compareColumns(
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
-        col, coff, clen);
+      compare = compareColumns(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength(), col, coff, clen);
       if (compare != 0) {
         return compare;
       }
@@ -1864,8 +1777,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * Compares the Key of a cell -- with fields being more significant in this order:
-     * rowkey, colfam/qual, timestamp, type, mvcc
+     * Compares the Key of a cell -- with fields being more significant in this order: rowkey,
+     * colfam/qual, timestamp, type, mvcc
      */
     @Override
     public int compare(final Cell left, final Cell right) {
@@ -1878,32 +1791,32 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * @param left left cell to compare rows for
+     * @param left  left cell to compare rows for
      * @param right right cell to compare rows for
      * @return Result comparing rows.
      */
     public int compareRows(final Cell left, final Cell right) {
-      return compareRows(left.getRowArray(),left.getRowOffset(), left.getRowLength(),
-      right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
 
     /**
      * Get the b[],o,l for left and right rowkey portions and compare.
-     * @param left the left kv serialized byte[] to be compared with
+     * @param left    the left kv serialized byte[] to be compared with
      * @param loffset the offset in the left byte[]
      * @param llength the length in the left byte[]
-     * @param right the right kv serialized byte[] to be compared with
+     * @param right   the right kv serialized byte[] to be compared with
      * @param roffset the offset in the right byte[]
      * @param rlength the length in the right byte[]
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
-        int rlength) {
+      int rlength) {
       return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
     }
 
     int compareColumns(final Cell left, final short lrowlength, final Cell right,
-        final short rrowlength) {
+      final short rrowlength) {
       return CellComparatorImpl.COMPARATOR.compareColumns(left, right);
     }
 
@@ -1935,17 +1848,17 @@ public class KeyValue implements ExtendedCell, Cloneable {
     /**
      * Overridden
      * @param commonPrefix location of expected common prefix
-     * @param left the left kv serialized byte[] to be compared with
-     * @param loffset the offset in the left byte[]
-     * @param llength the length in the left byte[]
-     * @param right the right kv serialized byte[] to be compared with
-     * @param roffset the offset in the byte[]
-     * @param rlength the length in the right byte[]
+     * @param left         the left kv serialized byte[] to be compared with
+     * @param loffset      the offset in the left byte[]
+     * @param llength      the length in the left byte[]
+     * @param right        the right kv serialized byte[] to be compared with
+     * @param roffset      the offset in the byte[]
+     * @param rlength      the length in the right byte[]
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     @Override // SamePrefixComparator
-    public int compareIgnoringPrefix(int commonPrefix, byte[] left,
-        int loffset, int llength, byte[] right, int roffset, int rlength) {
+    public int compareIgnoringPrefix(int commonPrefix, byte[] left, int loffset, int llength,
+      byte[] right, int roffset, int rlength) {
       // Compare row
       short lrowlength = Bytes.toShort(left, loffset);
       short rrowlength;
@@ -1954,17 +1867,16 @@ public class KeyValue implements ExtendedCell, Cloneable {
       if (commonPrefix < ROW_LENGTH_SIZE) {
         // almost nothing in common
         rrowlength = Bytes.toShort(right, roffset);
-        comparisonResult = compareRows(left, loffset + ROW_LENGTH_SIZE,
-            lrowlength, right, roffset + ROW_LENGTH_SIZE, rrowlength);
+        comparisonResult = compareRows(left, loffset + ROW_LENGTH_SIZE, lrowlength, right,
+          roffset + ROW_LENGTH_SIZE, rrowlength);
       } else { // the row length is the same
         rrowlength = lrowlength;
         if (commonPrefix < ROW_LENGTH_SIZE + rrowlength) {
           // The rows are not the same. Exclude the common prefix and compare
           // the rest of the two rows.
           int common = commonPrefix - ROW_LENGTH_SIZE;
-          comparisonResult = compareRows(
-              left, loffset + common + ROW_LENGTH_SIZE, lrowlength - common,
-              right, roffset + common + ROW_LENGTH_SIZE, rrowlength - common);
+          comparisonResult = compareRows(left, loffset + common + ROW_LENGTH_SIZE,
+            lrowlength - common, right, roffset + common + ROW_LENGTH_SIZE, rrowlength - common);
         }
       }
       if (comparisonResult != 0) {
@@ -1972,22 +1884,19 @@ public class KeyValue implements ExtendedCell, Cloneable {
       }
 
       assert lrowlength == rrowlength;
-      return compareWithoutRow(commonPrefix, left, loffset, llength, right,
-          roffset, rlength, lrowlength);
+      return compareWithoutRow(commonPrefix, left, loffset, llength, right, roffset, rlength,
+        lrowlength);
     }
 
     /**
-     * Compare columnFamily, qualifier, timestamp, and key type (everything
-     * except the row). This method is used both in the normal comparator and
-     * the "same-prefix" comparator. Note that we are assuming that row portions
-     * of both KVs have already been parsed and found identical, and we don't
-     * validate that assumption here.
-     * @param commonPrefix
-     *          the length of the common prefix of the two key-values being
-     *          compared, including row length and row
+     * Compare columnFamily, qualifier, timestamp, and key type (everything except the row). This
+     * method is used both in the normal comparator and the "same-prefix" comparator. Note that we
+     * are assuming that row portions of both KVs have already been parsed and found identical, and
+     * we don't validate that assumption here. n * the length of the common prefix of the two
+     * key-values being compared, including row length and row
      */
-    private int compareWithoutRow(int commonPrefix, byte[] left, int loffset,
-        int llength, byte[] right, int roffset, int rlength, short rowlength) {
+    private int compareWithoutRow(int commonPrefix, byte[] left, int loffset, int llength,
+      byte[] right, int roffset, int rlength, short rowlength) {
       /***
        * KeyValue Format and commonLength:
        * |_keyLen_|_valLen_|_rowLen_|_rowKey_|_famiLen_|_fami_|_Quali_|....
@@ -2039,23 +1948,20 @@ public class KeyValue implements ExtendedCell, Cloneable {
       }
       if (!sameFamilySize) {
         // comparing column family is enough.
-        return Bytes.compareTo(left, lfamilyoffset + common, lfamilylength
-            - common, right, rfamilyoffset + common, rfamilylength - common);
+        return Bytes.compareTo(left, lfamilyoffset + common, lfamilylength - common, right,
+          rfamilyoffset + common, rfamilylength - common);
       }
       // Compare family & qualifier together.
-      final int comparison = Bytes.compareTo(left, lfamilyoffset + common,
-          lcolumnlength - common, right, rfamilyoffset + common,
-          rcolumnlength - common);
+      final int comparison = Bytes.compareTo(left, lfamilyoffset + common, lcolumnlength - common,
+        right, rfamilyoffset + common, rcolumnlength - common);
       if (comparison != 0) {
         return comparison;
       }
 
       ////
       // Next compare timestamps.
-      long ltimestamp = Bytes.toLong(left,
-          loffset + (llength - TIMESTAMP_TYPE_SIZE));
-      long rtimestamp = Bytes.toLong(right,
-          roffset + (rlength - TIMESTAMP_TYPE_SIZE));
+      long ltimestamp = Bytes.toLong(left, loffset + (llength - TIMESTAMP_TYPE_SIZE));
+      long rtimestamp = Bytes.toLong(right, roffset + (rlength - TIMESTAMP_TYPE_SIZE));
       int compare = compareTimestamps(ltimestamp, rtimestamp);
       if (compare != 0) {
         return compare;
@@ -2069,30 +1975,32 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     protected int compareFamilies(final byte[] left, final int loffset, final int lfamilylength,
-        final byte[] right, final int roffset, final int rfamilylength) {
+      final byte[] right, final int roffset, final int rfamilylength) {
       int diff = Bytes.compareTo(left, loffset, lfamilylength, right, roffset, rfamilylength);
       return diff;
     }
 
     protected int compareColumns(final byte[] left, final int loffset, final int lquallength,
-        final byte[] right, final int roffset, final int rquallength) {
+      final byte[] right, final int roffset, final int rquallength) {
       int diff = Bytes.compareTo(left, loffset, lquallength, right, roffset, rquallength);
       return diff;
     }
+
     /**
      * Compares the row and column of two keyvalues for equality
-     * @param left left cell to compare row and column
+     * @param left  left cell to compare row and column
      * @param right right cell to compare row and column
      * @return True if same row and column.
      */
-    public boolean matchingRowColumn(final Cell left,
-        final Cell right) {
+    public boolean matchingRowColumn(final Cell left, final Cell right) {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
 
       // TsOffset = end of column data. just comparing Row+CF length of each
-      if ((left.getRowLength() + left.getFamilyLength() + left.getQualifierLength()) != (right
-          .getRowLength() + right.getFamilyLength() + right.getQualifierLength())) {
+      if (
+        (left.getRowLength() + left.getFamilyLength() + left.getQualifierLength())
+            != (right.getRowLength() + right.getFamilyLength() + right.getQualifierLength())
+      ) {
         return false;
       }
 
@@ -2107,19 +2015,19 @@ public class KeyValue implements ExtendedCell, Cloneable {
       int lfamilylength = left.getFamilyLength();
       int rfamilylength = right.getFamilyLength();
       int diff = compareFamilies(left.getFamilyArray(), lfoffset, lfamilylength,
-          right.getFamilyArray(), rfoffset, rfamilylength);
+        right.getFamilyArray(), rfoffset, rfamilylength);
       if (diff != 0) {
         return false;
       } else {
         diff = compareColumns(left.getQualifierArray(), left.getQualifierOffset(), lclength,
-            right.getQualifierArray(), right.getQualifierOffset(), rclength);
+          right.getQualifierArray(), right.getQualifierOffset(), rclength);
         return diff == 0;
       }
     }
 
     /**
      * Compares the row of two keyvalues for equality
-     * @param left left cell to compare row
+     * @param left  left cell to compare row
      * @param right right cell to compare row
      * @return True if rows match.
      */
@@ -2130,46 +2038,44 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * @param left left cell to compare row
+     * @param left       left cell to compare row
      * @param lrowlength left row length
-     * @param right right cell to compare row
+     * @param right      right cell to compare row
      * @param rrowlength right row length
      * @return True if rows match.
      */
-    private boolean matchingRows(final Cell left, final short lrowlength,
-        final Cell right, final short rrowlength) {
-      return lrowlength == rrowlength &&
-          matchingRows(left.getRowArray(), left.getRowOffset(), lrowlength,
-              right.getRowArray(), right.getRowOffset(), rrowlength);
+    private boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
+      final short rrowlength) {
+      return lrowlength == rrowlength && matchingRows(left.getRowArray(), left.getRowOffset(),
+        lrowlength, right.getRowArray(), right.getRowOffset(), rrowlength);
     }
 
     /**
      * Compare rows. Just calls Bytes.equals, but it's good to have this encapsulated.
-     * @param left Left row array.
+     * @param left    Left row array.
      * @param loffset Left row offset.
      * @param llength Left row length.
-     * @param right Right row array.
+     * @param right   Right row array.
      * @param roffset Right row offset.
      * @param rlength Right row length.
      * @return Whether rows are the same row.
      */
-    public boolean matchingRows(final byte [] left, final int loffset, final int llength,
-        final byte [] right, final int roffset, final int rlength) {
+    public boolean matchingRows(final byte[] left, final int loffset, final int llength,
+      final byte[] right, final int roffset, final int rlength) {
       return Bytes.equals(left, loffset, llength, right, roffset, rlength);
     }
 
     public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
       byte[] fakeKey = getShortMidpointKey(lastKeyOfPreviousBlock, firstKeyInBlock);
       if (compareFlatKey(fakeKey, firstKeyInBlock) > 0) {
-        LOG.error("Unexpected getShortMidpointKey result, fakeKey:"
-            + Bytes.toStringBinary(fakeKey) + ", firstKeyInBlock:"
-            + Bytes.toStringBinary(firstKeyInBlock));
+        LOG.error("Unexpected getShortMidpointKey result, fakeKey:" + Bytes.toStringBinary(fakeKey)
+          + ", firstKeyInBlock:" + Bytes.toStringBinary(firstKeyInBlock));
         return firstKeyInBlock;
       }
       if (lastKeyOfPreviousBlock != null && compareFlatKey(lastKeyOfPreviousBlock, fakeKey) >= 0) {
-        LOG.error("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:" +
-            Bytes.toStringBinary(lastKeyOfPreviousBlock) + ", fakeKey:" +
-            Bytes.toStringBinary(fakeKey));
+        LOG.error("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:"
+          + Bytes.toStringBinary(lastKeyOfPreviousBlock) + ", fakeKey:"
+          + Bytes.toStringBinary(fakeKey));
         return firstKeyInBlock;
       }
       return fakeKey;
@@ -2177,7 +2083,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
 
     /**
      * This is a HFile block index key optimization.
-     * @param leftKey byte array for left Key
+     * @param leftKey  byte array for left Key
      * @param rightKey byte array for right Key
      * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      * @deprecated Since 0.99.2;
@@ -2204,8 +2110,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
       int leftColumnLength = leftKey.length - leftCommonLengthWithTSAndType;
       int rightColumnLength = rightKey.length - rightCommonLengthWithTSAndType;
       // rows are equal
-      if (leftRowLength == rightRowLength && compareRows(leftKey, ROW_LENGTH_SIZE, leftRowLength,
-        rightKey, ROW_LENGTH_SIZE, rightRowLength) == 0) {
+      if (
+        leftRowLength == rightRowLength && compareRows(leftKey, ROW_LENGTH_SIZE, leftRowLength,
+          rightKey, ROW_LENGTH_SIZE, rightRowLength) == 0
+      ) {
         // Compare family & qualifier together.
         int comparison = Bytes.compareTo(leftKey, leftCommonLength, leftColumnLength, rightKey,
           rightCommonLength, rightColumnLength);
@@ -2222,8 +2130,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
       // rows are different
       short minLength = leftRowLength < rightRowLength ? leftRowLength : rightRowLength;
       short diffIdx = 0;
-      while (diffIdx < minLength
-          && leftKey[ROW_LENGTH_SIZE + diffIdx] == rightKey[ROW_LENGTH_SIZE + diffIdx]) {
+      while (
+        diffIdx < minLength
+          && leftKey[ROW_LENGTH_SIZE + diffIdx] == rightKey[ROW_LENGTH_SIZE + diffIdx]
+      ) {
         diffIdx++;
       }
       byte[] newRowKey = null;
@@ -2233,8 +2143,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
         System.arraycopy(rightKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx + 1);
       } else {
         int diffByte = leftKey[ROW_LENGTH_SIZE + diffIdx];
-        if ((0xff & diffByte) < 0xff && (diffByte + 1) <
-            (rightKey[ROW_LENGTH_SIZE + diffIdx] & 0xff)) {
+        if (
+          (0xff & diffByte) < 0xff && (diffByte + 1) < (rightKey[ROW_LENGTH_SIZE + diffIdx] & 0xff)
+        ) {
           newRowKey = new byte[diffIdx + 1];
           System.arraycopy(leftKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx);
           newRowKey[diffIdx] = (byte) (diffByte + 1);
@@ -2243,8 +2154,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
           System.arraycopy(rightKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx + 1);
         }
       }
-      return new KeyValue(newRowKey, null, null, HConstants.LATEST_TIMESTAMP,
-        Type.Maximum).getKey();
+      return new KeyValue(newRowKey, null, null, HConstants.LATEST_TIMESTAMP, Type.Maximum)
+        .getKey();
     }
 
     @Override
@@ -2255,10 +2166,10 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @param in Where to read bytes from.  Creates a byte array to hold the KeyValue
-   *           backing bytes copied from the steam.
-   * @return KeyValue created by deserializing from <code>in</code> OR if we find a length
-   *           of zero, we will return null which can be useful marking a stream as done.
+   * @param in Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes
+   *           copied from the steam.
+   * @return KeyValue created by deserializing from <code>in</code> OR if we find a length of zero,
+   *         we will return null which can be useful marking a stream as done.
    * @throws IOException if any IO error happen
    */
   public static KeyValue create(final DataInput in) throws IOException {
@@ -2268,9 +2179,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
   /**
    * Create a KeyValue reading <code>length</code> from <code>in</code>
    * @param length length of the Key
-   * @param in Input to read from
-   * @return Created KeyValue OR if we find a length of zero, we will return null which
-   *           can be useful marking a stream as done.
+   * @param in     Input to read from
+   * @return Created KeyValue OR if we find a length of zero, we will return null which can be
+   *         useful marking a stream as done.
    * @throws IOException if any IO error happen
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
@@ -2282,22 +2193,22 @@ public class KeyValue implements ExtendedCell, Cloneable {
       throw new IOException("Failed read " + length + " bytes, stream corrupt?");
     }
 
-    // This is how the old Writables.readFrom used to deserialize.  Didn't even vint.
-    byte [] bytes = new byte[length];
+    // This is how the old Writables.readFrom used to deserialize. Didn't even vint.
+    byte[] bytes = new byte[length];
     in.readFully(bytes);
     return new KeyValue(bytes, 0, length);
   }
 
   /**
    * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable.
-   * @param kv the KeyValue on which write is being requested
+   * @param kv  the KeyValue on which write is being requested
    * @param out OutputStream to write keyValue to
    * @return Length written on stream
    * @throws IOException if any IO error happen
    * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
-    // This is how the old Writables write used to serialize KVs.  Need to figure way to make it
+    // This is how the old Writables write used to serialize KVs. Need to figure way to make it
     // work for all implementations.
     int length = kv.getLength();
     out.writeInt(length);
@@ -2306,23 +2217,23 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do
-   * not require a {@link DataOutput}, just take plain {@link OutputStream}
-   * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
-   * @param kv the KeyValue on which write is being requested
-   * @param out OutputStream to write keyValue to
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do not
+   * require a {@link DataOutput}, just take plain {@link OutputStream} Named <code>oswrite</code>
+   * so does not clash with {@link #write(KeyValue, DataOutput)}
+   * @param kv       the KeyValue on which write is being requested
+   * @param out      OutputStream to write keyValue to
    * @param withTags boolean value indicating write is with Tags or not
    * @return Length written on stream
    * @throws IOException if any IO error happen
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
    * @see KeyValueUtil#oswrite(Cell, OutputStream, boolean)
-   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
-   *             Instead use {@link #write(OutputStream, boolean)}
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
+   *             {@link #write(OutputStream, boolean)}
    */
   @Deprecated
   public static long oswrite(final KeyValue kv, final OutputStream out, final boolean withTags)
-      throws IOException {
+    throws IOException {
     ByteBufferUtils.putInt(out, kv.getSerializedSize(withTags));
     return (long) kv.write(out, withTags) + Bytes.SIZEOF_INT;
   }
@@ -2353,50 +2264,51 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * Avoids redundant comparisons for better performance.
-   *
-   * TODO get rid of this wart
+   * Avoids redundant comparisons for better performance. TODO get rid of this wart
    */
   public interface SamePrefixComparator<T> {
     /**
      * Compare two keys assuming that the first n bytes are the same.
      * @param commonPrefix How many bytes are the same.
      */
-    int compareIgnoringPrefix(int commonPrefix, byte[] left, int loffset, int llength,
-        byte[] right, int roffset, int rlength
-    );
+    int compareIgnoringPrefix(int commonPrefix, byte[] left, int loffset, int llength, byte[] right,
+      int roffset, int rlength);
   }
 
   /**
    * HeapSize implementation
-   *
+   * <p/>
    * We do not count the bytes in the rowCache because it should be empty for a KeyValue in the
    * MemStore.
    */
   @Override
   public long heapSize() {
-    /*
-     * Deep object overhead for this KV consists of two parts. The first part is the KV object
-     * itself, while the second part is the backing byte[]. We will only count the array overhead
-     * from the byte[] only if this is the first KV in there.
-     */
-    return ClassSize.align(FIXED_OVERHEAD) +
-        (offset == 0
-          ? ClassSize.sizeOfByteArray(length)  // count both length and object overhead
-          : length);                           // only count the number of bytes
+    // Deep object overhead for this KV consists of two parts. The first part is the KV object
+    // itself, while the second part is the backing byte[]. We will only count the array overhead
+    // from the byte[] only if this is the first KV in there.
+    int fixed = ClassSize.align(FIXED_OVERHEAD);
+    if (offset == 0) {
+      // count both length and object overhead
+      return fixed + ClassSize.sizeOfByteArray(length);
+    } else {
+      // only count the number of bytes
+      return fixed + length;
+    }
   }
 
   /**
-   * A simple form of KeyValue that creates a keyvalue with only the key part of the byte[]
-   * Mainly used in places where we need to compare two cells.  Avoids copying of bytes
-   * In places like block index keys, we need to compare the key byte[] with a cell.
-   * Hence create a Keyvalue(aka Cell) that would help in comparing as two cells
+   * A simple form of KeyValue that creates a keyvalue with only the key part of the byte[] Mainly
+   * used in places where we need to compare two cells. Avoids copying of bytes In places like block
+   * index keys, we need to compare the key byte[] with a cell. Hence create a Keyvalue(aka Cell)
+   * that would help in comparing as two cells
    */
   public static class KeyOnlyKeyValue extends KeyValue {
     private short rowLen = -1;
+
     public KeyOnlyKeyValue() {
 
     }
+
     public KeyOnlyKeyValue(byte[] b) {
       this(b, 0, b.length);
     }
@@ -2428,9 +2340,9 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
-     * A setter that helps to avoid object creation every time and whenever
-     * there is a need to create new KeyOnlyKeyValue.
-     * @param key Key to set
+     * A setter that helps to avoid object creation every time and whenever there is a need to
+     * create new KeyOnlyKeyValue.
+     * @param key    Key to set
      * @param offset Offset of the Key
      * @param length length of the Key
      */
@@ -2511,7 +2423,6 @@ public class KeyValue implements ExtendedCell, Cloneable {
     byte getTypeByte(int keyLength) {
       return this.bytes[this.offset + keyLength - 1];
     }
-
 
     private int getQualifierLength(int rlength, int flength) {
       return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);

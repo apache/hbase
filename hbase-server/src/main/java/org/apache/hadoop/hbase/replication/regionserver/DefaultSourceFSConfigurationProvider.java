@@ -1,12 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
@@ -15,7 +22,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -26,13 +32,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This will load all the xml configuration files for the source cluster replication ID from
- * user configured replication configuration directory.
+ * This will load all the xml configuration files for the source cluster replication ID from user
+ * configured replication configuration directory.
  */
 @InterfaceAudience.Private
 public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurationProvider {
   private static final Logger LOG =
-      LoggerFactory.getLogger(DefaultSourceFSConfigurationProvider.class);
+    LoggerFactory.getLogger(DefaultSourceFSConfigurationProvider.class);
 
   // Map containing all the source clusters configurations against their replication cluster id
   private final Map<String, Configuration> sourceClustersConfs = new HashMap<>();
@@ -40,7 +46,7 @@ public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurati
 
   @Override
   public Configuration getConf(Configuration sinkConf, String replicationClusterId)
-      throws IOException {
+    throws IOException {
     if (sourceClustersConfs.get(replicationClusterId) == null) {
       synchronized (this.sourceClustersConfs) {
         if (sourceClustersConfs.get(replicationClusterId) == null) {
@@ -62,8 +68,7 @@ public class DefaultSourceFSConfigurationProvider implements SourceFSConfigurati
 
           File confDir = new File(replicationConfDir, replicationClusterId);
           LOG.info("Loading source cluster " + replicationClusterId
-                  + " file system configurations from xml "
-                  + "files under directory " + confDir);
+            + " file system configurations from xml " + "files under directory " + confDir);
           String[] listofConfFiles = FileUtil.list(confDir);
           for (String confFile : listofConfFiles) {
             if (new File(confDir, confFile).isFile() && confFile.endsWith(XML)) {

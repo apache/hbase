@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,17 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class responsible for parsing the command line and starting the
- * RegionServer.
+ * Class responsible for parsing the command line and starting the RegionServer.
  */
 @InterfaceAudience.Private
 public class HRegionServerCommandLine extends ServerCommandLine {
@@ -36,8 +38,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private final Class<? extends HRegionServer> regionServerClass;
 
-  private static final String USAGE =
-    "Usage: HRegionServer [-D conf.param=value] start";
+  private static final String USAGE = "Usage: HRegionServer [-D conf.param=value] start";
 
   public HRegionServerCommandLine(Class<? extends HRegionServer> clazz) {
     this.regionServerClass = clazz;
@@ -50,12 +51,13 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private int start() throws Exception {
     Configuration conf = getConf();
-    try {
+    final Span span = TraceUtil.createSpan("HRegionServerCommandLine.start");
+    try (Scope ignored = span.makeCurrent()) {
       // If 'local', don't start a region server here. Defer to
       // LocalHBaseCluster. It manages 'local' clusters.
       if (LocalHBaseCluster.isLocal(conf)) {
-        LOG.warn("Not starting a distinct region server because "
-            + HConstants.CLUSTER_DISTRIBUTED + " is false");
+        LOG.warn("Not starting a distinct region server because " + HConstants.CLUSTER_DISTRIBUTED
+          + " is false");
       } else {
         logProcessInfo(getConf());
         HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
@@ -65,9 +67,13 @@ public class HRegionServerCommandLine extends ServerCommandLine {
           throw new RuntimeException("HRegionServer Aborted");
         }
       }
+      span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
+      TraceUtil.setError(span, t);
       LOG.error("Region server exiting", t);
       return 1;
+    } finally {
+      span.end();
     }
     return 0;
   }
@@ -84,10 +90,8 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     if ("start".equals(cmd)) {
       return start();
     } else if ("stop".equals(cmd)) {
-      System.err.println(
-        "To shutdown the regionserver run " +
-        "hbase-daemon.sh stop regionserver or send a kill signal to " +
-        "the regionserver pid");
+      System.err.println("To shutdown the regionserver run "
+        + "hbase-daemon.sh stop regionserver or send a kill signal to " + "the regionserver pid");
       return 1;
     } else {
       usage("Unknown command: " + args[0]);

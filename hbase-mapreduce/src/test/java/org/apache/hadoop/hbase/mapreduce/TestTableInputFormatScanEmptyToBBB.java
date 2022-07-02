@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestTableInputFormatScanEmptyToBBB extends TestTableInputFormatScan
    */
   @Test
   public void testScanEmptyToBBB()
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "bbb", "bba");
   }
 }

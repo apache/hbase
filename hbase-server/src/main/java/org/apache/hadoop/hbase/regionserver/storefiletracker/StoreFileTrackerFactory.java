@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,7 +59,8 @@ public final class StoreFileTrackerFactory {
    * Maps between configuration names for trackers and implementation classes.
    */
   public enum Trackers {
-    DEFAULT(DefaultStoreFileTracker.class), FILE(FileBasedStoreFileTracker.class),
+    DEFAULT(DefaultStoreFileTracker.class),
+    FILE(FileBasedStoreFileTracker.class),
     MIGRATION(MigrationStoreFileTracker.class);
 
     final Class<? extends StoreFileTracker> clazz;
@@ -172,13 +175,12 @@ public final class StoreFileTrackerFactory {
   }
 
   public static TableDescriptor updateWithTrackerConfigs(Configuration conf,
-      TableDescriptor descriptor) {
-    //CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
-    //descriptors with the SFT impl specific configs. By the time this happens, the table has no
-    //regions nor stores yet, so it can't create a proper StoreContext.
+    TableDescriptor descriptor) {
+    // CreateTableProcedure needs to instantiate the configured SFT impl, in order to update table
+    // descriptors with the SFT impl specific configs. By the time this happens, the table has no
+    // regions nor stores yet, so it can't create a proper StoreContext.
     if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
-      StoreFileTracker tracker =
-        StoreFileTrackerFactory.create(conf, true, null);
+      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
       return tracker.updateWithTrackerConfigs(builder).build();
     }

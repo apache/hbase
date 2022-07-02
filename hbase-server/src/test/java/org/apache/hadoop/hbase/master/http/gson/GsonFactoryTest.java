@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.http.gson;
 
 import static org.junit.Assert.assertEquals;
+
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,9 +30,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
-@Category({ MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class GsonFactoryTest {
 
   @ClassRule
@@ -69,9 +71,9 @@ public class GsonFactoryTest {
     input.put(Bytes.toBytes("this is printable"), new byte[] { 0, 1, 2, 3, 4, 5 });
     input.put(new byte[] { -127, -63, 0, 63, 127 }, Bytes.toBytes("test"));
     final String actual = gson.toJson(input);
-    final String expected = "{" +
-      "\"this is printable\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\"," +
-      "\"��\\u0000?\u007F\":\"test\"}";
+    final String expected =
+      "{" + "\"this is printable\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\","
+        + "\"��\\u0000?\u007F\":\"test\"}";
     assertEquals(expected, actual);
   }
 
@@ -80,11 +82,7 @@ public class GsonFactoryTest {
     private final int anInt;
     private final String aString;
 
-    public SomeBean(
-      final boolean aBoolean,
-      final int anInt,
-      final String aString
-    ) {
+    public SomeBean(final boolean aBoolean, final int anInt, final String aString) {
       this.aBoolean = aBoolean;
       this.anInt = anInt;
       this.aString = aString;

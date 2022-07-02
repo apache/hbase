@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -34,12 +33,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that we correctly serialize exceptions from a remote source
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestForeignExceptionSerialization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestForeignExceptionSerialization.class);
+    HBaseClassTestRule.forClass(TestForeignExceptionSerialization.class);
 
   private static final String srcName = "someNode";
 
@@ -80,10 +79,10 @@ public class TestForeignExceptionSerialization {
     // Workaround for java 11 - replaced assertArrayEquals with individual elements comparison
     // using custom comparison helper method
     assertEquals("Stacktrace lengths don't match", generic.getStackTrace().length,
-        e.getCause().getStackTrace().length);
+      e.getCause().getStackTrace().length);
     for (int i = 0; i < generic.getStackTrace().length; i++) {
       assertTrue("Local stack trace got corrupted at " + i + "th index",
-          compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]));
+        compareStackTraceElement(generic.getStackTrace()[i], e.getCause().getStackTrace()[i]));
     }
 
     e.printStackTrace(); // should have ForeignException and source node in it.
@@ -95,8 +94,9 @@ public class TestForeignExceptionSerialization {
 
   // Helper method to compare two stackTraceElements
   private boolean compareStackTraceElement(StackTraceElement obj1, StackTraceElement obj2) {
-    return obj1.getClassName().equals(obj2.getClassName()) && obj1.getLineNumber() == obj2
-        .getLineNumber() && Objects.equals(obj1.getMethodName(), obj2.getMethodName()) && Objects
-        .equals(obj1.getFileName(), obj2.getFileName());
+    return obj1.getClassName().equals(obj2.getClassName())
+      && obj1.getLineNumber() == obj2.getLineNumber()
+      && Objects.equals(obj1.getMethodName(), obj2.getMethodName())
+      && Objects.equals(obj1.getFileName(), obj2.getFileName());
   }
 }

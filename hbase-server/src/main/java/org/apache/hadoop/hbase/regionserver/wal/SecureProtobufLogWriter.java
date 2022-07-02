@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -33,7 +32,7 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
 
   @Override
   protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
-      throws IOException {
+    throws IOException {
     return super.buildSecureWALHeader(conf, builder);
   }
 

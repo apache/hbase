@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -27,37 +30,38 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @Category({ MiscTests.class, MediumTests.class })
 public class TestMajorCompactor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMajorCompactor.class);
+    HBaseClassTestRule.forClass(TestMajorCompactor.class);
 
   public static final byte[] FAMILY = Bytes.toBytes("a");
   protected HBaseTestingUtil utility;
   protected Admin admin;
 
-  @Before public void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     utility = new HBaseTestingUtil();
     utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
     utility.startMiniCluster();
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     utility.shutdownMiniCluster();
   }
 
-  @Test public void testCompactingATable() throws Exception {
+  @Test
+  public void testCompactingATable() throws Exception {
     TableName tableName = TableName.valueOf("TestMajorCompactor");
     utility.createMultiRegionTable(tableName, FAMILY, 5);
     utility.waitTableAvailable(tableName);
@@ -74,9 +78,8 @@ public class TestMajorCompactor {
     // we should have a table with more store files than we would before we major compacted.
     assertTrue(numberOfRegions < numHFiles);
 
-    MajorCompactor compactor =
-      new MajorCompactor(utility.getConfiguration(), tableName,
-        Sets.newHashSet(Bytes.toString(FAMILY)), 1, EnvironmentEdgeManager.currentTime(), 200);
+    MajorCompactor compactor = new MajorCompactor(utility.getConfiguration(), tableName,
+      Sets.newHashSet(Bytes.toString(FAMILY)), 1, EnvironmentEdgeManager.currentTime(), 200);
     compactor.initializeWorkQueues();
     compactor.compactAllRegions();
     compactor.shutdown();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -110,7 +110,7 @@ public final class Constraints {
 
   /**
    * Check to see if the Constraint is currently set.
-   * @param desc {@link TableDescriptor} to check
+   * @param desc  {@link TableDescriptor} to check
    * @param clazz {@link Constraint} class to check for.
    * @return <tt>true</tt> if the {@link Constraint} is present, even if it is disabled.
    *         <tt>false</tt> otherwise.
@@ -121,7 +121,7 @@ public final class Constraints {
 
   /**
    * Get the kv {@link Entry} in the descriptor for the specified class
-   * @param desc {@link TableDescriptor} to read
+   * @param desc  {@link TableDescriptor} to read
    * @param clazz To search for
    * @return The {@link Pair} of {@literal <key, value>} in the table, if that class is present.
    *         {@code null} otherwise.
@@ -138,7 +138,7 @@ public final class Constraints {
   /**
    * Get the kv {@link Entry} in the descriptor builder for the specified class
    * @param builder {@link TableDescriptorBuilder} to read
-   * @param clazz To search for
+   * @param clazz   To search for
    * @return The {@link Pair} of {@literal <key, value>} in the table, if that class is present.
    *         {@code null} otherwise.
    */
@@ -161,9 +161,9 @@ public final class Constraints {
    * which the {@link Constraint} will be run. A {@link Constraint} earlier in the list will be run
    * before those later in the list. The same logic applies between two Constraints over time
    * (earlier added is run first on the regionserver).
-   * @param builder {@link TableDescriptorBuilder} to add a {@link Constraint}
+   * @param builder     {@link TableDescriptorBuilder} to add a {@link Constraint}
    * @param constraints {@link Constraint Constraints} to add. All constraints are considered
-   *          automatically enabled on add
+   *                    automatically enabled on add
    * @throws IOException If constraint could not be serialized/added to table
    */
   @SafeVarargs
@@ -189,13 +189,14 @@ public final class Constraints {
    * which the {@link Constraint} will be run. A {@link Constraint} earlier in the list will be run
    * before those later in the list. The same logic applies between two Constraints over time
    * (earlier added is run first on the regionserver).
-   * @param builder {@link TableDescriptorBuilder} to add a {@link Constraint}
+   * @param builder     {@link TableDescriptorBuilder} to add a {@link Constraint}
    * @param constraints {@link Pair} of a {@link Constraint} and its associated
-   *          {@link Configuration}. The Constraint will be configured on load with the specified
-   *          configuration.All constraints are considered automatically enabled on add
+   *                    {@link Configuration}. The Constraint will be configured on load with the
+   *                    specified configuration.All constraints are considered automatically enabled
+   *                    on add
    * @throws IOException if any constraint could not be deserialized. Assumes if 1 constraint is not
-   *           loaded properly, something has gone terribly wrong and that all constraints need to
-   *           be enforced.
+   *                     loaded properly, something has gone terribly wrong and that all constraints
+   *                     need to be enforced.
    */
   @SafeVarargs
   public static TableDescriptorBuilder add(TableDescriptorBuilder builder,
@@ -214,12 +215,12 @@ public final class Constraints {
    * Each constraint, when added to the table, will have a specific priority, dictating the order in
    * which the {@link Constraint} will be run. A {@link Constraint} added will run on the
    * regionserver before those added to the {@link TableDescriptorBuilder} later.
-   * @param builder {@link TableDescriptorBuilder} to add a {@link Constraint}
+   * @param builder    {@link TableDescriptorBuilder} to add a {@link Constraint}
    * @param constraint to be added
-   * @param conf configuration associated with the constraint
+   * @param conf       configuration associated with the constraint
    * @throws IOException if any constraint could not be deserialized. Assumes if 1 constraint is not
-   *           loaded properly, something has gone terribly wrong and that all constraints need to
-   *           be enforced.
+   *                     loaded properly, something has gone terribly wrong and that all constraints
+   *                     need to be enforced.
    */
   public static TableDescriptorBuilder add(TableDescriptorBuilder builder,
     Class<? extends Constraint> constraint, Configuration conf) throws IOException {
@@ -246,8 +247,8 @@ public final class Constraints {
 
   /**
    * Setup the configuration for a constraint as to whether it is enabled and its priority
-   * @param conf on which to base the new configuration
-   * @param enabled <tt>true</tt> if it should be run
+   * @param conf     on which to base the new configuration
+   * @param enabled  <tt>true</tt> if it should be run
    * @param priority relative to other constraints
    * @return a new configuration, storable in the {@link TableDescriptor}
    */
@@ -347,10 +348,10 @@ public final class Constraints {
   /**
    * Update the configuration for the {@link Constraint}; does not change the order in which the
    * constraint is run.
-   * @param builder {@link TableDescriptorBuilder} to update
-   * @param clazz {@link Constraint} to update
+   * @param builder       {@link TableDescriptorBuilder} to update
+   * @param clazz         {@link Constraint} to update
    * @param configuration to update the {@link Constraint} with.
-   * @throws IOException if the Constraint was not stored correctly
+   * @throws IOException              if the Constraint was not stored correctly
    * @throws IllegalArgumentException if the Constraint was not present on this table.
    */
   public static TableDescriptorBuilder setConfiguration(TableDescriptorBuilder builder,
@@ -381,7 +382,7 @@ public final class Constraints {
   /**
    * Remove the constraint (and associated information) for the table descriptor.
    * @param builder {@link TableDescriptorBuilder} to modify
-   * @param clazz {@link Constraint} class to remove
+   * @param clazz   {@link Constraint} class to remove
    */
   public static TableDescriptorBuilder remove(TableDescriptorBuilder builder,
     Class<? extends Constraint> clazz) {
@@ -393,7 +394,7 @@ public final class Constraints {
    * Enable the given {@link Constraint}. Retains all the information (e.g. Configuration) for the
    * {@link Constraint}, but makes sure that it gets loaded on the table.
    * @param builder {@link TableDescriptorBuilder} to modify
-   * @param clazz {@link Constraint} to enable
+   * @param clazz   {@link Constraint} to enable
    * @throws IOException If the constraint cannot be properly deserialized
    */
   public static void enableConstraint(TableDescriptorBuilder builder,
@@ -405,7 +406,7 @@ public final class Constraints {
    * Disable the given {@link Constraint}. Retains all the information (e.g. Configuration) for the
    * {@link Constraint}, but it just doesn't load the {@link Constraint} on the table.
    * @param builder {@link TableDescriptorBuilder} to modify
-   * @param clazz {@link Constraint} to disable.
+   * @param clazz   {@link Constraint} to disable.
    * @throws IOException if the constraint cannot be found
    */
   public static void disableConstraint(TableDescriptorBuilder builder,
@@ -421,8 +422,8 @@ public final class Constraints {
     // get the original constraint
     Pair<String, String> entry = getKeyValueForClass(builder, clazz);
     if (entry == null) {
-      throw new IllegalArgumentException("Constraint: " + clazz.getName() +
-        " is not associated with this table. You can't enable it!");
+      throw new IllegalArgumentException("Constraint: " + clazz.getName()
+        + " is not associated with this table. You can't enable it!");
     }
 
     // create a new configuration from that conf
@@ -437,7 +438,7 @@ public final class Constraints {
 
   /**
    * Check to see if the given constraint is enabled.
-   * @param desc {@link TableDescriptor} to check.
+   * @param desc  {@link TableDescriptor} to check.
    * @param clazz {@link Constraint} to check for
    * @return <tt>true</tt> if the {@link Constraint} is present and enabled. <tt>false</tt>
    *         otherwise.
@@ -460,11 +461,11 @@ public final class Constraints {
 
   /**
    * Get the constraints stored in the table descriptor
-   * @param desc To read from
+   * @param desc        To read from
    * @param classloader To use when loading classes. If a special classloader is used on a region,
-   *          for instance, then that should be the classloader used to load the constraints. This
-   *          could also apply to unit-testing situation, where want to ensure that class is
-   *          reloaded or not.
+   *                    for instance, then that should be the classloader used to load the
+   *                    constraints. This could also apply to unit-testing situation, where want to
+   *                    ensure that class is reloaded or not.
    * @return List of configured {@link Constraint Constraints}
    * @throws IOException if any part of reading/arguments fails
    */

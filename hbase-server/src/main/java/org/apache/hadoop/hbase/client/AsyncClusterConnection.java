@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Return all the replicas for a region. Used for region replica replication.
    */
   CompletableFuture<RegionLocations> getRegionLocations(TableName tableName, byte[] row,
-      boolean reload);
+    boolean reload);
 
   /**
    * Return the token for this bulk load.
@@ -74,15 +74,15 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * <p/>
    * Defined as default here to avoid breaking callers who rely on the bulkLoad version that does
    * not expect additional clusterIds param.
-   * @param tableName the target table
-   * @param familyPaths hdfs path for the the table family dirs containg files to be loaded.
-   * @param row row key.
+   * @param tableName    the target table
+   * @param familyPaths  hdfs path for the the table family dirs containg files to be loaded.
+   * @param row          row key.
    * @param assignSeqNum seq num for the event on WAL.
-   * @param userToken user token.
-   * @param bulkToken bulk load token.
-   * @param copyFiles flag for copying the loaded hfiles.
-   * @param clusterIds list of cluster ids where the given bulk load has already been processed.
-   * @param replicate flags if the bulkload is targeted for replication.
+   * @param userToken    user token.
+   * @param bulkToken    bulk load token.
+   * @param copyFiles    flag for copying the loaded hfiles.
+   * @param clusterIds   list of cluster ids where the given bulk load has already been processed.
+   * @param replicate    flags if the bulkload is targeted for replication.
    */
   CompletableFuture<Boolean> bulkLoad(TableName tableName, List<Pair<byte[], String>> familyPaths,
     byte[] row, boolean assignSeqNum, Token<?> userToken, String bulkToken, boolean copyFiles,

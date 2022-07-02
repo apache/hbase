@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,8 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
@@ -36,9 +38,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogReplicaMode;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,6 +54,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -62,6 +67,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Category({ MediumTests.class, ClientTests.class })
@@ -101,8 +107,9 @@ public class TestAsyncNonMetaRegionLocator {
 
     // Enable hbase:meta replication.
     HBaseTestingUtil.setReplicas(admin, TableName.META_TABLE_NAME, NUM_OF_META_REPLICA);
-    TEST_UTIL.waitFor(30000, () -> TEST_UTIL.getMiniHBaseCluster()
-      .getRegions(TableName.META_TABLE_NAME).size() >= NUM_OF_META_REPLICA);
+    TEST_UTIL.waitFor(30000,
+      () -> TEST_UTIL.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
+          >= NUM_OF_META_REPLICA);
 
     SPLIT_KEYS = new byte[8][];
     for (int i = 111; i < 999; i += 111) {
@@ -288,8 +295,9 @@ public class TestAsyncNonMetaRegionLocator {
       .get();
 
     TEST_UTIL.getAdmin().move(Bytes.toBytes(loc.getRegion().getEncodedName()), newServerName);
-    while (!TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName()
-      .equals(newServerName)) {
+    while (
+      !TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME).getServerName().equals(newServerName)
+    ) {
       Thread.sleep(100);
     }
     // Should be same as it is in cache
@@ -459,5 +467,79 @@ public class TestAsyncNonMetaRegionLocator {
       getDefaultRegionLocation(TABLE_NAME, EMPTY_START_ROW, RegionLocateType.CURRENT, false).get();
     IntStream.range(0, 100).parallel()
       .forEach(i -> locator.updateCachedLocationOnError(loc, new NotServingRegionException()));
+  }
+
+  @Test
+  public void testCacheLocationWhenGetAllLocations() throws Exception {
+    createMultiRegionTable();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    conn.getRegionLocator(TABLE_NAME).getAllRegionLocations().get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+    for (RegionInfo region : regions) {
+      assertNotNull(conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey()));
+    }
+  }
+
+  @Test
+  public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations() throws Exception {
+    createMultiRegionTable();
+    AsyncConnectionImpl conn = (AsyncConnectionImpl) ConnectionFactory
+      .createAsyncConnection(TEST_UTIL.getConfiguration()).get();
+    List<RegionInfo> regions = TEST_UTIL.getAdmin().getRegions(TABLE_NAME);
+    RegionInfo chosen = regions.get(0);
+
+    // re-populate region cache
+    AsyncTableRegionLocator regionLocator = conn.getRegionLocator(TABLE_NAME);
+    regionLocator.clearRegionLocationCache();
+    regionLocator.getAllRegionLocations().get();
+
+    int tries = 3;
+    // expect all to be non-null at first
+    checkRegionsWithRetries(conn, regions, null, tries);
+
+    // clear servername from region info
+    Put put = MetaTableAccessor.makePutFromRegionInfo(chosen, EnvironmentEdgeManager.currentTime());
+    MetaTableAccessor.addEmptyLocation(put, 0);
+    MetaTableAccessor.putsToMetaTable(TEST_UTIL.getConnection(), Lists.newArrayList(put));
+
+    // re-populate region cache again. check that we succeeded in nulling the servername
+    regionLocator.clearRegionLocationCache();
+    for (HRegionLocation loc : regionLocator.getAllRegionLocations().get()) {
+      if (loc.getRegion().equals(chosen)) {
+        assertNull(loc.getServerName());
+      }
+    }
+
+    // expect all but chosen to be non-null. chosen should be null because serverName was null
+    checkRegionsWithRetries(conn, regions, chosen, tries);
+  }
+
+  // caching of getAllRegionLocations is async. so we give it a couple tries
+  private void checkRegionsWithRetries(AsyncConnectionImpl conn, List<RegionInfo> regions,
+    RegionInfo chosen, int retries) throws InterruptedException {
+    while (true) {
+      try {
+        checkRegions(conn, regions, chosen);
+        break;
+      } catch (AssertionError e) {
+        if (retries-- <= 0) {
+          throw e;
+        }
+        Thread.sleep(500);
+      }
+    }
+  }
+
+  private void checkRegions(AsyncConnectionImpl conn, List<RegionInfo> regions, RegionInfo chosen) {
+    for (RegionInfo region : regions) {
+      RegionLocations fromCache =
+        conn.getLocator().getRegionLocationInCache(TABLE_NAME, region.getStartKey());
+      if (region.equals(chosen)) {
+        assertNull(fromCache);
+      } else {
+        assertNotNull(fromCache);
+      }
+    }
   }
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -26,13 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Option;
@@ -43,43 +41,37 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 public final class ClusterMetricsBuilder {
 
   public static ClusterStatusProtos.ClusterStatus toClusterStatus(ClusterMetrics metrics) {
-    ClusterStatusProtos.ClusterStatus.Builder builder
-        = ClusterStatusProtos.ClusterStatus.newBuilder()
-        .addAllBackupMasters(metrics.getBackupMasterNames().stream()
-            .map(ProtobufUtil::toServerName).collect(Collectors.toList()))
-        .addAllDeadServers(metrics.getDeadServerNames().stream()
-            .map(ProtobufUtil::toServerName).collect(Collectors.toList()))
+    ClusterStatusProtos.ClusterStatus.Builder builder =
+      ClusterStatusProtos.ClusterStatus.newBuilder()
+        .addAllBackupMasters(metrics.getBackupMasterNames().stream().map(ProtobufUtil::toServerName)
+          .collect(Collectors.toList()))
+        .addAllDeadServers(metrics.getDeadServerNames().stream().map(ProtobufUtil::toServerName)
+          .collect(Collectors.toList()))
         .addAllLiveServers(metrics.getLiveServerMetrics().entrySet().stream()
-            .map(s -> ClusterStatusProtos.LiveServerInfo
-                .newBuilder()
-                .setServer(ProtobufUtil.toServerName(s.getKey()))
-                .setServerLoad(ServerMetricsBuilder.toServerLoad(s.getValue()))
-                .build())
-            .collect(Collectors.toList()))
+          .map(s -> ClusterStatusProtos.LiveServerInfo.newBuilder()
+            .setServer(ProtobufUtil.toServerName(s.getKey()))
+            .setServerLoad(ServerMetricsBuilder.toServerLoad(s.getValue())).build())
+          .collect(Collectors.toList()))
         .addAllMasterCoprocessors(metrics.getMasterCoprocessorNames().stream()
-            .map(n -> HBaseProtos.Coprocessor.newBuilder().setName(n).build())
-            .collect(Collectors.toList()))
+          .map(n -> HBaseProtos.Coprocessor.newBuilder().setName(n).build())
+          .collect(Collectors.toList()))
         .addAllRegionsInTransition(metrics.getRegionStatesInTransition().stream()
-            .map(r -> ClusterStatusProtos.RegionInTransition
-                .newBuilder()
-                .setSpec(HBaseProtos.RegionSpecifier
-                    .newBuilder()
-                    .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)
-                    .setValue(UnsafeByteOperations.unsafeWrap(r.getRegion().getRegionName()))
-                    .build())
-                .setRegionState(r.convert())
-                .build())
-            .collect(Collectors.toList()))
+          .map(r -> ClusterStatusProtos.RegionInTransition.newBuilder()
+            .setSpec(HBaseProtos.RegionSpecifier.newBuilder()
+              .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME)
+              .setValue(UnsafeByteOperations.unsafeWrap(r.getRegion().getRegionName())).build())
+            .setRegionState(r.convert()).build())
+          .collect(Collectors.toList()))
         .setMasterInfoPort(metrics.getMasterInfoPort())
         .addAllServersName(metrics.getServersName().stream().map(ProtobufUtil::toServerName)
           .collect(Collectors.toList()))
         .addAllTableRegionStatesCount(metrics.getTableRegionStatesCount().entrySet().stream()
-          .map(status ->
-            ClusterStatusProtos.TableRegionStatesCount.newBuilder()
-              .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
-              .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue()))
-              .build())
-          .collect(Collectors.toList()));
+          .map(status -> ClusterStatusProtos.TableRegionStatesCount.newBuilder()
+            .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
+            .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue())).build())
+          .collect(Collectors.toList()))
+        .addAllDecommissionedServers(metrics.getDecommissionedServerNames().stream()
+          .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
     if (metrics.getMasterName() != null) {
       builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
     }
@@ -95,40 +87,35 @@ public final class ClusterMetricsBuilder {
     }
     if (metrics.getHBaseVersion() != null) {
       builder.setHbaseVersion(
-          FSProtos.HBaseVersionFileContent.newBuilder()
-              .setVersion(metrics.getHBaseVersion()));
+        FSProtos.HBaseVersionFileContent.newBuilder().setVersion(metrics.getHBaseVersion()));
     }
     return builder.build();
   }
 
-  public static ClusterMetrics toClusterMetrics(
-      ClusterStatusProtos.ClusterStatus proto) {
+  public static ClusterMetrics toClusterMetrics(ClusterStatusProtos.ClusterStatus proto) {
     ClusterMetricsBuilder builder = ClusterMetricsBuilder.newBuilder();
-    builder.setLiveServerMetrics(proto.getLiveServersList().stream()
+    builder
+      .setLiveServerMetrics(proto.getLiveServersList().stream()
         .collect(Collectors.toMap(e -> ProtobufUtil.toServerName(e.getServer()),
-            ServerMetricsBuilder::toServerMetrics)))
-        .setDeadServerNames(proto.getDeadServersList().stream()
-            .map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()))
-        .setBackerMasterNames(proto.getBackupMastersList().stream()
-            .map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()))
-        .setRegionsInTransition(proto.getRegionsInTransitionList().stream()
-            .map(ClusterStatusProtos.RegionInTransition::getRegionState)
-            .map(RegionState::convert)
-            .collect(Collectors.toList()))
-        .setMasterCoprocessorNames(proto.getMasterCoprocessorsList().stream()
-            .map(HBaseProtos.Coprocessor::getName)
-            .collect(Collectors.toList()))
-        .setServerNames(proto.getServersNameList().stream().map(ProtobufUtil::toServerName)
-            .collect(Collectors.toList()))
-        .setTableRegionStatesCount(
-          proto.getTableRegionStatesCountList().stream()
-          .collect(Collectors.toMap(
-            e -> ProtobufUtil.toTableName(e.getTableName()),
-            e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))))
-        .setMasterTasks(proto.getMasterTasksList().stream()
-          .map(t -> ProtobufUtil.getServerTask(t)).collect(Collectors.toList()));
+          ServerMetricsBuilder::toServerMetrics)))
+      .setDeadServerNames(proto.getDeadServersList().stream().map(ProtobufUtil::toServerName)
+        .collect(Collectors.toList()))
+      .setBackerMasterNames(proto.getBackupMastersList().stream().map(ProtobufUtil::toServerName)
+        .collect(Collectors.toList()))
+      .setRegionsInTransition(proto.getRegionsInTransitionList().stream()
+        .map(ClusterStatusProtos.RegionInTransition::getRegionState).map(RegionState::convert)
+        .collect(Collectors.toList()))
+      .setMasterCoprocessorNames(proto.getMasterCoprocessorsList().stream()
+        .map(HBaseProtos.Coprocessor::getName).collect(Collectors.toList()))
+      .setServerNames(proto.getServersNameList().stream().map(ProtobufUtil::toServerName)
+        .collect(Collectors.toList()))
+      .setTableRegionStatesCount(proto.getTableRegionStatesCountList().stream()
+        .collect(Collectors.toMap(e -> ProtobufUtil.toTableName(e.getTableName()),
+          e -> ProtobufUtil.toTableRegionStatesCount(e.getRegionStatesCount()))))
+      .setMasterTasks(proto.getMasterTasksList().stream().map(t -> ProtobufUtil.getServerTask(t))
+        .collect(Collectors.toList()))
+      .setDecommissionedServerNames(proto.getDecommissionedServersList().stream()
+        .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
     if (proto.hasClusterId()) {
       builder.setClusterId(ClusterId.convert(proto.getClusterId()).toString());
     }
@@ -158,21 +145,37 @@ public final class ClusterMetricsBuilder {
    */
   public static ClusterMetrics.Option toOption(ClusterStatusProtos.Option option) {
     switch (option) {
-      case HBASE_VERSION: return ClusterMetrics.Option.HBASE_VERSION;
-      case LIVE_SERVERS: return ClusterMetrics.Option.LIVE_SERVERS;
-      case DEAD_SERVERS: return ClusterMetrics.Option.DEAD_SERVERS;
-      case REGIONS_IN_TRANSITION: return ClusterMetrics.Option.REGIONS_IN_TRANSITION;
-      case CLUSTER_ID: return ClusterMetrics.Option.CLUSTER_ID;
-      case MASTER_COPROCESSORS: return ClusterMetrics.Option.MASTER_COPROCESSORS;
-      case MASTER: return ClusterMetrics.Option.MASTER;
-      case BACKUP_MASTERS: return ClusterMetrics.Option.BACKUP_MASTERS;
-      case BALANCER_ON: return ClusterMetrics.Option.BALANCER_ON;
-      case SERVERS_NAME: return ClusterMetrics.Option.SERVERS_NAME;
-      case MASTER_INFO_PORT: return ClusterMetrics.Option.MASTER_INFO_PORT;
-      case TABLE_TO_REGIONS_COUNT: return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
-      case TASKS: return ClusterMetrics.Option.TASKS;
+      case HBASE_VERSION:
+        return ClusterMetrics.Option.HBASE_VERSION;
+      case LIVE_SERVERS:
+        return ClusterMetrics.Option.LIVE_SERVERS;
+      case DEAD_SERVERS:
+        return ClusterMetrics.Option.DEAD_SERVERS;
+      case REGIONS_IN_TRANSITION:
+        return ClusterMetrics.Option.REGIONS_IN_TRANSITION;
+      case CLUSTER_ID:
+        return ClusterMetrics.Option.CLUSTER_ID;
+      case MASTER_COPROCESSORS:
+        return ClusterMetrics.Option.MASTER_COPROCESSORS;
+      case MASTER:
+        return ClusterMetrics.Option.MASTER;
+      case BACKUP_MASTERS:
+        return ClusterMetrics.Option.BACKUP_MASTERS;
+      case BALANCER_ON:
+        return ClusterMetrics.Option.BALANCER_ON;
+      case SERVERS_NAME:
+        return ClusterMetrics.Option.SERVERS_NAME;
+      case MASTER_INFO_PORT:
+        return ClusterMetrics.Option.MASTER_INFO_PORT;
+      case TABLE_TO_REGIONS_COUNT:
+        return ClusterMetrics.Option.TABLE_TO_REGIONS_COUNT;
+      case TASKS:
+        return ClusterMetrics.Option.TASKS;
+      case DECOMMISSIONED_SERVERS:
+        return ClusterMetrics.Option.DECOMMISSIONED_SERVERS;
       // should not reach here
-      default: throw new IllegalArgumentException("Invalid option: " + option);
+      default:
+        throw new IllegalArgumentException("Invalid option: " + option);
     }
   }
 
@@ -183,21 +186,37 @@ public final class ClusterMetricsBuilder {
    */
   public static ClusterStatusProtos.Option toOption(ClusterMetrics.Option option) {
     switch (option) {
-      case HBASE_VERSION: return ClusterStatusProtos.Option.HBASE_VERSION;
-      case LIVE_SERVERS: return ClusterStatusProtos.Option.LIVE_SERVERS;
-      case DEAD_SERVERS: return ClusterStatusProtos.Option.DEAD_SERVERS;
-      case REGIONS_IN_TRANSITION: return ClusterStatusProtos.Option.REGIONS_IN_TRANSITION;
-      case CLUSTER_ID: return ClusterStatusProtos.Option.CLUSTER_ID;
-      case MASTER_COPROCESSORS: return ClusterStatusProtos.Option.MASTER_COPROCESSORS;
-      case MASTER: return ClusterStatusProtos.Option.MASTER;
-      case BACKUP_MASTERS: return ClusterStatusProtos.Option.BACKUP_MASTERS;
-      case BALANCER_ON: return ClusterStatusProtos.Option.BALANCER_ON;
-      case SERVERS_NAME: return Option.SERVERS_NAME;
-      case MASTER_INFO_PORT: return ClusterStatusProtos.Option.MASTER_INFO_PORT;
-      case TABLE_TO_REGIONS_COUNT: return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
-      case TASKS: return ClusterStatusProtos.Option.TASKS;
+      case HBASE_VERSION:
+        return ClusterStatusProtos.Option.HBASE_VERSION;
+      case LIVE_SERVERS:
+        return ClusterStatusProtos.Option.LIVE_SERVERS;
+      case DEAD_SERVERS:
+        return ClusterStatusProtos.Option.DEAD_SERVERS;
+      case REGIONS_IN_TRANSITION:
+        return ClusterStatusProtos.Option.REGIONS_IN_TRANSITION;
+      case CLUSTER_ID:
+        return ClusterStatusProtos.Option.CLUSTER_ID;
+      case MASTER_COPROCESSORS:
+        return ClusterStatusProtos.Option.MASTER_COPROCESSORS;
+      case MASTER:
+        return ClusterStatusProtos.Option.MASTER;
+      case BACKUP_MASTERS:
+        return ClusterStatusProtos.Option.BACKUP_MASTERS;
+      case BALANCER_ON:
+        return ClusterStatusProtos.Option.BALANCER_ON;
+      case SERVERS_NAME:
+        return Option.SERVERS_NAME;
+      case MASTER_INFO_PORT:
+        return ClusterStatusProtos.Option.MASTER_INFO_PORT;
+      case TABLE_TO_REGIONS_COUNT:
+        return ClusterStatusProtos.Option.TABLE_TO_REGIONS_COUNT;
+      case TASKS:
+        return ClusterStatusProtos.Option.TASKS;
+      case DECOMMISSIONED_SERVERS:
+        return ClusterStatusProtos.Option.DECOMMISSIONED_SERVERS;
       // should not reach here
-      default: throw new IllegalArgumentException("Invalid option: " + option);
+      default:
+        throw new IllegalArgumentException("Invalid option: " + option);
     }
   }
 
@@ -208,7 +227,7 @@ public final class ClusterMetricsBuilder {
    */
   public static EnumSet<ClusterMetrics.Option> toOptions(List<ClusterStatusProtos.Option> options) {
     return options.stream().map(ClusterMetricsBuilder::toOption)
-        .collect(Collectors.toCollection(() -> EnumSet.noneOf(ClusterMetrics.Option.class)));
+      .collect(Collectors.toCollection(() -> EnumSet.noneOf(ClusterMetrics.Option.class)));
   }
 
   /**
@@ -223,6 +242,7 @@ public final class ClusterMetricsBuilder {
   public static ClusterMetricsBuilder newBuilder() {
     return new ClusterMetricsBuilder();
   }
+
   @Nullable
   private String hbaseVersion;
   private List<ServerName> deadServerNames = Collections.emptyList();
@@ -241,13 +261,16 @@ public final class ClusterMetricsBuilder {
   private Map<TableName, RegionStatesCount> tableRegionStatesCount = Collections.emptyMap();
   @Nullable
   private List<ServerTask> masterTasks;
+  private List<ServerName> decommissionedServerNames = Collections.emptyList();
 
   private ClusterMetricsBuilder() {
   }
+
   public ClusterMetricsBuilder setHBaseVersion(String value) {
     this.hbaseVersion = value;
     return this;
   }
+
   public ClusterMetricsBuilder setDeadServerNames(List<ServerName> value) {
     this.deadServerNames = value;
     return this;
@@ -262,66 +285,69 @@ public final class ClusterMetricsBuilder {
     this.masterName = value;
     return this;
   }
+
   public ClusterMetricsBuilder setBackerMasterNames(List<ServerName> value) {
     this.backupMasterNames = value;
     return this;
   }
+
   public ClusterMetricsBuilder setRegionsInTransition(List<RegionState> value) {
     this.regionsInTransition = value;
     return this;
   }
+
   public ClusterMetricsBuilder setClusterId(String value) {
     this.clusterId = value;
     return this;
   }
+
   public ClusterMetricsBuilder setMasterCoprocessorNames(List<String> value) {
     this.masterCoprocessorNames = value;
     return this;
   }
+
   public ClusterMetricsBuilder setBalancerOn(@Nullable Boolean value) {
     this.balancerOn = value;
     return this;
   }
+
   public ClusterMetricsBuilder setMasterInfoPort(int value) {
     this.masterInfoPort = value;
     return this;
   }
+
   public ClusterMetricsBuilder setServerNames(List<ServerName> serversName) {
     this.serversName = serversName;
     return this;
   }
+
   public ClusterMetricsBuilder setMasterTasks(List<ServerTask> masterTasks) {
     this.masterTasks = masterTasks;
     return this;
   }
 
-  public ClusterMetricsBuilder setTableRegionStatesCount(
-      Map<TableName, RegionStatesCount> tableRegionStatesCount) {
+  public ClusterMetricsBuilder setDecommissionedServerNames(List<ServerName> value) {
+    this.decommissionedServerNames = value;
+    return this;
+  }
+
+  public ClusterMetricsBuilder
+    setTableRegionStatesCount(Map<TableName, RegionStatesCount> tableRegionStatesCount) {
     this.tableRegionStatesCount = tableRegionStatesCount;
     return this;
   }
 
   public ClusterMetrics build() {
-    return new ClusterMetricsImpl(
-        hbaseVersion,
-        deadServerNames,
-        liveServerMetrics,
-        masterName,
-        backupMasterNames,
-        regionsInTransition,
-        clusterId,
-        masterCoprocessorNames,
-        balancerOn,
-        masterInfoPort,
-        serversName,
-        tableRegionStatesCount,
-        masterTasks
-    );
+    return new ClusterMetricsImpl(hbaseVersion, deadServerNames, liveServerMetrics, masterName,
+      backupMasterNames, regionsInTransition, clusterId, masterCoprocessorNames, balancerOn,
+      masterInfoPort, serversName, tableRegionStatesCount, masterTasks, decommissionedServerNames);
   }
+
   private static class ClusterMetricsImpl implements ClusterMetrics {
     @Nullable
     private final String hbaseVersion;
     private final List<ServerName> deadServerNames;
+    private final List<ServerName> decommissionedServerNames;
     private final Map<ServerName, ServerMetrics> liveServerMetrics;
     @Nullable
     private final ServerName masterName;
@@ -338,19 +364,14 @@ public final class ClusterMetricsBuilder {
     private final List<ServerTask> masterTasks;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
-        Map<ServerName, ServerMetrics> liveServerMetrics,
-        ServerName masterName,
-        List<ServerName> backupMasterNames,
-        List<RegionState> regionsInTransition,
-        String clusterId,
-        List<String> masterCoprocessorNames,
-        Boolean balancerOn,
-        int masterInfoPort,
-        List<ServerName> serversName,
-        Map<TableName, RegionStatesCount> tableRegionStatesCount,
-        List<ServerTask> masterTasks) {
+      Map<ServerName, ServerMetrics> liveServerMetrics, ServerName masterName,
+      List<ServerName> backupMasterNames, List<RegionState> regionsInTransition, String clusterId,
+      List<String> masterCoprocessorNames, Boolean balancerOn, int masterInfoPort,
+      List<ServerName> serversName, Map<TableName, RegionStatesCount> tableRegionStatesCount,
+      List<ServerTask> masterTasks, List<ServerName> decommissionedServerNames) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
+      this.decommissionedServerNames = Preconditions.checkNotNull(decommissionedServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
       this.masterName = masterName;
       this.backupMasterNames = Preconditions.checkNotNull(backupMasterNames);
@@ -372,6 +393,11 @@ public final class ClusterMetricsBuilder {
     @Override
     public List<ServerName> getDeadServerNames() {
       return Collections.unmodifiableList(deadServerNames);
+    }
+
+    @Override
+    public List<ServerName> getDecommissionedServerNames() {
+      return Collections.unmodifiableList(decommissionedServerNames);
     }
 
     @Override
@@ -437,15 +463,15 @@ public final class ClusterMetricsBuilder {
       int backupMastersSize = getBackupMasterNames().size();
       sb.append("\nNumber of backup masters: " + backupMastersSize);
       if (backupMastersSize > 0) {
-        for (ServerName serverName: getBackupMasterNames()) {
+        for (ServerName serverName : getBackupMasterNames()) {
           sb.append("\n  " + serverName);
         }
       }
 
       int serversSize = getLiveServerMetrics().size();
       int serversNameSize = getServersName().size();
-      sb.append("\nNumber of live region servers: "
-          + (serversSize > 0 ? serversSize : serversNameSize));
+      sb.append(
+        "\nNumber of live region servers: " + (serversSize > 0 ? serversSize : serversNameSize));
       if (serversSize > 0) {
         for (ServerName serverName : getLiveServerMetrics().keySet()) {
           sb.append("\n  " + serverName.getServerName());

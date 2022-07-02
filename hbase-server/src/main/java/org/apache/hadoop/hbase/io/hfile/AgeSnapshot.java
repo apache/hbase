@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Snapshot of block cache age in cache.
- * This object is preferred because we can control how it is serialized out when JSON'ing.
+ * Snapshot of block cache age in cache. This object is preferred because we can control how it is
+ * serialized out when JSON'ing.
  */
 @InterfaceAudience.Private
 public class AgeSnapshot {
@@ -32,7 +32,7 @@ public class AgeSnapshot {
 
   AgeSnapshot(final FastLongHistogram ageHistogram) {
     this.ageHistogram = ageHistogram;
-    this.quantiles = ageHistogram.getQuantiles(new double[]{0.75, 0.95, 0.98, 0.99, 0.999});
+    this.quantiles = ageHistogram.getQuantiles(new double[] { 0.75, 0.95, 0.98, 0.99, 0.999 });
   }
 
   public double get75thPercentile() {
@@ -54,7 +54,6 @@ public class AgeSnapshot {
   public double get999thPercentile() {
     return quantiles[4];
   }
-
 
   public double getMean() {
     return this.ageHistogram.getMean();

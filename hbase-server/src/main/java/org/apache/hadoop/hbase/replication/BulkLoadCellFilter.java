@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,10 +40,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
 public class BulkLoadCellFilter {
   private static final Logger LOG = LoggerFactory.getLogger(BulkLoadCellFilter.class);
 
-  private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+  private final ExtendedCellBuilder cellBuilder =
+    ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+
   /**
    * Filters the bulk load cell using the supplied predicate.
-   * @param cell The WAL cell to filter.
+   * @param cell         The WAL cell to filter.
    * @param famPredicate Returns true of given family should be removed.
    * @return The filtered cell.
    */
@@ -75,19 +77,13 @@ public class BulkLoadCellFilter {
     } else if (copiedStoresList.isEmpty()) {
       return null;
     }
-    BulkLoadDescriptor.Builder newDesc =
-        BulkLoadDescriptor.newBuilder().setTableName(bld.getTableName())
-            .setEncodedRegionName(bld.getEncodedRegionName())
-            .setBulkloadSeqNum(bld.getBulkloadSeqNum());
+    BulkLoadDescriptor.Builder newDesc = BulkLoadDescriptor.newBuilder()
+      .setTableName(bld.getTableName()).setEncodedRegionName(bld.getEncodedRegionName())
+      .setBulkloadSeqNum(bld.getBulkloadSeqNum());
     newDesc.addAllStores(copiedStoresList);
     BulkLoadDescriptor newBulkLoadDescriptor = newDesc.build();
-    return cellBuilder.clear()
-            .setRow(CellUtil.cloneRow(cell))
-            .setFamily(WALEdit.METAFAMILY)
-            .setQualifier(WALEdit.BULK_LOAD)
-            .setTimestamp(cell.getTimestamp())
-            .setType(cell.getTypeByte())
-            .setValue(newBulkLoadDescriptor.toByteArray())
-            .build();
+    return cellBuilder.clear().setRow(CellUtil.cloneRow(cell)).setFamily(WALEdit.METAFAMILY)
+      .setQualifier(WALEdit.BULK_LOAD).setTimestamp(cell.getTimestamp()).setType(cell.getTypeByte())
+      .setValue(newBulkLoadDescriptor.toByteArray()).build();
   }
 }

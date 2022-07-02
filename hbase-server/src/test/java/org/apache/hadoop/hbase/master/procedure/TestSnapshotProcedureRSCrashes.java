@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -44,8 +43,8 @@ public class TestSnapshotProcedureRSCrashes extends TestSnapshotProcedure {
     SnapshotProcedure sp = new SnapshotProcedure(env, snapshotProto);
     long procId = procExec.submitProcedure(sp);
 
-    SnapshotRegionProcedure snp = waitProcedureRunnableAndGetFirst(
-      SnapshotRegionProcedure.class, 60000);
+    SnapshotRegionProcedure snp =
+      waitProcedureRunnableAndGetFirst(SnapshotRegionProcedure.class, 60000);
     ServerName targetServer = env.getAssignmentManager().getRegionStates()
       .getRegionStateNode(snp.getRegion()).getRegionLocation();
     TEST_UTIL.getHBaseCluster().killRegionServer(targetServer);
@@ -64,15 +63,15 @@ public class TestSnapshotProcedureRSCrashes extends TestSnapshotProcedure {
     SnapshotProcedure sp = new SnapshotProcedure(env, snapshotProto);
     long procId = procExec.submitProcedure(sp);
 
-    SnapshotVerifyProcedure svp = waitProcedureRunnableAndGetFirst(
-      SnapshotVerifyProcedure.class, 60000);
+    SnapshotVerifyProcedure svp =
+      waitProcedureRunnableAndGetFirst(SnapshotVerifyProcedure.class, 60000);
     TEST_UTIL.waitFor(10000, () -> svp.getServerName() != null);
     ServerName previousTargetServer = svp.getServerName();
 
     HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(previousTargetServer);
     TEST_UTIL.getHBaseCluster().killRegionServer(rs.getServerName());
-    TEST_UTIL.waitFor(60000, () -> svp.getServerName() != null
-      && !svp.getServerName().equals(previousTargetServer));
+    TEST_UTIL.waitFor(60000,
+      () -> svp.getServerName() != null && !svp.getServerName().equals(previousTargetServer));
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     SnapshotTestingUtils.assertOneSnapshotThatMatches(TEST_UTIL.getAdmin(), snapshotProto);

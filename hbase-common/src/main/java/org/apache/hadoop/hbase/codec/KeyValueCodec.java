@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -33,14 +32,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Codec that does KeyValue version 1 serialization.
+ * <p>
+ * Encodes Cell as serialized in KeyValue with total length prefix. This is how KVs were serialized
+ * in Puts, Deletes and Results pre-0.96. Its what would happen if you called the Writable#write
+ * KeyValue implementation. This encoder will fail if the passed Cell is not an old-school pre-0.96
+ * KeyValue. Does not copy bytes writing. It just writes them direct to the passed stream.
+ * <p>
+ * If you wrote two KeyValues to this encoder, it would look like this in the stream:
  *
- * <p>Encodes Cell as serialized in KeyValue with total length prefix.
- * This is how KVs were serialized in Puts, Deletes and Results pre-0.96.  Its what would
- * happen if you called the Writable#write KeyValue implementation.  This encoder will fail
- * if the passed Cell is not an old-school pre-0.96 KeyValue.  Does not copy bytes writing.
- * It just writes them direct to the passed stream.
- *
- * <p>If you wrote two KeyValues to this encoder, it would look like this in the stream:
  * <pre>
  * length-of-KeyValue1 // A java int with the length of KeyValue1 backing array
  * KeyValue1 backing array filled with a KeyValue serialized in its particular format

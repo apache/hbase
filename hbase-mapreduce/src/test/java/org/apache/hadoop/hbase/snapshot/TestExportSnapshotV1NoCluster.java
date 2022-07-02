@@ -44,16 +44,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test Export Snapshot Tool
- * Tests V1 snapshots only. Used to ALSO test v2 but strange failure so separate the tests.
- * See companion file for test of v2 snapshot.
+ * Test Export Snapshot Tool Tests V1 snapshots only. Used to ALSO test v2 but strange failure so
+ * separate the tests. See companion file for test of v2 snapshot.
  * @see TestExportSnapshotV2NoCluster
  */
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({ MapReduceTests.class, MediumTests.class })
 public class TestExportSnapshotV1NoCluster {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExportSnapshotV1NoCluster.class);
+    HBaseClassTestRule.forClass(TestExportSnapshotV1NoCluster.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV1NoCluster.class);
 
   private HBaseCommonTestingUtil testUtil = new HBaseCommonTestingUtil();
@@ -91,26 +90,26 @@ public class TestExportSnapshotV1NoCluster {
    */
   @Test
   public void testSnapshotWithRefsExportFileSystemState() throws Exception {
-    final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(),
-      this.fs, testDir);
-    final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1("tableWithRefsV1",
-      "tableWithRefsV1");
+    final SnapshotMock snapshotMock =
+      new SnapshotMock(testUtil.getConfiguration(), this.fs, testDir);
+    final SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV1("tableWithRefsV1", "tableWithRefsV1");
     testSnapshotWithRefsExportFileSystemState(this.fs, builder, testUtil, testDir);
   }
 
   /**
-   * Generates a couple of regions for the specified SnapshotMock,
-   * and then it will run the export and verification.
+   * Generates a couple of regions for the specified SnapshotMock, and then it will run the export
+   * and verification.
    */
   static void testSnapshotWithRefsExportFileSystemState(FileSystem fs,
-     SnapshotMock.SnapshotBuilder builder, HBaseCommonTestingUtil testUtil, Path testDir)
-        throws Exception {
+    SnapshotMock.SnapshotBuilder builder, HBaseCommonTestingUtil testUtil, Path testDir)
+    throws Exception {
     Path[] r1Files = builder.addRegion();
     Path[] r2Files = builder.addRegion();
     builder.commit();
     // remove references, only keep data files
     Set<String> dataFiles = new HashSet<>();
-    for (Path[] files: new Path[][]{r1Files, r2Files}) {
+    for (Path[] files : new Path[][] { r1Files, r2Files }) {
       for (Path file : files) {
         if (StoreFileInfo.isReference(file.getName())) {
           Pair<String, String> referredToRegionAndFile =
@@ -124,16 +123,16 @@ public class TestExportSnapshotV1NoCluster {
     int snapshotFilesCount = dataFiles.size();
     String snapshotName = builder.getSnapshotDescription().getName();
     TableName tableName = builder.getTableDescriptor().getTableName();
-    TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(),
-      tableName, snapshotName, snapshotName, snapshotFilesCount,
-      testDir, getDestinationDir(fs, testUtil, testDir), false, null, true);
+    TestExportSnapshot.testExportFileSystemState(testUtil.getConfiguration(), tableName,
+      snapshotName, snapshotName, snapshotFilesCount, testDir,
+      getDestinationDir(fs, testUtil, testDir), false, false, null, true);
   }
 
   static Path getDestinationDir(FileSystem fs, HBaseCommonTestingUtil hctu, Path testDir)
-      throws IOException {
-    Path path = new Path(new Path(testDir, "export-test"),
-      "export-" + EnvironmentEdgeManager.currentTime()).makeQualified(fs.getUri(),
-      fs.getWorkingDirectory());
+    throws IOException {
+    Path path =
+      new Path(new Path(testDir, "export-test"), "export-" + EnvironmentEdgeManager.currentTime())
+        .makeQualified(fs.getUri(), fs.getWorkingDirectory());
     LOG.info("Export destination={}, fs={}, fsurl={}, fswd={}, testDir={}", path, fs, fs.getUri(),
       fs.getWorkingDirectory(), testDir);
     return path;

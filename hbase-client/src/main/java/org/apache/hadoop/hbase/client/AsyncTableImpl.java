@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
+
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 
 /**
@@ -177,8 +181,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilder() {
 
-      private final CheckAndMutateWithFilterBuilder builder =
-        rawTable.checkAndMutate(row, filter);
+      private final CheckAndMutateWithFilterBuilder builder = rawTable.checkAndMutate(row, filter);
 
       @Override
       public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
@@ -209,10 +212,9 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
-    List<CheckAndMutate> checkAndMutates) {
-    return rawTable.checkAndMutate(checkAndMutates).stream()
-      .map(this::wrap).collect(toList());
+  public List<CompletableFuture<CheckAndMutateResult>>
+    checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream().map(this::wrap).collect(toList());
   }
 
   @Override
@@ -231,22 +233,29 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   private void scan0(Scan scan, ScanResultConsumer consumer) {
-    try (ResultScanner scanner = getScanner(scan)) {
-      consumer.onScanMetricsCreated(scanner.getScanMetrics());
-      for (Result result; (result = scanner.next()) != null;) {
-        if (!consumer.onNext(result)) {
-          break;
+    Span span = null;
+    try (AsyncTableResultScanner scanner = rawTable.getScanner(scan)) {
+      span = scanner.getSpan();
+      try (Scope ignored = span.makeCurrent()) {
+        consumer.onScanMetricsCreated(scanner.getScanMetrics());
+        for (Result result; (result = scanner.next()) != null;) {
+          if (!consumer.onNext(result)) {
+            break;
+          }
         }
+        consumer.onComplete();
       }
-      consumer.onComplete();
     } catch (IOException e) {
-      consumer.onError(e);
+      try (Scope ignored = span.makeCurrent()) {
+        consumer.onError(e);
+      }
     }
   }
 
   @Override
   public void scan(Scan scan, ScanResultConsumer consumer) {
-    pool.execute(() -> scan0(scan, consumer));
+    final Context context = Context.current();
+    pool.execute(context.wrap(() -> scan0(scan, consumer)));
   }
 
   @Override
@@ -271,14 +280,14 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, byte[] row) {
+    ServiceCaller<S, R> callable, byte[] row) {
     return wrap(rawTable.coprocessorService(stubMaker, callable, row));
   }
 
   @Override
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
-      Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
-      CoprocessorCallback<R> callback) {
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    CoprocessorCallback<R> callback) {
     final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 

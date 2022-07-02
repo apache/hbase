@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,14 +38,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RSDumpServlet extends StateDumpServlet {
   private static final long serialVersionUID = 1L;
-  private static final String LINE =
-    "===========================================================";
+  private static final String LINE = "===========================================================";
 
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
-    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
-        HRegionServer.REGIONSERVER);
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    HRegionServer hrs =
+      (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
     response.setContentType("text/plain");
@@ -60,8 +57,7 @@ public class RSDumpServlet extends StateDumpServlet {
     OutputStream os = response.getOutputStream();
     try (PrintWriter out = new PrintWriter(os)) {
 
-      out.println("RegionServer status for " + hrs.getServerName()
-        + " as of " + new Date());
+      out.println("RegionServer status for " + hrs.getServerName() + " as of " + new Date());
 
       out.println("\n\nVersion Info:");
       out.println(LINE);
@@ -128,29 +124,28 @@ public class RSDumpServlet extends StateDumpServlet {
     }
   }
 
-
   public static void dumpCallQueues(HRegionServer hrs, PrintWriter out) {
     CallQueueInfo callQueueInfo = hrs.getRpcServer().getScheduler().getCallQueueInfo();
 
-    for(String queueName: callQueueInfo.getCallQueueNames()) {
+    for (String queueName : callQueueInfo.getCallQueueNames()) {
 
       out.println("\nQueue Name: " + queueName);
 
       long totalCallCount = 0L, totalCallSize = 0L;
-      for (String methodName: callQueueInfo.getCalledMethodNames(queueName)) {
+      for (String methodName : callQueueInfo.getCalledMethodNames(queueName)) {
         long thisMethodCount, thisMethodSize;
         thisMethodCount = callQueueInfo.getCallMethodCount(queueName, methodName);
         thisMethodSize = callQueueInfo.getCallMethodSize(queueName, methodName);
 
-        out.println("Method in call: "+methodName);
-        out.println("Total call count for method: "+thisMethodCount);
-        out.println("Total call size for method (bytes): "+thisMethodSize);
+        out.println("Method in call: " + methodName);
+        out.println("Total call count for method: " + thisMethodCount);
+        out.println("Total call size for method (bytes): " + thisMethodSize);
 
         totalCallCount += thisMethodCount;
         totalCallSize += thisMethodSize;
       }
-      out.println("Total call count for queue: "+totalCallCount);
-      out.println("Total call size for queue (bytes): "+totalCallSize);
+      out.println("Total call count for queue: " + totalCallCount);
+      out.println("Total call size for queue (bytes): " + totalCallSize);
     }
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,12 +45,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestSettingTimeoutOnBlockingPoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSettingTimeoutOnBlockingPoint.class);
+    HBaseClassTestRule.forClass(TestSettingTimeoutOnBlockingPoint.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM = Bytes.toBytes("f");
@@ -84,7 +84,7 @@ public class TestSettingTimeoutOnBlockingPoint {
 
     @Override
     public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Increment increment) throws IOException {
+      final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
       return null;
     }
@@ -98,7 +98,7 @@ public class TestSettingTimeoutOnBlockingPoint {
     TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {
       try {
-        try( Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
           table.incrementColumnValue(ROW1, FAM, FAM, 1);
         }
       } catch (IOException e) {

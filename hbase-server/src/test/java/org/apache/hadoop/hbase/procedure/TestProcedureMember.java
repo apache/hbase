@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,15 +48,17 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 /**
  * Test the procedure member, and it's error handling mechanisms.
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureMember {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureMember.class);
+    HBaseClassTestRule.forClass(TestProcedureMember.class);
 
   private static final long WAKE_FREQUENCY = 100;
   private static final long TIMEOUT = 100000;
@@ -64,11 +66,10 @@ public class TestProcedureMember {
 
   private final String op = "some op";
   private final byte[] data = new byte[0];
-  private final ForeignExceptionDispatcher mockListener = Mockito
-      .spy(new ForeignExceptionDispatcher());
+  private final ForeignExceptionDispatcher mockListener =
+    Mockito.spy(new ForeignExceptionDispatcher());
   private final SubprocedureFactory mockBuilder = mock(SubprocedureFactory.class);
-  private final ProcedureMemberRpcs mockMemberComms = Mockito
-      .mock(ProcedureMemberRpcs.class);
+  private final ProcedureMemberRpcs mockMemberComms = Mockito.mock(ProcedureMemberRpcs.class);
   private ProcedureMember member;
   private ForeignExceptionDispatcher dispatcher;
   Subprocedure spySub;
@@ -77,14 +78,9 @@ public class TestProcedureMember {
    * Reset all the mock objects
    */
   @After
-  public void resetTest() {
+  public void resetTest() throws IOException {
     reset(mockListener, mockBuilder, mockMemberComms);
-    if (member != null)
-      try {
-        member.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    Closeables.close(member, true);
   }
 
   /**
@@ -105,13 +101,13 @@ public class TestProcedureMember {
     String name = "node";
     ThreadPoolExecutor pool = ProcedureMember.defaultPool(name, 1, POOL_KEEP_ALIVE);
     member = new ProcedureMember(mockMemberComms, pool, mockBuilder);
-    when(mockMemberComms.getMemberName()).thenReturn("membername"); // needed for generating exception
+    when(mockMemberComms.getMemberName()).thenReturn("membername"); // needed for generating
+                                                                    // exception
     Subprocedure subproc = new EmptySubprocedure(member, dispatcher);
     spySub = spy(subproc);
     when(mockBuilder.buildSubprocedure(op, data)).thenReturn(spySub);
     addCommitAnswer();
   }
-
 
   /**
    * Add a 'in barrier phase' response to the mock controller when it gets a acquired notification
@@ -152,8 +148,7 @@ public class TestProcedureMember {
     order.verify(mockMemberComms).sendMemberAcquired(eq(spy));
     order.verify(spy).insideBarrier();
     order.verify(mockMemberComms).sendMemberCompleted(eq(spy), eq(data));
-    order.verify(mockMemberComms, never()).sendMemberAborted(eq(spy),
-        any());
+    order.verify(mockMemberComms, never()).sendMemberAborted(eq(spy), any());
   }
 
   /**
@@ -165,13 +160,12 @@ public class TestProcedureMember {
     buildCohortMemberPair();
 
     // mock an exception on Subprocedure's prepare
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            throw new IOException("Forced IOException in member acquireBarrier");
-          }
-        }).when(spySub).acquireBarrier();
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        throw new IOException("Forced IOException in member acquireBarrier");
+      }
+    }).when(spySub).acquireBarrier();
 
     // run the operation
     // build a new operation
@@ -200,13 +194,12 @@ public class TestProcedureMember {
     buildCohortMemberPair();
 
     // mock an exception on Subprocedure's prepare
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            throw new IOException("Forced IOException in member prepare");
-          }
-        }).when(mockMemberComms).sendMemberAcquired(any());
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        throw new IOException("Forced IOException in member prepare");
+      }
+    }).when(mockMemberComms).sendMemberAcquired(any());
 
     // run the operation
     // build a new operation
@@ -229,28 +222,27 @@ public class TestProcedureMember {
   }
 
   /**
-   * Fail correctly if coordinator aborts the procedure.  The subprocedure will not interrupt a
-   * running {@link Subprocedure#acquireBarrier()} -- prepare needs to finish first, and the the abort
-   * is checked.  Thus, the {@link Subprocedure#acquireBarrier()} should succeed but later get rolled back
-   * via {@link Subprocedure#cleanup}.
+   * Fail correctly if coordinator aborts the procedure. The subprocedure will not interrupt a
+   * running {@link Subprocedure#acquireBarrier()} -- prepare needs to finish first, and the the
+   * abort is checked. Thus, the {@link Subprocedure#acquireBarrier()} should succeed but later get
+   * rolled back via {@link Subprocedure#cleanup}.
    */
   @Test
   public void testCoordinatorAbort() throws Exception {
     buildCohortMemberPair();
 
     // mock that another node timed out or failed to prepare
-    final TimeoutException oate = new TimeoutException("bogus timeout", 1,2,0);
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            // inject a remote error (this would have come from an external thread)
-            spySub.cancel("bogus message", oate);
-            // sleep the wake frequency since that is what we promised
-            Thread.sleep(WAKE_FREQUENCY);
-            return null;
-          }
-        }).when(spySub).waitForReachedGlobalBarrier();
+    final TimeoutException oate = new TimeoutException("bogus timeout", 1, 2, 0);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        // inject a remote error (this would have come from an external thread)
+        spySub.cancel("bogus message", oate);
+        // sleep the wake frequency since that is what we promised
+        Thread.sleep(WAKE_FREQUENCY);
+        return null;
+      }
+    }).when(spySub).waitForReachedGlobalBarrier();
 
     // run the operation
     // build a new operation
@@ -273,24 +265,23 @@ public class TestProcedureMember {
 
   /**
    * Handle failures if a member's commit phase fails.
-   *
-   * NOTE: This is the core difference that makes this different from traditional 2PC.  In true
-   * 2PC the transaction is committed just before the coordinator sends commit messages to the
-   * member.  Members are then responsible for reading its TX log.  This implementation actually
-   * rolls back, and thus breaks the normal TX guarantees.
-  */
+   * <p/>
+   * NOTE: This is the core difference that makes this different from traditional 2PC. In true 2PC
+   * the transaction is committed just before the coordinator sends commit messages to the member.
+   * Members are then responsible for reading its TX log. This implementation actually rolls back,
+   * and thus breaks the normal TX guarantees.
+   */
   @Test
   public void testMemberCommitException() throws Exception {
     buildCohortMemberPair();
 
     // mock an exception on Subprocedure's prepare
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            throw new IOException("Forced IOException in member prepare");
-          }
-        }).when(spySub).insideBarrier();
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        throw new IOException("Forced IOException in member prepare");
+      }
+    }).when(spySub).insideBarrier();
 
     // run the operation
     // build a new operation
@@ -314,27 +305,26 @@ public class TestProcedureMember {
 
   /**
    * Handle Failures if a member's commit phase succeeds but notification to coordinator fails
-   *
-   * NOTE: This is the core difference that makes this different from traditional 2PC.  In true
-   * 2PC the transaction is committed just before the coordinator sends commit messages to the
-   * member.  Members are then responsible for reading its TX log.  This implementation actually
-   * rolls back, and thus breaks the normal TX guarantees.
-  */
+   * <p/>
+   * NOTE: This is the core difference that makes this different from traditional 2PC. In true 2PC
+   * the transaction is committed just before the coordinator sends commit messages to the member.
+   * Members are then responsible for reading its TX log. This implementation actually rolls back,
+   * and thus breaks the normal TX guarantees.
+   */
   @Test
   public void testMemberCommitCommsFailure() throws Exception {
     buildCohortMemberPair();
-    final TimeoutException oate = new TimeoutException("bogus timeout",1,2,0);
-    doAnswer(
-        new Answer<Void>() {
-          @Override
-          public Void answer(InvocationOnMock invocation) throws Throwable {
-            // inject a remote error (this would have come from an external thread)
-            spySub.cancel("commit comms fail", oate);
-            // sleep the wake frequency since that is what we promised
-            Thread.sleep(WAKE_FREQUENCY);
-            return null;
-          }
-        }).when(mockMemberComms).sendMemberCompleted(any(), eq(data));
+    final TimeoutException oate = new TimeoutException("bogus timeout", 1, 2, 0);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        // inject a remote error (this would have come from an external thread)
+        spySub.cancel("commit comms fail", oate);
+        // sleep the wake frequency since that is what we promised
+        Thread.sleep(WAKE_FREQUENCY);
+        return null;
+      }
+    }).when(mockMemberComms).sendMemberCompleted(any(), eq(data));
 
     // run the operation
     // build a new operation
@@ -374,9 +364,8 @@ public class TestProcedureMember {
     // fail during the prepare phase
     doThrow(new ForeignException("SRC", "prepare exception")).when(spy).acquireBarrier();
     // and throw a connection error when we try to tell the controller about it
-    doThrow(new IOException("Controller is down!")).when(mockMemberComms)
-        .sendMemberAborted(eq(spy), any());
-
+    doThrow(new IOException("Controller is down!")).when(mockMemberComms).sendMemberAborted(eq(spy),
+      any());
 
     // run the operation
     // build a new operation
@@ -393,10 +382,10 @@ public class TestProcedureMember {
 
     // TODO Need to do another refactor to get this to propagate to the coordinator.
     // make sure we pass a remote exception back the controller
-//    order.verify(mockMemberComms).sendMemberAborted(eq(spy),
-//      any());
-//    order.verify(dispSpy).receiveError(anyString(),
-//        any(), any());
+    // order.verify(mockMemberComms).sendMemberAborted(eq(spy),
+    // any());
+    // order.verify(dispSpy).receiveError(anyString(),
+    // any(), any());
   }
 
   /**
@@ -407,8 +396,9 @@ public class TestProcedureMember {
   @Test
   public void testNoTaskToBeRunFromRequest() throws Exception {
     ThreadPoolExecutor pool = mock(ThreadPoolExecutor.class);
-    when(mockBuilder.buildSubprocedure(op, data)).thenReturn(null)
-      .thenThrow(new IllegalStateException("Wrong state!"), new IllegalArgumentException("can't understand the args"));
+    when(mockBuilder.buildSubprocedure(op, data)).thenReturn(null).thenThrow(
+      new IllegalStateException("Wrong state!"),
+      new IllegalArgumentException("can't understand the args"));
     member = new ProcedureMember(mockMemberComms, pool, mockBuilder);
     // builder returns null
     // build a new operation
@@ -441,9 +431,9 @@ public class TestProcedureMember {
    */
   public class EmptySubprocedure extends SubprocedureImpl {
     public EmptySubprocedure(ProcedureMember member, ForeignExceptionDispatcher dispatcher) {
-      super( member, op, dispatcher,
-      // TODO 1000000 is an arbitrary number that I picked.
-          WAKE_FREQUENCY, TIMEOUT);
+      super(member, op, dispatcher,
+        // TODO 1000000 is an arbitrary number that I picked.
+        WAKE_FREQUENCY, TIMEOUT);
     }
   }
 }

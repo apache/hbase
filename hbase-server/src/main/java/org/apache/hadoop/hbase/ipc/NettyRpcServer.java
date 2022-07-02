@@ -29,12 +29,16 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.buffer.UnpooledByteBufAllocator;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
@@ -53,17 +57,32 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  * An RPC server with Netty4 implementation.
  * @since 2.0.0
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class NettyRpcServer extends RpcServer {
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
 
   /**
-   * Name of property to change netty rpc server eventloop thread count. Default is 0.
-   * Tests may set this down from unlimited.
+   * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
+   * this down from unlimited.
    */
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
     "hbase.netty.eventloop.rpcserver.thread.count";
   private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
+
+  /**
+   * Name of property to change the byte buf allocator for the netty channels. Default is no value,
+   * which causes us to use PooledByteBufAllocator. Valid settings here are "pooled", "unpooled",
+   * and "heap", or, the name of a class implementing ByteBufAllocator.
+   * <p>
+   * "pooled" and "unpooled" may prefer direct memory depending on netty configuration, which is
+   * controlled by platform specific code and documented system properties.
+   * <p>
+   * "heap" will prefer heap arena allocations.
+   */
+  public static final String HBASE_NETTY_ALLOCATOR_KEY = "hbase.netty.rpcserver.allocator";
+  static final String POOLED_ALLOCATOR_TYPE = "pooled";
+  static final String UNPOOLED_ALLOCATOR_TYPE = "unpooled";
+  static final String HEAP_ALLOCATOR_TYPE = "heap";
 
   private final InetSocketAddress bindAddress;
 
@@ -71,12 +90,14 @@ public class NettyRpcServer extends RpcServer {
   private final Channel serverChannel;
   private final ChannelGroup allChannels =
     new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+  private final ByteBufAllocator channelAllocator;
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
-      InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
-      boolean reservoirEnabled) throws IOException {
+    InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
+    boolean reservoirEnabled) throws IOException {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
+    this.channelAllocator = getChannelAllocator(conf);
     EventLoopGroup eventLoopGroup;
     Class<? extends ServerChannel> channelClass;
     if (server instanceof HRegionServer) {
@@ -84,31 +105,32 @@ public class NettyRpcServer extends RpcServer {
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
-      int threadCount = server == null? EVENTLOOP_THREADCOUNT_DEFAULT:
-        server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+      int threadCount = server == null
+        ? EVENTLOOP_THREADCOUNT_DEFAULT
+        : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
           EVENTLOOP_THREADCOUNT_DEFAULT);
       eventLoopGroup = new NioEventLoopGroup(threadCount,
         new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;
     }
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
-        .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
-        .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
-        .childOption(ChannelOption.SO_REUSEADDR, true)
-        .childHandler(new ChannelInitializer<Channel>() {
-
-          @Override
-          protected void initChannel(Channel ch) throws Exception {
-            ChannelPipeline pipeline = ch.pipeline();
-            FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
-            preambleDecoder.setSingleDecode(true);
-            pipeline.addLast("preambleDecoder", preambleDecoder);
-            pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
-            pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
-            pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
-            pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
-          }
-        });
+      .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
+      .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
+      .childOption(ChannelOption.SO_REUSEADDR, true)
+      .childHandler(new ChannelInitializer<Channel>() {
+        @Override
+        protected void initChannel(Channel ch) throws Exception {
+          ch.config().setAllocator(channelAllocator);
+          ChannelPipeline pipeline = ch.pipeline();
+          FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
+          preambleDecoder.setSingleDecode(true);
+          pipeline.addLast("preambleDecoder", preambleDecoder);
+          pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
+          pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
+          pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
+          pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
+        }
+      });
     try {
       serverChannel = bootstrap.bind(this.bindAddress).sync().channel();
       LOG.info("Bind to {}", serverChannel.localAddress());
@@ -117,6 +139,36 @@ public class NettyRpcServer extends RpcServer {
     }
     initReconfigurable(conf);
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  private ByteBufAllocator getChannelAllocator(Configuration conf) throws IOException {
+    final String value = conf.get(HBASE_NETTY_ALLOCATOR_KEY);
+    if (value != null) {
+      if (POOLED_ALLOCATOR_TYPE.equalsIgnoreCase(value)) {
+        LOG.info("Using {} for buffer allocation", PooledByteBufAllocator.class.getName());
+        return PooledByteBufAllocator.DEFAULT;
+      } else if (UNPOOLED_ALLOCATOR_TYPE.equalsIgnoreCase(value)) {
+        LOG.info("Using {} for buffer allocation", UnpooledByteBufAllocator.class.getName());
+        return UnpooledByteBufAllocator.DEFAULT;
+      } else if (HEAP_ALLOCATOR_TYPE.equalsIgnoreCase(value)) {
+        LOG.info("Using {} for buffer allocation", HeapByteBufAllocator.class.getName());
+        return HeapByteBufAllocator.DEFAULT;
+      } else {
+        // If the value is none of the recognized labels, treat it as a class name. This allows the
+        // user to supply a custom implementation, perhaps for debugging.
+        try {
+          // ReflectionUtils throws UnsupportedOperationException if there are any problems.
+          ByteBufAllocator alloc = (ByteBufAllocator) ReflectionUtils.newInstance(value);
+          LOG.info("Using {} for buffer allocation", value);
+          return alloc;
+        } catch (ClassCastException | UnsupportedOperationException e) {
+          throw new IOException(e);
+        }
+      }
+    } else {
+      LOG.info("Using {} for buffer allocation", PooledByteBufAllocator.class.getName());
+      return PooledByteBufAllocator.DEFAULT;
+    }
   }
 
   @InterfaceAudience.Private

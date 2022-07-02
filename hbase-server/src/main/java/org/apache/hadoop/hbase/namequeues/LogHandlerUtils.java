@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Event Handler utility class
@@ -50,8 +49,8 @@ public class LogHandlerUtils {
   }
 
   private static List<TooSlowLog.SlowLogPayload> filterLogs(
-      AdminProtos.SlowLogResponseRequest request,
-      List<TooSlowLog.SlowLogPayload> slowLogPayloadList, int totalFilters) {
+    AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> slowLogPayloadList,
+    int totalFilters) {
     List<TooSlowLog.SlowLogPayload> filteredSlowLogPayloads = new ArrayList<>();
     final String regionName =
       StringUtils.isNotEmpty(request.getRegionName()) ? request.getRegionName() : null;
@@ -75,8 +74,10 @@ public class LogHandlerUtils {
       if (slowLogPayload.getUserName().equals(userName)) {
         totalFilterMatches++;
       }
-      if (request.hasFilterByOperator() && request.getFilterByOperator()
-        .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)) {
+      if (
+        request.hasFilterByOperator() && request.getFilterByOperator()
+          .equals(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND)
+      ) {
         // Filter by AND operator
         if (totalFilterMatches == totalFilters) {
           filteredSlowLogPayloads.add(slowLogPayload);
@@ -92,7 +93,7 @@ public class LogHandlerUtils {
   }
 
   public static List<TooSlowLog.SlowLogPayload> getFilteredLogs(
-      AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
+    AdminProtos.SlowLogResponseRequest request, List<TooSlowLog.SlowLogPayload> logPayloadList) {
     int totalFilters = getTotalFiltersCount(request);
     if (totalFilters > 0) {
       logPayloadList = filterLogs(request, logPayloadList, totalFilters);

@@ -27,8 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class SecurityConstants {
 
   /**
-   * Configuration keys for programmatic JAAS configuration for secured master
-   * and regionserver interaction
+   * Configuration keys for programmatic JAAS configuration for secured master and regionserver
+   * interaction
    */
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
   public static final String MASTER_KRB_KEYTAB_FILE = "hbase.master.keytab.file";
@@ -36,15 +36,16 @@ public final class SecurityConstants {
   public static final String REGIONSERVER_KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
 
   /**
-   * This config is for experts: don't set its value unless you really know what you are doing.
-   * When set to true, HBase client using SASL Kerberos will skip reverse DNS lookup and use provided
-   * hostname of the destination for the principal instead. See https://issues.apache.org/jira/browse/HBASE-25665
-   * for more details.
+   * This config is for experts: don't set its value unless you really know what you are doing. When
+   * set to true, HBase client using SASL Kerberos will skip reverse DNS lookup and use provided
+   * hostname of the destination for the principal instead. See
+   * https://issues.apache.org/jira/browse/HBASE-25665 for more details.
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static final String UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS =
     "hbase.unsafe.client.kerberos.hostname.disable.reversedns";
-  public static final boolean DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS = false;
+  public static final boolean DEFAULT_UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS =
+    false;
 
   private SecurityConstants() {
     // Can't be instantiated with this ctor.

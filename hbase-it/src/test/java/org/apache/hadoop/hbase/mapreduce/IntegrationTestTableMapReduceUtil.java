@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,8 +34,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test that we add tmpjars correctly including the named dependencies. Runs
- * as an integration test so that classpath is realistic.
+ * Test that we add tmpjars correctly including the named dependencies. Runs as an integration test
+ * so that classpath is realistic.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestTableMapReduceUtil implements Configurable, Tool {
@@ -92,7 +91,7 @@ public class IntegrationTestTableMapReduceUtil implements Configurable, Tool {
   public void setConf(Configuration conf) {
     if (util != null) {
       throw new IllegalArgumentException(
-          "setConf not supported after the test has been initialized.");
+        "setConf not supported after the test has been initialized.");
     }
     util = new IntegrationTestingUtility(conf);
   }

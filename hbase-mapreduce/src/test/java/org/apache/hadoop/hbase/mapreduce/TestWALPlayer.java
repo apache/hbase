@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
@@ -72,11 +73,11 @@ import org.mockito.stubbing.Answer;
 /**
  * Basic test for the WALPlayer M/R tool
  */
-@Category({MapReduceTests.class, LargeTests.class})
+@Category({ MapReduceTests.class, LargeTests.class })
 public class TestWALPlayer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALPlayer.class);
+    HBaseClassTestRule.forClass(TestWALPlayer.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static SingleProcessHBaseCluster cluster;
@@ -115,9 +116,9 @@ public class TestWALPlayer {
     TEST_UTIL.createTable(tn, TestRecoveredEdits.RECOVEREDEDITS_COLUMNFAMILY);
     // Copy testing recovered.edits file that is over under hbase-server test resources
     // up into a dir in our little hdfs cluster here.
-    String hbaseServerTestResourcesEdits = System.getProperty("test.build.classes") +
-        "/../../../hbase-server/src/test/resources/" +
-      TestRecoveredEdits.RECOVEREDEDITS_PATH.getName();
+    String hbaseServerTestResourcesEdits =
+      System.getProperty("test.build.classes") + "/../../../hbase-server/src/test/resources/"
+        + TestRecoveredEdits.RECOVEREDEDITS_PATH.getName();
     assertTrue(new File(hbaseServerTestResourcesEdits).exists());
     FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
     // Target dir.
@@ -125,7 +126,7 @@ public class TestWALPlayer {
     assertTrue(dfs.mkdirs(targetDir));
     dfs.copyFromLocalFile(new Path(hbaseServerTestResourcesEdits), targetDir);
     assertEquals(0,
-      ToolRunner.run(new WALPlayer(this.conf), new String [] {targetDir.toString()}));
+      ToolRunner.run(new WALPlayer(this.conf), new String[] { targetDir.toString() }));
     // I don't know how many edits are in this file for this table... so just check more than 1.
     assertTrue(TEST_UTIL.countRows(tn) > 0);
   }
@@ -157,19 +158,17 @@ public class TestWALPlayer {
     // replay the WAL, map table 1 to table 2
     WAL log = cluster.getRegionServer(0).getWAL(null);
     log.rollWriter();
-    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem()
-        .getWALRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
+    String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
+      HConstants.HREGION_LOGDIR_NAME).toString();
 
-    Configuration configuration= TEST_UTIL.getConfiguration();
+    Configuration configuration = TEST_UTIL.getConfiguration();
     WALPlayer player = new WALPlayer(configuration);
-    String optionName="_test_.name";
+    String optionName = "_test_.name";
     configuration.set(optionName, "1000");
     player.setupTime(configuration, optionName);
-    assertEquals(1000,configuration.getLong(optionName,0));
+    assertEquals(1000, configuration.getLong(optionName, 0));
     assertEquals(0, ToolRunner.run(configuration, player,
-        new String[] {walInputDir, tableName1.getNameAsString(),
-        tableName2.getNameAsString() }));
-
+      new String[] { walInputDir, tableName1.getNameAsString(), tableName2.getNameAsString() }));
 
     // verify the WAL was player into table 2
     Get g = new Get(ROW);
@@ -233,7 +232,7 @@ public class TestWALPlayer {
 
     PrintStream oldPrintStream = System.err;
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
@@ -246,8 +245,8 @@ public class TestWALPlayer {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("ERROR: Wrong number of arguments:"));
-        assertTrue(data.toString().contains("Usage: WALPlayer [options] <WAL inputdir>" +
-            " [<tables> <tableMappings>]"));
+        assertTrue(data.toString()
+          .contains("Usage: WALPlayer [options] <WAL inputdir>" + " [<tables> <tableMappings>]"));
         assertTrue(data.toString().contains("-Dwal.bulk.output=/path/for/output"));
       }
 

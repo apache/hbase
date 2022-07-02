@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,18 +33,22 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestClientMode extends TestModeBase {
 
-  @ClassRule public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientMode.class);
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestClientMode.class);
 
-  @Override protected Mode getMode() {
+  @Override
+  protected Mode getMode() {
     return Mode.CLIENT;
   }
 
-  @Override protected void assertRecords(List<Record> records) {
+  @Override
+  protected void assertRecords(List<Record> records) {
     TestUtils.assertRecordsInClientMode(records);
   }
 
-  @Override protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
+  @Override
+  protected void assertDrillDown(Record currentRecord, DrillDownInfo drillDownInfo) {
     assertThat(drillDownInfo.getNextMode(), is(Mode.USER));
     assertThat(drillDownInfo.getInitialFilters().size(), is(1));
     String client = currentRecord.get(Field.CLIENT).asString();

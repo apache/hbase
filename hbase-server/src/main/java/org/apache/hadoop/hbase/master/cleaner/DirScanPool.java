@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The thread pool used for scan directories
@@ -57,15 +57,19 @@ public class DirScanPool implements ConfigurationObserver {
   }
 
   private DirScanPool(Configuration conf, Type dirScanPoolType) {
+    this(dirScanPoolType, conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
+      dirScanPoolType.cleanerPoolSizeConfigDefault));
+  }
+
+  private DirScanPool(Type dirScanPoolType, String poolSize) {
     this.dirScanPoolType = dirScanPoolType;
     this.name = dirScanPoolType.name().toLowerCase();
-    String poolSize = conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
-      dirScanPoolType.cleanerPoolSizeConfigDefault);
     size = CleanerChore.calculatePoolSize(poolSize);
     // poolSize may be 0 or 0.0 from a careless configuration,
     // double check to make sure.
-    size = size == 0 ?
-      CleanerChore.calculatePoolSize(dirScanPoolType.cleanerPoolSizeConfigDefault) : size;
+    size = size == 0
+      ? CleanerChore.calculatePoolSize(dirScanPoolType.cleanerPoolSizeConfigDefault)
+      : size;
     pool = initializePool(size, name);
     LOG.info("{} Cleaner pool size is {}", name, size);
     cleanerLatch = 0;
@@ -83,12 +87,11 @@ public class DirScanPool implements ConfigurationObserver {
    */
   @Override
   public synchronized void onConfigurationChange(Configuration conf) {
-    int newSize = CleanerChore.calculatePoolSize(
-      conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
-        dirScanPoolType.cleanerPoolSizeConfigDefault));
+    int newSize = CleanerChore.calculatePoolSize(conf.get(dirScanPoolType.cleanerPoolSizeConfigName,
+      dirScanPoolType.cleanerPoolSizeConfigDefault));
     if (newSize == size) {
       LOG.trace("{} Cleaner Size from configuration is same as previous={}, no need to update.",
-          name, newSize);
+        name, newSize);
       return;
     }
     size = newSize;
@@ -141,6 +144,10 @@ public class DirScanPool implements ConfigurationObserver {
 
   public static DirScanPool getHFileCleanerScanPool(Configuration conf) {
     return new DirScanPool(conf, Type.HFILE_CLEANER);
+  }
+
+  public static DirScanPool getHFileCleanerScanPool(String poolSize) {
+    return new DirScanPool(Type.HFILE_CLEANER, poolSize);
   }
 
   public static DirScanPool getLogCleanerScanPool(Configuration conf) {

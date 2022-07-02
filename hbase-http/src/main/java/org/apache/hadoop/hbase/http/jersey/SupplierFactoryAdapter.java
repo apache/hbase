@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.http.jersey;
 
 import java.util.function.Supplier;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.org.glassfish.hk2.api.Factory;
 
 /**
@@ -34,9 +35,12 @@ public class SupplierFactoryAdapter<T> implements Factory<T> {
     this.supplier = supplier;
   }
 
-  @Override public T provide() {
+  @Override
+  public T provide() {
     return supplier.get();
   }
 
-  @Override public void dispose(T instance) { }
+  @Override
+  public void dispose(T instance) {
+  }
 }

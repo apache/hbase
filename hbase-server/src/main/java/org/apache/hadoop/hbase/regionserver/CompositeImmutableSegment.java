@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -30,10 +28,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 
 /**
- * The CompositeImmutableSegments is created as a collection of ImmutableSegments and supports
- * the interface of a single ImmutableSegments.
- * The CompositeImmutableSegments is planned to be used only as a snapshot,
- * thus only relevant interfaces are supported
+ * The CompositeImmutableSegments is created as a collection of ImmutableSegments and supports the
+ * interface of a single ImmutableSegments. The CompositeImmutableSegments is planned to be used
+ * only as a snapshot, thus only relevant interfaces are supported
  */
 @InterfaceAudience.Private
 public class CompositeImmutableSegment extends ImmutableSegment {
@@ -105,7 +102,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   @Override
-  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS){
+  public boolean shouldSeek(TimeRange tr, long oldestUnexpiredTS) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -117,7 +114,6 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   public KeyValueScanner getScanner(long readPoint) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
-
 
   @Override
   public List<KeyValueScanner> getScanners(long readPoint) {
@@ -145,8 +141,8 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   }
 
   /**
-   * Setting the CellSet of the segment - used only for flat immutable segment for setting
-   * immutable CellSet after its creation in immutable segment constructor
+   * Setting the CellSet of the segment - used only for flat immutable segment for setting immutable
+   * CellSet after its creation in immutable segment constructor
    * @return this object
    */
   @Override
@@ -154,13 +150,13 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-
   @Override
   protected long indexEntrySize() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  @Override protected boolean canBeFlattened() {
+  @Override
+  protected boolean canBeFlattened() {
     return false;
   }
 
@@ -202,7 +198,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return this.timeRangeTracker;
   }
 
-  //*** Methods for SegmentsScanner
+  // *** Methods for SegmentsScanner
   @Override
   public Cell last() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
@@ -238,13 +234,13 @@ public class CompositeImmutableSegment extends ImmutableSegment {
 
   @Override
   protected void internalAdd(Cell cell, boolean mslabUsed, MemStoreSizing memstoreSizing,
-      boolean sizeAddedPreOperation) {
+    boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
   @Override
   protected void updateMetaInfo(Cell cellToAdd, boolean succ, boolean mslabUsed,
-      MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
+    MemStoreSizing memstoreSizing, boolean sizeAddedPreOperation) {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
@@ -272,7 +268,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   @Override
   public String toString() {
     StringBuilder sb =
-        new StringBuilder("This is CompositeImmutableSegment and those are its segments:: ");
+      new StringBuilder("This is CompositeImmutableSegment and those are its segments:: ");
     for (ImmutableSegment s : segments) {
       sb.append(s.toString());
     }
@@ -282,7 +278,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
   @Override
   List<KeyValueScanner> getSnapshotScanners() {
     List<KeyValueScanner> list = new ArrayList<>(this.segments.size());
-    for (ImmutableSegment segment: this.segments) {
+    for (ImmutableSegment segment : this.segments) {
       list.add(new SnapshotSegmentScanner(segment));
     }
     return list;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,15 +21,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * Information about drilling down.
- *
- * When drilling down, going to next {@link Mode} with initial {@link RecordFilter}s.
+ * Information about drilling down. When drilling down, going to next {@link Mode} with initial
+ * {@link RecordFilter}s.
  */
 @InterfaceAudience.Private
 public class DrillDownInfo {

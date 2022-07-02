@@ -1,20 +1,19 @@
 /*
- * Copyright The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -29,8 +28,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * BaseSourceImpl, following the pattern
  */
 @InterfaceAudience.Private
-public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implements
-    MetricsHeapMemoryManagerSource {
+public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl
+  implements MetricsHeapMemoryManagerSource {
 
   private final MetricHistogram blockedFlushHistogram;
   private final MetricHistogram unblockedFlushHistogram;
@@ -52,39 +51,38 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl implement
   }
 
   public MetricsHeapMemoryManagerSourceImpl(String metricsName, String metricsDescription,
-      String metricsContext, String metricsJmxContext) {
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // Histograms
-    blockedFlushHistogram = getMetricsRegistry()
-        .newSizeHistogram(BLOCKED_FLUSH_NAME, BLOCKED_FLUSH_DESC);
-    unblockedFlushHistogram = getMetricsRegistry()
-        .newSizeHistogram(UNBLOCKED_FLUSH_NAME, UNBLOCKED_FLUSH_DESC);
-    incMemStoreSizeHistogram = getMetricsRegistry()
-        .newSizeHistogram(INC_MEMSTORE_TUNING_NAME, INC_MEMSTORE_TUNING_DESC);
-    decMemStoreSizeHistogram = getMetricsRegistry()
-        .newSizeHistogram(DEC_MEMSTORE_TUNING_NAME, DEC_MEMSTORE_TUNING_DESC);
-    incBlockCacheSizeHistogram = getMetricsRegistry()
-        .newSizeHistogram(INC_BLOCKCACHE_TUNING_NAME, INC_BLOCKCACHE_TUNING_DESC);
-    decBlockCacheSizeHistogram = getMetricsRegistry()
-        .newSizeHistogram(DEC_BLOCKCACHE_TUNING_NAME, DEC_BLOCKCACHE_TUNING_DESC);
+    blockedFlushHistogram =
+      getMetricsRegistry().newSizeHistogram(BLOCKED_FLUSH_NAME, BLOCKED_FLUSH_DESC);
+    unblockedFlushHistogram =
+      getMetricsRegistry().newSizeHistogram(UNBLOCKED_FLUSH_NAME, UNBLOCKED_FLUSH_DESC);
+    incMemStoreSizeHistogram =
+      getMetricsRegistry().newSizeHistogram(INC_MEMSTORE_TUNING_NAME, INC_MEMSTORE_TUNING_DESC);
+    decMemStoreSizeHistogram =
+      getMetricsRegistry().newSizeHistogram(DEC_MEMSTORE_TUNING_NAME, DEC_MEMSTORE_TUNING_DESC);
+    incBlockCacheSizeHistogram =
+      getMetricsRegistry().newSizeHistogram(INC_BLOCKCACHE_TUNING_NAME, INC_BLOCKCACHE_TUNING_DESC);
+    decBlockCacheSizeHistogram =
+      getMetricsRegistry().newSizeHistogram(DEC_BLOCKCACHE_TUNING_NAME, DEC_BLOCKCACHE_TUNING_DESC);
 
     // Gauges
-    blockedFlushGauge = getMetricsRegistry()
-        .newGauge(BLOCKED_FLUSH_GAUGE_NAME, BLOCKED_FLUSH_GAUGE_DESC, 0L);
-    unblockedFlushGauge = getMetricsRegistry()
-        .newGauge(UNBLOCKED_FLUSH_GAUGE_NAME, UNBLOCKED_FLUSH_GAUGE_DESC, 0L);
-    memStoreSizeGauge = getMetricsRegistry()
-        .newGauge(MEMSTORE_SIZE_GAUGE_NAME, MEMSTORE_SIZE_GAUGE_DESC, 0L);
-    blockCacheSizeGauge = getMetricsRegistry()
-        .newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
+    blockedFlushGauge =
+      getMetricsRegistry().newGauge(BLOCKED_FLUSH_GAUGE_NAME, BLOCKED_FLUSH_GAUGE_DESC, 0L);
+    unblockedFlushGauge =
+      getMetricsRegistry().newGauge(UNBLOCKED_FLUSH_GAUGE_NAME, UNBLOCKED_FLUSH_GAUGE_DESC, 0L);
+    memStoreSizeGauge =
+      getMetricsRegistry().newGauge(MEMSTORE_SIZE_GAUGE_NAME, MEMSTORE_SIZE_GAUGE_DESC, 0L);
+    blockCacheSizeGauge =
+      getMetricsRegistry().newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
 
     // Counters
-    doNothingCounter = getMetricsRegistry()
-        .newCounter(DO_NOTHING_COUNTER_NAME, DO_NOTHING_COUNTER_DESC, 0L);
+    doNothingCounter =
+      getMetricsRegistry().newCounter(DO_NOTHING_COUNTER_NAME, DO_NOTHING_COUNTER_DESC, 0L);
     aboveHeapOccupancyLowWatermarkCounter = getMetricsRegistry()
-        .newCounter(ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME,
-          ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC, 0L);
+      .newCounter(ABOVE_HEAP_LOW_WATERMARK_COUNTER_NAME, ABOVE_HEAP_LOW_WATERMARK_COUNTER_DESC, 0L);
   }
 
   @Override

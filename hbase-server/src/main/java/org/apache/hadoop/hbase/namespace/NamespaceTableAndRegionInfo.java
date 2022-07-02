@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namespace;
 
 import java.util.HashMap;
@@ -23,15 +22,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.hbase.TableName;
-
-import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+
 /**
- * NamespaceTableAndRegionInfo is a helper class that contains information
- * about current state of tables and regions in a namespace.
+ * NamespaceTableAndRegionInfo is a helper class that contains information about current state of
+ * tables and regions in a namespace.
  */
 @InterfaceAudience.Private
 class NamespaceTableAndRegionInfo {
@@ -45,7 +43,6 @@ class NamespaceTableAndRegionInfo {
 
   /**
    * Gets the name of the namespace.
-   *
    * @return name of the namespace.
    */
   String getName() {
@@ -54,16 +51,14 @@ class NamespaceTableAndRegionInfo {
 
   /**
    * Gets the set of table names belonging to namespace.
-   *
    * @return A set of table names.
    */
-  synchronized  Set<TableName> getTables() {
+  synchronized Set<TableName> getTables() {
     return this.tableAndRegionInfo.keySet();
   }
 
   /**
    * Gets the total number of regions in namespace.
-   *
    * @return the region count
    */
   synchronized int getRegionCount() {
@@ -88,8 +83,8 @@ class NamespaceTableAndRegionInfo {
 
   synchronized void addTable(TableName tableName, int regionCount) {
     if (!name.equalsIgnoreCase(tableName.getNamespaceAsString())) {
-      throw new IllegalStateException("Table : " + tableName + " does not belong to namespace "
-          + name);
+      throw new IllegalStateException(
+        "Table : " + tableName + " does not belong to namespace " + name);
     }
     if (!tableAndRegionInfo.containsKey(tableName)) {
       tableAndRegionInfo.put(tableName, new AtomicInteger(regionCount));
@@ -114,6 +109,6 @@ class NamespaceTableAndRegionInfo {
   public String toString() {
     Joiner.MapJoiner mapJoiner = Joiner.on(',').withKeyValueSeparator("=");
     return "NamespaceTableAndRegionInfo [name=" + name + ", tableAndRegionInfo="
-        + mapJoiner.join(tableAndRegionInfo) + "]";
+      + mapJoiner.join(tableAndRegionInfo) + "]";
   }
 }

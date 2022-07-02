@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,31 +36,29 @@ public class TestGlobalQuotaSettingsImpl {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGlobalQuotaSettingsImpl.class);
+    HBaseClassTestRule.forClass(TestGlobalQuotaSettingsImpl.class);
 
-  QuotaProtos.TimedQuota REQUEST_THROTTLE = QuotaProtos.TimedQuota.newBuilder()
-      .setScope(QuotaProtos.QuotaScope.MACHINE).setSoftLimit(100)
+  QuotaProtos.TimedQuota REQUEST_THROTTLE =
+    QuotaProtos.TimedQuota.newBuilder().setScope(QuotaProtos.QuotaScope.MACHINE).setSoftLimit(100)
       .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
-  QuotaProtos.Throttle THROTTLE = QuotaProtos.Throttle.newBuilder()
-      .setReqNum(REQUEST_THROTTLE).build();
+  QuotaProtos.Throttle THROTTLE =
+    QuotaProtos.Throttle.newBuilder().setReqNum(REQUEST_THROTTLE).build();
 
-  QuotaProtos.SpaceQuota SPACE_QUOTA = QuotaProtos.SpaceQuota.newBuilder()
-      .setSoftLimit(1024L * 1024L).setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_WRITES)
-      .build();
+  QuotaProtos.SpaceQuota SPACE_QUOTA =
+    QuotaProtos.SpaceQuota.newBuilder().setSoftLimit(1024L * 1024L)
+      .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_WRITES).build();
 
   @Test
   public void testMergeThrottle() throws IOException {
-    QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder()
-        .setThrottle(THROTTLE).build();
-    QuotaProtos.TimedQuota writeQuota = REQUEST_THROTTLE.toBuilder()
-        .setSoftLimit(500).build();
+    QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder().setThrottle(THROTTLE).build();
+    QuotaProtos.TimedQuota writeQuota = REQUEST_THROTTLE.toBuilder().setSoftLimit(500).build();
     // Unset the req throttle, set a write throttle
     QuotaProtos.ThrottleRequest writeThrottle = QuotaProtos.ThrottleRequest.newBuilder()
-        .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
+      .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
 
     GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl("joe", null, null, null, quota);
-    GlobalQuotaSettingsImpl merged = settings.merge(
-      new ThrottleSettings("joe", null, null, null, writeThrottle));
+    GlobalQuotaSettingsImpl merged =
+      settings.merge(new ThrottleSettings("joe", null, null, null, writeThrottle));
 
     QuotaProtos.Throttle mergedThrottle = merged.getThrottleProto();
     // Verify the request throttle is in place
@@ -77,37 +75,34 @@ public class TestGlobalQuotaSettingsImpl {
   @Test
   public void testMergeSpace() throws IOException {
     TableName tn = TableName.valueOf("foo");
-    QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder()
-        .setSpace(SPACE_QUOTA).build();
+    QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder().setSpace(SPACE_QUOTA).build();
 
     GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, tn, null, null, quota);
     // Switch the violation policy to DISABLE
-    GlobalQuotaSettingsImpl merged = settings.merge(
-        new SpaceLimitSettings(tn, SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.DISABLE));
+    GlobalQuotaSettingsImpl merged = settings
+      .merge(new SpaceLimitSettings(tn, SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.DISABLE));
 
     QuotaProtos.SpaceQuota mergedSpaceQuota = merged.getSpaceProto();
     assertEquals(SPACE_QUOTA.getSoftLimit(), mergedSpaceQuota.getSoftLimit());
-    assertEquals(
-        QuotaProtos.SpaceViolationPolicy.DISABLE, mergedSpaceQuota.getViolationPolicy());
+    assertEquals(QuotaProtos.SpaceViolationPolicy.DISABLE, mergedSpaceQuota.getViolationPolicy());
   }
 
   @Test
   public void testMergeThrottleAndSpace() throws IOException {
     final String ns = "org1";
-    QuotaProtos.Quotas quota = QuotaProtos.Quotas.newBuilder()
-        .setThrottle(THROTTLE).setSpace(SPACE_QUOTA).build();
+    QuotaProtos.Quotas quota =
+      QuotaProtos.Quotas.newBuilder().setThrottle(THROTTLE).setSpace(SPACE_QUOTA).build();
     GlobalQuotaSettingsImpl settings = new GlobalQuotaSettingsImpl(null, null, ns, null, quota);
 
-    QuotaProtos.TimedQuota writeQuota = REQUEST_THROTTLE.toBuilder()
-        .setSoftLimit(500).build();
+    QuotaProtos.TimedQuota writeQuota = REQUEST_THROTTLE.toBuilder().setSoftLimit(500).build();
     // Add a write throttle
     QuotaProtos.ThrottleRequest writeThrottle = QuotaProtos.ThrottleRequest.newBuilder()
-        .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
+      .setTimedQuota(writeQuota).setType(QuotaProtos.ThrottleType.WRITE_NUMBER).build();
 
-    GlobalQuotaSettingsImpl merged = settings.merge(
-      new ThrottleSettings(null, null, ns, null, writeThrottle));
-    GlobalQuotaSettingsImpl finalQuota = merged.merge(new SpaceLimitSettings(
-        ns, SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.NO_WRITES_COMPACTIONS));
+    GlobalQuotaSettingsImpl merged =
+      settings.merge(new ThrottleSettings(null, null, ns, null, writeThrottle));
+    GlobalQuotaSettingsImpl finalQuota = merged.merge(new SpaceLimitSettings(ns,
+      SPACE_QUOTA.getSoftLimit(), SpaceViolationPolicy.NO_WRITES_COMPACTIONS));
 
     // Verify both throttle quotas
     QuotaProtos.Throttle throttle = finalQuota.getThrottleProto();
@@ -122,8 +117,7 @@ public class TestGlobalQuotaSettingsImpl {
     // Verify space quota
     QuotaProtos.SpaceQuota finalSpaceQuota = finalQuota.getSpaceProto();
     assertEquals(SPACE_QUOTA.getSoftLimit(), finalSpaceQuota.getSoftLimit());
-    assertEquals(
-        QuotaProtos.SpaceViolationPolicy.NO_WRITES_COMPACTIONS,
-        finalSpaceQuota.getViolationPolicy());
+    assertEquals(QuotaProtos.SpaceViolationPolicy.NO_WRITES_COMPACTIONS,
+      finalSpaceQuota.getViolationPolicy());
   }
 }

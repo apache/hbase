@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -36,9 +37,9 @@ import org.junit.experimental.categories.Category;
 public class TestZKMainServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKMainServer.class);
+    HBaseClassTestRule.forClass(TestZKMainServer.class);
 
-  // ZKMS calls System.exit.  Catch the call and prevent exit using trick described up in
+  // ZKMS calls System.exit. Catch the call and prevent exit using trick described up in
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit
   protected static class ExitException extends SecurityException {
     private static final long serialVersionUID = 1L;
@@ -83,8 +84,8 @@ public class TestZKMainServer {
       ZKUtil.checkExists(zkw, znode);
       boolean exception = false;
       try {
-        ZKMainServer.main(new String [] {"-server", htu.getZkCluster().getAddress().toString(),
-          "delete", znode});
+        ZKMainServer.main(
+          new String[] { "-server", htu.getZkCluster().getAddress().toString(), "delete", znode });
       } catch (ExitException ee) {
         // ZKMS calls System.exit which should trigger this exception.
         exception = true;
@@ -121,28 +122,27 @@ public class TestZKMainServer {
     assertEquals(ensemble, "example1.com:5678,example2.com:9012,example3.com:" + port);
 
     // multiple servers(IPv6) with its own port
-    c.set("hbase.zookeeper.quorum", "[2001:db8:1::242:ac11:2]:2181," +
-                                    "[2001:db8:1::242:ac11:3]:5678");
+    c.set("hbase.zookeeper.quorum",
+      "[2001:db8:1::242:ac11:2]:2181," + "[2001:db8:1::242:ac11:3]:5678");
     ensemble = parser.parse(c);
-    assertEquals("[2001:db8:1::242:ac11:2]:2181," +
-                 "[2001:db8:1::242:ac11:3]:5678", ensemble);
+    assertEquals("[2001:db8:1::242:ac11:2]:2181," + "[2001:db8:1::242:ac11:3]:5678", ensemble);
 
     // some servers(IPv6) without its own port, which will be assigned the default client port
-    c.set("hbase.zookeeper.quorum", "[1001:db8:1::242:ac11:8], [2001:db8:1::242:df23:2]:9876," +
-                                    "[2001:db8:1::242:ac11:3]:5678");
+    c.set("hbase.zookeeper.quorum",
+      "[1001:db8:1::242:ac11:8], [2001:db8:1::242:df23:2]:9876," + "[2001:db8:1::242:ac11:3]:5678");
     ensemble = parser.parse(c);
-    assertEquals("[1001:db8:1::242:ac11:8]:1234, [2001:db8:1::242:df23:2]:9876," +
-                 "[2001:db8:1::242:ac11:3]:5678", ensemble);
+    assertEquals("[1001:db8:1::242:ac11:8]:1234, [2001:db8:1::242:df23:2]:9876,"
+      + "[2001:db8:1::242:ac11:3]:5678", ensemble);
 
-    //a bad case
+    // a bad case
     try {
       // some servers(IPv6) with an invaild Ipv6 address in it
-      c.set("hbase.zookeeper.quorum", "[1001:db8:1::242:ac11:8], [2001:db8:1::242:df23:2]:9876," +
-              "[1001:db8:1::242:ac11:8:89:67]:5678");
+      c.set("hbase.zookeeper.quorum", "[1001:db8:1::242:ac11:8], [2001:db8:1::242:df23:2]:9876,"
+        + "[1001:db8:1::242:ac11:8:89:67]:5678");
       parser.parse(c);
       Assert.fail("IPv6 address should be 8 groups.");
     } catch (IllegalArgumentException e) {
-      //expected
+      // expected
     }
   }
 }

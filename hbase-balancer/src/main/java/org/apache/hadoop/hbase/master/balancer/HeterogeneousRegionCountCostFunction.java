@@ -1,16 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.balancer;
 
@@ -63,19 +66,19 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
    * configuration used for the path where the rule file is stored.
    */
   static final String HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE =
-      "hbase.master.balancer.heterogeneousRegionCountRulesFile";
+    "hbase.master.balancer.heterogeneousRegionCountRulesFile";
   private static final Logger LOG =
-      LoggerFactory.getLogger(HeterogeneousRegionCountCostFunction.class);
+    LoggerFactory.getLogger(HeterogeneousRegionCountCostFunction.class);
   /**
    * Default rule to apply when the rule file is not found. Default to 200.
    */
   private static final String HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT =
-      "hbase.master.balancer.heterogeneousRegionCountDefault";
+    "hbase.master.balancer.heterogeneousRegionCountDefault";
   /**
    * Cost for the function. Default to 500, can be changed.
    */
   private static final String REGION_COUNT_SKEW_COST_KEY =
-      "hbase.master.balancer.stochastic.heterogeneousRegionCountCost";
+    "hbase.master.balancer.stochastic.heterogeneousRegionCountCost";
   private static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
   private final String rulesPath;
 
@@ -104,17 +107,19 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
     this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
     this.rulesPath = conf.get(HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_FILE);
     this.defaultNumberOfRegions =
-        conf.getInt(HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT, 200);
+      conf.getInt(HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT, 200);
 
     if (this.defaultNumberOfRegions < 0) {
       LOG.warn("invalid configuration '" + HBASE_MASTER_BALANCER_HETEROGENEOUS_RULES_DEFAULT
-          + "'. Setting default to 200");
+        + "'. Setting default to 200");
       this.defaultNumberOfRegions = 200;
     }
-    if (conf.getFloat(RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY,
-      RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST) > 0) {
+    if (
+      conf.getFloat(RegionCountSkewCostFunction.REGION_COUNT_SKEW_COST_KEY,
+        RegionCountSkewCostFunction.DEFAULT_REGION_COUNT_SKEW_COST) > 0
+    ) {
       LOG.warn("regionCountCost is not set to 0, "
-          + " this will interfere with the HeterogeneousRegionCountCostFunction!");
+        + " this will interfere with the HeterogeneousRegionCountCostFunction!");
     }
   }
 
@@ -153,12 +158,12 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
    * used to load the rule files.
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|HeterogeneousRegionCountCostFunction).java")
+      allowedOnPath = ".*(/src/test/.*|HeterogeneousRegionCountCostFunction).java")
   void loadRules() {
     final List<String> lines = readFile(this.rulesPath);
     if (null == lines) {
       LOG.warn("cannot load rules file, keeping latest rules file which has "
-          + this.limitPerRule.size() + " rules");
+        + this.limitPerRule.size() + " rules");
       return;
     }
 
@@ -175,7 +180,7 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
         final List<String> splits = Splitter.on(' ').splitToList(line);
         if (splits.size() != 2) {
           throw new IOException(
-              "line '" + line + "' is malformated, " + "expected [regexp] [limit]. Skipping line");
+            "line '" + line + "' is malformated, " + "expected [regexp] [limit]. Skipping line");
         }
 
         final Pattern pattern = Pattern.compile(splits.get(0));
@@ -243,7 +248,7 @@ public class HeterogeneousRegionCountCostFunction extends CostFunction {
     }
     overallUsage = (double) this.cluster.numRegions / (double) this.totalCapacity;
     LOG.info("Cluster can hold " + this.cluster.numRegions + "/" + this.totalCapacity + " regions ("
-        + Math.round(overallUsage * 100) + "%)");
+      + Math.round(overallUsage * 100) + "%)");
     if (overallUsage >= 1) {
       LOG.warn("Cluster is overused, {}", overallUsage);
     }

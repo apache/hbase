@@ -103,7 +103,7 @@ do
     break
   fi
 done
- 
+
 # Allow alternate hbase conf dir location.
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.

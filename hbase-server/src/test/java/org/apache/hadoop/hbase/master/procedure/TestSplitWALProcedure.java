@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -49,7 +48,7 @@ import org.junit.experimental.categories.Category;
 public class TestSplitWALProcedure {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSplitWALProcedure.class);
+    HBaseClassTestRule.forClass(TestSplitWALProcedure.class);
 
   private static HBaseTestingUtil TEST_UTIL;
   private HMaster master;
@@ -72,8 +71,8 @@ public class TestSplitWALProcedure {
   @After
   public void teardown() throws Exception {
     if (this.master != null) {
-      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(
-        master.getMasterProcedureExecutor(), false);
+      ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
+        false);
     }
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -90,13 +89,13 @@ public class TestSplitWALProcedure {
     Assert.assertEquals(1, wals.size());
     TEST_UTIL.getHBaseCluster().killRegionServer(testServer.getServerName());
     TEST_UTIL.waitFor(30000, () -> master.getProcedures().stream()
-        .anyMatch(procedure -> procedure instanceof SplitWALProcedure));
+      .anyMatch(procedure -> procedure instanceof SplitWALProcedure));
     Procedure splitWALProcedure = master.getProcedures().stream()
-        .filter(procedure -> procedure instanceof SplitWALProcedure).findAny().get();
+      .filter(procedure -> procedure instanceof SplitWALProcedure).findAny().get();
     Assert.assertNotNull(splitWALProcedure);
     TEST_UTIL.waitFor(5000, () -> ((SplitWALProcedure) splitWALProcedure).getWorker() != null);
     TEST_UTIL.getHBaseCluster()
-        .killRegionServer(((SplitWALProcedure) splitWALProcedure).getWorker());
+      .killRegionServer(((SplitWALProcedure) splitWALProcedure).getWorker());
     ProcedureTestingUtility.waitProcedure(masterPE, splitWALProcedure.getProcId());
     Assert.assertTrue(splitWALProcedure.isSuccess());
     ProcedureTestingUtility.waitAllProcedures(masterPE);
@@ -112,9 +111,9 @@ public class TestSplitWALProcedure {
     List<FileStatus> wals = splitWALManager.getWALsToSplit(testServer.getServerName(), false);
     Assert.assertEquals(1, wals.size());
     SplitWALProcedure splitWALProcedure =
-        new SplitWALProcedure(wals.get(0).getPath().toString(), testServer.getServerName());
+      new SplitWALProcedure(wals.get(0).getPath().toString(), testServer.getServerName());
     long pid = ProcedureTestingUtility.submitProcedure(master.getMasterProcedureExecutor(),
-        splitWALProcedure, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      splitWALProcedure, HConstants.NO_NONCE, HConstants.NO_NONCE);
     TEST_UTIL.waitFor(5000, () -> splitWALProcedure.getWorker() != null);
     // Kill master
     TEST_UTIL.getHBaseCluster().killMaster(master.getServerName());
@@ -125,7 +124,7 @@ public class TestSplitWALProcedure {
     this.master = TEST_UTIL.getHBaseCluster().getMaster();
     ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), pid);
     Optional<Procedure<?>> procedure =
-        master.getProcedures().stream().filter(p -> p.getProcId() == pid).findAny();
+      master.getProcedures().stream().filter(p -> p.getProcId() == pid).findAny();
     // make sure procedure is successful and wal is deleted
     Assert.assertTrue(procedure.isPresent());
     Assert.assertTrue(procedure.get().isSuccess());

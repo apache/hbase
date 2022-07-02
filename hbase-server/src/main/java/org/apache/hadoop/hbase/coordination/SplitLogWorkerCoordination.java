@@ -1,21 +1,22 @@
- /*
-  * Licensed to the Apache Software Foundation (ASF) under one
-  * or more contributor license agreements.  See the NOTICE file
-  * distributed with this work for additional information
-  * regarding copyright ownership.  The ASF licenses this file
-  * to you under the Apache License, Version 2.0 (the
-  * "License"); you may not use this file except in compliance
-  * with the License.  You may obtain a copy of the License at
-  *
-  *     http://www.apache.org/licenses/LICENSE-2.0
-  *
-  * Unless required by applicable law or agreed to in writing, software
-  * distributed under the License is distributed on an "AS IS" BASIS,
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
-  */
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.coordination;
+
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,8 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Coordinated operations for {@link SplitLogWorker} and
- * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
- * methods for SplitLogWorker: <BR>
+ * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important methods for
+ * SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
  * ready to supply the tasks <BR>
  * {@link #taskLoop()} loop for new tasks until the worker is stopped <BR>
@@ -41,7 +42,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALManager
+ *             distributed WAL splitter, see SplitWALManager
  */
 @Deprecated
 @InterfaceAudience.Private
@@ -50,16 +51,16 @@ public interface SplitLogWorkerCoordination {
   /**
    * Initialize internal values. This method should be used when corresponding SplitLogWorker
    * instance is created
-   * @param server instance of RegionServerServices to work with
-   * @param conf is current configuration.
+   * @param server            instance of RegionServerServices to work with
+   * @param conf              is current configuration.
    * @param splitTaskExecutor split executor from SplitLogWorker
-   * @param worker instance of SplitLogWorker
+   * @param worker            instance of SplitLogWorker
    */
-  void init(RegionServerServices server, Configuration conf,
-      TaskExecutor splitTaskExecutor, SplitLogWorker worker);
+  void init(RegionServerServices server, Configuration conf, TaskExecutor splitTaskExecutor,
+    SplitLogWorker worker);
 
   /**
-   *  called when Coordination should stop processing tasks and exit
+   * called when Coordination should stop processing tasks and exit
    */
   void stopProcessingTasks();
 
@@ -77,8 +78,8 @@ public interface SplitLogWorkerCoordination {
   /**
    * marks log file as corrupted
    * @param rootDir where to find the log
-   * @param name of the log
-   * @param fs file system
+   * @param name    of the log
+   * @param fs      file system
    */
   void markCorrupted(Path rootDir, String name, FileSystem fs);
 
@@ -109,10 +110,10 @@ public interface SplitLogWorkerCoordination {
 
   /**
    * Notify coordination engine that splitting task has completed.
-   * @param slt See {@link SplitLogTask}
-   * @param ctr counter to be updated
+   * @param slt              See {@link SplitLogTask}
+   * @param ctr              counter to be updated
    * @param splitTaskDetails details about log split task (specific to coordination engine being
-   *          used).
+   *                         used).
    */
   void endTask(SplitLogTask slt, LongAdder ctr, SplitTaskDetails splitTaskDetails);
 

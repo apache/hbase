@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestClientOperationInterrupt {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientOperationInterrupt.class);
+    HBaseClassTestRule.forClass(TestClientOperationInterrupt.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationInterrupt.class);
 
@@ -71,18 +71,17 @@ public class TestClientOperationInterrupt {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-                         final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+      final List<Cell> results) throws IOException {
       Threads.sleep(2500);
     }
   }
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessor.class.getName());
+      TestCoprocessor.class.getName());
     util = new HBaseTestingUtil(conf);
     util.startMiniCluster();
 
@@ -93,13 +92,12 @@ public class TestClientOperationInterrupt {
       }
       admin.deleteTable(tableName);
     }
-    Table ht = util.createTable(tableName, new byte[][]{dummy, test});
+    Table ht = util.createTable(tableName, new byte[][] { dummy, test });
 
     Put p = new Put(row1);
     p.addColumn(dummy, dummy, dummy);
     ht.put(p);
   }
-
 
   @Test
   public void testInterrupt50Percent() throws IOException, InterruptedException {
@@ -147,7 +145,6 @@ public class TestClientOperationInterrupt {
       threads.get(i).interrupt();
     }
 
-
     boolean stillAlive = true;
     while (stillAlive) {
       stillAlive = false;
@@ -161,10 +158,10 @@ public class TestClientOperationInterrupt {
 
     Assert.assertFalse(Thread.currentThread().isInterrupted());
     Assert.assertTrue(" noEx: " + noEx.get() + ", badEx=" + badEx.get() + ", noInt=" + noInt.get(),
-        noEx.get() == expectedNoExNum && badEx.get() == 0);
+      noEx.get() == expectedNoExNum && badEx.get() == 0);
 
     // The problem here is that we need the server to free its handlers to handle all operations
-    while (done.get() != nbThread){
+    while (done.get() != nbThread) {
       Thread.sleep(1);
     }
 

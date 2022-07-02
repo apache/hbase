@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
@@ -63,7 +62,7 @@ import org.slf4j.LoggerFactory;
  * Testing writing a version 3 {@link HFile} for all encoded blocks
  */
 @RunWith(Parameterized.class)
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestHFileWriterV3WithDataEncoders {
 
   @ClassRule
@@ -80,8 +79,7 @@ public class TestHFileWriterV3WithDataEncoders {
   private boolean useTags;
   private DataBlockEncoding dataBlockEncoding;
 
-  public TestHFileWriterV3WithDataEncoders(boolean useTags,
-      DataBlockEncoding dataBlockEncoding) {
+  public TestHFileWriterV3WithDataEncoders(boolean useTags, DataBlockEncoding dataBlockEncoding) {
     this.useTags = useTags;
     this.dataBlockEncoding = dataBlockEncoding;
   }
@@ -95,8 +93,8 @@ public class TestHFileWriterV3WithDataEncoders {
       if (dataBlockEncoding == DataBlockEncoding.NONE) {
         continue;
       }
-      params[i++] = new Object[]{false, dataBlockEncoding};
-      params[i++] = new Object[]{true, dataBlockEncoding};
+      params[i++] = new Object[] { false, dataBlockEncoding };
+      params[i++] = new Object[] { true, dataBlockEncoding };
     }
     return Arrays.asList(params);
   }
@@ -120,33 +118,26 @@ public class TestHFileWriterV3WithDataEncoders {
   }
 
   @Test
-  public void testMidKeyInHFile() throws IOException{
+  public void testMidKeyInHFile() throws IOException {
     testMidKeyInHFileInternals(useTags);
   }
 
   private void testMidKeyInHFileInternals(boolean useTags) throws IOException {
-    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
-      "testMidKeyInHFile");
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testMidKeyInHFile");
     Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
     int entryCount = 50000;
     writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, true, useTags);
   }
 
-  private void writeDataAndReadFromHFile(Path hfilePath,
-      Compression.Algorithm compressAlgo, int entryCount, boolean findMidKey, boolean useTags)
-      throws IOException {
+  private void writeDataAndReadFromHFile(Path hfilePath, Compression.Algorithm compressAlgo,
+    int entryCount, boolean findMidKey, boolean useTags) throws IOException {
 
-    HFileContext context = new HFileContextBuilder()
-      .withBlockSize(4096)
-      .withIncludesTags(useTags)
-      .withDataBlockEncoding(dataBlockEncoding)
-      .withCellComparator(CellComparatorImpl.COMPARATOR)
+    HFileContext context = new HFileContextBuilder().withBlockSize(4096).withIncludesTags(useTags)
+      .withDataBlockEncoding(dataBlockEncoding).withCellComparator(CellComparatorImpl.COMPARATOR)
       .withCompression(compressAlgo).build();
     CacheConfig cacheConfig = new CacheConfig(conf);
-    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig)
-      .withPath(fs, hfilePath)
-      .withFileContext(context)
-      .create();
+    HFile.Writer writer = new HFile.WriterFactory(conf, cacheConfig).withPath(fs, hfilePath)
+      .withFileContext(context).create();
 
     List<KeyValue> keyValues = new ArrayList<>(entryCount);
     writeKeyValues(entryCount, useTags, writer, RNG, keyValues);
@@ -154,34 +145,26 @@ public class TestHFileWriterV3WithDataEncoders {
     FSDataInputStream fsdis = fs.open(hfilePath);
 
     long fileSize = fs.getFileStatus(hfilePath).getLen();
-    FixedFileTrailer trailer =
-      FixedFileTrailer.readFromStream(fsdis, fileSize);
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, fileSize);
 
     Assert.assertEquals(3, trailer.getMajorVersion());
     Assert.assertEquals(entryCount, trailer.getEntryCount());
-    HFileContext meta = new HFileContextBuilder()
-      .withCompression(compressAlgo)
-      .withIncludesMvcc(true)
-      .withIncludesTags(useTags)
-      .withDataBlockEncoding(dataBlockEncoding)
+    HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)
+      .withIncludesMvcc(true).withIncludesTags(useTags).withDataBlockEncoding(dataBlockEncoding)
       .withHBaseCheckSum(true).build();
-    ReaderContext readerContext = new ReaderContextBuilder()
-      .withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
-      .withFilePath(hfilePath)
-      .withFileSystem(fs)
-      .withFileSize(fileSize).build();
+    ReaderContext readerContext =
+      new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
+        .withFilePath(hfilePath).withFileSystem(fs).withFileSize(fileSize).build();
     HFileBlock.FSReader blockReader =
       new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP, conf);
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
-      new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator,
-        trailer.getNumDataIndexLevels());
+      new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator, trailer.getNumDataIndexLevels());
     HFileBlockIndex.BlockIndexReader metaBlockIndexReader =
       new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
 
-    HFileBlock.BlockIterator blockIter = blockReader.blockRange(
-      trailer.getLoadOnOpenDataOffset(),
+    HFileBlock.BlockIterator blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
       fileSize - trailer.getTrailerSize());
     // Data index. We also read statistics about the block index written after
     // the root level.
@@ -189,12 +172,8 @@ public class TestHFileWriterV3WithDataEncoders {
       blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
 
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fs, hfilePath);
-    readerContext = new ReaderContextBuilder()
-      .withFilePath(hfilePath)
-      .withFileSize(fileSize)
-      .withFileSystem(wrapper.getHfs())
-      .withInputStreamWrapper(wrapper)
-      .build();
+    readerContext = new ReaderContextBuilder().withFilePath(hfilePath).withFileSize(fileSize)
+      .withFileSystem(wrapper.getHfs()).withInputStreamWrapper(wrapper).build();
     HFileInfo hfile = new HFileInfo(readerContext, conf);
     HFile.Reader reader = new HFilePreadReader(readerContext, hfile, cacheConfig, conf);
     hfile.initMetaAndIndex(reader);
@@ -205,14 +184,14 @@ public class TestHFileWriterV3WithDataEncoders {
 
     // Meta index.
     metaBlockIndexReader.readRootIndex(
-      blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
-        .getByteStream(), trailer.getMetaIndexCount());
+      blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX).getByteStream(),
+      trailer.getMetaIndexCount());
     // File info
     HFileInfo fileInfo = new HFileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
-    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
-    boolean includeMemstoreTS = keyValueFormatVersion != null &&
-      Bytes.toInt(keyValueFormatVersion) > 0;
+    byte[] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
+    boolean includeMemstoreTS =
+      keyValueFormatVersion != null && Bytes.toInt(keyValueFormatVersion) > 0;
 
     // Counters for the number of key/value pairs and the number of blocks
     int entriesRead = 0;
@@ -220,9 +199,8 @@ public class TestHFileWriterV3WithDataEncoders {
     long memstoreTS = 0;
 
     DataBlockEncoder encoder = dataBlockEncoding.getEncoder();
-    long curBlockPos = scanBlocks(entryCount, context, keyValues, fsdis, trailer,
-      meta, blockReader, entriesRead, blocksRead, encoder);
-
+    long curBlockPos = scanBlocks(entryCount, context, keyValues, fsdis, trailer, meta, blockReader,
+      entriesRead, blocksRead, encoder);
 
     // Meta blocks. We can scan until the load-on-open data offset (which is
     // the root block index offset in version 2) because we are not testing
@@ -232,18 +210,18 @@ public class TestHFileWriterV3WithDataEncoders {
     while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: {}, scanning until {}", fsdis.getPos(),
         trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false, true)
-        .unpack(context, blockReader);
+      HFileBlock block =
+        blockReader.readBlockData(curBlockPos, -1, false, false, true).unpack(context, blockReader);
       Assert.assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuff buf = block.getBufferWithoutHeader();
       if (Writables.getWritable(buf.array(), buf.arrayOffset(), buf.limit(), t) == null) {
-        throw new IOException("Failed to deserialize block " + this +
-          " into a " + t.getClass().getSimpleName());
+        throw new IOException(
+          "Failed to deserialize block " + this + " into a " + t.getClass().getSimpleName());
       }
-      Text expectedText =
-        (metaCounter == 0 ? new Text("Paris") : metaCounter == 1 ? new Text(
-          "Moscow") : new Text("Washington, D.C."));
+      Text expectedText = (metaCounter == 0 ? new Text("Paris")
+        : metaCounter == 1 ? new Text("Moscow")
+        : new Text("Washington, D.C."));
       Assert.assertEquals(expectedText, t);
       LOG.info("Read meta block data: " + t);
       ++metaCounter;
@@ -255,22 +233,22 @@ public class TestHFileWriterV3WithDataEncoders {
   }
 
   private long scanBlocks(int entryCount, HFileContext context, List<KeyValue> keyValues,
-      FSDataInputStream fsdis, FixedFileTrailer trailer, HFileContext meta,
-      HFileBlock.FSReader blockReader, int entriesRead, int blocksRead,
-      DataBlockEncoder encoder) throws IOException {
+    FSDataInputStream fsdis, FixedFileTrailer trailer, HFileContext meta,
+    HFileBlock.FSReader blockReader, int entriesRead, int blocksRead, DataBlockEncoder encoder)
+    throws IOException {
     // Scan blocks the way the reader would scan them
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
       HFileBlockDecodingContext ctx = blockReader.getBlockDecodingContext();
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, false, false, true)
-        .unpack(context, blockReader);
+      HFileBlock block =
+        blockReader.readBlockData(curBlockPos, -1, false, false, true).unpack(context, blockReader);
       Assert.assertEquals(BlockType.ENCODED_DATA, block.getBlockType());
       ByteBuff origBlock = block.getBufferReadOnly();
       int pos = block.headerSize() + DataBlockEncoding.ID_SIZE;
       origBlock.position(pos);
       origBlock.limit(pos + block.getUncompressedSizeWithoutHeader() - DataBlockEncoding.ID_SIZE);
-      ByteBuff buf =  origBlock.slice();
+      ByteBuff buf = origBlock.slice();
       DataBlockEncoder.EncodedSeeker seeker =
         encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
       seeker.setCurrentBuffer(buf);
@@ -278,7 +256,7 @@ public class TestHFileWriterV3WithDataEncoders {
       KeyValue kv = keyValues.get(entriesRead);
       Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
       ++entriesRead;
-      while(seeker.next()) {
+      while (seeker.next()) {
         res = seeker.getCell();
         kv = keyValues.get(entriesRead);
         Assert.assertEquals(0, CellComparatorImpl.COMPARATOR.compare(res, kv));
@@ -292,8 +270,8 @@ public class TestHFileWriterV3WithDataEncoders {
     return curBlockPos;
   }
 
-  private void writeKeyValues(int entryCount, boolean useTags, HFile.Writer writer,
-      Random rand, List<KeyValue> keyValues) throws IOException {
+  private void writeKeyValues(int entryCount, boolean useTags, HFile.Writer writer, Random rand,
+    List<KeyValue> keyValues) throws IOException {
 
     for (int i = 0; i < entryCount; ++i) {
       byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(rand, i);
@@ -308,11 +286,10 @@ public class TestHFileWriterV3WithDataEncoders {
           rand.nextBytes(tagBytes);
           tags.add(new ArrayBackedTag((byte) 1, tagBytes));
         }
-        keyValue = new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP,
-          valueBytes, tags);
+        keyValue =
+          new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP, valueBytes, tags);
       } else {
-        keyValue = new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP,
-          valueBytes);
+        keyValue = new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP, valueBytes);
       }
       writer.append(keyValue);
       keyValues.add(keyValue);

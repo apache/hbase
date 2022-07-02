@@ -28,23 +28,21 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsRegionServerSourceImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsRegionServerSourceImpl.class);
+    HBaseClassTestRule.forClass(TestMetricsRegionServerSourceImpl.class);
 
   @Test
   public void testGetInstance() {
     MetricsRegionServerSourceFactory metricsRegionServerSourceFactory =
-        CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
-    MetricsRegionServerSource serverSource =
-        metricsRegionServerSourceFactory.createServer(null);
+      CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
+    MetricsRegionServerSource serverSource = metricsRegionServerSourceFactory.createServer(null);
     assertTrue(serverSource instanceof MetricsRegionServerSourceImpl);
     assertSame(metricsRegionServerSourceFactory,
-        CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class));
+      CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class));
   }
-
 
   @Test(expected = RuntimeException.class)
   public void testNoGetRegionServerMetricsSourceImpl() {

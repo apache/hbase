@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class RestoreSnapshotException extends HBaseSnapshotException {
   /**
-   * @param message reason why restoring the snapshot fails
+   * @param message             reason why restoring the snapshot fails
    * @param snapshotDescription description of the snapshot attempted
    */
   public RestoreSnapshotException(String message, SnapshotDescription snapshotDescription) {
@@ -35,12 +35,12 @@ public class RestoreSnapshotException extends HBaseSnapshotException {
   }
 
   /**
-   * @param message reason why restoring the snapshot fails
-   * @param cause the root cause of the failure
+   * @param message             reason why restoring the snapshot fails
+   * @param cause               the root cause of the failure
    * @param snapshotDescription description of the snapshot attempted
    */
   public RestoreSnapshotException(String message, Throwable cause,
-      SnapshotDescription snapshotDescription) {
+    SnapshotDescription snapshotDescription) {
     super(message, cause, snapshotDescription);
   }
 
@@ -53,7 +53,7 @@ public class RestoreSnapshotException extends HBaseSnapshotException {
 
   /**
    * @param message reason why restoring the snapshot fails
-   * @param cause the root cause of the failure
+   * @param cause   the root cause of the failure
    */
   public RestoreSnapshotException(String message, Throwable cause) {
     super(message, cause);

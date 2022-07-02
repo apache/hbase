@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,11 +27,10 @@ import org.apache.yetus.audience.InterfaceStability;
  * This class gives you the ability to change the max versions and TTL options before opening a
  * scanner for a Store. And also gives you some information for the scan.
  * <p>
- * Changing max versions, min versins, KeepDeletedCells, and TTL are usually safe even
- * for flush/compaction, so here we provide a way to do it for you. If you want to do other
- * complicated operations such as filtering, please wrap
- * the {@link InternalScanner} in the {@code preCompact} and {@code preFlush} methods in
- * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}.
+ * Changing max versions, min versins, KeepDeletedCells, and TTL are usually safe even for
+ * flush/compaction, so here we provide a way to do it for you. If you want to do other complicated
+ * operations such as filtering, please wrap the {@link InternalScanner} in the {@code preCompact}
+ * and {@code preFlush} methods in {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}.
  * <p>
  * For user scans, we also provide this class as a parameter in the {@code preStoreScannerOpen}
  * method in {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}. You can use it to change

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
 import java.io.File;
@@ -41,8 +40,8 @@ public class SecureTestCluster {
 
   private static LocalHBaseCluster CLUSTER;
 
-  private static final File KEYTAB_FILE = new File(TEST_UTIL.getDataTestDir("keytab").toUri()
-      .getPath());
+  private static final File KEYTAB_FILE =
+    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
   private static MiniKdc KDC;
 
   private static String HOST = "localhost";
@@ -51,20 +50,20 @@ public class SecureTestCluster {
 
   private static String HTTP_PRINCIPAL;
 
-  //When extending SecureTestCluster on downstream projects that refer SecureTestCluster via
-  //hbase-server jar, we need to provide a way for the implementation to refer to its own class
-  //definition, so that KeyStoreTestUtil.getClasspathDir can resolve a valid path in the local FS
-  //to place required SSL config files.
+  // When extending SecureTestCluster on downstream projects that refer SecureTestCluster via
+  // hbase-server jar, we need to provide a way for the implementation to refer to its own class
+  // definition, so that KeyStoreTestUtil.getClasspathDir can resolve a valid path in the local FS
+  // to place required SSL config files.
   private static Class testRunnerClass = SecureTestCluster.class;
 
   /**
-   * SecureTestCluster extending classes can set their own <code>Class</code> reference type
-   * to be used as the target resource to be looked for on the class loader by
+   * SecureTestCluster extending classes can set their own <code>Class</code> reference type to be
+   * used as the target resource to be looked for on the class loader by
    * <code>KeyStoreTestUtil</code>, when deciding where to place ssl related config files.
-   * @param testRunnerClass a <code>Class</code> reference from the
-   *                        <code>SecureTestCluster</code> extender.
+   * @param testRunnerClass a <code>Class</code> reference from the <code>SecureTestCluster</code>
+   *                        extender.
    */
-  protected static void setTestRunner(Class testRunnerClass){
+  protected static void setTestRunner(Class testRunnerClass) {
     SecureTestCluster.testRunnerClass = testRunnerClass;
   }
 
@@ -84,11 +83,11 @@ public class SecureTestCluster {
     TEST_UTIL.startMiniZKCluster();
 
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration(),
-        PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+      PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSSLConfiguration(TEST_UTIL, testRunnerClass);
 
     TEST_UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        TokenProvider.class.getName());
+      TokenProvider.class.getName());
     TEST_UTIL.startMiniDFSCluster(1);
     Path rootdir = TEST_UTIL.getDataTestDirOnTestFS("TestGenerateDelegationToken");
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootdir);

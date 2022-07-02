@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +18,16 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.UUID;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Filters out entries with our peerClusterId (i.e. already replicated)
- * and marks all other entries with our clusterID
+ * Filters out entries with our peerClusterId (i.e. already replicated) and marks all other entries
+ * with our clusterID
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 @InterfaceStability.Evolving
@@ -40,22 +37,26 @@ public class ClusterMarkingEntryFilter implements WALEntryFilter {
   private ReplicationEndpoint replicationEndpoint;
 
   /**
-   * @param clusterId id of this cluster
-   * @param peerClusterId of the other cluster
+   * @param clusterId           id of this cluster
+   * @param peerClusterId       of the other cluster
    * @param replicationEndpoint ReplicationEndpoint which will handle the actual replication
    */
-  public ClusterMarkingEntryFilter(UUID clusterId, UUID peerClusterId, ReplicationEndpoint replicationEndpoint) {
+  public ClusterMarkingEntryFilter(UUID clusterId, UUID peerClusterId,
+    ReplicationEndpoint replicationEndpoint) {
     this.clusterId = clusterId;
     this.peerClusterId = peerClusterId;
     this.replicationEndpoint = replicationEndpoint;
   }
+
   @Override
   public Entry filter(Entry entry) {
     // don't replicate if the log entries have already been consumed by the cluster
-    if (replicationEndpoint.canReplicateToSameCluster()
-        || !entry.getKey().getClusterIds().contains(peerClusterId)) {
+    if (
+      replicationEndpoint.canReplicateToSameCluster()
+        || !entry.getKey().getClusterIds().contains(peerClusterId)
+    ) {
       WALEdit edit = entry.getEdit();
-      WALKeyImpl logKey = (WALKeyImpl)entry.getKey();
+      WALKeyImpl logKey = (WALKeyImpl) entry.getKey();
 
       if (edit != null && !edit.isEmpty()) {
         // Mark that the current cluster has the change

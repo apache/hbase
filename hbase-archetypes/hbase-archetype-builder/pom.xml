@@ -1,6 +1,5 @@
-<?xml version="1.0"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
   /**
    * Licensed to the Apache Software Foundation (ASF) under one
@@ -23,9 +22,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>hbase-archetypes</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <artifactId>hbase-archetypes</artifactId>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -58,10 +57,10 @@
             further using xml-maven-plugin for xslt transformation, below. -->
           <execution>
             <id>hbase-client__copy-src-to-build-archetype-subdir</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${build.archetype.subdir}</outputDirectory>
               <resources>
@@ -76,29 +75,30 @@
           </execution>
           <execution>
             <id>hbase-client__copy-pom-to-temp-for-xslt-processing</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${temp.exemplar.subdir}</outputDirectory>
               <resources>
                 <resource>
                   <directory>/${project.basedir}/../${hbase-client.dir}</directory>
-                  <filtering>true</filtering> <!-- filtering replaces ${project.version} with literal -->
+                  <filtering>true</filtering>
+                  <!-- filtering replaces ${project.version} with literal -->
                   <includes>
                     <include>pom.xml</include>
                   </includes>
-                 </resource>
+                </resource>
               </resources>
             </configuration>
           </execution>
           <execution>
             <id>hbase-shaded-client__copy-src-to-build-archetype-subdir</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${build.archetype.subdir}</outputDirectory>
               <resources>
@@ -113,20 +113,21 @@
           </execution>
           <execution>
             <id>hbase-shaded-client__copy-pom-to-temp-for-xslt-processing</id>
-            <phase>generate-resources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>generate-resources</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.exemplar.subdir}</outputDirectory>
               <resources>
                 <resource>
                   <directory>/${project.basedir}/../${hbase-shaded-client.dir}</directory>
-                  <filtering>true</filtering> <!-- filtering replaces ${project.version} with literal -->
+                  <filtering>true</filtering>
+                  <!-- filtering replaces ${project.version} with literal -->
                   <includes>
                     <include>pom.xml</include>
                   </includes>
-                 </resource>
+                </resource>
               </resources>
             </configuration>
           </execution>
@@ -137,10 +138,10 @@
             using xml-maven-plugin for xslt transformation, below.  -->
           <execution>
             <id>hbase-client-ARCHETYPE__copy-pom-to-temp-for-xslt-processing</id>
-            <phase>prepare-package</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>prepare-package</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-client.dir}/${temp.archetype.subdir}</outputDirectory>
               <resources>
@@ -149,16 +150,16 @@
                   <includes>
                     <include>pom.xml</include>
                   </includes>
-                 </resource>
+                </resource>
               </resources>
             </configuration>
           </execution>
           <execution>
             <id>hbase-shaded-client-ARCHETYPE__copy-pom-to-temp-for-xslt-processing</id>
-            <phase>prepare-package</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
+            <phase>prepare-package</phase>
             <configuration>
               <outputDirectory>/${project.basedir}/../${hbase-shaded-client.dir}/${temp.archetype.subdir}</outputDirectory>
               <resources>
@@ -167,7 +168,7 @@
                   <includes>
                     <include>pom.xml</include>
                   </includes>
-                 </resource>
+                </resource>
               </resources>
             </configuration>
           </execution>
@@ -182,10 +183,10 @@
           <!-- xml-maven-plugin modifies each exemplar project's pom.xml file to convert to standalone project. -->
           <execution>
             <id>modify-exemplar-pom-files-via-xslt</id>
-            <phase>process-resources</phase>
             <goals>
               <goal>transform</goal>
             </goals>
+            <phase>process-resources</phase>
             <configuration>
               <transformationSets>
                 <transformationSet>
@@ -212,10 +213,10 @@
                prevent warnings when project is generated from archetype.  -->
           <execution>
             <id>modify-archetype-pom-files-via-xslt</id>
-            <phase>package</phase>
             <goals>
               <goal>transform</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <transformationSets>
                 <transformationSet>
@@ -242,32 +243,32 @@
       </plugin>
 
       <plugin>
-      <artifactId>maven-antrun-plugin</artifactId>
+        <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <!-- exec-maven-plugin executes chmod to make scripts executable -->
           <execution>
             <id>make-scripts-executable</id>
-            <phase>process-resources</phase>
             <goals>
               <goal>run</goal>
             </goals>
+            <phase>process-resources</phase>
             <configuration>
-              <chmod file="${project.basedir}/createArchetypes.sh" perm="+x" />
-              <chmod file="${project.basedir}/installArchetypes.sh" perm="+x" />
+              <chmod file="${project.basedir}/createArchetypes.sh" perm="+x"/>
+              <chmod file="${project.basedir}/installArchetypes.sh" perm="+x"/>
             </configuration>
           </execution>
           <!-- exec-maven-plugin executes script which invokes 'archetype:create-from-project'
                to derive archetypes from exemplar projects. -->
           <execution>
             <id>run-createArchetypes-script</id>
-            <phase>compile</phase>
             <goals>
               <goal>run</goal>
             </goals>
+            <phase>compile</phase>
             <configuration>
-              <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
-                 <arg line="./createArchetypes.sh"/>
-               </exec>
+              <exec dir="${project.basedir}" executable="${shell-executable}" failonerror="true">
+                <arg line="./createArchetypes.sh"/>
+              </exec>
             </configuration>
           </execution>
           <!-- exec-maven-plugin executes script which invokes 'install' to install each
@@ -277,14 +278,14 @@
                which does test generation of a project based on the archetype. -->
           <execution>
             <id>run-installArchetypes-script</id>
-            <phase>install</phase>
             <goals>
               <goal>run</goal>
             </goals>
+            <phase>install</phase>
             <configuration>
-              <exec executable="${shell-executable}" dir="${project.basedir}" failonerror="true">
-                 <arg line="./installArchetypes.sh"/>
-               </exec>
+              <exec dir="${project.basedir}" executable="${shell-executable}" failonerror="true">
+                <arg line="./installArchetypes.sh"/>
+              </exec>
             </configuration>
           </execution>
         </executions>

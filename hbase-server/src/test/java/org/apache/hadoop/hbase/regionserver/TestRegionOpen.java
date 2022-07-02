@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,12 +54,12 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, RegionServerTests.class})
+@Category({ MediumTests.class, RegionServerTests.class })
 public class TestRegionOpen {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionOpen.class);
+    HBaseClassTestRule.forClass(TestRegionOpen.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
   private static final int NB_SERVERS = 1;
@@ -86,15 +86,15 @@ public class TestRegionOpen {
   @Test
   public void testPriorityRegionIsOpenedWithSeparateThreadPool() throws Exception {
     final TableName tableName = TableName.valueOf(TestRegionOpen.class.getSimpleName());
-    ThreadPoolExecutor exec = getRS().getExecutorService()
-        .getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
+    ThreadPoolExecutor exec =
+      getRS().getExecutorService().getExecutorThreadPool(ExecutorType.RS_OPEN_PRIORITY_REGION);
     long completed = exec.getCompletedTaskCount();
 
     TableDescriptor tableDescriptor =
       TableDescriptorBuilder.newBuilder(tableName).setPriority(HConstants.HIGH_QOS)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Admin admin = connection.getAdmin()) {
+      Admin admin = connection.getAdmin()) {
       admin.createTable(tableDescriptor);
     }
 
@@ -125,7 +125,8 @@ public class TestRegionOpen {
     try {
       HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
     } catch (IOException e) {
-      LOG.info("Caught expected IOE due missing .regioninfo file, due: " + e.getMessage() + " skipping region open.");
+      LOG.info("Caught expected IOE due missing .regioninfo file, due: " + e.getMessage()
+        + " skipping region open.");
       // We should only have 1 region online
       List<RegionInfo> regions = admin.getRegions(tableName);
       LOG.info("Regions: " + regions);

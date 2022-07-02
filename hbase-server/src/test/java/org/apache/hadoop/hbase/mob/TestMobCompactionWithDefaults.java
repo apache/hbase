@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +16,14 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.mob;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -41,46 +43,41 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-  * Mob file compaction base test.
-  * 1. Enables batch mode for regular MOB compaction,
-  *    Sets batch size to 7 regions. (Optional)
-  * 2. Disables periodic MOB compactions, sets minimum age to archive to 10 sec
-  * 3. Creates MOB table with 20 regions
-  * 4. Loads MOB data (randomized keys, 1000 rows), flushes data.
-  * 5. Repeats 4. two more times
-  * 6. Verifies that we have 20 *3 = 60 mob files (equals to number of regions x 3)
-  * 7. Runs major MOB compaction.
-  * 8. Verifies that number of MOB files in a mob directory is 20 x4 = 80
-  * 9. Waits for a period of time larger than minimum age to archive
-  * 10. Runs Mob cleaner chore
-  * 11 Verifies that number of MOB files in a mob directory is 20.
-  * 12 Runs scanner and checks all 3 * 1000 rows.
+ * Mob file compaction base test. 1. Enables batch mode for regular MOB compaction, Sets batch size
+ * to 7 regions. (Optional) 2. Disables periodic MOB compactions, sets minimum age to archive to 10
+ * sec 3. Creates MOB table with 20 regions 4. Loads MOB data (randomized keys, 1000 rows), flushes
+ * data. 5. Repeats 4. two more times 6. Verifies that we have 20 *3 = 60 mob files (equals to
+ * number of regions x 3) 7. Runs major MOB compaction. 8. Verifies that number of MOB files in a
+ * mob directory is 20 x4 = 80 9. Waits for a period of time larger than minimum age to archive 10.
+ * Runs Mob cleaner chore 11 Verifies that number of MOB files in a mob directory is 20. 12 Runs
+ * scanner and checks all 3 * 1000 rows.
  */
+@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestMobCompactionWithDefaults {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestMobCompactionWithDefaults.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactionWithDefaults.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactionWithDefaults.class);
+    HBaseClassTestRule.forClass(TestMobCompactionWithDefaults.class);
 
-  protected static HBaseTestingUtil HTU;
+  protected HBaseTestingUtil HTU;
   protected static Configuration conf;
   protected static long minAgeToArchive = 10000;
 
@@ -89,7 +86,7 @@ public class TestMobCompactionWithDefaults {
   protected final static byte[] qualifier = Bytes.toBytes("q1");
   protected final static long mobLen = 10;
   protected final static byte[] mobVal = Bytes
-      .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
+    .toBytes("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
 
   @Rule
   public TestName test = new TestName();
@@ -102,8 +99,19 @@ public class TestMobCompactionWithDefaults {
 
   protected MobFileCleanerChore cleanerChore;
 
-  @BeforeClass
-  public static void htuStart() throws Exception {
+  protected Boolean useFileBasedSFT;
+
+  public TestMobCompactionWithDefaults(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = { false, true };
+    return Arrays.asList(data);
+  }
+
+  protected void htuStart() throws Exception {
     HTU = new HBaseTestingUtil();
     conf = HTU.getConfiguration();
     conf.setInt("hfile.format.version", 3);
@@ -114,23 +122,27 @@ public class TestMobCompactionWithDefaults {
     // Set minimum age to archive to 10 sec
     conf.setLong(MobConstants.MIN_AGE_TO_ARCHIVE_KEY, minAgeToArchive);
     // Set compacted file discharger interval to a half minAgeToArchive
-    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive/2);
+    conf.setLong("hbase.hfile.compaction.discharger.interval", minAgeToArchive / 2);
     conf.setBoolean("hbase.regionserver.compaction.enabled", false);
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
+    additonalConfigSetup();
     HTU.startMiniCluster();
   }
 
-  @AfterClass
-  public static void htuStop() throws Exception {
-    HTU.shutdownMiniCluster();
+  protected void additonalConfigSetup() {
   }
 
   @Before
   public void setUp() throws Exception {
+    htuStart();
     admin = HTU.getAdmin();
     cleanerChore = new MobFileCleanerChore();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
-    tableDescriptor = HTU.createModifyableTableDescriptor(test.getMethodName())
+    tableDescriptor = HTU.createModifyableTableDescriptor(TestMobUtils.getTableName(test))
       .setColumnFamily(familyDescriptor).build();
     RegionSplitter.UniformSplit splitAlgo = new RegionSplitter.UniformSplit();
     byte[][] splitKeys = splitAlgo.split(numRegions);
@@ -159,6 +171,7 @@ public class TestMobCompactionWithDefaults {
   public void tearDown() throws Exception {
     admin.disableTable(tableDescriptor.getTableName());
     admin.deleteTable(tableDescriptor.getTableName());
+    HTU.shutdownMiniCluster();
   }
 
   @Test
@@ -167,56 +180,56 @@ public class TestMobCompactionWithDefaults {
     loadAndFlushThreeTimes(rows, table, famStr);
     mobCompact(tableDescriptor, familyDescriptor);
     assertEquals("Should have 4 MOB files per region due to 3xflush + compaction.", numRegions * 4,
-        getNumberOfMobFiles(table, famStr));
-    cleanupAndVerifyCounts(table, famStr, 3*rows);
+      getNumberOfMobFiles(table, famStr));
+    cleanupAndVerifyCounts(table, famStr, 3 * rows);
     LOG.info("MOB compaction " + description() + " finished OK");
   }
 
   @Test
   public void testMobFileCompactionAfterSnapshotClone() throws InterruptedException, IOException {
-    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
     LOG.info("MOB compaction of cloned snapshot, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(test.getMethodName(), table);
-    admin.cloneSnapshot(test.getMethodName(), clone);
+    admin.snapshot(TestMobUtils.getTableName(test), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
     assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
-        getNumberOfMobFiles(clone, famStr));
+      getNumberOfMobFiles(clone, famStr));
     mobCompact(admin.getDescriptor(clone), familyDescriptor);
     assertEquals("Should have 3 hlinks + 1 MOB file per region due to clone + compact",
-        4 * numRegions, getNumberOfMobFiles(clone, famStr));
-    cleanupAndVerifyCounts(clone, famStr, 3*rows);
+      4 * numRegions, getNumberOfMobFiles(clone, famStr));
+    cleanupAndVerifyCounts(clone, famStr, 3 * rows);
     LOG.info("MOB compaction of cloned snapshot, " + description() + " finished OK");
   }
 
   @Test
-  public void testMobFileCompactionAfterSnapshotCloneAndFlush() throws InterruptedException,
-      IOException {
-    final TableName clone = TableName.valueOf(test.getMethodName() + "-clone");
+  public void testMobFileCompactionAfterSnapshotCloneAndFlush()
+    throws InterruptedException, IOException {
+    final TableName clone = TableName.valueOf(TestMobUtils.getTableName(test) + "-clone");
     LOG.info("MOB compaction of cloned snapshot after flush, " + description() + " started");
     loadAndFlushThreeTimes(rows, table, famStr);
     LOG.debug("Taking snapshot and cloning table {}", table);
-    admin.snapshot(test.getMethodName(), table);
-    admin.cloneSnapshot(test.getMethodName(), clone);
+    admin.snapshot(TestMobUtils.getTableName(test), table);
+    admin.cloneSnapshot(TestMobUtils.getTableName(test), clone);
     assertEquals("Should have 3 hlinks per region in MOB area from snapshot clone", 3 * numRegions,
-        getNumberOfMobFiles(clone, famStr));
+      getNumberOfMobFiles(clone, famStr));
     loadAndFlushThreeTimes(rows, clone, famStr);
     mobCompact(admin.getDescriptor(clone), familyDescriptor);
     assertEquals("Should have 7 MOB file per region due to clone + 3xflush + compact",
-        7 * numRegions, getNumberOfMobFiles(clone, famStr));
-    cleanupAndVerifyCounts(clone, famStr, 6*rows);
+      7 * numRegions, getNumberOfMobFiles(clone, famStr));
+    cleanupAndVerifyCounts(clone, famStr, 6 * rows);
     LOG.info("MOB compaction of cloned snapshot w flush, " + description() + " finished OK");
   }
 
   protected void loadAndFlushThreeTimes(int rows, TableName table, String family)
-      throws IOException {
+    throws IOException {
     final long start = getNumberOfMobFiles(table, family);
     // Load and flush data 3 times
     loadData(table, rows);
     loadData(table, rows);
     loadData(table, rows);
-    assertEquals("Should have 3 more mob files per region from flushing.", start +  numRegions * 3,
-        getNumberOfMobFiles(table, family));
+    assertEquals("Should have 3 more mob files per region from flushing.", start + numRegions * 3,
+      getNumberOfMobFiles(table, family));
   }
 
   protected String description() {
@@ -224,24 +237,23 @@ public class TestMobCompactionWithDefaults {
   }
 
   protected void enableCompactions() throws IOException {
-    final List<String> serverList = admin.getRegionServers().stream().map(sn -> sn.getServerName())
-          .collect(Collectors.toList());
+    final List<String> serverList =
+      admin.getRegionServers().stream().map(sn -> sn.getServerName()).collect(Collectors.toList());
     admin.compactionSwitch(true, serverList);
   }
 
   protected void disableCompactions() throws IOException {
-    final List<String> serverList = admin.getRegionServers().stream().map(sn -> sn.getServerName())
-          .collect(Collectors.toList());
+    final List<String> serverList =
+      admin.getRegionServers().stream().map(sn -> sn.getServerName()).collect(Collectors.toList());
     admin.compactionSwitch(false, serverList);
   }
 
   /**
-   * compact the given table and return once it is done.
-   * should presume compactions are disabled when called.
-   * should ensure compactions are disabled before returning.
+   * compact the given table and return once it is done. should presume compactions are disabled
+   * when called. should ensure compactions are disabled before returning.
    */
   protected void mobCompact(TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
+    ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
     LOG.debug("Major compact MOB table " + tableDescriptor.getTableName());
     enableCompactions();
     mobCompactImpl(tableDescriptor, familyDescriptor);
@@ -250,17 +262,16 @@ public class TestMobCompactionWithDefaults {
   }
 
   /**
-   * Call the API for compaction specific to the test set.
-   * should not wait for compactions to finish.
-   * may assume compactions are enabled when called.
+   * Call the API for compaction specific to the test set. should not wait for compactions to
+   * finish. may assume compactions are enabled when called.
    */
   protected void mobCompactImpl(TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
+    ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
     admin.majorCompact(tableDescriptor.getTableName(), familyDescriptor.getName());
   }
 
   protected void waitUntilCompactionIsComplete(TableName table)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     CompactionState state = admin.getCompactionState(table);
     while (state != CompactionState.NONE) {
       LOG.debug("Waiting for compaction on {} to complete. current state {}", table, state);
@@ -271,18 +282,21 @@ public class TestMobCompactionWithDefaults {
   }
 
   protected void cleanupAndVerifyCounts(TableName table, String family, int rows)
-      throws InterruptedException, IOException {
+    throws InterruptedException, IOException {
     // We have guarantee, that compacted file discharger will run during this pause
     // because it has interval less than this wait time
     LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
 
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
-    // Cleanup again
-    cleanerChore.cleanupObsoleteMobFiles(conf, table);
+
+    // run cleaner chore on each RS
+    for (ServerName sn : admin.getRegionServers()) {
+      HTU.getMiniHBaseCluster().getRegionServer(sn).getRSMobFileCleanerChore().chore();
+    }
 
     assertEquals("After cleaning, we should have 1 MOB file per region based on size.", numRegions,
-        getNumberOfMobFiles(table, family));
+      getNumberOfMobFiles(table, family));
 
     LOG.debug("checking count of rows");
     long scanned = scanTable(table);
@@ -290,8 +304,7 @@ public class TestMobCompactionWithDefaults {
 
   }
 
-  protected  long getNumberOfMobFiles(TableName tableName, String family)
-      throws IOException {
+  protected long getNumberOfMobFiles(TableName tableName, String family) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     Path dir = MobUtils.getMobFamilyPath(conf, tableName, family);
     FileStatus[] stat = fs.listStatus(dir);
@@ -303,10 +316,9 @@ public class TestMobCompactionWithDefaults {
     return stat.length;
   }
 
-
   protected long scanTable(TableName tableName) {
     try (final Table table = HTU.getConnection().getTable(tableName);
-         final ResultScanner scanner = table.getScanner(fam)) {
+      final ResultScanner scanner = table.getScanner(fam)) {
       Result result;
       long counter = 0;
       while ((result = scanner.next()) != null) {

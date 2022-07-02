@@ -79,10 +79,8 @@ public final class TraceUtil {
   /**
    * Trace an asynchronous operation for a table.
    */
-  public static <T> CompletableFuture<T> tracedFuture(
-    Supplier<CompletableFuture<T>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> CompletableFuture<T> tracedFuture(Supplier<CompletableFuture<T>> action,
+    Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       CompletableFuture<T> future = action.get();
@@ -108,10 +106,8 @@ public final class TraceUtil {
    * Trace an asynchronous operation, and finish the create {@link Span} when all the given
    * {@code futures} are completed.
    */
-  public static <T> List<CompletableFuture<T>> tracedFutures(
-    Supplier<List<CompletableFuture<T>>> action,
-    Supplier<Span> spanSupplier
-  ) {
+  public static <T> List<CompletableFuture<T>>
+    tracedFutures(Supplier<List<CompletableFuture<T>>> action, Supplier<Span> spanSupplier) {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       List<CompletableFuture<T>> futures = action.get();
@@ -140,6 +136,31 @@ public final class TraceUtil {
   }
 
   /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable, final String spanName) {
+    return tracedRunnable(runnable, () -> createSpan(spanName));
+  }
+
+  /**
+   * Wrap the provided {@code runnable} in a {@link Runnable} that is traced.
+   */
+  public static Runnable tracedRunnable(final Runnable runnable,
+    final Supplier<Span> spanSupplier) {
+    // N.B. This method name follows the convention of this class, i.e., tracedFuture, rather than
+    // the convention of the OpenTelemetry classes, i.e., Context#wrap.
+    return () -> {
+      final Span span = spanSupplier.get();
+      try (final Scope ignored = span.makeCurrent()) {
+        runnable.run();
+        span.setStatus(StatusCode.OK);
+      } finally {
+        span.end();
+      }
+    };
+  }
+
+  /**
    * A {@link Runnable} that may also throw.
    * @param <T> the type of {@link Throwable} that can be produced.
    */
@@ -148,16 +169,19 @@ public final class TraceUtil {
     void run() throws T;
   }
 
-  public static <T extends Throwable> void trace(
-    final ThrowingRunnable<T> runnable,
+  /**
+   * Trace the execution of {@code runnable}.
+   */
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
     final String spanName) throws T {
     trace(runnable, () -> createSpan(spanName));
   }
 
-  public static <T extends Throwable> void trace(
-    final ThrowingRunnable<T> runnable,
-    final Supplier<Span> spanSupplier
-  ) throws T {
+  /**
+   * Trace the execution of {@code runnable}.
+   */
+  public static <T extends Throwable> void trace(final ThrowingRunnable<T> runnable,
+    final Supplier<Span> spanSupplier) throws T {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       runnable.run();
@@ -180,17 +204,13 @@ public final class TraceUtil {
     R call() throws T;
   }
 
-  public static <R, T extends Throwable> R trace(
-    final ThrowingCallable<R, T> callable,
-    final String spanName
-  ) throws T {
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final String spanName) throws T {
     return trace(callable, () -> createSpan(spanName));
   }
 
-  public static <R, T extends Throwable> R trace(
-    final ThrowingCallable<R, T> callable,
-    final Supplier<Span> spanSupplier
-  ) throws T {
+  public static <R, T extends Throwable> R trace(final ThrowingCallable<R, T> callable,
+    final Supplier<Span> spanSupplier) throws T {
     Span span = spanSupplier.get();
     try (Scope ignored = span.makeCurrent()) {
       final R ret = callable.call();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +21,16 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * An interface for a screen view that handles key presses and timers.
  */
 @InterfaceAudience.Private
 public interface ScreenView {
   void init();
-  @Nullable ScreenView handleKeyPress(KeyPress keyPress);
-  @Nullable ScreenView handleTimer();
+
+  @Nullable
+  ScreenView handleKeyPress(KeyPress keyPress);
+
+  @Nullable
+  ScreenView handleTimer();
 }

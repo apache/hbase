@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,14 +59,12 @@ public class TestAdmin extends TestAdminBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin.class);
 
   @Test
-  public void testListTableDescriptors() throws IOException{
-    TableDescriptor metaTableDescriptor =  TEST_UTIL.getAdmin().
-        getDescriptor(TableName.META_TABLE_NAME);
-    List<TableDescriptor> tableDescriptors = TEST_UTIL.getAdmin().
-        listTableDescriptors(true);
+  public void testListTableDescriptors() throws IOException {
+    TableDescriptor metaTableDescriptor =
+      TEST_UTIL.getAdmin().getDescriptor(TableName.META_TABLE_NAME);
+    List<TableDescriptor> tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(true);
     assertTrue(tableDescriptors.contains(metaTableDescriptor));
-    tableDescriptors = TEST_UTIL.getAdmin().
-        listTableDescriptors(false);
+    tableDescriptors = TEST_UTIL.getAdmin().listTableDescriptors(false);
     assertFalse(tableDescriptors.contains(metaTableDescriptor));
   }
 
@@ -94,7 +92,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void testTruncateTable(final TableName tableName, boolean preserveSplits)
-      throws IOException {
+    throws IOException {
     byte[][] splitKeys = new byte[2][];
     splitKeys[0] = Bytes.toBytes(4);
     splitKeys[1] = Bytes.toBytes(8);
@@ -356,7 +354,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void verifyRoundRobinDistribution(RegionLocator regionLocator, int expectedRegions)
-      throws IOException {
+    throws IOException {
     int numRS = TEST_UTIL.getMiniHBaseCluster().getNumLiveRegionServers();
     List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<RegionInfo>> server2Regions = new HashMap<>();
@@ -393,7 +391,7 @@ public class TestAdmin extends TestAdminBase {
   }
 
   private void testCloneTableSchema(final TableName tableName, final TableName newTableName,
-      boolean preserveSplits) throws Exception {
+    boolean preserveSplits) throws Exception {
     byte[] FAMILY_0 = Bytes.toBytes("cf0");
     byte[] FAMILY_1 = Bytes.toBytes("cf1");
     byte[][] splitKeys = new byte[2][];
@@ -427,8 +425,7 @@ public class TestAdmin extends TestAdminBase {
     assertEquals(TTL, newTableDesc.getColumnFamily(FAMILY_1).getTimeToLive());
     // HBASE-26246 introduced persist of store file tracker into table descriptor
     tableDesc = TableDescriptorBuilder.newBuilder(tableDesc).setValue(TRACKER_IMPL,
-      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).
-      build();
+      StoreFileTrackerFactory.getStoreFileTrackerName(TEST_UTIL.getConfiguration())).build();
     TEST_UTIL.verifyTableDescriptorIgnoreTableName(tableDesc, newTableDesc);
 
     if (preserveSplits) {

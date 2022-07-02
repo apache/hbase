@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,7 +49,7 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   public CustomizedScanInfoBuilder(ScanInfo scanInfo, Scan scan) {
     this.scanInfo = scanInfo;
-    //copy the scan so no coproc using this ScanOptions can alter the "real" scan
+    // copy the scan so no coproc using this ScanOptions can alter the "real" scan
     this.scan = new ImmutableScan(scan);
   }
 
@@ -83,8 +83,8 @@ public class CustomizedScanInfoBuilder implements ScanOptions {
 
   @Override
   public String toString() {
-    return "ScanOptions [maxVersions=" + getMaxVersions() + ", TTL=" + getTTL() +
-      ", KeepDeletedCells=" + getKeepDeletedCells() + ", MinVersions=" + getMinVersions() + "]";
+    return "ScanOptions [maxVersions=" + getMaxVersions() + ", TTL=" + getTTL()
+      + ", KeepDeletedCells=" + getKeepDeletedCells() + ", MinVersions=" + getMinVersions() + "]";
   }
 
   @Override

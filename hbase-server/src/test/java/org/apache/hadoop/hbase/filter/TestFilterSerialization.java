@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,12 +36,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestFilterSerialization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFilterSerialization.class);
+    HBaseClassTestRule.forClass(TestFilterSerialization.class);
 
   @Test
   public void testColumnCountGetFilter() throws Exception {
@@ -52,7 +52,7 @@ public class TestFilterSerialization {
 
   @Test
   public void testColumnPaginationFilter() throws Exception {
-    ColumnPaginationFilter columnPaginationFilter = new ColumnPaginationFilter(1,7);
+    ColumnPaginationFilter columnPaginationFilter = new ColumnPaginationFilter(1, 7);
     assertTrue(columnPaginationFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPaginationFilter))));
   }
@@ -61,26 +61,26 @@ public class TestFilterSerialization {
   public void testColumnPrefixFilter() throws Exception {
     // empty string
     ColumnPrefixFilter columnPrefixFilter = new ColumnPrefixFilter(Bytes.toBytes(""));
-    assertTrue(columnPrefixFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPrefixFilter))));
+    assertTrue(columnPrefixFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPrefixFilter))));
 
     // non-empty string
     columnPrefixFilter = new ColumnPrefixFilter(Bytes.toBytes(""));
-    assertTrue(columnPrefixFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPrefixFilter))));
+    assertTrue(columnPrefixFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnPrefixFilter))));
   }
 
   @Test
   public void testColumnRangeFilter() throws Exception {
     // null columns
     ColumnRangeFilter columnRangeFilter = new ColumnRangeFilter(null, true, null, false);
-    assertTrue(columnRangeFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnRangeFilter))));
+    assertTrue(columnRangeFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnRangeFilter))));
 
     // non-null columns
     columnRangeFilter = new ColumnRangeFilter(Bytes.toBytes("a"), false, Bytes.toBytes("b"), true);
-    assertTrue(columnRangeFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnRangeFilter))));
+    assertTrue(columnRangeFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnRangeFilter))));
   }
 
   @Test
@@ -102,82 +102,80 @@ public class TestFilterSerialization {
   public void testFamilyFilter() throws Exception {
     FamilyFilter familyFilter = new FamilyFilter(CompareOperator.EQUAL,
       new BinaryPrefixComparator(Bytes.toBytes("testValueOne")));
-    assertTrue(familyFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(familyFilter))));
+    assertTrue(familyFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(familyFilter))));
   }
 
   @Test
   public void testFilterList() throws Exception {
     // empty filter list
     FilterList filterList = new FilterList(new LinkedList<>());
-    assertTrue(filterList.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
+    assertTrue(filterList
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
 
     // non-empty filter list
     LinkedList<Filter> list = new LinkedList<>();
     list.add(new ColumnCountGetFilter(1));
-    list.add(new RowFilter(CompareOperator.EQUAL,
-      new SubstringComparator("testFilterList")));
-    assertTrue(filterList.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
+    list.add(new RowFilter(CompareOperator.EQUAL, new SubstringComparator("testFilterList")));
+    assertTrue(filterList
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterList))));
   }
 
   @Test
   public void testFilterWrapper() throws Exception {
     FilterWrapper filterWrapper =
-      new FilterWrapper(
-        new ColumnRangeFilter(Bytes.toBytes("e"), false, Bytes.toBytes("f"), true));
-    assertTrue(filterWrapper.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterWrapper))));
+      new FilterWrapper(new ColumnRangeFilter(Bytes.toBytes("e"), false, Bytes.toBytes("f"), true));
+    assertTrue(filterWrapper
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(filterWrapper))));
   }
 
   @Test
   public void testFirstKeyOnlyFilter() throws Exception {
     FirstKeyOnlyFilter firstKeyOnlyFilter = new FirstKeyOnlyFilter();
-    assertTrue(firstKeyOnlyFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyOnlyFilter))));
+    assertTrue(firstKeyOnlyFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(firstKeyOnlyFilter))));
   }
 
   @Test
   public void testFuzzyRowFilter() throws Exception {
     LinkedList<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
-    fuzzyList.add(new Pair<>(Bytes.toBytes("999"),new byte[] {0, 0, 1}));
-    fuzzyList.add(new Pair<>(Bytes.toBytes("abcd"),new byte[] {1, 0, 1, 1}));
+    fuzzyList.add(new Pair<>(Bytes.toBytes("999"), new byte[] { 0, 0, 1 }));
+    fuzzyList.add(new Pair<>(Bytes.toBytes("abcd"), new byte[] { 1, 0, 1, 1 }));
     FuzzyRowFilter fuzzyRowFilter = new FuzzyRowFilter(fuzzyList);
-    assertTrue(fuzzyRowFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(fuzzyRowFilter))));
+    assertTrue(fuzzyRowFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(fuzzyRowFilter))));
   }
 
   @Test
   public void testInclusiveStopFilter() throws Exception {
     // InclusveStopFilter with null stopRowKey
     InclusiveStopFilter inclusiveStopFilter = new InclusiveStopFilter(null);
-    assertTrue(inclusiveStopFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(inclusiveStopFilter))));
+    assertTrue(inclusiveStopFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(inclusiveStopFilter))));
 
     // InclusveStopFilter with non-null stopRowKey
     inclusiveStopFilter = new InclusiveStopFilter(Bytes.toBytes("inclusiveStopFilter"));
-    assertTrue(inclusiveStopFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(inclusiveStopFilter))));
+    assertTrue(inclusiveStopFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(inclusiveStopFilter))));
   }
 
   @Test
   public void testKeyOnlyFilter() throws Exception {
     // KeyOnlyFilter with lenAsVal
     KeyOnlyFilter keyOnlyFilter = new KeyOnlyFilter(true);
-    assertTrue(keyOnlyFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(keyOnlyFilter))));
+    assertTrue(keyOnlyFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(keyOnlyFilter))));
 
     // KeyOnlyFilter without lenAsVal
     keyOnlyFilter = new KeyOnlyFilter();
-    assertTrue(keyOnlyFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(keyOnlyFilter))));
+    assertTrue(keyOnlyFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(keyOnlyFilter))));
   }
 
   @Test
   public void testMultipleColumnPrefixFilter() throws Exception {
     // empty array
-    byte [][] prefixes = null;
+    byte[][] prefixes = null;
     MultipleColumnPrefixFilter multipleColumnPrefixFilter =
       new MultipleColumnPrefixFilter(prefixes);
     assertTrue(multipleColumnPrefixFilter.areSerializedFieldsEqual(
@@ -195,59 +193,58 @@ public class TestFilterSerialization {
   @Test
   public void testPageFilter() throws Exception {
     PageFilter pageFilter = new PageFilter(6);
-    assertTrue(pageFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(pageFilter))));
+    assertTrue(pageFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(pageFilter))));
   }
 
   @Test
   public void testPrefixFilter() throws Exception {
     // null prefix
     PrefixFilter prefixFilter = new PrefixFilter(null);
-    assertTrue(prefixFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(prefixFilter))));
+    assertTrue(prefixFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(prefixFilter))));
 
     // non-null prefix
     prefixFilter = new PrefixFilter(Bytes.toBytes("abc"));
-    assertTrue(prefixFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(prefixFilter))));
+    assertTrue(prefixFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(prefixFilter))));
   }
 
   @Test
   public void testQualifierFilter() throws Exception {
-    QualifierFilter qualifierFilter = new QualifierFilter(CompareOperator.EQUAL,
-      new NullComparator());
-    assertTrue(qualifierFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(qualifierFilter))));
+    QualifierFilter qualifierFilter =
+      new QualifierFilter(CompareOperator.EQUAL, new NullComparator());
+    assertTrue(qualifierFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(qualifierFilter))));
   }
 
   @Test
   public void testRandomRowFilter() throws Exception {
-    RandomRowFilter randomRowFilter = new RandomRowFilter((float)0.1);
-    assertTrue(randomRowFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(randomRowFilter))));
+    RandomRowFilter randomRowFilter = new RandomRowFilter((float) 0.1);
+    assertTrue(randomRowFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(randomRowFilter))));
   }
 
   @Test
   public void testRowFilter() throws Exception {
-    RowFilter rowFilter = new RowFilter(CompareOperator.EQUAL,
-      new SubstringComparator("testRowFilter"));
-    assertTrue(rowFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(rowFilter))));
+    RowFilter rowFilter =
+      new RowFilter(CompareOperator.EQUAL, new SubstringComparator("testRowFilter"));
+    assertTrue(
+      rowFilter.areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(rowFilter))));
   }
 
   @Test
   public void testSingleColumnValueExcludeFilter() throws Exception {
     // null family/column SingleColumnValueExcludeFilter
     SingleColumnValueExcludeFilter singleColumnValueExcludeFilter =
-      new SingleColumnValueExcludeFilter(null, null,
-      CompareOperator.GREATER_OR_EQUAL, Bytes.toBytes("value"));
+      new SingleColumnValueExcludeFilter(null, null, CompareOperator.GREATER_OR_EQUAL,
+        Bytes.toBytes("value"));
     assertTrue(singleColumnValueExcludeFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueExcludeFilter))));
 
     // non-null family/column SingleColumnValueFilter
-    singleColumnValueExcludeFilter =
-      new SingleColumnValueExcludeFilter(Bytes.toBytes("fam"), Bytes.toBytes("qual"),
-      CompareOperator.LESS_OR_EQUAL, new NullComparator(), false, false);
+    singleColumnValueExcludeFilter = new SingleColumnValueExcludeFilter(Bytes.toBytes("fam"),
+      Bytes.toBytes("qual"), CompareOperator.LESS_OR_EQUAL, new NullComparator(), false, false);
     assertTrue(singleColumnValueExcludeFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueExcludeFilter))));
   }
@@ -256,15 +253,13 @@ public class TestFilterSerialization {
   public void testSingleColumnValueFilter() throws Exception {
     // null family/column SingleColumnValueFilter
     SingleColumnValueFilter singleColumnValueFilter =
-      new SingleColumnValueFilter(null, null,
-      CompareOperator.LESS, Bytes.toBytes("value"));
+      new SingleColumnValueFilter(null, null, CompareOperator.LESS, Bytes.toBytes("value"));
     assertTrue(singleColumnValueFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueFilter))));
 
     // non-null family/column SingleColumnValueFilter
-    singleColumnValueFilter =
-      new SingleColumnValueFilter(Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-       CompareOperator.NOT_EQUAL, new NullComparator(), true, true);
+    singleColumnValueFilter = new SingleColumnValueFilter(Bytes.toBytes("family"),
+      Bytes.toBytes("qualifier"), CompareOperator.NOT_EQUAL, new NullComparator(), true, true);
     assertTrue(singleColumnValueFilter.areSerializedFieldsEqual(
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(singleColumnValueFilter))));
   }
@@ -272,41 +267,40 @@ public class TestFilterSerialization {
   @Test
   public void testSkipFilter() throws Exception {
     SkipFilter skipFilter = new SkipFilter(new PageFilter(6));
-    assertTrue(skipFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(skipFilter))));
+    assertTrue(skipFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(skipFilter))));
   }
 
   @Test
   public void testTimestampsFilter() throws Exception {
     // Empty timestamp list
     TimestampsFilter timestampsFilter = new TimestampsFilter(new LinkedList<>());
-    assertTrue(timestampsFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
+    assertTrue(timestampsFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
 
     // Non-empty timestamp list
     LinkedList<Long> list = new LinkedList<>();
     list.add(EnvironmentEdgeManager.currentTime());
     list.add(EnvironmentEdgeManager.currentTime());
     timestampsFilter = new TimestampsFilter(list);
-    assertTrue(timestampsFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
+    assertTrue(timestampsFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(timestampsFilter))));
   }
 
   @Test
   public void testValueFilter() throws Exception {
-    ValueFilter valueFilter = new ValueFilter(CompareOperator.NO_OP,
-      new BinaryComparator(Bytes.toBytes("testValueOne")));
-    assertTrue(valueFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(valueFilter))));
+    ValueFilter valueFilter =
+      new ValueFilter(CompareOperator.NO_OP, new BinaryComparator(Bytes.toBytes("testValueOne")));
+    assertTrue(valueFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(valueFilter))));
   }
 
   @Test
   public void testWhileMatchFilter() throws Exception {
-    WhileMatchFilter whileMatchFilter =
-      new WhileMatchFilter(
-        new ColumnRangeFilter(Bytes.toBytes("c"), false, Bytes.toBytes("d"), true));
-    assertTrue(whileMatchFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(whileMatchFilter))));
+    WhileMatchFilter whileMatchFilter = new WhileMatchFilter(
+      new ColumnRangeFilter(Bytes.toBytes("c"), false, Bytes.toBytes("d"), true));
+    assertTrue(whileMatchFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(whileMatchFilter))));
   }
 
   @Test
@@ -316,18 +310,16 @@ public class TestFilterSerialization {
     ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
     ranges.add(new RowRange(Bytes.toBytes(60), true, Bytes.toBytes(70), false));
 
-    MultiRowRangeFilter multiRowRangeFilter =
-      new MultiRowRangeFilter(ranges);
-    assertTrue(multiRowRangeFilter.areSerializedFieldsEqual(
-      ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
+    MultiRowRangeFilter multiRowRangeFilter = new MultiRowRangeFilter(ranges);
+    assertTrue(multiRowRangeFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
   }
 
   @Test
   public void testColumnValueFilter() throws Exception {
-    ColumnValueFilter columnValueFilter =
-        new ColumnValueFilter(Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
-            CompareOperator.EQUAL, Bytes.toBytes("value"));
-    assertTrue(columnValueFilter.areSerializedFieldsEqual(
-        ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnValueFilter))));
+    ColumnValueFilter columnValueFilter = new ColumnValueFilter(Bytes.toBytes("family"),
+      Bytes.toBytes("qualifier"), CompareOperator.EQUAL, Bytes.toBytes("value"));
+    assertTrue(columnValueFilter
+      .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnValueFilter))));
   }
 }

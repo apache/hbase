@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.util.RetryCounter.ExponentialBackoffPolicyWithLimit;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,11 +35,7 @@ public class RetryCounterFactory {
   }
 
   public RetryCounterFactory(int maxAttempts, int sleepIntervalMillis, int maxSleepTime) {
-    this(new RetryConfig(
-      maxAttempts,
-      sleepIntervalMillis,
-      maxSleepTime,
-      TimeUnit.MILLISECONDS,
+    this(new RetryConfig(maxAttempts, sleepIntervalMillis, maxSleepTime, TimeUnit.MILLISECONDS,
       new ExponentialBackoffPolicyWithLimit()));
   }
 

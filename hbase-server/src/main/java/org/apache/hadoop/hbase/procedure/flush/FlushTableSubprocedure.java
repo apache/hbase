@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure.flush;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
@@ -33,11 +28,13 @@ import org.apache.hadoop.hbase.procedure.flush.RegionServerFlushTableProcedureMa
 import org.apache.hadoop.hbase.regionserver.FlushLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This flush region implementation uses the distributed procedure framework to flush
- * table regions.
- * Its acquireBarrier stage does nothing.  Its insideBarrier stage flushes the regions.
+ * This flush region implementation uses the distributed procedure framework to flush table regions.
+ * Its acquireBarrier stage does nothing. Its insideBarrier stage flushes the regions.
  */
 @InterfaceAudience.Private
 public class FlushTableSubprocedure extends Subprocedure {
@@ -48,10 +45,9 @@ public class FlushTableSubprocedure extends Subprocedure {
   private final List<HRegion> regions;
   private final FlushTableSubprocedurePool taskManager;
 
-  public FlushTableSubprocedure(ProcedureMember member,
-      ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<HRegion> regions, String table, String family,
-      FlushTableSubprocedurePool taskManager) {
+  public FlushTableSubprocedure(ProcedureMember member, ForeignExceptionDispatcher errorListener,
+    long wakeFrequency, long timeout, List<HRegion> regions, String table, String family,
+    FlushTableSubprocedurePool taskManager) {
     super(member, table, errorListener, wakeFrequency, timeout);
     this.table = table;
     this.family = family;
@@ -62,6 +58,7 @@ public class FlushTableSubprocedure extends Subprocedure {
   private static class RegionFlushTask implements Callable<Void> {
     HRegion region;
     List<byte[]> families;
+
     RegionFlushTask(HRegion region, List<byte[]> families) {
       this.region = region;
       this.families = families;
@@ -97,8 +94,8 @@ public class FlushTableSubprocedure extends Subprocedure {
 
     // assert that the taskManager is empty.
     if (taskManager.hasTasks()) {
-      throw new IllegalStateException("Attempting to flush "
-          + table + " but we currently have outstanding tasks");
+      throw new IllegalStateException(
+        "Attempting to flush " + table + " but we currently have outstanding tasks");
     }
     List<byte[]> families = null;
     if (family != null) {
@@ -140,8 +137,8 @@ public class FlushTableSubprocedure extends Subprocedure {
    */
   @Override
   public void cleanup(Exception e) {
-    LOG.info("Aborting all flush region subprocedure task threads for '"
-        + table + "' due to error", e);
+    LOG.info("Aborting all flush region subprocedure task threads for '" + table + "' due to error",
+      e);
     try {
       taskManager.cancelTasks();
     } catch (InterruptedException e1) {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,12 +26,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Tracks the availability and value of a single ZooKeeper node.
- *
- * <p>Utilizes the {@link ZKListener} interface to get the necessary
- * ZooKeeper events related to the node.
- *
- * <p>This is the base class used by trackers in both the Master and
- * RegionServers.
+ * <p>
+ * Utilizes the {@link ZKListener} interface to get the necessary ZooKeeper events related to the
+ * node.
+ * <p>
+ * This is the base class used by trackers in both the Master and RegionServers.
  */
 @InterfaceAudience.Private
 public abstract class ZKNodeTracker extends ZKListener {
@@ -53,9 +51,9 @@ public abstract class ZKNodeTracker extends ZKListener {
    * Constructs a new ZK node tracker.
    * <p/>
    * After construction, use {@link #start} to kick off tracking.
-   * @param watcher reference to the {@link ZKWatcher} which also contains configuration and
-   *          constants
-   * @param node path of the node being tracked
+   * @param watcher   reference to the {@link ZKWatcher} which also contains configuration and
+   *                  constants
+   * @param node      path of the node being tracked
    * @param abortable used to abort if a fatal error occurs
    */
   public ZKNodeTracker(ZKWatcher watcher, String node, Abortable abortable) {
@@ -74,9 +72,9 @@ public abstract class ZKNodeTracker extends ZKListener {
   public synchronized void start() {
     this.watcher.registerListener(this);
     try {
-      if(ZKUtil.watchAndCheckExists(watcher, node)) {
-        byte [] data = ZKUtil.getDataAndWatch(watcher, node);
-        if(data != null) {
+      if (ZKUtil.watchAndCheckExists(watcher, node)) {
+        byte[] data = ZKUtil.getDataAndWatch(watcher, node);
+        if (data != null) {
           this.data = data;
         } else {
           // It existed but now does not, try again to ensure a watch is set
@@ -103,26 +101,23 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   /**
    * Gets the data of the node, blocking until the node is available.
-   *
    * @return data of the node
    * @throws InterruptedException if the waiting thread is interrupted
    */
-  public synchronized byte [] blockUntilAvailable()
-    throws InterruptedException {
+  public synchronized byte[] blockUntilAvailable() throws InterruptedException {
     return blockUntilAvailable(0, false);
   }
 
   /**
-   * Gets the data of the node, blocking until the node is available or the
-   * specified timeout has elapsed.
-   *
+   * Gets the data of the node, blocking until the node is available or the specified timeout has
+   * elapsed.
    * @param timeout maximum time to wait for the node data to be available, n milliseconds. Pass 0
    *                for no timeout.
    * @return data of the node
    * @throws InterruptedException if the waiting thread is interrupted
    */
-  public synchronized byte [] blockUntilAvailable(long timeout, boolean refresh)
-          throws InterruptedException {
+  public synchronized byte[] blockUntilAvailable(long timeout, boolean refresh)
+    throws InterruptedException {
     if (timeout < 0) {
       throw new IllegalArgumentException();
     }
@@ -134,25 +129,25 @@ public abstract class ZKNodeTracker extends ZKListener {
       try {
         // This does not create a watch if the node does not exists
         this.data = ZKUtil.getDataAndWatch(watcher, node);
-      } catch(KeeperException e) {
+      } catch (KeeperException e) {
         // We use to abort here, but in some cases the abort is ignored (
-        //  (empty Abortable), so it's better to log...
+        // (empty Abortable), so it's better to log...
         LOG.warn("Unexpected exception handling blockUntilAvailable", e);
         abortable.abort("Unexpected exception handling blockUntilAvailable", e);
       }
     }
-    boolean nodeExistsChecked = (!refresh ||data!=null);
+    boolean nodeExistsChecked = (!refresh || data != null);
     while (!this.stopped && (notimeout || remaining > 0) && this.data == null) {
       if (!nodeExistsChecked) {
         try {
           nodeExistsChecked = (ZKUtil.checkExists(watcher, node) != -1);
         } catch (KeeperException e) {
-          LOG.warn("Got exception while trying to check existence in  ZooKeeper" +
-            " of the node: " + node + ", retrying if timeout not reached", e);
+          LOG.warn("Got exception while trying to check existence in  ZooKeeper" + " of the node: "
+            + node + ", retrying if timeout not reached", e);
         }
 
         // It did not exists, and now it does.
-        if (nodeExistsChecked){
+        if (nodeExistsChecked) {
           LOG.debug("Node {} now exists, resetting a watcher", node);
           try {
             // This does not create a watch if the node does not exists
@@ -164,7 +159,7 @@ public abstract class ZKNodeTracker extends ZKListener {
         }
       }
       // We expect a notification; but we wait with a
-      //  a timeout to lower the impact of a race condition if any
+      // a timeout to lower the impact of a race condition if any
       wait(100);
       remaining = timeout - (EnvironmentEdgeManager.currentTime() - startTime);
     }
@@ -173,18 +168,17 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   /**
    * Gets the data of the node.
-   *
-   * <p>If the node is currently available, the most up-to-date known version of
-   * the data is returned.  If the node is not currently available, null is
-   * returned.
+   * <p>
+   * If the node is currently available, the most up-to-date known version of the data is returned.
+   * If the node is not currently available, null is returned.
    * @param refresh whether to refresh the data by calling ZK directly.
    * @return data of the node, null if unavailable
    */
-  public synchronized byte [] getData(boolean refresh) {
+  public synchronized byte[] getData(boolean refresh) {
     if (refresh) {
       try {
         this.data = ZKUtil.getDataAndWatch(watcher, node);
-      } catch(KeeperException e) {
+      } catch (KeeperException e) {
         abortable.abort("Unexpected exception handling getData", e);
       }
     }
@@ -202,28 +196,28 @@ public abstract class ZKNodeTracker extends ZKListener {
     }
 
     try {
-      byte [] data = ZKUtil.getDataAndWatch(watcher, node);
+      byte[] data = ZKUtil.getDataAndWatch(watcher, node);
       if (data != null) {
         this.data = data;
         notifyAll();
       } else {
         nodeDeleted(path);
       }
-    } catch(KeeperException e) {
+    } catch (KeeperException e) {
       abortable.abort("Unexpected exception handling nodeCreated event", e);
     }
   }
 
   @Override
   public synchronized void nodeDeleted(String path) {
-    if(path.equals(node)) {
+    if (path.equals(node)) {
       try {
-        if(ZKUtil.watchAndCheckExists(watcher, node)) {
+        if (ZKUtil.watchAndCheckExists(watcher, node)) {
           nodeCreated(path);
         } else {
           this.data = null;
         }
-      } catch(KeeperException e) {
+      } catch (KeeperException e) {
         abortable.abort("Unexpected exception handling nodeDeleted event", e);
       }
     }
@@ -231,16 +225,14 @@ public abstract class ZKNodeTracker extends ZKListener {
 
   @Override
   public synchronized void nodeDataChanged(String path) {
-    if(path.equals(node)) {
+    if (path.equals(node)) {
       nodeCreated(path);
     }
   }
 
   /**
-   * Checks if the baseznode set as per the property 'zookeeper.znode.parent'
-   * exists.
-   * @return true if baseznode exists.
-   *         false if doesnot exists.
+   * Checks if the baseznode set as per the property 'zookeeper.znode.parent' exists.
+   * @return true if baseznode exists. false if doesnot exists.
    */
   public boolean checkIfBaseNodeAvailable() {
     try {
@@ -249,15 +241,13 @@ public abstract class ZKNodeTracker extends ZKListener {
       }
     } catch (KeeperException e) {
       abortable.abort("Exception while checking if basenode (" + watcher.getZNodePaths().baseZNode
-          + ") exists in ZooKeeper.",
-        e);
+        + ") exists in ZooKeeper.", e);
     }
     return true;
   }
 
   @Override
   public String toString() {
-    return "ZKNodeTracker{" +
-        "node='" + node + ", stopped=" + stopped + '}';
+    return "ZKNodeTracker{" + "node='" + node + ", stopped=" + stopped + '}';
   }
 }

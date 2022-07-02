@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,8 +35,8 @@ public final class PerClientRandomNonceGenerator implements NonceGenerator {
 
   private PerClientRandomNonceGenerator() {
     byte[] clientIdBase = ClientIdGenerator.generateClientId();
-    this.clientId = (((long) Arrays.hashCode(clientIdBase)) << 32) +
-      ThreadLocalRandom.current().nextInt();
+    this.clientId =
+      (((long) Arrays.hashCode(clientIdBase)) << 32) + ThreadLocalRandom.current().nextInt();
   }
 
   @Override

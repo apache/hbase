@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldValue;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Represents a filter that's filtering the metric {@link Record}s.
@@ -67,8 +66,10 @@ public final class RecordFilter {
     }
 
     StringBuilder fieldString = new StringBuilder();
-    while (filterString.length() > index && filterString.charAt(index) != '<'
-      && filterString.charAt(index) != '>' && filterString.charAt(index) != '=') {
+    while (
+      filterString.length() > index && filterString.charAt(index) != '<'
+        && filterString.charAt(index) != '>' && filterString.charAt(index) != '='
+    ) {
       fieldString.append(filterString.charAt(index++));
     }
 
@@ -82,8 +83,10 @@ public final class RecordFilter {
     }
 
     StringBuilder operatorString = new StringBuilder();
-    while (filterString.length() > index && (filterString.charAt(index) == '<' ||
-      filterString.charAt(index) == '>' || filterString.charAt(index) == '=')) {
+    while (
+      filterString.length() > index && (filterString.charAt(index) == '<'
+        || filterString.charAt(index) == '>' || filterString.charAt(index) == '=')
+    ) {
       operatorString.append(filterString.charAt(index++));
     }
 
@@ -166,8 +169,7 @@ public final class RecordFilter {
       return not != ret;
     }
 
-    int compare = ignoreCase ?
-      fieldValue.compareToIgnoreCase(value) : fieldValue.compareTo(value);
+    int compare = ignoreCase ? fieldValue.compareToIgnoreCase(value) : fieldValue.compareTo(value);
 
     boolean ret;
     switch (operator) {

@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Balanced queue executor with a fastpath. Because this is FIFO, it has no respect for
- * ordering so a fast path skipping the queuing of Calls if an Handler is available, is possible.
- * Just pass the Call direct to waiting Handler thread. Try to keep the hot Handlers bubbling
- * rather than let them go cold and lose context. Idea taken from Apace Kudu (incubating). See
+ * Balanced queue executor with a fastpath. Because this is FIFO, it has no respect for ordering so
+ * a fast path skipping the queuing of Calls if an Handler is available, is possible. Just pass the
+ * Call direct to waiting Handler thread. Try to keep the hot Handlers bubbling rather than let them
+ * go cold and lose context. Idea taken from Apace Kudu (incubating). See
  * https://gerrit.cloudera.org/#/c/2938/7/src/kudu/rpc/service_queue.h
  */
 @InterfaceAudience.Private
@@ -42,35 +42,35 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
   private final Deque<FastPathRpcHandler> fastPathHandlerStack = new ConcurrentLinkedDeque<>();
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
-      final Abortable abortable) {
+    final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+    final Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
   }
 
   public FastPathBalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
-      final Configuration conf, final Abortable abortable) {
+    final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+    final Configuration conf, final Abortable abortable) {
     super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
   }
 
   @Override
   protected RpcHandler getHandler(final String name, final double handlerFailureThreshhold,
-      final int handlerCount, final BlockingQueue<CallRunner> q,
-      final AtomicInteger activeHandlerCount, final AtomicInteger failedHandlerCount,
-      final Abortable abortable) {
+    final int handlerCount, final BlockingQueue<CallRunner> q,
+    final AtomicInteger activeHandlerCount, final AtomicInteger failedHandlerCount,
+    final Abortable abortable) {
     return new FastPathRpcHandler(name, handlerFailureThreshhold, handlerCount, q,
       activeHandlerCount, failedHandlerCount, abortable, fastPathHandlerStack);
   }
 
   @Override
   public boolean dispatch(CallRunner callTask) {
-    //FastPathHandlers don't check queue limits, so if we're completely shut down
-    //we have to prevent ourselves from using the handler in the first place
-    if (currentQueueLimit == 0){
+    // FastPathHandlers don't check queue limits, so if we're completely shut down
+    // we have to prevent ourselves from using the handler in the first place
+    if (currentQueueLimit == 0) {
       return false;
     }
     FastPathRpcHandler handler = popReadyHandler();
-    return handler != null? handler.loadCallRunner(callTask): super.dispatch(callTask);
+    return handler != null ? handler.loadCallRunner(callTask) : super.dispatch(callTask);
   }
 
   /**

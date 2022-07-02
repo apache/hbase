@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,21 +26,20 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 
 /**
- * Base class to test Configuration Update logic. It wraps up things needed to
- * test configuration change and provides utility methods for test cluster setup,
- * updating/restoring configuration file.
+ * Base class to test Configuration Update logic. It wraps up things needed to test configuration
+ * change and provides utility methods for test cluster setup, updating/restoring configuration
+ * file.
  */
 public abstract class AbstractTestUpdateConfiguration {
   private static final String SERVER_CONFIG = "hbase-site.xml";
-  private static final String OVERRIDE_SERVER_CONFIG  = "override-hbase-site.xml";
-  private static final String BACKUP_SERVER_CONFIG  = "backup-hbase-site.xml";
+  private static final String OVERRIDE_SERVER_CONFIG = "override-hbase-site.xml";
+  private static final String BACKUP_SERVER_CONFIG = "backup-hbase-site.xml";
 
   private static Path configFileUnderTestDataDir;
   private static Path overrideConfigFileUnderTestDataDir;
   private static Path backupConfigFileUnderTestDataDir;
 
-  protected static void setUpConfigurationFiles(final HBaseTestingUtil testUtil)
-    throws Exception {
+  protected static void setUpConfigurationFiles(final HBaseTestingUtil testUtil) throws Exception {
     // Before this change, the test will update hbase-site.xml under target/test-classes and
     // trigger a config reload. Since target/test-classes/hbase-site.xml is being used by
     // other testing cases at the same time, this update will break other testing cases so it will
@@ -63,8 +62,7 @@ public abstract class AbstractTestUpdateConfiguration {
 
     // Copy override config file overrider-hbase-site.xml from target/test-class to
     // target/test-data/UUID directory.
-    Path overrideConfigFile = Paths.get("target", "test-classes",
-      OVERRIDE_SERVER_CONFIG);
+    Path overrideConfigFile = Paths.get("target", "test-classes", OVERRIDE_SERVER_CONFIG);
     overrideConfigFileUnderTestDataDir = Paths.get(absoluteDataPath, OVERRIDE_SERVER_CONFIG);
     Files.copy(overrideConfigFile, overrideConfigFileUnderTestDataDir);
 
@@ -81,8 +79,8 @@ public abstract class AbstractTestUpdateConfiguration {
     // Exposing a new method in HBaseConfiguration causes confusion. Instead, the new hbase-site.xml
     // under test-data directory is added to RegionServer's configuration as a workaround.
     for (RegionServerThread rsThread : testUtil.getMiniHBaseCluster().getRegionServerThreads()) {
-      rsThread.getRegionServer().getConfiguration().addResource(
-        testUtil.getDataTestDir(SERVER_CONFIG));
+      rsThread.getRegionServer().getConfiguration()
+        .addResource(testUtil.getDataTestDir(SERVER_CONFIG));
     }
   }
 
@@ -90,27 +88,25 @@ public abstract class AbstractTestUpdateConfiguration {
    * Replace the hbase-site.xml file under this test's data directory with the content of the
    * override-hbase-site.xml file. Stashes the current existing file so that it can be restored
    * using {@link #restoreHBaseSiteXML()}.
-   *
    * @throws IOException if an I/O error occurs
    */
   protected void replaceHBaseSiteXML() throws IOException {
     // make a backup of hbase-site.xml
-    Files.copy(configFileUnderTestDataDir,
-      backupConfigFileUnderTestDataDir, StandardCopyOption.REPLACE_EXISTING);
+    Files.copy(configFileUnderTestDataDir, backupConfigFileUnderTestDataDir,
+      StandardCopyOption.REPLACE_EXISTING);
     // update hbase-site.xml by overwriting it
-    Files.copy(overrideConfigFileUnderTestDataDir,
-      configFileUnderTestDataDir, StandardCopyOption.REPLACE_EXISTING);
+    Files.copy(overrideConfigFileUnderTestDataDir, configFileUnderTestDataDir,
+      StandardCopyOption.REPLACE_EXISTING);
   }
 
   /**
    * Restores the hbase-site.xml file that was stashed by a previous call to
    * {@link #replaceHBaseSiteXML()}.
-   *
    * @throws IOException if an I/O error occurs
    */
   protected void restoreHBaseSiteXML() throws IOException {
     // restore hbase-site.xml
-    Files.copy(backupConfigFileUnderTestDataDir,
-      configFileUnderTestDataDir, StandardCopyOption.REPLACE_EXISTING);
+    Files.copy(backupConfigFileUnderTestDataDir, configFileUnderTestDataDir,
+      StandardCopyOption.REPLACE_EXISTING);
   }
 }

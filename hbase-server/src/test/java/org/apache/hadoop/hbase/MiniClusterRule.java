@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -44,7 +46,7 @@ import org.junit.rules.TestRule;
  *
  *     &#64;Rule
  *     public final ConnectionRule connectionRule =
- *       new ConnectionRule(miniClusterRule::createConnection);
+ *       ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
  *   }
  * }
  * </pre>
@@ -81,8 +83,10 @@ public final class MiniClusterRule extends ExternalResource {
     }
 
     public MiniClusterRule build() {
-      return new MiniClusterRule(conf, miniClusterOption != null ? miniClusterOption :
-        StartTestingClusterOption.builder().build());
+      return new MiniClusterRule(conf,
+        miniClusterOption != null
+          ? miniClusterOption
+          : StartTestingClusterOption.builder().build());
     }
   }
 
@@ -109,10 +113,22 @@ public final class MiniClusterRule extends ExternalResource {
   }
 
   /**
+   * Create a {@link Connection} to the managed {@link SingleProcessHBaseCluster}. It's up to the
+   * caller to {@link Connection#close() close()} the connection when finished.
+   */
+  public Connection createConnection() {
+    try {
+      return createAsyncConnection().get().toConnection();
+    } catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
    * Create a {@link AsyncConnection} to the managed {@link SingleProcessHBaseCluster}. It's up to
    * the caller to {@link AsyncConnection#close() close()} the connection when finished.
    */
-  public CompletableFuture<AsyncConnection> createConnection() {
+  public CompletableFuture<AsyncConnection> createAsyncConnection() {
     if (miniCluster == null) {
       throw new IllegalStateException("test cluster not initialized");
     }

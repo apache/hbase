@@ -21,50 +21,46 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 /**
- * Performs multiple mutations atomically on a single row.
- *
- * The mutations are performed in the order in which they
- * were added.
- *
- * <p>We compare and equate mutations based off their row so be careful putting RowMutations
- * into Sets or using them as keys in Maps.
+ * Performs multiple mutations atomically on a single row. The mutations are performed in the order
+ * in which they were added.
+ * <p>
+ * We compare and equate mutations based off their row so be careful putting RowMutations into Sets
+ * or using them as keys in Maps.
  */
 @InterfaceAudience.Public
 public class RowMutations implements Row {
 
   /**
    * Create a {@link RowMutations} with the specified mutations.
-   * @param mutations the mutations to send
-   * @return RowMutations
-   * @throws IOException if any row in mutations is different to another
+   * @param mutations the mutations to send n * @throws IOException if any row in mutations is
+   *                  different to another
    */
   public static RowMutations of(List<? extends Mutation> mutations) throws IOException {
     if (CollectionUtils.isEmpty(mutations)) {
       throw new IllegalArgumentException("Cannot instantiate a RowMutations by empty list");
     }
-    return new RowMutations(mutations.get(0).getRow(), mutations.size())
-        .add(mutations);
+    return new RowMutations(mutations.get(0).getRow(), mutations.size()).add(mutations);
   }
 
   private final List<Mutation> mutations;
-  private final byte [] row;
+  private final byte[] row;
 
-  public RowMutations(byte [] row) {
+  public RowMutations(byte[] row) {
     this(row, -1);
   }
+
   /**
    * Create an atomic mutation for the specified row.
-   * @param row row key
+   * @param row             row key
    * @param initialCapacity the initial capacity of the RowMutations
    */
-  public RowMutations(byte [] row, int initialCapacity) {
+  public RowMutations(byte[] row, int initialCapacity) {
     this.row = Bytes.copy(Mutation.checkRow(row));
     if (initialCapacity <= 0) {
       this.mutations = new ArrayList<>();
@@ -88,9 +84,9 @@ public class RowMutations implements Row {
   public RowMutations add(List<? extends Mutation> mutations) throws IOException {
     for (Mutation mutation : mutations) {
       if (!Bytes.equals(row, mutation.getRow())) {
-        throw new WrongRowIOException("The row in the recently added Mutation <" +
-          Bytes.toStringBinary(mutation.getRow()) + "> doesn't match the original one <" +
-          Bytes.toStringBinary(this.row) + ">");
+        throw new WrongRowIOException(
+          "The row in the recently added Mutation <" + Bytes.toStringBinary(mutation.getRow())
+            + "> doesn't match the original one <" + Bytes.toStringBinary(this.row) + ">");
       }
     }
     this.mutations.addAll(mutations);

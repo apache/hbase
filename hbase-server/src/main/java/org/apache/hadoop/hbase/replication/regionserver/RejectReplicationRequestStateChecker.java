@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.function.BiPredicate;
-
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -27,16 +26,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class RejectReplicationRequestStateChecker
-    implements BiPredicate<SyncReplicationState, SyncReplicationState> {
+  implements BiPredicate<SyncReplicationState, SyncReplicationState> {
 
   private static final RejectReplicationRequestStateChecker INST =
-      new RejectReplicationRequestStateChecker();
+    new RejectReplicationRequestStateChecker();
 
   @Override
   public boolean test(SyncReplicationState state, SyncReplicationState newState) {
     return state == SyncReplicationState.ACTIVE || state == SyncReplicationState.DOWNGRADE_ACTIVE
-        || newState == SyncReplicationState.ACTIVE
-        || newState == SyncReplicationState.DOWNGRADE_ACTIVE;
+      || newState == SyncReplicationState.ACTIVE
+      || newState == SyncReplicationState.DOWNGRADE_ACTIVE;
   }
 
   public static RejectReplicationRequestStateChecker get() {

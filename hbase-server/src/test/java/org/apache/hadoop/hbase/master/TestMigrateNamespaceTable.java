@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,8 +56,8 @@ public class TestMigrateNamespaceTable {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(1).
-        numAlwaysStandByMasters(1).numRegionServers(1).build();
+    StartTestingClusterOption option = StartTestingClusterOption.builder().numMasters(1)
+      .numAlwaysStandByMasters(1).numRegionServers(1).build();
     UTIL.startMiniCluster(option);
   }
 

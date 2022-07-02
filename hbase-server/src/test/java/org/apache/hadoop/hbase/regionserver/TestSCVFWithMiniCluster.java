@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,16 +52,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 /*
- * This test verifies that the scenarios illustrated by HBASE-10850 work
- * w.r.t. essential column family optimization
+ * This test verifies that the scenarios illustrated by HBASE-10850 work w.r.t. essential column
+ * family optimization
  */
 public class TestSCVFWithMiniCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSCVFWithMiniCluster.class);
+    HBaseClassTestRule.forClass(TestSCVFWithMiniCluster.class);
 
   private static final TableName HBASE_TABLE_NAME = TableName.valueOf("TestSCVFWithMiniCluster");
 
@@ -149,6 +149,7 @@ public class TestSCVFWithMiniCluster {
     }
     assertEquals(expected, count);
   }
+
   /**
    * Test the filter by adding all columns of family A in the scan. (OK)
    */

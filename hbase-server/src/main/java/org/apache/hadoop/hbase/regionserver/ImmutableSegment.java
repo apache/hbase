@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,13 +24,14 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
- * and is not needed for a {@link MutableSegment}.
+ * ImmutableSegment is an abstract class that extends the API supported by a {@link Segment}, and is
+ * not needed for a {@link MutableSegment}.
  */
 @InterfaceAudience.Private
 public abstract class ImmutableSegment extends Segment {
 
-  public static final long DEEP_OVERHEAD = Segment.DEEP_OVERHEAD + ClassSize.NON_SYNC_TIMERANGE_TRACKER;
+  public static final long DEEP_OVERHEAD =
+    Segment.DEEP_OVERHEAD + ClassSize.NON_SYNC_TIMERANGE_TRACKER;
 
   // each sub-type of immutable segment knows whether it is flat or not
   protected abstract boolean canBeFlattened();
@@ -40,9 +40,10 @@ public abstract class ImmutableSegment extends Segment {
     return getCellSet().getNumUniqueKeys();
   }
 
-  /////////////////////  CONSTRUCTORS  /////////////////////
-  /**------------------------------------------------------------------------
-   * Empty C-tor to be used only for CompositeImmutableSegment
+  ///////////////////// CONSTRUCTORS /////////////////////
+  /**
+   * ------------------------------------------------------------------------ Empty C-tor to be used
+   * only for CompositeImmutableSegment
    */
   protected ImmutableSegment(CellComparator comparator) {
     super(comparator, TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC));
@@ -52,23 +53,25 @@ public abstract class ImmutableSegment extends Segment {
     super(comparator, segments, TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC));
   }
 
-  /**------------------------------------------------------------------------
-   * C-tor to be used to build the derived classes
+  /**
+   * ------------------------------------------------------------------------ C-tor to be used to
+   * build the derived classes
    */
   protected ImmutableSegment(CellSet cs, CellComparator comparator, MemStoreLAB memStoreLAB) {
     super(cs, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC));
   }
 
-  /**------------------------------------------------------------------------
-   * Copy C-tor to be used when new CSLMImmutableSegment (derived) is being built from a Mutable one.
-   * This C-tor should be used when active MutableSegment is pushed into the compaction
-   * pipeline and becomes an ImmutableSegment.
+  /**
+   * ------------------------------------------------------------------------ Copy C-tor to be used
+   * when new CSLMImmutableSegment (derived) is being built from a Mutable one. This C-tor should be
+   * used when active MutableSegment is pushed into the compaction pipeline and becomes an
+   * ImmutableSegment.
    */
   protected ImmutableSegment(Segment segment) {
     super(segment);
   }
 
-  /////////////////////  PUBLIC METHODS  /////////////////////
+  ///////////////////// PUBLIC METHODS /////////////////////
 
   public int getNumOfSegments() {
     return 1;
@@ -81,7 +84,7 @@ public abstract class ImmutableSegment extends Segment {
   @Override
   public String toString() {
     String res = super.toString();
-    res += "Num uniques "+getNumUniqueKeys()+"; ";
+    res += "Num uniques " + getNumUniqueKeys() + "; ";
     return res;
   }
 

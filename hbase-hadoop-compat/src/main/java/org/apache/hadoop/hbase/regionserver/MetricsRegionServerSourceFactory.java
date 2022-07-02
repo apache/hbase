@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.io.MetricsIOSource;
@@ -30,7 +29,6 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Given a wrapper create a MetricsRegionServerSource.
-   *
    * @param regionServerWrapper The wrapped region server
    * @return a Metrics Source.
    */
@@ -38,7 +36,6 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Create a MetricsRegionSource from a MetricsRegionWrapper.
-   *
    * @param wrapper The wrapped region
    * @return A metrics region source
    */
@@ -58,8 +55,7 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Create a MetricsTableSource from a MetricsTableWrapper.
-   *
-   * @param table The table name
+   * @param table   The table name
    * @param wrapper The wrapped table aggregate
    * @return A metrics table source
    */
@@ -67,7 +63,6 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Get a MetricsTableAggregateSource
-   *
    * @return A metrics table aggregate source
    */
   MetricsTableAggregateSource getTableAggregate();
@@ -80,7 +75,6 @@ public interface MetricsRegionServerSourceFactory {
 
   /**
    * Create a MetricsIOSource from a MetricsIOWrapper.
-   *
    * @return A metrics IO source
    */
   MetricsIOSource createIO(MetricsIOWrapper wrapper);

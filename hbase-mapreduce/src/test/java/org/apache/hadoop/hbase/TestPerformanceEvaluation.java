@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,20 +55,19 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestPerformanceEvaluation {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPerformanceEvaluation.class);
+    HBaseClassTestRule.forClass(TestPerformanceEvaluation.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
   @Test
   public void testDefaultInMemoryCompaction() {
-    PerformanceEvaluation.TestOptions defaultOpts =
-        new PerformanceEvaluation.TestOptions();
+    PerformanceEvaluation.TestOptions defaultOpts = new PerformanceEvaluation.TestOptions();
     assertEquals(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT,
-        defaultOpts.getInMemoryCompaction().toString());
+      defaultOpts.getInMemoryCompaction().toString());
     TableDescriptor tableDescriptor = PerformanceEvaluation.getTableDescriptor(defaultOpts);
     for (ColumnFamilyDescriptor familyDescriptor : tableDescriptor.getColumnFamilies()) {
       assertEquals(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_DEFAULT,
@@ -172,7 +170,7 @@ public class TestPerformanceEvaluation {
 
   @Test
   public void testZipfian() throws NoSuchMethodException, SecurityException, InstantiationException,
-      IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+    IllegalAccessException, IllegalArgumentException, InvocationTargetException {
     TestOptions opts = new PerformanceEvaluation.TestOptions();
     opts.setValueZipf(true);
     final int valueSize = 1024;
@@ -181,7 +179,7 @@ public class TestPerformanceEvaluation {
     Constructor<?> ctor =
       Histogram.class.getDeclaredConstructor(com.codahale.metrics.Reservoir.class);
     ctor.setAccessible(true);
-    Histogram histogram = (Histogram)ctor.newInstance(new UniformReservoir(1024 * 500));
+    Histogram histogram = (Histogram) ctor.newInstance(new UniformReservoir(1024 * 500));
     for (int i = 0; i < 100; i++) {
       histogram.update(rrt.getValueLength(null));
     }
@@ -256,11 +254,11 @@ public class TestPerformanceEvaluation {
     try {
       options = PerformanceEvaluation.parseOpts(opts);
       fail("should fail");
-    } catch (IllegalArgumentException  e) {
+    } catch (IllegalArgumentException e) {
       System.out.println(e.getMessage());
     }
 
-    //Re-create options
+    // Re-create options
     opts = new LinkedList<>();
     opts.offer("--autoFlush=true");
     opts.offer("--multiPut=10");
@@ -316,7 +314,7 @@ public class TestPerformanceEvaluation {
     try {
       options = PerformanceEvaluation.parseOpts(opts);
       fail("should fail");
-    } catch (IllegalArgumentException  e) {
+    } catch (IllegalArgumentException e) {
       System.out.println(e.getMessage());
     }
 
@@ -344,7 +342,7 @@ public class TestPerformanceEvaluation {
     try {
       options = PerformanceEvaluation.parseOpts(opts);
       fail("should fail");
-    } catch (IllegalStateException  e) {
+    } catch (IllegalStateException e) {
       System.out.println(e.getMessage());
     }
 

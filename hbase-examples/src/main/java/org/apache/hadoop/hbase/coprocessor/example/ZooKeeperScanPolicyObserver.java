@@ -1,20 +1,19 @@
-/**
- * Copyright The Apache Software Foundation
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
@@ -62,7 +61,7 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
   // The zk ensemble info is put in hbase config xml with given custom key.
   public static final String ZK_ENSEMBLE_KEY = "ZooKeeperScanPolicyObserver.zookeeper.ensemble";
   public static final String ZK_SESSION_TIMEOUT_KEY =
-      "ZooKeeperScanPolicyObserver.zookeeper.session.timeout";
+    "ZooKeeperScanPolicyObserver.zookeeper.session.timeout";
   public static final int ZK_SESSION_TIMEOUT_DEFAULT = 30 * 1000; // 30 secs
   public static final String NODE = "/backup/example/lastbackup";
   private static final String ZKKEY = "ZK";
@@ -91,8 +90,8 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
 
     private void create() throws Exception {
       client =
-          CuratorFrameworkFactory.builder().connectString(ensemble).sessionTimeoutMs(sessionTimeout)
-              .retryPolicy(new RetryForever(1000)).canBeReadOnly(true).build();
+        CuratorFrameworkFactory.builder().connectString(ensemble).sessionTimeoutMs(sessionTimeout)
+          .retryPolicy(new RetryForever(1000)).canBeReadOnly(true).build();
       client.start();
       cache = new NodeCache(client, NODE);
       cache.start(true);
@@ -142,7 +141,7 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
       this.cache = ((ZKDataHolder) renv.getSharedData().computeIfAbsent(ZKKEY, k -> {
         String ensemble = renv.getConfiguration().get(ZK_ENSEMBLE_KEY);
         int sessionTimeout =
-            renv.getConfiguration().getInt(ZK_SESSION_TIMEOUT_KEY, ZK_SESSION_TIMEOUT_DEFAULT);
+          renv.getConfiguration().getInt(ZK_SESSION_TIMEOUT_KEY, ZK_SESSION_TIMEOUT_DEFAULT);
         return new ZKDataHolder(ensemble, sessionTimeout);
       })).acquire();
     } catch (Exception e) {
@@ -179,14 +178,14 @@ public class ZooKeeperScanPolicyObserver implements RegionCoprocessor, RegionObs
 
   @Override
   public void preFlushScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
+    ScanOptions options, FlushLifeCycleTracker tracker) throws IOException {
     resetTTL(options);
   }
 
   @Override
   public void preCompactScannerOpen(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
-      ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
-      CompactionRequest request) throws IOException {
+    ScanType scanType, ScanOptions options, CompactionLifeCycleTracker tracker,
+    CompactionRequest request) throws IOException {
     resetTTL(options);
   }
 }

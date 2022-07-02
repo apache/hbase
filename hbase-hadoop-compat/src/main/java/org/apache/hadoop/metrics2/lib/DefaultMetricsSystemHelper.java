@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,8 +77,8 @@ public class DefaultMetricsSystemHelper {
    * so far as a Source, thus preventing further re-registration of the source with the same name.
    * In case of dynamic metrics tied to region-lifecycles, this becomes a problem because we would
    * like to be able to re-register and remove with the same name. Otherwise, it is resource leak.
-   * This ugly code manually removes the name from the UniqueNames map.
-   * TODO: May not be needed for Hadoop versions after YARN-5190.
+   * This ugly code manually removes the name from the UniqueNames map. TODO: May not be needed for
+   * Hadoop versions after YARN-5190.
    */
   public void removeSourceName(String name) {
     if (sourceNamesField == null || mapField == null) {
@@ -92,8 +92,9 @@ public class DefaultMetricsSystemHelper {
       }
     } catch (Exception ex) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Received exception while trying to access Hadoop Metrics classes via " +
-                        "reflection.", ex);
+        LOG.trace(
+          "Received exception while trying to access Hadoop Metrics classes via " + "reflection.",
+          ex);
       }
     }
   }

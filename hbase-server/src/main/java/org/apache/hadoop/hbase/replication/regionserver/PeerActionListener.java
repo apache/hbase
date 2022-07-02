@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface PeerActionListener {
 
-  static final PeerActionListener DUMMY = new PeerActionListener() {};
+  static final PeerActionListener DUMMY = new PeerActionListener() {
+  };
 
   default void peerSyncReplicationStateChange(String peerId, SyncReplicationState from,
-      SyncReplicationState to, int stage) {}
+    SyncReplicationState to, int stage) {
+  }
 }

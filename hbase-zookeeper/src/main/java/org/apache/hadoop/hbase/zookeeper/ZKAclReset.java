@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.List;
@@ -32,24 +30,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * You may add the jaas.conf option
- *    -Djava.security.auth.login.config=/PATH/jaas.conf
- *
- * You may also specify -D to set options
- *    "hbase.zookeeper.quorum"    (it should be in hbase-site.xml)
- *    "zookeeper.znode.parent"    (it should be in hbase-site.xml)
- *
- * Use -set-acls to set the ACLs, no option to erase ACLs
+ * You may add the jaas.conf option -Djava.security.auth.login.config=/PATH/jaas.conf You may also
+ * specify -D to set options "hbase.zookeeper.quorum" (it should be in hbase-site.xml)
+ * "zookeeper.znode.parent" (it should be in hbase-site.xml) Use -set-acls to set the ACLs, no
+ * option to erase ACLs
  */
 @InterfaceAudience.Private
 public class ZKAclReset extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(ZKAclReset.class);
 
-  private static void resetAcls(final ZKWatcher zkw, final String znode,
-                                final boolean eraseAcls) throws Exception {
+  private static void resetAcls(final ZKWatcher zkw, final String znode, final boolean eraseAcls)
+    throws Exception {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, znode);
     if (children != null) {
-      for (String child: children) {
+      for (String child : children) {
         resetAcls(zkw, ZNodePaths.joinZNode(znode, child), eraseAcls);
       }
     }
@@ -64,8 +58,7 @@ public class ZKAclReset extends Configured implements Tool {
     }
   }
 
-  private static void resetAcls(final Configuration conf, boolean eraseAcls)
-      throws Exception {
+  private static void resetAcls(final Configuration conf, boolean eraseAcls) throws Exception {
     try (ZKWatcher zkw = new ZKWatcher(conf, "ZKAclReset", null)) {
       LOG.info((eraseAcls ? "Erase" : "Set") + " HBase ACLs for {} {}", zkw.getQuorum(),
         zkw.getZNodePaths().baseZNode);
@@ -110,7 +103,7 @@ public class ZKAclReset extends Configured implements Tool {
     }
 
     resetAcls(getConf(), eraseAcls);
-    return(0);
+    return (0);
   }
 
   public static void main(String[] args) throws Exception {

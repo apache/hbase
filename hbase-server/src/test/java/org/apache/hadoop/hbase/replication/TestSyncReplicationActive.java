@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -117,8 +117,8 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     write(UTIL2, 200, 300);
   }
 
-  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtil utility, Path remoteDir,
-      String peerId) throws Exception {
+  private void verifyNoClusterIdInRemoteLog(HBaseTestingUtil utility, Path remoteDir, String peerId)
+    throws Exception {
     FileSystem fs2 = utility.getTestFileSystem();
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));
     Assert.assertTrue(files.length > 0);

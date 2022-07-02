@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,12 +52,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestAppendTimeRange {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAppendTimeRange.class);
+    HBaseClassTestRule.forClass(TestAppendTimeRange.class);
 
   @Rule
   public TestName name = new TestName();
@@ -76,7 +76,7 @@ public class TestAppendTimeRange {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        MyObserver.class.getName());
+      MyObserver.class.getName());
     // Make general delay zero rather than default. Timing is off in this
     // test that depends on an evironment edge that is manually moved forward.
     util.getConfiguration().setInt(RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY, 0);
@@ -100,12 +100,12 @@ public class TestAppendTimeRange {
 
     @Override
     public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Append append) throws IOException {
-      NavigableMap<byte [], List<Cell>> map = append.getFamilyCellMap();
-      for (Map.Entry<byte [], List<Cell>> entry : map.entrySet()) {
+      final Append append) throws IOException {
+      NavigableMap<byte[], List<Cell>> map = append.getFamilyCellMap();
+      for (Map.Entry<byte[], List<Cell>> entry : map.entrySet()) {
         for (Cell cell : entry.getValue()) {
-          String appendStr = Bytes.toString(cell.getValueArray(), cell.getValueOffset(),
-              cell.getValueLength());
+          String appendStr =
+            Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
           if (appendStr.equals("b")) {
             tr10 = append.getTimeRange();
           } else if (appendStr.equals("c") && !append.getTimeRange().isAllTime()) {
@@ -137,12 +137,11 @@ public class TestAppendTimeRange {
       time = EnvironmentEdgeManager.currentTime();
       mee.setValue(time);
       TimeRange range2 = TimeRange.between(1, time + 20);
-      List<Row> actions =
-          Arrays.asList(new Row[] {
-              new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))
-                  .setTimeRange(range2.getMin(), range2.getMax()),
-              new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))
-                  .setTimeRange(range2.getMin(), range2.getMax()) });
+      List<Row> actions = Arrays.asList(new Row[] {
+        new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))
+          .setTimeRange(range2.getMin(), range2.getMax()),
+        new Append(ROW).addColumn(TEST_FAMILY, QUAL, Bytes.toBytes("c"))
+          .setTimeRange(range2.getMin(), range2.getMax()) });
       Object[] results1 = new Object[actions.size()];
       table.batch(actions, results1);
       assertEquals(MyObserver.tr2.getMin(), range2.getMin());

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -40,19 +38,18 @@ public class Addressing {
    * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return An InetSocketInstance
    */
-  public static InetSocketAddress createInetSocketAddressFromHostAndPortStr(
-      final String hostAndPort) {
+  public static InetSocketAddress
+    createInetSocketAddressFromHostAndPortStr(final String hostAndPort) {
     return new InetSocketAddress(parseHostname(hostAndPort), parsePort(hostAndPort));
   }
 
   /**
    * @param hostname Server hostname
-   * @param port Server port
-   * @return Returns a concatenation of <code>hostname</code> and
-   * <code>port</code> in following
-   * form: <code>&lt;hostname&gt; ':' &lt;port&gt;</code>.  For example, if hostname
-   * is <code>example.org</code> and port is 1234, this method will return
-   * <code>example.org:1234</code>
+   * @param port     Server port
+   * @return Returns a concatenation of <code>hostname</code> and <code>port</code> in following
+   *         form: <code>&lt;hostname&gt; ':' &lt;port&gt;</code>. For example, if hostname is
+   *         <code>example.org</code> and port is 1234, this method will return
+   *         <code>example.org:1234</code>
    */
   public static String createHostAndPortStr(final String hostname, final int port) {
     return hostname + HOSTNAME_PORT_SEPARATOR + port;
@@ -109,8 +106,8 @@ public class Addressing {
     });
   }
 
-  private static InetAddress getIpAddress(AddressSelectionCondition condition) throws
-      SocketException {
+  private static InetAddress getIpAddress(AddressSelectionCondition condition)
+    throws SocketException {
     // Before we connect somewhere, we cannot be sure about what we'd be bound to; however,
     // we only connect when the message where client ID is, is long constructed. Thus,
     // just use whichever IP address we can find.
@@ -153,24 +150,23 @@ public class Addressing {
   }
 
   /**
-   * Given an InetSocketAddress object returns a String represent of it.
-   * This is a util method for Java 17. The toString() function of InetSocketAddress
-   * will flag the unresolved address with a substring in the string, which will result
-   * in unexpected problem. We should use this util function to get the string when we
-   * not sure whether the input address is resolved or not.
+   * Given an InetSocketAddress object returns a String represent of it. This is a util method for
+   * Java 17. The toString() function of InetSocketAddress will flag the unresolved address with a
+   * substring in the string, which will result in unexpected problem. We should use this util
+   * function to get the string when we not sure whether the input address is resolved or not.
    * @param address address to convert to a "host:port" String.
    * @return the String represent of the given address, like "foo:1234".
    */
   public static String inetSocketAddress2String(InetSocketAddress address) {
-    return address.isUnresolved() ?
-      address.toString().replace("/<unresolved>", "") :
-      address.toString();
+    return address.isUnresolved()
+      ? address.toString().replace("/<unresolved>", "")
+      : address.toString();
   }
 
   /**
    * Interface for AddressSelectionCondition to check if address is acceptable
    */
-  public interface AddressSelectionCondition{
+  public interface AddressSelectionCondition {
     /**
      * Condition on which to accept inet address
      * @param address to check

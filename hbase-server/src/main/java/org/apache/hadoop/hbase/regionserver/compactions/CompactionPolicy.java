@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A compaction policy determines how to select files for compaction,
- * how to compact them, and how to generate the compacted files.
+ * A compaction policy determines how to select files for compaction, how to compact them, and how
+ * to generate the compacted files.
  */
 @InterfaceAudience.Private
 public abstract class CompactionPolicy {
@@ -46,7 +43,7 @@ public abstract class CompactionPolicy {
    * @return True if we should run a major compaction.
    */
   public abstract boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
-      throws IOException;
+    throws IOException;
 
   /**
    * @param compactionSize Total size of some compaction
@@ -55,8 +52,8 @@ public abstract class CompactionPolicy {
   public abstract boolean throttleCompaction(long compactionSize);
 
   /**
-   * Inform the policy that some configuration has been change,
-   * so cached value should be updated it any.
+   * Inform the policy that some configuration has been change, so cached value should be updated it
+   * any.
    */
   public void setConf(Configuration conf) {
     this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);

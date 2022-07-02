@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,12 +24,10 @@ import org.apache.hadoop.hbase.util.HbckTableInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Simple implementation of TableIntegrityErrorHandler. Can be used as a base
- * class.
+ * Simple implementation of TableIntegrityErrorHandler. Can be used as a base class.
  */
 @InterfaceAudience.Private
-abstract public class TableIntegrityErrorHandlerImpl implements
-    TableIntegrityErrorHandler {
+abstract public class TableIntegrityErrorHandlerImpl implements TableIntegrityErrorHandler {
   HbckTableInfo ti;
 
   /**
@@ -73,8 +71,7 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    * {@inheritDoc}
    */
   @Override
-  public void handleDuplicateStartKeys(HbckRegionInfo hi1, HbckRegionInfo hi2)
-      throws IOException {
+  public void handleDuplicateStartKeys(HbckRegionInfo hi1, HbckRegionInfo hi2) throws IOException {
   }
 
   /**
@@ -82,23 +79,21 @@ abstract public class TableIntegrityErrorHandlerImpl implements
    */
   @Override
   public void handleOverlapInRegionChain(HbckRegionInfo hi1, HbckRegionInfo hi2)
-      throws IOException {
+    throws IOException {
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public void handleHoleInRegionChain(byte[] holeStart, byte[] holeEnd)
-      throws IOException {
+  public void handleHoleInRegionChain(byte[] holeStart, byte[] holeEnd) throws IOException {
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public void handleOverlapGroup(Collection<HbckRegionInfo> overlap)
-      throws IOException {
+  public void handleOverlapGroup(Collection<HbckRegionInfo> overlap) throws IOException {
   }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,19 +21,19 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@link RemoteException} with some extra information.  If source exception
- * was a {@link org.apache.hadoop.hbase.DoNotRetryIOException}, 
- * {@link #isDoNotRetry()} will return true.
- * <p>A {@link RemoteException} hosts exceptions we got from the server.
+ * A {@link RemoteException} with some extra information. If source exception was a
+ * {@link org.apache.hadoop.hbase.DoNotRetryIOException}, {@link #isDoNotRetry()} will return true.
+ * <p>
+ * A {@link RemoteException} hosts exceptions we got from the server.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
@@ -41,6 +41,7 @@ public class RemoteWithExtrasException extends RemoteException {
   private final String hostname;
   private final int port;
   private final boolean doNotRetry;
+  private final boolean serverOverloaded;
 
   /**
    * Dynamic class loader to load filter/comparators
@@ -51,22 +52,32 @@ public class RemoteWithExtrasException extends RemoteException {
     static {
       ClassLoader parent = RemoteWithExtrasException.class.getClassLoader();
       Configuration conf = HBaseConfiguration.create();
-      CLASS_LOADER = AccessController.doPrivileged((PrivilegedAction<ClassLoader>)
-        () -> new DynamicClassLoader(conf, parent)
-      );
+      CLASS_LOADER = AccessController
+        .doPrivileged((PrivilegedAction<ClassLoader>) () -> new DynamicClassLoader(conf, parent));
     }
   }
 
   public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry) {
-    this(className, msg, null, -1, doNotRetry);
+    this(className, msg, doNotRetry, false);
+  }
+
+  public RemoteWithExtrasException(String className, String msg, final boolean doNotRetry,
+    final boolean serverOverloaded) {
+    this(className, msg, null, -1, doNotRetry, serverOverloaded);
   }
 
   public RemoteWithExtrasException(String className, String msg, final String hostname,
-      final int port, final boolean doNotRetry) {
+    final int port, final boolean doNotRetry) {
+    this(className, msg, hostname, port, doNotRetry, false);
+  }
+
+  public RemoteWithExtrasException(String className, String msg, final String hostname,
+    final int port, final boolean doNotRetry, final boolean serverOverloaded) {
     super(className, msg);
     this.hostname = hostname;
     this.port = port;
     this.doNotRetry = doNotRetry;
+    this.serverOverloaded = serverOverloaded;
   }
 
   @Override
@@ -82,14 +93,14 @@ public class RemoteWithExtrasException extends RemoteException {
         realClass = Class.forName(getClassName(), false, super.getClass().getClassLoader());
       } catch (ClassNotFoundException e) {
         return new DoNotRetryIOException(
-            "Unable to load exception received from server:" + e.getMessage(), this);
+          "Unable to load exception received from server:" + e.getMessage(), this);
       }
     }
     try {
       return instantiateException(realClass.asSubclass(IOException.class));
     } catch (Exception e) {
       return new DoNotRetryIOException(
-          "Unable to instantiate exception received from server:" + e.getMessage(), this);
+        "Unable to instantiate exception received from server:" + e.getMessage(), this);
     }
   }
 
@@ -98,6 +109,17 @@ public class RemoteWithExtrasException extends RemoteException {
     cn.setAccessible(true);
     IOException ex = cn.newInstance(this.getMessage());
     ex.initCause(this);
+
+    if (ex instanceof HBaseServerException) {
+      // this is a newly constructed exception.
+      // if an exception defaults to meaning isServerOverloaded, we use that.
+      // otherwise, see if the remote exception value should mean setting to true.
+      HBaseServerException serverException = (HBaseServerException) ex;
+      if (serverOverloaded && !serverException.isServerOverloaded()) {
+        serverException.setServerOverloaded(true);
+      }
+    }
+
     return ex;
   }
 
@@ -120,5 +142,12 @@ public class RemoteWithExtrasException extends RemoteException {
    */
   public boolean isDoNotRetry() {
     return this.doNotRetry;
+  }
+
+  /**
+   * @return True if the server was considered overloaded when the exception was thrown.
+   */
+  public boolean isServerOverloaded() {
+    return serverOverloaded;
   }
 }

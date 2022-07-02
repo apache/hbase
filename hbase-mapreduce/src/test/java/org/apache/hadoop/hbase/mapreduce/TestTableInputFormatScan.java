@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,7 +46,7 @@ public class TestTableInputFormatScan extends TestTableInputFormatScanBase {
    */
   @Test
   public void testSpecifiedNumOfMappersMR()
-      throws InterruptedException, IOException, ClassNotFoundException {
+    throws InterruptedException, IOException, ClassNotFoundException {
     testNumOfSplitsMR(2, 52);
     testNumOfSplitsMR(4, 104);
   }
@@ -61,7 +61,7 @@ public class TestTableInputFormatScan extends TestTableInputFormatScanBase {
 
   @Test
   public void testScanFromConfiguration()
-      throws IOException, InterruptedException, ClassNotFoundException {
+    throws IOException, InterruptedException, ClassNotFoundException {
     testScanFromConfiguration("bba", "bbd", "bbc");
   }
 }

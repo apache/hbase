@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -132,10 +131,9 @@ class EntryBuffers {
   }
 
   /**
-   * A buffer of some number of edits for a given region.
-   * This accumulates edits and also provides a memory optimization in order to
-   * share a single byte array instance for the table and region name.
-   * Also tracks memory usage of the accumulated edits.
+   * A buffer of some number of edits for a given region. This accumulates edits and also provides a
+   * memory optimization in order to share a single byte array instance for the table and region
+   * name. Also tracks memory usage of the accumulated edits.
    */
   static class RegionEntryBuffer implements HeapSize {
     private long heapInBuffer = 0;
@@ -153,8 +151,8 @@ class EntryBuffers {
       internify(entry);
       entryBuffer.add(entry);
       // TODO linkedlist entry
-      long incrHeap = entry.getEdit().heapSize() +
-          ClassSize.align(2 * ClassSize.REFERENCE); // WALKey pointers
+      // entry size plus WALKey pointers
+      long incrHeap = entry.getEdit().heapSize() + ClassSize.align(2 * ClassSize.REFERENCE);
       heapInBuffer += incrHeap;
       return incrHeap;
     }

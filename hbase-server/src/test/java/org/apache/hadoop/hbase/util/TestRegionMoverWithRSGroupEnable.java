@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
+
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,11 +47,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.junit.Assert.assertEquals;
 
 /**
- * Test for rsgroup enable, unloaded regions from decommissoned host of a rsgroup
- * should be assigned to those regionservers belonging to the same rsgroup.
+ * Test for rsgroup enable, unloaded regions from decommissoned host of a rsgroup should be assigned
+ * to those regionservers belonging to the same rsgroup.
  */
 @Category({ MiscTests.class, MediumTests.class })
 public class TestRegionMoverWithRSGroupEnable {
@@ -61,7 +62,6 @@ public class TestRegionMoverWithRSGroupEnable {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoverWithRSGroupEnable.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String TEST_RSGROUP = "test";
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -108,8 +108,7 @@ public class TestRegionMoverWithRSGroupEnable {
       TEST_UTIL.deleteTable(tableName);
     }
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f"))
-      .setRegionServerGroup(TEST_RSGROUP)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).setRegionServerGroup(TEST_RSGROUP)
       .build();
     String startKey = "a";
     String endKey = "z";

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,10 +61,9 @@ public class TestRegionReplicaFailover {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
+    HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestRegionReplicaReplication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaReplication.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
@@ -86,7 +85,7 @@ public class TestRegionReplicaFailover {
   @Before
   public void before() throws Exception {
     Configuration conf = HTU.getConfiguration();
-   // Up the handlers; this test needs more than usual.
+    // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY, true);
@@ -116,7 +115,7 @@ public class TestRegionReplicaFailover {
     // Create a new table with region replication, don't put any data. Test that the secondary
     // region replica is available to read.
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName())) {
+      Table table = connection.getTable(htd.getTableName())) {
 
       Get get = new Get(row);
       get.setConsistency(Consistency.TIMELINE);
@@ -127,15 +126,14 @@ public class TestRegionReplicaFailover {
 
   /**
    * Tests the case where if there is some data in the primary region, reopening the region replicas
-   * (enable/disable table, etc) makes the region replicas readable.
-   * @throws IOException
+   * (enable/disable table, etc) makes the region replicas readable. n
    */
   @Test
   public void testSecondaryRegionWithNonEmptyRegion() throws IOException {
     // Create a new table with region replication and load some data
     // than disable and enable the table again and verify the data from secondary
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName())) {
+      Table table = connection.getTable(htd.getTableName())) {
 
       HTU.loadNumericRows(table, fam, 0, 1000);
 
@@ -152,7 +150,7 @@ public class TestRegionReplicaFailover {
   @Test
   public void testPrimaryRegionKill() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName())) {
+      Table table = connection.getTable(htd.getTableName())) {
 
       HTU.loadNumericRows(table, fam, 0, 1000);
 
@@ -186,10 +184,11 @@ public class TestRegionReplicaFailover {
     HTU.getMiniHBaseCluster().startRegionServer();
   }
 
-  /** wal replication is async, we have to wait until the replication catches up, or we timeout
+  /**
+   * wal replication is async, we have to wait until the replication catches up, or we timeout
    */
   private void verifyNumericRowsWithTimeout(final Table table, final byte[] f, final int startRow,
-      final int endRow, final int replicaId, final long timeout) throws Exception {
+    final int endRow, final int replicaId, final long timeout) throws Exception {
     try {
       HTU.waitFor(timeout, new Predicate<Exception>() {
         @Override
@@ -215,7 +214,7 @@ public class TestRegionReplicaFailover {
   @Test
   public void testSecondaryRegionKill() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName())) {
+      Table table = connection.getTable(htd.getTableName())) {
       HTU.loadNumericRows(table, fam, 0, 1000);
 
       // wait for some time to ensure that async wal replication does it's magic
@@ -250,15 +249,14 @@ public class TestRegionReplicaFailover {
   }
 
   /**
-   * Tests the case where there are 3 region replicas and the primary is continuously accepting
-   * new writes while one of the secondaries is killed. Verification is done for both of the
-   * secondary replicas.
+   * Tests the case where there are 3 region replicas and the primary is continuously accepting new
+   * writes while one of the secondaries is killed. Verification is done for both of the secondary
+   * replicas.
    */
   @Test
   public void testSecondaryRegionKillWhilePrimaryIsAcceptingWrites() throws Exception {
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName());
-        Admin admin = connection.getAdmin()) {
+      Table table = connection.getTable(htd.getTableName()); Admin admin = connection.getAdmin()) {
       // start a thread to do the loading of primary
       HTU.loadNumericRows(table, fam, 0, 1000); // start with some base
       admin.flush(table.getName());
@@ -273,7 +271,7 @@ public class TestRegionReplicaFailover {
         public void run() {
           while (!done.get()) {
             try {
-              HTU.loadNumericRows(table, fam, key.get(), key.get()+1000);
+              HTU.loadNumericRows(table, fam, key.get(), key.get() + 1000);
               key.addAndGet(1000);
             } catch (Throwable e) {
               ex.compareAndSet(null, e);
@@ -344,7 +342,7 @@ public class TestRegionReplicaFailover {
     HTU.getAdmin().createTable(htd, startKey, endKey, numRegions);
 
     try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName())) {
+      Table table = connection.getTable(htd.getTableName())) {
 
       for (int i = 1; i < splits.length; i++) {
         for (int j = 0; j < regionReplication; j++) {
