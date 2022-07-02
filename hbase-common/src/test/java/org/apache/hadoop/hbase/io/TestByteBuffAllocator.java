@@ -345,8 +345,6 @@ public class TestByteBuffAllocator {
     ByteBuff buf = alloc.allocate(bufSize);
     assertException(() -> buf.retain(2));
     assertException(() -> buf.release(2));
-    assertException(() -> buf.touch());
-    assertException(() -> buf.touch(new Object()));
   }
 
   private void assertException(Runnable r) {
