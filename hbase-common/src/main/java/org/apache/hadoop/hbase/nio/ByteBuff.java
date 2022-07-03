@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -563,7 +564,8 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
     return this;
   }
 
-  // Visible for testing
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+    allowedOnPath = ".*/src/test/.*")
   public RefCnt getRefCnt() {
     return refCnt;
   }

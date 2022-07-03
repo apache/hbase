@@ -2034,12 +2034,12 @@ public class HFileBlock implements Cacheable {
       .withByteBuffAllocator(blk.allocator).withShared(!newBuff.hasArray());
   }
 
-  static HFileBlock shallowClone(HFileBlock blk, ByteBuff newBuf) {
+  private static HFileBlock shallowClone(HFileBlock blk, ByteBuff newBuf) {
     return createBuilder(blk, newBuf).build();
   }
 
   static HFileBlock deepCloneOnHeap(HFileBlock blk) {
     ByteBuff deepCloned = ByteBuff.wrap(ByteBuffer.wrap(blk.buf.toBytes(0, blk.buf.limit())));
-    return createBuilder(blk, deepCloned).withShared(false).build();
+    return createBuilder(blk, deepCloned).build();
   }
 }
