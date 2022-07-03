@@ -726,11 +726,6 @@ public class HFileBlock implements Cacheable {
    * by default.
    */
   public boolean isSharedMem() {
-    if (this instanceof SharedMemHFileBlock) {
-      return true;
-    } else if (this instanceof ExclusiveMemHFileBlock) {
-      return false;
-    }
     return true;
   }
 
