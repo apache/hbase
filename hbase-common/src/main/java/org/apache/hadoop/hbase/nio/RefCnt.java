@@ -21,6 +21,7 @@ import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.util.AbstractReferenceCounted;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCounted;
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
@@ -103,7 +104,7 @@ public class RefCnt extends AbstractReferenceCounted {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   public Recycler getRecycler() {
     return recycler;
   }
