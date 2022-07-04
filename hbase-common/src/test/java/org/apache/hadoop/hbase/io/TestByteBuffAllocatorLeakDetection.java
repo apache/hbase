@@ -42,6 +42,7 @@ public class TestByteBuffAllocatorLeakDetection {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestByteBuffAllocatorLeakDetection.class);
 
+  @SuppressWarnings("unused")
   @Test
   public void testLeakDetection() throws InterruptedException {
     InternalLoggerFactory original = InternalLoggerFactory.getDefaultFactory();
