@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -545,6 +546,28 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   public static ByteBuff wrap(ByteBuffer buffer) {
     return wrap(buffer, RefCnt.create());
+  }
+
+  /**
+   * Calling this method in strategic locations where ByteBuffs are referenced may help diagnose
+   * potential buffer leaks. We pass the buffer itself as a default hint, but one can use
+   * {@link #touch(Object)} to pass their own hint as well.
+   */
+  @Override
+  public ByteBuff touch() {
+    return touch(this);
+  }
+
+  @Override
+  public ByteBuff touch(Object hint) {
+    refCnt.touch(hint);
+    return this;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public RefCnt getRefCnt() {
+    return refCnt;
   }
 
   /**
