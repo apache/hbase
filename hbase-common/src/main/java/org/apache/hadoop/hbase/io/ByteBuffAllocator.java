@@ -347,11 +347,20 @@ public class ByteBuffAllocator {
       // just allocate the ByteBuffer from on-heap.
       bbs.add(allocateOnHeap(remain));
     }
-    ByteBuff bb = ByteBuff.wrap(bbs, () -> {
-      for (int i = 0; i < lenFromReservoir; i++) {
-        this.putbackBuffer(bbs.get(i));
-      }
-    });
+
+    ByteBuff bb;
+    // we only need a recycler if we successfully pulled from the pool
+    // this matters for determining whether to add leak detection in RefCnt
+    if (lenFromReservoir == 0) {
+      bb = ByteBuff.wrap(bbs);
+    } else {
+      bb = ByteBuff.wrap(bbs, () -> {
+        for (int i = 0; i < lenFromReservoir; i++) {
+          this.putbackBuffer(bbs.get(i));
+        }
+      });
+    }
+
     bb.limit(size);
     return bb;
   }
