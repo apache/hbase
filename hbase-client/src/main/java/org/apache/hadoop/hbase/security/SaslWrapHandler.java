@@ -86,6 +86,7 @@ public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
       }
     }
   }
+
   @Override
   public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
     // Also remove on removal in case close(...) is not called.
