@@ -64,6 +64,8 @@ public class SingleByteBuff extends ByteBuff {
     } else {
       this.unsafeOffset = UnsafeAccess.directBufferAddress(buf);
     }
+    // Touch the reference count it's easier to debug leaks.
+    refCnt.touch();
   }
 
   @Override

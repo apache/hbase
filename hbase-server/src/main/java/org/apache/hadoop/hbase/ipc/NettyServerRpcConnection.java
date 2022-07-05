@@ -64,8 +64,11 @@ class NettyServerRpcConnection extends ServerRpcConnection {
       process(new SingleByteBuff(buf.nioBuffer()));
     } else {
       ByteBuffer connectionHeader = ByteBuffer.allocate(buf.readableBytes());
-      buf.readBytes(connectionHeader);
-      buf.release();
+      try {
+        buf.readBytes(connectionHeader);
+      } finally {
+        buf.release();
+      }
       process(connectionHeader);
     }
   }
@@ -78,9 +81,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     try {
       if (skipInitialSaslHandshake) {
         skipInitialSaslHandshake = false;
-        if (callCleanup != null) {
-          callCleanup.run();
-        }
+        callCleanupIfNeeded();
         return;
       }
 
@@ -90,9 +91,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
         processOneRpc(buf);
       }
     } catch (Exception e) {
-      if (callCleanup != null) {
-        callCleanup.run();
-      }
+      callCleanupIfNeeded();
       throw e;
     } finally {
       this.callCleanup = null;
@@ -103,9 +102,16 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     disposeSasl();
     channel.close();
+    // Call the cleanup again just in case this was not done.
+    callCleanupIfNeeded();
     callCleanup = null;
   }
 
+  private void callCleanupIfNeeded() {
+    if (callCleanup != null) {
+      callCleanup.run();
+    }
+  }
   @Override
   public boolean isConnectionOpen() {
     return channel.isOpen();

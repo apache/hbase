@@ -88,10 +88,20 @@ public class CryptoAESWrapHandler extends ChannelOutboundHandlerAdapter {
   }
 
   @Override
-  public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+  public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    // Also remove on removal in case close(...) is not called.
+    removeAndFailIfNeeded();
+  }
+
+  @Override
+  public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception{
+    removeAndFailIfNeeded();
+    ctx.close(promise);
+  }
+
+  private void removeAndFailIfNeeded() {
     if (!queue.isEmpty()) {
       queue.releaseAndFailAll(new ConnectionClosedException("Connection closed"));
     }
-    ctx.close(promise);
   }
 }
