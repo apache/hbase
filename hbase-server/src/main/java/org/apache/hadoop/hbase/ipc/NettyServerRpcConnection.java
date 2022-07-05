@@ -33,6 +33,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescrip
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -60,12 +61,15 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   void process(final ByteBuf buf) throws IOException, InterruptedException {
     if (connectionHeaderRead) {
-      this.callCleanup = buf::release;
+      this.callCleanup = () -> ReferenceCountUtil.safeRelease(buf);
       process(new SingleByteBuff(buf.nioBuffer()));
     } else {
       ByteBuffer connectionHeader = ByteBuffer.allocate(buf.readableBytes());
-      buf.readBytes(connectionHeader);
-      buf.release();
+      try {
+        buf.readBytes(connectionHeader);
+      } finally {
+        buf.release();
+      }
       process(connectionHeader);
     }
   }
@@ -78,9 +82,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     try {
       if (skipInitialSaslHandshake) {
         skipInitialSaslHandshake = false;
-        if (callCleanup != null) {
-          callCleanup.run();
-        }
+        callCleanupIfNeeded();
         return;
       }
 
@@ -90,9 +92,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
         processOneRpc(buf);
       }
     } catch (Exception e) {
-      if (callCleanup != null) {
-        callCleanup.run();
-      }
+      callCleanupIfNeeded();
       throw e;
     } finally {
       this.callCleanup = null;
@@ -103,7 +103,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     disposeSasl();
     channel.close();
-    callCleanup = null;
+    callCleanupIfNeeded();
   }
 
   @Override
