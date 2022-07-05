@@ -314,5 +314,10 @@ public class TestTableInputFormatBase {
     @Override
     public void clearRegionLocationCache() {
     }
+
+    @Override
+    public String getClusterId() {
+      return null;
+    }
   }
 }
