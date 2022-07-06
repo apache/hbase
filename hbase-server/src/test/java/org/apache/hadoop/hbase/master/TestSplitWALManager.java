@@ -115,8 +115,7 @@ public class TestSplitWALManager {
     Assert.assertNotNull(e);
     Assert.assertTrue(e instanceof ProcedureSuspendedException);
 
-    splitWALManager.releaseSplitWALWorker(server, TEST_UTIL.getHBaseCluster().getMaster()
-      .getMasterProcedureExecutor().getEnvironment().getProcedureScheduler());
+    splitWALManager.releaseSplitWALWorker(server);
     Assert.assertNotNull(splitWALManager.acquireSplitWALWorker(testProcedures.get(3)));
   }
 
@@ -348,7 +347,7 @@ public class TestSplitWALManager {
           setNextState(MasterProcedureProtos.SplitWALState.RELEASE_SPLIT_WORKER);
           return Flow.HAS_MORE_STATE;
         case RELEASE_SPLIT_WORKER:
-          splitWALManager.releaseSplitWALWorker(worker, env.getProcedureScheduler());
+          splitWALManager.releaseSplitWALWorker(worker);
           return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
