@@ -600,7 +600,7 @@
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.67</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
-    <commons-crypto.version>1.0.0</commons-crypto.version>
+    <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
