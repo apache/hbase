@@ -2157,4 +2157,14 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new IOException(cause);
     }
   }
+
+  @Override
+  public String getClusterId() {
+    try {
+      return registry.getClusterId().get();
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("Error fetching cluster ID: ", e);
+    }
+    return null;
+  }
 }

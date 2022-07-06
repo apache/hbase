@@ -233,5 +233,10 @@ public class TestMultiTableInputFormatBase {
     @Override
     public void clearRegionLocationCache() {
     }
+
+    @Override
+    public String getClusterId() {
+      return null;
+    }
   }
 }
