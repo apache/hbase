@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.master.procedure.CloneSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureScheduler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.RestoreSnapshotProcedure;
 import org.apache.hadoop.hbase.master.procedure.SnapshotProcedure;
@@ -1470,20 +1468,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
   public ServerName acquireSnapshotVerifyWorker(SnapshotVerifyProcedure procedure)
     throws ProcedureSuspendedException {
-    Optional<ServerName> worker = verifyWorkerAssigner.acquire();
-    if (worker.isPresent()) {
-      LOG.debug("{} Acquired verify snapshot worker={}", procedure, worker.get());
-      return worker.get();
-    }
-    verifyWorkerAssigner.suspend(procedure);
-    throw new ProcedureSuspendedException();
+    ServerName worker = verifyWorkerAssigner.acquire(procedure);
+    LOG.debug("{} Acquired verify snapshot worker={}", procedure, worker);
+    return worker;
   }
 
-  public void releaseSnapshotVerifyWorker(SnapshotVerifyProcedure procedure, ServerName worker,
-    MasterProcedureScheduler scheduler) {
+  public void releaseSnapshotVerifyWorker(SnapshotVerifyProcedure procedure, ServerName worker) {
     LOG.debug("{} Release verify snapshot worker={}", procedure, worker);
     verifyWorkerAssigner.release(worker);
-    verifyWorkerAssigner.wake(scheduler);
   }
 
   private void restoreWorkers() {
