@@ -150,15 +150,15 @@ public class TestVerifyReplicationCrossDiffHdfs {
 
   @AfterClass
   public static void tearDownClass() throws Exception {
-    if (mapReduceUtil != null) {
-      mapReduceUtil.shutdownMiniCluster();
-    }
-    if (util2 != null) {
-      util2.shutdownMiniCluster();
-    }
-    if (util1 != null) {
-      util1.shutdownMiniCluster();
-    }
+    // if (mapReduceUtil != null) {
+    // mapReduceUtil.shutdownMiniCluster();
+    // }
+    // if (util2 != null) {
+    // util2.shutdownMiniCluster();
+    // }
+    // if (util1 != null) {
+    // util1.shutdownMiniCluster();
+    // }
   }
 
   @Test
