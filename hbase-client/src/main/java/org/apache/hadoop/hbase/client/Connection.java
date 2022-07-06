@@ -174,6 +174,11 @@ public interface Connection extends Abortable, Closeable {
   TableBuilder getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
+   * @return the cluster ID unique to this HBase cluster.
+   */
+  String getClusterId();
+
+  /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
    * be thread-safe. A new instance should be created by each thread. This is a lightweight
    * operation. Pooling or caching of the returned Hbck instance is not recommended. <br>
