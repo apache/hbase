@@ -825,7 +825,7 @@ elif [ "${DEBUG}" = "true" ]; then
   echo "Skipped adding JDK11 JVM flags."
 fi
 
-if [[ -n "${HBASE_TRACE_OPTS}" ]]; then
+if [[ "${HBASE_OTEL_TRACING_ENABLED:-false}" = "true" ]] ; then
   if [ "${DEBUG}" = "true" ]; then
     echo "Attaching opentelemetry agent"
   fi
