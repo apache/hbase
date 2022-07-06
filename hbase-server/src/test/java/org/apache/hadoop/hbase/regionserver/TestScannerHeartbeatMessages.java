@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.RSRpcServices.DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,9 +50,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -60,6 +65,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -137,6 +143,40 @@ public class TestScannerHeartbeatMessages {
     TEST_UTIL.startMiniCluster(1);
 
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
+  }
+
+  @Test
+  public void testTimeLimitAccountsForQueueTime() throws IOException, InterruptedException {
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    RSRpcServices services = new RSRpcServices(rs);
+    RpcCall mockRpcCall = Mockito.mock(RpcCall.class);
+    // first return 180 (minimal queuing), then 120 (more queueing), then 101 (heavy queueing)
+    // finally, 25 is fatal levels of queueing -- exceeding timeout
+    when(mockRpcCall.getReceiveTime()).thenReturn(180L, 120L, 101L, 25L);
+
+    // assume timeout of 100ms
+    HBaseRpcController mockController = Mockito.mock(HBaseRpcController.class);
+    when(mockController.getCallTimeout()).thenReturn(100);
+
+    // current time is 100, which we'll subtract from 90 and 50 to generate some time deltas
+    EnvironmentEdgeManager.injectEdge(() -> 200L);
+
+    try {
+      // we queued for 20ms, leaving 80ms of timeout, which we divide by 2
+      assertEquals(200 + (100 - 20) / 2, services.getTimeLimit(mockRpcCall, mockController, true));
+      // we queued for 80ms, leaving 20ms of timeout, which we divide by 2
+      assertEquals(200 + (100 - 80) / 2, services.getTimeLimit(mockRpcCall, mockController, true));
+      // we queued for 99ms of 100ms timeout, leaving only 1ms. we fall back to default minimum
+      assertEquals(200 + DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
+        services.getTimeLimit(mockRpcCall, mockController, true));
+      // lastly, we queue for 175ms of 100ms timeout. this should be very rare since we drop
+      // timed out calls in the queue. in this case we still fallback on default minimum for now.
+      assertEquals(200 + DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
+        services.getTimeLimit(mockRpcCall, mockController, true));
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+
   }
 
   static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
