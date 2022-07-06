@@ -281,7 +281,7 @@ public class ServerCrashProcedure extends
       }
       splitWALManager.deleteWALDir(serverName);
     } catch (IOException e) {
-      LOG.warn("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
+      LOG.info("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
     }
   }
 
