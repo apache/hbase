@@ -212,7 +212,7 @@ public class HRegionFileSystem {
    * <br>
    * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
    * @param familyName The name of column family.
-   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See see hadoop 2.6+
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See hadoop 2.6+
    *                   org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g 'COLD',
    *                   'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
