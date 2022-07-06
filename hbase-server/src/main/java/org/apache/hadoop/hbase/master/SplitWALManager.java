@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -160,7 +159,7 @@ public class SplitWALManager {
   /**
    * After the worker finished the split WAL task, it will release the worker, and wake up all the
    * suspend procedures in the ProcedureEvent
-   * @param worker    worker which is about to release
+   * @param worker worker which is about to release
    */
   public void releaseSplitWALWorker(ServerName worker) {
     LOG.debug("Release split WAL worker={}", worker);
