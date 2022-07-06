@@ -178,8 +178,8 @@ public class TestScannerHeartbeatMessages {
 
   }
 
-  static Table createTestTable(TableName name, byte[][] rows, byte[][] families, byte[][] qualifiers,
-    byte[] cellValue) throws IOException {
+  static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
+    byte[][] qualifiers, byte[] cellValue) throws IOException {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
