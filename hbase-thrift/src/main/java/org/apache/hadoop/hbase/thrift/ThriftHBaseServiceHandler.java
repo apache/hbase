@@ -1217,6 +1217,11 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     return TThriftServerType.ONE;
   }
 
+  @Override
+  public String getClusterId() throws TException {
+    return connectionCache.getClusterId();
+  }
+
   private static IOError getIOError(Throwable throwable) {
     IOError error = new IOErrorWithCause(throwable);
     error.setCanRetry(!(throwable instanceof DoNotRetryIOException));
