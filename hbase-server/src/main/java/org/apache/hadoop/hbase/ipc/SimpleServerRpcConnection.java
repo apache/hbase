@@ -284,7 +284,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       } else {
         processOneRpc(data);
       }
-
+    } catch (Exception e) {
+      callCleanupIfNeeded();
+      throw e;
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
       data = null; // For the GC
@@ -296,8 +298,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     disposeSasl();
     data = null;
-    callCleanup = null;
-    if (!channel.isOpen()) return;
+    callCleanupIfNeeded();
+    if (!channel.isOpen()) {
+      return;
+    }
     try {
       socket.shutdownOutput();
     } catch (Exception ignored) {
