@@ -63,10 +63,10 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
 
   public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
     ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
-    RpcControllerFactory rpcControllerFactory, ExecutorService pool,
-    int replicaCallTimeoutMicroSecondScan) throws IOException {
+    RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
+    int scannerTimeout, int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      replicaCallTimeoutMicroSecondScan);
+      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan);
     exceptionsQueue = new ConcurrentLinkedQueue<>();
     final Context context = Context.current();
     final Runnable runnable = context.wrap(new PrefetchRunnable());

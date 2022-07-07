@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -107,7 +108,8 @@ public class TestClientScanner {
       RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
       throws IOException {
       super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
-        primaryOperationTimeout);
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, primaryOperationTimeout);
     }
 
     @Override
@@ -500,7 +502,7 @@ public class TestClientScanner {
     }
 
     @Override
-    public <T> RpcRetryingCaller<T> newCaller() {
+    public <T> RpcRetryingCaller<T> newCaller(int rpcTimeout) {
       return new RpcRetryingCaller<T>() {
         @Override
         public void cancel() {

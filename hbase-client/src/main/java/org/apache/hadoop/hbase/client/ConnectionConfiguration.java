@@ -71,6 +71,11 @@ public class ConnectionConfiguration {
       HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED);
   }
 
+  public static final String HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY =
+    "hbase.client.meta.read.rpc.timeout";
+  public static final String HBASE_CLIENT_META_SCANNER_TIMEOUT =
+    "hbase.client.meta.scanner.timeout.period";
+
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
   private final long writeBufferPeriodicFlushTimerTickMs;
@@ -85,7 +90,11 @@ public class ConnectionConfiguration {
   private final int maxKeyValueSize;
   private final int rpcTimeout;
   private final int readRpcTimeout;
+  private final int metaReadRpcTimeout;
   private final int writeRpcTimeout;
+  private final int scanTimeout;
+  private final int metaScanTimeout;
+
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
   private final long pauseMs;
@@ -140,8 +149,15 @@ public class ConnectionConfiguration {
     this.readRpcTimeout = conf.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
 
+    this.metaReadRpcTimeout = conf.getInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeout);
+
     this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+
+    this.scanTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+
+    this.metaScanTimeout = conf.getInt(HBASE_CLIENT_META_SCANNER_TIMEOUT, scanTimeout);
 
     long pauseMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
     long pauseMsForServerOverloaded = conf.getLong(HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
@@ -178,14 +194,21 @@ public class ConnectionConfiguration {
     this.clientScannerAsyncPrefetch = Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
     this.readRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.metaReadRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.writeRpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
     this.rpcTimeout = HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
+    this.scanTimeout = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
+    this.metaScanTimeout = scanTimeout;
     this.pauseMs = DEFAULT_HBASE_CLIENT_PAUSE;
     this.pauseMsForServerOverloaded = DEFAULT_HBASE_CLIENT_PAUSE;
   }
 
   public int getReadRpcTimeout() {
     return readRpcTimeout;
+  }
+
+  public int getMetaReadRpcTimeout() {
+    return metaReadRpcTimeout;
   }
 
   public int getWriteRpcTimeout() {
@@ -246,6 +269,14 @@ public class ConnectionConfiguration {
 
   public int getRpcTimeout() {
     return rpcTimeout;
+  }
+
+  public int getScanTimeout() {
+    return scanTimeout;
+  }
+
+  public int getMetaScanTimeout() {
+    return metaScanTimeout;
   }
 
   public long getPauseMillis() {

@@ -36,10 +36,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ClientSimpleScanner extends ClientScanner {
   public ClientSimpleScanner(Configuration configuration, Scan scan, TableName name,
     ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
-    RpcControllerFactory rpcControllerFactory, ExecutorService pool,
-    int replicaCallTimeoutMicroSecondScan) throws IOException {
+    RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
+    int scannerTimeout, int replicaCallTimeoutMicroSecondScan) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      replicaCallTimeoutMicroSecondScan);
+      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan);
   }
 
   @Override

@@ -305,7 +305,7 @@ public class RpcRetryingCallerWithReadReplicas {
     for (int id = min; id <= max; id++) {
       HRegionLocation hrl = rl.getRegionLocation(id);
       ReplicaRegionServerCallable callOnReplica = new ReplicaRegionServerCallable(id, hrl);
-      cs.submit(callOnReplica, operationTimeout, id);
+      cs.submit(callOnReplica, rpcTimeout, operationTimeout, id);
     }
   }
 

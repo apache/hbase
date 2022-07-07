@@ -968,7 +968,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         try (Scope ignored = span.makeCurrent();
           ReversedClientScanner rcs =
             new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
-              rpcControllerFactory, getMetaLookupPool(), metaReplicaCallTimeoutScanInMicroSecond)) {
+              rpcControllerFactory, getMetaLookupPool(), connectionConfig.getMetaReadRpcTimeout(),
+              connectionConfig.getMetaScanTimeout(), metaReplicaCallTimeoutScanInMicroSecond)) {
           boolean tableNotFound = true;
           for (;;) {
             Result regionInfoRow = rcs.next();

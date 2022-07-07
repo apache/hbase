@@ -53,15 +53,16 @@ public class ResultBoundedCompletionService<V> {
     private T result = null;
     private ExecutionException exeEx = null;
     private volatile boolean cancelled = false;
-    private final int callTimeout;
+    private final int operationTimeout;
     private final RpcRetryingCaller<T> retryingCaller;
     private boolean resultObtained = false;
     private final int replicaId; // replica id
 
-    public QueueingFuture(RetryingCallable<T> future, int callTimeout, int id) {
+    public QueueingFuture(RetryingCallable<T> future, int rpcTimeout, int operationTimeout,
+      int id) {
       this.future = future;
-      this.callTimeout = callTimeout;
-      this.retryingCaller = retryingCallerFactory.<T> newCaller();
+      this.operationTimeout = operationTimeout;
+      this.retryingCaller = retryingCallerFactory.<T> newCaller(rpcTimeout);
       this.replicaId = id;
     }
 
@@ -70,7 +71,7 @@ public class ResultBoundedCompletionService<V> {
     public void run() {
       try {
         if (!cancelled) {
-          result = this.retryingCaller.callWithRetries(future, callTimeout);
+          result = this.retryingCaller.callWithRetries(future, operationTimeout);
           resultObtained = true;
         }
       } catch (Throwable t) {
@@ -157,8 +158,8 @@ public class ResultBoundedCompletionService<V> {
     this.completedTasks = new ArrayList<>(maxTasks);
   }
 
-  public void submit(RetryingCallable<V> task, int callTimeout, int id) {
-    QueueingFuture<V> newFuture = new QueueingFuture<>(task, callTimeout, id);
+  public void submit(RetryingCallable<V> task, int rpcTimeout, int operationTimeout, int id) {
+    QueueingFuture<V> newFuture = new QueueingFuture<>(task, rpcTimeout, operationTimeout, id);
     // remove trace for runnable because HBASE-25373 and OpenTelemetry do not cover TraceRunnable
     executor.execute(newFuture);
     tasks[id] = newFuture;
