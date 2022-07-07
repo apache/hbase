@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
@@ -90,6 +92,7 @@ public class TestScannerHeartbeatMessages {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static Table TABLE = null;
+  private static Connection CONN = null;
 
   /**
    * Table configuration
@@ -133,6 +136,7 @@ public class TestScannerHeartbeatMessages {
 
     conf.setStrings(HConstants.REGION_IMPL, HeartbeatHRegion.class.getName());
     conf.setStrings(HConstants.REGION_SERVER_IMPL, HeartbeatHRegionServer.class.getName());
+    // setting these here for usage on the server side. will override for client side below
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SERVER_TIMEOUT);
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, SERVER_TIMEOUT);
     conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 1);
@@ -141,6 +145,10 @@ public class TestScannerHeartbeatMessages {
     conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 1);
     TEST_UTIL.startMiniCluster(1);
 
+    // set client timeout for client side, we want it to be less than server side.
+    Configuration clientConf = new Configuration(conf);
+    clientConf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
+    CONN = ConnectionFactory.createConnection(clientConf);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
   }
 
@@ -180,10 +188,10 @@ public class TestScannerHeartbeatMessages {
 
   static Table createTestTable(TableName name, byte[][] rows, byte[][] families,
     byte[][] qualifiers, byte[] cellValue) throws IOException {
-    Table ht = TEST_UTIL.createTable(name, families);
+    TEST_UTIL.createTable(name, families);
+    Table ht = CONN.getTable(name);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
-    ht.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, CLIENT_TIMEOUT);
     return ht;
   }
 
@@ -211,6 +219,7 @@ public class TestScannerHeartbeatMessages {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    CONN.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 

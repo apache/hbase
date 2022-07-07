@@ -75,6 +75,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected final long maxScannerResultSize;
   private final ClusterConnection connection;
   protected final TableName tableName;
+  protected final int readRpcTimeout;
   protected final int scannerTimeout;
   protected boolean scanMetricsPublished = false;
   protected RpcRetryingCaller<Result[]> caller;
@@ -100,8 +101,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
     ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
-    RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
-    throws IOException {
+    RpcControllerFactory controllerFactory, ExecutorService pool, int scanReadRpcTimeout,
+    int scannerTimeout, int primaryOperationTimeout) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(
         "Scan table=" + tableName + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -120,8 +121,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
       this.maxScannerResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     }
-    this.scannerTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    this.readRpcTimeout = scanReadRpcTimeout;
+    this.scannerTimeout = scannerTimeout;
 
     // check if application wants to collect scan metrics
     initScanMetrics(scan);
@@ -248,9 +249,9 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // clear the current region, we will set a new value to it after the first call of the new
     // callable.
     this.currentRegion = null;
-    this.callable =
-      new ScannerCallableWithReplicas(getTable(), getConnection(), createScannerCallable(), pool,
-        primaryOperationTimeout, scan, getRetries(), scannerTimeout, caching, conf, caller);
+    this.callable = new ScannerCallableWithReplicas(getTable(), getConnection(),
+      createScannerCallable(), pool, primaryOperationTimeout, scan, getRetries(), readRpcTimeout,
+      scannerTimeout, caching, conf, caller);
     this.callable.setCaching(this.caching);
     incRegionCountMetrics(scanMetrics);
     return true;

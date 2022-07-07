@@ -23,6 +23,8 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PE
 import static org.apache.hadoop.hbase.HConstants.HBASE_META_SCANNER_CACHING;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +59,9 @@ class AsyncConnectionConfiguration {
   // timeout for each read rpc request
   private final long readRpcTimeoutNs;
 
+  // timeout for each read rpc request against system tables
+  private final long metaReadRpcTimeoutNs;
+
   // timeout for each write rpc request
   private final long writeRpcTimeoutNs;
 
@@ -74,6 +79,7 @@ class AsyncConnectionConfiguration {
   // client that it is still alive. The scan timeout is used as operation timeout for every
   // operations in a scan, such as openScanner or next.
   private final long scanTimeoutNs;
+  private final long metaScanTimeoutNs;
 
   private final int scannerCaching;
 
@@ -111,8 +117,11 @@ class AsyncConnectionConfiguration {
       TimeUnit.MILLISECONDS.toNanos(connectionConf.getMetaOperationTimeout());
     this.operationTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getOperationTimeout());
     this.rpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getRpcTimeout());
-    this.readRpcTimeoutNs = TimeUnit.MILLISECONDS
-      .toNanos(conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, connectionConf.getReadRpcTimeout()));
+    long readRpcTimeoutMillis =
+      conf.getLong(HBASE_RPC_READ_TIMEOUT_KEY, connectionConf.getRpcTimeout());
+    this.readRpcTimeoutNs = TimeUnit.MILLISECONDS.toNanos(readRpcTimeoutMillis);
+    this.metaReadRpcTimeoutNs = TimeUnit.MILLISECONDS
+      .toNanos(conf.getLong(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeoutMillis));
     this.writeRpcTimeoutNs = TimeUnit.MILLISECONDS
       .toNanos(conf.getLong(HBASE_RPC_WRITE_TIMEOUT_KEY, connectionConf.getWriteRpcTimeout()));
     this.pauseNs = TimeUnit.MILLISECONDS.toNanos(connectionConf.getPauseMillis());
@@ -124,8 +133,11 @@ class AsyncConnectionConfiguration {
       TimeUnit.MICROSECONDS.toNanos(connectionConf.getReplicaCallTimeoutMicroSecondScan());
     this.primaryMetaScanTimeoutNs =
       TimeUnit.MICROSECONDS.toNanos(connectionConf.getMetaReplicaCallTimeoutMicroSecondScan());
-    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(conf
-      .getInt(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD));
+    long scannerTimeoutMillis = conf.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
+    this.scanTimeoutNs = TimeUnit.MILLISECONDS.toNanos(scannerTimeoutMillis);
+    this.metaScanTimeoutNs = TimeUnit.MILLISECONDS
+      .toNanos(conf.getLong(HBASE_CLIENT_META_SCANNER_TIMEOUT, scannerTimeoutMillis));
 
     // fields not in connection configuration
     this.startLogErrorsCnt =
@@ -150,6 +162,10 @@ class AsyncConnectionConfiguration {
     return readRpcTimeoutNs;
   }
 
+  long getMetaReadRpcTimeoutNs() {
+    return metaReadRpcTimeoutNs;
+  }
+
   long getWriteRpcTimeoutNs() {
     return writeRpcTimeoutNs;
   }
@@ -172,6 +188,10 @@ class AsyncConnectionConfiguration {
 
   long getScanTimeoutNs() {
     return scanTimeoutNs;
+  }
+
+  long getMetaScanTimeoutNs() {
+    return metaScanTimeoutNs;
   }
 
   int getScannerCaching() {
