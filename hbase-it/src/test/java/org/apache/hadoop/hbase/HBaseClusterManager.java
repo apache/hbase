@@ -86,7 +86,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       return;
     }
     sshUserName = conf.get("hbase.it.clustermanager.ssh.user", "");
-    String extraSshOptions = conf.get("hbase.it.clustermanager.ssh.opts", "");
+    String extraSshOptions = conf.get("hbase.it.clustermanager.ssh.opts", "-o ConnectTimeout=10");
     sshOptions = System.getenv("HBASE_SSH_OPTS");
     if (!extraSshOptions.isEmpty()) {
       sshOptions = StringUtils.join(new Object[] { sshOptions, extraSshOptions }, " ");
