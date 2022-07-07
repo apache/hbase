@@ -430,6 +430,9 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       // it's the one we have just pushed or just a no-op
       waitingAckQueue.removeFirst();
 
+      checksumBuf.release();
+      headerBuf.release();
+
       // This method takes ownership of the dataBuf so we need release it before returning.
       dataBuf.release();
       return;
