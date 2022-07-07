@@ -101,8 +101,6 @@ public class MultiByteBuff extends ByteBuff {
     this.limit = offset;
     this.itemBeginPos[items.length] = offset + 1;
     this.limitedItemIndex = this.items.length - 1;
-    // Touch the reference count it's easier to debug leaks.
-    refCnt.touch();
   }
 
   private MultiByteBuff(RefCnt refCnt, ByteBuffer[] items, int[] itemBeginPos, int limit,
@@ -115,8 +113,6 @@ public class MultiByteBuff extends ByteBuff {
     this.limit = limit;
     this.limitedItemIndex = limitedIndex;
     this.markedItemIndex = markedIndex;
-    // Touch the reference count it's easier to debug leaks.
-    refCnt.touch();
   }
 
   /**
