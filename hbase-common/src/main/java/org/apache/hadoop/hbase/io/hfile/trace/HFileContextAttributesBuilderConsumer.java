@@ -25,8 +25,6 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.HFILE_NAME_K
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.READ_TYPE_KEY;
 
 import io.opentelemetry.api.common.AttributesBuilder;
-import io.opentelemetry.context.Context;
-import io.opentelemetry.context.ContextKey;
 import java.util.Objects;
 import java.util.function.Consumer;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -36,10 +34,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>
- * Populate fields on an {@link AttributesBuilder} based on an {@link HFileContext}. Passed around
- * inside an active {@link Context}, indexed under {@link #CONTEXT_KEY}. The class is designed such
- * that calls to the {@link #accept(AttributesBuilder)} method are idempotent with regards to the
- * instance of this class.
+ * Populate fields on an {@link AttributesBuilder} based on an {@link HFileContext}. The class is
+ * designed such that calls to the {@link #accept(AttributesBuilder)} method are idempotent with
+ * regards to the instance state of this class.
  * </p>
  * <p>
  * The true and truly ridiculous class name should be something more like
@@ -48,13 +45,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class HFileContextAttributesBuilderConsumer implements Consumer<AttributesBuilder> {
-
-  /**
-   * Used to place extract attributes pertaining to the {@link HFileContext} that scopes the active
-   * {@link Context}.
-   */
-  public static final ContextKey<Consumer<AttributesBuilder>> CONTEXT_KEY =
-    ContextKey.named("db.hbase.io.hfile.context_attributes");
 
   private final HFileContext hFileContext;
 

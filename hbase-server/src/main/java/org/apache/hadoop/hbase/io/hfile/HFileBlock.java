@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
-import static org.apache.hadoop.hbase.io.hfile.trace.HFileContextAttributesBuilderConsumer.CONTEXT_KEY;
 
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Context;
+import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -32,7 +31,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -60,6 +58,7 @@ import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.ReadType;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -645,9 +644,14 @@ public class HFileBlock implements Cacheable {
     HFileBlock unpacked = shallowClone(this, newBuf);
 
     boolean succ = false;
-    final Context context =
-      Context.current().with(CONTEXT_KEY, new HFileContextAttributesBuilderConsumer(fileContext));
-    try (Scope ignored = context.makeCurrent()) {
+    final Span span = TraceUtil.createSpan("HFileBlock.unpack");
+    if (span.isRecording()) {
+      // don't bother resolving all the metadata if the span isn't being collected.
+      final AttributesBuilder builder = Attributes.builder();
+      new HFileContextAttributesBuilderConsumer(fileContext).accept(builder);
+      span.setAllAttributes(builder.build());
+    }
+    try (Scope ignored = span.makeCurrent()) {
       HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
         ? reader.getBlockDecodingContext()
         : reader.getDefaultBlockDecodingContext();
@@ -664,6 +668,7 @@ public class HFileBlock implements Cacheable {
       if (!succ) {
         unpacked.release();
       }
+      span.end();
     }
   }
 
@@ -1514,11 +1519,16 @@ public class HFileBlock implements Cacheable {
       // guaranteed to use hdfs checksum verification.
       boolean doVerificationThruHBaseChecksum = streamWrapper.shouldUseHBaseChecksum();
       FSDataInputStream is = streamWrapper.getStream(doVerificationThruHBaseChecksum);
-      final Context context = Context.current().with(CONTEXT_KEY,
+      final Span span = TraceUtil.createSpan("FSReaderImpl.readBlockData");
+      if (span.isRecording()) {
+        // don't bother resolving all the metadata if the span isn't being collected.
+        final AttributesBuilder builder = Attributes.builder();
         new HFileContextAttributesBuilderConsumer(fileContext)
           .setSkipChecksum(doVerificationThruHBaseChecksum)
-          .setReadType(pread ? ReadType.POSITIONAL_READ : ReadType.SEEK_PLUS_READ));
-      try (Scope ignored = context.makeCurrent()) {
+          .setReadType(pread ? ReadType.POSITIONAL_READ : ReadType.SEEK_PLUS_READ).accept(builder);
+        span.setAllAttributes(builder.build());
+      }
+      try (Scope ignored = span.makeCurrent()) {
         HFileBlock blk = readBlockDataInternal(is, offset, onDiskSizeWithHeaderL, pread,
           doVerificationThruHBaseChecksum, updateMetrics, intoHeap);
         if (blk == null) {
@@ -1530,7 +1540,9 @@ public class HFileBlock implements Cacheable {
               + offset + " filesize " + fileSize + " but this cannot happen because doVerify is "
               + doVerificationThruHBaseChecksum;
             HFile.LOG.warn(msg);
-            throw new IOException(msg); // cannot happen case here
+            final IOException e = new IOException(msg);
+            TraceUtil.setError(span, e);
+            throw e; // cannot happen case here
           }
           HFile.CHECKSUM_FAILURES.increment(); // update metrics
 
@@ -1555,7 +1567,9 @@ public class HFileBlock implements Cacheable {
             "readBlockData failed, possibly due to " + "checksum verification failed for file "
               + pathName + " at offset " + offset + " filesize " + fileSize;
           HFile.LOG.warn(msg);
-          throw new IOException(msg);
+          final IOException e = new IOException(msg);
+          TraceUtil.setError(span, e);
+          throw e;
         }
 
         // If there is a checksum mismatch earlier, then retry with
@@ -1566,7 +1580,10 @@ public class HFileBlock implements Cacheable {
         // but it is harmless because eventually checksumOffCount will be
         // a negative number.
         streamWrapper.checksumOk();
+        span.setStatus(StatusCode.OK);
         return blk;
+      } finally {
+        span.end();
       }
     }
 
@@ -1667,9 +1684,6 @@ public class HFileBlock implements Cacheable {
       }
 
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = Attributes.builder();
-      Optional.of(Context.current()).map(val -> val.get(CONTEXT_KEY))
-        .ifPresent(c -> c.accept(attributesBuilder));
       int onDiskSizeWithHeader = checkAndGetSizeAsInt(onDiskSizeWithHeaderL, hdrSize);
       // Try and get cached header. Will serve us in rare case where onDiskSizeWithHeaderL is -1
       // and will save us having to seek the stream backwards to reread the header we
@@ -1696,7 +1710,7 @@ public class HFileBlock implements Cacheable {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Extra seek to get block size!", new RuntimeException());
           }
-          span.addEvent("Extra seek to get block size!", attributesBuilder.build());
+          span.addEvent("Extra seek to get block size!");
           headerBuf = HEAP.allocate(hdrSize);
           readAtOffset(is, headerBuf, hdrSize, false, offset, pread);
           headerBuf.rewind();
@@ -1746,7 +1760,6 @@ public class HFileBlock implements Cacheable {
           hFileBlock.sanityCheckUncompressed();
         }
         LOG.trace("Read {} in {} ms", hFileBlock, duration);
-        span.addEvent("Read block", attributesBuilder.build());
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
           cacheNextBlockHeader(offset + hFileBlock.getOnDiskSizeWithHeader(), onDiskBlock,

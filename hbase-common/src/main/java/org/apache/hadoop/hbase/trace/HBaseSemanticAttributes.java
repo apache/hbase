@@ -106,6 +106,26 @@ public final class HBaseSemanticAttributes {
    */
   public static final AttributeKey<String> BLOCK_CACHE_KEY_KEY =
     AttributeKey.stringKey("db.hbase.io.hfile.block_cache_key");
+  /**
+   * Indicates the name of the column family accessed.
+   */
+  public static final AttributeKey<String> COLUMN_FAMILY_NAME_KEY =
+    AttributeKey.stringKey("db.hbase.io.store.column_family_name");
+  /**
+   * Records the {@code ScanQueryMatcher.MatchCode} produced during a scan.
+   */
+  public static final AttributeKey<String> QUERY_MATCHER_MATCH_CODE_KEY =
+    AttributeKey.stringKey("db.hbase.io.store.query_matcher.match_code");
+  /**
+   * Records the {@code DeleteTracker.DeleteResult} produced during a scan.
+   */
+  public static final AttributeKey<String> QUERY_MATCHER_DELETE_CODE_KEY =
+    AttributeKey.stringKey("db.hbase.io.store.query_matcher.delete_result");
+  /**
+   * Records the {@code Filter.ReturnCode} produced during a scan.
+   */
+  public static final AttributeKey<String> QUERY_MATCHER_FILTER_CODE_KEY =
+    AttributeKey.stringKey("db.hbase.io.store.query_matcher.filter_result");
 
   /**
    * These values represent the different IO read strategies HBase may employ for accessing

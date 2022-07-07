@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import io.opentelemetry.api.trace.Span;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -249,6 +250,8 @@ public class ScannerContext {
    * state that was passed in.
    */
   NextState setScannerState(NextState state) {
+    final Span span = Span.current();
+    span.addEvent("ScannerContext.setScannerState");
     if (!NextState.isValidState(state)) {
       throw new IllegalArgumentException("Cannot set to invalid state: " + state);
     }

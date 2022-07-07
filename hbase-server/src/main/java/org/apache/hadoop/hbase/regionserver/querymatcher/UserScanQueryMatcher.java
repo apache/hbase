@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.QUERY_MATCHER_FILTER_CODE_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.QUERY_MATCHER_MATCH_CODE_KEY;
+
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
@@ -122,6 +127,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   protected final MatchCode matchColumn(Cell cell, long timestamp, byte typeByte)
     throws IOException {
+    final Span span = Span.current();
     int tsCmp = tr.compare(timestamp);
     if (tsCmp > 0) {
       return MatchCode.SKIP;
@@ -131,6 +137,10 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
     // STEP 1: Check if the column is part of the requested columns
     MatchCode matchCode = columns.checkColumn(cell, typeByte);
+    if (span.isRecording()) {
+      span.addEvent("UserScanQueryMatcher.matchColumn column_hint",
+        Attributes.of(QUERY_MATCHER_MATCH_CODE_KEY, matchCode.name()));
+    }
     if (matchCode != MatchCode.INCLUDE) {
       return matchCode;
     }
@@ -139,6 +149,10 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
      * INCLUDE, INCLUDE_AND_SEEK_NEXT_COL, or INCLUDE_AND_SEEK_NEXT_ROW.
      */
     matchCode = columns.checkVersions(cell, timestamp, typeByte, false);
+    if (span.isRecording()) {
+      span.addEvent("UserScanQueryMatcher.matchColumn version_hint",
+        Attributes.of(QUERY_MATCHER_MATCH_CODE_KEY, matchCode.name()));
+    }
     switch (matchCode) {
       case SKIP:
         return MatchCode.SKIP;
@@ -151,9 +165,15 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
         break;
     }
 
-    return filter == null
-      ? matchCode
-      : mergeFilterResponse(cell, matchCode, filter.filterCell(cell));
+    if (filter != null) {
+      ReturnCode filterResponse = filter.filterCell(cell);
+      if (span.isRecording()) {
+        span.addEvent("UserScanQueryMatcher.matchColumn filter_hint",
+          Attributes.of(QUERY_MATCHER_FILTER_CODE_KEY, filterResponse.name()));
+      }
+      return mergeFilterResponse(cell, matchCode, filterResponse);
+    }
+    return matchCode;
   }
 
   /**

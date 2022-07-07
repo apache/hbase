@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.QUERY_MATCHER_DELETE_CODE_KEY;
+
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NavigableSet;
@@ -204,6 +208,11 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
     // MvccSensitiveTracker always need check all cells to save some infos.
     DeleteResult deleteResult = deletes.isDeleted(cell);
+    final Span span = Span.current();
+    if (span.isRecording()) {
+      span.addEvent("ScanQueryMatcher.checkDeleted",
+        Attributes.of(QUERY_MATCHER_DELETE_CODE_KEY, deleteResult.name()));
+    }
     switch (deleteResult) {
       case FAMILY_DELETED:
       case COLUMN_DELETED:

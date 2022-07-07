@@ -23,16 +23,13 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.HEAP_BYTES_R
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.Optional;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.io.hfile.trace.HFileContextAttributesBuilderConsumer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -86,14 +83,16 @@ public final class BlockIOUtils {
    */
   public static void readFully(ByteBuff buf, FSDataInputStream dis, int length) throws IOException {
     final Span span = Span.current();
-    final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
     if (!isByteBufferReadable(dis)) {
       // If InputStream does not support the ByteBuffer read, just read to heap and copy bytes to
       // the destination ByteBuff.
       byte[] heapBuf = new byte[length];
       IOUtils.readFully(dis, heapBuf, 0, length);
-      annotateHeapBytesRead(attributesBuilder, length);
-      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateHeapBytesRead(attributesBuilder, length);
+        span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      }
       copyToByteBuff(heapBuf, 0, length, buf);
       return;
     }
@@ -125,8 +124,11 @@ public final class BlockIOUtils {
         }
       }
     } finally {
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+        span.addEvent("BlockIOUtils.readFully", attributesBuilder.build());
+      }
     }
   }
 
@@ -159,9 +161,11 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
-      span.addEvent("BlockIOUtils.readFullyWithHeapBuffer", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateHeapBytesRead(attributesBuilder, heapBytesRead);
+        span.addEvent("BlockIOUtils.readFullyWithHeapBuffer", attributesBuilder.build());
+      }
     }
   }
 
@@ -200,9 +204,11 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, heapBytesRead);
-      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateHeapBytesRead(attributesBuilder, heapBytesRead);
+        span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      }
     }
     return bytesRemaining <= 0;
   }
@@ -260,9 +266,11 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+        span.addEvent("BlockIOUtils.readWithExtra", attributesBuilder.build());
+      }
     }
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
   }
@@ -333,9 +341,11 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateHeapBytesRead(attributesBuilder, bytesRead);
-      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateHeapBytesRead(attributesBuilder, bytesRead);
+        span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      }
     }
     copyToByteBuff(buf, 0, bytesRead, buff);
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -387,9 +397,11 @@ public final class BlockIOUtils {
       }
     } finally {
       final Span span = Span.current();
-      final AttributesBuilder attributesBuilder = builderFromContext(Context.current());
-      annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
-      span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      if (span.isRecording()) {
+        final AttributesBuilder attributesBuilder = Attributes.builder();
+        annotateBytesRead(attributesBuilder, directBytesRead, heapBytesRead);
+        span.addEvent("BlockIOUtils.preadWithExtra", attributesBuilder.build());
+      }
     }
 
     return (extraLen > 0) && (bytesRead == necessaryLen + extraLen);
@@ -416,18 +428,6 @@ public final class BlockIOUtils {
       offset += copyLen;
     }
     return len;
-  }
-
-  /**
-   * Construct a fresh {@link AttributesBuilder} from the provided {@link Context}, populated with
-   * relevant attributes populated by {@link HFileContextAttributesBuilderConsumer#CONTEXT_KEY}.
-   */
-  private static AttributesBuilder builderFromContext(Context context) {
-    final AttributesBuilder attributesBuilder = Attributes.builder();
-    Optional.ofNullable(context)
-      .map(val -> val.get(HFileContextAttributesBuilderConsumer.CONTEXT_KEY))
-      .ifPresent(c -> c.accept(attributesBuilder));
-    return attributesBuilder;
   }
 
   /**

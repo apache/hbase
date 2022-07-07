@@ -17,9 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.COLUMN_FAMILY_NAME_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.QUERY_MATCHER_MATCH_CODE_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.REGION_NAMES_KEY;
+
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
@@ -523,6 +531,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean seek(Cell key) throws IOException {
+    final Span span = Span.current();
+    span.addEvent("StoreScanner.seek");
     if (checkFlushed()) {
       reopenAfterFlush();
     }
@@ -614,6 +624,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
         ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
+        final Span span = Span.current();
+        if (span.isRecording()) {
+          final AttributesBuilder builder = Attributes.builder();
+          builder.put(REGION_NAMES_KEY,
+            Collections.singletonList(store.getRegionInfo().getRegionNameAsString()));
+          builder.put(COLUMN_FAMILY_NAME_KEY, store.getColumnFamilyName());
+          builder.put(QUERY_MATCHER_MATCH_CODE_KEY, qcode.name());
+          span.addEvent("ScanQueryMatcher.match");
+        }
         switch (qcode) {
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -1075,6 +1094,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean reseek(Cell kv) throws IOException {
+    final Span span = Span.current();
+    span.addEvent("StoreScanner.reseek");
     if (checkFlushed()) {
       reopenAfterFlush();
     }

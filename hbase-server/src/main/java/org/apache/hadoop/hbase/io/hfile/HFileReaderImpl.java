@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.BLOCK_CACHE_KEY_KEY;
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DATA_BLOCK_ENCODING_KEY;
 
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -523,85 +527,103 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      *         block(e.g. using a faked index key)
      */
     protected int blockSeek(Cell key, boolean seekBefore) {
-      int klen, vlen, tlen = 0;
-      int lastKeyValueSize = -1;
-      int offsetFromPos;
-      do {
-        offsetFromPos = 0;
-        // Better to ensure that we use the BB Utils here
-        long ll = blockBuffer.getLongAfterPosition(offsetFromPos);
-        klen = (int) (ll >> Integer.SIZE);
-        vlen = (int) (Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
-        if (checkKeyLen(klen) || checkLen(vlen)) {
-          throw new IllegalStateException(
-            "Invalid klen " + klen + " or vlen " + vlen + ". Block offset: " + curBlock.getOffset()
-              + ", block length: " + blockBuffer.limit() + ", position: " + blockBuffer.position()
-              + " (without header)." + " path=" + reader.getPath());
-        }
-        offsetFromPos += Bytes.SIZEOF_LONG;
-        this.rowLen = blockBuffer.getShortAfterPosition(offsetFromPos);
-        blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
-        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen, rowLen);
-        int comp =
-          PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
-        offsetFromPos += klen + vlen;
-        if (this.reader.getFileContext().isIncludesTags()) {
-          // Read short as unsigned, high byte first
-          tlen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
-            ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
-          if (checkLen(tlen)) {
-            throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
-              + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
-              + blockBuffer.position() + " (without header)." + " path=" + reader.getPath());
+      final Span span = TraceUtil.createSpan("HFileScannerImpl.blockSeek");
+      try (Scope ignored = span.makeCurrent()) {
+        int klen, vlen, tlen = 0;
+        int lastKeyValueSize = -1;
+        int offsetFromPos;
+        do {
+          offsetFromPos = 0;
+          // Better to ensure that we use the BB Utils here
+          long ll = blockBuffer.getLongAfterPosition(offsetFromPos);
+          klen = (int) (ll >> Integer.SIZE);
+          vlen = (int) (Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
+          if (checkKeyLen(klen) || checkLen(vlen)) {
+            final IllegalStateException e = new IllegalStateException(
+              "Invalid klen " + klen + " or vlen " + vlen + ". Block offset: "
+                + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+                + blockBuffer.position() + " (without header)." + " path=" + reader.getPath());
+            TraceUtil.setError(span, e);
+            throw e;
           }
-          // add the two bytes read for the tags.
-          offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
-        }
-        if (this.reader.getHFileInfo().shouldIncludeMemStoreTS()) {
-          // Directly read the mvcc based on current position
-          readMvccVersion(offsetFromPos);
-        }
-        if (comp == 0) {
-          if (seekBefore) {
-            if (lastKeyValueSize < 0) {
-              throw new IllegalStateException("blockSeek with seekBefore "
-                + "at the first key of the block: key=" + CellUtil.getCellKeyAsString(key)
-                + ", blockOffset=" + curBlock.getOffset() + ", onDiskSize="
-                + curBlock.getOnDiskSizeWithHeader() + ", path=" + reader.getPath());
+          offsetFromPos += Bytes.SIZEOF_LONG;
+          this.rowLen = blockBuffer.getShortAfterPosition(offsetFromPos);
+          blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
+          bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen, rowLen);
+          int comp =
+            PrivateCellUtil.compareKeyIgnoresMvcc(reader.getComparator(), key, bufBackedKeyOnlyKv);
+          offsetFromPos += klen + vlen;
+          if (this.reader.getFileContext().isIncludesTags()) {
+            // Read short as unsigned, high byte first
+            tlen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
+              ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
+            if (checkLen(tlen)) {
+              final IllegalStateException e =
+                new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
+                  + curBlock.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
+                  + blockBuffer.position() + " (without header)." + " path=" + reader.getPath());
+              TraceUtil.setError(span, e);
+              throw e;
             }
-            blockBuffer.moveBack(lastKeyValueSize);
+            // add the two bytes read for the tags.
+            offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
+          }
+          if (this.reader.getHFileInfo().shouldIncludeMemStoreTS()) {
+            // Directly read the mvcc based on current position
+            readMvccVersion(offsetFromPos);
+          }
+          if (comp == 0) {
+            if (seekBefore) {
+              if (lastKeyValueSize < 0) {
+                final IllegalStateException e =
+                  new IllegalStateException("blockSeek with seekBefore "
+                    + "at the first key of the block: key=" + CellUtil.getCellKeyAsString(key)
+                    + ", blockOffset=" + curBlock.getOffset() + ", onDiskSize="
+                    + curBlock.getOnDiskSizeWithHeader() + ", path=" + reader.getPath());
+                TraceUtil.setError(span, e);
+                throw e;
+              }
+              blockBuffer.moveBack(lastKeyValueSize);
+              readKeyValueLen();
+              span.setStatus(StatusCode.OK);
+              return 1; // non exact match.
+            }
+            currKeyLen = klen;
+            currValueLen = vlen;
+            currTagsLen = tlen;
+            span.setStatus(StatusCode.OK);
+            return 0; // indicate exact match
+          } else if (comp < 0) {
+            if (lastKeyValueSize > 0) {
+              blockBuffer.moveBack(lastKeyValueSize);
+            }
             readKeyValueLen();
-            return 1; // non exact match.
+            if (lastKeyValueSize == -1 && blockBuffer.position() == 0) {
+              span.setStatus(StatusCode.OK);
+              return HConstants.INDEX_KEY_MAGIC;
+            }
+            span.setStatus(StatusCode.OK);
+            return 1;
           }
-          currKeyLen = klen;
-          currValueLen = vlen;
-          currTagsLen = tlen;
-          return 0; // indicate exact match
-        } else if (comp < 0) {
-          if (lastKeyValueSize > 0) {
-            blockBuffer.moveBack(lastKeyValueSize);
+          // The size of this key/value tuple, including key/value length fields.
+          lastKeyValueSize = klen + vlen + currMemstoreTSLen + KEY_VALUE_LEN_SIZE;
+          // include tag length also if tags included with KV
+          if (reader.getFileContext().isIncludesTags()) {
+            lastKeyValueSize += tlen + Bytes.SIZEOF_SHORT;
           }
-          readKeyValueLen();
-          if (lastKeyValueSize == -1 && blockBuffer.position() == 0) {
-            return HConstants.INDEX_KEY_MAGIC;
-          }
-          return 1;
-        }
-        // The size of this key/value tuple, including key/value length fields.
-        lastKeyValueSize = klen + vlen + currMemstoreTSLen + KEY_VALUE_LEN_SIZE;
-        // include tag length also if tags included with KV
-        if (reader.getFileContext().isIncludesTags()) {
-          lastKeyValueSize += tlen + Bytes.SIZEOF_SHORT;
-        }
-        blockBuffer.skip(lastKeyValueSize);
-      } while (blockBuffer.hasRemaining());
+          blockBuffer.skip(lastKeyValueSize);
+        } while (blockBuffer.hasRemaining());
 
-      // Seek to the last key we successfully read. This will happen if this is
-      // the last key/value pair in the file, in which case the following call
-      // to next() has to return false.
-      blockBuffer.moveBack(lastKeyValueSize);
-      readKeyValueLen();
-      return 1; // didn't exactly find it.
+        // Seek to the last key we successfully read. This will happen if this is
+        // the last key/value pair in the file, in which case the following call
+        // to next() has to return false.
+        blockBuffer.moveBack(lastKeyValueSize);
+        readKeyValueLen();
+        span.setStatus(StatusCode.OK);
+        return 1; // didn't exactly find it.
+      } finally {
+        span.end();
+      }
     }
 
     @Override
@@ -1090,71 +1112,80 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
     boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
-    // Check cache for block. If found return.
-    BlockCache cache = cacheConf.getBlockCache().orElse(null);
-    if (cache != null) {
-      HFileBlock cachedBlock =
-        (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics);
-      if (cachedBlock != null) {
-        if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
-          HFileBlock compressedBlock = cachedBlock;
-          cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
-          // In case of compressed block after unpacking we can release the compressed block
-          if (compressedBlock != cachedBlock) {
-            compressedBlock.release();
+    final Span span = TraceUtil.createSpan("HFileReaderImpl.getCachedBlock");
+    try (Scope ignored = span.makeCurrent()) {
+      // Check cache for block. If found return.
+      BlockCache cache = cacheConf.getBlockCache().orElse(null);
+      if (cache != null) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics);
+        if (cachedBlock != null) {
+          if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
+            HFileBlock compressedBlock = cachedBlock;
+            cachedBlock = compressedBlock.unpack(hfileContext, fsBlockReader);
+            // In case of compressed block after unpacking we can release the compressed block
+            if (compressedBlock != cachedBlock) {
+              compressedBlock.release();
+            }
           }
-        }
-        try {
-          validateBlockType(cachedBlock, expectedBlockType);
-        } catch (IOException e) {
-          returnAndEvictBlock(cache, cacheKey, cachedBlock);
-          throw e;
-        }
+          try {
+            validateBlockType(cachedBlock, expectedBlockType);
+          } catch (IOException e) {
+            returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            TraceUtil.setError(span, e);
+            throw e;
+          }
 
-        if (expectedDataBlockEncoding == null) {
+          if (expectedDataBlockEncoding == null) {
+            span.setStatus(StatusCode.OK);
+            return cachedBlock;
+          }
+          DataBlockEncoding actualDataBlockEncoding = cachedBlock.getDataBlockEncoding();
+          // Block types other than data blocks always have
+          // DataBlockEncoding.NONE. To avoid false negative cache misses, only
+          // perform this check if cached block is a data block.
+          if (
+            cachedBlock.getBlockType().isData()
+              && !actualDataBlockEncoding.equals(expectedDataBlockEncoding)
+          ) {
+            // This mismatch may happen if a Scanner, which is used for say a
+            // compaction, tries to read an encoded block from the block cache.
+            // The reverse might happen when an EncodedScanner tries to read
+            // un-encoded blocks which were cached earlier.
+            //
+            // Because returning a data block with an implicit BlockType mismatch
+            // will cause the requesting scanner to throw a disk read should be
+            // forced here. This will potentially cause a significant number of
+            // cache misses, so update so we should keep track of this as it might
+            // justify the work on a CompoundScanner.
+            if (
+              !expectedDataBlockEncoding.equals(DataBlockEncoding.NONE)
+                && !actualDataBlockEncoding.equals(DataBlockEncoding.NONE)
+            ) {
+              // If the block is encoded but the encoding does not match the
+              // expected encoding it is likely the encoding was changed but the
+              // block was not yet evicted. Evictions on file close happen async
+              // so blocks with the old encoding still linger in cache for some
+              // period of time. This event should be rare as it only happens on
+              // schema definition change.
+              LOG.info(
+                "Evicting cached block with key {} because data block encoding mismatch; "
+                  + "expected {}, actual {}, path={}",
+                cacheKey, actualDataBlockEncoding, expectedDataBlockEncoding, path);
+              // This is an error scenario. so here we need to release the block.
+              returnAndEvictBlock(cache, cacheKey, cachedBlock);
+            }
+            span.setStatus(StatusCode.OK);
+            return null;
+          }
+          span.setStatus(StatusCode.OK);
           return cachedBlock;
         }
-        DataBlockEncoding actualDataBlockEncoding = cachedBlock.getDataBlockEncoding();
-        // Block types other than data blocks always have
-        // DataBlockEncoding.NONE. To avoid false negative cache misses, only
-        // perform this check if cached block is a data block.
-        if (
-          cachedBlock.getBlockType().isData()
-            && !actualDataBlockEncoding.equals(expectedDataBlockEncoding)
-        ) {
-          // This mismatch may happen if a Scanner, which is used for say a
-          // compaction, tries to read an encoded block from the block cache.
-          // The reverse might happen when an EncodedScanner tries to read
-          // un-encoded blocks which were cached earlier.
-          //
-          // Because returning a data block with an implicit BlockType mismatch
-          // will cause the requesting scanner to throw a disk read should be
-          // forced here. This will potentially cause a significant number of
-          // cache misses, so update so we should keep track of this as it might
-          // justify the work on a CompoundScanner.
-          if (
-            !expectedDataBlockEncoding.equals(DataBlockEncoding.NONE)
-              && !actualDataBlockEncoding.equals(DataBlockEncoding.NONE)
-          ) {
-            // If the block is encoded but the encoding does not match the
-            // expected encoding it is likely the encoding was changed but the
-            // block was not yet evicted. Evictions on file close happen async
-            // so blocks with the old encoding still linger in cache for some
-            // period of time. This event should be rare as it only happens on
-            // schema definition change.
-            LOG.info(
-              "Evicting cached block with key {} because data block encoding mismatch; "
-                + "expected {}, actual {}, path={}",
-              cacheKey, actualDataBlockEncoding, expectedDataBlockEncoding, path);
-            // This is an error scenario. so here we need to release the block.
-            returnAndEvictBlock(cache, cacheKey, cachedBlock);
-          }
-          return null;
-        }
-        return cachedBlock;
       }
+      return null;
+    } finally {
+      span.end();
     }
-    return null;
   }
 
   private void returnAndEvictBlock(BlockCache cache, BlockCacheKey cacheKey, Cacheable block) {
@@ -1479,17 +1510,21 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public boolean next() throws IOException {
-      boolean isValid = seeker.next();
-      if (!isValid) {
-        HFileBlock newBlock = readNextDataBlock();
-        isValid = newBlock != null;
-        if (isValid) {
-          updateCurrentBlock(newBlock);
-        } else {
-          setNonSeekedState();
+      return TraceUtil.trace(() -> {
+        final Span span = Span.current();
+        span.setAttribute(DATA_BLOCK_ENCODING_KEY, getEffectiveDataBlockEncoding().name());
+        boolean isValid = seeker.next();
+        if (!isValid) {
+          HFileBlock newBlock = readNextDataBlock();
+          isValid = newBlock != null;
+          if (isValid) {
+            updateCurrentBlock(newBlock);
+          } else {
+            setNonSeekedState();
+          }
         }
-      }
-      return isValid;
+        return isValid;
+      }, "EncodedScanner.next");
     }
 
     @Override
@@ -1541,6 +1576,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         updateCurrentBlock(seekToBlock);
       } else if (rewind) {
         seeker.rewind();
+        final Span span = Span.current();
+        span.addEvent("EncodedSeeker.rewind");
       }
       this.nextIndexedKey = nextIndexedKey;
       return seeker.seekToKeyInBlock(key, seekBefore);

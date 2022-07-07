@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -93,12 +94,14 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public Cell next() throws IOException {
-    if (closed) {
-      return null;
-    }
-    Cell oldCurrent = current;
-    updateCurrent(); // update the currently observed Cell
-    return oldCurrent;
+    return TraceUtil.trace(() -> {
+      if (closed) {
+        return null;
+      }
+      Cell oldCurrent = current;
+      updateCurrent(); // update the currently observed Cell
+      return oldCurrent;
+    }, "SegmentScanner.next");
   }
 
   /**
@@ -108,19 +111,21 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean seek(Cell cell) throws IOException {
-    if (closed) {
-      return false;
-    }
-    if (cell == null) {
-      close();
-      return false;
-    }
-    // restart the iterator from new key
-    iter = getIterator(cell);
-    // last is going to be reinitialized in the next getNext() call
-    last = null;
-    updateCurrent();
-    return (current != null);
+    return TraceUtil.trace(() -> {
+      if (closed) {
+        return false;
+      }
+      if (cell == null) {
+        close();
+        return false;
+      }
+      // restart the iterator from new key
+      iter = getIterator(cell);
+      // last is going to be reinitialized in the next getNext() call
+      last = null;
+      updateCurrent();
+      return (current != null);
+    }, "SegmentScanner.seek");
   }
 
   protected Iterator<Cell> getIterator(Cell cell) {
@@ -136,19 +141,21 @@ public class SegmentScanner implements KeyValueScanner {
    */
   @Override
   public boolean reseek(Cell cell) throws IOException {
-    if (closed) {
-      return false;
-    }
-    /*
-     * See HBASE-4195 & HBASE-3855 & HBASE-6591 for the background on this implementation. This code
-     * is executed concurrently with flush and puts, without locks. The ideal implementation for
-     * performance would use the sub skip list implicitly pointed by the iterator. Unfortunately the
-     * Java API does not offer a method to get it. So we remember the last keys we iterated to and
-     * restore the reseeked set to at least that point.
-     */
-    iter = getIterator(getHighest(cell, last));
-    updateCurrent();
-    return (current != null);
+    return TraceUtil.trace(() -> {
+      if (closed) {
+        return false;
+      }
+      /*
+       * See HBASE-4195 & HBASE-3855 & HBASE-6591 for the background on this implementation. This
+       * code is executed concurrently with flush and puts, without locks. The ideal implementation
+       * for performance would use the sub skip list implicitly pointed by the iterator.
+       * Unfortunately the Java API does not offer a method to get it. So we remember the last keys
+       * we iterated to and restore the reseeked set to at least that point.
+       */
+      iter = getIterator(getHighest(cell, last));
+      updateCurrent();
+      return (current != null);
+    }, "SegmentScanner.reseek");
   }
 
   /**

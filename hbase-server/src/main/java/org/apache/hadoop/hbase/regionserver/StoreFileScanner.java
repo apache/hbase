@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +40,9 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.trace.HFileContextAttributesBuilderConsumer;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -186,77 +193,113 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public Cell next() throws IOException {
-    Cell retKey = cur;
-
-    try {
-      // only seek if we aren't at the end. cur == null implies 'end'.
-      if (cur != null) {
-        hfs.next();
-        setCurrentCell(hfs.getCell());
-        if (hasMVCCInfo || this.reader.isBulkLoaded()) {
-          skipKVsNewerThanReadpoint();
-        }
+    return TraceUtil.trace(() -> {
+      final Span span = Span.current();
+      if (span.isRecording()) {
+        final AttributesBuilder builder = Attributes.builder();
+        new HFileContextAttributesBuilderConsumer(hfs.getReader().getFileContext()).accept(builder);
+        span.setAllAttributes(builder.build());
       }
-    } catch (FileNotFoundException e) {
-      throw e;
-    } catch (IOException e) {
-      throw new IOException("Could not iterate " + this, e);
-    }
-    return retKey;
+      Cell retKey = cur;
+
+      try {
+        // only seek if we aren't at the end. cur == null implies 'end'.
+        if (cur != null) {
+          hfs.next();
+          setCurrentCell(hfs.getCell());
+          if (hasMVCCInfo || this.reader.isBulkLoaded()) {
+            skipKVsNewerThanReadpoint();
+          }
+        }
+      } catch (FileNotFoundException e) {
+        throw e;
+      } catch (IOException e) {
+        throw new IOException("Could not iterate " + this, e);
+      }
+      return retKey;
+    }, "StoreFileScanner.next");
   }
 
   @Override
   public boolean seek(Cell key) throws IOException {
-    if (seekCount != null) seekCount.increment();
+    final Span span = TraceUtil.createSpan("StoreFileScanner.seek");
+    if (span.isRecording()) {
+      final AttributesBuilder builder = Attributes.builder();
+      new HFileContextAttributesBuilderConsumer(hfs.getReader().getFileContext()).accept(builder);
+      span.setAllAttributes(builder.build());
+    }
 
-    try {
+    try (Scope ignored = span.makeCurrent()) {
+      if (seekCount != null) seekCount.increment();
+
       try {
         if (!seekAtOrAfter(hfs, key)) {
           this.cur = null;
+          span.setStatus(StatusCode.OK);
           return false;
         }
 
         setCurrentCell(hfs.getCell());
 
         if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
+          span.setStatus(StatusCode.OK);
           return skipKVsNewerThanReadpoint();
         } else {
+          span.setStatus(StatusCode.OK);
           return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
         }
       } finally {
         realSeekDone = true;
       }
     } catch (FileNotFoundException e) {
+      TraceUtil.setError(span, e);
       throw e;
     } catch (IOException ioe) {
-      throw new IOException("Could not seek " + this + " to key " + key, ioe);
+      final IOException e = new IOException("Could not seek " + this + " to key " + key, ioe);
+      TraceUtil.setError(span, e);
+      throw e;
+    } finally {
+      span.end();
     }
   }
 
   @Override
   public boolean reseek(Cell key) throws IOException {
-    if (seekCount != null) seekCount.increment();
-
-    try {
+    final Span span = TraceUtil.createSpan("StoreFileScanner.reseek");
+    if (span.isRecording()) {
+      final AttributesBuilder builder = Attributes.builder();
+      new HFileContextAttributesBuilderConsumer(hfs.getReader().getFileContext()).accept(builder);
+      span.setAllAttributes(builder.build());
+    }
+    try (Scope ignored = span.makeCurrent()) {
+      if (seekCount != null) seekCount.increment();
       try {
         if (!reseekAtOrAfter(hfs, key)) {
           this.cur = null;
+          span.setStatus(StatusCode.OK);
           return false;
         }
         setCurrentCell(hfs.getCell());
 
         if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
+          span.setStatus(StatusCode.OK);
           return skipKVsNewerThanReadpoint();
         } else {
+          span.setStatus(StatusCode.OK);
           return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
         }
       } finally {
         realSeekDone = true;
       }
     } catch (FileNotFoundException e) {
+      TraceUtil.setError(span, e);
       throw e;
     } catch (IOException ioe) {
-      throw new IOException("Could not reseek " + this + " to key " + key, ioe);
+      final IOException e = new IOException("Could not reseek " + this + " to key " + key, ioe);
+      TraceUtil.setError(span, e);
+      throw e;
+    } finally {
+      span.end();
     }
   }
 
