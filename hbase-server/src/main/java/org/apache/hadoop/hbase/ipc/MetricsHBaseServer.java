@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -112,7 +113,13 @@ public class MetricsHBaseServer {
       } else if (throwable instanceof UnknownScannerException) {
         source.unknownScannerException();
       } else if (throwable instanceof ScannerResetException) {
-        source.scannerResetException();
+        if (throwable.getCause() instanceof TimeoutIOException) {
+          // Thrown by RSRpcServices, this is more accurately reported as a timeout,
+          // since client will never see the actual reset exception
+          source.callTimedOut();
+        } else {
+          source.scannerResetException();
+        }
       } else if (throwable instanceof RegionMovedException) {
         source.movedRegionException();
       } else if (throwable instanceof NotServingRegionException) {
