@@ -109,7 +109,8 @@ public class SnapshotVerifyProcedure extends ServerRemoteProcedure
       setFailure("verify-snapshot", e);
     } finally {
       // release the worker
-      env.getMasterServices().getSnapshotManager().releaseSnapshotVerifyWorker(this, targetServer);
+      env.getMasterServices().getSnapshotManager().releaseSnapshotVerifyWorker(this, targetServer,
+        env.getProcedureScheduler());
     }
   }
 
