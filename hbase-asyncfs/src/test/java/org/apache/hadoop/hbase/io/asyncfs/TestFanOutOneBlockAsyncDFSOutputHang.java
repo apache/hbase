@@ -162,9 +162,11 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
 
       @Override
       public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!(msg instanceof ByteBuf)) {
-          ctx.fireChannelRead(msg);
-        }
+          if (!(msg instanceof ByteBuf)) {
+            ctx.fireChannelRead(msg);
+          } else {
+            ((ByteBuf) msg).release();
+          }
       }
     });
 
