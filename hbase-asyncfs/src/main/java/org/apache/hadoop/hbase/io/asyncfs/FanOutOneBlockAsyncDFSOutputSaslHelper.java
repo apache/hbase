@@ -662,7 +662,8 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+      // Release buffer on removal.
       cBuf.release();
       cBuf = null;
     }
