@@ -471,6 +471,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private RegionReplicationBufferManager regionReplicationBufferManager;
 
   /**
+   * Regionserver can connect to different proxy port of active master than original port
+   * derived through Zookeeper/Master Registry.
+   */
+  private static final String HBASE_MASTER_PROXY_PORT_FOR_RS_CONNECT =
+    "hbase.master.proxy.port.rs.connect";
+
+  /**
    * Starts a HRegionServer at the default location.
    * <p/>
    * Don't start any services or managers in here in the Constructor. Defer till after we register
@@ -2446,7 +2453,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
-      return masterAddressTracker.getMasterAddress();
+      int newMasterPort = this.conf.getInt(HBASE_MASTER_PROXY_PORT_FOR_RS_CONNECT, -1);
+      if (newMasterPort == -1) {
+        return masterAddressTracker.getMasterAddress();
+      } else {
+        ServerName sn = masterAddressTracker.getMasterAddress();
+        return ServerName.valueOf(sn.getHostname(), newMasterPort, sn.getStartcode());
+      }
     }
     ServerName sn = null;
     long previousLogTime = 0;
@@ -2471,6 +2484,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
             interrupted = true;
           }
           continue;
+        }
+        int newMasterPort = this.conf.getInt(HBASE_MASTER_PROXY_PORT_FOR_RS_CONNECT, -1);
+        if (newMasterPort != -1) {
+          sn = ServerName.valueOf(sn.getHostname(), newMasterPort, sn.getStartcode());
         }
         try {
           BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
