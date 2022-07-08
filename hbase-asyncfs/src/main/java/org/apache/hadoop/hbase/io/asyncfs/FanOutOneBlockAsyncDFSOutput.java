@@ -429,6 +429,12 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       future.completeExceptionally(new IOException("stream already broken"));
       // it's the one we have just pushed or just a no-op
       waitingAckQueue.removeFirst();
+
+      checksumBuf.release();
+      headerBuf.release();
+
+      // This method takes ownership of the dataBuf so we need release it before returning.
+      dataBuf.release();
       return;
     }
     // TODO: we should perhaps measure time taken per DN here;
