@@ -21,6 +21,7 @@ import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
@@ -99,13 +100,13 @@ public class TestBootstrapNodeManager {
         ServerName.valueOf("server2", 12345, EnvironmentEdgeManager.currentTime()),
         ServerName.valueOf("server3", 12345, EnvironmentEdgeManager.currentTime()),
         ServerName.valueOf("server4", 12345, EnvironmentEdgeManager.currentTime()));
-    when(conn.getLiveRegionServers(any(), anyInt()))
+    when(conn.getLiveRegionServers(any(), anyInt(), anyBoolean()))
       .thenReturn(CompletableFuture.completedFuture(regionServers));
     when(conn.getAllBootstrapNodes(any()))
       .thenReturn(CompletableFuture.completedFuture(regionServers));
-    manager = new BootstrapNodeManager(conn, tracker);
+    manager = new BootstrapNodeManager(conn, tracker, false);
     Thread.sleep(3000);
-    verify(conn, times(1)).getLiveRegionServers(any(), anyInt());
+    verify(conn, times(1)).getLiveRegionServers(any(), anyInt(), anyBoolean());
     verify(conn, atLeastOnce()).getAllBootstrapNodes(any());
     assertListEquals(regionServers, manager.getBootstrapNodes());
   }
@@ -115,13 +116,13 @@ public class TestBootstrapNodeManager {
   public void testOnlyMaster() throws Exception {
     List<ServerName> regionServers =
       Arrays.asList(ServerName.valueOf("server1", 12345, EnvironmentEdgeManager.currentTime()));
-    when(conn.getLiveRegionServers(any(), anyInt()))
+    when(conn.getLiveRegionServers(any(), anyInt(), anyBoolean()))
       .thenReturn(CompletableFuture.completedFuture(regionServers));
     when(conn.getAllBootstrapNodes(any()))
       .thenReturn(CompletableFuture.completedFuture(regionServers));
-    manager = new BootstrapNodeManager(conn, tracker);
+    manager = new BootstrapNodeManager(conn, tracker, false);
     Thread.sleep(3000);
-    verify(conn, atLeast(2)).getLiveRegionServers(any(), anyInt());
+    verify(conn, atLeast(2)).getLiveRegionServers(any(), anyInt(), anyBoolean());
     verify(conn, never()).getAllBootstrapNodes(any());
     assertListEquals(regionServers, manager.getBootstrapNodes());
   }
@@ -136,7 +137,7 @@ public class TestBootstrapNodeManager {
     List<ServerName> newRegionServers =
       Arrays.asList(ServerName.valueOf("server5", 12345, EnvironmentEdgeManager.currentTime()),
         ServerName.valueOf("server6", 12345, EnvironmentEdgeManager.currentTime()));
-    when(conn.getLiveRegionServers(any(), anyInt()))
+    when(conn.getLiveRegionServers(any(), anyInt(), anyBoolean()))
       .thenReturn(CompletableFuture.completedFuture(regionServers));
     when(conn.getAllBootstrapNodes(any())).thenAnswer(invocation -> {
       if (invocation.getArgument(0, ServerName.class).getHostname().equals("server4")) {
@@ -145,11 +146,11 @@ public class TestBootstrapNodeManager {
         return CompletableFuture.completedFuture(regionServers.subList(0, 3));
       }
     });
-    manager = new BootstrapNodeManager(conn, tracker);
+    manager = new BootstrapNodeManager(conn, tracker, false);
     // we should remove server4 from the list
     Waiter.waitFor(conf, 30000, () -> manager.getBootstrapNodes().size() == 3);
     assertListEquals(regionServers.subList(0, 3), manager.getBootstrapNodes());
-    when(conn.getLiveRegionServers(any(), anyInt()))
+    when(conn.getLiveRegionServers(any(), anyInt(), anyBoolean()))
       .thenReturn(CompletableFuture.completedFuture(newRegionServers));
     doAnswer(invocation -> {
       String hostname = invocation.getArgument(0, ServerName.class).getHostname();

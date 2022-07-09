@@ -462,6 +462,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   public static final String WARMUP_BEFORE_MOVE = "hbase.master.warmup.before.move";
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
+  static final String MASTER_PROXY_PORT_EXPOSE = "hbase.master.expose.proxy.port";
+  private static final int MASTER_PROXY_PORT_EXPOSE_DEFAULT = -1;
+
+  private final int masterProxyPort;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -533,7 +538,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           getChoreService().scheduleChore(clusterStatusPublisherChore);
         }
       }
-      this.activeMasterManager = createActiveMasterManager(zooKeeper, serverName, this);
+      masterProxyPort = conf.getInt(MASTER_PROXY_PORT_EXPOSE, MASTER_PROXY_PORT_EXPOSE_DEFAULT);
+      this.activeMasterManager =
+        createActiveMasterManager(zooKeeper, serverName, this, masterProxyPort);
       cachedClusterId = new CachedClusterId(this, conf);
       this.regionServerTracker = new RegionServerTracker(zooKeeper, this);
       this.rpcServices.start(zooKeeper);
@@ -554,8 +561,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    * implementation.
    */
   protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
-    org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
-    return new ActiveMasterManager(zk, sn, server);
+    org.apache.hadoop.hbase.Server server, int proxyPort) throws InterruptedIOException {
+    return new ActiveMasterManager(zk, sn, server, proxyPort);
   }
 
   @Override
@@ -2394,7 +2401,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
      * delete this node for us since it is ephemeral.
      */
     LOG.info("Adding backup master ZNode " + backupZNode);
-    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName, infoPort)) {
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName, infoPort,
+      masterProxyPort)) {
       LOG.warn("Failed create of " + backupZNode + " by " + serverName);
     }
     this.activeMasterManager.setInfoPort(infoPort);

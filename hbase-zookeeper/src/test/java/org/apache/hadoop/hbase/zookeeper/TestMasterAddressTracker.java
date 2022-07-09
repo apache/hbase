@@ -114,7 +114,7 @@ public class TestMasterAddressTracker {
     if (sn != null) {
       LOG.info("Creating master node");
       MasterAddressTracker.setMasterAddress(zk, zk.getZNodePaths().masterAddressZNode, sn,
-        infoPort);
+        infoPort, -1);
 
       // Wait for the node to be created
       LOG.info("Waiting for master address manager to be notified");
@@ -192,8 +192,8 @@ public class TestMasterAddressTracker {
     String backupZNode2 =
       ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupMaster2.toString());
     // Add backup masters
-    MasterAddressTracker.setMasterAddress(zk, backupZNode1, backupMaster1, 2222);
-    MasterAddressTracker.setMasterAddress(zk, backupZNode2, backupMaster2, 3333);
+    MasterAddressTracker.setMasterAddress(zk, backupZNode1, backupMaster1, 2222, -1);
+    MasterAddressTracker.setMasterAddress(zk, backupZNode2, backupMaster2, 3333, -1);
     TEST_UTIL.waitFor(30000, () -> addressTracker.getBackupMasters().size() == 2);
     backupMasters = addressTracker.getBackupMasters();
     assertEquals(2, backupMasters.size());

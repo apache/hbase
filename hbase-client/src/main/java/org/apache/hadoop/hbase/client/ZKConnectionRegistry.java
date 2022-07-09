@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -60,9 +61,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
 
   private final ZNodePaths znodePaths;
 
+  private final boolean consumeMasterProxyPort;
+
   ZKConnectionRegistry(Configuration conf) {
     this.znodePaths = new ZNodePaths(conf);
     this.zk = new ReadOnlyZKClient(conf);
+    consumeMasterProxyPort = conf.getBoolean(HConstants.CONSUME_MASTER_PROXY_PORT,
+      HConstants.CONSUME_MASTER_PROXY_PORT_DEFAULT);
   }
 
   private interface Converter<T> {
@@ -229,8 +234,13 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             return null;
           }
           HBaseProtos.ServerName snProto = proto.getMaster();
-          return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
-            snProto.getStartCode());
+          if (consumeMasterProxyPort && proto.hasProxyPort()) {
+            return ServerName.valueOf(snProto.getHostName(), proto.getProxyPort(),
+              snProto.getStartCode());
+          } else {
+            return ServerName.valueOf(snProto.getHostName(), snProto.getPort(),
+              snProto.getStartCode());
+          }
         }),
       "ZKConnectionRegistry.getActiveMaster");
   }

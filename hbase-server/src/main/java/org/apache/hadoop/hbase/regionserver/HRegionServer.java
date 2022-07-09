@@ -470,6 +470,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private RegionReplicationBufferManager regionReplicationBufferManager;
 
+  private final boolean consumeMasterProxyPort;
+
   /**
    * Starts a HRegionServer at the default location.
    * <p/>
@@ -486,6 +488,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
       FSUtils.setupShortCircuitRead(this.conf);
+
+      consumeMasterProxyPort =
+        this.conf.getBoolean(HConstants.CONSUME_MASTER_PROXY_PORT, HConstants.CONSUME_MASTER_PROXY_PORT_DEFAULT);
 
       // Disable usage of meta replicas in the regionserver
       this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
@@ -661,7 +666,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try (Scope ignored = span.makeCurrent()) {
       initializeZooKeeper();
       setupClusterConnection();
-      bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker);
+      bootstrapNodeManager = new BootstrapNodeManager(asyncClusterConnection, masterAddressTracker,
+        this.consumeMasterProxyPort);
       regionReplicationBufferManager = new RegionReplicationBufferManager(this);
       // Setup RPC client for master communication
       this.rpcClient = asyncClusterConnection.getRpcClient();
@@ -2446,7 +2452,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @InterfaceAudience.Private
   protected synchronized ServerName createRegionServerStatusStub(boolean refresh) {
     if (rssStub != null) {
-      return masterAddressTracker.getMasterAddress();
+      return this.consumeMasterProxyPort ?
+        masterAddressTracker.getMasterAddressWithProxyPortIfAvailable(false) :
+        masterAddressTracker.getMasterAddress();
     }
     ServerName sn = null;
     long previousLogTime = 0;
@@ -2455,7 +2463,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     boolean interrupted = false;
     try {
       while (keepLooping()) {
-        sn = this.masterAddressTracker.getMasterAddress(refresh);
+        sn = this.consumeMasterProxyPort ?
+          this.masterAddressTracker.getMasterAddressWithProxyPortIfAvailable(refresh) :
+          this.masterAddressTracker.getMasterAddress(refresh);
         if (sn == null) {
           if (!keepLooping()) {
             // give up with no connection.
@@ -3518,7 +3528,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   public Optional<ServerName> getActiveMaster() {
-    return Optional.ofNullable(masterAddressTracker.getMasterAddress());
+    return Optional.ofNullable(this.consumeMasterProxyPort ?
+      masterAddressTracker.getMasterAddressWithProxyPortIfAvailable(false) :
+      masterAddressTracker.getMasterAddress());
   }
 
   @Override

@@ -220,7 +220,7 @@ public class TestActiveMasterManager {
         String backupZn =
           ZNodePaths.joinZNode(zk.getZNodePaths().backupMasterAddressesZNode, backupSn.toString());
         backupZNodes.add(backupZn);
-        MasterAddressTracker.setMasterAddress(zk, backupZn, backupSn, 1234);
+        MasterAddressTracker.setMasterAddress(zk, backupZn, backupSn, 1234, -1);
         TEST_UTIL.waitFor(10000,
           () -> activeMasterManager.getBackupMasters().size() == backupZNodes.size());
       }
@@ -305,7 +305,7 @@ public class TestActiveMasterManager {
       this.clusterStatusTracker = new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
 
-      this.activeMasterManager = new ActiveMasterManager(zk, master, this);
+      this.activeMasterManager = new ActiveMasterManager(zk, master, this, -1);
       zk.registerListener(activeMasterManager);
     }
 

@@ -1567,6 +1567,10 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  public static final String CONSUME_MASTER_PROXY_PORT =
+    "hbase.client.consume.master.proxy.port";
+  public static final boolean CONSUME_MASTER_PROXY_PORT_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

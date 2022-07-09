@@ -67,6 +67,8 @@ public class ActiveMasterManager extends ZKListener {
   final ServerName sn;
   final Server master;
 
+  private final int masterProxyPort;
+
   // Active master's server name. Invalidated anytime active master changes (based on ZK
   // notifications) and lazily fetched on-demand.
   // ServerName is immutable, so we don't need heavy synchronization around it.
@@ -80,13 +82,14 @@ public class ActiveMasterManager extends ZKListener {
    * @param sn      ServerName
    * @param master  In an instance of a Master.
    */
-  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master)
+  ActiveMasterManager(ZKWatcher watcher, ServerName sn, Server master, int masterProxyPort)
     throws InterruptedIOException {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
     updateBackupMasters();
+    this.masterProxyPort = masterProxyPort;
   }
 
   // will be set after jetty server is started
@@ -231,10 +234,8 @@ public class ActiveMasterManager extends ZKListener {
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
-        if (
-          MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.getZNodePaths().masterAddressZNode, this.sn, infoPort)
-        ) {
+        if (MasterAddressTracker.setMasterAddress(this.watcher,
+          this.watcher.getZNodePaths().masterAddressZNode, this.sn, infoPort, masterProxyPort)) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)

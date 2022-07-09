@@ -107,7 +107,10 @@ public class BootstrapNodeManager {
 
   private long lastRequestMasterTime;
 
-  public BootstrapNodeManager(AsyncClusterConnection conn, MasterAddressTracker masterAddrTracker) {
+  private final boolean consumeMasterProxyPort;
+
+  public BootstrapNodeManager(AsyncClusterConnection conn, MasterAddressTracker masterAddrTracker,
+    boolean consumeMasterProxyPort) {
     this.conn = conn;
     this.masterAddrTracker = masterAddrTracker;
     Configuration conf = conn.getConfiguration();
@@ -125,6 +128,7 @@ public class BootstrapNodeManager {
         .setTimeUnit(TimeUnit.SECONDS));
     executor.schedule(this::getFromMaster, getDelay(requestMasterMinIntervalSecs),
       TimeUnit.SECONDS);
+    this.consumeMasterProxyPort = consumeMasterProxyPort;
   }
 
   private long getDelay(long delay) {
@@ -136,8 +140,8 @@ public class BootstrapNodeManager {
     List<ServerName> liveRegionServers;
     try {
       // get 2 times number of node
-      liveRegionServers =
-        FutureUtils.get(conn.getLiveRegionServers(masterAddrTracker, maxNodeCount * 2));
+      liveRegionServers = FutureUtils.get(
+        conn.getLiveRegionServers(masterAddrTracker, maxNodeCount * 2, consumeMasterProxyPort));
     } catch (IOException e) {
       LOG.warn("failed to get live region servers from master", e);
       if (retryCounter == null) {

@@ -157,6 +157,45 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
+   * If master has exposed proxy port, return it with ServerName object. Else, return
+   * ServerName object with master's original binding port.
+   *
+   * @param refresh whether to refresh the data by calling ZK directly.
+   * @return Server name or null if timed out.
+   */
+  public ServerName getMasterAddressWithProxyPortIfAvailable(final boolean refresh) {
+    try {
+      ServerName serverName = ProtobufUtil.parseServerNameFrom(super.getData(refresh));
+      if (serverName == null) {
+        return null;
+      }
+      int masterProxyPort = getMasterProxyPortToConnect();
+      if (masterProxyPort >= 0) {
+        return ServerName.valueOf(serverName.getHostname(), masterProxyPort,
+          serverName.getStartcode());
+      } else {
+        return serverName;
+      }
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse master znode data", e);
+      return null;
+    }
+  }
+
+  private int getMasterProxyPortToConnect() {
+    try {
+      final ZooKeeperProtos.Master master = parse(this.getData(false));
+      if (master == null || !master.hasProxyPort()) {
+        return -1;
+      }
+      return master.getProxyPort();
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse master zk node data", e);
+      return -1;
+    }
+  }
+
+  /**
    * Get master address. Use this instead of {@link #getMasterAddress()} if you do not have an
    * instance of this tracker in your context.
    * @param zkw ZKWatcher to use
@@ -251,16 +290,20 @@ public class MasterAddressTracker extends ZKNodeTracker {
   /**
    * Set master address into the <code>master</code> znode or into the backup subdirectory of backup
    * masters; switch off the passed in <code>znode</code> path.
+   *
    * @param zkw    The ZKWatcher to use.
    * @param znode  Where to create the znode; could be at the top level or it could be under backup
    *               masters
    * @param master ServerName of the current master must not be null.
+   * @param infoPort Server info port.
+   * @param proxyPort Optional proxy port exposed by Server for clients to make connection to
+   *                  for security reasons if required. Value < 0 would be ignored.
    * @return true if node created, false if not; a watch is set in both cases
    * @throws KeeperException if a ZooKeeper operation fails
    */
   public static boolean setMasterAddress(final ZKWatcher zkw, final String znode,
-    final ServerName master, int infoPort) throws KeeperException {
-    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master, infoPort));
+    final ServerName master, int infoPort, int proxyPort) throws KeeperException {
+    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master, infoPort, proxyPort));
   }
 
   /**
@@ -272,10 +315,14 @@ public class MasterAddressTracker extends ZKNodeTracker {
   }
 
   /**
+   * Serialize Server info for znode.
+   *
    * @param sn must not be null
+   * @param infoPort Server info port.
+   * @param proxyPort Server proxy port. Valid value should be positive.
    * @return Content of the master znode as a serialized pb with the pb magic as prefix.
    */
-  static byte[] toByteArray(final ServerName sn, int infoPort) {
+  static byte[] toByteArray(final ServerName sn, int infoPort, int proxyPort) {
     ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
     HBaseProtos.ServerName.Builder snbuilder = HBaseProtos.ServerName.newBuilder();
     snbuilder.setHostName(sn.getHostname());
@@ -284,6 +331,9 @@ public class MasterAddressTracker extends ZKNodeTracker {
     mbuilder.setMaster(snbuilder.build());
     mbuilder.setRpcVersion(HConstants.RPC_CURRENT_VERSION);
     mbuilder.setInfoPort(infoPort);
+    if (proxyPort >= 0) {
+      mbuilder.setProxyPort(proxyPort);
+    }
     return ProtobufUtil.prependPBMagic(mbuilder.build().toByteArray());
   }
 

@@ -130,10 +130,14 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
 
   @Override
   public CompletableFuture<List<ServerName>>
-    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count,
+    boolean consumeMasterProxyPort) {
     CompletableFuture<List<ServerName>> future = new CompletableFuture<>();
+    ServerName masterServerName = consumeMasterProxyPort ?
+      masterAddrTracker.getMasterAddressWithProxyPortIfAvailable(false) :
+      masterAddrTracker.getMasterAddress();
     RegionServerStatusService.Interface stub = RegionServerStatusService
-      .newStub(rpcClient.createRpcChannel(masterAddrTracker.getMasterAddress(), user, rpcTimeout));
+      .newStub(rpcClient.createRpcChannel(masterServerName, user, rpcTimeout));
     HBaseRpcController controller = rpcControllerFactory.newController();
     stub.getLiveRegionServers(controller,
       GetLiveRegionServersRequest.newBuilder().setCount(count).build(), resp -> {

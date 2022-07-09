@@ -155,7 +155,8 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
 
   @Override
   public CompletableFuture<List<ServerName>>
-    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count) {
+    getLiveRegionServers(MasterAddressTracker masterAddrTracker, int count,
+      boolean consumeMasterProxyPort) {
     return null;
   }
 

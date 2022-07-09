@@ -321,12 +321,12 @@ public class TestZKNodeTracker {
     assertNotNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we don't delete if we're not supposed to
-    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
+    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0, -1));
     MasterAddressTracker.deleteIfEquals(zkw, ServerName.valueOf("127.0.0.2:52", 45L).toString());
     assertNotNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we delete when we're supposed to
-    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
+    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0, -1));
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
     assertNull(ZKUtil.getData(zkw, nodeName));
 

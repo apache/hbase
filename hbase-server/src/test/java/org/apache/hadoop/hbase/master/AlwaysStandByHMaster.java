@@ -45,9 +45,9 @@ public class AlwaysStandByHMaster extends HMaster {
   private static class AlwaysStandByMasterManager extends ActiveMasterManager {
     private static final Logger LOG = LoggerFactory.getLogger(AlwaysStandByMasterManager.class);
 
-    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master)
+    AlwaysStandByMasterManager(ZKWatcher watcher, ServerName sn, Server master, int proxyPort)
       throws InterruptedIOException {
-      super(watcher, sn, master);
+      super(watcher, sn, master, proxyPort);
     }
 
     /**
@@ -94,7 +94,7 @@ public class AlwaysStandByHMaster extends HMaster {
   }
 
   protected ActiveMasterManager createActiveMasterManager(ZKWatcher zk, ServerName sn,
-    org.apache.hadoop.hbase.Server server) throws InterruptedIOException {
-    return new AlwaysStandByMasterManager(zk, sn, server);
+    org.apache.hadoop.hbase.Server server, int proxyPort) throws InterruptedIOException {
+    return new AlwaysStandByMasterManager(zk, sn, server, proxyPort);
   }
 }

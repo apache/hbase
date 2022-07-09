@@ -97,7 +97,7 @@ public interface AsyncClusterConnection extends AsyncConnection {
    * Get live region servers from masters.
    */
   CompletableFuture<List<ServerName>> getLiveRegionServers(MasterAddressTracker masterAddrTracker,
-    int count);
+    int count, boolean consumeMasterProxyPort);
 
   /**
    * Get the bootstrap node list of another region server.
