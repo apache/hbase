@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,7 +27,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -39,15 +40,17 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.AsyncTable;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -83,10 +86,18 @@ public class ReplicationSink {
   private final Configuration conf;
   // Volatile because of note in here -- look for double-checked locking:
   // http://www.oracle.com/technetwork/articles/javase/bloch-effective-08-qa-140880.html
-  private volatile Connection sharedHtableCon;
+  /**
+   * This shared {@link Connection} is used for handling bulk load hfiles replication.
+   */
+  private volatile Connection sharedConnection;
+  /**
+   * This shared {@link AsyncConnection} is used for handling wal replication.
+   */
+  private volatile AsyncConnection sharedAsyncConnection;
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
-  private final Object sharedHtableConLock = new Object();
+  private final Object sharedConnectionLock = new Object();
+  private final Object sharedAsyncConnectionLock = new Object();
   // Number of hfiles that we successfully replicated
   private long hfilesReplicated = 0;
   private SourceFSConfigurationProvider provider;
@@ -375,16 +386,31 @@ public class ReplicationSink {
    */
   public void stopReplicationSinkServices() {
     try {
-      if (this.sharedHtableCon != null) {
-        synchronized (sharedHtableConLock) {
-          if (this.sharedHtableCon != null) {
-            this.sharedHtableCon.close();
-            this.sharedHtableCon = null;
+      if (this.sharedConnection != null) {
+        synchronized (sharedConnectionLock) {
+          if (this.sharedConnection != null) {
+            this.sharedConnection.close();
+            this.sharedConnection = null;
           }
         }
       }
     } catch (IOException e) {
-      LOG.warn("IOException while closing the connection", e); // ignoring as we are closing.
+      // ignoring as we are closing.
+      LOG.warn("IOException while closing the sharedConnection", e);
+    }
+
+    try {
+      if (this.sharedAsyncConnection != null) {
+        synchronized (sharedAsyncConnectionLock) {
+          if (this.sharedAsyncConnection != null) {
+            this.sharedAsyncConnection.close();
+            this.sharedAsyncConnection = null;
+          }
+        }
+      }
+    } catch (IOException e) {
+      // ignoring as we are closing.
+      LOG.warn("IOException while closing the sharedAsyncConnection", e);
     }
   }
 
@@ -399,49 +425,67 @@ public class ReplicationSink {
     if (allRows.isEmpty()) {
       return;
     }
-    Table table = null;
-    try {
-      Connection connection = getConnection();
-      table = connection.getTable(tableName);
-      for (List<Row> rows : allRows) {
-        List<List<Row>> batchRows;
-        if (rows.size() > batchRowSizeThreshold) {
-          batchRows = Lists.partition(rows, batchRowSizeThreshold);
-        } else {
-          batchRows = Collections.singletonList(rows);
-        }
-        for (List<Row> rowList : batchRows) {
-          table.batch(rowList, null);
-        }
+    AsyncTable<?> table = getAsyncConnection().getTable(tableName);
+    List<Future<?>> futures = new ArrayList<>();
+    for (List<Row> rows : allRows) {
+      List<List<Row>> batchRows;
+      if (rows.size() > batchRowSizeThreshold) {
+        batchRows = Lists.partition(rows, batchRowSizeThreshold);
+      } else {
+        batchRows = Collections.singletonList(rows);
       }
-    } catch (RetriesExhaustedWithDetailsException rewde) {
-      for (Throwable ex : rewde.getCauses()) {
-        if (ex instanceof TableNotFoundException) {
+      futures.addAll(batchRows.stream().map(table::batchAll).collect(Collectors.toList()));
+    }
+
+    for (Future<?> future : futures) {
+      try {
+        FutureUtils.get(future);
+      } catch (RetriesExhaustedException e) {
+        if (e.getCause() instanceof TableNotFoundException) {
           throw new TableNotFoundException("'" + tableName + "'");
         }
-      }
-      throw rewde;
-    } catch (InterruptedException ix) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(ix);
-    } finally {
-      if (table != null) {
-        table.close();
+        throw e;
       }
     }
   }
 
+  /**
+   * Return the shared {@link Connection} which is used for handling bulk load hfiles replication.
+   */
   private Connection getConnection() throws IOException {
     // See https://en.wikipedia.org/wiki/Double-checked_locking
-    Connection connection = sharedHtableCon;
+    Connection connection = sharedConnection;
     if (connection == null) {
-      synchronized (sharedHtableConLock) {
-        connection = sharedHtableCon;
+      synchronized (sharedConnectionLock) {
+        connection = sharedConnection;
         if (connection == null) {
-          connection = sharedHtableCon = ConnectionFactory.createConnection(conf);
+          connection = ConnectionFactory.createConnection(conf);
+          sharedConnection = connection;
         }
       }
     }
     return connection;
+  }
+
+  /**
+   * Return the shared {@link AsyncConnection} which is used for handling wal replication.
+   */
+  private AsyncConnection getAsyncConnection() throws IOException {
+    // See https://en.wikipedia.org/wiki/Double-checked_locking
+    AsyncConnection asyncConnection = sharedAsyncConnection;
+    if (asyncConnection == null) {
+      synchronized (sharedAsyncConnectionLock) {
+        asyncConnection = sharedAsyncConnection;
+        if (asyncConnection == null) {
+          /**
+           * Get the AsyncConnection immediately.
+           */
+          asyncConnection = FutureUtils.get(ConnectionFactory.createAsyncConnection(conf));
+          sharedAsyncConnection = asyncConnection;
+        }
+      }
+    }
+    return asyncConnection;
   }
 
   /**

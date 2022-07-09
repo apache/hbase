@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.allOf;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnly;
+import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
 import com.google.protobuf.RpcChannel;
 import java.util.List;

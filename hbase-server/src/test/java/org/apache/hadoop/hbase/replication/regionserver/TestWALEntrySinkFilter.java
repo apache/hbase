@@ -23,9 +23,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -34,34 +33,26 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
+import org.apache.hadoop.hbase.client.AsyncAdminBuilder;
+import org.apache.hadoop.hbase.client.AsyncBufferedMutatorBuilder;
+import org.apache.hadoop.hbase.client.AsyncConnection;
+import org.apache.hadoop.hbase.client.AsyncTable;
+import org.apache.hadoop.hbase.client.AsyncTableBuilder;
+import org.apache.hadoop.hbase.client.AsyncTableRegionLocator;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.ConnectionRegistry;
+import org.apache.hadoop.hbase.client.DummyAsyncTable;
+import org.apache.hadoop.hbase.client.DummyConnectionRegistry;
+import org.apache.hadoop.hbase.client.Hbck;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.client.ScanResultConsumer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -123,9 +114,12 @@ public class TestWALEntrySinkFilter {
   public void testWALEntryFilter() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
+    conf.setClass(DummyConnectionRegistry.REGISTRY_IMPL_CONF_KEY, DevNullConnectionRegistry.class,
+      DummyConnectionRegistry.class);
     conf.setClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY,
       IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
-    conf.setClass("hbase.client.connection.impl", DevNullConnection.class, Connection.class);
+    conf.setClass(ConnectionFactory.HBASE_CLIENT_ASYNC_CONNECTION_IMPL,
+      DevNullAsyncConnection.class, AsyncConnection.class);
     ReplicationSink sink = new ReplicationSink(conf);
     // Create some dumb walentries.
     List<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry> entries =
@@ -203,55 +197,79 @@ public class TestWALEntrySinkFilter {
     }
   }
 
+  public static class DevNullConnectionRegistry extends DummyConnectionRegistry {
+
+    public DevNullConnectionRegistry(Configuration conf) {
+    }
+
+    @Override
+    public CompletableFuture<String> getClusterId() {
+      return CompletableFuture.completedFuture("test");
+    }
+  }
+
   /**
-   * A DevNull Connection whose only purpose is checking what edits made it through. See down in
-   * {@link Table#batch(List, Object[])}.
+   * A DevNull AsyncConnection whose only purpose is checking what edits made it through. See down
+   * in {@link AsyncTable#batchAll}.
    */
-  public static class DevNullConnection implements Connection {
-    private final Configuration configuration;
+  public static class DevNullAsyncConnection implements AsyncConnection {
 
-    DevNullConnection(Configuration configuration, ExecutorService es, User user) {
-      this.configuration = configuration;
+    private final Configuration conf;
+
+    public DevNullAsyncConnection(Configuration conf, ConnectionRegistry registry, String clusterId,
+      User user) {
+      this.conf = conf;
     }
 
     @Override
-    public void abort(String why, Throwable e) {
-
-    }
-
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-
-    @Override
-    public Configuration getConfiguration() {
-      return this.configuration;
-    }
-
-    @Override
-    public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
+    public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
       return null;
     }
 
     @Override
-    public BufferedMutator getBufferedMutator(BufferedMutatorParams params) throws IOException {
+    public void clearRegionLocationCache() {
+    }
+
+    @Override
+    public AsyncTableBuilder<AdvancedScanResultConsumer> getTableBuilder(TableName tableName) {
       return null;
     }
 
     @Override
-    public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+    public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
+      ExecutorService pool) {
       return null;
     }
 
     @Override
-    public Admin getAdmin() throws IOException {
+    public AsyncAdminBuilder getAdminBuilder() {
       return null;
     }
 
     @Override
-    public void close() throws IOException {
+    public AsyncAdminBuilder getAdminBuilder(ExecutorService pool) {
+      return null;
+    }
 
+    @Override
+    public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName) {
+      return null;
+    }
+
+    @Override
+    public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
+      ExecutorService pool) {
+      return null;
+    }
+
+    @Override
+    public CompletableFuture<Hbck> getHbck() {
+      return null;
+    }
+
+    @Override
+    public Hbck getHbck(ServerName masterServer) throws IOException {
+      return null;
     }
 
     @Override
@@ -260,320 +278,31 @@ public class TestWALEntrySinkFilter {
     }
 
     @Override
-    public TableBuilder getTableBuilder(final TableName tableName, ExecutorService pool) {
-      return new TableBuilder() {
-        @Override
-        public TableBuilder setOperationTimeout(int timeout) {
-          return this;
-        }
+    public void close() throws IOException {
+    }
+
+    @Override
+    public AsyncTable<AdvancedScanResultConsumer> getTable(TableName tableName) {
+      return new DummyAsyncTable<AdvancedScanResultConsumer>() {
 
         @Override
-        public TableBuilder setRpcTimeout(int timeout) {
-          return this;
-        }
-
-        @Override
-        public TableBuilder setReadRpcTimeout(int timeout) {
-          return this;
-        }
-
-        @Override
-        public TableBuilder setWriteRpcTimeout(int timeout) {
-          return this;
-        }
-
-        @Override
-        public Table build() {
-          return new Table() {
-            @Override
-            public TableName getName() {
-              return tableName;
-            }
-
-            @Override
-            public Configuration getConfiguration() {
-              return configuration;
-            }
-
-            @Override
-            public HTableDescriptor getTableDescriptor() throws IOException {
-              return null;
-            }
-
-            @Override
-            public TableDescriptor getDescriptor() throws IOException {
-              return null;
-            }
-
-            @Override
-            public boolean exists(Get get) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean[] exists(List<Get> gets) throws IOException {
-              return new boolean[0];
-            }
-
-            @Override
-            public void batch(List<? extends Row> actions, Object[] results)
-              throws IOException, InterruptedException {
-              for (Row action : actions) {
-                // Row is the index of the loop above where we make WALEntry and Cells.
-                int row = Bytes.toInt(action.getRow());
-                assertTrue("" + row, row > BOUNDARY);
-                UNFILTERED.incrementAndGet();
-              }
-            }
-
-            @Override
-            public <R> void batchCallback(List<? extends Row> actions, Object[] results,
-              Batch.Callback<R> callback) throws IOException, InterruptedException {
-
-            }
-
-            @Override
-            public Result get(Get get) throws IOException {
-              return null;
-            }
-
-            @Override
-            public Result[] get(List<Get> gets) throws IOException {
-              return new Result[0];
-            }
-
-            @Override
-            public ResultScanner getScanner(Scan scan) throws IOException {
-              return null;
-            }
-
-            @Override
-            public ResultScanner getScanner(byte[] family) throws IOException {
-              return null;
-            }
-
-            @Override
-            public ResultScanner getScanner(byte[] family, byte[] qualifier) throws IOException {
-              return null;
-            }
-
-            @Override
-            public void put(Put put) throws IOException {
-
-            }
-
-            @Override
-            public void put(List<Put> puts) throws IOException {
-
-            }
-
-            @Override
-            public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value,
-              Put put) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-              CompareFilter.CompareOp compareOp, byte[] value, Put put) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
-              CompareOperator op, byte[] value, Put put) throws IOException {
-              return false;
-            }
-
-            @Override
-            public void delete(Delete delete) throws IOException {
-
-            }
-
-            @Override
-            public void delete(List<Delete> deletes) throws IOException {
-
-            }
-
-            @Override
-            public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value,
-              Delete delete) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-              CompareFilter.CompareOp compareOp, byte[] value, Delete delete) throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
-              CompareOperator op, byte[] value, Delete delete) throws IOException {
-              return false;
-            }
-
-            @Override
-            public CheckAndMutateBuilder checkAndMutate(byte[] row, byte[] family) {
-              return null;
-            }
-
-            @Override
-            public Result mutateRow(RowMutations rm) throws IOException {
-              return null;
-            }
-
-            @Override
-            public Result append(Append append) throws IOException {
-              return null;
-            }
-
-            @Override
-            public Result increment(Increment increment) throws IOException {
-              return null;
-            }
-
-            @Override
-            public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-              long amount) throws IOException {
-              return 0;
-            }
-
-            @Override
-            public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-              long amount, Durability durability) throws IOException {
-              return 0;
-            }
-
-            @Override
-            public void close() throws IOException {
-
-            }
-
-            @Override
-            public CoprocessorRpcChannel coprocessorService(byte[] row) {
-              return null;
-            }
-
-            @Override
-            public <T extends com.google.protobuf.Service, R> Map<byte[], R> coprocessorService(
-              Class<T> service, byte[] startKey, byte[] endKey, Batch.Call<T, R> callable)
-              throws com.google.protobuf.ServiceException, Throwable {
-              return null;
-            }
-
-            @Override
-            public <T extends com.google.protobuf.Service, R> void coprocessorService(
-              Class<T> service, byte[] startKey, byte[] endKey, Batch.Call<T, R> callable,
-              Batch.Callback<R> callback) throws com.google.protobuf.ServiceException, Throwable {
-
-            }
-
-            @Override
-            public <R extends com.google.protobuf.Message> Map<byte[], R> batchCoprocessorService(
-              com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor,
-              com.google.protobuf.Message request, byte[] startKey, byte[] endKey,
-              R responsePrototype) throws com.google.protobuf.ServiceException, Throwable {
-              return null;
-            }
-
-            @Override
-            public <R extends com.google.protobuf.Message> void batchCoprocessorService(
-              com.google.protobuf.Descriptors.MethodDescriptor methodDescriptor,
-              com.google.protobuf.Message request, byte[] startKey, byte[] endKey,
-              R responsePrototype, Batch.Callback<R> callback)
-              throws com.google.protobuf.ServiceException, Throwable {
-
-            }
-
-            @Override
-            public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-              CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation)
-              throws IOException {
-              return false;
-            }
-
-            @Override
-            public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
-              CompareOperator op, byte[] value, RowMutations mutation) throws IOException {
-              return false;
-            }
-
-            @Override
-            public long getRpcTimeout(TimeUnit unit) {
-              return 0;
-            }
-
-            @Override
-            public int getRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setRpcTimeout(int rpcTimeout) {
-
-            }
-
-            @Override
-            public long getReadRpcTimeout(TimeUnit unit) {
-              return 0;
-            }
-
-            @Override
-            public int getReadRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setReadRpcTimeout(int readRpcTimeout) {
-
-            }
-
-            @Override
-            public long getWriteRpcTimeout(TimeUnit unit) {
-              return 0;
-            }
-
-            @Override
-            public int getWriteRpcTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setWriteRpcTimeout(int writeRpcTimeout) {
-
-            }
-
-            @Override
-            public long getOperationTimeout(TimeUnit unit) {
-              return 0;
-            }
-
-            @Override
-            public int getOperationTimeout() {
-              return 0;
-            }
-
-            @Override
-            public void setOperationTimeout(int operationTimeout) {
-            }
-
-            @Override
-            public RegionLocator getRegionLocator() throws IOException {
-              return null;
-            }
-          };
+        public <T> CompletableFuture<List<T>> batchAll(List<? extends Row> actions) {
+          List<T> list = new ArrayList<>(actions.size());
+          for (Row action : actions) {
+            // Row is the index of the loop above where we make WALEntry and Cells.
+            int row = Bytes.toInt(action.getRow());
+            assertTrue("" + row, row > BOUNDARY);
+            UNFILTERED.incrementAndGet();
+            list.add(null);
+          }
+          return CompletableFuture.completedFuture(list);
         }
       };
     }
 
     @Override
-    public void clearRegionLocationCache() {
-    }
-
-    @Override
-    public String getClusterId() {
-      return null;
+    public Configuration getConfiguration() {
+      return conf;
     }
   }
 }
