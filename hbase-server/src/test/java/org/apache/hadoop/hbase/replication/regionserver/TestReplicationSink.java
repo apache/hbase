@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -330,8 +330,8 @@ public class TestReplicationSink {
         try {
           SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
             replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-          Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
-        } catch (RetriesExhaustedWithDetailsException e) {
+          Assert.fail("Should re-throw RetriesExhaustedException.");
+        } catch (RetriesExhaustedException e) {
         } finally {
           admin.enableTable(TABLE_NAME1);
         }
