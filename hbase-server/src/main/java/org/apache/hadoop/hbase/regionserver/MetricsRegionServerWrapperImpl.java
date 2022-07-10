@@ -80,6 +80,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private volatile long offHeapMemstoreSize = 0;
   private volatile long storeFileSize = 0;
   private volatile double storeFileSizeGrowthRate = 0;
+  private volatile long maxStoreFileCount = 0;
   private volatile long maxStoreFileAge = 0;
   private volatile long minStoreFileAge = 0;
   private volatile long avgStoreFileAge = 0;
@@ -434,6 +435,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getMaxStoreFiles() {
+    return maxStoreFileCount;
+  }
+
+  @Override
   public long getMaxStoreFileAge() {
     return maxStoreFileAge;
   }
@@ -716,6 +722,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         long tempNumStores = 0, tempNumStoreFiles = 0, tempStoreFileSize = 0;
         long tempMemstoreSize = 0, tempOnHeapMemstoreSize = 0, tempOffHeapMemstoreSize = 0;
         long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
+        long tempMaxStoreFileCount = 0;
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
         long tempFilteredReadRequestsCount = 0, tempCpRequestsCount = 0;
@@ -798,6 +805,8 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
             tempOnHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
             tempOffHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
             tempStoreFileSize += store.getStorefilesSize();
+
+            tempMaxStoreFileCount = Math.max(tempMaxStoreFileCount, store.getStorefilesCount());
 
             OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
             if (
@@ -905,6 +914,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         onHeapMemstoreSize = tempOnHeapMemstoreSize;
         offHeapMemstoreSize = tempOffHeapMemstoreSize;
         storeFileSize = tempStoreFileSize;
+        maxStoreFileCount = tempMaxStoreFileCount;
         maxStoreFileAge = tempMaxStoreFileAge;
         if (regionCount > 0) {
           averageRegionSize = (memstoreSize + storeFileSize) / regionCount;
