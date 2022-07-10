@@ -493,18 +493,8 @@ public class HFileBlock implements Cacheable {
    * @return the buffer with header skipped and checksum omitted.
    */
   public ByteBuff getBufferWithoutHeader() {
-    return this.getBufferWithoutHeader(false);
-  }
-
-  /**
-   * Returns a buffer that does not include the header or checksum.
-   * @param withChecksum to indicate whether include the checksum or not.
-   * @return the buffer with header skipped and checksum omitted.
-   */
-  public ByteBuff getBufferWithoutHeader(boolean withChecksum) {
     ByteBuff dup = getBufferReadOnly();
-    int delta = withChecksum ? 0 : totalChecksumBytes();
-    return dup.position(headerSize()).limit(buf.limit() - delta).slice();
+    return dup.position(headerSize()).slice();
   }
 
   /**
@@ -568,19 +558,21 @@ public class HFileBlock implements Cacheable {
       sanityCheckAssertion(dup.getInt(), onDiskDataSizeWithHeader, "onDiskDataSizeWithHeader");
     }
 
-    int cksumBytes = totalChecksumBytes();
-    int expectedBufLimit = onDiskDataSizeWithHeader + cksumBytes;
-    if (dup.limit() != expectedBufLimit) {
-      throw new AssertionError("Expected limit " + expectedBufLimit + ", got " + dup.limit());
+    if (dup.limit() != onDiskDataSizeWithHeader) {
+      throw new AssertionError(
+        "Expected limit " + onDiskDataSizeWithHeader + ", got " + dup.limit());
     }
 
     // We might optionally allocate HFILEBLOCK_HEADER_SIZE more bytes to read the next
     // block's header, so there are two sensible values for buffer capacity.
     int hdrSize = headerSize();
     dup.rewind();
-    if (dup.remaining() != expectedBufLimit && dup.remaining() != expectedBufLimit + hdrSize) {
+    if (
+      dup.remaining() != onDiskDataSizeWithHeader
+        && dup.remaining() != onDiskDataSizeWithHeader + hdrSize
+    ) {
       throw new AssertionError("Invalid buffer capacity: " + dup.remaining() + ", expected "
-        + expectedBufLimit + " or " + (expectedBufLimit + hdrSize));
+        + onDiskDataSizeWithHeader + " or " + (onDiskDataSizeWithHeader + hdrSize));
     }
   }
 
@@ -641,12 +633,13 @@ public class HFileBlock implements Cacheable {
         ? reader.getBlockDecodingContext()
         : reader.getDefaultBlockDecodingContext();
       // Create a duplicated buffer without the header part.
+      int headerSize = this.headerSize();
       ByteBuff dup = this.buf.duplicate();
-      dup.position(this.headerSize());
+      dup.position(headerSize);
       dup = dup.slice();
       // Decode the dup into unpacked#buf
-      ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
+      ctx.prepareDecoding(unpacked.getOnDiskDataSizeWithHeader() - headerSize,
+        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(), dup);
       succ = true;
       return unpacked;
     } finally {
@@ -661,9 +654,8 @@ public class HFileBlock implements Cacheable {
    * buffer. Does not change header fields. Reserve room to keep checksum bytes too.
    */
   private ByteBuff allocateBufferForUnpacking() {
-    int cksumBytes = totalChecksumBytes();
     int headerSize = headerSize();
-    int capacityNeeded = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
+    int capacityNeeded = headerSize + uncompressedSizeWithoutHeader;
 
     ByteBuff source = buf.duplicate();
     ByteBuff newBuf = allocator.allocate(capacityNeeded);
@@ -682,9 +674,8 @@ public class HFileBlock implements Cacheable {
    * calculated heuristic, not tracked attribute of the block.
    */
   public boolean isUnpacked() {
-    final int cksumBytes = totalChecksumBytes();
     final int headerSize = headerSize();
-    final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
+    final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader;
     final int bufCapacity = buf.remaining();
     return bufCapacity == expectedCapacity || bufCapacity == expectedCapacity + headerSize;
   }
@@ -1709,6 +1700,9 @@ public class HFileBlock implements Cacheable {
         if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
           return null;
         }
+        // remove checksum from buffer now that it's verified
+        int sizeWithoutChecksum = curBlock.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
+        curBlock = curBlock.duplicate().limit(sizeWithoutChecksum);
         long duration = EnvironmentEdgeManager.currentTime() - startTime;
         if (updateMetrics) {
           HFile.updateReadLatency(duration, pread);

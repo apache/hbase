@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -30,11 +33,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,7 +76,45 @@ public class TestHFileBlockUnpack {
     Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     conf.setInt(ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY, MIN_ALLOCATION_SIZE);
     allocator = ByteBuffAllocator.create(conf, true);
+  }
 
+  /**
+   * It's important that if you read and unpack the same HFileBlock twice, it results in an
+   * identical buffer each time. Otherwise we end up with validation failures in block cache, since
+   * contents may not match if the same block is cached twice. See
+   * https://issues.apache.org/jira/browse/HBASE-27053
+   */
+  @Test
+  public void itUnpacksIdenticallyEachTime() throws IOException {
+    Path path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
+    int totalSize = createTestBlock(path);
+
+    // Allocate a bunch of random buffers, so we can be sure that unpack will only have "dirty"
+    // buffers to choose from when allocating itself.
+    Random random = new Random();
+    byte[] temp = new byte[HConstants.DEFAULT_BLOCKSIZE];
+    List<ByteBuff> buffs = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      ByteBuff buff = allocator.allocate(HConstants.DEFAULT_BLOCKSIZE);
+      random.nextBytes(temp);
+      buff.put(temp);
+      buffs.add(buff);
+    }
+
+    buffs.forEach(ByteBuff::release);
+
+    // read the same block twice. we should expect the underlying buffer below to
+    // be identical each time
+    HFileBlock blockOne = readBlock(path, totalSize).unpacked;
+    HFileBlock blockTwo = readBlock(path, totalSize).unpacked;
+
+    ByteBuff bufferOne = blockOne.getBufferWithoutHeader();
+    ByteBuff bufferTwo = blockTwo.getBufferWithoutHeader();
+
+    // This assertion should succeed, but it fails on master. It will succeed once
+    // cksumBytes is removed from HFileBlock#allocateBuffer.
+    assertEquals(0,
+      ByteBuff.compareTo(bufferOne, 0, bufferOne.limit(), bufferTwo, 0, bufferTwo.limit()));
   }
 
   /**
@@ -83,15 +126,66 @@ public class TestHFileBlockUnpack {
    */
   @Test
   public void itUsesSharedMemoryIfUnpackedBlockExceedsMinAllocationSize() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    Path path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
+    int totalSize = createTestBlock(path);
+    HFileBlockWrapper blockFromHFile = readBlock(path, totalSize);
+
+    assertFalse("expected hfile block to NOT be unpacked", blockFromHFile.original.isUnpacked());
+    assertFalse("expected hfile block to NOT use shared memory",
+      blockFromHFile.original.isSharedMem());
+
+    assertTrue(
+      "expected generated block size " + blockFromHFile.original.getOnDiskSizeWithHeader()
+        + " to be less than " + MIN_ALLOCATION_SIZE,
+      blockFromHFile.original.getOnDiskSizeWithHeader() < MIN_ALLOCATION_SIZE);
+    assertTrue(
+      "expected generated block uncompressed size "
+        + blockFromHFile.original.getUncompressedSizeWithoutHeader() + " to be more than "
+        + MIN_ALLOCATION_SIZE,
+      blockFromHFile.original.getUncompressedSizeWithoutHeader() > MIN_ALLOCATION_SIZE);
+
+    assertTrue("expected unpacked block to be unpacked", blockFromHFile.unpacked.isUnpacked());
+    assertTrue("expected unpacked block to use shared memory",
+      blockFromHFile.unpacked.isSharedMem());
+  }
+
+  private static class HFileBlockWrapper {
+    private final HFileBlock original;
+    private final HFileBlock unpacked;
+
+    private HFileBlockWrapper(HFileBlock original, HFileBlock unpacked) {
+      this.original = original;
+      this.unpacked = unpacked;
+    }
+  }
+
+  private HFileBlockWrapper readBlock(Path path, int totalSize) throws IOException {
+    try (FSDataInputStream is = fs.open(path)) {
+      HFileContext meta =
+        new HFileContextBuilder().withHBaseCheckSum(true).withCompression(Compression.Algorithm.GZ)
+          .withIncludesMvcc(false).withIncludesTags(false).build();
+      ReaderContext context =
+        new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+          .withFileSize(totalSize).withFilePath(path).withFileSystem(fs).build();
+      HFileBlock.FSReaderImpl hbr =
+        new HFileBlock.FSReaderImpl(context, meta, allocator, TEST_UTIL.getConfiguration());
+      hbr.setDataBlockEncoder(NoOpDataBlockEncoder.INSTANCE, TEST_UTIL.getConfiguration());
+      hbr.setIncludesMemStoreTS(false);
+      HFileBlock blockFromHFile = hbr.readBlockData(0, -1, false, false, false);
+      blockFromHFile.sanityCheck();
+      return new HFileBlockWrapper(blockFromHFile, blockFromHFile.unpack(meta, hbr));
+    }
+  }
+
+  private int createTestBlock(Path path) throws IOException {
     HFileContext meta =
       new HFileContextBuilder().withCompression(Compression.Algorithm.GZ).withIncludesMvcc(false)
         .withIncludesTags(false).withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
 
-    Path path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
     int totalSize;
     try (FSDataOutputStream os = fs.create(path)) {
-      HFileBlock.Writer hbw = new HFileBlock.Writer(conf, NoOpDataBlockEncoder.INSTANCE, meta);
+      HFileBlock.Writer hbw =
+        new HFileBlock.Writer(TEST_UTIL.getConfiguration(), NoOpDataBlockEncoder.INSTANCE, meta);
       hbw.startWriting(BlockType.DATA);
       writeTestKeyValues(hbw, MIN_ALLOCATION_SIZE - 1);
       hbw.writeHeaderAndData(os);
@@ -100,36 +194,7 @@ public class TestHFileBlockUnpack {
         "expected generated block size " + totalSize + " to be less than " + MIN_ALLOCATION_SIZE,
         totalSize < MIN_ALLOCATION_SIZE);
     }
-
-    try (FSDataInputStream is = fs.open(path)) {
-      meta =
-        new HFileContextBuilder().withHBaseCheckSum(true).withCompression(Compression.Algorithm.GZ)
-          .withIncludesMvcc(false).withIncludesTags(false).build();
-      ReaderContext context =
-        new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(is))
-          .withFileSize(totalSize).withFilePath(path).withFileSystem(fs).build();
-      HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(context, meta, allocator, conf);
-      hbr.setDataBlockEncoder(NoOpDataBlockEncoder.INSTANCE, conf);
-      hbr.setIncludesMemStoreTS(false);
-      HFileBlock blockFromHFile = hbr.readBlockData(0, -1, false, false, false);
-      blockFromHFile.sanityCheck();
-      assertFalse("expected hfile block to NOT be unpacked", blockFromHFile.isUnpacked());
-      assertFalse("expected hfile block to NOT use shared memory", blockFromHFile.isSharedMem());
-
-      assertTrue(
-        "expected generated block size " + blockFromHFile.getOnDiskSizeWithHeader()
-          + " to be less than " + MIN_ALLOCATION_SIZE,
-        blockFromHFile.getOnDiskSizeWithHeader() < MIN_ALLOCATION_SIZE);
-      assertTrue(
-        "expected generated block uncompressed size "
-          + blockFromHFile.getUncompressedSizeWithoutHeader() + " to be more than "
-          + MIN_ALLOCATION_SIZE,
-        blockFromHFile.getUncompressedSizeWithoutHeader() > MIN_ALLOCATION_SIZE);
-
-      HFileBlock blockUnpacked = blockFromHFile.unpack(meta, hbr);
-      assertTrue("expected unpacked block to be unpacked", blockUnpacked.isUnpacked());
-      assertTrue("expected unpacked block to use shared memory", blockUnpacked.isSharedMem());
-    }
+    return totalSize;
   }
 
   static int writeTestKeyValues(HFileBlock.Writer hbw, int desiredSize) throws IOException {

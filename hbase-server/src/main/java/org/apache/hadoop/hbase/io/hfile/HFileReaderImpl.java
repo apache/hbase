@@ -1311,6 +1311,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           !isCompaction, shouldUseHeap(expectedBlockType));
         validateBlockType(hfileBlock, expectedBlockType);
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
+        assert unpacked.isUnpacked() : "unpacked block not unpacked";
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
 
         // Cache the block if necessary

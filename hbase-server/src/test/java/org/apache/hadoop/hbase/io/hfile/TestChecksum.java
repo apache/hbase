@@ -149,11 +149,13 @@ public class TestChecksum {
       HFileBlock b = hbr.readBlockData(0, -1, false, false, true);
       assertTrue(!b.isSharedMem());
 
+      ByteBuff bufferWithChecksum = getBufferWithChecksum(b);
+
       // verify SingleByteBuff checksum.
-      verifySBBCheckSum(b.getBufferReadOnly());
+      verifySBBCheckSum(bufferWithChecksum);
 
       // verify MultiByteBuff checksum.
-      verifyMBBCheckSum(b.getBufferReadOnly());
+      verifyMBBCheckSum(bufferWithChecksum);
 
       ByteBuff data = b.getBufferWithoutHeader();
       for (int i = 0; i < intCount; i++) {
@@ -167,6 +169,22 @@ public class TestChecksum {
       }
       assertEquals(0, HFile.getAndResetChecksumFailuresCount());
     }
+  }
+
+  private ByteBuff getBufferWithChecksum(HFileBlock block) throws IOException {
+    ByteBuff buf = block.getBufferReadOnly();
+
+    int numBytes =
+      (int) ChecksumUtil.numBytes(buf.remaining(), block.getHFileContext().getBytesPerChecksum());
+    byte[] checksum = new byte[numBytes];
+    ChecksumUtil.generateChecksums(buf.array(), 0, buf.limit(), checksum, 0,
+      block.getHFileContext().getChecksumType(), block.getBytesPerChecksum());
+
+    ByteBuff bufWithChecksum = ByteBuffAllocator.HEAP.allocate(buf.limit() + numBytes);
+    bufWithChecksum.put(buf.array(), 0, buf.limit());
+    bufWithChecksum.put(checksum);
+
+    return bufWithChecksum.rewind();
   }
 
   /**
