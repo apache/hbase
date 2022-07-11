@@ -131,6 +131,11 @@ public class FifoRpcScheduler extends RpcScheduler {
   }
 
   @Override
+  public int getBulkLoadQueueLength() {
+    return 0;
+  }
+
+  @Override
   public int getActiveRpcHandlerCount() {
     return executor.getActiveCount();
   }
@@ -147,6 +152,11 @@ public class FifoRpcScheduler extends RpcScheduler {
 
   @Override
   public int getActiveReplicationRpcHandlerCount() {
+    return 0;
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
     return 0;
   }
 

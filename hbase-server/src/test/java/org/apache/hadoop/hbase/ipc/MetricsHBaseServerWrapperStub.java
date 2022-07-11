@@ -34,6 +34,11 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper 
   }
 
   @Override
+  public int getBulkLoadQueueLength() {
+    return 109;
+  }
+
+  @Override
   public int getPriorityQueueLength() {
     return 104;
   }
@@ -61,6 +66,11 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper 
   @Override
   public int getActiveReplicationRpcHandlerCount() {
     return 203;
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    return 204;
   }
 
   @Override
