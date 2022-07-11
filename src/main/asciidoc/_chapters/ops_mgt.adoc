@@ -3377,6 +3377,21 @@ as in <<snapshots_s3>>.
 After you meet the prerequisites, follow the instructions
 in <<snapshots_s3>>, replacingthe protocol specifier with `wasb://` or `wasbs://`.
 
+[[snapshots_oss]]
+== Storing Snapshots in Aliyun Object Storage Service
+
+You can store snapshots in Aliyun Object Storage Service(Aliyun OSS) using the same techniques
+as in <<snapshots_s3>>.
+
+.Prerequisites
+- You must be using HBase 1.2 or higher with Hadoop 2.9.1 or
+higher.
+- Your hosts must be configured to be aware of the Aliyun oss filesystem.
+See https://hadoop.apache.org/docs/stable/hadoop-aliyun/tools/hadoop-aliyun/index.html.
+
+After you meet the prerequisites, follow the instructions
+in <<snapshots_s3>>, replacing the protocol specifier with `oss://`.
+
 [[ops.capacity]]
 == Capacity Planning and Region Sizing
 
