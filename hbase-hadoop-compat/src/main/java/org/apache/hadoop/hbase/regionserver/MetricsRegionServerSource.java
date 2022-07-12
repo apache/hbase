@@ -307,6 +307,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_FREE_DESC = "Size of the block cache that is not occupied.";
   String BLOCK_CACHE_COUNT = "blockCacheCount";
   String BLOCK_CACHE_COUNT_DESC = "Number of block in the block cache.";
+  String BLOCK_CACHE_DATA_BLOCK_COUNT = "blockCacheDataBlockCount";
+  String BLOCK_CACHE_DATA_BLOCK_COUNT_DESC = "Number of DATA block in the block cache.";
   String BLOCK_CACHE_SIZE = "blockCacheSize";
   String BLOCK_CACHE_SIZE_DESC = "Size of the block cache.";
   String BLOCK_CACHE_HIT_COUNT = "blockCacheHitCount";
@@ -356,6 +358,15 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_GENERAL_BLOOM_META_HIT_COUNT = "blockCacheGeneralBloomMetaHitCount";
   String BLOCK_CACHE_DELETE_FAMILY_BLOOM_HIT_COUNT = "blockCacheDeleteFamilyBloomHitCount";
   String BLOCK_CACHE_TRAILER_HIT_COUNT = "blockCacheTrailerHitCount";
+  String L1_CACHE_FREE_SIZE = "l1CacheFreeSize";
+  String L1_CACHE_FREE_SIZE_DESC = "Amount of free bytes in the L1 cache";
+  String L1_CACHE_SIZE = "l1CacheSize";
+  String L1_CACHE_SIZE_DESC = "Size of the L1 cache in bytes";
+  String L1_CACHE_COUNT = "l1CacheCount";
+  String L1_CACHE_COUNT_DESC = "Count of blocks in the L1 cache";
+  String L1_CACHE_EVICTION_COUNT = "l1CacheEvictionCount";
+  String L1_CACHE_EVICTION_COUNT_DESC = "Count of blocks evicted from the L1 cache";
+
   String L1_CACHE_HIT_COUNT = "l1CacheHitCount";
   String L1_CACHE_HIT_COUNT_DESC = "L1 cache hit count.";
   String L1_CACHE_MISS_COUNT = "l1CacheMissCount";
@@ -364,6 +375,14 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String L1_CACHE_HIT_RATIO_DESC = "L1 cache hit ratio.";
   String L1_CACHE_MISS_RATIO = "l1CacheMissRatio";
   String L1_CACHE_MISS_RATIO_DESC = "L1 cache miss ratio.";
+  String L2_CACHE_FREE_SIZE = "l2CacheFreeSize";
+  String L2_CACHE_FREE_SIZE_DESC = "Amount of free bytes in the L2 cache";
+  String L2_CACHE_SIZE = "l2CacheSize";
+  String L2_CACHE_SIZE_DESC = "Size of the L2 cache in bytes";
+  String L2_CACHE_COUNT = "l2CacheCount";
+  String L2_CACHE_COUNT_DESC = "Count of blocks in the L2 cache";
+  String L2_CACHE_EVICTION_COUNT = "l2CacheEvictionCount";
+  String L2_CACHE_EVICTION_COUNT_DESC = "Count of blocks evicted from the L2 cache";
   String L2_CACHE_HIT_COUNT = "l2CacheHitCount";
   String L2_CACHE_HIT_COUNT_DESC = "L2 cache hit count.";
   String L2_CACHE_MISS_COUNT = "l2CacheMissCount";
