@@ -89,6 +89,11 @@ public interface MetricsTableWrapperAggregate {
   long getNumStoreFiles(String table);
 
   /**
+   * Get the max number of store files across all regions of this table
+   */
+  long getMaxStoreFiles(String table);
+
+  /**
    * @return Max age of store files for this table
    */
   long getMaxStoreFileAge(String table);

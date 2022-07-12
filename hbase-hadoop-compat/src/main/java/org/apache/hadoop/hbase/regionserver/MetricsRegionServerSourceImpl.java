@@ -483,6 +483,8 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
       .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
       .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
       .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC), rsWrap.getNumStoreFiles())
+      .addGauge(Interns.info(MAX_STOREFILE_COUNT, MAX_STOREFILE_COUNT_DESC),
+        rsWrap.getMaxStoreFiles())
       .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
       .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
       .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
