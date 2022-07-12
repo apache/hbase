@@ -60,6 +60,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getMaxStoreFiles() {
+    return 23;
+  }
+
+  @Override
   public long getMemStoreSize() {
     return 1025;
   }

@@ -91,6 +91,7 @@ public class TestMetricsTableAggregate {
     HELPER.assertGauge(pre + "regionCount", 11, agg);
     HELPER.assertGauge(pre + "storeCount", 22, agg);
     HELPER.assertGauge(pre + "storeFileCount", 33, agg);
+    HELPER.assertGauge(pre + "maxStoreFileCount", 8, agg);
     HELPER.assertGauge(pre + "maxStoreFileAge", 44, agg);
     HELPER.assertGauge(pre + "minStoreFileAge", 55, agg);
     HELPER.assertGauge(pre + "avgStoreFileAge", 66, agg);

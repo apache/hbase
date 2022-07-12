@@ -86,6 +86,11 @@ public interface MetricsRegionServerWrapper {
   long getNumStoreFiles();
 
   /**
+   * Get the max number of store files across all regions of this region server.
+   */
+  long getMaxStoreFiles();
+
+  /**
    * Get the size of the memstore on this region server.
    */
   long getMemStoreSize();
