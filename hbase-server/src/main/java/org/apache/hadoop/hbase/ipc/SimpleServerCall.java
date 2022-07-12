@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  * Datastructure that holds all necessary to a method invocation and then afterward, carries the
  * result.
  */
+@Deprecated
 @InterfaceAudience.Private
 class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
 

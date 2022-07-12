@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +35,6 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.io.Files;
@@ -69,50 +70,12 @@ public class TestBufferChain {
   }
 
   @Test
-  public void testChainChunkBiggerThanWholeArray() throws IOException {
-    ByteBuffer[] bufs = wrapArrays(HELLO_WORLD_CHUNKS);
-    BufferChain chain = new BufferChain(bufs);
-    writeAndVerify(chain, "hello world", 8192);
-    assertNoRemaining(bufs);
-  }
-
-  @Test
-  public void testChainChunkBiggerThanSomeArrays() throws IOException {
-    ByteBuffer[] bufs = wrapArrays(HELLO_WORLD_CHUNKS);
-    BufferChain chain = new BufferChain(bufs);
-    writeAndVerify(chain, "hello world", 3);
-    assertNoRemaining(bufs);
-  }
-
-  @Test
   public void testLimitOffset() throws IOException {
     ByteBuffer[] bufs = new ByteBuffer[] { stringBuf("XXXhelloYYY", 3, 5), stringBuf(" ", 0, 1),
       stringBuf("XXXXworldY", 4, 5) };
     BufferChain chain = new BufferChain(bufs);
-    writeAndVerify(chain, "hello world", 3);
+    writeAndVerify(chain, "hello world");
     assertNoRemaining(bufs);
-  }
-
-  @Test
-  public void testWithSpy() throws IOException {
-    ByteBuffer[] bufs = new ByteBuffer[] { stringBuf("XXXhelloYYY", 3, 5), stringBuf(" ", 0, 1),
-      stringBuf("XXXXworldY", 4, 5) };
-    BufferChain chain = new BufferChain(bufs);
-    FileOutputStream fos = new FileOutputStream(tmpFile);
-    FileChannel ch = Mockito.spy(fos.getChannel());
-    try {
-      chain.write(ch, 2);
-      assertEquals("he", Files.toString(tmpFile, Charsets.UTF_8));
-      chain.write(ch, 2);
-      assertEquals("hell", Files.toString(tmpFile, Charsets.UTF_8));
-      chain.write(ch, 3);
-      assertEquals("hello w", Files.toString(tmpFile, Charsets.UTF_8));
-      chain.write(ch, 8);
-      assertEquals("hello world", Files.toString(tmpFile, Charsets.UTF_8));
-    } finally {
-      ch.close();
-      fos.close();
-    }
   }
 
   private ByteBuffer stringBuf(String string, int position, int length) {
@@ -137,14 +100,13 @@ public class TestBufferChain {
     return ret;
   }
 
-  private void writeAndVerify(BufferChain chain, String string, int chunkSize) throws IOException {
+  private void writeAndVerify(BufferChain chain, String string) throws IOException {
     FileOutputStream fos = new FileOutputStream(tmpFile);
     FileChannel ch = fos.getChannel();
     try {
       long remaining = string.length();
       while (chain.hasRemaining()) {
-        long n = chain.write(ch, chunkSize);
-        assertTrue(n == chunkSize || n == remaining);
+        long n = chain.write(ch);
         remaining -= n;
       }
       assertEquals(0, remaining);

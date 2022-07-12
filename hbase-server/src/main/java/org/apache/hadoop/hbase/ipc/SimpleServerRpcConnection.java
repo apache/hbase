@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /** Reads calls from a connection and queues them for handling. */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
+@Deprecated
 @InterfaceAudience.Private
 class SimpleServerRpcConnection extends ServerRpcConnection {
 
