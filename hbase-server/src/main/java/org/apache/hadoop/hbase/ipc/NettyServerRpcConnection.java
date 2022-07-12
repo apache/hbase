@@ -49,6 +49,11 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   NettyServerRpcConnection(NettyRpcServer rpcServer, Channel channel) {
     super(rpcServer);
     this.channel = channel;
+    // register close hook to release resources
+    channel.closeFuture().addListener(f -> {
+      disposeSasl();
+      callCleanupIfNeeded();
+    });
     InetSocketAddress inetSocketAddress = ((InetSocketAddress) channel.remoteAddress());
     this.addr = inetSocketAddress.getAddress();
     if (addr == null) {
@@ -101,9 +106,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public synchronized void close() {
-    disposeSasl();
     channel.close();
-    callCleanupIfNeeded();
   }
 
   @Override
