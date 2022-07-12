@@ -77,9 +77,8 @@ public class TestSeparateClientZKCluster {
     clientZkCluster = new MiniZooKeeperCluster(TEST_UTIL.getConfiguration());
     clientZkCluster.setDefaultClientPort(clientZkPort);
     clientZkCluster.startup(clientZkDir);
-    // reduce the retry number and start log counter
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.start.log.errors.counter", -1);
+    // start log counter
+    TEST_UTIL.getConfiguration().setInt("hbase.client.start.log.errors.counter", 3);
     TEST_UTIL.getConfiguration().setInt("zookeeper.recovery.retry", 1);
     // core settings for testing client ZK cluster
     TEST_UTIL.getConfiguration().setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
