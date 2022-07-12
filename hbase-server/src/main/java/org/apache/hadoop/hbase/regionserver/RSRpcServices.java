@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -3699,6 +3700,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         scannerClosed = true;
         closeScanner(region, scanner, scannerName, rpcCall);
       }
+
+      // There's no point returning to a timed out client. Throwing ensures scanner is closed
+      if (rpcCall != null && EnvironmentEdgeManager.currentTime() > rpcCall.getDeadline()) {
+        throw new TimeoutIOException("Client deadline exceeded, cannot return results");
+      }
+
       return builder.build();
     } catch (IOException e) {
       try {
