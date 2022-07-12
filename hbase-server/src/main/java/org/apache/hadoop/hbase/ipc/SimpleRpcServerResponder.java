@@ -36,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Sends responses of RPC back to clients.
  */
+@Deprecated
 @InterfaceAudience.Private
 class SimpleRpcServerResponder extends Thread {
 

@@ -23,13 +23,12 @@ import java.nio.channels.GatheringByteChannel;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Chain of ByteBuffers. Used writing out an array of byte buffers. Writes in chunks.
+ * Chain of ByteBuffers. Used writing out an array of byte buffers.
  */
 @InterfaceAudience.Private
 class BufferChain {
   private final ByteBuffer[] buffers;
   private int remaining = 0;
-  private int bufferOffset = 0;
   private int size;
 
   BufferChain(ByteBuffer... buffers) {
@@ -61,51 +60,27 @@ class BufferChain {
     return remaining > 0;
   }
 
-  /**
-   * Write out our chain of buffers in chunks
-   * @param channel   Where to write
-   * @param chunkSize Size of chunks to write.
-   * @return Amount written. n
-   */
-  long write(GatheringByteChannel channel, int chunkSize) throws IOException {
-    int chunkRemaining = chunkSize;
-    ByteBuffer lastBuffer = null;
-    int bufCount = 0;
-    int restoreLimit = -1;
-
-    while (chunkRemaining > 0 && bufferOffset + bufCount < buffers.length) {
-      lastBuffer = buffers[bufferOffset + bufCount];
-      if (!lastBuffer.hasRemaining()) {
-        bufferOffset++;
-        continue;
-      }
-      bufCount++;
-      if (lastBuffer.remaining() > chunkRemaining) {
-        restoreLimit = lastBuffer.limit();
-        lastBuffer.limit(lastBuffer.position() + chunkRemaining);
-        chunkRemaining = 0;
-        break;
-      } else {
-        chunkRemaining -= lastBuffer.remaining();
-      }
-    }
-    assert lastBuffer != null;
-    if (chunkRemaining == chunkSize) {
-      assert !hasRemaining();
-      // no data left to write
+  long write(GatheringByteChannel channel) throws IOException {
+    if (!hasRemaining()) {
       return 0;
     }
-    try {
-      long ret = channel.write(buffers, bufferOffset, bufCount);
-      if (ret > 0) {
-        remaining = (int) (remaining - ret);
-      }
-      return ret;
-    } finally {
-      if (restoreLimit >= 0) {
-        lastBuffer.limit(restoreLimit);
+    long written = 0;
+    for (ByteBuffer bb : this.buffers) {
+      if (bb.hasRemaining()) {
+        final int pos = bb.position();
+        final int result = channel.write(bb);
+        if (result <= 0) {
+          // Write error. Return how much we were able to write until now.
+          return written;
+        }
+        // Adjust the position of buffers already written so we don't write out
+        // duplicate data upon retry of incomplete write with the same buffer chain.
+        bb.position(pos + result);
+        remaining -= result;
+        written += result;
       }
     }
+    return written;
   }
 
   int size() {
