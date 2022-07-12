@@ -50,7 +50,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     this.maxFrameLength = maxFrameLength;
   }
 
-  private NettyServerRpcConnection connection;
+  NettyServerRpcConnection connection;
 
   void setConnection(NettyServerRpcConnection connection) {
     this.connection = connection;
