@@ -296,6 +296,10 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
             MetricsRegionServerSource.STOREFILE_COUNT_DESC),
           tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));
         mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MAX_STOREFILE_COUNT,
+            MetricsRegionServerSource.MAX_STOREFILE_COUNT_DESC),
+          tableWrapperAgg.getMaxStoreFiles(tableName.getNameAsString()));
+        mrb.addGauge(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
             MetricsRegionServerSource.STOREFILE_SIZE_DESC),
           tableWrapperAgg.getStoreFileSize(tableName.getNameAsString()));
