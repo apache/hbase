@@ -75,6 +75,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
  * put itself on new queue for Responder to pull from and return result to client.
  * @see BlockingRpcClient
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class SimpleRpcServer extends RpcServer {
 
@@ -487,20 +488,9 @@ public class SimpleRpcServer extends RpcServer {
     return call(fakeCall, status);
   }
 
-  /**
-   * This is a wrapper around
-   * {@link java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)}. If the amount of data
-   * is large, it writes to channel in smaller chunks. This is to avoid jdk from creating many
-   * direct buffers as the size of buffer increases. This also minimizes extra copies in NIO layer
-   * as a result of multiple write operations required to write a large buffer.
-   * @param channel     writable byte channel to write to
-   * @param bufferChain Chain of buffers to write
-   * @return number of bytes written
-   * @see java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)
-   */
   protected long channelWrite(GatheringByteChannel channel, BufferChain bufferChain)
     throws IOException {
-    long count = bufferChain.write(channel, NIO_BUFFER_LIMIT);
+    long count = bufferChain.write(channel);
     if (count > 0) {
       this.metrics.sentBytes(count);
     }
