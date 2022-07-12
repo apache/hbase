@@ -74,8 +74,7 @@ public class NettyRpcServer extends RpcServer {
 
   private final CountDownLatch closed = new CountDownLatch(1);
   private final Channel serverChannel;
-  private final ChannelGroup allChannels =
-    new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
+  final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
