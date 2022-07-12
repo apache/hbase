@@ -66,6 +66,8 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private final ByteBuffAllocator allocator;
 
   private BlockCache blockCache;
+  private BlockCache l1Cache = null;
+  private BlockCache l2Cache = null;
   private MobFileCache mobFileCache;
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
@@ -169,6 +171,14 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getBucketCacheStats();
       } else {
         l1Stats = this.cacheStats;
+      }
+    }
+    if (this.blockCache != null) {
+      if (this.blockCache instanceof CombinedBlockCache) {
+        l1Cache = ((CombinedBlockCache) this.blockCache).getFirstLevelCache();
+        l2Cache = ((CombinedBlockCache) this.blockCache).getSecondLevelCache();
+      } else {
+        l1Cache = this.blockCache;
       }
     }
   }
@@ -275,6 +285,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getBlockCacheDataBlockCount() {
+    return this.blockCache != null ? this.blockCache.getDataBlockCount() : 0L;
+  }
+
+  @Override
   public long getMemStoreLimit() {
     return this.regionServer.getRegionServerAccounting().getGlobalMemStoreLimit();
   }
@@ -350,6 +365,38 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getBlockCacheFailedInsertions() {
     return this.cacheStats != null ? this.cacheStats.getFailedInserts() : 0L;
+  }
+
+  public long getL1CacheSize() {
+    return this.l1Cache != null ? this.l1Cache.getCurrentSize() : 0L;
+  }
+
+  public long getL1CacheFreeSize() {
+    return this.l1Cache != null ? this.l1Cache.getFreeSize() : 0L;
+  }
+
+  public long getL1CacheCount() {
+    return this.l1Cache != null ? this.l1Cache.getBlockCount() : 0L;
+  }
+
+  public long getL1CacheEvictedCount() {
+    return this.l1Stats != null ? this.l1Stats.getEvictedCount() : 0L;
+  }
+
+  public long getL2CacheSize() {
+    return this.l2Cache != null ? this.l2Cache.getCurrentSize() : 0L;
+  }
+
+  public long getL2CacheFreeSize() {
+    return this.l2Cache != null ? this.l2Cache.getFreeSize() : 0L;
+  }
+
+  public long getL2CacheCount() {
+    return this.l2Cache != null ? this.l2Cache.getBlockCount() : 0L;
+  }
+
+  public long getL2CacheEvictedCount() {
+    return this.l2Stats != null ? this.l2Stats.getEvictedCount() : 0L;
   }
 
   @Override
