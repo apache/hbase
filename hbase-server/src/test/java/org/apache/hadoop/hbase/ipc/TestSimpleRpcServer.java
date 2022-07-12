@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -36,24 +34,20 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 @Category({ RPCTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
-public class TestNettyRpcServer {
+public class TestSimpleRpcServer {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyRpcServer.class);
+    HBaseClassTestRule.forClass(TestSimpleRpcServer.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -66,36 +60,27 @@ public class TestNettyRpcServer {
   @Rule
   public TestName name = new TestName();
 
-  @Parameterized.Parameter
-  public String allocatorType;
-
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] { { NettyRpcServer.POOLED_ALLOCATOR_TYPE },
-      { NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE }, { NettyRpcServer.HEAP_ALLOCATOR_TYPE },
-      { SimpleByteBufAllocator.class.getName() } });
-  }
-
-  @Before
-  public void setup() throws Exception {
+  @SuppressWarnings("deprecation")
+  @BeforeClass
+  public static void setupClass() throws Exception {
     // A subclass may have already created TEST_UTIL and is now upcalling to us
     if (TEST_UTIL == null) {
       TEST_UTIL = new HBaseTestingUtil();
     }
+    // Set RPC server impl to SimpleRpcServer
     TEST_UTIL.getConfiguration().set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-      NettyRpcServer.class.getName());
-    TEST_UTIL.getConfiguration().set(NettyRpcServer.HBASE_NETTY_ALLOCATOR_KEY, allocatorType);
+      SimpleRpcServer.class.getName());
     TEST_UTIL.startMiniCluster();
   }
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDownClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testNettyRpcServer() throws Exception {
-    doTest(TableName.valueOf(name.getMethodName().replace('[', '_').replace(']', '_')));
+  public void testSimpleRpcServer() throws Exception {
+    doTest(TableName.valueOf(name.getMethodName()));
   }
 
   protected void doTest(TableName tableName) throws Exception {
