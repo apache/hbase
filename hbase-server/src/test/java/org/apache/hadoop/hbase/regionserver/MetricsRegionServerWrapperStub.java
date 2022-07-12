@@ -255,6 +255,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBlockCacheDataBlockCount() {
+    return 300;
+  }
+
+  @Override
   public long getBlockCacheSize() {
     return 415;
   }
@@ -305,6 +310,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getL1CacheSize() {
+    return 123;
+  }
+
+  @Override
+  public long getL1CacheFreeSize() {
+    return 100;
+  }
+
+  @Override
+  public long getL1CacheCount() {
+    return 50;
+  }
+
+  @Override
+  public long getL1CacheEvictedCount() {
+    return 1000;
+  }
+
+  @Override
   public long getL1CacheHitCount() {
     return 200;
   }
@@ -322,6 +347,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public double getL1CacheMissRatio() {
     return 20;
+  }
+
+  @Override
+  public long getL2CacheSize() {
+    return 456;
+  }
+
+  @Override
+  public long getL2CacheFreeSize() {
+    return 200;
+  }
+
+  @Override
+  public long getL2CacheCount() {
+    return 75;
+  }
+
+  @Override
+  public long getL2CacheEvictedCount() {
+    return 2000;
   }
 
   @Override

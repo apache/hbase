@@ -377,4 +377,8 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   public FirstLevelBlockCache getFirstLevelCache() {
     return l1Cache;
   }
+
+  public BlockCache getSecondLevelCache() {
+    return l2Cache;
+  }
 }
