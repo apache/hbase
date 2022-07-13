@@ -64,10 +64,11 @@ public class NettyRpcServer extends RpcServer {
   /**
    * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
    * this down from unlimited.
+   * @deprecated Use NettyEventLoopGroupConfig#NETTY_WORKER_COUNT_KEY instead.
    */
+  @Deprecated
   public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
     "hbase.netty.eventloop.rpcserver.thread.count";
-  private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
   /**
    * Name of property to change the byte buf allocator for the netty channels. Default is no value,
@@ -104,10 +105,13 @@ public class NettyRpcServer extends RpcServer {
       eventLoopGroup = config.group();
       channelClass = config.serverChannelClass();
     } else {
+      // Prefer NettyEventLoopGroupConfig.NETTY_WORKER_COUNT_KEY over
+      // HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY
       int threadCount = server == null
-        ? EVENTLOOP_THREADCOUNT_DEFAULT
-        : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
-          EVENTLOOP_THREADCOUNT_DEFAULT);
+        ? NettyEventLoopGroupConfig.DEFAULT_NETTY_WORKER_COUNT
+        : server.getConfiguration().getInt(NettyEventLoopGroupConfig.NETTY_WORKER_COUNT_KEY,
+          server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
+            NettyEventLoopGroupConfig.DEFAULT_NETTY_WORKER_COUNT));
       eventLoopGroup = new NioEventLoopGroup(threadCount,
         new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
       channelClass = NioServerSocketChannel.class;

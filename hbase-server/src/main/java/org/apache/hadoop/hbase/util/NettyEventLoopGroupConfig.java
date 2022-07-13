@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.ThreadFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -37,8 +38,15 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory
 /**
  * Event loop group related config.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class NettyEventLoopGroupConfig {
+
+  public static final String NETTY_WORKER_COUNT_KEY = "hbase.netty.worker.count";
+  public static final int DEFAULT_NETTY_WORKER_COUNT = 0;
+
+  public static final String NETTY_NATIVETRANSPORT_KEY = "hbase.netty.nativetransport";
+  public static final boolean DEFAULT_NETTY_NATIVETRANSPORT = true;
+
   private final EventLoopGroup group;
 
   private final Class<? extends ServerChannel> serverChannelClass;
@@ -47,14 +55,15 @@ public class NettyEventLoopGroupConfig {
 
   private static boolean useEpoll(Configuration conf) {
     // Config to enable native transport.
-    boolean epollEnabled = conf.getBoolean("hbase.netty.nativetransport", true);
+    final boolean epollEnabled =
+      conf.getBoolean(NETTY_NATIVETRANSPORT_KEY, DEFAULT_NETTY_NATIVETRANSPORT);
     // Use the faster native epoll transport mechanism on linux if enabled
     return epollEnabled && JVM.isLinux() && JVM.isAmd64();
   }
 
   public NettyEventLoopGroupConfig(Configuration conf, String threadPoolName) {
-    boolean useEpoll = useEpoll(conf);
-    int workerCount = conf.getInt("hbase.netty.worker.count", 0);
+    final boolean useEpoll = useEpoll(conf);
+    final int workerCount = conf.getInt(NETTY_WORKER_COUNT_KEY, DEFAULT_NETTY_WORKER_COUNT);
     ThreadFactory eventLoopThreadFactory =
       new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
     if (useEpoll) {
