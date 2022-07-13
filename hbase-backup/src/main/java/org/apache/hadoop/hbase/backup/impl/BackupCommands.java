@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -310,7 +311,7 @@ public final class BackupCommands {
       String setName = null;
       if (cmdline.hasOption(OPTION_SET)) {
         setName = cmdline.getOptionValue(OPTION_SET);
-        tables = getTablesForSet(setName, getConf());
+        tables = getTablesForSet(setName);
 
         if (tables == null) {
           System.out
@@ -371,7 +372,7 @@ public final class BackupCommands {
       }
     }
 
-    private String getTablesForSet(String name, Configuration conf) throws IOException {
+    private String getTablesForSet(String name) throws IOException {
       try (final BackupSystemTable table = new BackupSystemTable(conn)) {
         List<TableName> tables = table.describeBackupSet(name);
 
@@ -1001,14 +1002,14 @@ public final class BackupCommands {
           processSetDescribe(args);
           break;
         case SET_LIST:
-          processSetList(args);
+          processSetList();
           break;
         default:
           break;
       }
     }
 
-    private void processSetList(String[] args) throws IOException {
+    private void processSetList() throws IOException {
       super.execute();
 
       // List all backup set names
@@ -1089,11 +1090,7 @@ public final class BackupCommands {
       super.execute();
 
       String setName = args[2];
-      String[] tables = args[3].split(",");
-      TableName[] tableNames = new TableName[tables.length];
-      for (int i = 0; i < tables.length; i++) {
-        tableNames[i] = TableName.valueOf(tables[i]);
-      }
+      TableName[] tableNames = (TableName[]) Splitter.on(',').splitToList(args[3]).toArray();
       try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.addToBackupSet(setName, tableNames);
       }

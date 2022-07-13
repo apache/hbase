@@ -181,7 +181,7 @@ public class RestoreTablesClient {
 
   private List<Path> getFilesRecursively(String fileBackupDir)
     throws IllegalArgumentException, IOException {
-    FileSystem fs = FileSystem.get((new Path(fileBackupDir)).toUri(), new Configuration());
+    FileSystem fs = FileSystem.get(new Path(fileBackupDir).toUri(), new Configuration());
     List<Path> list = new ArrayList<>();
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(fileBackupDir), true);
     while (it.hasNext()) {

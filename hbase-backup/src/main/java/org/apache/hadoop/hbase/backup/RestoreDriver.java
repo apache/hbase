@@ -83,7 +83,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     Log4jUtils.disableZkAndClientLoggers();
   }
 
-  private int parseAndRun(String[] args) throws IOException {
+  private int parseAndRun() throws IOException {
     // Check if backup is enabled
     if (!BackupManager.isBackupEnabled(getConf())) {
       System.err.println(BackupRestoreConstants.ENABLE_BACKUP);
@@ -146,7 +146,7 @@ public class RestoreDriver extends AbstractHBaseTool {
       if (cmd.hasOption(OPTION_SET)) {
         String setName = cmd.getOptionValue(OPTION_SET);
         try {
-          tables = getTablesForSet(conn, setName, conf);
+          tables = getTablesForSet(conn, setName);
         } catch (IOException e) {
           System.out.println("ERROR: " + e.getMessage() + " for setName=" + setName);
           printToolUsage();
@@ -182,8 +182,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     return 0;
   }
 
-  private String getTablesForSet(Connection conn, String name, Configuration conf)
-    throws IOException {
+  private String getTablesForSet(Connection conn, String name) throws IOException {
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       List<TableName> tables = table.describeBackupSet(name);
 
@@ -214,7 +213,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    return parseAndRun(cmd.getArgs());
+    return parseAndRun();
   }
 
   public static void main(String[] args) throws Exception {

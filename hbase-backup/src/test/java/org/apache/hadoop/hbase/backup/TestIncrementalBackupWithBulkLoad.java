@@ -114,8 +114,6 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
     assertTrue(checkSucceeded(backupIdIncMultiple1));
     // Delete all data in table1
     TEST_UTIL.deleteTableData(table1);
-    // #5.1 - check tables for full restore */
-    Admin hAdmin = TEST_UTIL.getAdmin();
 
     // #6 - restore incremental backup for table1
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1 };

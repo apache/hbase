@@ -47,7 +47,6 @@ import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,7 +126,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
    * @param backupInfo  backup info
    * @param newProgress progress
    * @param bytesCopied bytes copied
-   * @throws NoNodeException exception
    */
   static void updateProgress(BackupInfo backupInfo, BackupManager backupManager, int newProgress,
     long bytesCopied) throws IOException {
@@ -361,7 +359,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
    * @param conf     The hadoop configuration
    * @param copyType The backup copy type
    * @param options  Options for customized ExportSnapshot or DistCp
-   * @throws Exception exception
    */
   @Override
   public int copy(BackupInfo context, BackupManager backupManager, Configuration conf,

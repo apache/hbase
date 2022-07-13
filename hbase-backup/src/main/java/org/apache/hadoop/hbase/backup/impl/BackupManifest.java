@@ -366,7 +366,6 @@ public class BackupManifest {
   }
 
   // backup image directory
-  private String tableBackupDir = null;
   private BackupImage backupImage;
 
   /**
@@ -385,7 +384,6 @@ public class BackupManifest {
    * @param backup The ongoing backup session info
    */
   public BackupManifest(BackupInfo backup, TableName table) {
-    this.tableBackupDir = backup.getTableBackupDir(table);
     List<TableName> tables = new ArrayList<TableName>();
     tables.add(table);
     BackupImage.Builder builder = BackupImage.newBuilder();
@@ -470,7 +468,7 @@ public class BackupManifest {
    * TODO: fix it. Persist the manifest file.
    * @throws IOException IOException when storing the manifest file.
    */
-  public void store(Configuration conf) throws BackupException {
+  public void store(Configuration conf) throws IOException {
     byte[] data = backupImage.toProto().toByteArray();
     // write the file, overwrite if already exist
     Path manifestFilePath =
@@ -479,10 +477,7 @@ public class BackupManifest {
     try (FSDataOutputStream out =
       manifestFilePath.getFileSystem(conf).create(manifestFilePath, true)) {
       out.write(data);
-    } catch (IOException e) {
-      throw new BackupException(e.getMessage());
     }
-
     LOG.info("Manifest file stored to " + manifestFilePath);
   }
 
@@ -526,7 +521,7 @@ public class BackupManifest {
       restoreImages.put(Long.valueOf(image.startTs), image);
     }
     return new ArrayList<>(
-      reverse ? (restoreImages.descendingMap().values()) : (restoreImages.values()));
+      reverse ? restoreImages.descendingMap().values() : restoreImages.values());
   }
 
   /**

@@ -63,12 +63,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+
 /**
  * A collection for methods used by multiple classes to backup HBase tables.
  */
 @InterfaceAudience.Private
 public final class BackupUtils {
-  protected static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
   public static final int MILLISEC_IN_HOUR = 3600000;
 
@@ -136,9 +138,10 @@ public final class BackupUtils {
         // write a copy of descriptor to the target directory
         Path target = new Path(backupInfo.getTableBackupDir(table));
         FileSystem targetFs = target.getFileSystem(conf);
-        FSTableDescriptors descriptors =
-          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
-        descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        try (FSTableDescriptors descriptors =
+          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf))) {
+          descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        }
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
@@ -279,8 +282,9 @@ public final class BackupUtils {
     if (tables == null) {
       return null;
     }
-    String[] tableArray = tables.split(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
-
+    String[] tableArray =
+      (String[]) Splitter.onPattern(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND)
+        .splitToList(tables).toArray();
     TableName[] ret = new TableName[tableArray.length];
     for (int i = 0; i < tableArray.length; i++) {
       ret[i] = TableName.valueOf(tableArray[i]);
@@ -594,7 +598,7 @@ public final class BackupUtils {
       }
 
       private long getTimestamp(String backupId) {
-        String[] split = backupId.split("_");
+        String[] split = (String[]) Splitter.on('_').splitToList(backupId).toArray();
         return Long.parseLong(split[1]);
       }
     });
@@ -734,7 +738,8 @@ public final class BackupUtils {
   public static String findMostRecentBackupId(String[] backupIds) {
     long recentTimestamp = Long.MIN_VALUE;
     for (String backupId : backupIds) {
-      long ts = Long.parseLong(backupId.split("_")[1]);
+      String[] ids = (String[]) Splitter.on('_').splitToList(backupId).toArray();
+      long ts = Long.parseLong(ids[1]);
       if (ts > recentTimestamp) {
         recentTimestamp = ts;
       }
