@@ -69,11 +69,11 @@ public class TestSecureNettyRpcServer extends TestNettyRpcServer {
 
   @After
   public void tearDown() throws Exception {
-    super.tearDown();
     if (KDC != null) {
       KDC.stop();
     }
     KEYTAB_FILE.delete();
+    super.tearDown();
     TEST_UTIL.cleanupTestDir();
   }
 

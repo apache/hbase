@@ -70,11 +70,11 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
 
   @AfterClass
   public static void tearDownClass() throws Exception {
-    TestSimpleRpcServer.tearDownClass();
     if (KDC != null) {
       KDC.stop();
     }
     KEYTAB_FILE.delete();
+    TestSimpleRpcServer.tearDownClass();
     TEST_UTIL.cleanupTestDir();
   }
 
