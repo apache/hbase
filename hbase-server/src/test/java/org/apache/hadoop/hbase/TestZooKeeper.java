@@ -192,9 +192,15 @@ public class TestZooKeeper {
       m.getZooKeeper().close();
       MockLoadBalancer.retainAssignCalled = false;
       final int expectedNumOfListeners = countPermanentListeners(zkw);
+      // the master could already been aborted by some background tasks but here we call abort
+      // directly to make sure this will happen
       m.abort("Test recovery from zk session expired",
         new KeeperException.SessionExpiredException());
-      assertTrue(m.isStopped()); // Master doesn't recover any more
+      // it is possible that our abort call above returned earlier because of someone else has
+      // already called abort, but it is possible that it has not finished the abort call yet so the
+      // isStopped flag is still false, let's wait for sometime.
+      TEST_UTIL.waitFor(5000, () -> m.isStopped()); // Master doesn't recover any more
+
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
       assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
