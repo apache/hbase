@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -40,7 +41,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category({ RPCTests.class, MediumTests.class })
 public class TestSimpleRpcServer {
@@ -58,7 +58,7 @@ public class TestSimpleRpcServer {
   protected static HBaseTestingUtil TEST_UTIL;
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
 
   @SuppressWarnings("deprecation")
   @BeforeClass
@@ -80,16 +80,15 @@ public class TestSimpleRpcServer {
 
   @Test
   public void testSimpleRpcServer() throws Exception {
-    doTest(TableName.valueOf(name.getMethodName()));
+    doTest(name.getTableName());
   }
 
   protected void doTest(TableName tableName) throws Exception {
-    // Splitting just complicates the test scenario
+    // Splitting just complicates the test scenario, disable it
     final TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
       .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName()).build();
-    final Table table =
-      TEST_UTIL.createTable(desc, new byte[][] { FAMILY }, TEST_UTIL.getConfiguration());
-    try {
+    try (Table table =
+      TEST_UTIL.createTable(desc, new byte[][] { FAMILY }, TEST_UTIL.getConfiguration())) {
       // put some test data
       for (int i = 0; i < NUM_ROWS; i++) {
         final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
@@ -105,8 +104,6 @@ public class TestSimpleRpcServer {
         assertNotNull("Result did not contain expected value", v);
         assertTrue("Value was not verified", LoadTestKVGenerator.verify(v, rowKey, QUALIFIER));
       }
-    } finally {
-      table.close();
     }
   }
 

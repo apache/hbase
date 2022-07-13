@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -35,7 +35,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
 
 @Category({ RPCTests.class, MediumTests.class })
 public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
@@ -51,7 +50,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
   private static UserGroupInformation UGI;
 
   @Rule
-  public TestName name = new TestName();
+  public TableNameTestRule name = new TableNameTestRule();
 
   @BeforeClass
   public static void setupClass() throws Exception {
@@ -60,7 +59,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
-    final String principalName = PRINCIPAL + "@" + KDC.getRealm();
+    String principalName = PRINCIPAL + "@" + KDC.getRealm();
     HBaseKerberosUtils.setPrincipalForTesting(principalName);
     Configuration conf = TEST_UTIL.getConfiguration();
     HBaseKerberosUtils.setSecuredConfiguration(conf, principalName, principalName);
@@ -75,6 +74,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     if (KDC != null) {
       KDC.stop();
     }
+    KEYTAB_FILE.delete();
     TEST_UTIL.cleanupTestDir();
   }
 
@@ -84,7 +84,7 @@ public class TestSecureSimpleRpcServer extends TestSimpleRpcServer {
     UGI.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        doTest(TableName.valueOf(name.getMethodName()));
+        doTest(name.getTableName());
         return null;
       }
     });
