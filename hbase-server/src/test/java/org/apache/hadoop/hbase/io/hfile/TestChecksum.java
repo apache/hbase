@@ -171,6 +171,12 @@ public class TestChecksum {
     }
   }
 
+  /**
+   * HFileBlock buffer does not include checksum because it is discarded after verifying upon
+   * reading from disk. We artificially add a checksum onto the buffer for use in testing that
+   * ChecksumUtil.validateChecksum works for SingleByteBuff and MultiByteBuff in
+   * {@link #verifySBBCheckSum(ByteBuff)} and {@link #verifyMBBCheckSum(ByteBuff)}
+   */
   private ByteBuff getBufferWithChecksum(HFileBlock block) throws IOException {
     ByteBuff buf = block.getBufferReadOnly();
 

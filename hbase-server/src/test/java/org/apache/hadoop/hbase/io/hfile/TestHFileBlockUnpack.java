@@ -111,8 +111,6 @@ public class TestHFileBlockUnpack {
     ByteBuff bufferOne = blockOne.getBufferWithoutHeader();
     ByteBuff bufferTwo = blockTwo.getBufferWithoutHeader();
 
-    // This assertion should succeed, but it fails on master. It will succeed once
-    // cksumBytes is removed from HFileBlock#allocateBuffer.
     assertEquals(0,
       ByteBuff.compareTo(bufferOne, 0, bufferOne.limit(), bufferTwo, 0, bufferTwo.limit()));
   }
@@ -149,7 +147,7 @@ public class TestHFileBlockUnpack {
       blockFromHFile.unpacked.isSharedMem());
   }
 
-  private static class HFileBlockWrapper {
+  private final static class HFileBlockWrapper {
     private final HFileBlock original;
     private final HFileBlock unpacked;
 
