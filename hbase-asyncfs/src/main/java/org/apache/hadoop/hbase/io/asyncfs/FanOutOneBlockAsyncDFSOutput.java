@@ -234,6 +234,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   // this usually does not happen which means it is not on the critical path so make it synchronized
   // so that the implementation will not burn up our brain as there are multiple state changes and
   // checks.
+  @SuppressWarnings("FutureReturnValueIgnored")
   private synchronized void failed(Channel channel, Supplier<Throwable> errorSupplier) {
     if (state == State.CLOSED) {
       return;
@@ -317,6 +318,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
       if (evt instanceof IdleStateEvent) {
         IdleStateEvent e = (IdleStateEvent) evt;
@@ -405,6 +407,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     return locations;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void flushBuffer(CompletableFuture<Long> future, ByteBuf dataBuf,
     long nextPacketOffsetInBlock, boolean syncBlock) {
     int dataLen = dataBuf.readableBytes();
@@ -545,6 +548,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
     return future;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void endBlock() throws IOException {
     Preconditions.checkState(waitingAckQueue.isEmpty(),
       "should call flush first before calling close");

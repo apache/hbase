@@ -90,7 +90,7 @@ public interface AsyncFSOutput extends Closeable {
   void close() throws IOException;
 
   /**
-   * @return byteSize success synced to underlying filesystem.
+   * Returns the number of bytes successfully synced to underlying filesystem.
    */
   long getSyncedLength();
 }

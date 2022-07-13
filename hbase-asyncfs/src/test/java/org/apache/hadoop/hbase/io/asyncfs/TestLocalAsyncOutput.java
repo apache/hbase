@@ -53,9 +53,9 @@ public class TestLocalAsyncOutput {
   private static StreamSlowMonitor MONITOR;
 
   @AfterClass
-  public static void tearDownAfterClass() throws IOException {
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.cleanupTestDir();
-    GROUP.shutdownGracefully();
+    GROUP.shutdownGracefully().get();
     MONITOR = StreamSlowMonitor.create(TEST_UTIL.getConfiguration(), "testMonitor");
   }
 

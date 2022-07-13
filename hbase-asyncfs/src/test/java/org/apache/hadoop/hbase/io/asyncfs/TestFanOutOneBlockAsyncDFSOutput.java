@@ -93,9 +93,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException, InterruptedException {
+  public static void tearDown() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
-      EVENT_LOOP_GROUP.shutdownGracefully().sync();
+      EVENT_LOOP_GROUP.shutdownGracefully().sync().get();
     }
     shutdownMiniDFSCluster();
   }
@@ -254,7 +254,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   @Test
-  public void testWriteLargeChunk() throws IOException, InterruptedException, ExecutionException {
+  public void testWriteLargeChunk() throws Exception {
     Path f = new Path("/" + name.getMethodName());
     EventLoop eventLoop = EVENT_LOOP_GROUP.next();
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
@@ -262,7 +262,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     byte[] b = new byte[50 * 1024 * 1024];
     Bytes.random(b);
     out.write(b);
-    out.flush(false);
+    out.flush(false).get();
     assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
     assertEquals(b.length, FS.getFileStatus(f).getLen());

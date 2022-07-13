@@ -83,6 +83,7 @@ public class TestOverwriteFileUnderConstruction extends AsyncFSTestBase {
   }
 
   @Test
+  @SuppressWarnings("MissingFail")
   public void testOverwrite() throws IOException {
     Path file = new Path("/" + name.getMethodName());
     FSDataOutputStream out1 = FS.create(file);

@@ -86,6 +86,7 @@ import org.apache.hbase.thirdparty.io.netty.buffer.CompositeByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelFuture;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
@@ -335,8 +336,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       this.dfsClient = dfsClient;
     }
 
-    private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload) throws IOException {
-      sendSaslMessage(ctx, payload, null);
+    private ChannelFuture sendSaslMessage(ChannelHandlerContext ctx, byte[] payload)
+      throws IOException {
+      return sendSaslMessage(ctx, payload, null);
     }
 
     private List<CipherOption> getCipherOptions() throws IOException {
@@ -432,7 +434,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       }
     }
 
-    private void sendSaslMessage(ChannelHandlerContext ctx, byte[] payload,
+    private ChannelFuture sendSaslMessage(ChannelHandlerContext ctx, byte[] payload,
       List<CipherOption> options) throws IOException {
       DataTransferEncryptorMessageProto.Builder builder =
         DataTransferEncryptorMessageProto.newBuilder();
@@ -448,10 +450,11 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       size += CodedOutputStream.computeRawVarint32Size(size);
       ByteBuf buf = ctx.alloc().buffer(size);
       proto.writeDelimitedTo(new ByteBufOutputStream(buf));
-      ctx.write(buf);
+      return ctx.write(buf);
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
       ctx.write(ctx.alloc().buffer(4).writeInt(SASL_TRANSFER_MAGIC_NUMBER));
       sendSaslMessage(ctx, new byte[0]);
@@ -546,8 +549,9 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
             if (requestedQopContainsPrivacy()) {
               cipherOptions = getCipherOptions();
             }
-            sendSaslMessage(ctx, response, cipherOptions);
+            ChannelFuture sendFuture = sendSaslMessage(ctx, response, cipherOptions);
             ctx.flush();
+            sendFuture.get();
             step++;
             break;
           }
@@ -635,6 +639,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
       throws Exception {
       if (msg instanceof ByteBuf) {
@@ -647,6 +652,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void flush(ChannelHandlerContext ctx) throws Exception {
       if (cBuf.isReadable()) {
         byte[] b = new byte[cBuf.readableBytes()];

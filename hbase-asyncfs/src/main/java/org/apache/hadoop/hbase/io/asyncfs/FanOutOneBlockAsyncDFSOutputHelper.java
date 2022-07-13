@@ -36,7 +36,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -341,7 +340,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       });
   }
 
-  private static void requestWriteBlock(Channel channel, StorageType storageType,
+  private static ChannelFuture requestWriteBlock(Channel channel, StorageType storageType,
     OpWriteBlockProto.Builder writeBlockProtoBuilder) throws IOException {
     OpWriteBlockProto proto =
       writeBlockProtoBuilder.setStorageType(PBHelperClient.convertStorageType(storageType)).build();
@@ -351,18 +350,19 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     buffer.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
     buffer.writeByte(Op.WRITE_BLOCK.code);
     proto.writeDelimitedTo(new ByteBufOutputStream(buffer));
-    channel.writeAndFlush(buffer);
+    return channel.writeAndFlush(buffer);
   }
 
-  private static void initialize(Configuration conf, Channel channel, DatanodeInfo dnInfo,
+  private static Promise<Void> initialize(Configuration conf, Channel channel, DatanodeInfo dnInfo,
     StorageType storageType, OpWriteBlockProto.Builder writeBlockProtoBuilder, int timeoutMs,
     DFSClient client, Token<BlockTokenIdentifier> accessToken, Promise<Channel> promise)
     throws IOException {
     Promise<Void> saslPromise = channel.eventLoop().newPromise();
     trySaslNegotiate(conf, channel, dnInfo, timeoutMs, client, accessToken, saslPromise);
-    saslPromise.addListener(new FutureListener<Void>() {
+    return saslPromise.addListener(new FutureListener<Void>() {
 
       @Override
+      @SuppressWarnings("FutureReturnValueIgnored")
       public void operationComplete(Future<Void> future) throws Exception {
         if (future.isSuccess()) {
           // setup response processing pipeline first, then send request.
@@ -375,6 +375,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     });
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private static List<Future<Channel>> connectToDataNodes(Configuration conf, DFSClient client,
     String clientName, LocatedBlock locatedBlock, long maxBytesRcvd, long latestGS,
     BlockConstructionStage stage, DataChecksum summer, EventLoopGroup eventLoopGroup,
@@ -451,6 +452,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return new EnumSetWritable<>(EnumSet.copyOf(flags));
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private static FanOutOneBlockAsyncDFSOutput createOutput(DistributedFileSystem dfs, String src,
     boolean overwrite, boolean createParent, short replication, long blockSize,
     EventLoopGroup eventLoopGroup, Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
@@ -488,7 +490,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         DataChecksum summer = createChecksum(client);
         locatedBlock = namenode.addBlock(src, client.getClientName(), null,
           toExcludeNodes.toArray(new DatanodeInfo[0]), stat.getFileId(), null, null);
-        Map<Channel, DatanodeInfo> datanodes = new IdentityHashMap<>();
+        IdentityHashMap<Channel, DatanodeInfo> datanodes = new IdentityHashMap<>();
         futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
           PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
         for (int i = 0, n = futureList.size(); i < n; i++) {
@@ -610,6 +612,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     try {
       Thread.sleep(ConnectionUtils.getPauseTime(100, retry));
     } catch (InterruptedException e) {
+      LOG.debug("Interrupted while sleeping", e);
     }
   }
 }

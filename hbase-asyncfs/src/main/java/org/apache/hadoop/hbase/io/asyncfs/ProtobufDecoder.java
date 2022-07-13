@@ -83,6 +83,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
   }
 
+  @Override
   protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
     int length = msg.readableBytes();
     byte[] array;

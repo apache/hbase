@@ -103,12 +103,12 @@ public class TestFanOutOneBlockAsyncDFSOutputHang extends AsyncFSTestBase {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException, InterruptedException {
+  public static void tearDown() throws Exception {
     if (OUT != null) {
       OUT.recoverAndClose(null);
     }
     if (EVENT_LOOP_GROUP != null) {
-      EVENT_LOOP_GROUP.shutdownGracefully().sync();
+      EVENT_LOOP_GROUP.shutdownGracefully().sync().get();
     }
     shutdownMiniDFSCluster();
   }
