@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -346,7 +347,7 @@ public class ScannerContext {
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
     return hasTimeLimit(checkerScope)
-      && (returnImmediately || System.currentTimeMillis() >= limits.getTime());
+      && (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
   }
 
   /**
