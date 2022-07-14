@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -209,7 +210,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
           // Notify the client about the offending request
           SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
-            null, null, null, this, 0, this.addr, System.currentTimeMillis(), 0,
+            null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
             this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
           RequestTooBigException reqTooBigEx = new RequestTooBigException(msg);
           this.rpcServer.metrics.exception(reqTooBigEx);
@@ -334,7 +335,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     RequestHeader header, Message param, CellScanner cellScanner, long size,
     InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
-      remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.bbAllocator,
+      remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
       this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
   }
 

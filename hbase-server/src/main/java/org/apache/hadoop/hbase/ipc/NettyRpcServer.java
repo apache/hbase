@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -191,8 +192,8 @@ public class NettyRpcServer extends RpcServer {
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
     Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
     throws IOException {
-    return call(service, md, param, cellScanner, receiveTime, status, System.currentTimeMillis(),
-      0);
+    return call(service, md, param, cellScanner, receiveTime, status,
+      EnvironmentEdgeManager.currentTime(), 0);
   }
 
   @Override

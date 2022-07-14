@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -108,7 +109,7 @@ public class CallRunner {
         }
         return;
       }
-      call.setStartTime(System.currentTimeMillis());
+      call.setStartTime(EnvironmentEdgeManager.currentTime());
       if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
         return;

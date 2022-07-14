@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -384,7 +385,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       Message result = call.getService().callBlockingMethod(md, controller, param);
       long receiveTime = call.getReceiveTime();
       long startTime = call.getStartTime();
-      long endTime = System.currentTimeMillis();
+      long endTime = EnvironmentEdgeManager.currentTime();
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
