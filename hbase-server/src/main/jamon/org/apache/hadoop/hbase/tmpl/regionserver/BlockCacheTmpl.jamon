@@ -366,12 +366,12 @@ are combined counts. Request count is sum of hits and misses.</p>
 <%if lru %>
     <tr>
         <td>Size of Index Blocks</td>
-        <td><% String.format("%,d", ((LruBlockCache)bc).getCurrentIndexSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentIndexSize(), "B", 1) %></td>
         <td>Size of INDEX Blocks</td>
     </tr>
     <tr>
         <td>Size of Bloom Blocks</td>
-        <td><% String.format("%,d", ((LruBlockCache)bc).getCurrentBloomSize()) %></td>
+        <td><% TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentBloomSize(), "B", 1) %></td>
         <td>Size of BLOOM Blocks</td>
     </tr>
 </%if>
