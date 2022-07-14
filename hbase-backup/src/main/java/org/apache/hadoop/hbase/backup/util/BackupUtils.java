@@ -63,8 +63,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
-
 /**
  * A collection for methods used by multiple classes to backup HBase tables.
  */
@@ -278,13 +276,12 @@ public final class BackupUtils {
     return logFiles;
   }
 
+  @SuppressWarnings("StringSplitter")
   public static TableName[] parseTableNames(String tables) {
     if (tables == null) {
       return null;
     }
-    String[] tableArray =
-      (String[]) Splitter.onPattern(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND)
-        .splitToList(tables).toArray();
+    String[] tableArray = tables.split(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
     TableName[] ret = new TableName[tableArray.length];
     for (int i = 0; i < tableArray.length; i++) {
       ret[i] = TableName.valueOf(tableArray[i]);
@@ -597,8 +594,9 @@ public final class BackupUtils {
         return ts1 < ts2 ? 1 : -1;
       }
 
+      @SuppressWarnings("StringSplitter")
       private long getTimestamp(String backupId) {
-        String[] split = (String[]) Splitter.on('_').splitToList(backupId).toArray();
+        String[] split = backupId.split("_");
         return Long.parseLong(split[1]);
       }
     });
@@ -735,11 +733,11 @@ public final class BackupUtils {
     return BulkLoadHFiles.create(conf);
   }
 
+  @SuppressWarnings("StringSplitter")
   public static String findMostRecentBackupId(String[] backupIds) {
     long recentTimestamp = Long.MIN_VALUE;
     for (String backupId : backupIds) {
-      String[] ids = (String[]) Splitter.on('_').splitToList(backupId).toArray();
-      long ts = Long.parseLong(ids[1]);
+      long ts = Long.parseLong(backupId.split("_")[1]);
       if (ts > recentTimestamp) {
         recentTimestamp = ts;
       }

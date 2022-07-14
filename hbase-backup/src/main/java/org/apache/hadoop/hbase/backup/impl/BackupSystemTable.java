@@ -71,8 +71,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
-
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -1741,14 +1739,16 @@ public final class BackupSystemTable implements Closeable {
     return scan;
   }
 
+  @SuppressWarnings("StringSplitter")
   static String getTableNameFromOrigBulkLoadRow(String rowStr) {
-    String[] parts = (String[]) Splitter.onPattern(BLK_LD_DELIM).splitToList(rowStr).toArray();
+    String[] parts = rowStr.split(BLK_LD_DELIM);
     return parts[1];
   }
 
+  @SuppressWarnings("StringSplitter")
   static String getRegionNameFromOrigBulkLoadRow(String rowStr) {
     // format is bulk : namespace : table : region : file
-    String[] parts = (String[]) Splitter.onPattern(BLK_LD_DELIM).splitToList(rowStr).toArray();
+    String[] parts = rowStr.split(BLK_LD_DELIM);
     int idx = 3;
     if (parts.length == 4) {
       // the table is in default namespace

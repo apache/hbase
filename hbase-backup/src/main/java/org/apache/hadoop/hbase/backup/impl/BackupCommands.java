@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -1082,15 +1081,19 @@ public final class BackupCommands {
       return arr;
     }
 
+    @SuppressWarnings("StringSplitter")
     private void processSetAdd(String[] args) throws IOException {
       if (args == null || args.length != 4) {
         printUsage();
         throw new IOException(INCORRECT_USAGE);
       }
       super.execute();
-
       String setName = args[2];
-      TableName[] tableNames = (TableName[]) Splitter.on(',').splitToList(args[3]).toArray();
+      String[] tables = args[3].split(",");
+      TableName[] tableNames = new TableName[tables.length];
+      for (int i = 0; i < tables.length; i++) {
+        tableNames[i] = TableName.valueOf(tables[i]);
+      }
       try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.addToBackupSet(setName, tableNames);
       }
