@@ -187,7 +187,16 @@ public interface AsyncAdmin {
    * Deletes a table.
    * @param tableName name of table to delete
    */
-  CompletableFuture<Void> deleteTable(TableName tableName);
+  default CompletableFuture<Void> deleteTable(TableName tableName){
+    return deleteTable(tableName, true);
+  }
+
+  /**
+   * Deletes a table.
+   * @param tableName name of table to delete
+   * @param archive if need to archive the table
+   */
+  CompletableFuture<Void> deleteTable(TableName tableName, boolean archive);
 
   /**
    * Truncate a table.

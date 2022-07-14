@@ -1114,11 +1114,13 @@ public final class RequestConverter {
   public static DeleteTableRequest buildDeleteTableRequest(
       final TableName tableName,
       final long nonceGroup,
-      final long nonce) {
+      final long nonce,
+      final boolean archive) {
     DeleteTableRequest.Builder builder = DeleteTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
+    builder.setArchive(archive);
     return builder.build();
   }
 

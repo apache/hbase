@@ -250,6 +250,15 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public long deleteTable(
+    final TableName tableName,
+    final long nonceGroup,
+    final long nonce,
+    final boolean archive) throws IOException {
+    return -1;
+  }
+
+  @Override
   public long truncateTable(
       final TableName tableName,
       final boolean preserveSplits,
