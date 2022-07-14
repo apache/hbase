@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.asyncfs;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
