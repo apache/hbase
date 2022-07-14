@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
  * Only EQUAL or NOT_EQUAL comparisons are valid with this comparator.
  * <p>
  * For example:
- * <p>
  *
  * <pre>
  * ValueFilter vf = new ValueFilter(CompareOp.EQUAL, new RegexStringComparator(
@@ -57,9 +56,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
  *     "((([\\dA-Fa-f]{1,4}:){7}[\\dA-Fa-f]{1,4})(:([\\d]{1,3}.)"
  *     + "{3}[\\d]{1,3})?)(\\/[0-9]+)?"));
  * </pre>
- * <p>
+ *
  * Supports {@link java.util.regex.Pattern} flags as well:
- * <p>
  *
  * <pre>
  * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
@@ -145,15 +143,14 @@ public class RegexStringComparator extends ByteArrayComparable {
     return engine.compareTo(value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     return engine.toByteArray();
   }
 
   /**
+   * Parse a serialized representation of the comparator
    * @param pbBytes A pb serialized {@link RegexStringComparator} instance
    * @return An instance of {@link RegexStringComparator} made from <code>bytes</code> n * @see
    *         #toByteArray
@@ -185,13 +182,17 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof RegexStringComparator)) return false;
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof RegexStringComparator)) {
+      return false;
+    }
     RegexStringComparator comparator = (RegexStringComparator) other;
     return super.areSerializedFieldsEqual(comparator)
       && engine.getClass().isInstance(comparator.getEngine())

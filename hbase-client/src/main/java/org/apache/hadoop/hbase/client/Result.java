@@ -672,15 +672,12 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @return the size of the underlying Cell []
+   * Return the size of the underlying Cell []
    */
   public int size() {
     return this.cells == null ? 0 : this.cells.length;
   }
 
-  /**
-   * n
-   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -896,8 +893,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @return the associated statistics about the region from which this was returned. Can be
-   *         <tt>null</tt> if stats are disabled.
+   * Return the associated statistics about the region from which this was returned. Can be
+   * <tt>null</tt> if stats are disabled.
    */
   public RegionLoadStats getStats() {
     return stats;

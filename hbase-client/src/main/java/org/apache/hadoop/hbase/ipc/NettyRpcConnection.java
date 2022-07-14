@@ -126,6 +126,7 @@ class NettyRpcConnection extends RpcConnection {
     return channel != null;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void shutdown0() {
     assert eventLoop.inEventLoop();
     if (channel != null) {
@@ -167,6 +168,7 @@ class NettyRpcConnection extends RpcConnection {
 
   private boolean reloginInProgress;
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void scheduleRelogin(Throwable error) {
     assert eventLoop.inEventLoop();
     if (error instanceof FallbackDisallowedException) {
@@ -199,6 +201,7 @@ class NettyRpcConnection extends RpcConnection {
     shutdown0();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void saslNegotiate(final Channel ch) {
     assert eventLoop.inEventLoop();
     UserGroupInformation ticket = provider.getRealUser(remoteId.getTicket());
@@ -220,6 +223,7 @@ class NettyRpcConnection extends RpcConnection {
     saslPromise.addListener(new FutureListener<Boolean>() {
 
       @Override
+      @SuppressWarnings("FutureReturnValueIgnored")
       public void operationComplete(Future<Boolean> future) throws Exception {
         if (future.isSuccess()) {
           ChannelPipeline p = ch.pipeline();
@@ -281,6 +285,7 @@ class NettyRpcConnection extends RpcConnection {
       .remoteAddress(remoteAddr).connect().addListener(new ChannelFutureListener() {
 
         @Override
+        @SuppressWarnings("FutureReturnValueIgnored")
         public void operationComplete(ChannelFuture future) throws Exception {
           Channel ch = future.channel();
           if (!future.isSuccess()) {
@@ -317,6 +322,7 @@ class NettyRpcConnection extends RpcConnection {
     }, new CancellationCallback() {
 
       @Override
+      @SuppressWarnings("FutureReturnValueIgnored")
       public void run(boolean cancelled) throws IOException {
         if (cancelled) {
           setCancelled(call);

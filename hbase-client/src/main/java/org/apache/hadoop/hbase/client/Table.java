@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -302,11 +301,13 @@ public interface Table extends Closeable {
   interface CheckAndMutateBuilder {
 
     /**
+     * Add a column qualifier to check.
      * @param qualifier column qualifier to check.
      */
     CheckAndMutateBuilder qualifier(byte[] qualifier);
 
     /**
+     * Add a time range to check
      * @param timeRange timeRange to check
      */
     CheckAndMutateBuilder timeRange(TimeRange timeRange);
@@ -325,24 +326,28 @@ public interface Table extends Closeable {
     }
 
     /**
+     * Check for a match.
      * @param compareOp comparison operator to use
      * @param value     the expected value
      */
     CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
 
     /**
+     * Provide a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise.
      */
     boolean thenPut(Put put) throws IOException;
 
     /**
+     * Provide a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise.
      */
     boolean thenDelete(Delete delete) throws IOException;
 
     /**
+     * Provide a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise.
      */
@@ -355,13 +360,8 @@ public interface Table extends Closeable {
    * <p>
    * Use the returned {@link CheckAndMutateWithFilterBuilder} to construct your request and then
    * execute it. This is a fluent style API, the code is like:
-   *
-   * <pre>
-   * <code>
-   * table.checkAndMutate(row, filter).thenPut(put);
-   * </code>
-   * </pre>
-   *
+   * <p>
+   * {@code table.checkAndMutate(row, filter).thenPut(put); }
    * @deprecated Since 3.0.0, will be removed in 4.0.0. For internal test use only, do not use it
    *             any more.
    */
@@ -379,23 +379,27 @@ public interface Table extends Closeable {
   interface CheckAndMutateWithFilterBuilder {
 
     /**
+     * Add a time range to check
      * @param timeRange timeRange to check
      */
     CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange);
 
     /**
+     * Provide a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise.
      */
     boolean thenPut(Put put) throws IOException;
 
     /**
+     * Provide a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise.
      */
     boolean thenDelete(Delete delete) throws IOException;
 
     /**
+     * Provide a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise.
      */
@@ -445,7 +449,7 @@ public interface Table extends Closeable {
    * write operations to a row are synchronized, and readers are guaranteed to see this operation
    * fully completed.
    * @param append object that specifies the columns and values to be appended
-   * @throws IOException e
+   * @throws IOException if a remote or network exception occurs.
    * @return values of columns after the append operation (maybe null)
    */
   default Result append(final Append append) throws IOException {
@@ -460,7 +464,7 @@ public interface Table extends Closeable {
    * fully completed.
    * @param increment object that specifies the columns and amounts to be used for the increment
    *                  operations
-   * @throws IOException e
+   * @throws IOException if a remote or network exception occurs.
    * @return values of columns after the increment
    */
   default Result increment(final Increment increment) throws IOException {
@@ -531,7 +535,6 @@ public interface Table extends Closeable {
    * used to access a published coprocessor {@link Service} using standard protobuf service
    * invocations:
    * <p/>
-   * <div style="background-color: #cccccc; padding: 2px"> <blockquote>
    *
    * <pre>
    * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
@@ -542,7 +545,6 @@ public interface Table extends Closeable {
    * MyCallResponse response = service.myCall(null, request);
    * </pre>
    *
-   * </blockquote> </div>
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
    * @deprecated since 3.0.0, will removed in 4.0.0. This is too low level, please stop using it any
@@ -660,7 +662,7 @@ public interface Table extends Closeable {
     final Map<byte[], R> results =
       Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
-      new Callback<R>() {
+      new Batch.Callback<R>() {
         @Override
         public void update(byte[] region, byte[] row, R result) {
           if (region != null) {

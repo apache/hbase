@@ -91,9 +91,7 @@ public class PageFilter extends FilterBase {
     return new PageFilter(pageSize);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.PageFilter.Builder builder = FilterProtos.PageFilter.newBuilder();
@@ -102,8 +100,10 @@ public class PageFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of the filter.
    * @param pbBytes A pb serialized {@link PageFilter} instance
-   * @return An instance of {@link PageFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link PageFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static PageFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.PageFilter proto;
@@ -116,9 +116,8 @@ public class PageFilter extends FilterBase {
   }
 
   /**
-   * @param o other Filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
@@ -128,7 +127,6 @@ public class PageFilter extends FilterBase {
     if (!(o instanceof PageFilter)) {
       return false;
     }
-
     PageFilter other = (PageFilter) o;
     return this.getPageSize() == other.getPageSize();
   }
@@ -140,7 +138,7 @@ public class PageFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

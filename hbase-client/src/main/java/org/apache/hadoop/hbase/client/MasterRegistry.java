@@ -75,6 +75,7 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
    * separated host[:port] values. If no port number if specified, default master port is assumed.
    * @param conf Configuration to parse from.
    */
+  @SuppressWarnings("StringSplitter")
   public static Set<ServerName> parseMasterAddrs(Configuration conf) throws UnknownHostException {
     Set<ServerName> masterAddrs = new HashSet<>();
     String configuredMasters = getMasterAddr(conf);

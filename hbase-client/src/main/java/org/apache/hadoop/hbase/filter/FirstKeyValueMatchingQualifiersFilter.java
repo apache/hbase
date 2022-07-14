@@ -32,10 +32,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   /**
+   * Parse a serialized representation of the filter.
    * @param pbBytes A pb serialized {@link FirstKeyValueMatchingQualifiersFilter} instance
    * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from
-   *         <code>bytes</code> n * @see #toByteArray
+   *         <code>bytes</code>
+   * @see #toByteArray
    */
+  @SuppressWarnings("DoNotCallSuggester")
   public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
     throw new DeserializationException(

@@ -47,10 +47,6 @@ public class SubstringComparator extends ByteArrayComparable {
 
   private String substr;
 
-  /**
-   * Constructor
-   * @param substr the substring
-   */
   public SubstringComparator(String substr) {
     super(Bytes.toBytes(substr.toLowerCase(Locale.ROOT)));
     this.substr = substr.toLowerCase(Locale.ROOT);
@@ -66,9 +62,7 @@ public class SubstringComparator extends ByteArrayComparable {
     return Bytes.toString(value, offset, length).toLowerCase(Locale.ROOT).contains(substr) ? 0 : 1;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.SubstringComparator.Builder builder =
@@ -78,6 +72,7 @@ public class SubstringComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of the comparator.
    * @param pbBytes A pb serialized {@link SubstringComparator} instance
    * @return An instance of {@link SubstringComparator} made from <code>bytes</code> n * @see
    *         #toByteArray
@@ -94,14 +89,17 @@ public class SubstringComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof SubstringComparator)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof SubstringComparator)) {
+      return false;
+    }
     SubstringComparator comparator = (SubstringComparator) other;
     return super.areSerializedFieldsEqual(comparator) && this.substr.equals(comparator.substr);
   }

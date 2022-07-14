@@ -125,23 +125,17 @@ public class SingleColumnValueFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Return the comparator */
   public org.apache.hadoop.hbase.filter.ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the family
-   */
+  /** Return the family */
   public byte[] getFamily() {
     return columnFamily;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Return the qualifier */
   public byte[] getQualifier() {
     return columnQualifier;
   }
@@ -283,15 +277,14 @@ public class SingleColumnValueFilter extends FilterBase {
     return builder.build();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     return convert().toByteArray();
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link SingleColumnValueFilter} instance
    * @return An instance of {@link SingleColumnValueFilter} made from <code>bytes</code>
    * @see #toByteArray
@@ -320,14 +313,17 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof SingleColumnValueFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof SingleColumnValueFilter)) {
+      return false;
+    }
     SingleColumnValueFilter other = (SingleColumnValueFilter) o;
     return Bytes.equals(this.getFamily(), other.getFamily())
       && Bytes.equals(this.getQualifier(), other.getQualifier()) && this.op.equals(other.op)
@@ -355,7 +351,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

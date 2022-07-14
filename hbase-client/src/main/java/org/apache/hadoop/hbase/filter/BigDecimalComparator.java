@@ -45,11 +45,11 @@ public class BigDecimalComparator extends ByteArrayComparable {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof BigDecimalComparator)) {
-      return false;
-    }
     if (this == obj) {
       return true;
+    }
+    if (!(obj instanceof BigDecimalComparator)) {
+      return false;
     }
     BigDecimalComparator bdc = (BigDecimalComparator) obj;
     return this.bigDecimal.equals(bdc.bigDecimal);
@@ -72,9 +72,7 @@ public class BigDecimalComparator extends ByteArrayComparable {
     return this.bigDecimal.compareTo(that);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BigDecimalComparator.Builder builder =
@@ -84,9 +82,10 @@ public class BigDecimalComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of the comparator
    * @param pbBytes A pb serialized {@link BigDecimalComparator} instance
    * @return An instance of {@link BigDecimalComparator} made from <code>bytes</code>
-   * @throws DeserializationException A deserialization exception
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BigDecimalComparator parseFrom(final byte[] pbBytes)
@@ -102,10 +101,10 @@ public class BigDecimalComparator extends ByteArrayComparable {
   }
 
   /**
-   * @param other the other comparator
-   * @return true if and only if the fields of the comparator that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other.
    */
+  @SuppressWarnings("ReferenceEquality")
   boolean areSerializedFieldsEqual(BigDecimalComparator other) {
     if (other == this) {
       return true;

@@ -70,28 +70,28 @@ public final class Size implements Comparable<Size> {
   }
 
   /**
-   * @return size unit
+   * Return the size unit
    */
   public Unit getUnit() {
     return unit;
   }
 
   /**
-   * get the value
+   * Return the value
    */
   public long getLongValue() {
     return (long) value;
   }
 
   /**
-   * get the value
+   * Return the value
    */
   public double get() {
     return value;
   }
 
   /**
-   * get the value which is converted to specified unit.
+   * Return the value which is converted to specified unit.
    * @param unit size unit
    * @return the converted value
    */

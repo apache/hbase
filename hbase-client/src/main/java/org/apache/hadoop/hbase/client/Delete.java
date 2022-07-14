@@ -111,8 +111,6 @@ public class Delete extends Mutation {
    * <p>
    * This timestamp is ONLY used for a delete row operation. If specifying families or columns, you
    * must specify each timestamp individually.
-   * @param row We make a local copy of this passed in row. nn * @param timestamp maximum version
-   *            timestamp (only for delete row)
    */
   public Delete(final byte[] row, final int rowOffset, final int rowLength, long timestamp) {
     checkRow(row, rowOffset, rowLength);
@@ -121,6 +119,7 @@ public class Delete extends Mutation {
   }
 
   /**
+   * Create a Delete operation given another as template.
    * @param deleteToCopy delete to copy
    */
   public Delete(final Delete deleteToCopy) {
@@ -142,8 +141,9 @@ public class Delete extends Mutation {
   /**
    * Add an existing delete marker to this Delete object.
    * @param cell An existing cell of type "delete".
-   * @return this for invocation chaining n
+   * @return this for invocation chaining
    */
+  @Override
   public Delete add(Cell cell) throws IOException {
     super.add(cell);
     return this;

@@ -62,9 +62,6 @@ public class MultiRowRangeFilter extends FilterBase {
   private BasicRowRange range;
   private ReturnCode currentReturnCode;
 
-  /**
-   * @param list A list of <code>RowRange</code>
-   */
   public MultiRowRangeFilter(List<RowRange> list) {
     // We don't use rangeList anywhere else, but keeping it lets us pay a little
     // memory to avoid touching the serialization logic.
@@ -199,9 +196,10 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   /**
+   * Parse the serialized representation of this filter.
    * @param pbBytes A pb serialized instance
    * @return An instance of MultiRowRangeFilter
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    */
   public static MultiRowRangeFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -226,9 +224,8 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   /**
-   * @param o the filter to compare
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
@@ -469,16 +466,12 @@ public class MultiRowRangeFilter extends FilterBase {
       return stopRow;
     }
 
-    /**
-     * @return if start row is inclusive.
-     */
+    /** Return if start row is inclusive. */
     public boolean isStartRowInclusive() {
       return startRowInclusive;
     }
 
-    /**
-     * @return if stop row is inclusive.
-     */
+    /** Return if stop row is inclusive. */
     public boolean isStopRowInclusive() {
       return stopRowInclusive;
     }
@@ -520,11 +513,11 @@ public class MultiRowRangeFilter extends FilterBase {
 
     @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof BasicRowRange)) {
-        return false;
-      }
       if (this == obj) {
         return true;
+      }
+      if (!(obj instanceof BasicRowRange)) {
+        return false;
       }
       BasicRowRange rr = (BasicRowRange) obj;
       return Bytes.equals(this.stopRow, rr.getStopRow())
@@ -722,45 +715,33 @@ public class MultiRowRangeFilter extends FilterBase {
       this.foundFirstRange = true;
     }
 
-    /**
-     * Gets the RowRange at the given offset.
-     */
-    @SuppressWarnings("unchecked")
+    /** Gets the RowRange at the given offset. */
+    @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
     public <T extends BasicRowRange> T get(int i) {
       return (T) ranges.get(i);
     }
 
-    /**
-     * Returns true if the first matching row range was found.
-     */
+    /** Returns true if the first matching row range was found. */
     public boolean hasFoundFirstRange() {
       return foundFirstRange;
     }
 
-    /**
-     * Returns true if the current range's key is exclusive
-     */
+    /** Returns true if the current range's key is exclusive */
     public boolean isExclusive() {
       return exclusive;
     }
 
-    /**
-     * Resets the exclusive flag.
-     */
+    /** Resets the exclusive flag. */
     public void resetExclusive() {
       exclusive = false;
     }
 
-    /**
-     * Returns true if this class has been initialized by calling {@link #initialize(boolean)}.
-     */
+    /** Returns true if this class has been initialized by calling {@link #initialize(boolean)}. */
     public boolean isInitialized() {
       return initialized;
     }
 
-    /**
-     * Returns true if we exhausted searching all row ranges.
-     */
+    /** Returns true if we exhausted searching all row ranges. */
     public boolean isIterationComplete(int index) {
       return index >= ranges.size();
     }
@@ -768,7 +749,7 @@ public class MultiRowRangeFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

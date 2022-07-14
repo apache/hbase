@@ -107,16 +107,12 @@ final public class FilterList extends FilterBase {
     this(operator, Arrays.asList(filters));
   }
 
-  /**
-   * Get the operator. n
-   */
+  /** Return the operator. */
   public Operator getOperator() {
     return operator;
   }
 
-  /**
-   * Get the filters. n
-   */
+  /** Return the filters. */
   public List<Filter> getFilters() {
     return filterListBase.getFilters();
   }
@@ -181,9 +177,7 @@ final public class FilterList extends FilterBase {
     return filterListBase.filterRow();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.FilterList.Builder builder = FilterProtos.FilterList.newBuilder();
@@ -196,8 +190,10 @@ final public class FilterList extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link FilterList} instance
-   * @return An instance of {@link FilterList} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link FilterList} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static FilterList parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FilterList proto;
@@ -220,14 +216,17 @@ final public class FilterList extends FilterBase {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
-   * corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter other) {
-    if (other == this) return true;
-    if (!(other instanceof FilterList)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof FilterList)) {
+      return false;
+    }
     FilterList o = (FilterList) other;
     return this.getOperator().equals(o.getOperator())
       && ((this.getFilters() == o.getFilters()) || this.getFilters().equals(o.getFilters()));
@@ -262,7 +261,7 @@ final public class FilterList extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

@@ -156,27 +156,23 @@ public abstract class Mutation extends OperationWithAttributes
     return list;
   }
 
-  /*
+  /**
    * Create a KeyValue with this objects row key and the Put identifier.
-   * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value) {
     return new KeyValue(this.row, family, qualifier, ts, KeyValue.Type.Put, value);
   }
 
   /**
-   * Create a KeyValue with this objects row key and the Put identifier. nnnn * @param tags -
-   * Specify the Tags as an Array
-   * @return a KeyValue with this objects row key and the Put identifier.
+   * Create a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tags) {
     KeyValue kvWithTag = new KeyValue(this.row, family, qualifier, ts, value, tags);
     return kvWithTag;
   }
 
-  /*
+  /**
    * Create a KeyValue with this objects row key and the Put identifier.
-   * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
     Tag[] tags) {
@@ -261,7 +257,7 @@ public abstract class Mutation extends OperationWithAttributes
     if (tags != null) {
       List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(t)));
+        tagsString.add(t.getType() + ":" + Bytes.toStringBinary(Tag.cloneValue(t)));
       }
       stringMap.put("tag", tagsString);
     }
@@ -327,7 +323,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * @return the set of clusterIds that have consumed the mutation
+   * Return the set of clusterIds that have consumed the mutation.
    */
   public List<UUID> getClusterIds() {
     List<UUID> clusterIds = new ArrayList<>();
@@ -343,7 +339,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Sets the visibility expression associated with cells in this Mutation. n
+   * Sets the visibility expression associated with cells in this Mutation.
    */
   public Mutation setCellVisibility(CellVisibility expression) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY,
@@ -352,7 +348,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * @return CellVisibility associated with cells in this Mutation. n
+   * Return the cell visibility associated with cells in this Mutation.
    */
   public CellVisibility getCellVisibility() throws DeserializationException {
     byte[] cellVisibilityBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
@@ -360,29 +356,17 @@ public abstract class Mutation extends OperationWithAttributes
     return toCellVisibility(cellVisibilityBytes);
   }
 
-  /**
-   * Create a protocol buffer CellVisibility based on a client CellVisibility. n * @return a
-   * protocol buffer CellVisibility
-   */
   static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
     ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
     builder.setExpression(cellVisibility.getExpression());
     return builder.build();
   }
 
-  /**
-   * Convert a protocol buffer CellVisibility to a client CellVisibility n * @return the converted
-   * client CellVisibility
-   */
   private static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
     if (proto == null) return null;
     return new CellVisibility(proto.getExpression());
   }
 
-  /**
-   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility n * @return the
-   * converted client CellVisibility n
-   */
   private static CellVisibility toCellVisibility(byte[] protoBytes)
     throws DeserializationException {
     if (protoBytes == null) return null;
@@ -410,14 +394,14 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * @return the number of different families
+   * Return the number of different families
    */
   public int numFamilies() {
     return getFamilyCellMap().size();
   }
 
   /**
-   * @return Calculate what Mutation adds to class heap size.
+   * Calculate and return what the Mutation adds to class heap size.
    */
   @Override
   public long heapSize() {
@@ -448,13 +432,14 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * @return The serialized ACL for this operation, or null if none
+   * Return the serialized ACL for this operation, or null if none
    */
   public byte[] getACL() {
     return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
   }
 
   /**
+   * Set an ACL for this operation.
    * @param user  User short name
    * @param perms Permissions for the user
    */
@@ -465,6 +450,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
+   * Set an ACL for this operation.
    * @param perms A map of permissions for a user or users
    */
   public Mutation setACL(Map<String, Permission> perms) {
@@ -499,9 +485,6 @@ public abstract class Mutation extends OperationWithAttributes
     return this;
   }
 
-  /**
-   * @return current value for returnResults
-   */
   // Used by Increment and Append only.
   @InterfaceAudience.Private
   protected boolean isReturnResults() {
@@ -509,8 +492,8 @@ public abstract class Mutation extends OperationWithAttributes
     return v == null ? true : Bytes.toBoolean(v);
   }
 
-  @InterfaceAudience.Private
   // Used by Increment and Append only.
+  @InterfaceAudience.Private
   protected Mutation setReturnResults(boolean returnResults) {
     setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
     return this;
@@ -608,7 +591,7 @@ public abstract class Mutation extends OperationWithAttributes
     return filteredList;
   }
 
-  /*
+  /**
    * Private method to determine if this object's familyMap contains the given value assigned to the
    * given family, qualifier and timestamp respecting the 2 boolean arguments nnnnnn * @return
    * returns true if the given family, qualifier timestamp and value already has an existing

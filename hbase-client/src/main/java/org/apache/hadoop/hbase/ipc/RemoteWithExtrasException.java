@@ -123,30 +123,22 @@ public class RemoteWithExtrasException extends RemoteException {
     return ex;
   }
 
-  /**
-   * @return null if not set
-   */
+  /** Return null if not set */
   public String getHostname() {
     return this.hostname;
   }
 
-  /**
-   * @return -1 if not set
-   */
+  /** Return -1 if not set */
   public int getPort() {
     return this.port;
   }
 
-  /**
-   * @return True if origin exception was a do not retry type.
-   */
+  /** Return true if origin exception was a do not retry type. */
   public boolean isDoNotRetry() {
     return this.doNotRetry;
   }
 
-  /**
-   * @return True if the server was considered overloaded when the exception was thrown.
-   */
+  /** Return true if the server was considered overloaded when the exception was thrown. */
   public boolean isServerOverloaded() {
     return serverOverloaded;
   }

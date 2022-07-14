@@ -93,9 +93,7 @@ public class KeyOnlyFilter extends FilterBase {
     return filter;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.KeyOnlyFilter.Builder builder = FilterProtos.KeyOnlyFilter.newBuilder();
@@ -104,8 +102,10 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link KeyOnlyFilter} instance
-   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static KeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.KeyOnlyFilter proto;
@@ -118,22 +118,24 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof KeyOnlyFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof KeyOnlyFilter)) {
+      return false;
+    }
     KeyOnlyFilter other = (KeyOnlyFilter) o;
     return this.lenAsVal == other.lenAsVal;
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

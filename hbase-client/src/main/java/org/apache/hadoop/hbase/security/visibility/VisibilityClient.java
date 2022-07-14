@@ -88,7 +88,7 @@ public class VisibilityClient {
             for (String label : labels) {
               if (label.length() > 0) {
                 VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-                newBuilder.setLabel(UnsafeByteOperations.unsafeWrap((Bytes.toBytes(label))));
+                newBuilder.setLabel(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(label)));
                 builder.addVisLabel(newBuilder.build());
               }
             }
@@ -108,18 +108,13 @@ public class VisibilityClient {
     }
   }
 
-  /**
-   * Sets given labels globally authorized for the user. nnnnn
-   */
+  /** Sets given labels globally authorized for the user. */
   public static VisibilityLabelsResponse setAuths(Connection connection, final String[] auths,
     final String user) throws Throwable {
     return setOrClearAuths(connection, auths, user, true);
   }
 
-  /**
-   * @param connection the Connection instance to use. n * @return labels, the given user is
-   *                   globally authorized for. n
-   */
+  /** Get the authentication details for a given user. */
   public static GetAuthsResponse getAuths(Connection connection, final String user)
     throws Throwable {
     try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
@@ -212,7 +207,7 @@ public class VisibilityClient {
             setAuthReqBuilder.setUser(UnsafeByteOperations.unsafeWrap(Bytes.toBytes(user)));
             for (String auth : auths) {
               if (auth.length() > 0) {
-                setAuthReqBuilder.addAuth((ByteString.copyFromUtf8(auth)));
+                setAuthReqBuilder.addAuth(ByteString.copyFromUtf8(auth));
               }
             }
             if (setOrClear) {

@@ -63,9 +63,7 @@ public class NullComparator extends ByteArrayComparable {
     return value != null ? 1 : 0;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.NullComparator.Builder builder = ComparatorProtos.NullComparator.newBuilder();
@@ -73,6 +71,7 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of the comparator.
    * @param pbBytes A pb serialized {@link NullComparator} instance
    * @return An instance of {@link NullComparator} made from <code>bytes</code> n * @see
    *         #toByteArray
@@ -88,8 +87,8 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {

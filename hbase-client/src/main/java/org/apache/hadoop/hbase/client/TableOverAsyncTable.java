@@ -47,8 +47,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -143,8 +142,8 @@ class TableOverAsyncTable implements Table {
   }
 
   @Override
-  public <R> void batchCallback(List<? extends Row> actions, Object[] results, Callback<R> callback)
-    throws IOException, InterruptedException {
+  public <R> void batchCallback(List<? extends Row> actions, Object[] results,
+    Batch.Callback<R> callback) throws IOException, InterruptedException {
     ConcurrentLinkedQueue<ThrowableWithExtraContext> errors = new ConcurrentLinkedQueue<>();
     CountDownLatch latch = new CountDownLatch(actions.size());
     AsyncTableRegionLocator locator = conn.getRegionLocator(getName());
@@ -467,7 +466,7 @@ class TableOverAsyncTable implements Table {
   }
 
   private <R> void coprocessorService(String serviceName, byte[] startKey, byte[] endKey,
-    Callback<R> callback, StubCall<R> call) throws Throwable {
+    Batch.Callback<R> callback, StubCall<R> call) throws Throwable {
     // get regions covered by the row range
     ExecutorService pool = Context.current().wrap(this.poolSupplier.get());
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
@@ -509,7 +508,8 @@ class TableOverAsyncTable implements Table {
 
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
-    byte[] endKey, Call<T, R> callable, Callback<R> callback) throws ServiceException, Throwable {
+    byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
+    throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
       .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {
@@ -526,8 +526,8 @@ class TableOverAsyncTable implements Table {
   @SuppressWarnings("unchecked")
   @Override
   public <R extends Message> void batchCoprocessorService(MethodDescriptor methodDescriptor,
-    Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
-    throws ServiceException, Throwable {
+    Message request, byte[] startKey, byte[] endKey, R responsePrototype,
+    Batch.Callback<R> callback) throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(conn)
       .setTableName(table.getName()).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
     TraceUtil.trace(() -> {

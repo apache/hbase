@@ -69,9 +69,7 @@ public class ValueFilter extends CompareFilter {
     return new ValueFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ValueFilter.Builder builder = FilterProtos.ValueFilter.newBuilder();
@@ -80,8 +78,10 @@ public class ValueFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of the filter
    * @param pbBytes A pb serialized {@link ValueFilter} instance
-   * @return An instance of {@link ValueFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link ValueFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ValueFilter proto;
@@ -104,20 +104,23 @@ public class ValueFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ValueFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ValueFilter)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(o);
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

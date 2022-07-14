@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.IdentityHashMap;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public final class CacheEvictionStatsBuilder {
+
   long evictedBlocks = 0;
   long maxCacheSize = 0;
-  Map<byte[], Throwable> exceptions = new HashMap<>();
+  IdentityHashMap<byte[], Throwable> exceptions = new IdentityHashMap<>();
 
   CacheEvictionStatsBuilder() {
   }
@@ -44,6 +44,7 @@ public final class CacheEvictionStatsBuilder {
     exceptions.put(regionName, ie);
   }
 
+  @SuppressWarnings("IdentityHashMapUsage")
   public CacheEvictionStatsBuilder append(CacheEvictionStats stats) {
     this.evictedBlocks += stats.getEvictedBlocks();
     this.maxCacheSize += stats.getMaxCacheSize();
@@ -54,4 +55,5 @@ public final class CacheEvictionStatsBuilder {
   public CacheEvictionStats build() {
     return new CacheEvictionStats(this);
   }
+
 }

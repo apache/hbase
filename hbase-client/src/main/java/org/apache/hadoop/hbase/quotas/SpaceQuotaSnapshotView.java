@@ -40,7 +40,7 @@ public interface SpaceQuotaSnapshotView {
     Optional<SpaceViolationPolicy> getPolicy();
 
     /**
-     * @return {@code true} if the quota is being violated, {@code false} otherwise.
+     * Return {@code true} if the quota is being violated, {@code false} otherwise.
      */
     boolean isInViolation();
   }

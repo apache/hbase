@@ -26,12 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 abstract class AbstractResponse {
 
   public enum ResponseType {
-
-    SINGLE(0),
-    MULTI(1);
-
-    ResponseType(int value) {
-    }
+    SINGLE,
+    MULTI;
   }
 
   public abstract ResponseType type();

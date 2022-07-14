@@ -96,9 +96,7 @@ class IPCUtil {
     return totalSize;
   }
 
-  /**
-   * @return Size on the wire when the two messages are written with writeDelimitedTo
-   */
+  /** Return the size on the wire when the two messages are written with writeDelimitedTo */
   public static int getTotalSizeWhenWrittenDelimited(Message... messages) {
     int totalSize = 0;
     for (Message m : messages) {

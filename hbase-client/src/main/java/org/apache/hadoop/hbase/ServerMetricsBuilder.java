@@ -44,10 +44,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @InterfaceAudience.Private
 public final class ServerMetricsBuilder {
 
-  /**
-   * @param sn the server name
-   * @return a empty metrics
-   */
   public static ServerMetrics of(ServerName sn) {
     return newBuilder(sn).build();
   }
@@ -300,6 +296,7 @@ public final class ServerMetricsBuilder {
       return versionNumber;
     }
 
+    @Override
     public String getVersion() {
       return version;
     }
@@ -414,16 +411,20 @@ public final class ServerMetricsBuilder {
         int currentMaxCompactedStoreFileRefCount = r.getMaxCompactedStoreFileRefCount();
         maxCompactedStoreFileRefCount =
           Math.max(maxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
-        uncompressedStoreFileSizeMB += r.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
-        storeFileSizeMB += r.getStoreFileSize().get(Size.Unit.MEGABYTE);
-        memStoreSizeMB += r.getMemStoreSize().get(Size.Unit.MEGABYTE);
-        storefileIndexSizeKB += r.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
+        uncompressedStoreFileSizeMB = (long) (uncompressedStoreFileSizeMB
+          + r.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE));
+        storeFileSizeMB = (long) (storeFileSizeMB + r.getStoreFileSize().get(Size.Unit.MEGABYTE));
+        memStoreSizeMB = (long) (memStoreSizeMB + r.getMemStoreSize().get(Size.Unit.MEGABYTE));
+        storefileIndexSizeKB = (long) (storefileIndexSizeKB
+          + r.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE));
         readRequestsCount += r.getReadRequestCount();
         cpRequestsCount += r.getCpRequestCount();
         writeRequestsCount += r.getWriteRequestCount();
         filteredReadRequestsCount += r.getFilteredReadRequestCount();
-        rootLevelIndexSizeKB += r.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE);
-        bloomFilterSizeMB += r.getBloomFilterSize().get(Size.Unit.MEGABYTE);
+        rootLevelIndexSizeKB = (long) (rootLevelIndexSizeKB
+          + r.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE));
+        bloomFilterSizeMB =
+          (long) (bloomFilterSizeMB + r.getBloomFilterSize().get(Size.Unit.MEGABYTE));
         compactedCellCount += r.getCompactedCellCount();
         compactingCellCount += r.getCompactingCellCount();
       }

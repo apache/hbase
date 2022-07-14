@@ -22,14 +22,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class ClientBackoffPolicyFactory {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ClientBackoffPolicyFactory.class);
 
   private ClientBackoffPolicyFactory() {
   }
@@ -42,9 +38,7 @@ public final class ClientBackoffPolicyFactory {
       new Class<?>[] { Configuration.class }, new Object[] { conf });
   }
 
-  /**
-   * Default backoff policy that doesn't create any backoff for the client, regardless of load
-   */
+  /** Default backoff policy that doesn't create any backoff for the client, regardless of load. */
   public static class NoBackoffPolicy implements ClientBackoffPolicy {
     public NoBackoffPolicy(Configuration conf) {
       // necessary to meet contract

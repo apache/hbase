@@ -44,9 +44,7 @@ public class MultiResponse extends AbstractResponse {
     super();
   }
 
-  /**
-   * @return Number of pairs in this container
-   */
+  /** Return the number of results in this container */
   public int size() {
     int size = 0;
     for (RegionResult result : results.values()) {
@@ -56,25 +54,30 @@ public class MultiResponse extends AbstractResponse {
   }
 
   /**
-   * Add the pair to the container, grouped by the regionName n * @param originalIndex the original
-   * index of the Action (request).
-   * @param resOrEx the result or error; will be empty for successful Put and Delete actions.
+   * Add the pair to the container, grouped by the regionName
+   * @param regionName    the region
+   * @param originalIndex the original index of the Action (request).
+   * @param resOrEx       the result or error; will be empty for successful Put and Delete actions.
    */
   public void add(byte[] regionName, int originalIndex, Object resOrEx) {
     getResult(regionName).addResult(originalIndex, resOrEx);
   }
 
+  /**
+   * Add the pair to the container, grouped by the regionName
+   * @param regionName the region
+   * @param ie         the error
+   */
   public void addException(byte[] regionName, Throwable ie) {
     exceptions.put(regionName, ie);
   }
 
-  /**
-   * @return the exception for the region, if any. Null otherwise.
-   */
+  /** Return the exception for the region, if any. Null otherwise. */
   public Throwable getException(byte[] regionName) {
     return exceptions.get(regionName);
   }
 
+  /** Return all exceptions for the responses, if any. */
   public Map<byte[], Throwable> getExceptions() {
     return exceptions;
   }

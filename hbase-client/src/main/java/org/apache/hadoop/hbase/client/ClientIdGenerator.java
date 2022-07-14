@@ -38,8 +38,8 @@ final class ClientIdGenerator {
   }
 
   /**
-   * @return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill... Note
-   *         though that new UUID in java by default is just a random number.
+   * Return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill... Note
+   * though that new UUID in java by default is just a random number.
    */
   public static byte[] generateClientId() {
     byte[] selfBytes = getIpAddressBytes();
@@ -58,9 +58,8 @@ final class ClientIdGenerator {
     return id;
   }
 
-  /**
-   * @return PID of the current process, if it can be extracted from JVM name, or null.
-   */
+  /** Return the PID of the current process, if it can be extracted from JVM name, or null. */
+  @SuppressWarnings("StringSplitter")
   public static Long getPid() {
     String name = ManagementFactory.getRuntimeMXBean().getName();
     String[] nameParts = name.split("@");
@@ -77,8 +76,8 @@ final class ClientIdGenerator {
   }
 
   /**
-   * @return Some IPv4/IPv6 address available on the current machine that is up, not virtual and not
-   *         a loopback address. Empty array if none can be found or error occurred.
+   * Return an IPv4/IPv6 address available on the current machine that is up, not virtual and not a
+   * loopback address. Empty array if none can be found or error occurred.
    */
   public static byte[] getIpAddressBytes() {
     try {

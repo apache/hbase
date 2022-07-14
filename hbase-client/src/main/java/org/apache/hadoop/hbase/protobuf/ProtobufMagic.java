@@ -35,6 +35,7 @@ public class ProtobufMagic {
   public static final byte[] PB_MAGIC = new byte[] { 'P', 'B', 'U', 'F' };
 
   /**
+   * Check if the byte array has {@link #PB_MAGIC} for a prefix.
    * @param bytes Bytes to check.
    * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
@@ -43,10 +44,8 @@ public class ProtobufMagic {
     return isPBMagicPrefix(bytes, 0, bytes.length);
   }
 
-  /*
-   * Copied from Bytes.java to here hbase-common now depends on hbase-protocol Referencing
-   * Bytes.java directly would create circular dependency
-   */
+  // Copied from Bytes.java to here hbase-common now depends on hbase-protocol Referencing
+  // Bytes.java directly would create circular dependency
   private static int compareTo(byte[] buffer1, int offset1, int length1, byte[] buffer2,
     int offset2, int length2) {
     // Short circuit equal case
@@ -67,6 +66,7 @@ public class ProtobufMagic {
   }
 
   /**
+   * Check if the byte array has {@link #PB_MAGIC} for a prefix.
    * @param bytes  Bytes to check.
    * @param offset offset to start at
    * @param len    length to use
@@ -77,9 +77,7 @@ public class ProtobufMagic {
     return compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
   }
 
-  /**
-   * @return Length of {@link #PB_MAGIC}
-   */
+  /** Return length of {@link #PB_MAGIC} */
   public static int lengthOfPBMagic() {
     return PB_MAGIC.length;
   }

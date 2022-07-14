@@ -95,42 +95,42 @@ public class TableState {
   private final State state;
 
   /**
-   * @return True if table is {@link State#ENABLED}.
+   * Return true if table is {@link State#ENABLED}.
    */
   public boolean isEnabled() {
     return isInStates(State.ENABLED);
   }
 
   /**
-   * @return True if table is {@link State#ENABLING}.
+   * Return true if table is {@link State#ENABLING}.
    */
   public boolean isEnabling() {
     return isInStates(State.ENABLING);
   }
 
   /**
-   * @return True if {@link State#ENABLED} or {@link State#ENABLING}
+   * Return true if {@link State#ENABLED} or {@link State#ENABLING}
    */
   public boolean isEnabledOrEnabling() {
     return isInStates(State.ENABLED, State.ENABLING);
   }
 
   /**
-   * @return True if table is disabled.
+   * Return true if table is disabled.
    */
   public boolean isDisabled() {
     return isInStates(State.DISABLED);
   }
 
   /**
-   * @return True if table is disabling.
+   * Return true if table is disabling.
    */
   public boolean isDisabling() {
     return isInStates(State.DISABLING);
   }
 
   /**
-   * @return True if {@link State#DISABLED} or {@link State#DISABLED}
+   * Return true if {@link State#DISABLED} or {@link State#DISABLED}
    */
   public boolean isDisabledOrDisabling() {
     return isInStates(State.DISABLED, State.DISABLING);
@@ -147,7 +147,7 @@ public class TableState {
   }
 
   /**
-   * @return table state
+   * Return the table state.
    */
   public State getState() {
     return state;
@@ -223,15 +223,19 @@ public class TableState {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    TableState that = (TableState) o;
-
-    if (state != that.state) return false;
-    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null)
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof TableState)) {
       return false;
-
+    }
+    TableState that = (TableState) o;
+    if (state != that.state) {
+      return false;
+    }
+    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null) {
+      return false;
+    }
     return true;
   }
 

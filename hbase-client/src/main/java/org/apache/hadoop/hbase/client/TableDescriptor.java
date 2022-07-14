@@ -141,7 +141,7 @@ public interface TableDescriptor {
   int getPriority();
 
   /**
-   * @return Returns the configured replicas per region
+   * Return the configured number of replicas per region.
    */
   int getRegionReplication();
 
@@ -188,7 +188,7 @@ public interface TableDescriptor {
   String getValue(String key);
 
   /**
-   * @return Getter for fetching an unmodifiable map.
+   * Return a getter for fetching an unmodifiable map.
    */
   Map<Bytes, Bytes> getValues();
 
@@ -207,7 +207,7 @@ public interface TableDescriptor {
   boolean hasColumnFamily(final byte[] name);
 
   /**
-   * @return true if the read-replicas memstore replication is enabled.
+   * Return true if the read-replicas memstore replication is enabled.
    */
   boolean hasRegionMemStoreReplication();
 
@@ -273,8 +273,8 @@ public interface TableDescriptor {
   boolean isReadOnly();
 
   /**
-   * @return Name of this table and then a map of all of the column family descriptors (with only
-   *         the non-default column family attributes)
+   * Return the name of this table and then a map of all of the column family descriptors (with only
+   * the non-default column family attributes)
    */
   String toStringCustomizedValues();
 

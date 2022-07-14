@@ -33,24 +33,18 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * APIs, the code are like:
  *
  * <pre>
- * <code>
  * // A CheckAndMutate operation where do the specified action if the column (specified by the
  * // family and the qualifier) of the row equals to the specified value
- * CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
- *   .ifEquals(family, qualifier, value)
- *   .build(put);
+ * CheckAndMutate checkAndMutate =
+ *   CheckAndMutate.newBuilder(row).ifEquals(family, qualifier, value).build(put);
  *
  * // A CheckAndMutate operation where do the specified action if the column (specified by the
  * // family and the qualifier) of the row doesn't exist
- * CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
- *   .ifNotExists(family, qualifier)
- *   .build(put);
+ * CheckAndMutate checkAndMutate =
+ *   CheckAndMutate.newBuilder(row).ifNotExists(family, qualifier).build(put);
  *
  * // A CheckAndMutate operation where do the specified action if the row matches the filter
- * CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row)
- *   .ifMatches(filter)
- *   .build(delete);
- * </code>
+ * CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(row).ifMatches(filter).build(delete);
  * </pre>
  */
 @InterfaceAudience.Public
@@ -97,6 +91,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for a match
      * @param family    family to check
      * @param qualifier qualifier to check
      * @param compareOp comparison operator to use
@@ -113,6 +108,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for a match
      * @param filter filter to check
      * @return the CheckAndMutate object
      */
@@ -122,6 +118,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Set a time range to check
      * @param timeRange time range to check
      * @return the CheckAndMutate object
      */
@@ -144,6 +141,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build a check and mutate operation with a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return a CheckAndMutate object
      */
@@ -157,6 +155,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build a check and mutate operation with a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return a CheckAndMutate object
      */
@@ -170,6 +169,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build a check and mutate operation with an Increment to commit if the check succeeds.
      * @param increment data to increment if check succeeds
      * @return a CheckAndMutate object
      */
@@ -183,6 +183,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build a check and mutate operation with an Append to commit if the check succeeds.
      * @param append data to append if check succeeds
      * @return a CheckAndMutate object
      */
@@ -196,6 +197,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build a check and mutate operation with a RowMutations to commit if the check succeeds.
      * @param mutations mutations to perform if check succeeds
      * @return a CheckAndMutate object
      */
@@ -251,7 +253,7 @@ public final class CheckAndMutate implements Row {
   }
 
   /**
-   * @return the row
+   * Return the row
    */
   @Override
   public byte[] getRow() {
@@ -259,56 +261,56 @@ public final class CheckAndMutate implements Row {
   }
 
   /**
-   * @return the family to check
+   * Return the family to check
    */
   public byte[] getFamily() {
     return family;
   }
 
   /**
-   * @return the qualifier to check
+   * Return the qualifier to check
    */
   public byte[] getQualifier() {
     return qualifier;
   }
 
   /**
-   * @return the comparison operator
+   * Return the comparison operator
    */
   public CompareOperator getCompareOp() {
     return op;
   }
 
   /**
-   * @return the expected value
+   * Return the expected value
    */
   public byte[] getValue() {
     return value;
   }
 
   /**
-   * @return the filter to check
+   * Return the filter to check
    */
   public Filter getFilter() {
     return filter;
   }
 
   /**
-   * @return whether this has a filter or not
+   * Return whether this has a filter or not
    */
   public boolean hasFilter() {
     return filter != null;
   }
 
   /**
-   * @return the time range to check
+   * Return the time range to check
    */
   public TimeRange getTimeRange() {
     return timeRange;
   }
 
   /**
-   * @return the action done if check succeeds
+   * Return the action done if check succeeds
    */
   public Row getAction() {
     return action;

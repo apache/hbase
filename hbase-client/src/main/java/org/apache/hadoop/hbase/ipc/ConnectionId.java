@@ -57,6 +57,7 @@ class ConnectionId {
   }
 
   @Override
+  @SuppressWarnings("ReferenceEquality")
   public boolean equals(Object obj) {
     if (obj instanceof ConnectionId) {
       ConnectionId id = (ConnectionId) obj;

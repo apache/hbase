@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public class Append extends Mutation {
   private static final Logger LOG = LoggerFactory.getLogger(Append.class);
-  private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private static final int HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
   private TimeRange tr = TimeRange.allTime();
 
   /**

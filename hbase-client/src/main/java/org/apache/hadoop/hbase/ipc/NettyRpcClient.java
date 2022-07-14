@@ -76,6 +76,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   protected void closeInternal() {
     if (shutdownGroupWhenClose) {
       group.shutdownGracefully();

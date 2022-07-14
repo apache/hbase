@@ -68,30 +68,22 @@ public class ColumnValueFilter extends FilterBase {
     this.comparator = Preconditions.checkNotNull(comparator, "Comparator should not be null");
   }
 
-  /**
-   * n
-   */
+  /** Return the comparison operator */
   public CompareOperator getCompareOperator() {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Return the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the column family
-   */
+  /** Return the column family */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Return the qualifier */
   public byte[] getQualifier() {
     return qualifier;
   }
@@ -161,9 +153,7 @@ public class ColumnValueFilter extends FilterBase {
     return new ColumnValueFilter(family, qualifier, operator, comparator);
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Return a pb instance to represent this instance. */
   FilterProtos.ColumnValueFilter convert() {
     FilterProtos.ColumnValueFilter.Builder builder = FilterProtos.ColumnValueFilter.newBuilder();
 
@@ -213,7 +203,6 @@ public class ColumnValueFilter extends FilterBase {
     } else if (!(o instanceof ColumnValueFilter)) {
       return false;
     }
-
     ColumnValueFilter other = (ColumnValueFilter) o;
     return Bytes.equals(this.getFamily(), other.getFamily())
       && Bytes.equals(this.getQualifier(), other.getQualifier())
@@ -235,7 +224,7 @@ public class ColumnValueFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

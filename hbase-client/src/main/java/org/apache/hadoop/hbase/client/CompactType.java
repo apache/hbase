@@ -25,10 +25,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public enum CompactType {
-
-  NORMAL(0),
-  MOB(1);
-
-  CompactType(int value) {
-  }
+  NORMAL,
+  MOB;
 }

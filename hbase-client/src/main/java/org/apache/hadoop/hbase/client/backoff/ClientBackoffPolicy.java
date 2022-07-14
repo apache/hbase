@@ -33,7 +33,7 @@ public interface ClientBackoffPolicy {
   public static final String BACKOFF_POLICY_CLASS = "hbase.client.statistics.backoff-policy";
 
   /**
-   * @return the number of ms to wait on the client based on the
+   * Return the number of milliseconds to wait on the client based on the provided statistics.
    */
   public long getBackoffTime(ServerName serverName, byte[] region, ServerStatistics stats);
 }

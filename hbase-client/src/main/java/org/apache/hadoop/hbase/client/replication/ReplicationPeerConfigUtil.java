@@ -107,6 +107,7 @@ public final class ReplicationPeerConfigUtil {
    * Convert string to TableCFs Object. This is only for read TableCFs information from TableCF
    * node. Input String Format: ns1.table1:cf1,cf2;ns2.table2:cfA,cfB;ns3.table3.
    */
+  @SuppressWarnings("StringSplitter")
   public static ReplicationProtos.TableCF[] convert(String tableCFsConfig) {
     if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
       return null;
@@ -241,6 +242,7 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
+   * Parse the serialized representation of a peer
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
    * @throws DeserializationException deserialization exception
@@ -384,6 +386,7 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
+   * Serialize the peer configuration and return it as a byte array.
    * @param peerConfig peer config of replication peer
    * @return Serialized protobuf of <code>peerConfig</code> with pb magic prefix prepended suitable
    *         for use as content of a this.peersZNode; i.e. the content of PEER_ID znode under

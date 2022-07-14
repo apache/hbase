@@ -34,9 +34,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterIdProtos;
 public class ClusterId {
   private final String id;
 
-  /**
-   * New ClusterID. Generates a uniqueid.
-   */
+  /** New ClusterID. Generates a unique UUID. */
   public ClusterId() {
     this(UUID.randomUUID().toString());
   }
@@ -45,16 +43,16 @@ public class ClusterId {
     this.id = uuid;
   }
 
-  /**
-   * @return The clusterid serialized using pb w/ pb magic prefix
-   */
+  /** Return the cluster id serialized using pb with the pb magic prefix */
   public byte[] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
   }
 
   /**
+   * Parse a serialized representation of the cluster id.
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
-   * @return An instance of {@link ClusterId} made from <code>bytes</code> n * @see #toByteArray()
+   * @return An instance of {@link ClusterId} made from <code>bytes</code>
+   * @see #toByteArray()
    */
   public static ClusterId parseFrom(final byte[] bytes) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
@@ -74,24 +72,17 @@ public class ClusterId {
     }
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Return a pb instance to represent this instance. */
   public ClusterIdProtos.ClusterId convert() {
     ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
     return builder.setClusterId(this.id).build();
   }
 
-  /**
-   * n * @return A {@link ClusterId} made from the passed in <code>cid</code>
-   */
+  /** Return a {@link ClusterId} made from the passed in <code>cid</code> */
   public static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
     return new ClusterId(cid.getClusterId());
   }
 
-  /**
-   * @see java.lang.Object#toString()
-   */
   @Override
   public String toString() {
     return this.id;

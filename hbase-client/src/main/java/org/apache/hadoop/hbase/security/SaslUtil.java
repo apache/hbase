@@ -93,9 +93,10 @@ public class SaslUtil {
   }
 
   /**
+   * Return a map with values for SASL properties.
    * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
-   * @return Map with values for SASL properties.
    */
+  @SuppressWarnings("StringSplitter")
   public static Map<String, String> initSaslProperties(String rpcProtection) {
     String saslQop;
     if (rpcProtection.isEmpty()) {

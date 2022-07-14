@@ -34,6 +34,7 @@ public class ServerTooBusyException extends DoNotRetryIOException {
   }
 
   @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public ServerTooBusyException(InetSocketAddress address, long count) {
     super("Busy Server! " + count + " concurrent RPCs against " + address);
   }

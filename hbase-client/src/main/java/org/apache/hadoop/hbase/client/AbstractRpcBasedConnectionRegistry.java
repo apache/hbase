@@ -133,10 +133,8 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
    * For describing the actual asynchronous rpc call.
    * <p/>
    * Typically, you can use lambda expression to implement this interface as
-   *
-   * <pre>
-   * (c, s, d) -> s.xxx(c, your request here, d)
-   * </pre>
+   * <p>
+   * {@code (c, s, d) -> s.xxx(c, your request here, d) }
    */
   @FunctionalInterface
   protected interface Callable<T> {

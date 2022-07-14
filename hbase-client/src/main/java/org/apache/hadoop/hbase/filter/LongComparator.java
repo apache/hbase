@@ -53,9 +53,7 @@ public class LongComparator extends ByteArrayComparable {
     return Long.compare(longValue, that);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.LongComparator.Builder builder = ComparatorProtos.LongComparator.newBuilder();
@@ -64,9 +62,9 @@ public class LongComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse the serialized representation of this comparator.
    * @param pbBytes A pb serialized {@link LongComparator} instance
    * @return An instance of {@link LongComparator} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
    * @see #toByteArray
    */
   public static LongComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -80,8 +78,8 @@ public class LongComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other.
    */
   boolean areSerializedFieldsEqual(LongComparator other) {
     if (other == this) return true;

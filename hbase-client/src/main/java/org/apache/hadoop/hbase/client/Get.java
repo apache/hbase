@@ -445,7 +445,7 @@ public class Get extends Query implements Row {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Get)) {
       return false;
     }
     Row other = (Row) obj;

@@ -48,11 +48,14 @@ public abstract class AbstractSaslClientAuthenticationProvider
   }
 
   @Override
+  @SuppressWarnings("EqualsUsingHashCode")
   public final boolean equals(Object o) {
-    // SaslClientAuthProviders should be unique via their hashCode().
-    if (o instanceof AbstractSaslClientAuthenticationProvider) {
-      return this.hashCode() == o.hashCode();
+    if (this == o) {
+      return true;
     }
-    return false;
+    if (!(o instanceof AbstractSaslClientAuthenticationProvider)) {
+      return false;
+    }
+    return this.hashCode() == ((AbstractSaslClientAuthenticationProvider) o).hashCode();
   }
 }

@@ -112,8 +112,7 @@ public class LogQueryFilter {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof LogQueryFilter)) {
       return false;
     }
 

@@ -54,9 +54,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
     return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryComparator.Builder builder =
@@ -66,9 +64,10 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   }
 
   /**
+   * Parse a serialized representation of this comparator
    * @param pbBytes A pb serialized {@link BinaryComparator} instance
-   * @return An instance of {@link BinaryComparator} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link BinaryComparator} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static BinaryComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
     ComparatorProtos.BinaryComparator proto;
@@ -81,8 +80,8 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {

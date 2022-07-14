@@ -70,28 +70,28 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ClusterMetrics {
 
   /**
-   * @return the HBase version string as reported by the HMaster
+   * Return the HBase version string as reported by the master.
    */
   @Nullable
   String getHBaseVersion();
 
   /**
-   * @return the names of region servers on the dead list
+   * Return the names of region servers on the dead list.
    */
   List<ServerName> getDeadServerNames();
 
   /**
-   * @return the names of region servers on the decommissioned list
+   * Return the names of region servers on the decommissioned list.
    */
   List<ServerName> getDecommissionedServerNames();
 
   /**
-   * @return the names of region servers on the live list
+   * Return the names of region servers on the live list.
    */
   Map<ServerName, ServerMetrics> getLiveServerMetrics();
 
   /**
-   * @return the number of regions deployed on the cluster
+   * Return the number of regions deployed on the cluster.
    */
   default int getRegionCount() {
     return getLiveServerMetrics().entrySet().stream()
@@ -99,7 +99,7 @@ public interface ClusterMetrics {
   }
 
   /**
-   * @return the number of requests since last report
+   * Return the number of requests since the last report.
    */
   default long getRequestCount() {
     return getLiveServerMetrics().entrySet().stream()
@@ -115,7 +115,7 @@ public interface ClusterMetrics {
   ServerName getMasterName();
 
   /**
-   * @return the names of backup masters
+   * Return the names of the backup masters.
    */
   List<ServerName> getBackupMasterNames();
 
@@ -148,7 +148,7 @@ public interface ClusterMetrics {
   List<ServerName> getServersName();
 
   /**
-   * @return the average cluster load
+   * Return the average cluster load.
    */
   default double getAverageLoad() {
     int serverSize = getLiveServerMetrics().size();
@@ -159,7 +159,7 @@ public interface ClusterMetrics {
   }
 
   /**
-   * Provide region states count for given table. e.g howmany regions of give table are
+   * Provide region states count for given table. e.g how many regions of give table are
    * opened/closed/rit etc
    * @return map of table to region states count
    */

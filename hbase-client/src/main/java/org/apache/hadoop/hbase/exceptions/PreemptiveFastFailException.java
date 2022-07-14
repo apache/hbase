@@ -67,37 +67,27 @@ public class PreemptiveFastFailException extends ConnectException {
     this.guaranteedClientSideOnly = guaranteedClientSideOnly;
   }
 
-  /**
-   * @return time of the fist failure
-   */
+  /** Return time of the first failure */
   public long getFirstFailureAt() {
     return timeOfFirstFailureMilliSec;
   }
 
-  /**
-   * @return time of the latest attempt
-   */
+  /** Return time of the latest attempt */
   public long getLastAttemptAt() {
     return timeOfLatestAttemptMilliSec;
   }
 
-  /**
-   * @return failure count
-   */
+  /** Return the failure count */
   public long getFailureCount() {
     return failureCount;
   }
 
-  /**
-   * @return true if operation was attempted by server, false otherwise.
-   */
+  /** Return true if operation was attempted by server, false otherwise. */
   public boolean wasOperationAttemptedByServer() {
     return false;
   }
 
-  /**
-   * @return true if we know no mutation made it to the server, false otherwise.
-   */
+  /** Return true if we know no mutation made it to the server, false otherwise. */
   public boolean isGuaranteedClientSideOnly() {
     return guaranteedClientSideOnly;
   }

@@ -78,84 +78,85 @@ public interface ColumnFamilyDescriptor {
     };
 
   /**
-   * @return The storefile/hfile blocksize for this column family.
+   * Return the storefile/hfile blocksize for this column family.
    */
   int getBlocksize();
 
   /**
-   * @return bloom filter type used for new StoreFiles in ColumnFamily
+   * Return the bloom filter type used for new store files in the column family.
    */
   BloomType getBloomFilterType();
 
   /**
-   * @return Compression type setting.
+   * Return the compression type for compactions.
    */
   Compression.Algorithm getCompactionCompressionType();
 
   /**
-   * @return Compression type setting for major compactions.
+   * Return the compression type for major compactions.
    */
   Compression.Algorithm getMajorCompactionCompressionType();
 
   /**
-   * @return Compression type setting for minor compactions.
+   * Return the compression type for minor compactions.
    */
   Compression.Algorithm getMinorCompactionCompressionType();
 
   /**
-   * @return Compression type setting.
+   * Return the compression type.
    */
   Compression.Algorithm getCompressionType();
 
   /**
-   * @return an unmodifiable map.
+   * Return the column family attributes as an unmodifiable map.
    */
   Map<String, String> getConfiguration();
 
   /**
+   * Get a configuration value by key.
    * @param key the key whose associated value is to be returned
    * @return accessing the configuration value by key.
    */
   String getConfigurationValue(String key);
 
   /**
-   * @return replication factor set for this CF
+   * Return the DFS replication factor.
    */
   short getDFSReplication();
 
   /**
-   * @return the data block encoding algorithm used in block cache and optionally on disk
+   * Return the data block encoding algorithm used in block cache and optionally on disk.
    */
   DataBlockEncoding getDataBlockEncoding();
 
   /**
-   * @return Return the raw crypto key attribute for the family, or null if not set
+   * Return the raw crypto key attribute for the family, or null if not set.
    */
   byte[] getEncryptionKey();
 
   /**
-   * @return Return the encryption algorithm in use by this family
+   * Return the encryption algorithm in use by this family.
    */
   String getEncryptionType();
 
   /**
-   * @return in-memory compaction policy if set for the cf. Returns null if no policy is set for for
-   *         this column family
+   * Return the in-memory compaction policy if set for the cf. Returns null if no policy is set for
+   * for this column family
    */
   MemoryCompactionPolicy getInMemoryCompaction();
 
   /**
-   * @return return the KeepDeletedCells
+   * Return the current KeepDeletedCells settings.
    */
   KeepDeletedCells getKeepDeletedCells();
 
   /**
-   * @return maximum number of versions
+   * Return the maximum number of versions to keep.
    */
   int getMaxVersions();
 
   /**
-   * @return The minimum number of versions to keep.
+   * Return the minimum number of versions to keep.
    */
   int getMinVersions();
 
@@ -172,91 +173,91 @@ public interface ColumnFamilyDescriptor {
   long getMobThreshold();
 
   /**
-   * @return a copy of Name of this column family
+   * Return a copy of the name of this column family
    */
   byte[] getName();
 
   /**
-   * @return Name of this column family
+   * Return the name of this column family as a String.
    */
   String getNameAsString();
 
   /**
-   * @return the scope tag
+   * Return the scope tag.
    */
   int getScope();
 
   /**
-   * Not using {@code enum} here because HDFS is not using {@code enum} for storage policy, see
-   * org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite for more details.
-   * @return Return the storage policy in use by this family
+   * Return the storage policy in use by this family.
    */
   String getStoragePolicy();
 
   /**
-   * @return Time-to-live of cell contents, in seconds.
+   * Return the time-to-live of cell contents, in seconds.
    */
   int getTimeToLive();
 
   /**
+   * Get a configuration value by key.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   Bytes getValue(Bytes key);
 
   /**
+   * Get a configuration value by key.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   String getValue(String key);
 
   /**
+   * Get a configuration value by key.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   byte[] getValue(byte[] key);
 
   /**
-   * It clone all bytes of all elements.
-   * @return All values
+   * Return a map of all configuration values.
    */
   Map<Bytes, Bytes> getValues();
 
   /**
-   * @return True if hfile DATA type blocks should be cached (You cannot disable caching of INDEX
-   *         and BLOOM type blocks).
+   * Return true if hfile DATA type blocks should be cached (You cannot disable caching of INDEX and
+   * BLOOM type blocks).
    */
   boolean isBlockCacheEnabled();
 
   /**
-   * @return true if we should cache bloomfilter blocks on write
+   * Return true if we should cache bloomfilter blocks on write.
    */
   boolean isCacheBloomsOnWrite();
 
   /**
-   * @return true if we should cache data blocks on write
+   * Return true if we should cache data blocks on write.
    */
   boolean isCacheDataOnWrite();
 
   /**
-   * @return true if we should cache index blocks on write
+   * Return true if we should cache index blocks on write.
    */
   boolean isCacheIndexesOnWrite();
 
   /**
-   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
-   *         DataBlockEncoding is been used, this is having no effect.
+   * Return whether KV tags should be compressed along with DataBlockEncoding. When no
+   * DataBlockEncoding is been used, this is having no effect.
    */
   boolean isCompressTags();
 
   /**
-   * @return true if we should evict cached blocks from the blockcache on close
+   * Return true if we should evict cached blocks from the blockcache on close
    */
   boolean isEvictBlocksOnClose();
 
   /**
-   * @return True if we are to favor keeping all values for this column family in the HRegionServer
-   *         cache.
+   * Return true if we are to favor keeping all values for this column family in the HRegionServer
+   * cache.
    */
   boolean isInMemory();
 
@@ -267,12 +268,12 @@ public interface ColumnFamilyDescriptor {
   boolean isMobEnabled();
 
   /**
-   * @return true if we should prefetch blocks into the blockcache on open
+   * Return true if we should prefetch blocks into the blockcache on open
    */
   boolean isPrefetchBlocksOnOpen();
 
   /**
-   * @return Column family descriptor with only the customized attributes.
+   * Return the column family descriptor with only the customized attributes.
    */
   String toStringCustomizedValues();
 

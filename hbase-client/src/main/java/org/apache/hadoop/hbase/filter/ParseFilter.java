@@ -109,6 +109,7 @@ public class ParseFilter {
    * @param filterStringAsByteArray filter string given by the user
    * @return filter object we constructed
    */
+  @SuppressWarnings("JdkObsolete")
   public Filter parseFilterString(byte[] filterStringAsByteArray) throws CharacterCodingException {
     // stack for the operators and parenthesis
     Stack<ByteBuffer> operatorStack = new Stack<>();
@@ -156,7 +157,7 @@ public class ParseFilter {
           operatorStack.pop();
           continue;
         }
-        while (!(argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER))) {
+        while (!argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER)) {
           filterStack.push(popArguments(operatorStack, filterStack));
           if (operatorStack.empty()) {
             throw new IllegalArgumentException("Mismatched parenthesis");
@@ -364,10 +365,11 @@ public class ParseFilter {
    * @param filterStack   the stack containing the filters
    * @param operator      the operator found while parsing the filterString
    */
+  @SuppressWarnings("JdkObsolete")
   public void reduce(Stack<ByteBuffer> operatorStack, Stack<Filter> filterStack,
     ByteBuffer operator) {
     while (
-      !operatorStack.empty() && !(ParseConstants.LPAREN_BUFFER.equals(operatorStack.peek()))
+      !operatorStack.empty() && !ParseConstants.LPAREN_BUFFER.equals(operatorStack.peek())
         && hasHigherPriority(operatorStack.peek(), operator)
     ) {
       filterStack.push(popArguments(operatorStack, filterStack));
@@ -382,6 +384,7 @@ public class ParseFilter {
    * @param filterStack   the stack containing the filters
    * @return the evaluated filter
    */
+  @SuppressWarnings("JdkObsolete")
   public static Filter popArguments(Stack<ByteBuffer> operatorStack, Stack<Filter> filterStack) {
     ByteBuffer argumentOnTopOfStack = operatorStack.peek();
 
@@ -841,9 +844,7 @@ public class ParseFilter {
     return result;
   }
 
-  /**
-   * Return a Set of filters supported by the Filter Language
-   */
+  /** Return a Set of filters supported by the Filter Language */
   public Set<String> getSupportedFilters() {
     return filterHashMap.keySet();
   }

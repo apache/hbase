@@ -59,6 +59,7 @@ public final class ClientMetaTableAccessor {
   }
 
   @InterfaceAudience.Private
+  @SuppressWarnings("ImmutableEnumChecker")
   public enum QueryType {
     ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
     REGION(HConstants.CATALOG_FAMILY),
@@ -101,8 +102,7 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation from meta for the given region n * @param regionName region we're
-   * looking for
+   * Returns the HRegionLocation from meta for the given region we're looking for
    * @return HRegionLocation for the given region
    */
   public static CompletableFuture<Optional<HRegionLocation>>
@@ -127,8 +127,7 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Returns the HRegionLocation from meta for the given encoded region name n * @param
-   * encodedRegionName region we're looking for
+   * Returns the HRegionLocation from meta for the given encoded region name we're looking for
    * @return HRegionLocation for the given region
    */
   public static CompletableFuture<Optional<HRegionLocation>>
@@ -167,8 +166,8 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Used to get all region locations for the specific table. n * @param tableName table we're
-   * looking for, can be null for getting all regions
+   * Used to get all region locations for the specific table we're looking for. Can be null for
+   * getting all regions.
    * @return the list of region locations. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
@@ -191,9 +190,8 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Used to get table regions' info and server. n * @param tableName table we're looking for, can
-   * be null for getting all regions
-   * @param excludeOfflinedSplitParents don't return split parents
+   * Used to get table regions' info and server for the table we're looking for. Can be null for
+   * getting all regions.
    * @return the list of regioninfos and server. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
@@ -220,24 +218,12 @@ public final class ClientMetaTableAccessor {
     return future;
   }
 
-  /**
-   * Performs a scan of META table for given table. n * @param tableName table withing we scan
-   * @param type    scanned part of meta
-   * @param visitor Visitor invoked against each row
-   */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     TableName tableName, QueryType type, final Visitor visitor) {
     return scanMeta(metaTable, getTableStartRowForMeta(tableName, type),
       getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, visitor);
   }
 
-  /**
-   * Performs a scan of META table for given table. n * @param startRow Where to start the scan
-   * @param stopRow Where to stop the scan
-   * @param type    scanned part of meta
-   * @param maxRows maximum rows to return
-   * @param visitor Visitor invoked against each row
-   */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
@@ -383,7 +369,7 @@ public final class ClientMetaTableAccessor {
     abstract void add(Result r);
 
     /**
-     * @return Collected results; wait till visits complete to collect all possible results
+     * Return collected results; wait till visits complete to collect all possible results
      */
     List<T> getResults() {
       return this.results;
@@ -468,6 +454,7 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
+   * Determine the start row for scanning META according to query type
    * @param tableName table we're working with
    * @return start row for scanning META according to query type
    */
@@ -493,6 +480,7 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
+   * Determine the stop row for scanning META according to query type
    * @param tableName table we're working with
    * @return stop row for scanning META according to query type
    */

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -65,23 +64,17 @@ public class FirstKeyOnlyFilter extends FilterBase {
     return new FirstKeyOnlyFilter();
   }
 
-  /**
-   * @return true if first KV has been found.
-   */
+  /** Return true if first KV has been found. */
   protected boolean hasFoundKV() {
     return this.foundKV;
   }
 
-  /**
-   * @param value update {@link #foundKV} flag with value.
-   */
+  /** Update {@link #foundKV} flag with value. */
   protected void setFoundKV(boolean value) {
     this.foundKV = value;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FirstKeyOnlyFilter.Builder builder = FilterProtos.FirstKeyOnlyFilter.newBuilder();
@@ -89,9 +82,10 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
+   * Parses a serialized representation of the filter
    * @param pbBytes A pb serialized {@link FirstKeyOnlyFilter} instance
    * @return An instance of {@link FirstKeyOnlyFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FirstKeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -106,25 +100,27 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FirstKeyOnlyFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FirstKeyOnlyFilter)) {
+      return false;
+    }
     return true;
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(foundKV);
+    return Boolean.hashCode(foundKV);
   }
 }

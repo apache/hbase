@@ -26,15 +26,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class InvalidRowFilterException extends RuntimeException {
   private static final long serialVersionUID = 2667894046345657865L;
 
-  /** constructor */
   public InvalidRowFilterException() {
     super();
   }
 
-  /**
-   * constructor
-   * @param s message
-   */
   public InvalidRowFilterException(String s) {
     super(s);
   }

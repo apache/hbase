@@ -90,8 +90,8 @@ public interface RpcClient extends Closeable {
   void close();
 
   /**
-   * @return true when this client uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
-   *         supports cell blocks.
+   * Returns true when this client uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   * supports cell blocks.
    */
   boolean hasCellBlockSupport();
 }

@@ -31,103 +31,84 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface ServerMetrics {
 
+  /** Return the server name **/
   ServerName getServerName();
 
-  /**
-   * @return the version number of a regionserver.
-   */
+  /** Return the version number of the regionserver. */
   default int getVersionNumber() {
     return 0;
   }
 
-  /**
-   * @return the string type version of a regionserver.
-   */
+  /** Return the string formatted version of the regionserver. */
   default String getVersion() {
     return "0.0.0";
   }
 
-  /**
-   * @return the number of requests per second.
-   */
+  /** Return the number of requests per second. */
   long getRequestCountPerSecond();
 
-  /**
-   * @return total Number of requests from the start of the region server.
-   */
+  /** Return the total number of requests over the lifetime of the region server. */
   long getRequestCount();
 
-  /**
-   * @return total Number of read requests from the start of the region server.
-   */
+  /** Return the total number of read requests over the lifetime of the region server. */
   long getReadRequestsCount();
 
-  /**
-   * @return total Number of write requests from the start of the region server.
-   */
+  /** Return the total number of write requests over the lifetime of the region server. */
   long getWriteRequestsCount();
 
-  /**
-   * @return the amount of used heap
-   */
+  /** Return the amount of used heap */
   Size getUsedHeapSize();
 
-  /**
-   * @return the maximum allowable size of the heap
-   */
+  /** Return the maximum allowable size of the heap */
   Size getMaxHeapSize();
 
+  /** Return the info server port. */
   int getInfoServerPort();
 
   /**
-   * Call directly from client such as hbase shell
-   * @return the list of ReplicationLoadSource
+   * Return the list of replication load sources.
+   * <p>
+   * Used by clients such as the hbase shell
    */
   List<ReplicationLoadSource> getReplicationLoadSourceList();
 
   /**
-   * Call directly from client such as hbase shell
-   * @return a map of ReplicationLoadSource list per peer id
+   * Return the map of replication load sources as a list list per peer id.
+   * <p>
+   * Used by clients such as the hbase shell
    */
   Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap();
 
   /**
-   * Call directly from client such as hbase shell n
+   * return the replication load sink.
+   * <p>
+   * Used by clients such as the hbase shell
    */
   @Nullable
   ReplicationLoadSink getReplicationLoadSink();
 
-  /**
-   * @return region load metrics
-   */
+  /** Return the region load metrics */
   Map<byte[], RegionMetrics> getRegionMetrics();
 
   /**
-   * @return metrics per user
+   * Return the region metrics per user
    */
   Map<byte[], UserMetrics> getUserMetrics();
 
-  /**
-   * Return the RegionServer-level and Region-level coprocessors
-   * @return string set of loaded RegionServer-level and Region-level coprocessors
-   */
+  /** Return the combined list of RegionServer-level and Region-level coprocessors. */
   Set<String> getCoprocessorNames();
 
-  /**
-   * @return the timestamp (server side) of generating this metrics
-   */
+  /** Return the timestamp (server side) when metrics were last collected. */
   long getReportTimestamp();
 
-  /**
-   * @return the last timestamp (server side) of generating this metrics
-   */
+  /** Return the last timestamp (server side) when metrics were last collected. */
   long getLastReportTimestamp();
 
   /**
-   * Called directly from clients such as the hbase shell
-   * @return the active monitored tasks
+   * Return the list of active monitored tasks.
+   * <p>
+   * Used by clients such as the hbase shell
    */
   @Nullable
   List<ServerTask> getTasks();
-
 }

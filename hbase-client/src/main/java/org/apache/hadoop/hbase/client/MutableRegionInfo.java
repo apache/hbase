@@ -126,22 +126,20 @@ class MutableRegionInfo implements RegionInfo {
     this.encodedNameAsBytes = Bytes.toBytes(this.encodedName);
   }
 
-  /**
-   * @return Return a short, printable name for this region (usually encoded name) for us logging.
-   */
+  /** Return a short, printable name for this region (usually encoded name) for us logging. */
   @Override
   public String getShortNameToLog() {
     return RegionInfo.prettyPrint(this.getEncodedName());
   }
 
-  /** @return the regionId */
+  /** Return the region id */
   @Override
   public long getRegionId() {
     return regionId;
   }
 
   /**
-   * @return the regionName as an array of bytes.
+   * Return the regionName as an array of bytes.
    * @see #getRegionNameAsString()
    */
   @Override
@@ -150,14 +148,14 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * @return Region name as a String for use in logging, etc.
+   * Return the region name as a String for use in logging, etc.
    */
   @Override
   public String getRegionNameAsString() {
     return RegionInfo.getRegionNameAsString(this, this.regionName);
   }
 
-  /** @return the encoded region name */
+  /** Return the encoded region name */
   @Override
   public String getEncodedName() {
     return this.encodedName;
@@ -168,28 +166,26 @@ class MutableRegionInfo implements RegionInfo {
     return this.encodedNameAsBytes;
   }
 
-  /** @return the startKey */
+  /** Return the start key */
   @Override
   public byte[] getStartKey() {
     return startKey;
   }
 
-  /** @return the endKey */
+  /** Return the end key */
   @Override
   public byte[] getEndKey() {
     return endKey;
   }
 
-  /**
-   * Get current table name of the region n
-   */
+  /** Return the table name of the region */
   @Override
   public TableName getTable() {
     return this.tableName;
   }
 
   /**
-   * Returns true if the given inclusive range of rows is fully contained by this region. For
+   * Return true if the given inclusive range of rows is fully contained by this region. For
    * example, if the region is foo,a,g and this is passed ["b","c"] or ["a","c"] it will return
    * true, but if this is passed ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
@@ -208,9 +204,7 @@ class MutableRegionInfo implements RegionInfo {
     return firstKeyInRange && lastKeyInRange;
   }
 
-  /**
-   * Return true if the given row falls in this region.
-   */
+  /** Return true if the given row falls in this region. */
   @Override
   public boolean containsRow(byte[] row) {
     CellComparator cellComparator = CellComparatorImpl.getCellComparator(tableName);
@@ -219,30 +213,26 @@ class MutableRegionInfo implements RegionInfo {
         || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
-  /** @return true if this region is a meta region */
+  /** Return true if this region is a meta region */
   @Override
   public boolean isMetaRegion() {
     return tableName.equals(TableName.META_TABLE_NAME);
   }
 
-  /**
-   * @return True if has been split and has daughters.
-   */
+  /** Return true if has been split and has daughters. */
   @Override
   public boolean isSplit() {
     return this.split;
   }
 
-  /**
-   * @param split set split status n
-   */
+  /** Set set split status */
   public MutableRegionInfo setSplit(boolean split) {
     this.split = split;
     return this;
   }
 
   /**
-   * @return True if this region is offline.
+   * Return true if this region is offline.
    * @deprecated since 3.0.0 and will be removed in 4.0.0
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
@@ -255,7 +245,7 @@ class MutableRegionInfo implements RegionInfo {
   /**
    * The parent of a region split is offline while split daughters hold references to the parent.
    * Offlined regions are closed.
-   * @param offLine Set online/offline status. n
+   * @param offLine Set online/offline status.
    */
   public MutableRegionInfo setOffline(boolean offLine) {
     this.offLine = offLine;
@@ -263,7 +253,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * @return True if this is a split parent region.
+   * Return true if this is a split parent region.
    * @deprecated since 3.0.0 and will be removed in 4.0.0, Use {@link #isSplit()} instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
@@ -279,18 +269,12 @@ class MutableRegionInfo implements RegionInfo {
     return true;
   }
 
-  /**
-   * Returns the region replica id
-   * @return returns region replica id
-   */
+  /** Return the region replica id */
   @Override
   public int getReplicaId() {
     return replicaId;
   }
 
-  /**
-   * @see Object#toString()
-   */
   @Override
   public String toString() {
     return "{ENCODED => " + getEncodedName() + ", " + HConstants.NAME + " => '"
@@ -300,9 +284,6 @@ class MutableRegionInfo implements RegionInfo {
       + ((replicaId > 0) ? ", REPLICA_ID => " + replicaId : "") + "}";
   }
 
-  /**
-   * @see Object#equals(Object)
-   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -317,9 +298,6 @@ class MutableRegionInfo implements RegionInfo {
     return compareTo((RegionInfo) o) == 0;
   }
 
-  /**
-   * @see Object#hashCode()
-   */
   @Override
   public int hashCode() {
     return this.hashCode;

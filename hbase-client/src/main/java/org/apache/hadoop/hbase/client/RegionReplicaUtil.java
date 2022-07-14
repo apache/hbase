@@ -51,7 +51,7 @@ public class RegionReplicaUtil {
   /**
    * Returns the RegionInfo for the given replicaId. RegionInfo's correspond to a range of a table,
    * but more than one "instance" of the same range can be deployed which are differentiated by the
-   * replicaId. n * @param replicaId the replicaId to use
+   * replicaId.
    * @return an RegionInfo object corresponding to the same range (table, start and end key), but
    *         for the given replicaId.
    */
@@ -73,19 +73,17 @@ public class RegionReplicaUtil {
     return getRegionInfoForReplica(regionInfo, DEFAULT_REPLICA_ID);
   }
 
-  /** @return true if this replicaId corresponds to default replica for the region */
+  /** Return true if this replicaId corresponds to default replica for the region */
   public static boolean isDefaultReplica(int replicaId) {
     return DEFAULT_REPLICA_ID == replicaId;
   }
 
-  /** @return true if this region is a default replica for the region */
+  /** Return true if this region is a default replica for the region */
   public static boolean isDefaultReplica(RegionInfo hri) {
     return hri.getReplicaId() == DEFAULT_REPLICA_ID;
   }
 
-  /**
-   * Removes the non-default replicas from the passed regions collection n
-   */
+  /** Removes the non-default replicas from the passed regions collection */
   public static void removeNonDefaultRegions(Collection<RegionInfo> regions) {
     Iterator<RegionInfo> iterator = regions.iterator();
     while (iterator.hasNext()) {
@@ -149,7 +147,7 @@ public class RegionReplicaUtil {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }
-    List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
+    List<RegionInfo> hRegionInfos = new ArrayList<>(newReplicaCount * regions.size());
     for (RegionInfo ri : regions) {
       if (
         RegionReplicaUtil.isDefaultReplica(ri)

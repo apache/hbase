@@ -51,6 +51,7 @@ public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHa
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
     // read the ConnectionHeaderResponse from server
     int len = msg.readInt();
@@ -72,6 +73,7 @@ public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHa
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void handlerAdded(ChannelHandlerContext ctx) {
     try {
       // send the connection header to server first

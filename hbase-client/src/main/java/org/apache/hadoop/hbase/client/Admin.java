@@ -111,12 +111,11 @@ public interface Admin extends Abortable, Closeable {
   @Override
   boolean isAborted();
 
-  /**
-   * @return Connection used by this object.
-   */
+  /** Return the connection used by this object. */
   Connection getConnection();
 
   /**
+   * Return true if the table already exists.
    * @param tableName Table to check.
    * @return <code>true</code> if table exists already.
    * @throws IOException if a remote or network exception occurs
@@ -189,7 +188,7 @@ public interface Admin extends Abortable, Closeable {
    * Get a table descriptor.
    * @param tableName as a {@link TableName}
    * @return the tableDescriptor
-   * @throws org.apache.hadoop.hbase.TableNotFoundException
+   * @throws org.apache.hadoop.hbase.TableNotFoundException if the table is not found
    * @throws IOException                                    if a remote or network exception occurs
    */
   TableDescriptor getDescriptor(TableName tableName) throws TableNotFoundException, IOException;
@@ -383,20 +382,23 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Return true if the table is online
    * @param tableName name of table to check
-   * @return <code>true</code> if table is on-line
+   * @return <code>true</code> if table is online
    * @throws IOException if a remote or network exception occurs
    */
   boolean isTableEnabled(TableName tableName) throws IOException;
 
   /**
+   * Return true if the table is offline
    * @param tableName name of table to check
-   * @return <code>true</code> if table is off-line
+   * @return <code>true</code> if table is offline
    * @throws IOException if a remote or network exception occurs
    */
   boolean isTableDisabled(TableName tableName) throws IOException;
 
   /**
+   * Return true if all regions of the table are available
    * @param tableName name of table to check
    * @return <code>true</code> if all regions of the table are available
    * @throws IOException if a remote or network exception occurs
@@ -1102,7 +1104,7 @@ public interface Admin extends Abortable, Closeable {
   ClusterMetrics getClusterMetrics(EnumSet<Option> options) throws IOException;
 
   /**
-   * @return current master server name
+   * Return the current master server name
    * @throws IOException if a remote or network exception occurs
    */
   default ServerName getMaster() throws IOException {
@@ -1110,7 +1112,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * @return current backup master list
+   * Return the current backup master list
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getBackupMasters() throws IOException {
@@ -1118,7 +1120,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * @return current live region servers list
+   * Return the current live region servers list
    * @throws IOException if a remote or network exception occurs
    */
   default Collection<ServerName> getRegionServers() throws IOException {
@@ -1162,9 +1164,7 @@ public interface Admin extends Abortable, Closeable {
   List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName)
     throws IOException;
 
-  /**
-   * @return Configuration used by the instance.
-   */
+  /** Return the configuration used by the instance. */
   Configuration getConfiguration();
 
   /**
@@ -1228,7 +1228,7 @@ public interface Admin extends Abortable, Closeable {
    * Get a namespace descriptor by name.
    * @param name name of namespace descriptor
    * @return A descriptor
-   * @throws org.apache.hadoop.hbase.NamespaceNotFoundException
+   * @throws org.apache.hadoop.hbase.NamespaceNotFoundException if the namespace is not found
    * @throws IOException                                        if a remote or network exception
    *                                                            occurs
    */
@@ -1342,7 +1342,8 @@ public interface Admin extends Abortable, Closeable {
    * @param serverName The servername of the regionserver.
    * @throws IOException                                                      if a remote or network
    *                                                                          exception occurs
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException if we failed to close
+   *                                                                          the write ahead log
    */
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 

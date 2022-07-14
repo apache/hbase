@@ -143,8 +143,6 @@ public class TableDescriptorBuilder {
   private static final Bytes REGION_MEMSTORE_REPLICATION_KEY =
     new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
-  private static final Bytes REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY =
-    new Bytes(Bytes.toBytes(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY));
   /**
    * Used by shell/rest interface to access this metadata attribute which denotes if the table
    * should be treated by region normalizer.
@@ -303,6 +301,7 @@ public class TableDescriptorBuilder {
   private final ModifyableTableDescriptor desc;
 
   /**
+   * Serialize the descriptor to a byte array
    * @param desc The table descriptor to serialize
    * @return This instance serialized with pb with pb magic prefix
    */
@@ -317,7 +316,7 @@ public class TableDescriptorBuilder {
    * The input should be created by {@link #toByteArray}.
    * @param pbBytes A pb serialized TableDescriptor instance with pb magic prefix
    * @return This instance serialized with pb with pb magic prefix
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    */
   public static TableDescriptor parseFrom(byte[] pbBytes) throws DeserializationException {
     return ModifyableTableDescriptor.parseFrom(pbBytes);
@@ -1083,9 +1082,7 @@ public class TableDescriptorBuilder {
       return s.toString();
     }
 
-    /**
-     * @return map of all table attributes formatted into string.
-     */
+    /** Return a map of all table attributes formatted as strings. */
     public String toStringTableAttributes() {
       return getValues(true).toString();
     }

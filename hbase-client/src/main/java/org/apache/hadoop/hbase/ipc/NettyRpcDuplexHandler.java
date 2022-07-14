@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
@@ -76,6 +75,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
 
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void writeRequest(ChannelHandlerContext ctx, Call call, ChannelPromise promise)
     throws IOException {
     id2Call.put(call.id, call);
@@ -114,6 +114,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
     throws Exception {
     if (msg instanceof Call) {
@@ -168,7 +169,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     }
     Message value;
     if (call.responseDefaultType != null) {
-      Builder builder = call.responseDefaultType.newBuilderForType();
+      Message.Builder builder = call.responseDefaultType.newBuilderForType();
       builder.mergeDelimitedFrom(in);
       value = builder.build();
     } else {
@@ -202,7 +203,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     }
   }
 
-  private void cleanupCalls(ChannelHandlerContext ctx, IOException error) {
+  private void cleanupCalls(IOException error) {
     for (Call call : id2Call.values()) {
       call.setException(error);
     }
@@ -212,7 +213,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (!id2Call.isEmpty()) {
-      cleanupCalls(ctx, new ConnectionClosedException("Connection closed"));
+      cleanupCalls(new ConnectionClosedException("Connection closed"));
     }
     conn.shutdown();
     ctx.fireChannelInactive();
@@ -221,7 +222,7 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     if (!id2Call.isEmpty()) {
-      cleanupCalls(ctx, IPCUtil.toIOE(cause));
+      cleanupCalls(IPCUtil.toIOE(cause));
     }
     conn.shutdown();
   }

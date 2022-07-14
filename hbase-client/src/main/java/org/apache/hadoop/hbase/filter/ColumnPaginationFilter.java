@@ -78,23 +78,14 @@ public class ColumnPaginationFilter extends FilterBase {
     this.columnOffset = columnOffset;
   }
 
-  /**
-   * n
-   */
   public int getLimit() {
     return limit;
   }
 
-  /**
-   * n
-   */
   public int getOffset() {
     return offset;
   }
 
-  /**
-   * n
-   */
   public byte[] getColumnOffset() {
     return columnOffset;
   }
@@ -151,9 +142,7 @@ public class ColumnPaginationFilter extends FilterBase {
     return new ColumnPaginationFilter(limit, offset);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnPaginationFilter.Builder builder =
@@ -169,9 +158,10 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link ColumnPaginationFilter} instance
-   * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ColumnPaginationFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -188,15 +178,17 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ColumnPaginationFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ColumnPaginationFilter)) {
+      return false;
+    }
     ColumnPaginationFilter other = (ColumnPaginationFilter) o;
     if (this.columnOffset != null) {
       return this.getLimit() == other.getLimit()
@@ -216,7 +208,7 @@ public class ColumnPaginationFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

@@ -35,14 +35,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * the actual weights, and we want to filter out the entire row if any of its weights are zero. In
  * this case, we want to prevent rows from being emitted if a single key is filtered. Combine this
  * filter with a {@link ValueFilter}:
- * </p>
- * <p>
- * <code>
+ *
+ * <pre>
  * scan.setFilter(new SkipFilter(new ValueFilter(CompareOp.NOT_EQUAL,
  *     new BinaryComparator(Bytes.toBytes(0))));
- * </code> Any row which contained a column whose value was 0 will be filtered out (since
- * ValueFilter will not pass that Cell). Without this filter, the other non-zero valued columns in
- * the row would still be emitted.
+ * </pre>
+ *
+ * Any row which contained a column whose value was 0 will be filtered out (since ValueFilter will
+ * not pass that Cell). Without this filter, the other non-zero valued columns in the row would
+ * still be emitted.
  * </p>
  */
 @InterfaceAudience.Public
@@ -96,9 +97,7 @@ public class SkipFilter extends FilterBase {
     return true;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.SkipFilter.Builder builder = FilterProtos.SkipFilter.newBuilder();
@@ -107,8 +106,10 @@ public class SkipFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of the filter.
    * @param pbBytes A pb serialized {@link SkipFilter} instance
-   * @return An instance of {@link SkipFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link SkipFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static SkipFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.SkipFilter proto;
@@ -125,15 +126,17 @@ public class SkipFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof SkipFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof SkipFilter)) {
+      return false;
+    }
     SkipFilter other = (SkipFilter) o;
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
@@ -150,7 +153,7 @@ public class SkipFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

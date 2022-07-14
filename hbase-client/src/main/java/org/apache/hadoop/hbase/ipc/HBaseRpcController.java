@@ -50,19 +50,19 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   void setCellScanner(CellScanner cellScanner);
 
   /**
+   * Set a priority for the request.
    * @param priority Priority for this request; should fall roughly in the range
    *                 {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
    */
   void setPriority(int priority);
 
   /**
+   * Set a priority for the request based on a table name.
    * @param tn Set priority based off the table we are going against.
    */
   void setPriority(final TableName tn);
 
-  /**
-   * @return The priority of this request
-   */
+  /** Return the priority of this request */
   int getPriority();
 
   int getCallTimeout();
@@ -83,6 +83,8 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   IOException getFailed();
 
   /**
+   * Indicate the call has finished.
+   * <p>
    * <b>IMPORTANT:</b> always call this method if the call finished without any exception to tell
    * the {@code HBaseRpcController} that we are done.
    */
@@ -110,16 +112,12 @@ public interface HBaseRpcController extends RpcController, CellScannable {
    */
   void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action) throws IOException;
 
-  /**
-   * @return True if this Controller is carrying the RPC target Region's RegionInfo.
-   */
+  /** Return true if this Controller is carrying the RPC target Region's RegionInfo. */
   default boolean hasRegionInfo() {
     return false;
   }
 
-  /**
-   * @return Target Region's RegionInfo or null if not available or pertinent.
-   */
+  /** Return the target Region's RegionInfo or null if not available or pertinent. */
   default RegionInfo getRegionInfo() {
     return null;
   }

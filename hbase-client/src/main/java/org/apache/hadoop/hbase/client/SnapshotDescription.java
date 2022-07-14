@@ -28,6 +28,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
  * The POJO equivalent of HBaseProtos.SnapshotDescription
  */
 @InterfaceAudience.Public
+@SuppressWarnings("InlineMeSuggester")
 public class SnapshotDescription {
   private final String name;
   private final TableName table;

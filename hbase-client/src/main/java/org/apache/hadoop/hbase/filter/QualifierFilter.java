@@ -67,9 +67,7 @@ public class QualifierFilter extends CompareFilter {
     return new QualifierFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.QualifierFilter.Builder builder = FilterProtos.QualifierFilter.newBuilder();
@@ -78,9 +76,10 @@ public class QualifierFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of the filter.
    * @param pbBytes A pb serialized {@link QualifierFilter} instance
    * @return An instance of {@link QualifierFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static QualifierFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -104,20 +103,23 @@ public class QualifierFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof QualifierFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof QualifierFilter)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(o);
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

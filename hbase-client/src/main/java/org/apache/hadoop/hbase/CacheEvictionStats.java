@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -28,7 +29,7 @@ public final class CacheEvictionStats {
 
   private final long evictedBlocks;
   private final long maxCacheSize;
-  private final Map<byte[], Throwable> exceptions;
+  private final IdentityHashMap<byte[], Throwable> exceptions;
 
   CacheEvictionStats(CacheEvictionStatsBuilder builder) {
     this.evictedBlocks = builder.evictedBlocks;
@@ -44,6 +45,7 @@ public final class CacheEvictionStats {
     return maxCacheSize;
   }
 
+  @SuppressWarnings("IdentityHashMapUsage")
   public Map<byte[], Throwable> getExceptions() {
     return Collections.unmodifiableMap(exceptions);
   }

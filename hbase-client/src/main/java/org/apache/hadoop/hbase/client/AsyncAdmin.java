@@ -66,6 +66,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 public interface AsyncAdmin {
 
   /**
+   * Return if table exists already.
    * @param tableName Table to check.
    * @return True if table exists already. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -73,8 +74,9 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> tableExists(TableName tableName);
 
   /**
-   * List all the userspace tables.
-   * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   * Return a list of TableDescriptors wrapped by a {@link CompletableFuture}. List all the
+   * userspace tables.
+   * @return a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   default CompletableFuture<List<TableDescriptor>> listTableDescriptors() {
     return listTableDescriptors(false);
@@ -83,7 +85,7 @@ public interface AsyncAdmin {
   /**
    * List all the tables.
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableDescriptor>> listTableDescriptors(boolean includeSysTables);
 
@@ -91,7 +93,7 @@ public interface AsyncAdmin {
    * List all the tables matching the given pattern.
    * @param pattern          The compiled regular expression to match against
    * @param includeSysTables False to match only against userspace tables
-   * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableDescriptor>> listTableDescriptors(Pattern pattern,
     boolean includeSysTables);
@@ -99,14 +101,14 @@ public interface AsyncAdmin {
   /**
    * List specific tables including system tables.
    * @param tableNames the table list to match against
-   * @return - returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableDescriptor>> listTableDescriptors(List<TableName> tableNames);
 
   /**
    * Get list of table descriptors by namespace.
    * @param name namespace name
-   * @return returns a list of TableDescriptors wrapped by a {@link CompletableFuture}.
+   * @return a list of TableDescriptors wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name);
 
@@ -137,7 +139,7 @@ public interface AsyncAdmin {
   /**
    * Get list of table names by namespace.
    * @param name namespace name
-   * @return The list of table names in the namespace wrapped by a {@link CompletableFuture}.
+   * @return the list of table names in the namespace wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableName>> listTableNamesByNamespace(String name);
 
@@ -215,20 +217,23 @@ public interface AsyncAdmin {
   CompletableFuture<Void> disableTable(TableName tableName);
 
   /**
+   * Return if the table is online.
    * @param tableName name of table to check
-   * @return true if table is on-line. The return value will be wrapped by a
+   * @return true if the table is online. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isTableEnabled(TableName tableName);
 
   /**
+   * Return true if the table is offline.
    * @param tableName name of table to check
-   * @return true if table is off-line. The return value will be wrapped by a
+   * @return true if the table is offline. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
   CompletableFuture<Boolean> isTableDisabled(TableName tableName);
 
   /**
+   * Return true if all regions of the table are available
    * @param tableName name of table to check
    * @return true if all regions of the table are available. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -591,11 +596,15 @@ public interface AsyncAdmin {
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
   /**
+   * Assign a currently unassigned region. The region will be assigned to a regionserver chosen at
+   * random.
    * @param regionName Encoded or full name of region to assign.
    */
   CompletableFuture<Void> assign(byte[] regionName);
 
   /**
+   * Assign a currently unassigned region. The region will be assigned to a regionserver chosen at
+   * random.
    * @param regionName Encoded or full name of region to unassign.
    */
   CompletableFuture<Void> unassign(byte[] regionName);
@@ -1074,24 +1083,24 @@ public interface AsyncAdmin {
     List<byte[]> encodedRegionNames);
 
   /**
-   * @return cluster status wrapped by {@link CompletableFuture}
+   * Retuyrn the cluster status wrapped by {@link CompletableFuture}
    */
   CompletableFuture<ClusterMetrics> getClusterMetrics();
 
   /**
-   * @return cluster status wrapped by {@link CompletableFuture}
+   * Return the cluster status wrapped by {@link CompletableFuture}
    */
   CompletableFuture<ClusterMetrics> getClusterMetrics(EnumSet<Option> options);
 
   /**
-   * @return current master server name wrapped by {@link CompletableFuture}
+   * Return the current master server name wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<ServerName> getMaster() {
     return getClusterMetrics(EnumSet.of(Option.MASTER)).thenApply(ClusterMetrics::getMasterName);
   }
 
   /**
-   * @return current backup master list wrapped by {@link CompletableFuture}
+   * Return the current backup master list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getBackupMasters() {
     return getClusterMetrics(EnumSet.of(Option.BACKUP_MASTERS))
@@ -1099,13 +1108,17 @@ public interface AsyncAdmin {
   }
 
   /**
-   * @return current live region servers list wrapped by {@link CompletableFuture}
+   * Return the current live region servers list wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
       .thenApply(ClusterMetrics::getServersName);
   }
 
+  /**
+   * Return the current live region servers list, optionally excluding decommissioned servers,
+   * wrapped by {@link CompletableFuture}
+   */
   default CompletableFuture<Collection<ServerName>>
     getRegionServers(boolean excludeDecommissionedRS) {
     CompletableFuture<Collection<ServerName>> future = new CompletableFuture<>();
@@ -1133,7 +1146,7 @@ public interface AsyncAdmin {
   }
 
   /**
-   * @return a list of master coprocessors wrapped by {@link CompletableFuture}
+   * Return the list of master coprocessors wrapped by {@link CompletableFuture}
    */
   default CompletableFuture<List<String>> getMasterCoprocessorNames() {
     return getClusterMetrics(EnumSet.of(Option.MASTER_COPROCESSORS))
@@ -1195,19 +1208,19 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
-   * Clear compacting queues on a region server. n * @param queues the set of queue name
+   * Clear compacting queues on a region server.
    */
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver. n * @return a
-   * list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region server wrapped by
+   * {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table. nn
-   * * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region server for a table
+   * wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
     TableName tableName);
@@ -1268,8 +1281,8 @@ public interface AsyncAdmin {
   CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(byte[] regionName);
 
   /**
-   * @return the list of supported security capabilities. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * Return the list of supported security capabilities. The return value will be wrapped by a
+   * {@link CompletableFuture}.
    */
   CompletableFuture<List<SecurityCapability>> getSecurityCapabilities();
 
@@ -1411,13 +1424,8 @@ public interface AsyncAdmin {
    * <p>
    * The {@code stubMaker} is just a delegation to the {@code newStub} call. Usually it is only a
    * one line lambda expression, like:
-   *
-   * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
-   * </pre>
-   *
+   * <p>
+   * {@code channel -> xxxService.newStub(channel) }
    * @param stubMaker a delegation to the actual {@code newStub} call.
    * @param callable  a delegation to the actual protobuf rpc call. See the comment of
    *                  {@link ServiceCaller} for more details.
@@ -1434,13 +1442,8 @@ public interface AsyncAdmin {
    * <p>
    * The {@code stubMaker} is just a delegation to the {@code newStub} call. Usually it is only a
    * one line lambda expression, like:
-   *
-   * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
-   * </pre>
-   *
+   * <p>
+   * {@code channel -> xxxService.newStub(channel) }
    * @param stubMaker  a delegation to the actual {@code newStub} call.
    * @param callable   a delegation to the actual protobuf rpc call. See the comment of
    *                   {@link ServiceCaller} for more details.
@@ -1647,7 +1650,6 @@ public interface AsyncAdmin {
   /**
    * Creates a new RegionServer group with the given name
    * @param groupName the name of the group
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> addRSGroup(String groupName);
 
@@ -1655,34 +1657,29 @@ public interface AsyncAdmin {
    * Get group info for the given group name
    * @param groupName the group name
    * @return group info
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<RSGroupInfo> getRSGroup(String groupName);
 
   /**
    * Get group info for the given hostPort
    * @param hostPort HostPort to get RSGroupInfo for
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort);
 
   /**
    * Get group info for the given table
    * @param tableName table name to get RSGroupInfo for
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<RSGroupInfo> getRSGroup(TableName tableName);
 
   /**
    * Lists current set of RegionServer groups
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<List<RSGroupInfo>> listRSGroups();
 
   /**
    * Get all tables in this RegionServer group.
    * @param groupName the group name
-   * @throws IOException if a remote or network exception occurs
    * @see #getConfiguredNamespacesAndTablesInRSGroup(String)
    */
   CompletableFuture<List<TableName>> listTablesInRSGroup(String groupName);
@@ -1697,7 +1694,6 @@ public interface AsyncAdmin {
    * in the group 'A', but this method will not return these tables but only the namespace 'nsA',
    * while the {@link #listTablesInRSGroup(String)} will return all these tables.
    * @param groupName the group name
-   * @throws IOException if a remote or network exception occurs
    * @see #listTablesInRSGroup(String)
    */
   CompletableFuture<Pair<List<String>, List<TableName>>>
@@ -1706,7 +1702,6 @@ public interface AsyncAdmin {
   /**
    * Remove RegionServer group associated with the given name
    * @param groupName the group name
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> removeRSGroup(String groupName);
 
@@ -1716,7 +1711,6 @@ public interface AsyncAdmin {
    * servers to join other clusters. So we need to remove these servers from the group. 2.
    * Dead/recovering/live servers will be disallowed.
    * @param servers set of servers to remove
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> removeServersFromRSGroup(Set<Address> servers);
 
@@ -1724,7 +1718,6 @@ public interface AsyncAdmin {
    * Move given set of servers to the specified target RegionServer group
    * @param servers   set of servers to move
    * @param groupName the group to move servers to
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> moveServersToRSGroup(Set<Address> servers, String groupName);
 
@@ -1732,7 +1725,6 @@ public interface AsyncAdmin {
    * Set the RegionServer group for tables
    * @param tables    tables to set group for
    * @param groupName group name for tables
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> setRSGroup(Set<TableName> tables, String groupName);
 
@@ -1740,7 +1732,6 @@ public interface AsyncAdmin {
    * Balance regions in the given RegionServer group
    * @param groupName the group name
    * @return BalanceResponse details about the balancer run
-   * @throws IOException if a remote or network exception occurs
    */
   default CompletableFuture<BalanceResponse> balanceRSGroup(String groupName) {
     return balanceRSGroup(groupName, BalanceRequest.defaultInstance());
@@ -1751,7 +1742,6 @@ public interface AsyncAdmin {
    * @param groupName the group name
    * @param request   options to define how the balancer should run
    * @return BalanceResponse details about the balancer run
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<BalanceResponse> balanceRSGroup(String groupName, BalanceRequest request);
 
@@ -1759,7 +1749,6 @@ public interface AsyncAdmin {
    * Rename rsgroup
    * @param oldName old rsgroup name
    * @param newName new rsgroup name
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> renameRSGroup(String oldName, String newName);
 
@@ -1767,7 +1756,6 @@ public interface AsyncAdmin {
    * Update RSGroup configuration
    * @param groupName     the group name
    * @param configuration new configuration of the group name to be set
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<Void> updateRSGroupConfig(String groupName, Map<String, String> configuration);
 

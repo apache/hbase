@@ -23,10 +23,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest.Builder;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 
 /**
  * A {@link QuotaSettings} implementation for configuring filesystem-use quotas.
@@ -35,7 +33,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 @InterfaceStability.Evolving
 class SpaceLimitSettings extends QuotaSettings {
 
-  private final SpaceLimitRequest proto;
+  private final QuotaProtos.SpaceLimitRequest proto;
 
   SpaceLimitSettings(TableName tableName, long sizeLimit, SpaceViolationPolicy violationPolicy) {
     super(null, Objects.requireNonNull(tableName), null, null);
@@ -65,45 +63,46 @@ class SpaceLimitSettings extends QuotaSettings {
     proto = buildProtoRemoveQuota();
   }
 
-  SpaceLimitSettings(TableName tableName, String namespace, SpaceLimitRequest req) {
+  SpaceLimitSettings(TableName tableName, String namespace, QuotaProtos.SpaceLimitRequest req) {
     super(null, tableName, namespace, null);
     proto = req;
   }
 
   /**
-   * Build a {@link SpaceLimitRequest} protobuf object from the given {@link SpaceQuota}.
+   * Build a {@link QuotaProtos.SpaceLimitRequest} protobuf object from the given
+   * {@link SpaceQuota}.
    * @param protoQuota The preconstructed SpaceQuota protobuf
    * @return A protobuf request to change a space limit quota
    */
-  private SpaceLimitRequest buildProtoFromQuota(SpaceQuota protoQuota) {
-    return SpaceLimitRequest.newBuilder().setQuota(protoQuota).build();
+  private QuotaProtos.SpaceLimitRequest buildProtoFromQuota(QuotaProtos.SpaceQuota protoQuota) {
+    return QuotaProtos.SpaceLimitRequest.newBuilder().setQuota(protoQuota).build();
   }
 
   /**
-   * Builds a {@link SpaceQuota} protobuf object given the arguments.
+   * Builds a {@link QuotaProtos.SpaceQuota} protobuf object given the arguments.
    * @param sizeLimit       The size limit of the quota.
    * @param violationPolicy The action to take when the quota is exceeded.
    * @return The protobuf SpaceQuota representation.
    */
-  private SpaceLimitRequest buildProtoAddQuota(long sizeLimit,
+  private QuotaProtos.SpaceLimitRequest buildProtoAddQuota(long sizeLimit,
     SpaceViolationPolicy violationPolicy) {
-    return buildProtoFromQuota(SpaceQuota.newBuilder().setSoftLimit(sizeLimit)
+    return buildProtoFromQuota(QuotaProtos.SpaceQuota.newBuilder().setSoftLimit(sizeLimit)
       .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(violationPolicy)).build());
   }
 
   /**
-   * Builds a {@link SpaceQuota} protobuf object to remove a quota.
+   * Builds a {@link QuotaProtos.SpaceQuota} protobuf object to remove a quota.
    * @return The protobuf SpaceQuota representation.
    */
-  private SpaceLimitRequest buildProtoRemoveQuota() {
-    return SpaceLimitRequest.newBuilder().setQuota(SpaceQuota.newBuilder().setRemove(true).build())
-      .build();
+  private QuotaProtos.SpaceLimitRequest buildProtoRemoveQuota() {
+    return QuotaProtos.SpaceLimitRequest.newBuilder()
+      .setQuota(QuotaProtos.SpaceQuota.newBuilder().setRemove(true).build()).build();
   }
 
   /**
    * Returns a copy of the internal state of <code>this</code>
    */
-  SpaceLimitRequest getProto() {
+  QuotaProtos.SpaceLimitRequest getProto() {
     return proto.toBuilder().build();
   }
 
@@ -113,7 +112,7 @@ class SpaceLimitSettings extends QuotaSettings {
   }
 
   @Override
-  protected void setupSetQuotaRequest(Builder builder) {
+  protected void setupSetQuotaRequest(MasterProtos.SetQuotaRequest.Builder builder) {
     // TableName/Namespace are serialized in QuotaSettings
     builder.setSpaceLimit(proto);
   }
@@ -203,7 +202,7 @@ class SpaceLimitSettings extends QuotaSettings {
 
       // The message contained the expect SpaceQuota object
       if (settingsToMerge.proto.hasQuota()) {
-        SpaceQuota quotaToMerge = settingsToMerge.proto.getQuota();
+        QuotaProtos.SpaceQuota quotaToMerge = settingsToMerge.proto.getQuota();
         if (quotaToMerge.getRemove()) {
           return settingsToMerge;
         } else {
@@ -216,7 +215,7 @@ class SpaceLimitSettings extends QuotaSettings {
             throw new IllegalArgumentException("Cannot merge " + newSettings + " into " + this);
           }
           // Create a builder from the old settings
-          SpaceQuota.Builder mergedBuilder = this.proto.getQuota().toBuilder();
+          QuotaProtos.SpaceQuota.Builder mergedBuilder = this.proto.getQuota().toBuilder();
           // Build a new SpaceQuotas object from merging in the new settings
           return new SpaceLimitSettings(getTableName(), getNamespace(),
             buildProtoFromQuota(mergedBuilder.mergeFrom(quotaToMerge).build()));

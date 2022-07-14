@@ -75,9 +75,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
     return result;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryComponentComparator.Builder builder =
@@ -88,6 +86,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of this comparator
    * @param pbBytes A pb serialized {@link BinaryComponentComparator} instance
    * @return An instance of {@link BinaryComponentComparator} made from <code>bytes</code>
    * @throws DeserializationException DeserializationException
@@ -105,9 +104,8 @@ public class BinaryComponentComparator extends ByteArrayComparable {
   }
 
   /**
-   * @param other paramemter to compare against
-   * @return true if and only if the fields of the comparator that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {

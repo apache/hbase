@@ -29,11 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public enum IsolationLevel {
 
-  READ_COMMITTED(1),
-  READ_UNCOMMITTED(2);
-
-  IsolationLevel(int value) {
-  }
+  READ_COMMITTED,
+  READ_UNCOMMITTED;
 
   public byte[] toBytes() {
     return new byte[] { toByte() };

@@ -66,6 +66,7 @@ public final class ClientTokenUtil {
    * @return the authentication token instance, wrapped by a {@link CompletableFuture}.
    */
   @InterfaceAudience.Private
+  @SuppressWarnings("FutureReturnValueIgnored")
   public static CompletableFuture<Token<AuthenticationTokenIdentifier>>
     obtainToken(AsyncConnection conn) {
     CompletableFuture<Token<AuthenticationTokenIdentifier>> future = new CompletableFuture<>();

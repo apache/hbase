@@ -29,15 +29,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
 
 /**
  * Utility client for doing access control admin operations.
@@ -67,17 +62,11 @@ public class AccessControlClient {
       .contains(SecurityCapability.CELL_AUTHORIZATION);
   }
 
-  private static BlockingInterface getAccessControlServiceStub(Table ht) throws IOException {
-    CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
-    BlockingInterface protocol = AccessControlProtos.AccessControlService.newBlockingStub(service);
-    return protocol;
-  }
-
   /**
-   * Grants permission on the specified table for the specified user
-   * @param connection The Connection instance to use nnnn * @param mergeExistingPermissions If set
-   *                   to false, later granted permissions will override previous granted
-   *                   permissions. otherwise, it'll merge with previous granted permissions. nn
+   * Grants permission on the specified table for the specified user.
+   * <p>
+   * If mergeExistingPermissions is set to false, later granted permissions will override previous
+   * granted permissions. otherwise, it'll merge with previous granted permissions.
    */
   private static void grant(Connection connection, final TableName tableName, final String userName,
     final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
@@ -90,7 +79,6 @@ public class AccessControlClient {
   /**
    * Grants permission on the specified table for the specified user. If permissions for a specified
    * user exists, later granted permissions will override previous granted permissions.
-   * @param connection The Connection instance to use nnnnnn
    */
   public static void grant(Connection connection, final TableName tableName, final String userName,
     final byte[] family, final byte[] qual, final Permission.Action... actions) throws Throwable {
@@ -98,9 +86,10 @@ public class AccessControlClient {
   }
 
   /**
-   * Grants permission on the specified namespace for the specified user. nnn * @param
-   * mergeExistingPermissions If set to false, later granted permissions will override previous
-   * granted permissions. otherwise, it'll merge with previous granted permissions. nn
+   * Grants permission on the specified namespace for the specified user.
+   * <p>
+   * If mergeExistingPermissions is set to false, later granted permissions will override previous
+   * granted permissions. otherwise, it'll merge with previous granted permissions.
    */
   private static void grant(Connection connection, final String namespace, final String userName,
     boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
@@ -113,7 +102,6 @@ public class AccessControlClient {
    * Grants permission on the specified namespace for the specified user. If permissions on the
    * specified namespace exists, later granted permissions will override previous granted
    * permissions.
-   * @param connection The Connection instance to use nnnn
    */
   public static void grant(Connection connection, final String namespace, final String userName,
     final Permission.Action... actions) throws Throwable {
@@ -121,9 +109,10 @@ public class AccessControlClient {
   }
 
   /**
-   * Grant global permissions for the specified user. nn * @param mergeExistingPermissions If set to
-   * false, later granted permissions will override previous granted permissions. otherwise, it'll
-   * merge with previous granted permissions. nn
+   * Grant global permissions for the specified user.
+   * <p>
+   * If mergeExistingPermissions is set to false, later granted permissions will override previous
+   * granted permissions. otherwise, it'll merge with previous granted permissions.
    */
   private static void grant(Connection connection, final String userName,
     boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
@@ -134,7 +123,7 @@ public class AccessControlClient {
 
   /**
    * Grant global permissions for the specified user. If permissions for the specified user exists,
-   * later granted permissions will override previous granted permissions. nnnn
+   * later granted permissions will override previous granted permissions.
    */
   public static void grant(Connection connection, final String userName,
     final Permission.Action... actions) throws Throwable {
@@ -148,10 +137,7 @@ public class AccessControlClient {
     }
   }
 
-  /**
-   * Revokes the permission on the table
-   * @param connection The Connection instance to use nnnnnn
-   */
+  /** Revokes the permission on the table. */
   public static void revoke(Connection connection, final TableName tableName, final String username,
     final byte[] family, final byte[] qualifier, final Permission.Action... actions)
     throws Throwable {
@@ -159,20 +145,14 @@ public class AccessControlClient {
       .withFamily(family).withQualifier(qualifier).withActions(actions).build()));
   }
 
-  /**
-   * Revokes the permission on the namespace for the specified user.
-   * @param connection The Connection instance to use nnnn
-   */
+  /** Revokes the permission on the namespace for the specified user. */
   public static void revoke(Connection connection, final String namespace, final String userName,
     final Permission.Action... actions) throws Throwable {
     connection.getAdmin().revoke(
       new UserPermission(userName, Permission.newBuilder(namespace).withActions(actions).build()));
   }
 
-  /**
-   * Revoke global permissions for the specified user.
-   * @param connection The Connection instance to use
-   */
+  /** Revoke global permissions for the specified user. */
   public static void revoke(Connection connection, final String userName,
     final Permission.Action... actions) throws Throwable {
     connection.getAdmin()

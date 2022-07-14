@@ -65,44 +65,32 @@ public class ColumnRangeFilter extends FilterBase {
     this.maxColumnInclusive = maxColumnInclusive;
   }
 
-  /**
-   * @return if min column range is inclusive.
-   */
+  /** Return true if min column range is inclusive. */
   public boolean isMinColumnInclusive() {
     return minColumnInclusive;
   }
 
-  /**
-   * @return if max column range is inclusive.
-   */
+  /** Return true if max column range is inclusive. */
   public boolean isMaxColumnInclusive() {
     return maxColumnInclusive;
   }
 
-  /**
-   * @return the min column range for the filter
-   */
+  /** Return the min column range for the filter */
   public byte[] getMinColumn() {
     return this.minColumn;
   }
 
-  /**
-   * @return true if min column is inclusive, false otherwise
-   */
+  /** Return true if min column is inclusive, false otherwise */
   public boolean getMinColumnInclusive() {
     return this.minColumnInclusive;
   }
 
-  /**
-   * @return the max column range for the filter
-   */
+  /** Return the max column range for the filte */
   public byte[] getMaxColumn() {
     return this.maxColumn;
   }
 
-  /**
-   * @return true if max column is inclusive, false otherwise
-   */
+  /** Return true if max column is inclusive, false otherwise */
   public boolean getMaxColumnInclusive() {
     return this.maxColumnInclusive;
   }
@@ -155,9 +143,7 @@ public class ColumnRangeFilter extends FilterBase {
     return new ColumnRangeFilter(minColumn, minColumnInclusive, maxColumn, maxColumnInclusive);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnRangeFilter.Builder builder = FilterProtos.ColumnRangeFilter.newBuilder();
@@ -171,9 +157,10 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link ColumnRangeFilter} instance
-   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ColumnRangeFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnRangeFilter proto;
@@ -189,9 +176,8 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
-   * @param o filter to serialize.
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
@@ -222,7 +208,7 @@ public class ColumnRangeFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

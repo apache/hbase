@@ -73,9 +73,7 @@ public class FamilyFilter extends CompareFilter {
     return new FamilyFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FamilyFilter.Builder builder = FilterProtos.FamilyFilter.newBuilder();
@@ -84,6 +82,7 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of the filter.
    * @param pbBytes A pb serialized {@link FamilyFilter} instance
    * @return An instance of {@link FamilyFilter} made from <code>bytes</code> n * @see #toByteArray
    */
@@ -108,21 +107,24 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FamilyFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FamilyFilter)) {
+      return false;
+    }
     FamilyFilter other = (FamilyFilter) o;
     return super.areSerializedFieldsEqual(other);
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

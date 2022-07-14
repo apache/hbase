@@ -75,9 +75,7 @@ public class InclusiveStopFilter extends FilterBase {
     return new InclusiveStopFilter(stopRowKey);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.InclusiveStopFilter.Builder builder =
@@ -88,9 +86,10 @@ public class InclusiveStopFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link InclusiveStopFilter} instance
-   * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static InclusiveStopFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -105,15 +104,17 @@ public class InclusiveStopFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof InclusiveStopFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof InclusiveStopFilter)) {
+      return false;
+    }
     InclusiveStopFilter other = (InclusiveStopFilter) o;
     return Bytes.equals(this.getStopRowKey(), other.getStopRowKey());
   }
@@ -125,7 +126,7 @@ public class InclusiveStopFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

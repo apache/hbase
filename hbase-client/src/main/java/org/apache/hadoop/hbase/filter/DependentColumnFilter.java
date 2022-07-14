@@ -92,23 +92,17 @@ public class DependentColumnFilter extends CompareFilter {
     this(family, qualifier, dropDependentColumn, CompareOperator.NO_OP, null);
   }
 
-  /**
-   * @return the column family
-   */
+  /** Return the column family */
   public byte[] getFamily() {
     return this.columnFamily;
   }
 
-  /**
-   * @return the column qualifier
-   */
+  /** Return the column qualifier */
   public byte[] getQualifier() {
     return this.columnQualifier;
   }
 
-  /**
-   * @return true if we should drop the dependent column, false otherwise
-   */
+  /** Return true if we should drop the dependent column, false otherwise */
   public boolean dropDependentColumn() {
     return this.dropDependentColumn;
   }
@@ -188,9 +182,7 @@ public class DependentColumnFilter extends CompareFilter {
     }
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.DependentColumnFilter.Builder builder =
@@ -207,9 +199,10 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of this filter.
    * @param pbBytes A pb serialized {@link DependentColumnFilter} instance
-   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static DependentColumnFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -236,16 +229,19 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
-   * corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof DependentColumnFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof DependentColumnFilter)) {
+      return false;
+    }
     DependentColumnFilter other = (DependentColumnFilter) o;
     return other != null && super.areSerializedFieldsEqual(other)
       && Bytes.equals(this.getFamily(), other.getFamily())
@@ -263,7 +259,7 @@ public class DependentColumnFilter extends CompareFilter {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

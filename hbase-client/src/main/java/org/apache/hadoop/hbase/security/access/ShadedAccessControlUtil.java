@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.HasUserPermissionsRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Permission.Type;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -292,14 +291,14 @@ public class ShadedAccessControlUtil {
     }
     if (request.getNamespace() != null && !request.getNamespace().isEmpty()) {
       builder.setNamespaceName(ByteString.copyFromUtf8(request.getNamespace()));
-      builder.setType(Type.Namespace);
+      builder.setType(AccessControlProtos.Permission.Type.Namespace);
     }
     if (request.getTableName() != null) {
       builder.setTableName(toProtoTableName(request.getTableName()));
-      builder.setType(Type.Table);
+      builder.setType(AccessControlProtos.Permission.Type.Table);
     }
     if (!builder.hasType()) {
-      builder.setType(Type.Global);
+      builder.setType(AccessControlProtos.Permission.Type.Global);
     }
     if (request.getFamily() != null && request.getFamily().length > 0) {
       builder.setColumnFamily(ByteString.copyFrom(request.getFamily()));

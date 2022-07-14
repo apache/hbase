@@ -228,6 +228,7 @@ class CellBlockBuilder {
   }
 
   /**
+   * Create a new CellScanner
    * @param codec     to use for cellblock
    * @param cellBlock to encode
    * @return CellScanner to work against the content of <code>cellBlock</code>
@@ -248,6 +249,7 @@ class CellBlockBuilder {
   }
 
   /**
+   * Create a new CellScanner, reusing provided byte buffers
    * @param codec     to use for cellblock
    * @param cellBlock ByteBuffer containing the cells written by the Codec. The buffer should be
    *                  position()'ed at the start of the cell block and limit()'ed at the end.

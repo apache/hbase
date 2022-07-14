@@ -57,16 +57,12 @@ public class BitComparator extends ByteArrayComparable {
     this.bitOperator = bitOperator;
   }
 
-  /**
-   * @return the bitwise operator
-   */
+  /** Return the bitwise operator */
   public BitwiseOp getOperator() {
     return bitOperator;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Return the comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BitComparator.Builder builder = ComparatorProtos.BitComparator.newBuilder();
@@ -78,8 +74,10 @@ public class BitComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of this comparator
    * @param pbBytes A pb serialized {@link BitComparator} instance
-   * @return An instance of {@link BitComparator} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link BitComparator} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static BitComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
     ComparatorProtos.BitComparator proto;
@@ -93,8 +91,8 @@ public class BitComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {

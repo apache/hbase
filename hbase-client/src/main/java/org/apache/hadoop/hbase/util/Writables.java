@@ -34,6 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class Writables {
   /**
+   * Write the writeable into a byte array and return it.
    * @param w writable
    * @return The bytes of <code>w</code> gotten by running its
    *         {@link Writable#write(java.io.DataOutput)} method.

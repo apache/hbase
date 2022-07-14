@@ -29,9 +29,9 @@ public interface NonceGenerator {
 
   static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
-  /** @return the nonce group (client ID) of this client manager. */
+  /** Return the nonce group (client ID) of this client manager. */
   long getNonceGroup();
 
-  /** @return New nonce. */
+  /** Return a new nonce. */
   long newNonce();
 }

@@ -251,9 +251,7 @@ public class FuzzyRowFilter extends FilterBase {
     return done;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder();
@@ -267,9 +265,10 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of the filter
    * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
-   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static FuzzyRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FuzzyRowFilter proto;
@@ -342,7 +341,7 @@ public class FuzzyRowFilter extends FilterBase {
       long fuzzyBytes = Bytes.toLong(fuzzyKeyBytes, i);
       long fuzzyMeta = Bytes.toLong(fuzzyKeyMeta, i);
       long rowValue = Bytes.toLong(row, offset + i);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -354,7 +353,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = Bytes.toInt(fuzzyKeyBytes, off);
       int fuzzyMeta = Bytes.toInt(fuzzyKeyMeta, off);
       int rowValue = Bytes.toInt(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -365,7 +364,7 @@ public class FuzzyRowFilter extends FilterBase {
       short fuzzyBytes = Bytes.toShort(fuzzyKeyBytes, off);
       short fuzzyMeta = Bytes.toShort(fuzzyKeyMeta, off);
       short rowValue = Bytes.toShort(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         // even if it does not (in this case getNextForFuzzyRule
         // will return null)
@@ -378,7 +377,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = fuzzyKeyBytes[off] & 0xff;
       int fuzzyMeta = fuzzyKeyMeta[off] & 0xff;
       int rowValue = row[offset + off] & 0xff;
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -519,8 +518,8 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
-   * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
-   *         otherwise
+   * Return greater byte array than given (row) which satisfies the fuzzy rule if it exists, null
+   * otherwise
    */
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
     byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
@@ -605,14 +604,17 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FuzzyRowFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FuzzyRowFilter)) {
+      return false;
+    }
     FuzzyRowFilter other = (FuzzyRowFilter) o;
     if (this.fuzzyKeysData.size() != other.fuzzyKeysData.size()) return false;
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
@@ -630,7 +632,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

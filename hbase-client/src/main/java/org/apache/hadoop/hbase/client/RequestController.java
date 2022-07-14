@@ -67,9 +67,7 @@ public interface RequestController {
     void reset() throws InterruptedIOException;
   }
 
-  /**
-   * @return A new checker for evaluating a batch rows.
-   */
+  /** Return a new checker for evaluating a batch rows. */
   Checker newChecker();
 
   /**
@@ -86,9 +84,7 @@ public interface RequestController {
    */
   void decTaskCounters(Collection<byte[]> regions, ServerName sn);
 
-  /**
-   * @return The number of running task.
-   */
+  /** Return The number of running tasks. */
   long getNumberOfTasksInProgress();
 
   /**

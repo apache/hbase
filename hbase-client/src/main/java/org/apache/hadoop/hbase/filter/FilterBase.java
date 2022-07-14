@@ -71,7 +71,7 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Fitlers that never filter by modifying the returned List of Cells can inherit this
+   * Filters that never filter by modifying the returned List of Cells can inherit this
    * implementation that does nothing. {@inheritDoc}
    */
   @Override
@@ -113,6 +113,7 @@ public abstract class FilterBase extends Filter {
    * @param filterArguments the filter's arguments
    * @return constructed filter object
    */
+  @SuppressWarnings("DoNotCallSuggester")
   public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
     throw new IllegalArgumentException("This method has not been implemented");
   }

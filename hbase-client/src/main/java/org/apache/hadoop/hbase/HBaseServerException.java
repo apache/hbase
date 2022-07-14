@@ -45,8 +45,8 @@ public class HBaseServerException extends HBaseIOException {
   }
 
   /**
+   * Return true if the server was considered overloaded when the exception was thrown
    * @param t throwable to check for server overloaded state
-   * @return True if the server was considered overloaded when the exception was thrown
    */
   public static boolean isServerOverloaded(Throwable t) {
     if (t instanceof HBaseServerException) {
@@ -56,6 +56,8 @@ public class HBaseServerException extends HBaseIOException {
   }
 
   /**
+   * Set or clear the server overloaded status.
+   * <p>
    * Necessary for parsing RemoteException on client side
    * @param serverOverloaded True if server was overloaded when exception was thrown
    */
@@ -63,9 +65,7 @@ public class HBaseServerException extends HBaseIOException {
     this.serverOverloaded = serverOverloaded;
   }
 
-  /**
-   * @return True if server was considered overloaded when exception was thrown
-   */
+  /** Return true if server was considered overloaded when exception was thrown */
   public boolean isServerOverloaded() {
     return serverOverloaded;
   }

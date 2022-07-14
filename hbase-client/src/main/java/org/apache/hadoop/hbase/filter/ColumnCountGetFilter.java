@@ -78,9 +78,7 @@ public class ColumnCountGetFilter extends FilterBase {
     return new ColumnCountGetFilter(limit);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Return the filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnCountGetFilter.Builder builder =
@@ -90,6 +88,7 @@ public class ColumnCountGetFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of this filter
    * @param pbBytes A pb serialized {@link ColumnCountGetFilter} instance
    * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
    * @see #toByteArray
@@ -106,15 +105,17 @@ public class ColumnCountGetFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ColumnCountGetFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ColumnCountGetFilter)) {
+      return false;
+    }
     ColumnCountGetFilter other = (ColumnCountGetFilter) o;
     return this.getLimit() == other.getLimit();
   }
@@ -126,7 +127,7 @@ public class ColumnCountGetFilter extends FilterBase {
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Filter && areSerializedFieldsEqual((Filter) obj);
+    return (obj instanceof Filter) && areSerializedFieldsEqual((Filter) obj);
   }
 
   @Override

@@ -67,7 +67,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * Sets the authorizations to be used by this Query n
+   * Sets the authorizations to be used by this Query.
    */
   public Query setAuthorizations(Authorizations authorizations) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY,
@@ -76,7 +76,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * @return The authorizations this Query is associated with. n
+   * Return the authorizations this Query is associated with.
    */
   public Authorizations getAuthorizations() throws DeserializationException {
     byte[] authorizationsBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
@@ -85,6 +85,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
+   * Get the ACL for the operation.
    * @return The serialized ACL for this operation, or null if none
    */
   public byte[] getACL() {
@@ -92,6 +93,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
+   * Set the ACL for the operation.
    * @param user  User short name
    * @param perms Permissions for the user
    */
@@ -102,6 +104,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
+   * Set the ACL for the operation.
    * @param perms A map of permissions for a user or users
    */
   public Query setACL(Map<String, Permission> perms) {
@@ -163,9 +166,8 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * @return The isolation level of this query. If no isolation level was set for this query object,
-   *         then it returns READ_COMMITTED.
-   * @return The IsolationLevel for this query
+   * Return the isolation level of this query. If no isolation level was set for this query object,
+   * then it returns READ_COMMITTED.
    */
   public IsolationLevel getIsolationLevel() {
     byte[] attr = getAttribute(ISOLATION_LEVEL);
@@ -221,7 +223,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * @return A map of column families to time ranges
+   * Return a map of column families to time ranges
    */
   public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
     return this.colFamTimeRangeMap;

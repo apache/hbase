@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.util.Date;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -386,7 +385,7 @@ public class RegionState {
    */
   public String toDescriptiveString() {
     long relTime = EnvironmentEdgeManager.currentTime() - stamp;
-    return hri.getRegionNameAsString() + " state=" + state + ", ts=" + new Date(stamp) + " ("
+    return hri.getRegionNameAsString() + " state=" + state + ", ts=" + stamp + " ("
       + (relTime / 1000) + "s ago)" + ", server=" + serverName;
   }
 
@@ -417,12 +416,13 @@ public class RegionState {
    */
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof RegionState)) {
       return false;
     }
     RegionState tmp = (RegionState) obj;
-
     return RegionInfo.COMPARATOR.compare(tmp.hri, hri) == 0 && tmp.state == state
       && ((serverName != null && serverName.equals(tmp.serverName))
         || (tmp.serverName == null && serverName == null));

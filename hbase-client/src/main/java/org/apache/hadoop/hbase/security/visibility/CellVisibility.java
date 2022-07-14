@@ -36,7 +36,7 @@ public class CellVisibility {
   }
 
   /**
-   * @return The visibility expression
+   * Return The visibility expression
    */
   public String getExpression() {
     return this.expression;

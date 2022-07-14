@@ -65,6 +65,7 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
   private final Map<Integer, Call> id2Call = new HashMap<>();
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     if (msg instanceof Call) {
       Call call = (Call) msg;
@@ -78,7 +79,8 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
   }
 
   @Override
-  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+  @SuppressWarnings("FutureReturnValueIgnored")
+  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
     if (evt instanceof BufferCallEvent) {
       BufferCallEvent bcEvt = (BufferCallBeforeInitHandler.BufferCallEvent) evt;
       switch (bcEvt.action) {

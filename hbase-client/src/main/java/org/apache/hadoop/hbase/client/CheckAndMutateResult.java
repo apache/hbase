@@ -33,14 +33,14 @@ public class CheckAndMutateResult {
   }
 
   /**
-   * @return Whether the CheckAndMutate operation is successful or not
+   * Return whether the CheckAndMutate operation is successful or not
    */
   public boolean isSuccess() {
     return success;
   }
 
   /**
-   * @return It is used only for CheckAndMutate operations with Increment/Append. Otherwise null
+   * Return the result for CheckAndMutate operations with Increment/Append, or null otherwise
    */
   public Result getResult() {
     return result;

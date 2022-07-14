@@ -75,12 +75,14 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
         SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
     LOG.trace("Sending token size={} from initSASLContext.", response.length);
     ctx.writeAndFlush(
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void tryComplete(ChannelHandlerContext ctx) {
     if (!saslRpcClient.isComplete()) {
       return;

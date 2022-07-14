@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
@@ -26,6 +27,7 @@ import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
@@ -218,16 +220,30 @@ class ClusterStatusListener implements Closeable {
       }
 
       LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
-      channel.joinGroup(ina, ni, null, channel.newPromise());
+      try {
+        channel.joinGroup(ina, ni, null, channel.newPromise()).get();
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      } catch (ExecutionException e) {
+        throw new IOException(e);
+      }
     }
 
     @Override
     public void close() {
       if (channel != null) {
-        channel.close();
+        try {
+          channel.close().get();
+        } catch (InterruptedException | ExecutionException e) {
+          LOG.warn("Exception while closing", e);
+        }
         channel = null;
       }
-      group.shutdownGracefully();
+      try {
+        group.shutdownGracefully().get();
+      } catch (InterruptedException | ExecutionException e) {
+        LOG.warn("Exception while shutting down", e);
+      }
     }
 
     /**

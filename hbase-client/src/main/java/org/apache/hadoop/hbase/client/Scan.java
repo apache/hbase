@@ -434,6 +434,7 @@ public class Scan extends Query {
    *                  {@link #setStartStopRowForPrefixScan(byte[])} instead.
    */
   @Deprecated
+  @SuppressWarnings("InlineMeSuggester")
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
     return setStartStopRowForPrefixScan(rowPrefix);
   }
@@ -531,9 +532,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return the maximum result size in bytes. See {@link #setMaxResultSize(long)}
-   */
+  /** Return the maximum result size in bytes. See {@link #setMaxResultSize(long)} */
   public long getMaxResultSize() {
     return maxResultSize;
   }
@@ -571,9 +570,7 @@ public class Scan extends Query {
     return this.familyMap;
   }
 
-  /**
-   * @return the number of families in familyMap
-   */
+  /** Return the number of families in familyMap */
   public int numFamilies() {
     if (hasFamilies()) {
       return this.familyMap.size();
@@ -581,16 +578,12 @@ public class Scan extends Query {
     return 0;
   }
 
-  /**
-   * @return true if familyMap is non empty, false otherwise
-   */
+  /** Return true if familyMap is non empty, false otherwise */
   public boolean hasFamilies() {
     return !this.familyMap.isEmpty();
   }
 
-  /**
-   * @return the keys of the familyMap
-   */
+  /** Return the keys of the familyMap */
   public byte[][] getFamilies() {
     if (hasFamilies()) {
       return this.familyMap.keySet().toArray(new byte[0][0]);
@@ -598,88 +591,65 @@ public class Scan extends Query {
     return null;
   }
 
-  /**
-   * @return the startrow
-   */
+  /** Return the startrow */
   public byte[] getStartRow() {
     return this.startRow;
   }
 
-  /**
-   * @return if we should include start row when scan
-   */
+  /** Return if we should include start row when scan */
   public boolean includeStartRow() {
     return includeStartRow;
   }
 
-  /**
-   * @return the stoprow
-   */
+  /** Return the stop row */
   public byte[] getStopRow() {
     return this.stopRow;
   }
 
-  /**
-   * @return if we should include stop row when scan
-   */
+  /** Return if we should include the stop row when scanning */
   public boolean includeStopRow() {
     return includeStopRow;
   }
 
-  /**
-   * @return the max number of versions to fetch
-   */
+  /** Return the max number of versions to fetch */
   public int getMaxVersions() {
     return this.maxVersions;
   }
 
-  /**
-   * @return maximum number of values to return for a single call to next()
-   */
+  /** Return the maximum number of values to return for a single call to next */
   public int getBatch() {
     return this.batch;
   }
 
-  /**
-   * @return maximum number of values to return per row per CF
-   */
+  /** Return the maximum number of values to return per row per family */
   public int getMaxResultsPerColumnFamily() {
     return this.storeLimit;
   }
 
-  /**
-   * Method for retrieving the scan's offset per row per column family (#kvs to be skipped)
-   * @return row offset
-   */
+  /** Return the scan's offset per row per column family (#kvs to be skipped) */
   public int getRowOffsetPerColumnFamily() {
     return this.storeOffset;
   }
 
   /**
-   * @return caching the number of rows fetched when calling next on a scanner
+   * Return the the number of rows that will be fetched and cached when calling next on a scanner
    */
   public int getCaching() {
     return this.caching;
   }
 
-  /**
-   * n
-   */
+  /** Return the time range */
   public TimeRange getTimeRange() {
     return this.tr;
   }
 
-  /**
-   * n
-   */
+  /** Return the filter */
   @Override
   public Filter getFilter() {
     return filter;
   }
 
-  /**
-   * @return true is a filter has been specified, false if not
-   */
+  /** Return true is a filter has been specified, false if not */
   public boolean hasFilter() {
     return filter != null;
   }
@@ -736,9 +706,9 @@ public class Scan extends Query {
   }
 
   /**
-   * @return true when the constructor of this scan understands that the results they will see may
-   *         only represent a partial portion of a row. The entire row would be retrieved by
-   *         subsequent calls to {@link ResultScanner#next()}
+   * Return true when the constructor of this scan understands that the results they will see may
+   * only represent a partial portion of a row. The entire row would be retrieved by subsequent
+   * calls to {@link ResultScanner#next()}
    */
   public boolean getAllowPartialResults() {
     return allowPartialResults;
@@ -840,9 +810,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return True if this Scan is in "raw" mode.
-   */
+  /** Return true if this Scan is in "raw" mode. */
   public boolean isRaw() {
     byte[] attr = getAttribute(RAW_ATTR);
     return attr == null ? false : Bytes.toBoolean(attr);
@@ -902,9 +870,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return True if collection of scan metrics is enabled. For advanced users.
-   */
+  /** Return true if collection of scan metrics is enabled. For advanced users. */
   public boolean isScanMetricsEnabled() {
     byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
     return attr == null ? false : Bytes.toBoolean(attr);
@@ -915,6 +881,7 @@ public class Scan extends Query {
   }
 
   /**
+   * Disable or enable async prefetch.
    * @deprecated Since 3.0.0, will be removed in 4.0.0. After building sync client upon async
    *             client, the implementation is always 'async prefetch', so this flag is useless now.
    */
@@ -924,9 +891,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return the limit of rows for this scan
-   */
+  /** Return the limit of rows for this scan */
   public int getLimit() {
     return limit;
   }
@@ -958,9 +923,7 @@ public class Scan extends Query {
     PREAD
   }
 
-  /**
-   * @return the read type for this scan
-   */
+  /** Return the read type for this scan */
   public ReadType getReadType() {
     return readType;
   }
@@ -976,24 +939,18 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * Get the mvcc read point used to open a scanner.
-   */
+  /** Return the mvcc read point used to open the scanner. */
   long getMvccReadPoint() {
     return mvccReadPoint;
   }
 
-  /**
-   * Set the mvcc read point used to open a scanner.
-   */
+  /** Set the mvcc read point used to open the scanner. */
   Scan setMvccReadPoint(long mvccReadPoint) {
     this.mvccReadPoint = mvccReadPoint;
     return this;
   }
 
-  /**
-   * Set the mvcc read point to -1 which means do not use it.
-   */
+  /** Set the mvcc read point to -1 which means do not use it. */
   Scan resetMvccReadPoint() {
     return setMvccReadPoint(-1L);
   }

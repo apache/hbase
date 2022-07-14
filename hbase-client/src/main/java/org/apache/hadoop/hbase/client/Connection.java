@@ -60,7 +60,7 @@ public interface Connection extends Abortable, Closeable {
    */
 
   /**
-   * @return Configuration instance being used by this Connection instance.
+   * Return the configuration of this connection.
    */
   Configuration getConfiguration();
 
@@ -183,7 +183,7 @@ public interface Connection extends Abortable, Closeable {
   AsyncConnection toAsyncConnection();
 
   /**
-   * @return the cluster ID unique to this HBase cluster.
+   * Return the cluster ID unique to this HBase cluster.
    */
   String getClusterId();
 
