@@ -87,7 +87,7 @@ public class NettyRpcServer extends RpcServer {
     this.channelAllocator = getChannelAllocator(conf);
     // Get the event loop group configuration from the server class if available.
     NettyEventLoopGroupConfig config = null;
-    if (server != null) {
+    if (server instanceof HBaseServerBase) {
       config = ((HBaseServerBase) server).getEventLoopGroupConfig();
     }
     if (config == null) {
