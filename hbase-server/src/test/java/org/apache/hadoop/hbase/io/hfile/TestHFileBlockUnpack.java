@@ -105,12 +105,31 @@ public class TestHFileBlockUnpack {
 
     // read the same block twice. we should expect the underlying buffer below to
     // be identical each time
-    HFileBlock blockOne = readBlock(path, totalSize).unpacked;
-    HFileBlock blockTwo = readBlock(path, totalSize).unpacked;
+    HFileBlockWrapper blockOne = readBlock(path, totalSize);
+    HFileBlockWrapper blockTwo = readBlock(path, totalSize);
 
-    ByteBuff bufferOne = blockOne.getBufferWithoutHeader();
-    ByteBuff bufferTwo = blockTwo.getBufferWithoutHeader();
+    // first check size fields
+    assertEquals(blockOne.original.getOnDiskSizeWithHeader(),
+      blockTwo.original.getOnDiskSizeWithHeader());
+    assertEquals(blockOne.original.getUncompressedSizeWithoutHeader(),
+      blockTwo.original.getUncompressedSizeWithoutHeader());
 
+    // next check packed buffers
+    assertBuffersEqual(blockOne.original.getBufferWithoutHeader(),
+      blockTwo.original.getBufferWithoutHeader(),
+      blockOne.original.getOnDiskDataSizeWithHeader() - blockOne.original.headerSize());
+
+    // now check unpacked buffers. prior to HBASE-27053, this would fail because
+    // the unpacked buffer would include extra space for checksums at the end that was not written.
+    // so the checksum space would be filled with random junk when re-using pooled buffers.
+    assertBuffersEqual(blockOne.unpacked.getBufferWithoutHeader(),
+      blockTwo.unpacked.getBufferWithoutHeader(),
+      blockOne.original.getUncompressedSizeWithoutHeader());
+  }
+
+  private void assertBuffersEqual(ByteBuff bufferOne, ByteBuff bufferTwo, int expectedSize) {
+    assertEquals(expectedSize, bufferOne.limit());
+    assertEquals(expectedSize, bufferTwo.limit());
     assertEquals(0,
       ByteBuff.compareTo(bufferOne, 0, bufferOne.limit(), bufferTwo, 0, bufferTwo.limit()));
   }

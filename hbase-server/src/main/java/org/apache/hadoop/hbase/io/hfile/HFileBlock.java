@@ -1702,7 +1702,7 @@ public class HFileBlock implements Cacheable {
         }
         // remove checksum from buffer now that it's verified
         int sizeWithoutChecksum = curBlock.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
-        curBlock = curBlock.duplicate().limit(sizeWithoutChecksum);
+        curBlock = curBlock.limit(sizeWithoutChecksum);
         long duration = EnvironmentEdgeManager.currentTime() - startTime;
         if (updateMetrics) {
           HFile.updateReadLatency(duration, pread);
