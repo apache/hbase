@@ -646,14 +646,13 @@ public class TestHFileBlock {
               // verifies that the unpacked value read back off disk matches the unpacked value
               // generated before writing to disk.
               HFileBlock newBlock = b.unpack(meta, hbr);
-              // b's buffer has header + data + checksum while
-              // expectedContents have header + data only
+              // neither b's unpacked nor the expectedContents have checksum.
+              // they should be identical
               ByteBuff bufRead = newBlock.getBufferReadOnly();
               ByteBuffer bufExpected = expectedContents.get(i);
-              byte[] tmp = new byte[bufRead.limit() - newBlock.totalChecksumBytes()];
-              bufRead.get(tmp, 0, tmp.length);
-              boolean bytesAreCorrect = Bytes.compareTo(tmp, 0, tmp.length, bufExpected.array(),
-                bufExpected.arrayOffset(), bufExpected.limit()) == 0;
+              byte[] bytesRead = bufRead.toBytes();
+              boolean bytesAreCorrect = Bytes.compareTo(bytesRead, 0, bytesRead.length,
+                bufExpected.array(), bufExpected.arrayOffset(), bufExpected.limit()) == 0;
               String wrongBytesMsg = "";
 
               if (!bytesAreCorrect) {
@@ -663,8 +662,7 @@ public class TestHFileBlock {
                   + pread + ", cacheOnWrite=" + cacheOnWrite + "):\n";
                 wrongBytesMsg += Bytes.toStringBinary(bufExpected.array(),
                   bufExpected.arrayOffset(), Math.min(32 + 10, bufExpected.limit())) + ", actual:\n"
-                  + Bytes.toStringBinary(bufRead.array(), bufRead.arrayOffset(),
-                    Math.min(32 + 10, bufRead.limit()));
+                  + Bytes.toStringBinary(bytesRead, 0, Math.min(32 + 10, bytesRead.length));
                 if (detailedLogging) {
                   LOG.warn(
                     "expected header" + HFileBlock.toStringHeader(new SingleByteBuff(bufExpected))
