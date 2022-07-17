@@ -56,6 +56,8 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String METAPRIORITY_QUEUE_NAME = "numCallsInMetaPriorityQueue";
   String REPLICATION_QUEUE_NAME = "numCallsInReplicationQueue";
   String REPLICATION_QUEUE_DESC = "Number of calls in the replication call queue waiting to be run";
+  String BULKLOAD_QUEUE_NAME = "numCallsInBulkLoadQueue";
+  String BULKLOAD_QUEUE_DESC = "Number of calls in the bulkload call queue waiting to be run";
   String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
   String METAPRIORITY_QUEUE_DESC = "Number of calls in the priority call queue waiting to be run";
   String WRITE_QUEUE_NAME = "numCallsInWriteQueue";
@@ -77,6 +79,8 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NUM_ACTIVE_PRIORITY_HANDLER_DESC = "Number of active priority rpc handlers.";
   String NUM_ACTIVE_REPLICATION_HANDLER_NAME = "numActiveReplicationHandler";
   String NUM_ACTIVE_REPLICATION_HANDLER_DESC = "Number of active replication rpc handlers.";
+  String NUM_ACTIVE_BULKLOAD_HANDLER_NAME = "numActiveBulkLoadHandler";
+  String NUM_ACTIVE_BULKLOAD_HANDLER_DESC = "Number of active bulkload rpc handlers.";
   String NUM_ACTIVE_WRITE_HANDLER_NAME = "numActiveWriteHandler";
   String NUM_ACTIVE_WRITE_HANDLER_DESC = "Number of active write rpc handlers.";
   String NUM_ACTIVE_READ_HANDLER_NAME = "numActiveReadHandler";

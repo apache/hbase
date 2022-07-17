@@ -480,12 +480,21 @@ public class TestSimpleRpcScheduler {
       when(scanCall.getHeader()).thenReturn(scanHead);
       when(scanCall.getParam()).thenReturn(scanCall.param);
 
+      CallRunner bulkLoadCallTask = mock(CallRunner.class);
+      ServerCall bulkLoadCall = mock(ServerCall.class);
+      bulkLoadCall.param = ScanRequest.newBuilder().build();
+      RequestHeader bulkLadHead = RequestHeader.newBuilder().setMethodName("bulkload").build();
+      when(bulkLoadCallTask.getRpcCall()).thenReturn(bulkLoadCall);
+      when(bulkLoadCall.getHeader()).thenReturn(bulkLadHead);
+      when(bulkLoadCall.getParam()).thenReturn(bulkLoadCall.param);
+
       ArrayList<Integer> work = new ArrayList<>();
       doAnswerTaskExecution(putCallTask, work, 1, 1000);
       doAnswerTaskExecution(getCallTask, work, 2, 1000);
       doAnswerTaskExecution(scanCallTask, work, 3, 1000);
+      doAnswerTaskExecution(bulkLoadCallTask, work, 4, 1000);
 
-      // There are 3 queues: [puts], [gets], [scans]
+      // There are 3 queues: [puts], [gets], [scans], [bulkload]
       // so the calls will be interleaved
       scheduler.dispatch(putCallTask);
       scheduler.dispatch(putCallTask);
@@ -496,7 +505,9 @@ public class TestSimpleRpcScheduler {
       scheduler.dispatch(scanCallTask);
       scheduler.dispatch(scanCallTask);
       scheduler.dispatch(scanCallTask);
-
+      scheduler.dispatch(bulkLoadCallTask);
+      scheduler.dispatch(bulkLoadCallTask);
+      scheduler.dispatch(bulkLoadCallTask);
       while (work.size() < 6) {
         Thread.sleep(100);
       }
