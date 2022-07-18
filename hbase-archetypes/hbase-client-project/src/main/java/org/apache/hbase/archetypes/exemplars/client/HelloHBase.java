@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public final class HelloHBase {
 
-  protected static final String MY_NAMESPACE_NAME = "myTestNamespace";
+  static final String MY_NAMESPACE_NAME = "myTestNamespace";
   static final TableName MY_TABLE_NAME = TableName.valueOf("myTestTable");
   static final byte[] MY_COLUMN_FAMILY_NAME = Bytes.toBytes("cf");
   static final byte[] MY_FIRST_COLUMN_QUALIFIER = Bytes.toBytes("myFirstColumn");
