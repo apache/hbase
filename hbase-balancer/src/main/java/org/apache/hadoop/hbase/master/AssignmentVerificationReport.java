@@ -409,8 +409,8 @@ public class AssignmentVerificationReport {
   }
 
   /**
-   * @return list which contains just 3 elements: average dispersion score, max dispersion score and
-   *         min dispersion score as first, second and third element respectively.
+   * Return a list which contains 3 elements: average dispersion score, max dispersion score and min
+   * dispersion score as first, second and third elements, respectively.
    */
   public List<Float> getDispersionInformation() {
     List<Float> dispersion = new ArrayList<>();
@@ -578,7 +578,7 @@ public class AssignmentVerificationReport {
     }
     int i = 0;
     for (ServerName addr : serverSet) {
-      if ((i++) % 3 == 0) {
+      if (i++ % 3 == 0) {
         System.out.print("\n\t\t\t");
       }
       System.out.print(addr.getAddress() + " ; ");
