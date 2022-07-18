@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -945,6 +946,9 @@ public class TestWALSplit {
    */
   @Test
   public void testThreadingSlowWriterSmallBuffer() throws Exception {
+    // The logic of this test has conflict with the limit writers split logic, skip this test for
+    // TestWALSplitBoundedLogWriterCreation
+    assumeFalse(this instanceof TestWALSplitBoundedLogWriterCreation);
     doTestThreading(200, 1024, 50);
   }
 
