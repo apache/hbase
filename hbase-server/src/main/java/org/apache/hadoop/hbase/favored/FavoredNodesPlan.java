@@ -99,7 +99,7 @@ public class FavoredNodesPlan {
   }
 
   /**
-   * @return the mapping between each region to its favored region server list
+   * Return the mapping between each region to its favored region server list.
    */
   public Map<String, List<ServerName>> getAssignmentMap() {
     // Make a deep copy so changes don't harm our copy of favoredNodesMap.
@@ -119,7 +119,7 @@ public class FavoredNodesPlan {
     if (o == null) {
       return false;
     }
-    if (getClass() != o.getClass()) {
+    if (!(o instanceof FavoredNodesPlan)) {
       return false;
     }
     // To compare the map from object o is identical to current assignment map.

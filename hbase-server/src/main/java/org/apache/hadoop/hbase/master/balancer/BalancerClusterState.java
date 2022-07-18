@@ -216,7 +216,7 @@ class BalancerClusterState {
     colocatedReplicaCountsPerHost = new Int2IntCounterMap[numHosts];
     colocatedReplicaCountsPerRack = new Int2IntCounterMap[numRacks];
 
-    int tableIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
+    int regionIndex = 0, regionPerServerIndex = 0;
 
     for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       if (entry.getKey() == null) {

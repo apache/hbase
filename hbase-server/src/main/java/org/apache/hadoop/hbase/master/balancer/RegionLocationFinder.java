@@ -282,7 +282,7 @@ class RegionLocationFinder {
    * @param hosts the list of hosts
    * @return ServerName list
    */
-  protected List<ServerName> mapHostNameToServerName(List<String> hosts) {
+  List<ServerName> mapHostNameToServerName(List<String> hosts) {
     if (hosts == null || status == null) {
       if (hosts == null) {
         LOG.warn("RegionLocationFinder top hosts is null");
