@@ -498,18 +498,6 @@ public class WALEdit implements HeapSize {
   }
 
   /**
-   * Creates a replication tracker edit with {@link #METAFAMILY} family and
-   * {@link #REPLICATION_MARKER} qualifier and has null value.
-   * @param rowKey    rowkey
-   * @param timestamp timestamp
-   */
-  public static WALEdit createReplicationMarkerEdit(byte[] rowKey, long timestamp) {
-    KeyValue kv =
-      new KeyValue(rowKey, METAFAMILY, REPLICATION_MARKER, timestamp, KeyValue.Type.Put);
-    return new WALEdit().add(kv);
-  }
-
-  /**
    * Checks whether this edit is a replication marker edit.
    * @param edit edit
    * @return true if the cell within an edit has column = METAFAMILY and qualifier =
@@ -519,5 +507,9 @@ public class WALEdit implements HeapSize {
     // Check just the first cell from the edit. ReplicationMarker edit will have only 1 cell.
     return edit.getCells().size() == 1
       && CellUtil.matchingColumn(edit.getCells().get(0), METAFAMILY, REPLICATION_MARKER);
+  }
+
+  public boolean isEditBoundToRegion() {
+    return true;
   }
 }

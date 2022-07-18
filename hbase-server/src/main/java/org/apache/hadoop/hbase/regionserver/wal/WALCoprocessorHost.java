@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.coprocessor.WALCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.WALObserver;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
+import org.apache.hadoop.hbase.wal.NoRegionWALEdit;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -144,6 +145,10 @@ public class WALCoprocessorHost extends CoprocessorHost<WALCoprocessor, WALCopro
     if (this.coprocEnvironments.isEmpty()) {
       return;
     }
+    // Skip running this hook if edit is not bound to any region.
+    if (logEdit instanceof NoRegionWALEdit) {
+      return;
+    }
     execOperation(new WALObserverOperation() {
       @Override
       public void call(WALObserver oserver) throws IOException {
@@ -154,6 +159,10 @@ public class WALCoprocessorHost extends CoprocessorHost<WALCoprocessor, WALCopro
 
   public void postWALWrite(final RegionInfo info, final WALKey logKey, final WALEdit logEdit)
     throws IOException {
+    // Skip running this hook if edit is not bound to any region.
+    if (logEdit instanceof NoRegionWALEdit) {
+      return;
+    }
     execOperation(coprocEnvironments.isEmpty() ? null : new WALObserverOperation() {
       @Override
       protected void call(WALObserver observer) throws IOException {
