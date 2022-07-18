@@ -1063,6 +1063,9 @@ public final class HConstants {
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
     "hbase.regionserver.replication.handler.count";
   public static final int DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT = 3;
+  public static final String REGION_SERVER_BULKLOAD_HANDLER_COUNT =
+    "hbase.regionserver.bulkload.handler.count";
+  public static final int DEFAULT_REGION_SERVER_BULKLOAD_HANDLER_COUNT = 0;
   // Meta Transition handlers to deal with meta ReportRegionStateTransitionRequest. Meta transition
   // should be dealt with in a separate handler in case blocking other region's transition.
   public static final String MASTER_META_TRANSITION_HANDLER_COUNT =
@@ -1139,6 +1142,7 @@ public final class HConstants {
   public static final int PRIORITY_UNSET = -1;
   public static final int NORMAL_QOS = 0;
   public static final int REPLICATION_QOS = 5;
+  public static final int BULKLOAD_QOS = 4;
   /**
    * @deprecated since 3.0.0, will be removed in 4.0.0. DLR has been purged for a long time and
    *             region replication has its own 'replay' method.

@@ -150,10 +150,10 @@ public class TestMultiRespectsLimits {
       Bytes.toBytes("5"), // Buffer
     };
 
-    // Set the value size so that one result will be less than the MAX_SIE
+    // Set the value size so that one result will be less than the MAX_SIZE
     // however the block being reference will be larger than MAX_SIZE.
     // This should cause the regionserver to try and send a result immediately.
-    byte[] value = new byte[MAX_SIZE - 100];
+    byte[] value = new byte[1];
     Bytes.random(value);
 
     for (byte[] col : cols) {

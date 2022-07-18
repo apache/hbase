@@ -418,6 +418,22 @@ public class HFileBlock implements Cacheable {
     return buf.release();
   }
 
+  /**
+   * Calling this method in strategic locations where HFileBlocks are referenced may help diagnose
+   * potential buffer leaks. We pass the block itself as a default hint, but one can use
+   * {@link #touch(Object)} to pass their own hint as well.
+   */
+  @Override
+  public HFileBlock touch() {
+    return touch(this);
+  }
+
+  @Override
+  public HFileBlock touch(Object hint) {
+    buf.touch(hint);
+    return this;
+  }
+
   /** @return get data block encoding id that was used to encode this block */
   short getDataBlockEncodingId() {
     if (blockType != BlockType.ENCODED_DATA) {
@@ -477,18 +493,8 @@ public class HFileBlock implements Cacheable {
    * @return the buffer with header skipped and checksum omitted.
    */
   public ByteBuff getBufferWithoutHeader() {
-    return this.getBufferWithoutHeader(false);
-  }
-
-  /**
-   * Returns a buffer that does not include the header or checksum.
-   * @param withChecksum to indicate whether include the checksum or not.
-   * @return the buffer with header skipped and checksum omitted.
-   */
-  public ByteBuff getBufferWithoutHeader(boolean withChecksum) {
     ByteBuff dup = getBufferReadOnly();
-    int delta = withChecksum ? 0 : totalChecksumBytes();
-    return dup.position(headerSize()).limit(buf.limit() - delta).slice();
+    return dup.position(headerSize()).slice();
   }
 
   /**
@@ -552,19 +558,21 @@ public class HFileBlock implements Cacheable {
       sanityCheckAssertion(dup.getInt(), onDiskDataSizeWithHeader, "onDiskDataSizeWithHeader");
     }
 
-    int cksumBytes = totalChecksumBytes();
-    int expectedBufLimit = onDiskDataSizeWithHeader + cksumBytes;
-    if (dup.limit() != expectedBufLimit) {
-      throw new AssertionError("Expected limit " + expectedBufLimit + ", got " + dup.limit());
+    if (dup.limit() != onDiskDataSizeWithHeader) {
+      throw new AssertionError(
+        "Expected limit " + onDiskDataSizeWithHeader + ", got " + dup.limit());
     }
 
     // We might optionally allocate HFILEBLOCK_HEADER_SIZE more bytes to read the next
     // block's header, so there are two sensible values for buffer capacity.
     int hdrSize = headerSize();
     dup.rewind();
-    if (dup.remaining() != expectedBufLimit && dup.remaining() != expectedBufLimit + hdrSize) {
+    if (
+      dup.remaining() != onDiskDataSizeWithHeader
+        && dup.remaining() != onDiskDataSizeWithHeader + hdrSize
+    ) {
       throw new AssertionError("Invalid buffer capacity: " + dup.remaining() + ", expected "
-        + expectedBufLimit + " or " + (expectedBufLimit + hdrSize));
+        + onDiskDataSizeWithHeader + " or " + (onDiskDataSizeWithHeader + hdrSize));
     }
   }
 
@@ -616,20 +624,22 @@ public class HFileBlock implements Cacheable {
       return this;
     }
 
-    HFileBlock unpacked = shallowClone(this);
-    unpacked.allocateBuffer(); // allocates space for the decompressed block
+    ByteBuff newBuf = allocateBufferForUnpacking(); // allocates space for the decompressed block
+    HFileBlock unpacked = shallowClone(this, newBuf);
+
     boolean succ = false;
     try {
       HFileBlockDecodingContext ctx = blockType == BlockType.ENCODED_DATA
         ? reader.getBlockDecodingContext()
         : reader.getDefaultBlockDecodingContext();
       // Create a duplicated buffer without the header part.
+      int headerSize = this.headerSize();
       ByteBuff dup = this.buf.duplicate();
-      dup.position(this.headerSize());
+      dup.position(headerSize);
       dup = dup.slice();
       // Decode the dup into unpacked#buf
-      ctx.prepareDecoding(unpacked.getOnDiskSizeWithoutHeader(),
-        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(true), dup);
+      ctx.prepareDecoding(unpacked.getOnDiskDataSizeWithHeader() - headerSize,
+        unpacked.getUncompressedSizeWithoutHeader(), unpacked.getBufferWithoutHeader(), dup);
       succ = true;
       return unpacked;
     } finally {
@@ -643,20 +653,20 @@ public class HFileBlock implements Cacheable {
    * Always allocates a new buffer of the correct size. Copies header bytes from the existing
    * buffer. Does not change header fields. Reserve room to keep checksum bytes too.
    */
-  private void allocateBuffer() {
-    int cksumBytes = totalChecksumBytes();
+  private ByteBuff allocateBufferForUnpacking() {
     int headerSize = headerSize();
-    int capacityNeeded = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
+    int capacityNeeded = headerSize + uncompressedSizeWithoutHeader;
 
+    ByteBuff source = buf.duplicate();
     ByteBuff newBuf = allocator.allocate(capacityNeeded);
 
     // Copy header bytes into newBuf.
-    buf.position(0);
-    newBuf.put(0, buf, 0, headerSize);
+    source.position(0);
+    newBuf.put(0, source, 0, headerSize);
 
-    buf = newBuf;
     // set limit to exclude next block's header
-    buf.limit(capacityNeeded);
+    newBuf.limit(capacityNeeded);
+    return newBuf;
   }
 
   /**
@@ -664,9 +674,8 @@ public class HFileBlock implements Cacheable {
    * calculated heuristic, not tracked attribute of the block.
    */
   public boolean isUnpacked() {
-    final int cksumBytes = totalChecksumBytes();
     final int headerSize = headerSize();
-    final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader + cksumBytes;
+    final int expectedCapacity = headerSize + uncompressedSizeWithoutHeader;
     final int bufCapacity = buf.remaining();
     return bufCapacity == expectedCapacity || bufCapacity == expectedCapacity + headerSize;
   }
@@ -708,11 +717,6 @@ public class HFileBlock implements Cacheable {
    * by default.
    */
   public boolean isSharedMem() {
-    if (this instanceof SharedMemHFileBlock) {
-      return true;
-    } else if (this instanceof ExclusiveMemHFileBlock) {
-      return false;
-    }
     return true;
   }
 
@@ -1696,6 +1700,9 @@ public class HFileBlock implements Cacheable {
         if (verifyChecksum && !validateChecksum(offset, curBlock, hdrSize)) {
           return null;
         }
+        // remove checksum from buffer now that it's verified
+        int sizeWithoutChecksum = curBlock.getInt(Header.ON_DISK_DATA_SIZE_WITH_HEADER_INDEX);
+        curBlock.limit(sizeWithoutChecksum);
         long duration = EnvironmentEdgeManager.currentTime() - startTime;
         if (updateMetrics) {
           HFile.updateReadLatency(duration, pread);
@@ -1997,23 +2004,31 @@ public class HFileBlock implements Cacheable {
       + onDiskDataSizeWithHeader;
   }
 
-  private static HFileBlockBuilder createBuilder(HFileBlock blk) {
+  /**
+   * Creates a new HFileBlockBuilder from the existing block and a new ByteBuff. The builder will be
+   * loaded with all of the original fields from blk, except now using the newBuff and setting
+   * isSharedMem based on the source of the passed in newBuff. An existing HFileBlock may have been
+   * an {@link ExclusiveMemHFileBlock}, but the new buffer might call for a
+   * {@link SharedMemHFileBlock}. Or vice versa.
+   * @param blk     the block to clone from
+   * @param newBuff the new buffer to use
+   */
+  private static HFileBlockBuilder createBuilder(HFileBlock blk, ByteBuff newBuff) {
     return new HFileBlockBuilder().withBlockType(blk.blockType)
       .withOnDiskSizeWithoutHeader(blk.onDiskSizeWithoutHeader)
       .withUncompressedSizeWithoutHeader(blk.uncompressedSizeWithoutHeader)
-      .withPrevBlockOffset(blk.prevBlockOffset).withByteBuff(blk.buf.duplicate()) // Duplicate the
-                                                                                  // buffer.
-      .withOffset(blk.offset).withOnDiskDataSizeWithHeader(blk.onDiskDataSizeWithHeader)
+      .withPrevBlockOffset(blk.prevBlockOffset).withByteBuff(newBuff).withOffset(blk.offset)
+      .withOnDiskDataSizeWithHeader(blk.onDiskDataSizeWithHeader)
       .withNextBlockOnDiskSize(blk.nextBlockOnDiskSize).withHFileContext(blk.fileContext)
-      .withByteBuffAllocator(blk.allocator).withShared(blk.isSharedMem());
+      .withByteBuffAllocator(blk.allocator).withShared(!newBuff.hasArray());
   }
 
-  static HFileBlock shallowClone(HFileBlock blk) {
-    return createBuilder(blk).build();
+  private static HFileBlock shallowClone(HFileBlock blk, ByteBuff newBuf) {
+    return createBuilder(blk, newBuf).build();
   }
 
   static HFileBlock deepCloneOnHeap(HFileBlock blk) {
     ByteBuff deepCloned = ByteBuff.wrap(ByteBuffer.wrap(blk.buf.toBytes(0, blk.buf.limit())));
-    return createBuilder(blk).withByteBuff(deepCloned).withShared(false).build();
+    return createBuilder(blk, deepCloned).build();
   }
 }

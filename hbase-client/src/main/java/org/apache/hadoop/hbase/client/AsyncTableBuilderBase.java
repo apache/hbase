@@ -55,9 +55,12 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
     this.operationTimeoutNs = tableName.isSystemTable()
       ? connConf.getMetaOperationTimeoutNs()
       : connConf.getOperationTimeoutNs();
-    this.scanTimeoutNs = connConf.getScanTimeoutNs();
+    this.scanTimeoutNs =
+      tableName.isSystemTable() ? connConf.getMetaScanTimeoutNs() : connConf.getScanTimeoutNs();
     this.rpcTimeoutNs = connConf.getRpcTimeoutNs();
-    this.readRpcTimeoutNs = connConf.getReadRpcTimeoutNs();
+    this.readRpcTimeoutNs = tableName.isSystemTable()
+      ? connConf.getMetaReadRpcTimeoutNs()
+      : connConf.getReadRpcTimeoutNs();
     this.writeRpcTimeoutNs = connConf.getWriteRpcTimeoutNs();
     this.pauseNs = connConf.getPauseNs();
     this.pauseNsForServerOverloaded = connConf.getPauseNsForServerOverloaded();

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /** Reads calls from a connection and queues them for handling. */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
+@Deprecated
 @InterfaceAudience.Private
 class SimpleServerRpcConnection extends ServerRpcConnection {
 
@@ -284,7 +285,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       } else {
         processOneRpc(data);
       }
-
+    } catch (Exception e) {
+      callCleanupIfNeeded();
+      throw e;
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
       data = null; // For the GC
@@ -296,8 +299,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     disposeSasl();
     data = null;
-    callCleanup = null;
-    if (!channel.isOpen()) return;
+    callCleanupIfNeeded();
+    if (!channel.isOpen()) {
+      return;
+    }
     try {
       socket.shutdownOutput();
     } catch (Exception ignored) {

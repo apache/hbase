@@ -49,6 +49,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
    */
   private final RpcExecutor metaTransitionExecutor;
 
+  private final RpcExecutor bulkloadExecutor;
+
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
 
@@ -63,7 +65,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
     int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,
     Abortable server, int highPriorityLevel) {
-
+    int bulkLoadHandlerCount = conf.getInt(HConstants.REGION_SERVER_BULKLOAD_HANDLER_COUNT,
+      HConstants.DEFAULT_REGION_SERVER_BULKLOAD_HANDLER_COUNT);
     int maxQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH,
       handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
     int maxPriorityQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH,
@@ -71,6 +74,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     int maxReplicationQueueLength =
       conf.getInt(RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH,
         replicationHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    int maxBulkLoadQueueLength = conf.getInt(RpcScheduler.IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH,
+      bulkLoadHandlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
 
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
@@ -120,6 +125,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     this.metaTransitionExecutor = metaTransitionHandler > 0
       ? new FastPathBalancedQueueRpcExecutor("metaPriority.FPBQ", metaTransitionHandler,
         RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxPriorityQueueLength, priority, conf,
+        abortable)
+      : null;
+    this.bulkloadExecutor = bulkLoadHandlerCount > 0
+      ? new FastPathBalancedQueueRpcExecutor("bulkLoad.FPBQ", bulkLoadHandlerCount,
+        RpcExecutor.CALL_QUEUE_TYPE_FIFO_CONF_VALUE, maxBulkLoadQueueLength, priority, conf,
         abortable)
       : null;
   }
@@ -173,6 +183,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.start(port);
     }
+    if (bulkloadExecutor != null) {
+      bulkloadExecutor.start(port);
+    }
 
   }
 
@@ -187,6 +200,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     }
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.stop();
+    }
+    if (bulkloadExecutor != null) {
+      bulkloadExecutor.stop();
     }
 
   }
@@ -208,6 +224,8 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
       return replicationExecutor.dispatch(callTask);
+    } else if (bulkloadExecutor != null && level == HConstants.BULKLOAD_QOS) {
+      return bulkloadExecutor.dispatch(callTask);
     } else {
       return callExecutor.dispatch(callTask);
     }
@@ -234,9 +252,15 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   }
 
   @Override
+  public int getBulkLoadQueueLength() {
+    return bulkloadExecutor == null ? 0 : bulkloadExecutor.getQueueLength();
+  }
+
+  @Override
   public int getActiveRpcHandlerCount() {
     return callExecutor.getActiveHandlerCount() + getActivePriorityRpcHandlerCount()
-      + getActiveReplicationRpcHandlerCount() + getActiveMetaPriorityRpcHandlerCount();
+      + getActiveReplicationRpcHandlerCount() + getActiveMetaPriorityRpcHandlerCount()
+      + getActiveBulkLoadRpcHandlerCount();
   }
 
   @Override
@@ -257,6 +281,11 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   @Override
   public int getActiveReplicationRpcHandlerCount() {
     return (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    return bulkloadExecutor == null ? 0 : bulkloadExecutor.getActiveHandlerCount();
   }
 
   @Override
@@ -328,6 +357,12 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
       callQueueInfo.setCallMethodCount(queueName,
         metaTransitionExecutor.getCallQueueCountsSummary());
       callQueueInfo.setCallMethodSize(queueName, metaTransitionExecutor.getCallQueueSizeSummary());
+    }
+
+    if (null != bulkloadExecutor) {
+      queueName = "BulkLoad Queue";
+      callQueueInfo.setCallMethodCount(queueName, bulkloadExecutor.getCallQueueCountsSummary());
+      callQueueInfo.setCallMethodSize(queueName, bulkloadExecutor.getCallQueueSizeSummary());
     }
 
     return callQueueInfo;

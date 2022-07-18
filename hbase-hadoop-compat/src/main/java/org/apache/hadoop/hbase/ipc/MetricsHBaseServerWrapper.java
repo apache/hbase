@@ -27,6 +27,8 @@ public interface MetricsHBaseServerWrapper {
 
   int getReplicationQueueLength();
 
+  int getBulkLoadQueueLength();
+
   int getPriorityQueueLength();
 
   int getMetaPriorityQueueLength();
@@ -40,6 +42,8 @@ public interface MetricsHBaseServerWrapper {
   int getActivePriorityRpcHandlerCount();
 
   int getActiveReplicationRpcHandlerCount();
+
+  int getActiveBulkLoadRpcHandlerCount();
 
   int getActiveMetaPriorityRpcHandlerCount();
 

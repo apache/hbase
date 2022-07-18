@@ -35,6 +35,8 @@ public abstract class RpcScheduler {
     "hbase.ipc.server.priority.max.callqueue.length";
   public static final String IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH =
     "hbase.ipc.server.replication.max.callqueue.length";
+  public static final String IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH =
+    "hbase.ipc.server.bulkload.max.callqueue.length";
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   public static abstract class Context {
@@ -78,6 +80,9 @@ public abstract class RpcScheduler {
   /** Retrieves length of the replication queue for metrics. */
   public abstract int getReplicationQueueLength();
 
+  /** Retrieves length of the bulkload queue for metrics. */
+  public abstract int getBulkLoadQueueLength();
+
   /** Retrieves the total number of active handler. */
   public abstract int getActiveRpcHandlerCount();
 
@@ -92,6 +97,9 @@ public abstract class RpcScheduler {
 
   /** Retrieves the number of active replication handler. */
   public abstract int getActiveReplicationRpcHandlerCount();
+
+  /** Retrieves the number of active bulkload handler. */
+  public abstract int getActiveBulkLoadRpcHandlerCount();
 
   /**
    * If CoDel-based RPC executors are used, retrieves the number of Calls that were dropped from

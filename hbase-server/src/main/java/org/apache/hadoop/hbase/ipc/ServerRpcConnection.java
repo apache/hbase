@@ -342,6 +342,8 @@ abstract class ServerRpcConnection implements Closeable {
         } else {
           plaintextData = saslServer.unwrap(b, 0, b.length);
         }
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
         processUnwrappedData(plaintextData);
       }
     } else {
@@ -383,6 +385,9 @@ abstract class ServerRpcConnection implements Closeable {
         RpcServer.AUDITLOG.warn("{}{}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
           saslServer.getAttemptingUser());
         throw e;
+      } finally {
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
       }
       if (replyToken != null) {
         if (RpcServer.LOG.isDebugEnabled()) {
@@ -412,7 +417,9 @@ abstract class ServerRpcConnection implements Closeable {
       int count;
       if (unwrappedDataLengthBuffer.remaining() > 0) {
         count = this.rpcServer.channelRead(ch, unwrappedDataLengthBuffer);
-        if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0) return;
+        if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0) {
+          return;
+        }
       }
 
       if (unwrappedData == null) {
@@ -428,7 +435,9 @@ abstract class ServerRpcConnection implements Closeable {
       }
 
       count = this.rpcServer.channelRead(ch, unwrappedData);
-      if (count <= 0 || unwrappedData.remaining() > 0) return;
+      if (count <= 0 || unwrappedData.remaining() > 0) {
+        return;
+      }
 
       if (unwrappedData.remaining() == 0) {
         unwrappedDataLengthBuffer.clear();
@@ -730,6 +739,13 @@ abstract class ServerRpcConnection implements Closeable {
   private void doBadPreambleHandling(String msg, Exception e) throws IOException {
     SimpleRpcServer.LOG.warn(msg);
     doRespond(getErrorResponse(msg, e));
+  }
+
+  protected final void callCleanupIfNeeded() {
+    if (callCleanup != null) {
+      callCleanup.run();
+      callCleanup = null;
+    }
   }
 
   protected final boolean processPreamble(ByteBuffer preambleBuffer) throws IOException {

@@ -931,7 +931,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Initialize this region.
    * @param reporter Tickle every so often if initialize is taking a while.
    * @return What the next sequence (edit) id should be.
-   * @throws IOException e
    */
   long initialize(final CancelableProgressable reporter) throws IOException {
 
@@ -941,8 +940,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         + " should have at least one column family.");
     }
 
-    MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
-    status.enableStatusJournal(true);
+    MonitoredTask status =
+      TaskMonitor.get().createStatus("Initializing region " + this, false, true);
     long nextSeqId = -1;
     try {
       nextSeqId = initializeRegionInternals(reporter, status);
@@ -1596,8 +1595,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
       "Closing region " + this.getRegionInfo().getEncodedName() + (abort ? " due to abort" : ""),
-      ignoreStatus);
-    status.enableStatusJournal(true);
+      ignoreStatus, true);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
@@ -2318,7 +2316,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       status = TaskMonitor.get().createStatus("Compacting " + store + " in " + this);
-      status.enableStatusJournal(false);
       if (this.closed.get()) {
         String msg = "Skipping compaction on " + this + " because closed";
         LOG.debug(msg);
@@ -2455,7 +2452,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return new FlushResultImpl(FlushResult.Result.CANNOT_FLUSH, msg, false);
     }
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
-    status.enableStatusJournal(false);
     status.setStatus("Acquiring readlock on region");
     // block waiting for the lock for flushing cache
     lock.readLock().lock();

@@ -483,6 +483,8 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
       .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
       .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
       .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC), rsWrap.getNumStoreFiles())
+      .addGauge(Interns.info(MAX_STOREFILE_COUNT, MAX_STOREFILE_COUNT_DESC),
+        rsWrap.getMaxStoreFiles())
       .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
       .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
       .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
@@ -532,11 +534,19 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getBlockCacheFreeSize())
       .addGauge(Interns.info(BLOCK_CACHE_COUNT, BLOCK_CACHE_COUNT_DESC),
         rsWrap.getBlockCacheCount())
+      .addGauge(Interns.info(BLOCK_CACHE_DATA_BLOCK_COUNT, BLOCK_CACHE_DATA_BLOCK_COUNT_DESC),
+        rsWrap.getBlockCacheDataBlockCount())
       .addGauge(Interns.info(BLOCK_CACHE_SIZE, BLOCK_CACHE_SIZE_DESC), rsWrap.getBlockCacheSize())
       .addGauge(Interns.info(BLOCK_CACHE_HIT_PERCENT, BLOCK_CACHE_HIT_PERCENT_DESC),
         rsWrap.getBlockCacheHitPercent())
       .addGauge(Interns.info(BLOCK_CACHE_EXPRESS_HIT_PERCENT, BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC),
         rsWrap.getBlockCacheHitCachingPercent())
+      .addGauge(Interns.info(L1_CACHE_SIZE, L1_CACHE_SIZE_DESC), rsWrap.getL1CacheSize())
+      .addGauge(Interns.info(L1_CACHE_FREE_SIZE, L1_CACHE_FREE_SIZE_DESC),
+        rsWrap.getL1CacheFreeSize())
+      .addGauge(Interns.info(L1_CACHE_COUNT, L1_CACHE_COUNT_DESC), rsWrap.getL1CacheCount())
+      .addCounter(Interns.info(L1_CACHE_EVICTION_COUNT, L1_CACHE_EVICTION_COUNT_DESC),
+        rsWrap.getL1CacheEvictedCount())
       .addGauge(Interns.info(L1_CACHE_HIT_COUNT, L1_CACHE_HIT_COUNT_DESC),
         rsWrap.getL1CacheHitCount())
       .addGauge(Interns.info(L1_CACHE_MISS_COUNT, L1_CACHE_MISS_COUNT_DESC),
@@ -545,6 +555,12 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getL1CacheHitRatio())
       .addGauge(Interns.info(L1_CACHE_MISS_RATIO, L1_CACHE_MISS_RATIO_DESC),
         rsWrap.getL1CacheMissRatio())
+      .addGauge(Interns.info(L2_CACHE_SIZE, L2_CACHE_SIZE_DESC), rsWrap.getL2CacheSize())
+      .addGauge(Interns.info(L2_CACHE_FREE_SIZE, L2_CACHE_FREE_SIZE_DESC),
+        rsWrap.getL2CacheFreeSize())
+      .addGauge(Interns.info(L2_CACHE_COUNT, L2_CACHE_COUNT_DESC), rsWrap.getL2CacheCount())
+      .addCounter(Interns.info(L2_CACHE_EVICTION_COUNT, L2_CACHE_EVICTION_COUNT_DESC),
+        rsWrap.getL2CacheEvictedCount())
       .addGauge(Interns.info(L2_CACHE_HIT_COUNT, L2_CACHE_HIT_COUNT_DESC),
         rsWrap.getL2CacheHitCount())
       .addGauge(Interns.info(L2_CACHE_MISS_COUNT, L2_CACHE_MISS_COUNT_DESC),

@@ -143,36 +143,69 @@
 # export GREP="${GREP-grep}"
 # export SED="${SED-sed}"
 
-# Tracing
-# Uncomment some combination of these lines to enable tracing. You should change the options to use
-# the exporters appropriate to your environment. See
-# https://github.com/open-telemetry/opentelemetry-java-instrumentation for details on how to
-# configure exporters and other components through system properties.
 #
-# The presence HBASE_TRACE_OPTS indicates that tracing should be enabled, adding the agent to the
-# JVM launch command.
-# export HBASE_TRACE_OPTS="-Dotel.traces.exporter=none -Dotel.metrics.exporter=none"
+## OpenTelemetry Tracing
 #
-# For standalone mode, you must explicitly add HBASE_TRACE_OPTS to HBASE_OPTS by uncommenting this line.
-# But do not use and uncomment this line if you're running in distributed mode.
-# export HBASE_OPTS="${HBASE_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-standalone"
+# HBase is instrumented for tracing using OpenTelemetry. None of the other OpenTelemetry signals
+# are supported at this time. Configuring tracing involves setting several configuration points,
+# via environment variable or system property. This configuration prefers setting environment
+# variables whenever possible because they are picked up by all processes launched by `bin/hbase`.
+# Use system properties when you launch multiple processes from the same configuration directory --
+# when you need to specify different configuration values for different hbase processes that are
+# launched using the same HBase configuration (i.e., a single-host pseudo-distributed cluster or
+# launching the `bin/hbase shell` from a host that is also running an instance of the master). See
+# https://github.com/open-telemetry/opentelemetry-java/tree/v1.15.0/sdk-extensions/autoconfigure
+# for an inventory of configuration points and detailed explanations of each of them.
 #
-# Per-process configuration variables allow for fine-grained configuration control.
-# export HBASE_SHELL_OPTS="${HBASE_SHELL_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-shell"
-# export HBASE_JSHELL_OPTS="${HBASE_JSHELL_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-jshell"
-# export HBASE_HBCK_OPTS="${HBASE_HBCK_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-hbck"
-# export HBASE_MASTER_OPTS="${HBASE_MASTER_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-master"
-# export HBASE_REGIONSERVER_OPTS="${HBASE_REGIONSERVER_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-regionserver"
-# export HBASE_THRIFT_OPTS="${HBASE_THRIFT_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-thrift"
-# export HBASE_REST_OPTS="${HBASE_REST_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-rest"
-# export HBASE_ZOOKEEPER_OPTS="${HBASE_ZOOKEEPER_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-zookeeper"
-# export HBASE_PE_OPTS="${HBASE_PE_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-performanceevaluation"
-# export HBASE_LTT_OPTS="${HBASE_LTT_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-loadtesttool"
-# export HBASE_CANARY_OPTS="${HBASE_CANARY_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-canary"
-# export HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} ${HBASE_TRACE_OPTS} -Dotel.resource.attributes=service.name=hbase-hbtop"
+# Note also that as of this writing, the javaagent logs to stderr and is not configured along with
+# the rest of HBase's logging configuration.
 #
-# Manually specify a value for OPENTELEMETRY_JAVAAGENT_PATH to override the autodiscovery mechanism
-# export OPENTELEMETRY_JAVAAGENT_PATH=""
+# `HBASE_OTEL_TRACING_ENABLED`, required. Enable attaching the opentelemetry javaagent to the
+# process via support provided by `bin/hbase`. When this value us `false`, the agent is not added
+# to the process launch arguments and all further OpenTelemetry configuration is ignored.
+#export HBASE_OTEL_TRACING_ENABLED=true
+#
+# `OPENTELEMETRY_JAVAAGENT_PATH`, optional. Override the javaagent provided by HBase in `lib/trace`
+# with an alternate. Use when you need to upgrade the agent version or swap out the official one
+# for an alternative implementation.
+#export OPENTELEMETRY_JAVAAGENT_PATH=""
+#
+# `OTEL_FOO_EXPORTER`, required. Specify an Exporter implementation per signal type. HBase only
+# makes explicit use of the traces signal at this time, so the important one is
+# `OTEL_TRACES_EXPORTER`. Specify its value based on the exporter required for your tracing
+# environment. The other two should be uncommented and specified as `none`, otherwise the agent
+# may report errors while attempting to export these other signals to an unconfigured destination.
+# https://github.com/open-telemetry/opentelemetry-java/tree/v1.15.0/sdk-extensions/autoconfigure#exporters
+#export OTEL_TRACES_EXPORTER=""
+#export OTEL_METRICS_EXPORTER="none"
+#export OTEL_LOGS_EXPORTER="none"
+#
+# `OTEL_SERVICE_NAME`, required. Specify "resource attributes", and specifically the `service.name`,
+# as a unique value for each HBase process. OpenTelemetry allows for specifying this value in one
+# of two ways, via environment variables with the `OTEL_` prefix, or via system properties with the
+# `otel.` prefix. Which you use with HBase is decided based on whether this configuration file is
+# read by a single process or shared by multiple HBase processes. For the default standalone mode
+# or an environment where all processes share the same configuration file, use the `otel` system
+# properties by uncommenting all of the `HBASE_FOO_OPTS` exports below. When this configuration file
+# is being consumed by only a single process -- for example, from a systemd configuration or in a
+# container template -- replace use of `HBASE_FOO_OPTS` with the standard `OTEL_SERVICE_NAME` and/or
+# `OTEL_RESOURCE_ATTRIBUTES` environment variables. For further details, see
+# https://github.com/open-telemetry/opentelemetry-java/tree/v1.15.0/sdk-extensions/autoconfigure#opentelemetry-resource
+#export HBASE_CANARY_OPTS="${HBASE_CANARY_OPTS} -Dotel.resource.attributes=service.name=hbase-canary"
+#export HBASE_HBCK_OPTS="${HBASE_HBCK_OPTS} -Dotel.resource.attributes=service.name=hbase-hbck"
+#export HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dotel.resource.attributes=service.name=hbase-hbtop"
+#export HBASE_JSHELL_OPTS="${HBASE_JSHELL_OPTS} -Dotel.resource.attributes=service.name=hbase-jshell"
+#export HBASE_LTT_OPTS="${HBASE_LTT_OPTS} -Dotel.resource.attributes=service.name=hbase-loadtesttool"
+#export HBASE_MASTER_OPTS="${HBASE_MASTER_OPTS} -Dotel.resource.attributes=service.name=hbase-master"
+#export HBASE_PE_OPTS="${HBASE_PE_OPTS} -Dotel.resource.attributes=service.name=hbase-performanceevaluation"
+#export HBASE_REGIONSERVER_OPTS="${HBASE_REGIONSERVER_OPTS} -Dotel.resource.attributes=service.name=hbase-regionserver"
+#export HBASE_REST_OPTS="${HBASE_REST_OPTS} -Dotel.resource.attributes=service.name=hbase-rest"
+#export HBASE_SHELL_OPTS="${HBASE_SHELL_OPTS} -Dotel.resource.attributes=service.name=hbase-shell"
+#export HBASE_THRIFT_OPTS="${HBASE_THRIFT_OPTS} -Dotel.resource.attributes=service.name=hbase-thrift"
+#export HBASE_ZOOKEEPER_OPTS="${HBASE_ZOOKEEPER_OPTS} -Dotel.resource.attributes=service.name=hbase-zookeeper"
 
-# Additional argments passed to jshell invocation
+#
+# JDK11+ JShell
+#
+# Additional arguments passed to jshell invocation
 # export HBASE_JSHELL_ARGS="--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh"

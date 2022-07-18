@@ -45,6 +45,11 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   }
 
   @Override
+  public int getBulkLoadQueueLength() {
+    return delegate.getBulkLoadQueueLength();
+  }
+
+  @Override
   public int getPriorityQueueLength() {
     return delegate.getPriorityQueueLength();
   }
@@ -72,6 +77,11 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   @Override
   public int getActiveReplicationRpcHandlerCount() {
     return delegate.getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    return delegate.getActiveBulkLoadRpcHandlerCount();
   }
 
   @Override

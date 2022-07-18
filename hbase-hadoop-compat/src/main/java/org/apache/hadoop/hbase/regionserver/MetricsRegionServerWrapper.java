@@ -92,6 +92,11 @@ public interface MetricsRegionServerWrapper {
   long getNumStoreFiles();
 
   /**
+   * Get the max number of store files across all regions of this region server.
+   */
+  long getMaxStoreFiles();
+
+  /**
    * Get the size of the memstore on this region server.
    */
   long getMemStoreSize();
@@ -268,6 +273,11 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheCount();
 
   /**
+   * Get the number of DATA blocks in the block cache.
+   */
+  long getBlockCacheDataBlockCount();
+
+  /**
    * Get the total size (in bytes) of the block cache.
    */
   long getBlockCacheSize();
@@ -318,6 +328,26 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheFailedInsertions();
 
   /**
+   * Cache size (bytes) of L1 cache
+   */
+  long getL1CacheSize();
+
+  /**
+   * Free cache size (bytes) of L1 cache
+   */
+  long getL1CacheFreeSize();
+
+  /**
+   * Number of blocks in L1 cache
+   */
+  long getL1CacheCount();
+
+  /**
+   * Number of blocks evicted from L1 cache
+   */
+  long getL1CacheEvictedCount();
+
+  /**
    * Hit count of L1 cache.
    */
   long getL1CacheHitCount();
@@ -336,6 +366,26 @@ public interface MetricsRegionServerWrapper {
    * Miss ratio of L1 cache.
    */
   double getL1CacheMissRatio();
+
+  /**
+   * Cache size (bytes) of L2 cache
+   */
+  long getL2CacheSize();
+
+  /**
+   * Free cache size (bytes) of L2 cache
+   */
+  long getL2CacheFreeSize();
+
+  /**
+   * Number of blocks in L2 cache
+   */
+  long getL2CacheCount();
+
+  /**
+   * Number of blocks evicted from L2 cache
+   */
+  long getL2CacheEvictedCount();
 
   /**
    * Hit count of L2 cache.
