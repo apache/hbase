@@ -109,7 +109,7 @@ public class FavoredNodeAssignmentHelper {
           break;
         }
       }
-      serverList.add((sn));
+      serverList.add(sn);
       this.regionServerToRackMap.put(sn.getHostname(), rackName);
     }
   }
@@ -233,7 +233,7 @@ public class FavoredNodeAssignmentHelper {
           if (numIterations % rackList.size() == 0) {
             if (++serverIndex >= maxRackSize) serverIndex = 0;
           }
-          if ((++rackIndex) >= rackList.size()) {
+          if (++rackIndex >= rackList.size()) {
             rackIndex = 0; // reset the rack index to 0
           }
         } else break;
@@ -257,7 +257,7 @@ public class FavoredNodeAssignmentHelper {
       if (numIterations % rackList.size() == 0) {
         ++serverIndex;
       }
-      if ((++rackIndex) >= rackList.size()) {
+      if (++rackIndex >= rackList.size()) {
         rackIndex = 0; // reset the rack index to 0
       }
     }
@@ -296,7 +296,7 @@ public class FavoredNodeAssignmentHelper {
     if (getTotalNumberOfRacks() == 1) {
       favoredNodes = singleRackCase(regionInfo, primaryRS, primaryRack);
     } else {
-      favoredNodes = multiRackCase(regionInfo, primaryRS, primaryRack);
+      favoredNodes = multiRackCase(primaryRS, primaryRack);
     }
     return favoredNodes;
   }
@@ -481,14 +481,12 @@ public class FavoredNodeAssignmentHelper {
    * has only one region server, then we place primary and tertiary on one rack and secondary on
    * another. The aim is two distribute the three favored nodes on >= 2 racks. TODO: see how we can
    * use generateMissingFavoredNodeMultiRack API here
-   * @param regionInfo  Region for which we are trying to generate FN
    * @param primaryRS   The primary favored node.
    * @param primaryRack The rack of the primary favored node.
    * @return Array containing secondary and tertiary favored nodes.
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  private ServerName[] multiRackCase(RegionInfo regionInfo, ServerName primaryRS,
-    String primaryRack) throws IOException {
+  private ServerName[] multiRackCase(ServerName primaryRS, String primaryRack) throws IOException {
 
     List<ServerName> favoredNodes = Lists.newArrayList(primaryRS);
     // Create the secondary and tertiary pair
