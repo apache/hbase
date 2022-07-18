@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.jcodings.Encoding;
 import org.jcodings.EncodingDB;
-import org.jcodings.specific.UTF8Encoding;
+import org.jcodings.specific.NonStrictUTF8Encoding;
 import org.joni.Matcher;
 import org.joni.Option;
 import org.joni.Regex;
@@ -314,7 +314,7 @@ public class RegexStringComparator extends ByteArrayComparable {
    * NOTE: Only the {@link Pattern} flags CASE_INSENSITIVE, DOTALL, and MULTILINE are supported.
    */
   static class JoniRegexEngine implements Engine {
-    private Encoding encoding = UTF8Encoding.INSTANCE;
+    private Encoding encoding = NonStrictUTF8Encoding.INSTANCE;
     private String regex;
     private Regex pattern;
 
