@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -47,10 +46,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
-import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -60,14 +56,6 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class NettyRpcServer extends RpcServer {
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
-
-  /**
-   * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
-   * this down from unlimited.
-   */
-  public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
-    "hbase.netty.eventloop.rpcserver.thread.count";
-  private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
   /**
    * Name of property to change the byte buf allocator for the netty channels. Default is no value,
@@ -97,21 +85,16 @@ public class NettyRpcServer extends RpcServer {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
     this.channelAllocator = getChannelAllocator(conf);
-    EventLoopGroup eventLoopGroup;
-    Class<? extends ServerChannel> channelClass;
-    if (server instanceof HRegionServer) {
-      NettyEventLoopGroupConfig config = ((HBaseServerBase) server).getEventLoopGroupConfig();
-      eventLoopGroup = config.group();
-      channelClass = config.serverChannelClass();
-    } else {
-      int threadCount = server == null
-        ? EVENTLOOP_THREADCOUNT_DEFAULT
-        : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
-          EVENTLOOP_THREADCOUNT_DEFAULT);
-      eventLoopGroup = new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
-      channelClass = NioServerSocketChannel.class;
+    // Get the event loop group configuration from the server class if available.
+    NettyEventLoopGroupConfig config = null;
+    if (server instanceof HBaseServerBase) {
+      config = ((HBaseServerBase) server).getEventLoopGroupConfig();
     }
+    if (config == null) {
+      config = new NettyEventLoopGroupConfig(conf, "NettyRpcServer");
+    }
+    EventLoopGroup eventLoopGroup = config.group();
+    Class<? extends ServerChannel> channelClass = config.serverChannelClass();
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
       .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)

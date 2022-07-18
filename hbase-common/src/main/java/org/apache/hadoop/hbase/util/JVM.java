@@ -42,12 +42,15 @@ public class JVM {
 
   private static final boolean ibmvendor =
     System.getProperty("java.vendor") != null && System.getProperty("java.vendor").contains("IBM");
-  private static final boolean windows =
-    System.getProperty("os.name") != null && System.getProperty("os.name").startsWith("Windows");
-  private static final boolean linux =
-    System.getProperty("os.name") != null && System.getProperty("os.name").startsWith("Linux");
+  // At least on my systems os.name reports as "linux", not "Linux". Prefer case insensitive tests.
+  private static final boolean windows = System.getProperty("os.name") != null
+    && System.getProperty("os.name").toLowerCase().contains("windows");
+  private static final boolean linux = System.getProperty("os.name") != null
+    && System.getProperty("os.name").toLowerCase().contains("linux");
   private static final boolean amd64 =
     System.getProperty("os.arch") != null && System.getProperty("os.arch").contains("amd64");
+  private static final boolean aarch64 =
+    System.getProperty("os.arch") != null && System.getProperty("os.arch").contains("aarch64");
 
   private static final String JVMVersion = System.getProperty("java.version");
 
@@ -97,6 +100,14 @@ public class JVM {
    */
   public static boolean isAmd64() {
     return amd64;
+  }
+
+  /**
+   * Check if the arch is aarch64;
+   * @return whether this is aarch64 or not.
+   */
+  public static boolean isAarch64() {
+    return aarch64;
   }
 
   /**
