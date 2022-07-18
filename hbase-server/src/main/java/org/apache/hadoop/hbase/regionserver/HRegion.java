@@ -6502,7 +6502,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (call.isPresent()) {
         long deadline = call.get().getDeadline();
         if (deadline < Long.MAX_VALUE) {
-          int timeToDeadline = (int) (deadline - System.currentTimeMillis());
+          int timeToDeadline = (int) (deadline - EnvironmentEdgeManager.currentTime());
           if (timeToDeadline <= this.rowLockWaitDuration) {
             reachDeadlineFirst = true;
             timeout = timeToDeadline;
