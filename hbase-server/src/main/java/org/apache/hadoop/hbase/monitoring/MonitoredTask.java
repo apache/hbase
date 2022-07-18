@@ -69,16 +69,11 @@ public interface MonitoredTask extends Cloneable {
 
   void setWarnTime(final long t);
 
-  List<StatusJournalEntry> getStatusJournal();
-
   /**
-   * Enable journal that will store all statuses that have been set along with the time stamps when
-   * they were set.
-   * @param includeCurrentStatus whether to include the current set status in the journal
+   * If journal is enabled, we will store all statuses that have been set along with the time stamps
+   * when they were set. This method will give you all the journals stored so far.
    */
-  void enableStatusJournal(boolean includeCurrentStatus);
-
-  void disableStatusJournal();
+  List<StatusJournalEntry> getStatusJournal();
 
   String prettyPrintJournal();
 

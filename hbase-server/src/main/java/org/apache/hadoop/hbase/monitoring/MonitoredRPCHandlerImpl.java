@@ -45,7 +45,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl implements Monito
   private Map<String, Object> callInfoMap = new HashMap<>();
 
   public MonitoredRPCHandlerImpl() {
-    super();
+    super(false);
     // in this implementation, WAITING indicates that the handler is not
     // actively servicing an RPC call.
     setState(State.WAITING);
@@ -235,7 +235,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl implements Monito
       return map;
     }
     Map<String, Object> rpcJSON = new HashMap<>();
-    ArrayList paramList = new ArrayList();
+    ArrayList<Object> paramList = new ArrayList<>();
     map.put("rpcCall", rpcJSON);
     rpcJSON.put("queuetimems", getRPCQueueTime());
     rpcJSON.put("starttimems", getRPCStartTime());
