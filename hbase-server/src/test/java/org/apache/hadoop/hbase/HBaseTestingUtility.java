@@ -1906,14 +1906,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   public static final byte[] START_KEY_BYTES = { FIRST_CHAR, FIRST_CHAR, FIRST_CHAR };
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
-  public TableDescriptorBuilder.ModifyableTableDescriptor createModifyableTableDescriptor(final String name) {
+  public TableDescriptorBuilder.ModifyableTableDescriptor
+    createModifyableTableDescriptor(final String name) {
     return createModifyableTableDescriptor(TableName.valueOf(name),
       ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, MAXVERSIONS, HConstants.FOREVER,
       ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
   }
 
-  public TableDescriptorBuilder.ModifyableTableDescriptor createModifyableTableDescriptor(final TableName name,
-    final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+  public TableDescriptorBuilder.ModifyableTableDescriptor createModifyableTableDescriptor(
+    final TableName name, final int minVersions, final int versions, final int ttl,
+    KeepDeletedCells keepDeleted) {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name);
     for (byte[] cfName : new byte[][] { fam1, fam2, fam3 }) {
       ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(cfName)
