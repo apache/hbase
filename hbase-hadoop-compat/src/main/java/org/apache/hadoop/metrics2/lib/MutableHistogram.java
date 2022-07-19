@@ -59,6 +59,14 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
     return histogram.getMax();
   }
 
+  public String getName() {
+    return name;
+  }
+
+  public Snapshot getSnapshot() {
+    return histogram.snapshot();
+  }
+
   @Override
   public synchronized void snapshot(MetricsRecordBuilder metricsRecordBuilder, boolean all) {
     snapshot(name, desc, histogram, metricsRecordBuilder, all);

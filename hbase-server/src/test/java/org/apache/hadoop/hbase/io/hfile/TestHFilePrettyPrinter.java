@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.metrics2.lib.MutableRangeHistogram;
+import org.apache.hadoop.metrics2.lib.MutableSizeHistogram;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -125,5 +128,29 @@ public class TestHFilePrettyPrinter {
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
     assertEquals(expectedResult, result);
+  }
+
+  @Test
+  public void testHistograms() throws IOException {
+    int rowCount = 1000;
+    Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
+    TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, rowCount);
+    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
+      fileNotInRootDir);
+
+    System.setOut(ps);
+    new HFilePrettyPrinter(conf).run(new String[] { "-s", String.valueOf(fileNotInRootDir) });
+    String result = stream.toString();
+    assertContainsRanges(result, new MutableSizeHistogram("test", "test"), rowCount);
+    assertContainsRanges(result, new HFilePrettyPrinter.MutableColumnCountHistogram("test", "test"),
+      rowCount);
+  }
+
+  private void assertContainsRanges(String result, MutableRangeHistogram histogram, int count) {
+    for (long range : histogram.getRanges()) {
+      String expected = count + " <= " + range;
+      assertTrue("expected:\n" + result + "\nto contain: '" + expected + "'",
+        result.contains(expected));
+    }
   }
 }
