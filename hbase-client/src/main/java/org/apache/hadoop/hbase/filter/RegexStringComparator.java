@@ -314,6 +314,8 @@ public class RegexStringComparator extends ByteArrayComparable {
    * NOTE: Only the {@link Pattern} flags CASE_INSENSITIVE, DOTALL, and MULTILINE are supported.
    */
   static class JoniRegexEngine implements Engine {
+    // When using UTF8Encoding, an infinite loop can occur if an invalid UTF8 is encountered.
+    // Use NonStrictUTF8Encoding instead of UTF8Encoding to avoid the issue.
     private Encoding encoding = NonStrictUTF8Encoding.INSTANCE;
     private String regex;
     private Regex pattern;
