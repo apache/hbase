@@ -21,7 +21,6 @@ import com.google.errorprone.annotations.RestrictedApi;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +51,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.SetMultimap;
 
 /**
  * The class MobFileCleanerChore for running cleaner regularly to remove the expired and obsolete
@@ -209,27 +210,27 @@ public class MobFileCleanerChore extends ScheduledChore {
                 byte[] bulkloadMarkerData = sf.getMetadataValue(HStoreFile.BULKLOAD_TASK_KEY);
                 // close store file to avoid memory leaks
                 sf.closeStoreFile(true);
-                if (mobRefData == null && bulkloadMarkerData == null) {
-                  LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
-                    + "can not proceed until all old files will be MOB-compacted.", pp);
-                  return;
-                } else if (mobRefData == null && bulkloadMarkerData != null) {
-                  LOG.debug("Skipping file without MOB references (bulkloaded file):{}", pp);
-                  continue;
-                }
-                // mobRefData will never be null here, but to make FindBugs happy
-                if (mobRefData != null && mobRefData.length > 1) {
-                  // if length = 1 means NULL, that there are no MOB references
-                  // in this store file, but the file was created by new MOB code
-                  String[] mobs = new String(mobRefData).split(",");
-                  if (LOG.isTraceEnabled()) {
-                    LOG.trace("Found: {} mob references: {}", mobs.length, Arrays.toString(mobs));
+                if (mobRefData == null) {
+                  if (bulkloadMarkerData == null) {
+                    LOG.warn("Found old store file with no MOB_FILE_REFS: {} - "
+                      + "can not proceed until all old files will be MOB-compacted.", pp);
+                    return;
                   } else {
-                    LOG.debug("Found: {} mob references", mobs.length);
+                    LOG.debug("Skipping file without MOB references (bulkloaded file):{}", pp);
+                    continue;
                   }
-                  regionMobs.addAll(Arrays.asList(mobs));
-                } else {
-                  LOG.debug("File {} does not have mob references", currentPath);
+                }
+                // file may or may not have MOB references, but was created by the distributed
+                // mob compaction code.
+                try {
+                  SetMultimap<TableName, String> mobs =
+                    MobUtils.deserializeMobFileRefs(mobRefData).build();
+                  LOG.debug("Found {} mob references for store={}", mobs.size(), sf);
+                  LOG.trace("Specific mob references found for store={} : {}", sf, mobs);
+                  regionMobs.addAll(mobs.values());
+                } catch (RuntimeException exception) {
+                  throw new IOException("failure getting mob references for hfile " + sf,
+                    exception);
                 }
               }
             } catch (FileNotFoundException e) {

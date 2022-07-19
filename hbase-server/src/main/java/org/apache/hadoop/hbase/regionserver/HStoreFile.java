@@ -303,7 +303,8 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Only used by the Striped Compaction Policy n * @return value associated with the metadata key
+   * @param key to look up
+   * @return value associated with the metadata key
    */
   public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);

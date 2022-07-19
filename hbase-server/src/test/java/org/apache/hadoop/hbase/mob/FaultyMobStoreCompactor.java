@@ -23,14 +23,15 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -116,8 +117,6 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
       }
     }
 
-    FileSystem fs = store.getFileSystem();
-
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> cells = new ArrayList<>();
@@ -169,7 +168,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
         // Add the only reference we get for compact MOB case
         // because new store file will have only one MOB reference
         // in this case - of newly compacted MOB file
-        mobRefSet.get().add(mobFileWriter.getPath().getName());
+        mobRefSet.get().put(store.getTableName(), mobFileWriter.getPath().getName());
       }
       do {
         hasMore = scanner.next(cells, scannerContext);
@@ -242,9 +241,15 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               if (size > mobSizeThreshold) {
                 // If the value size is larger than the threshold, it's regarded as a mob. Since
                 // its value is already in the mob file, directly write this cell to the store file
-                writer.append(c);
-                // Add MOB reference to a set
-                mobRefSet.get().add(MobUtils.getMobFileName(c));
+                Optional<TableName> refTable = MobUtils.getTableName(c);
+                if (refTable.isPresent()) {
+                  mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
+                  writer.append(c);
+                } else {
+                  throw new IOException(String.format("MOB cell did not contain a tablename "
+                    + "tag. should not be possible. see ref guide on mob troubleshooting. "
+                    + "store={} cell={}", getStoreInfo(), c));
+                }
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
                 // the mob cell from the mob file, and write it back to the store file.
@@ -260,9 +265,15 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                   // directly write the cell to the store file, and leave it to be handled by the
                   // next compaction.
                   LOG.error("Empty value for: " + c);
-                  writer.append(c);
-                  // Add MOB reference to a set
-                  mobRefSet.get().add(MobUtils.getMobFileName(c));
+                  Optional<TableName> refTable = MobUtils.getTableName(c);
+                  if (refTable.isPresent()) {
+                    mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
+                    writer.append(c);
+                  } else {
+                    throw new IOException(String.format("MOB cell did not contain a tablename "
+                      + "tag. should not be possible. see ref guide on mob troubleshooting. "
+                      + "store={} cell={}", getStoreInfo(), c));
+                  }
                 }
               }
             } else {
@@ -285,7 +296,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
             cellsCountCompactedToMob++;
             cellsSizeCompactedToMob += c.getValueLength();
             // Add ref we get for compact MOB case
-            mobRefSet.get().add(mobFileWriter.getPath().getName());
+            mobRefSet.get().put(store.getTableName(), mobFileWriter.getPath().getName());
           }
 
           int len = c.getSerializedSize();
