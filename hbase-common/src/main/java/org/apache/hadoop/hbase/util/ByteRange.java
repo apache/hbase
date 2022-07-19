@@ -120,9 +120,7 @@ public interface ByteRange extends Comparable<ByteRange> {
    */
   public ByteRange setLength(int length);
 
-  /**
-   * @return true when this range is of zero length, false otherwise.
-   */
+  /** Returns true when this range is of zero length, false otherwise. */
   public boolean isEmpty();
 
   /**

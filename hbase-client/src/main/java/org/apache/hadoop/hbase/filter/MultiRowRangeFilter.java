@@ -176,9 +176,7 @@ public class MultiRowRangeFilter extends FilterBase {
     return PrivateCellUtil.createFirstOnRow(comparisonData, 0, (short) comparisonData.length);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.MultiRowRangeFilter.Builder builder =
@@ -469,16 +467,12 @@ public class MultiRowRangeFilter extends FilterBase {
       return stopRow;
     }
 
-    /**
-     * @return if start row is inclusive.
-     */
+    /** Returns if start row is inclusive. */
     public boolean isStartRowInclusive() {
       return startRowInclusive;
     }
 
-    /**
-     * @return if stop row is inclusive.
-     */
+    /** Returns if stop row is inclusive. */
     public boolean isStopRowInclusive() {
       return stopRowInclusive;
     }

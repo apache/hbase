@@ -52,17 +52,13 @@ public class RESTServlet implements Constants {
     return realUser;
   }
 
-  /**
-   * @return the RESTServlet singleton instance
-   */
+  /** Returns the RESTServlet singleton instance */
   public synchronized static RESTServlet getInstance() {
     assert (INSTANCE != null);
     return INSTANCE;
   }
 
-  /**
-   * @return the ConnectionCache instance
-   */
+  /** Returns the ConnectionCache instance */
   public ConnectionCache getConnectionCache() {
     return connectionCache;
   }

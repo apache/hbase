@@ -151,9 +151,7 @@ public class ColumnPaginationFilter extends FilterBase {
     return new ColumnPaginationFilter(limit, offset);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnPaginationFilter.Builder builder =

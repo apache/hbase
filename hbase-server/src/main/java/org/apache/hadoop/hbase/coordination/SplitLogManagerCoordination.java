@@ -56,30 +56,22 @@ public interface SplitLogManagerCoordination {
       this.failedDeletions = failedDeletions;
     }
 
-    /**
-     * @return the master value
-     */
+    /** Returns the master value */
     public MasterServices getMaster() {
       return master;
     }
 
-    /**
-     * @return map of tasks
-     */
+    /** Returns map of tasks */
     public ConcurrentMap<String, Task> getTasks() {
       return tasks;
     }
 
-    /**
-     * @return a set of failed deletions
-     */
+    /** Returns a set of failed deletions */
     public Set<String> getFailedDeletions() {
       return failedDeletions;
     }
 
-    /**
-     * @return server name
-     */
+    /** Returns server name */
     public ServerName getServerName() {
       return master.getServerName();
     }

@@ -68,9 +68,7 @@ public class DynamicMetricsRegistry {
     metricsInfo = info;
   }
 
-  /**
-   * @return the info object of the metrics registry
-   */
+  /** Returns the info object of the metrics registry */
   public MetricsInfo info() {
     return metricsInfo;
   }

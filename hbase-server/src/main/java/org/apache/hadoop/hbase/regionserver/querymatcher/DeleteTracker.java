@@ -51,9 +51,7 @@ public interface DeleteTracker extends ShipperListener {
    */
   DeleteResult isDeleted(Cell cell);
 
-  /**
-   * @return true if there are no current delete, false otherwise
-   */
+  /** Returns true if there are no current delete, false otherwise */
   boolean isEmpty();
 
   /**

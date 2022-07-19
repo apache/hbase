@@ -167,113 +167,85 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
         this.currentCompactedKVs = currentCompactedKVs;
       }
 
-      /**
-       * @return the region name
-       */
+      /** Returns the region name */
       @XmlAttribute
       public byte[] getName() {
         return name;
       }
 
-      /**
-       * @return the number of stores
-       */
+      /** Returns the number of stores */
       @XmlAttribute
       public int getStores() {
         return stores;
       }
 
-      /**
-       * @return the number of store files
-       */
+      /** Returns the number of store files */
       @XmlAttribute
       public int getStorefiles() {
         return storefiles;
       }
 
-      /**
-       * @return the total size of store files, in MB
-       */
+      /** Returns the total size of store files, in MB */
       @XmlAttribute
       public int getStorefileSizeMB() {
         return storefileSizeMB;
       }
 
-      /**
-       * @return memstore size, in MB
-       */
+      /** Returns memstore size, in MB */
       @XmlAttribute
       public int getMemStoreSizeMB() {
         return memstoreSizeMB;
       }
 
-      /**
-       * @return the total size of store file indexes, in KB
-       */
+      /** Returns the total size of store file indexes, in KB */
       @XmlAttribute
       public long getStorefileIndexSizeKB() {
         return storefileIndexSizeKB;
       }
 
-      /**
-       * @return the current total read requests made to region
-       */
+      /** Returns the current total read requests made to region */
       @XmlAttribute
       public long getReadRequestsCount() {
         return readRequestsCount;
       }
 
-      /**
-       * @return the current total read requests made to region
-       */
+      /** Returns the current total read requests made to region */
       @XmlAttribute
       public long getCpRequestsCount() {
         return cpRequestsCount;
       }
 
-      /**
-       * @return the current total write requests made to region
-       */
+      /** Returns the current total write requests made to region */
       @XmlAttribute
       public long getWriteRequestsCount() {
         return writeRequestsCount;
       }
 
-      /**
-       * @return The current total size of root-level indexes for the region, in KB.
-       */
+      /** Returns The current total size of root-level indexes for the region, in KB. */
       @XmlAttribute
       public int getRootIndexSizeKB() {
         return rootIndexSizeKB;
       }
 
-      /**
-       * @return The total size of static index, in KB
-       */
+      /** Returns The total size of static index, in KB */
       @XmlAttribute
       public int getTotalStaticIndexSizeKB() {
         return totalStaticIndexSizeKB;
       }
 
-      /**
-       * @return The total size of static bloom, in KB
-       */
+      /** Returns The total size of static bloom, in KB */
       @XmlAttribute
       public int getTotalStaticBloomSizeKB() {
         return totalStaticBloomSizeKB;
       }
 
-      /**
-       * @return The total number of compacting key-values
-       */
+      /** Returns The total number of compacting key-values */
       @XmlAttribute
       public long getTotalCompactingKVs() {
         return totalCompactingKVs;
       }
 
-      /**
-       * @return The number of current compacted key-values
-       */
+      /** Returns The number of current compacted key-values */
       @XmlAttribute
       public long getCurrentCompactedKVs() {
         return currentCompactedKVs;
@@ -426,49 +398,37 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
       this.startCode = startCode;
     }
 
-    /**
-     * @return the region server's name
-     */
+    /** Returns the region server's name */
     @XmlAttribute
     public String getName() {
       return name;
     }
 
-    /**
-     * @return the region server's start code
-     */
+    /** Returns the region server's start code */
     @XmlAttribute
     public long getStartCode() {
       return startCode;
     }
 
-    /**
-     * @return the current heap size, in MB
-     */
+    /** Returns the current heap size, in MB */
     @XmlAttribute
     public int getHeapSizeMB() {
       return heapSizeMB;
     }
 
-    /**
-     * @return the maximum heap size, in MB
-     */
+    /** Returns the maximum heap size, in MB */
     @XmlAttribute
     public int getMaxHeapSizeMB() {
       return maxHeapSizeMB;
     }
 
-    /**
-     * @return the list of regions served by the region server
-     */
+    /** Returns the list of regions served by the region server */
     @XmlElement(name = "Region")
     public List<Region> getRegions() {
       return regions;
     }
 
-    /**
-     * @return the number of requests per second processed by the region server
-     */
+    /** Returns the number of requests per second processed by the region server */
     @XmlAttribute
     public long getRequests() {
       return requests;
@@ -568,9 +528,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
   public StorageClusterStatusModel() {
   }
 
-  /**
-   * @return the list of live nodes
-   */
+  /** Returns the list of live nodes */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "LiveNodes")
   // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
@@ -579,9 +537,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
     return liveNodes;
   }
 
-  /**
-   * @return the list of dead nodes
-   */
+  /** Returns the list of dead nodes */
   @XmlElement(name = "Node")
   @XmlElementWrapper(name = "DeadNodes")
   // workaround https://github.com/FasterXML/jackson-dataformat-xml/issues/192
@@ -590,9 +546,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
     return deadNodes;
   }
 
-  /**
-   * @return the total number of regions served by the cluster
-   */
+  /** Returns the total number of regions served by the cluster */
   @XmlAttribute
   public int getRegions() {
     return regions;
@@ -607,9 +561,7 @@ public class StorageClusterStatusModel implements Serializable, ProtobufMessageH
     return requests;
   }
 
-  /**
-   * @return the average load of the region servers in the cluster
-   */
+  /** Returns the average load of the region servers in the cluster */
   @XmlAttribute
   public double getAverageLoad() {
     return averageLoad;

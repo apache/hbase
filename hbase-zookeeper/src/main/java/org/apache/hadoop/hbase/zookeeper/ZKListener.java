@@ -71,9 +71,7 @@ public abstract class ZKListener {
     // no-op
   }
 
-  /**
-   * @return The watcher associated with this listener
-   */
+  /** Returns The watcher associated with this listener */
   public ZKWatcher getWatcher() {
     return this.watcher;
   }

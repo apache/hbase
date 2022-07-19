@@ -824,9 +824,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
-  /**
-   * @return distributed commit coordinator for all running snapshots
-   */
+  /** Returns distributed commit coordinator for all running snapshots */
   ProcedureCoordinator getCoordinator() {
     return coordinator;
   }

@@ -169,14 +169,10 @@ public abstract class TimeRangeTracker {
     return (getMin() < tr.getMax() && getMax() >= tr.getMin());
   }
 
-  /**
-   * @return the minimumTimestamp
-   */
+  /** Returns the minimumTimestamp */
   public abstract long getMin();
 
-  /**
-   * @return the maximumTimestamp
-   */
+  /** Returns the maximumTimestamp */
   public abstract long getMax();
 
   @Override
@@ -227,9 +223,7 @@ public abstract class TimeRangeTracker {
     }
   }
 
-  /**
-   * @return Make a TimeRange from current state of <code>this</code>.
-   */
+  /** Returns Make a TimeRange from current state of <code>this</code>. */
   TimeRange toTimeRange() {
     long min = getMin();
     long max = getMax();

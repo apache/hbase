@@ -112,9 +112,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
     cells.add(cell);
   }
 
-  /**
-   * @return the row key
-   */
+  /** Returns the row key */
   public byte[] getKey() {
     return key;
   }
@@ -126,9 +124,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
     this.key = key;
   }
 
-  /**
-   * @return the cells
-   */
+  /** Returns the cells */
   public List<CellModel> getCells() {
     return cells;
   }

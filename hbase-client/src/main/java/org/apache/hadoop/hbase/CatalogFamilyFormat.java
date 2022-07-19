@@ -398,9 +398,7 @@ public class CatalogFamilyFormat {
     return false;
   }
 
-  /**
-   * @return True if the column in <code>cell</code> matches the regex 'info:merge.*'.
-   */
+  /** Returns True if the column in <code>cell</code> matches the regex 'info:merge.*'. */
   public static boolean isMergeQualifierPrefix(Cell cell) {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
     return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY)

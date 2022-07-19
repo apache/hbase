@@ -35,23 +35,19 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment<RegionCoprocessor> {
-  /** @return the region associated with this coprocessor */
+  /** Returns the region associated with this coprocessor */
   Region getRegion();
 
-  /** @return region information for the region this coprocessor is running on */
+  /** Returns region information for the region this coprocessor is running on */
   RegionInfo getRegionInfo();
 
-  /**
-   * @return Interface to Map of regions online on this RegionServer {@link #getServerName()}}.
-   */
+  /** Returns Interface to Map of regions online on this RegionServer {@link #getServerName()}}. */
   OnlineRegions getOnlineRegions();
 
-  /** @return shared data between all instances of this coprocessor */
+  /** Returns shared data between all instances of this coprocessor */
   ConcurrentMap<String, Object> getSharedData();
 
-  /**
-   * @return Hosting Server's ServerName
-   */
+  /** Returns Hosting Server's ServerName */
   ServerName getServerName();
 
   /**

@@ -96,9 +96,7 @@ public class SkipFilter extends FilterBase {
     return true;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.SkipFilter.Builder builder = FilterProtos.SkipFilter.newBuilder();

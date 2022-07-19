@@ -109,9 +109,7 @@ public class DirectMemoryUtils {
     return 0;
   }
 
-  /**
-   * @return the current amount of direct memory used.
-   */
+  /** Returns the current amount of direct memory used. */
   public static long getDirectMemoryUsage() {
     if (BEAN_SERVER == null || NIO_DIRECT_POOL == null || !HAS_MEMORY_USED_ATTRIBUTE) return 0;
     try {
@@ -123,9 +121,7 @@ public class DirectMemoryUtils {
     }
   }
 
-  /**
-   * @return the current amount of direct memory used by netty module.
-   */
+  /** Returns the current amount of direct memory used by netty module. */
   public static long getNettyDirectMemoryUsage() {
 
     ByteBufAllocatorMetric metric =

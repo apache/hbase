@@ -134,9 +134,7 @@ abstract class OutputSink {
     return this.totalSkippedEdits.get();
   }
 
-  /**
-   * @return the number of currently opened writers
-   */
+  /** Returns the number of currently opened writers */
   abstract int getNumOpenWriters();
 
   /**
@@ -147,14 +145,10 @@ abstract class OutputSink {
 
   abstract List<Path> close() throws IOException;
 
-  /**
-   * @return a map from encoded region ID to the number of edits written out for that region.
-   */
+  /** Returns a map from encoded region ID to the number of edits written out for that region. */
   abstract Map<String, Long> getOutputCounts();
 
-  /**
-   * @return number of regions we've recovered
-   */
+  /** Returns number of regions we've recovered */
   abstract int getNumberOfRecoveredRegions();
 
   /**

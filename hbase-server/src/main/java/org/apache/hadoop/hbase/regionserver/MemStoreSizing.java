@@ -88,9 +88,7 @@ public interface MemStoreSizing {
     }
   };
 
-  /**
-   * @return The new dataSize ONLY as a convenience
-   */
+  /** Returns The new dataSize ONLY as a convenience */
   long incMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
     int cellsCountDelta);
 
@@ -99,9 +97,7 @@ public interface MemStoreSizing {
       delta.getCellsCount());
   }
 
-  /**
-   * @return The new dataSize ONLY as a convenience
-   */
+  /** Returns The new dataSize ONLY as a convenience */
   default long decMemStoreSize(long dataSizeDelta, long heapSizeDelta, long offHeapSizeDelta,
     int cellsCountDelta) {
     return incMemStoreSize(-dataSizeDelta, -heapSizeDelta, -offHeapSizeDelta, -cellsCountDelta);

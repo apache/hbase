@@ -316,9 +316,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     return SERVERNAME_PATTERN.matcher(str).matches() ? valueOf(str) : valueOf(str, NON_STARTCODE);
   }
 
-  /**
-   * @return true if the String follows the pattern of {@link #toString()}, false otherwise.
-   */
+  /** Returns true if the String follows the pattern of {@link #toString()}, false otherwise. */
   public static boolean isFullServerName(final String str) {
     if (str == null || str.isEmpty()) {
       return false;

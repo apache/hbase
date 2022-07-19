@@ -382,9 +382,7 @@ public final class ClientMetaTableAccessor {
 
     abstract void add(Result r);
 
-    /**
-     * @return Collected results; wait till visits complete to collect all possible results
-     */
+    /** Returns Collected results; wait till visits complete to collect all possible results */
     List<T> getResults() {
       return this.results;
     }

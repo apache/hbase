@@ -30,8 +30,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 @Deprecated
 @InterfaceAudience.Private
 public interface HasRegionServerServices {
-  /**
-   * @return An instance of RegionServerServices, an object NOT for Coprocessor consumption.
-   */
+  /** Returns An instance of RegionServerServices, an object NOT for Coprocessor consumption. */
   RegionServerServices getRegionServerServices();
 }

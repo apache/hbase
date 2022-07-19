@@ -466,15 +466,13 @@ public class ServerManager {
     return numServers == 0 ? 0 : (double) totalLoad / (double) numServers;
   }
 
-  /** @return the count of active regionservers */
+  /** Returns the count of active regionservers */
   public int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
     return this.onlineServers.size();
   }
 
-  /**
-   * @return Read-only map of servers to serverinfo
-   */
+  /** Returns Read-only map of servers to serverinfo */
   public Map<ServerName, ServerMetrics> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
     synchronized (this.onlineServers) {
@@ -817,9 +815,7 @@ public class ServerManager {
     return max == Integer.MAX_VALUE ? "NO_LIMIT" : Integer.toString(max);
   }
 
-  /**
-   * @return A copy of the internal list of online servers.
-   */
+  /** Returns A copy of the internal list of online servers. */
   public List<ServerName> getOnlineServersList() {
     // TODO: optimize the load balancer call so we don't need to make a new list
     // TODO: FIX. THIS IS POPULAR CALL.
@@ -847,9 +843,7 @@ public class ServerManager {
     return names;
   }
 
-  /**
-   * @return A copy of the internal list of draining servers.
-   */
+  /** Returns A copy of the internal list of draining servers. */
   public List<ServerName> getDrainingServersList() {
     return new ArrayList<>(this.drainingServers);
   }
@@ -864,9 +858,7 @@ public class ServerManager {
     UNKNOWN
   }
 
-  /**
-   * @return whether the server is online, dead, or unknown.
-   */
+  /** Returns whether the server is online, dead, or unknown. */
   public synchronized ServerLiveState isServerKnownAndOnline(ServerName serverName) {
     return onlineServers.containsKey(serverName)
       ? ServerLiveState.LIVE

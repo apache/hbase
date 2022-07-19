@@ -239,21 +239,15 @@ public abstract class ScanQueryMatcher implements ShipperListener {
    */
   public abstract MatchCode match(Cell cell) throws IOException;
 
-  /**
-   * @return the start key
-   */
+  /** Returns the start key */
   public Cell getStartKey() {
     return startKey;
   }
 
-  /**
-   * @return whether there is an null column in the query
-   */
+  /** Returns whether there is an null column in the query */
   public abstract boolean hasNullColumnInQuery();
 
-  /**
-   * @return a cell represent the current row
-   */
+  /** Returns a cell represent the current row */
   public Cell currentRow() {
     return currentRow;
   }
@@ -337,9 +331,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     }
   }
 
-  /**
-   * @return the Filter
-   */
+  /** Returns the Filter */
   public abstract Filter getFilter();
 
   /**

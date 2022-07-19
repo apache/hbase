@@ -82,9 +82,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   }
 
   // can't avoid this unfortunately
-  /**
-   * @return The hfileName portion of this cache key
-   */
+  /** Returns The hfileName portion of this cache key */
   public String getHfileName() {
     return hfileName;
   }

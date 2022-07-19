@@ -159,9 +159,7 @@ public class TestHBCKSCP extends TestSCPBase {
     return pid;
   }
 
-  /**
-   * @return True if we find reference to <code>sn</code> in meta table.
-   */
+  /** Returns True if we find reference to <code>sn</code> in meta table. */
   private boolean searchMeta(HMaster master, ServerName sn) throws IOException {
     List<Pair<RegionInfo, ServerName>> ps =
       MetaTableAccessor.getTableRegionsAndLocations(master.getConnection(), null);

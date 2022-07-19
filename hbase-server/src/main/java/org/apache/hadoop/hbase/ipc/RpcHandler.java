@@ -63,9 +63,7 @@ public class RpcHandler extends Thread {
     this.abortable = abortable;
   }
 
-  /**
-   * @return A {@link CallRunner} n
-   */
+  /** Returns A {@link CallRunner} n */
   protected CallRunner getCallRunner() throws InterruptedException {
     return this.q.take();
   }

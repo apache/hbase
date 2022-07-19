@@ -158,9 +158,7 @@ public class SplitLogWorker implements Runnable {
     return true;
   }
 
-  /**
-   * @return Result either DONE, RESIGNED, or ERR.
-   */
+  /** Returns Result either DONE, RESIGNED, or ERR. */
   static Status splitLog(String filename, CancelableProgressable p, Configuration conf,
     RegionServerServices server, LastSequenceId sequenceIdChecker, WALFactory factory) {
     Path walDir;

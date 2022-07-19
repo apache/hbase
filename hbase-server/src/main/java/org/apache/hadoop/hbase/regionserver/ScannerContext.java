@@ -452,9 +452,7 @@ public class ScannerContext {
       return this.moreValues;
     }
 
-    /**
-     * @return true when the state indicates that a limit has been reached and scan should stop
-     */
+    /** Returns true when the state indicates that a limit has been reached and scan should stop */
     public boolean limitReached() {
       return this.limitReached;
     }
@@ -603,9 +601,7 @@ public class ScannerContext {
       this.heapSize = heapSize;
     }
 
-    /**
-     * @return {@link LimitScope} indicating scope in which the size limit is enforced
-     */
+    /** Returns {@link LimitScope} indicating scope in which the size limit is enforced */
     LimitScope getSizeScope() {
       return this.sizeScope;
     }
@@ -632,9 +628,7 @@ public class ScannerContext {
       this.time = time;
     }
 
-    /**
-     * @return {@link LimitScope} indicating scope in which the time limit is enforced
-     */
+    /** Returns {@link LimitScope} indicating scope in which the time limit is enforced */
     LimitScope getTimeScope() {
       return this.timeScope;
     }

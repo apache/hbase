@@ -436,7 +436,7 @@ public class RegionStateStore {
   }
 
   /**
-   * @return Return all regioninfos listed in the 'info:merge*' columns of the given {@code region}.
+   * Returns Return all regioninfos listed in the 'info:merge*' columns of the given {@code region}.
    */
   public List<RegionInfo> getMergeRegions(RegionInfo region) throws IOException {
     return CatalogFamilyFormat.getMergeRegions(getRegionCatalogResult(region).rawCells());

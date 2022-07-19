@@ -133,7 +133,7 @@ public class RegionCoprocessorHost
         MetricsCoprocessor.createRegistryForRegionCoprocessor(impl.getClass().getName());
     }
 
-    /** @return the region */
+    /** Returns the region */
     @Override
     public Region getRegion() {
       return region;

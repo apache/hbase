@@ -195,23 +195,17 @@ public class CompactionConfiguration {
       storeConfigInfo.getColumnFamilyName());
   }
 
-  /**
-   * @return lower bound below which compaction is selected without ratio test
-   */
+  /** Returns lower bound below which compaction is selected without ratio test */
   public long getMinCompactSize() {
     return minCompactSize;
   }
 
-  /**
-   * @return upper bound on file size to be included in minor compactions
-   */
+  /** Returns upper bound on file size to be included in minor compactions */
   public long getMaxCompactSize() {
     return maxCompactSize;
   }
 
-  /**
-   * @return lower bound on number of files to be included in minor compactions
-   */
+  /** Returns lower bound on number of files to be included in minor compactions */
   public int getMinFilesToCompact() {
     return minFilesToCompact;
   }
@@ -224,30 +218,22 @@ public class CompactionConfiguration {
     minFilesToCompact = threshold;
   }
 
-  /**
-   * @return upper bound on number of files to be included in minor compactions
-   */
+  /** Returns upper bound on number of files to be included in minor compactions */
   public int getMaxFilesToCompact() {
     return maxFilesToCompact;
   }
 
-  /**
-   * @return Ratio used for compaction
-   */
+  /** Returns Ratio used for compaction */
   public double getCompactionRatio() {
     return compactionRatio;
   }
 
-  /**
-   * @return Off peak Ratio used for compaction
-   */
+  /** Returns Off peak Ratio used for compaction */
   public double getCompactionRatioOffPeak() {
     return offPeakCompactionRatio;
   }
 
-  /**
-   * @return ThrottlePoint used for classifying small and large compactions
-   */
+  /** Returns ThrottlePoint used for classifying small and large compactions */
   public long getThrottlePoint() {
     return throttlePoint;
   }

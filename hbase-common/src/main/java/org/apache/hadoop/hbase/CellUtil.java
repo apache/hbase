@@ -501,9 +501,7 @@ public final class CellUtil {
     return matchingFamily(left, fam) && matchingQualifier(left, qual);
   }
 
-  /**
-   * @return True if matching column family and the qualifier starts with <code>qual</code>
-   */
+  /** Returns True if matching column family and the qualifier starts with <code>qual</code> */
   public static boolean matchingColumnFamilyAndQualifierPrefix(final Cell left, final byte[] fam,
     final byte[] qual) {
     return matchingFamily(left, fam) && PrivateCellUtil.qualifierStartsWith(left, qual);
@@ -571,9 +569,7 @@ public final class CellUtil {
     return PrivateCellUtil.isDelete(cell.getTypeByte());
   }
 
-  /**
-   * @return True if this cell is a Put.
-   */
+  /** Returns True if this cell is a Put. */
   @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
     return cell.getTypeByte() == Type.Put.getCode();
@@ -600,9 +596,7 @@ public final class CellUtil {
     PrivateCellUtil.setTimestamp(cell, Bytes.toLong(ts, tsOffset));
   }
 
-  /**
-   * @return The Key portion of the passed <code>cell</code> as a String.
-   */
+  /** Returns The Key portion of the passed <code>cell</code> as a String. */
   public static String getCellKeyAsString(Cell cell) {
     return getCellKeyAsString(cell,
       c -> Bytes.toStringBinary(c.getRowArray(), c.getRowOffset(), c.getRowLength()));

@@ -75,9 +75,7 @@ public class InclusiveStopFilter extends FilterBase {
     return new InclusiveStopFilter(stopRowKey);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.InclusiveStopFilter.Builder builder =

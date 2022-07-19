@@ -90,9 +90,7 @@ public interface BulkLoadHFiles {
    */
   void disableReplication();
 
-  /**
-   * @return true if replication has been disabled.
-   */
+  /** Returns true if replication has been disabled. */
   boolean isReplicationDisabled();
 
   /**

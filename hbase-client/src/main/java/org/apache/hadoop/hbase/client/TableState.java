@@ -94,44 +94,32 @@ public class TableState {
   private final TableName tableName;
   private final State state;
 
-  /**
-   * @return True if table is {@link State#ENABLED}.
-   */
+  /** Returns True if table is {@link State#ENABLED}. */
   public boolean isEnabled() {
     return isInStates(State.ENABLED);
   }
 
-  /**
-   * @return True if table is {@link State#ENABLING}.
-   */
+  /** Returns True if table is {@link State#ENABLING}. */
   public boolean isEnabling() {
     return isInStates(State.ENABLING);
   }
 
-  /**
-   * @return True if {@link State#ENABLED} or {@link State#ENABLING}
-   */
+  /** Returns True if {@link State#ENABLED} or {@link State#ENABLING} */
   public boolean isEnabledOrEnabling() {
     return isInStates(State.ENABLED, State.ENABLING);
   }
 
-  /**
-   * @return True if table is disabled.
-   */
+  /** Returns True if table is disabled. */
   public boolean isDisabled() {
     return isInStates(State.DISABLED);
   }
 
-  /**
-   * @return True if table is disabling.
-   */
+  /** Returns True if table is disabling. */
   public boolean isDisabling() {
     return isInStates(State.DISABLING);
   }
 
-  /**
-   * @return True if {@link State#DISABLED} or {@link State#DISABLED}
-   */
+  /** Returns True if {@link State#DISABLED} or {@link State#DISABLED} */
   public boolean isDisabledOrDisabling() {
     return isInStates(State.DISABLED, State.DISABLING);
   }
@@ -146,9 +134,7 @@ public class TableState {
     this.state = state;
   }
 
-  /**
-   * @return table state
-   */
+  /** Returns table state */
   public State getState() {
     return state;
   }

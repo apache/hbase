@@ -271,9 +271,7 @@ public abstract class ClientZKSyncer extends ZKListener {
    */
   protected abstract boolean validate(String path);
 
-  /**
-   * @return the zk path(s) to watch
-   */
+  /** Returns the zk path(s) to watch */
   protected abstract Set<String> getPathsToWatch();
 
   protected final void refreshWatchingList() {

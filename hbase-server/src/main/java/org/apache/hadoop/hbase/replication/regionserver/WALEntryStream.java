@@ -95,9 +95,7 @@ class WALEntryStream implements Closeable {
     this.walGroupId = walGroupId;
   }
 
-  /**
-   * @return true if there is another WAL {@link Entry}
-   */
+  /** Returns true if there is another WAL {@link Entry} */
   public boolean hasNext() throws IOException {
     if (currentEntry == null) {
       tryAdvanceEntry();
@@ -130,16 +128,12 @@ class WALEntryStream implements Closeable {
     closeReader();
   }
 
-  /**
-   * @return the position of the last Entry returned by next()
-   */
+  /** Returns the position of the last Entry returned by next() */
   public long getPosition() {
     return currentPositionOfEntry;
   }
 
-  /**
-   * @return the {@link Path} of the current WAL
-   */
+  /** Returns the {@link Path} of the current WAL */
   public Path getCurrentPath() {
     return currentPath;
   }

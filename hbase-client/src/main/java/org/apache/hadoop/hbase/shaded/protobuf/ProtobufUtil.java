@@ -339,9 +339,7 @@ public final class ProtobufUtil {
     }
   }
 
-  /**
-   * @return Length of {@link ProtobufMagic#lengthOfPBMagic()}
-   */
+  /** Returns Length of {@link ProtobufMagic#lengthOfPBMagic()} */
   public static int lengthOfPBMagic() {
     return ProtobufMagic.lengthOfPBMagic();
   }
@@ -1689,9 +1687,7 @@ public final class ProtobufUtil {
     }
   }
 
-  /**
-   * @return A GetRegionInfoRequest for the passed in regionName.
-   */
+  /** Returns A GetRegionInfoRequest for the passed in regionName. */
   public static GetRegionInfoRequest getGetRegionInfoRequest(final byte[] regionName)
     throws IOException {
     return org.apache.hadoop.hbase.client.RegionInfo.isEncodedRegionName(regionName)

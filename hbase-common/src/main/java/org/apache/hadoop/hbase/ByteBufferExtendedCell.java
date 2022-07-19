@@ -60,53 +60,33 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public abstract class ByteBufferExtendedCell implements ExtendedCell {
-  /**
-   * @return The {@link ByteBuffer} containing the row bytes.
-   */
+  /** Returns The {@link ByteBuffer} containing the row bytes. */
   public abstract ByteBuffer getRowByteBuffer();
 
-  /**
-   * @return Position in the {@link ByteBuffer} where row bytes start
-   */
+  /** Returns Position in the {@link ByteBuffer} where row bytes start */
   public abstract int getRowPosition();
 
-  /**
-   * @return The {@link ByteBuffer} containing the column family bytes.
-   */
+  /** Returns The {@link ByteBuffer} containing the column family bytes. */
   public abstract ByteBuffer getFamilyByteBuffer();
 
-  /**
-   * @return Position in the {@link ByteBuffer} where column family bytes start
-   */
+  /** Returns Position in the {@link ByteBuffer} where column family bytes start */
   public abstract int getFamilyPosition();
 
-  /**
-   * @return The {@link ByteBuffer} containing the column qualifier bytes.
-   */
+  /** Returns The {@link ByteBuffer} containing the column qualifier bytes. */
   public abstract ByteBuffer getQualifierByteBuffer();
 
-  /**
-   * @return Position in the {@link ByteBuffer} where column qualifier bytes start
-   */
+  /** Returns Position in the {@link ByteBuffer} where column qualifier bytes start */
   public abstract int getQualifierPosition();
 
-  /**
-   * @return The {@link ByteBuffer} containing the value bytes.
-   */
+  /** Returns The {@link ByteBuffer} containing the value bytes. */
   public abstract ByteBuffer getValueByteBuffer();
 
-  /**
-   * @return Position in the {@link ByteBuffer} where value bytes start
-   */
+  /** Returns Position in the {@link ByteBuffer} where value bytes start */
   public abstract int getValuePosition();
 
-  /**
-   * @return The {@link ByteBuffer} containing the tag bytes.
-   */
+  /** Returns The {@link ByteBuffer} containing the tag bytes. */
   public abstract ByteBuffer getTagsByteBuffer();
 
-  /**
-   * @return Position in the {@link ByteBuffer} where tag bytes start
-   */
+  /** Returns Position in the {@link ByteBuffer} where tag bytes start */
   public abstract int getTagsPosition();
 }

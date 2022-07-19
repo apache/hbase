@@ -39,8 +39,6 @@ public interface HFileBlockDecodingContext {
   void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
     ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) throws IOException;
 
-  /**
-   * @return HFile meta information
-   */
+  /** Returns HFile meta information */
   HFileContext getHFileContext();
 }

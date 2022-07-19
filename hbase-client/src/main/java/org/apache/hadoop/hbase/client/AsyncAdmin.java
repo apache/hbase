@@ -1073,34 +1073,24 @@ public interface AsyncAdmin {
   CompletableFuture<Void> recommissionRegionServer(ServerName server,
     List<byte[]> encodedRegionNames);
 
-  /**
-   * @return cluster status wrapped by {@link CompletableFuture}
-   */
+  /** Returns cluster status wrapped by {@link CompletableFuture} */
   CompletableFuture<ClusterMetrics> getClusterMetrics();
 
-  /**
-   * @return cluster status wrapped by {@link CompletableFuture}
-   */
+  /** Returns cluster status wrapped by {@link CompletableFuture} */
   CompletableFuture<ClusterMetrics> getClusterMetrics(EnumSet<Option> options);
 
-  /**
-   * @return current master server name wrapped by {@link CompletableFuture}
-   */
+  /** Returns current master server name wrapped by {@link CompletableFuture} */
   default CompletableFuture<ServerName> getMaster() {
     return getClusterMetrics(EnumSet.of(Option.MASTER)).thenApply(ClusterMetrics::getMasterName);
   }
 
-  /**
-   * @return current backup master list wrapped by {@link CompletableFuture}
-   */
+  /** Returns current backup master list wrapped by {@link CompletableFuture} */
   default CompletableFuture<Collection<ServerName>> getBackupMasters() {
     return getClusterMetrics(EnumSet.of(Option.BACKUP_MASTERS))
       .thenApply(ClusterMetrics::getBackupMasterNames);
   }
 
-  /**
-   * @return current live region servers list wrapped by {@link CompletableFuture}
-   */
+  /** Returns current live region servers list wrapped by {@link CompletableFuture} */
   default CompletableFuture<Collection<ServerName>> getRegionServers() {
     return getClusterMetrics(EnumSet.of(Option.SERVERS_NAME))
       .thenApply(ClusterMetrics::getServersName);
@@ -1132,9 +1122,7 @@ public interface AsyncAdmin {
     return future;
   }
 
-  /**
-   * @return a list of master coprocessors wrapped by {@link CompletableFuture}
-   */
+  /** Returns a list of master coprocessors wrapped by {@link CompletableFuture} */
   default CompletableFuture<List<String>> getMasterCoprocessorNames() {
     return getClusterMetrics(EnumSet.of(Option.MASTER_COPROCESSORS))
       .thenApply(ClusterMetrics::getMasterCoprocessorNames);

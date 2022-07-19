@@ -268,17 +268,13 @@ public class OpenRegionHandler extends EventHandler {
       }
     }
 
-    /**
-     * @return Null or the run exception; call this method after thread is done.
-     */
+    /** Returns Null or the run exception; call this method after thread is done. */
     Throwable getException() {
       return this.exception;
     }
   }
 
-  /**
-   * @return Instance of HRegion if successful open else null.
-   */
+  /** Returns Instance of HRegion if successful open else null. */
   private HRegion openRegion() {
     HRegion region = null;
     try {

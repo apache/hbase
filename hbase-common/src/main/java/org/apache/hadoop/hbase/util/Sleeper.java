@@ -105,9 +105,7 @@ public class Sleeper {
     }
   }
 
-  /**
-   * @return the sleep period in milliseconds
-   */
+  /** Returns the sleep period in milliseconds */
   public final int getPeriod() {
     return period;
   }

@@ -342,9 +342,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
     }
   }
 
-  /**
-   * @return Maximum region replica id found in passed list of regions.
-   */
+  /** Returns Maximum region replica id found in passed list of regions. */
   private static int getMaxReplicaId(List<RegionInfo> regions) {
     int max = 0;
     for (RegionInfo regionInfo : regions) {

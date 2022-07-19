@@ -65,9 +65,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
     return new FirstKeyOnlyFilter();
   }
 
-  /**
-   * @return true if first KV has been found.
-   */
+  /** Returns true if first KV has been found. */
   protected boolean hasFoundKV() {
     return this.foundKV;
   }
@@ -79,9 +77,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
     this.foundKV = value;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FirstKeyOnlyFilter.Builder builder = FilterProtos.FirstKeyOnlyFilter.newBuilder();

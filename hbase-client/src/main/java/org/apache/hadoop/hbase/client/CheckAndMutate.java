@@ -250,66 +250,48 @@ public final class CheckAndMutate implements Row {
     this.action = action;
   }
 
-  /**
-   * @return the row
-   */
+  /** Returns the row */
   @Override
   public byte[] getRow() {
     return row;
   }
 
-  /**
-   * @return the family to check
-   */
+  /** Returns the family to check */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier to check
-   */
+  /** Returns the qualifier to check */
   public byte[] getQualifier() {
     return qualifier;
   }
 
-  /**
-   * @return the comparison operator
-   */
+  /** Returns the comparison operator */
   public CompareOperator getCompareOp() {
     return op;
   }
 
-  /**
-   * @return the expected value
-   */
+  /** Returns the expected value */
   public byte[] getValue() {
     return value;
   }
 
-  /**
-   * @return the filter to check
-   */
+  /** Returns the filter to check */
   public Filter getFilter() {
     return filter;
   }
 
-  /**
-   * @return whether this has a filter or not
-   */
+  /** Returns whether this has a filter or not */
   public boolean hasFilter() {
     return filter != null;
   }
 
-  /**
-   * @return the time range to check
-   */
+  /** Returns the time range to check */
   public TimeRange getTimeRange() {
     return timeRange;
   }
 
-  /**
-   * @return the action done if check succeeds
-   */
+  /** Returns the action done if check succeeds */
   public Row getAction() {
     return action;
   }

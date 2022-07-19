@@ -365,9 +365,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.debug("Done initializing/checking cluster");
   }
 
-  /**
-   * @return status of CLI execution
-   */
+  /** Returns status of CLI execution */
   @Override
   public int runTestFromCommandLine() throws Exception {
     // Check if backup is enabled

@@ -98,9 +98,7 @@ public class RowMutations implements Row {
     return row;
   }
 
-  /**
-   * @return An unmodifiable list of the current mutations.
-   */
+  /** Returns An unmodifiable list of the current mutations. */
   public List<Mutation> getMutations() {
     return Collections.unmodifiableList(mutations);
   }

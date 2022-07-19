@@ -69,9 +69,7 @@ public class QuotaState {
     return builder.toString();
   }
 
-  /**
-   * @return true if there is no quota information associated to this object
-   */
+  /** Returns true if there is no quota information associated to this object */
   public synchronized boolean isBypass() {
     return globalLimiter == NoopQuotaLimiter.get();
   }

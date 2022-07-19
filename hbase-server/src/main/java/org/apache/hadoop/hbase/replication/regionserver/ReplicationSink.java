@@ -354,9 +354,7 @@ public class ReplicationSink {
       .append(Bytes.toString(family)).append(Path.SEPARATOR).append(storeFile).toString();
   }
 
-  /**
-   * @return True if we have crossed over onto a new row or type
-   */
+  /** Returns True if we have crossed over onto a new row or type */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
     return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
       || !CellUtil.matchingRows(previousCell, cell);

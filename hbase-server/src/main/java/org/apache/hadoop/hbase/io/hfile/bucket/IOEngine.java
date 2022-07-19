@@ -28,9 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface IOEngine {
-  /**
-   * @return true if persistent storage is supported for the cache when shutdown
-   */
+  /** Returns true if persistent storage is supported for the cache when shutdown */
   boolean isPersistent();
 
   /**

@@ -69,9 +69,7 @@ public class ValueFilter extends CompareFilter {
     return new ValueFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ValueFilter.Builder builder = FilterProtos.ValueFilter.newBuilder();

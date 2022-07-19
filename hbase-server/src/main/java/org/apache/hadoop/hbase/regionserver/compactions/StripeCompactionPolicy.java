@@ -588,24 +588,16 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      */
     public byte[] getEndRow(int stripeIndex);
 
-    /**
-     * @return Level 0 files.
-     */
+    /** Returns Level 0 files. */
     public List<HStoreFile> getLevel0Files();
 
-    /**
-     * @return All stripe boundaries; including the open ones on both ends.
-     */
+    /** Returns All stripe boundaries; including the open ones on both ends. */
     public List<byte[]> getStripeBoundaries();
 
-    /**
-     * @return The stripes.
-     */
+    /** Returns The stripes. */
     public ArrayList<ImmutableList<HStoreFile>> getStripes();
 
-    /**
-     * @return Stripe count.
-     */
+    /** Returns Stripe count. */
     public int getStripeCount();
   }
 }

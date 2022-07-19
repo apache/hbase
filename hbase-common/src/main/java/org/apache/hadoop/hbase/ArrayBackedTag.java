@@ -91,33 +91,25 @@ public class ArrayBackedTag implements Tag {
     this.type = bytes[offset + TAG_LENGTH_SIZE];
   }
 
-  /**
-   * @return The byte array backing this Tag.
-   */
+  /** Returns The byte array backing this Tag. */
   @Override
   public byte[] getValueArray() {
     return this.bytes;
   }
 
-  /**
-   * @return the tag type
-   */
+  /** Returns the tag type */
   @Override
   public byte getType() {
     return this.type;
   }
 
-  /**
-   * @return Length of actual tag bytes within the backed buffer
-   */
+  /** Returns Length of actual tag bytes within the backed buffer */
   @Override
   public int getValueLength() {
     return this.length - INFRASTRUCTURE_SIZE;
   }
 
-  /**
-   * @return Offset of actual tag bytes within the backed buffer
-   */
+  /** Returns Offset of actual tag bytes within the backed buffer */
   @Override
   public int getValueOffset() {
     return this.offset + INFRASTRUCTURE_SIZE;

@@ -181,9 +181,7 @@ final public class FilterList extends FilterBase {
     return filterListBase.filterRow();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.FilterList.Builder builder = FilterProtos.FilterList.newBuilder();

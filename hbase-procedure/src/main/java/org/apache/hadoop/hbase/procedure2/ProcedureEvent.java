@@ -42,7 +42,7 @@ public class ProcedureEvent<T> {
   }
 
   /**
-   * @return true if event is not ready and adds procedure to suspended queue, else returns false.
+   * Returns true if event is not ready and adds procedure to suspended queue, else returns false.
    */
   public synchronized boolean suspendIfNotReady(Procedure proc) {
     if (!ready) {

@@ -33,18 +33,14 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ProcedureMetrics {
-  /**
-   * @return Total number of instances submitted for a type of a procedure
-   */
+  /** Returns Total number of instances submitted for a type of a procedure */
   Counter getSubmittedCounter();
 
   /**
-   * @return Histogram of runtimes for all successfully completed instances of a type of a procedure
+   * Returns Histogram of runtimes for all successfully completed instances of a type of a procedure
    */
   Histogram getTimeHisto();
 
-  /**
-   * @return Total number of instances failed for a type of a procedure
-   */
+  /** Returns Total number of instances failed for a type of a procedure */
   Counter getFailedCounter();
 }

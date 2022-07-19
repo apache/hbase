@@ -86,9 +86,7 @@ public class IncreasingToUpperBoundRegionSplitPolicy extends ConstantSizeRegionS
     return shouldSplit;
   }
 
-  /**
-   * @return Count of regions on this server that share the table this.region belongs to
-   */
+  /** Returns Count of regions on this server that share the table this.region belongs to */
   private int getCountOfCommonTableRegions() {
     RegionServerServices rss = region.getRegionServerServices();
     // Can be null in tests

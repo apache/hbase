@@ -136,9 +136,7 @@ public class HFileArchiveTestingUtil {
     return null;
   }
 
-  /**
-   * @return &lt;expected, gotten, backup&gt;, where each is sorted
-   */
+  /** Returns &lt;expected, gotten, backup&gt;, where each is sorted */
   private static List<List<String>> getFileLists(FileStatus[] previous, FileStatus[] archived) {
     List<List<String>> files = new ArrayList<>(3);
 
