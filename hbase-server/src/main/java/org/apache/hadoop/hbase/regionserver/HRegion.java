@@ -3694,7 +3694,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * @param familyMap Map of Cells by family
      */
     protected void applyFamilyMapToMemStore(Map<byte[], List<Cell>> familyMap,
-      MemStoreSizing memstoreAccounting) throws IOException {
+      MemStoreSizing memstoreAccounting) {
       for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
         List<Cell> cells = e.getValue();
@@ -5231,7 +5231,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *              scenario but that do not make sense otherwise.
    */
   private void applyToMemStore(HStore store, List<Cell> cells, boolean delta,
-    MemStoreSizing memstoreAccounting) throws IOException {
+    MemStoreSizing memstoreAccounting) {
     // Any change in how we update Store/MemStore needs to also be done in other applyToMemStore!!!!
     boolean upsert = delta && store.getColumnFamilyDescriptor().getMaxVersions() == 1;
     if (upsert) {
@@ -8063,7 +8063,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private void attachRegionReplicationInWALAppend(BatchOperation<?> batchOp,
     MiniBatchOperationInProgress<Mutation> miniBatchOp, WALKeyImpl walKey, WALEdit walEdit,
-    WriteEntry writeEntry) throws IOException {
+    WriteEntry writeEntry) {
     if (!regionReplicationSink.isPresent()) {
       return;
     }
@@ -8092,7 +8092,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * replica.
    */
   private void doAttachReplicateRegionReplicaAction(WALKeyImpl walKey, WALEdit walEdit,
-    WriteEntry writeEntry) throws IOException {
+    WriteEntry writeEntry) {
     if (walEdit == null || walEdit.isEmpty()) {
       return;
     }
