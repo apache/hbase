@@ -2393,6 +2393,27 @@
               <!-- spotless manve plugin does not allow empty here, so use \n -->
               <replacement>\n</replacement>
             </replaceRegex>
+            <!--
+              e.g., rewrite
+              /** @return blabla */
+              or
+              /**
+               * @return blabla
+               */
+              to
+              /** Returns blabla */
+              See https://errorprone.info/bugpattern/FutureReturnValueIgnored
+            -->
+            <replaceRegex>
+              <name>Purge single returns tag multi line</name>
+              <searchRegex>(?m)^ */\*\*\n *\* *@return *(.*) *\n *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
+            <replaceRegex>
+              <name>Purge single returns tag single line</name>
+              <searchRegex>^ */\*\* *@return *(.*) *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
             <!-- apply a specific flavor -->
             <eclipse>
               <file>${session.executionRootDirectory}/dev-support/hbase_eclipse_formatter.xml</file>
