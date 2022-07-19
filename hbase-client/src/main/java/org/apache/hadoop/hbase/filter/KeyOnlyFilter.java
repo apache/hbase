@@ -99,9 +99,7 @@ public class KeyOnlyFilter extends FilterBase {
     return filter;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.KeyOnlyFilter.Builder builder = FilterProtos.KeyOnlyFilter.newBuilder();

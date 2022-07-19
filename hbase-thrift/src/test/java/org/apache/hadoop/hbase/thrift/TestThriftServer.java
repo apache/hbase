@@ -834,9 +834,7 @@ public class TestThriftServer {
     return columnList;
   }
 
-  /**
-   * @return a List of Mutations for a row, with columnA having valueA and columnB having valueB
-   */
+  /** Returns a List of Mutations for a row, with columnA having valueA and columnB having valueB */
   private static List<Mutation> getMutations() {
     List<Mutation> mutations = new ArrayList<>(2);
     mutations.add(new Mutation(false, columnAname, valueAname, true));

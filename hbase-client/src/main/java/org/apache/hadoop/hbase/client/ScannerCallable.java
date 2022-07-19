@@ -396,9 +396,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
     this.renew = val;
   }
 
-  /**
-   * @return the HRegionInfo for the current region
-   */
+  /** Returns the HRegionInfo for the current region */
   @Override
   public HRegionInfo getHRegionInfo() {
     if (!instantiated) {

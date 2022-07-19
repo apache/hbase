@@ -103,9 +103,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
     properties.put(key, value);
   }
 
-  /**
-   * @return The map of uncategorized namespace properties.
-   */
+  /** Returns The map of uncategorized namespace properties. */
   public Map<String, String> getProperties() {
     if (properties == null) {
       properties = new HashMap<>();

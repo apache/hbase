@@ -297,9 +297,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     return moreValues;
   }
 
-  /**
-   * @return true if more cells exist after this batch, false if scanner is done
-   */
+  /** Returns true if more cells exist after this batch, false if scanner is done */
   private boolean populateFromJoinedHeap(List<Cell> results, ScannerContext scannerContext)
     throws IOException {
     assert joinedContinuationRow != null;
@@ -371,9 +369,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     return nextKv != null && CellUtil.matchingRows(nextKv, currentRowCell);
   }
 
-  /**
-   * @return True if a filter rules the scanner is over, done.
-   */
+  /** Returns True if a filter rules the scanner is over, done. */
   @Override
   public synchronized boolean isFilterDone() throws IOException {
     return isFilterDoneInternal();
@@ -642,9 +638,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     scannerContext.getMetrics().countOfRowsScanned.incrementAndGet();
   }
 
-  /**
-   * @return true when the joined heap may have data for the current row
-   */
+  /** Returns true when the joined heap may have data for the current row */
   private boolean joinedHeapMayHaveData(Cell currentRowCell) throws IOException {
     Cell nextJoinedKv = joinedHeap.peek();
     boolean matchCurrentRow =

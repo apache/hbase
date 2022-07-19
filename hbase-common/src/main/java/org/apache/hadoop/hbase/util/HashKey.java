@@ -36,8 +36,6 @@ public abstract class HashKey<T> {
    */
   public abstract byte get(int pos);
 
-  /**
-   * @return The number of bytes in this HashKey
-   */
+  /** Returns The number of bytes in this HashKey */
   public abstract int length();
 }

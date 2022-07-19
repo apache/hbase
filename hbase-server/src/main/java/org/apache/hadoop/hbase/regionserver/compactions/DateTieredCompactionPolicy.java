@@ -313,7 +313,7 @@ public class DateTieredCompactionPolicy extends SortedCompactionPolicy {
   }
 
   /**
-   * @return a list of boundaries for multiple compaction output from minTimestamp to maxTimestamp.
+   * Returns a list of boundaries for multiple compaction output from minTimestamp to maxTimestamp.
    */
   private static List<Long> getCompactionBoundariesForMinor(CompactionWindow window,
     boolean singleOutput) {

@@ -82,9 +82,7 @@ public class ClusterStatusTracker extends ZKNodeTracker {
     }
   }
 
-  /**
-   * @return Content of the clusterup znode as a serialized pb with the pb magic as prefix.
-   */
+  /** Returns Content of the clusterup znode as a serialized pb with the pb magic as prefix. */
   static byte[] toByteArray() {
     ZooKeeperProtos.ClusterUp.Builder builder = ZooKeeperProtos.ClusterUp.newBuilder();
     builder.setStartDate(new java.util.Date().toString());

@@ -671,9 +671,7 @@ public class Result implements CellScannable, CellScanner {
     return this.cells == null || this.cells.length == 0;
   }
 
-  /**
-   * @return the size of the underlying Cell []
-   */
+  /** Returns the size of the underlying Cell [] */
   public int size() {
     return this.cells == null ? 0 : this.cells.length;
   }

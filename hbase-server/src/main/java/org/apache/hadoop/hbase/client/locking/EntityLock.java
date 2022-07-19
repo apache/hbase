@@ -208,9 +208,7 @@ public class EntityLock {
       setDaemon(true);
     }
 
-    /**
-     * @return Shuts down the thread clean and quietly.
-     */
+    /** Returns Shuts down the thread clean and quietly. */
     Thread shutdown() {
       shutdown = true;
       interrupt();

@@ -218,9 +218,7 @@ public abstract class AbstractMemStore implements MemStore {
     }
   }
 
-  /**
-   * @return Oldest timestamp of all the Cells in the MemStore
-   */
+  /** Returns Oldest timestamp of all the Cells in the MemStore */
   @Override
   public long timeOfOldestEdit() {
     return timeOfOldestEdit;
@@ -355,7 +353,7 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /**
-   * @return The total size of cells in this memstore. We will not consider cells in the snapshot
+   * Returns The total size of cells in this memstore. We will not consider cells in the snapshot
    */
   protected abstract long keySize();
 
@@ -377,9 +375,7 @@ public abstract class AbstractMemStore implements MemStore {
     return snapshot;
   }
 
-  /**
-   * @return an ordered list of segments from most recent to oldest in memstore
-   */
+  /** Returns an ordered list of segments from most recent to oldest in memstore */
   protected abstract List<Segment> getSegments() throws IOException;
 
 }

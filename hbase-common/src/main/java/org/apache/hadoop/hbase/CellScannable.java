@@ -26,8 +26,6 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public interface CellScannable {
-  /**
-   * @return A CellScanner over the contained {@link Cell}s
-   */
+  /** Returns A CellScanner over the contained {@link Cell}s */
   CellScanner cellScanner();
 }

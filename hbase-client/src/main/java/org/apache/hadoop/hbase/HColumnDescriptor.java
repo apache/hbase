@@ -193,17 +193,13 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return ColumnFamilyDescriptorBuilder.isLegalColumnFamilyName(b);
   }
 
-  /**
-   * @return Name of this column family
-   */
+  /** Returns Name of this column family */
   @Override
   public byte[] getName() {
     return delegatee.getName();
   }
 
-  /**
-   * @return The name string of this column family
-   */
+  /** Returns The name string of this column family */
   @Override
   public String getNameAsString() {
     return delegatee.getNameAsString();
@@ -650,9 +646,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.toString();
   }
 
-  /**
-   * @return Column family descriptor with only the customized attributes.
-   */
+  /** Returns Column family descriptor with only the customized attributes. */
   @Override
   public String toStringCustomizedValues() {
     return delegatee.toStringCustomizedValues();

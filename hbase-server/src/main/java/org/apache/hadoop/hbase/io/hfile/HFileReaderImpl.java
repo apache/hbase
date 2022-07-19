@@ -214,13 +214,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     return getLastKey().map(CellUtil::cloneRow);
   }
 
-  /** @return number of KV entries in this HFile */
+  /** Returns number of KV entries in this HFile */
   @Override
   public long getEntries() {
     return trailer.getEntryCount();
   }
 
-  /** @return comparator */
+  /** Returns comparator */
   @Override
   public CellComparator getComparator() {
     return this.hfileContext.getCellComparator();
@@ -961,16 +961,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       return blockSeek(key, seekBefore);
     }
 
-    /**
-     * @return True if v &lt;= 0 or v &gt; current block buffer limit.
-     */
+    /** Returns True if v &lt;= 0 or v &gt; current block buffer limit. */
     protected final boolean checkKeyLen(final int v) {
       return v <= 0 || v > this.blockBuffer.limit();
     }
 
-    /**
-     * @return True if v &lt; 0 or v &gt; current block buffer limit.
-     */
+    /** Returns True if v &lt; 0 or v &gt; current block buffer limit. */
     protected final boolean checkLen(final int v) {
       return v < 0 || v > this.blockBuffer.limit();
     }

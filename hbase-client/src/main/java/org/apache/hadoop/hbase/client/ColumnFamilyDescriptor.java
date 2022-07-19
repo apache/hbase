@@ -77,39 +77,25 @@ public interface ColumnFamilyDescriptor {
       return lcf.getConfiguration().hashCode() - rcf.getConfiguration().hashCode();
     };
 
-  /**
-   * @return The storefile/hfile blocksize for this column family.
-   */
+  /** Returns The storefile/hfile blocksize for this column family. */
   int getBlocksize();
 
-  /**
-   * @return bloom filter type used for new StoreFiles in ColumnFamily
-   */
+  /** Returns bloom filter type used for new StoreFiles in ColumnFamily */
   BloomType getBloomFilterType();
 
-  /**
-   * @return Compression type setting.
-   */
+  /** Returns Compression type setting. */
   Compression.Algorithm getCompactionCompressionType();
 
-  /**
-   * @return Compression type setting for major compactions.
-   */
+  /** Returns Compression type setting for major compactions. */
   Compression.Algorithm getMajorCompactionCompressionType();
 
-  /**
-   * @return Compression type setting for minor compactions.
-   */
+  /** Returns Compression type setting for minor compactions. */
   Compression.Algorithm getMinorCompactionCompressionType();
 
-  /**
-   * @return Compression type setting.
-   */
+  /** Returns Compression type setting. */
   Compression.Algorithm getCompressionType();
 
-  /**
-   * @return an unmodifiable map.
-   */
+  /** Returns an unmodifiable map. */
   Map<String, String> getConfiguration();
 
   /**
@@ -118,24 +104,16 @@ public interface ColumnFamilyDescriptor {
    */
   String getConfigurationValue(String key);
 
-  /**
-   * @return replication factor set for this CF
-   */
+  /** Returns replication factor set for this CF */
   short getDFSReplication();
 
-  /**
-   * @return the data block encoding algorithm used in block cache and optionally on disk
-   */
+  /** Returns the data block encoding algorithm used in block cache and optionally on disk */
   DataBlockEncoding getDataBlockEncoding();
 
-  /**
-   * @return Return the raw crypto key attribute for the family, or null if not set
-   */
+  /** Returns Return the raw crypto key attribute for the family, or null if not set */
   byte[] getEncryptionKey();
 
-  /**
-   * @return Return the encryption algorithm in use by this family
-   */
+  /** Returns Return the encryption algorithm in use by this family */
   String getEncryptionType();
 
   /**
@@ -144,19 +122,13 @@ public interface ColumnFamilyDescriptor {
    */
   MemoryCompactionPolicy getInMemoryCompaction();
 
-  /**
-   * @return return the KeepDeletedCells
-   */
+  /** Returns return the KeepDeletedCells */
   KeepDeletedCells getKeepDeletedCells();
 
-  /**
-   * @return maximum number of versions
-   */
+  /** Returns maximum number of versions */
   int getMaxVersions();
 
-  /**
-   * @return The minimum number of versions to keep.
-   */
+  /** Returns The minimum number of versions to keep. */
   int getMinVersions();
 
   /**
@@ -171,19 +143,13 @@ public interface ColumnFamilyDescriptor {
    */
   long getMobThreshold();
 
-  /**
-   * @return a copy of Name of this column family
-   */
+  /** Returns a copy of Name of this column family */
   byte[] getName();
 
-  /**
-   * @return Name of this column family
-   */
+  /** Returns Name of this column family */
   String getNameAsString();
 
-  /**
-   * @return the scope tag
-   */
+  /** Returns the scope tag */
   int getScope();
 
   /**
@@ -193,9 +159,7 @@ public interface ColumnFamilyDescriptor {
    */
   String getStoragePolicy();
 
-  /**
-   * @return Time-to-live of cell contents, in seconds.
-   */
+  /** Returns Time-to-live of cell contents, in seconds. */
   int getTimeToLive();
 
   /**
@@ -228,19 +192,13 @@ public interface ColumnFamilyDescriptor {
    */
   boolean isBlockCacheEnabled();
 
-  /**
-   * @return true if we should cache bloomfilter blocks on write
-   */
+  /** Returns true if we should cache bloomfilter blocks on write */
   boolean isCacheBloomsOnWrite();
 
-  /**
-   * @return true if we should cache data blocks on write
-   */
+  /** Returns true if we should cache data blocks on write */
   boolean isCacheDataOnWrite();
 
-  /**
-   * @return true if we should cache index blocks on write
-   */
+  /** Returns true if we should cache index blocks on write */
   boolean isCacheIndexesOnWrite();
 
   /**
@@ -249,9 +207,7 @@ public interface ColumnFamilyDescriptor {
    */
   boolean isCompressTags();
 
-  /**
-   * @return true if we should evict cached blocks from the blockcache on close
-   */
+  /** Returns true if we should evict cached blocks from the blockcache on close */
   boolean isEvictBlocksOnClose();
 
   /**
@@ -266,14 +222,10 @@ public interface ColumnFamilyDescriptor {
    */
   boolean isMobEnabled();
 
-  /**
-   * @return true if we should prefetch blocks into the blockcache on open
-   */
+  /** Returns true if we should prefetch blocks into the blockcache on open */
   boolean isPrefetchBlocksOnOpen();
 
-  /**
-   * @return Column family descriptor with only the customized attributes.
-   */
+  /** Returns Column family descriptor with only the customized attributes. */
   String toStringCustomizedValues();
 
   /**

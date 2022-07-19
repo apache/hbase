@@ -101,9 +101,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     return this.regionInfo;
   }
 
-  /**
-   * @return One-shot cell scanner (you cannot back it up and restart)
-   */
+  /** Returns One-shot cell scanner (you cannot back it up and restart) */
   @Override
   public CellScanner cellScanner() {
     return cellScanner;

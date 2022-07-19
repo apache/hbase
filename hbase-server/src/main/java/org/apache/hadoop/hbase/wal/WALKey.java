@@ -45,31 +45,21 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
     return 0;
   }
 
-  /**
-   * @return encoded region name
-   */
+  /** Returns encoded region name */
   byte[] getEncodedRegionName();
 
-  /**
-   * @return table name
-   */
+  /** Returns table name */
   TableName getTableName();
 
-  /**
-   * @return the write time
-   */
+  /** Returns the write time */
   long getWriteTime();
 
-  /**
-   * @return The nonce group
-   */
+  /** Returns The nonce group */
   default long getNonceGroup() {
     return HConstants.NO_NONCE;
   }
 
-  /**
-   * @return The nonce
-   */
+  /** Returns The nonce */
   default long getNonce() {
     return HConstants.NO_NONCE;
   }

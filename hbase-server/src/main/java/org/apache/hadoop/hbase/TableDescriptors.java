@@ -35,9 +35,7 @@ public interface TableDescriptors {
     return get(tableName) != null;
   }
 
-  /**
-   * @return TableDescriptor for tablename
-   */
+  /** Returns TableDescriptor for tablename */
   TableDescriptor get(TableName tableName) throws IOException;
 
   /**
@@ -72,8 +70,6 @@ public interface TableDescriptors {
    */
   void update(TableDescriptor htd, boolean cacheOnly) throws IOException;
 
-  /**
-   * @return Instance of table descriptor or null if none found.
-   */
+  /** Returns Instance of table descriptor or null if none found. */
   TableDescriptor remove(TableName tablename) throws IOException;
 }

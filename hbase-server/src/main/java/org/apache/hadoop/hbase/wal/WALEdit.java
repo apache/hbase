@@ -367,9 +367,7 @@ public class WALEdit implements HeapSize {
       : null;
   }
 
-  /**
-   * @return A Marker WALEdit that has <code>c</code> serialized as its value
-   */
+  /** Returns A Marker WALEdit that has <code>c</code> serialized as its value */
   public static WALEdit createCompaction(final RegionInfo hri, final CompactionDescriptor c) {
     byte[] pbbytes = c.toByteArray();
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, COMPACTION,

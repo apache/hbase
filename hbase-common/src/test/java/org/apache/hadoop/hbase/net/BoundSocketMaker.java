@@ -53,9 +53,7 @@ public final class BoundSocketMaker implements Closeable {
     return this.socket.getLocalPort();
   }
 
-  /**
-   * @return Returns a bound socket; be sure to close when done.
-   */
+  /** Returns Returns a bound socket; be sure to close when done. */
   private ServerSocket get(String hostname, Supplier<Integer> randomPortMaker) {
     ServerSocket ss = null;
     int port = -1;

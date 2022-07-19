@@ -73,9 +73,7 @@ public class FastPathBalancedQueueRpcExecutor extends BalancedQueueRpcExecutor {
     return handler != null ? handler.loadCallRunner(callTask) : super.dispatch(callTask);
   }
 
-  /**
-   * @return Pop a Handler instance if one available ready-to-go or else return null.
-   */
+  /** Returns Pop a Handler instance if one available ready-to-go or else return null. */
   private FastPathRpcHandler popReadyHandler() {
     return this.fastPathHandlerStack.poll();
   }

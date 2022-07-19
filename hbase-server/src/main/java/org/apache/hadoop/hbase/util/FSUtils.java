@@ -117,9 +117,7 @@ public final class FSUtils {
   private FSUtils() {
   }
 
-  /**
-   * @return True is <code>fs</code> is instance of DistributedFileSystem n
-   */
+  /** Returns True is <code>fs</code> is instance of DistributedFileSystem n */
   public static boolean isDistributedFileSystem(final FileSystem fs) throws IOException {
     FileSystem fileSystem = fs;
     // If passed an instance of HFileSystem, it fails instanceof DistributedFileSystem.
@@ -1763,9 +1761,7 @@ public final class FSUtils {
     return traversedPaths;
   }
 
-  /**
-   * @return A set containing all namenode addresses of fs
-   */
+  /** Returns A set containing all namenode addresses of fs */
   private static Set<InetSocketAddress> getNNAddresses(DistributedFileSystem fs,
     Configuration conf) {
     Set<InetSocketAddress> addresses = new HashSet<>();

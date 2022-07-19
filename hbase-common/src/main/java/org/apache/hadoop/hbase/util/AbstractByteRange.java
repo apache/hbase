@@ -152,9 +152,7 @@ public abstract class AbstractByteRange implements ByteRange {
     return isEmpty(this);
   }
 
-  /**
-   * @return true when {@code range} is of zero length, false otherwise.
-   */
+  /** Returns true when {@code range} is of zero length, false otherwise. */
   public static boolean isEmpty(ByteRange range) {
     return range == null || range.getLength() == 0;
   }

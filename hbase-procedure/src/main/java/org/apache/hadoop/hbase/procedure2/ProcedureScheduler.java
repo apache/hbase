@@ -87,9 +87,7 @@ public interface ProcedureScheduler {
    */
   void completionCleanup(Procedure proc);
 
-  /**
-   * @return true if there are procedures available to process, otherwise false.
-   */
+  /** Returns true if there are procedures available to process, otherwise false. */
   boolean hasRunnables();
 
   /**

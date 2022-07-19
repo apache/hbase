@@ -334,9 +334,7 @@ public final class ProtobufUtil {
     }
   }
 
-  /**
-   * @return Length of {@link ProtobufMagic#lengthOfPBMagic()}
-   */
+  /** Returns Length of {@link ProtobufMagic#lengthOfPBMagic()} */
   public static int lengthOfPBMagic() {
     return ProtobufMagic.lengthOfPBMagic();
   }

@@ -64,9 +64,7 @@ public interface SplitLogWorkerCoordination {
    */
   void stopProcessingTasks();
 
-  /**
-   * @return the current value of exitWorker
-   */
+  /** Returns the current value of exitWorker */
   boolean isStop();
 
   /**
@@ -123,9 +121,7 @@ public interface SplitLogWorkerCoordination {
    */
   interface SplitTaskDetails {
 
-    /**
-     * @return full file path in HDFS for the WAL file to be split.
-     */
+    /** Returns full file path in HDFS for the WAL file to be split. */
     String getWALFile();
   }
 }

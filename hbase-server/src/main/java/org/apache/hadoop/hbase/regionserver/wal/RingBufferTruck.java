@@ -58,9 +58,7 @@ final class RingBufferTruck {
     this.type = Type.SYNC;
   }
 
-  /**
-   * @return the type of this truck's payload.
-   */
+  /** Returns the type of this truck's payload. */
   Type type() {
     return type;
   }

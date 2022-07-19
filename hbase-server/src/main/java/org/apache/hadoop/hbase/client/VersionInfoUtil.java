@@ -65,9 +65,7 @@ public final class VersionInfoUtil {
     return false;
   }
 
-  /**
-   * @return the versionInfo extracted from the current RpcCallContext
-   */
+  /** Returns the versionInfo extracted from the current RpcCallContext */
   public static HBaseProtos.VersionInfo getCurrentClientVersionInfo() {
     return RpcServer.getCurrentCall().map(RpcCallContext::getClientVersionInfo).orElse(null);
   }

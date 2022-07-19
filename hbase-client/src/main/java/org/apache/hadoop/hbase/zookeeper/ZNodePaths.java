@@ -137,9 +137,7 @@ public class ZNodePaths {
       .append("]").toString();
   }
 
-  /**
-   * @return the znode string corresponding to a replicaId
-   */
+  /** Returns the znode string corresponding to a replicaId */
   public String getZNodeForReplica(int replicaId) {
     if (RegionReplicaUtil.isDefaultReplica(replicaId)) {
       return joinZNode(baseZNode, metaZNodePrefix);
@@ -169,16 +167,12 @@ public class ZNodePaths {
       : Integer.parseInt(znode.substring(metaZNodePrefix.length() + 1));
   }
 
-  /**
-   * @return True if meta znode.
-   */
+  /** Returns True if meta znode. */
   public boolean isMetaZNodePrefix(String znode) {
     return znode != null && znode.startsWith(this.metaZNodePrefix);
   }
 
-  /**
-   * @return True is the fully qualified path is for meta location
-   */
+  /** Returns True is the fully qualified path is for meta location */
   public boolean isMetaZNodePath(String path) {
     int prefixLen = baseZNode.length() + 1;
     return path.length() > prefixLen && isMetaZNodePrefix(path.substring(prefixLen));

@@ -149,9 +149,7 @@ public class TestRaceBetweenSCPAndDTP {
     UTIL.waitFor(60000, () -> procExec.isFinished(dtpProcId));
   }
 
-  /**
-   * @return Returns {@link Procedure#NO_PROC_ID} if no SCP found else actual pid.
-   */
+  /** Returns Returns {@link Procedure#NO_PROC_ID} if no SCP found else actual pid. */
   private long getSCPPID(ProcedureExecutor<?> e) {
     Optional<ServerCrashProcedure> optional = e.getProcedures().stream()
       .filter(p -> p instanceof ServerCrashProcedure).map(p -> (ServerCrashProcedure) p).findAny();

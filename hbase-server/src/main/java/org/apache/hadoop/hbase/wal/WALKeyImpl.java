@@ -328,13 +328,13 @@ public class WALKeyImpl implements WALKey {
     // do nothing
   }
 
-  /** @return encoded region name */
+  /** Returns encoded region name */
   @Override
   public byte[] getEncodedRegionName() {
     return encodedRegionName;
   }
 
-  /** @return table name */
+  /** Returns table name */
   @Override
   public TableName getTableName() {
     return tablename;
@@ -377,9 +377,7 @@ public class WALKeyImpl implements WALKey {
     return this.sequenceId;
   }
 
-  /**
-   * @return the write time
-   */
+  /** Returns the write time */
   @Override
   public long getWriteTime() {
     return this.writeTime;
@@ -389,13 +387,13 @@ public class WALKeyImpl implements WALKey {
     return replicationScope;
   }
 
-  /** @return The nonce group */
+  /** Returns The nonce group */
   @Override
   public long getNonceGroup() {
     return nonceGroup;
   }
 
-  /** @return The nonce */
+  /** Returns The nonce */
   @Override
   public long getNonce() {
     return nonce;
@@ -418,9 +416,7 @@ public class WALKeyImpl implements WALKey {
     }
   }
 
-  /**
-   * @return the set of cluster Ids that have consumed the change
-   */
+  /** Returns the set of cluster Ids that have consumed the change */
   public List<UUID> getClusterIds() {
     return clusterIds;
   }

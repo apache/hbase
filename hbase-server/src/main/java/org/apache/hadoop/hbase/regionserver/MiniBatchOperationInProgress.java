@@ -61,9 +61,7 @@ public class MiniBatchOperationInProgress<T> {
     this.readyToWriteCount = readyToWriteCount;
   }
 
-  /**
-   * @return The number of operations(Mutations) involved in this batch.
-   */
+  /** Returns The number of operations(Mutations) involved in this batch. */
   public int size() {
     return this.lastIndexExclusive - this.firstIndex;
   }

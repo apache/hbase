@@ -328,9 +328,7 @@ public class HStoreFile implements StoreFile {
     return fileInfo.refCount.get();
   }
 
-  /**
-   * @return true if the file is still used in reads
-   */
+  /** Returns true if the file is still used in reads */
   public boolean isReferencedInReads() {
     int rc = fileInfo.refCount.get();
     assert rc >= 0; // we should not go negative.

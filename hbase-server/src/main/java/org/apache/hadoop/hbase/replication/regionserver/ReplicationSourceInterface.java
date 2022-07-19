@@ -120,34 +120,22 @@ public interface ReplicationSourceInterface {
    */
   String getStats();
 
-  /**
-   * @return peer enabled or not
-   */
+  /** Returns peer enabled or not */
   boolean isPeerEnabled();
 
-  /**
-   * @return active or not
-   */
+  /** Returns active or not */
   boolean isSourceActive();
 
-  /**
-   * @return metrics of this replication source
-   */
+  /** Returns metrics of this replication source */
   MetricsSource getSourceMetrics();
 
-  /**
-   * @return the replication endpoint used by this replication source
-   */
+  /** Returns the replication endpoint used by this replication source */
   ReplicationEndpoint getReplicationEndpoint();
 
-  /**
-   * @return the replication source manager
-   */
+  /** Returns the replication source manager */
   ReplicationSourceManager getSourceManager();
 
-  /**
-   * @return the wal file length provider
-   */
+  /** Returns the wal file length provider */
   WALFileLengthProvider getWALFileLengthProvider();
 
   /**
@@ -178,16 +166,12 @@ public interface ReplicationSourceInterface {
     return new HashMap<>();
   }
 
-  /**
-   * @return whether this is a replication source for recovery.
-   */
+  /** Returns whether this is a replication source for recovery. */
   default boolean isRecovered() {
     return false;
   }
 
-  /**
-   * @return The instance of queueStorage used by this ReplicationSource.
-   */
+  /** Returns The instance of queueStorage used by this ReplicationSource. */
   ReplicationQueueStorage getReplicationQueueStorage();
 
   /**

@@ -173,9 +173,7 @@ public final class StartMiniClusterOption {
       + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
-  /**
-   * @return a new builder.
-   */
+  /** Returns a new builder. */
   public static Builder builder() {
     return new Builder();
   }

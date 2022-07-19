@@ -114,8 +114,6 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    */
   boolean renewLease();
 
-  /**
-   * @return the scan metrics, or {@code null} if we do not enable metrics.
-   */
+  /** Returns the scan metrics, or {@code null} if we do not enable metrics. */
   ScanMetrics getScanMetrics();
 }

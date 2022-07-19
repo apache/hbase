@@ -186,32 +186,24 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
       || isRegionReplicaReplicationEnabled(conf);
   }
 
-  /**
-   * @return True if Region Read Replica is enabled for user-space tables.
-   */
+  /** Returns True if Region Read Replica is enabled for user-space tables. */
   private static boolean isRegionReplicaReplicationEnabled(Configuration conf) {
     return conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION);
   }
 
-  /**
-   * @return True if hbase:meta Region Read Replica is enabled.
-   */
+  /** Returns True if hbase:meta Region Read Replica is enabled. */
   public static boolean isMetaRegionReplicaReplicationEnabled(Configuration conf, TableName tn) {
     return TableName.isMetaTableName(tn) && conf.getBoolean(
       REGION_REPLICA_REPLICATION_CATALOG_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION_CATALOG);
   }
 
-  /**
-   * @return True if wait for primary to flush is enabled for user-space tables.
-   */
+  /** Returns True if wait for primary to flush is enabled for user-space tables. */
   public static boolean isRegionReplicaWaitForPrimaryFlushEnabled(Configuration conf) {
     return conf.getBoolean(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
       DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH);
   }
 
-  /**
-   * @return True if we are to refresh user-space hfiles in Region Read Replicas.
-   */
+  /** Returns True if we are to refresh user-space hfiles in Region Read Replicas. */
   public static boolean isRegionReplicaStoreFileRefreshEnabled(Configuration conf) {
     return conf.getBoolean(REGION_REPLICA_STORE_FILE_REFRESH,
       DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH);

@@ -54,14 +54,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @InterfaceAudience.Private
 public interface RegionServerServices extends Server, MutableOnlineRegions, FavoredNodesForRegion {
 
-  /**
-   * @return the WAL for a particular region. Pass null for getting the default (common) WAL
-   */
+  /** Returns the WAL for a particular region. Pass null for getting the default (common) WAL */
   WAL getWAL(RegionInfo regionInfo) throws IOException;
 
-  /**
-   * @return the List of WALs that are used by this server Doesn't include the meta WAL
-   */
+  /** Returns the List of WALs that are used by this server Doesn't include the meta WAL */
   List<WAL> getWALs() throws IOException;
 
   /**
@@ -76,24 +72,16 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   CompactionRequester getCompactionRequestor();
 
-  /**
-   * @return the RegionServerAccounting for this Region Server
-   */
+  /** Returns the RegionServerAccounting for this Region Server */
   RegionServerAccounting getRegionServerAccounting();
 
-  /**
-   * @return RegionServer's instance of {@link RegionServerRpcQuotaManager}
-   */
+  /** Returns RegionServer's instance of {@link RegionServerRpcQuotaManager} */
   RegionServerRpcQuotaManager getRegionServerRpcQuotaManager();
 
-  /**
-   * @return RegionServer's instance of {@link SecureBulkLoadManager}
-   */
+  /** Returns RegionServer's instance of {@link SecureBulkLoadManager} */
   SecureBulkLoadManager getSecureBulkLoadManager();
 
-  /**
-   * @return RegionServer's instance of {@link RegionServerSpaceQuotaManager}
-   */
+  /** Returns RegionServer's instance of {@link RegionServerSpaceQuotaManager} */
   RegionServerSpaceQuotaManager getRegionServerSpaceQuotaManager();
 
   /**
@@ -191,14 +179,10 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS();
 
-  /**
-   * @return The RegionServer's "Leases" service
-   */
+  /** Returns The RegionServer's "Leases" service */
   LeaseManager getLeaseManager();
 
-  /**
-   * @return hbase executor service
-   */
+  /** Returns hbase executor service */
   ExecutorService getExecutorService();
 
   /**
@@ -215,9 +199,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   boolean registerService(Service service);
 
-  /**
-   * @return heap memory manager instance
-   */
+  /** Returns heap memory manager instance */
   HeapMemoryManager getHeapMemoryManager();
 
   /**
@@ -228,9 +210,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   double getCompactionPressure();
 
-  /**
-   * @return the controller to avoid flush too fast
-   */
+  /** Returns the controller to avoid flush too fast */
   ThroughputController getFlushThroughputController();
 
   /**
@@ -241,9 +221,7 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
   @Deprecated
   double getFlushPressure();
 
-  /**
-   * @return the metrics tracker for the region server
-   */
+  /** Returns the metrics tracker for the region server */
   MetricsRegionServer getMetrics();
 
   /**
@@ -262,34 +240,22 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   void unassign(byte[] regionName) throws IOException;
 
-  /**
-   * @return True if cluster is up; false if cluster is not up (we are shutting down).
-   */
+  /** Returns True if cluster is up; false if cluster is not up (we are shutting down). */
   boolean isClusterUp();
 
-  /**
-   * @return Return table descriptors implementation.
-   */
+  /** Returns Return table descriptors implementation. */
   TableDescriptors getTableDescriptors();
 
-  /**
-   * @return The block cache instance.
-   */
+  /** Returns The block cache instance. */
   Optional<BlockCache> getBlockCache();
 
-  /**
-   * @return The cache for mob files.
-   */
+  /** Returns The cache for mob files. */
   Optional<MobFileCache> getMobFileCache();
 
-  /**
-   * @return the {@link AccessChecker}
-   */
+  /** Returns the {@link AccessChecker} */
   AccessChecker getAccessChecker();
 
-  /**
-   * @return {@link ZKPermissionWatcher}
-   */
+  /** Returns {@link ZKPermissionWatcher} */
   ZKPermissionWatcher getZKPermissionWatcher();
 
   /**

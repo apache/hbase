@@ -162,9 +162,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     LOG.debug("Done initializing/checking cluster");
   }
 
-  /**
-   * @return status of CLI execution
-   */
+  /** Returns status of CLI execution */
   @Override
   public int runTestFromCommandLine() throws Exception {
     testMobCompaction();

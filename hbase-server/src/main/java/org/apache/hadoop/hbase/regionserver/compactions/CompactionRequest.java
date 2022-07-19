@@ -28,39 +28,25 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface CompactionRequest {
 
-  /**
-   * @return unmodifiable collection of StoreFiles in compaction
-   */
+  /** Returns unmodifiable collection of StoreFiles in compaction */
   Collection<? extends StoreFile> getFiles();
 
-  /**
-   * @return total size of all StoreFiles in compaction
-   */
+  /** Returns total size of all StoreFiles in compaction */
   long getSize();
 
-  /**
-   * @return <code>true</code> if major compaction or all files are compacted
-   */
+  /** Returns <code>true</code> if major compaction or all files are compacted */
   boolean isAllFiles();
 
-  /**
-   * @return <code>true</code> if major compaction
-   */
+  /** Returns <code>true</code> if major compaction */
   boolean isMajor();
 
-  /**
-   * @return priority of compaction request
-   */
+  /** Returns priority of compaction request */
   int getPriority();
 
-  /**
-   * @return <code>true</code> if compaction is Off-peak
-   */
+  /** Returns <code>true</code> if compaction is Off-peak */
   boolean isOffPeak();
 
-  /**
-   * @return compaction request creation time in milliseconds
-   */
+  /** Returns compaction request creation time in milliseconds */
   long getSelectionTime();
 
 }

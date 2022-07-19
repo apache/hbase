@@ -116,16 +116,12 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferWri
     buff.put(buf, 0, pos);
   }
 
-  /**
-   * @return the underlying array where the data gets accumulated
-   */
+  /** Returns the underlying array where the data gets accumulated */
   public byte[] getBuffer() {
     return this.buf;
   }
 
-  /**
-   * @return The current size of the buffer.
-   */
+  /** Returns The current size of the buffer. */
   public int size() {
     return this.pos;
   }

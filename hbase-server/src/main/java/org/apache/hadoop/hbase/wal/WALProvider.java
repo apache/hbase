@@ -55,9 +55,7 @@ public interface WALProvider {
    */
   WAL getWAL(RegionInfo region) throws IOException;
 
-  /**
-   * @return the List of WALs that are used by this server
-   */
+  /** Returns the List of WALs that are used by this server */
   List<WAL> getWALs();
 
   /**

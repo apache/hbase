@@ -114,22 +114,22 @@ public final class SnapshotInfo extends AbstractHBaseTool {
         this.size = size;
       }
 
-      /** @return true if the file is in the archive */
+      /** Returns true if the file is in the archive */
       public boolean inArchive() {
         return this.inArchive;
       }
 
-      /** @return true if the file is corrupted */
+      /** Returns true if the file is corrupted */
       public boolean isCorrupted() {
         return this.corrupted;
       }
 
-      /** @return true if the file is missing */
+      /** Returns true if the file is missing */
       public boolean isMissing() {
         return this.size < 0;
       }
 
-      /** @return the file size */
+      /** Returns the file size */
       public long getSize() {
         return this.size;
       }
@@ -176,67 +176,67 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       this.fs = fs;
     }
 
-    /** @return the snapshot descriptor */
+    /** Returns the snapshot descriptor */
     public SnapshotDescription getSnapshotDescription() {
       return ProtobufUtil.createSnapshotDesc(this.snapshot);
     }
 
-    /** @return true if the snapshot is corrupted */
+    /** Returns true if the snapshot is corrupted */
     public boolean isSnapshotCorrupted() {
       return hfilesMissing.get() > 0 || logsMissing.get() > 0 || hfilesCorrupted.get() > 0;
     }
 
-    /** @return the number of available store files */
+    /** Returns the number of available store files */
     public int getStoreFilesCount() {
       return hfilesCount.get() + hfilesArchiveCount.get() + hfilesMobCount.get();
     }
 
-    /** @return the number of available store files in the archive */
+    /** Returns the number of available store files in the archive */
     public int getArchivedStoreFilesCount() {
       return hfilesArchiveCount.get();
     }
 
-    /** @return the number of available store files in the mob dir */
+    /** Returns the number of available store files in the mob dir */
     public int getMobStoreFilesCount() {
       return hfilesMobCount.get();
     }
 
-    /** @return the number of available log files */
+    /** Returns the number of available log files */
     public int getLogsCount() {
       return logsCount.get();
     }
 
-    /** @return the number of missing store files */
+    /** Returns the number of missing store files */
     public int getMissingStoreFilesCount() {
       return hfilesMissing.get();
     }
 
-    /** @return the number of corrupted store files */
+    /** Returns the number of corrupted store files */
     public int getCorruptedStoreFilesCount() {
       return hfilesCorrupted.get();
     }
 
-    /** @return the number of missing log files */
+    /** Returns the number of missing log files */
     public int getMissingLogsCount() {
       return logsMissing.get();
     }
 
-    /** @return the total size of the store files referenced by the snapshot */
+    /** Returns the total size of the store files referenced by the snapshot */
     public long getStoreFilesSize() {
       return hfilesSize.get() + hfilesArchiveSize.get() + hfilesMobSize.get();
     }
 
-    /** @return the total size of the store files shared */
+    /** Returns the total size of the store files shared */
     public long getSharedStoreFilesSize() {
       return hfilesSize.get();
     }
 
-    /** @return the total size of the store files in the archive */
+    /** Returns the total size of the store files in the archive */
     public long getArchivedStoreFileSize() {
       return hfilesArchiveSize.get();
     }
 
-    /** @return the total size of the store files in the mob store */
+    /** Returns the total size of the store files in the mob store */
     public long getMobStoreFilesSize() {
       return hfilesMobSize.get();
     }
@@ -251,17 +251,17 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       return nonSharedHfilesArchiveSize.get();
     }
 
-    /** @return the percentage of the shared store files */
+    /** Returns the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
       return ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
     }
 
-    /** @return the percentage of the mob store files */
+    /** Returns the percentage of the mob store files */
     public float getMobStoreFilePercentage() {
       return ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
     }
 
-    /** @return the total log size */
+    /** Returns the total log size */
     public long getLogsSize() {
       return logSize.get();
     }

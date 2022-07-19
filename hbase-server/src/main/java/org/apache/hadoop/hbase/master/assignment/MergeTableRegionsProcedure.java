@@ -745,9 +745,7 @@ public class MergeTableRegionsProcedure
     }
   }
 
-  /**
-   * @return The merged region. Maybe be null if called to early or we failed.
-   */
+  /** Returns The merged region. Maybe be null if called to early or we failed. */
   RegionInfo getMergedRegion() {
     return this.mergedRegion;
   }

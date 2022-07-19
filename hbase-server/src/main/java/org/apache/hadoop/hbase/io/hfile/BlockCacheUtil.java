@@ -116,9 +116,7 @@ public class BlockCacheUtil {
     }
   }
 
-  /**
-   * @return A JSON String of <code>filename</code> and counts of <code>blocks</code>
-   */
+  /** Returns A JSON String of <code>filename</code> and counts of <code>blocks</code> */
   public static String toJSON(String filename, NavigableSet<CachedBlock> blocks)
     throws IOException {
     CachedBlockCountsPerFile counts = new CachedBlockCountsPerFile(filename);
@@ -134,16 +132,12 @@ public class BlockCacheUtil {
     return GSON.toJson(counts);
   }
 
-  /**
-   * @return JSON string of <code>cbsf</code> aggregated
-   */
+  /** Returns JSON string of <code>cbsf</code> aggregated */
   public static String toJSON(CachedBlocksByFile cbsbf) throws IOException {
     return GSON.toJson(cbsbf);
   }
 
-  /**
-   * @return JSON string of <code>bc</code> content.
-   */
+  /** Returns JSON string of <code>bc</code> content. */
   public static String toJSON(BlockCache bc) throws IOException {
     return GSON.toJson(bc);
   }
@@ -318,9 +312,7 @@ public class BlockCacheUtil {
       return this.cachedBlockByFile;
     }
 
-    /**
-     * @return count of blocks in the cache
-     */
+    /** Returns count of blocks in the cache */
     public int getCount() {
       return count;
     }
@@ -329,16 +321,12 @@ public class BlockCacheUtil {
       return dataBlockCount;
     }
 
-    /**
-     * @return size of blocks in the cache
-     */
+    /** Returns size of blocks in the cache */
     public long getSize() {
       return size;
     }
 
-    /**
-     * @return Size of data.
-     */
+    /** Returns Size of data. */
     public long getDataSize() {
       return dataSize;
     }

@@ -134,9 +134,7 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
     return Integer.MAX_VALUE;
   }
 
-  /**
-   * @return This events' sequence id.
-   */
+  /** Returns This events' sequence id. */
   public long getSeqid() {
     return this.seqid;
   }

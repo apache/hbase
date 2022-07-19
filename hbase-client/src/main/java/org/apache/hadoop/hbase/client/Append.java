@@ -90,9 +90,7 @@ public class Append extends Mutation {
     return this;
   }
 
-  /**
-   * @return current setting for returnResults
-   */
+  /** Returns current setting for returnResults */
   // This method makes public the superclasses's protected method.
   @Override
   public boolean isReturnResults() {

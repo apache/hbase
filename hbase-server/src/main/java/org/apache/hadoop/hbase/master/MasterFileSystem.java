@@ -185,37 +185,27 @@ public class MasterFileSystem {
     return this.conf;
   }
 
-  /**
-   * @return HBase root dir.
-   */
+  /** Returns HBase root dir. */
   public Path getRootDir() {
     return this.rootdir;
   }
 
-  /**
-   * @return HBase root log dir.
-   */
+  /** Returns HBase root log dir. */
   public Path getWALRootDir() {
     return this.walRootDir;
   }
 
-  /**
-   * @return the directory for a give {@code region}.
-   */
+  /** Returns the directory for a give {@code region}. */
   public Path getRegionDir(RegionInfo region) {
     return FSUtils.getRegionDirFromRootDir(getRootDir(), region);
   }
 
-  /**
-   * @return HBase temp dir.
-   */
+  /** Returns HBase temp dir. */
   public Path getTempDir() {
     return this.tempdir;
   }
 
-  /**
-   * @return The unique identifier generated for this cluster
-   */
+  /** Returns The unique identifier generated for this cluster */
   public ClusterId getClusterId() {
     return clusterId;
   }

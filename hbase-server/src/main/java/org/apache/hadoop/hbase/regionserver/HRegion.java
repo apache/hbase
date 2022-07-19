@@ -621,9 +621,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private boolean failedSanityCheck = false;
     private boolean wrongFamily = false;
 
-    /**
-     * @return If a {@link WrongRegionException} has been observed.
-     */
+    /** Returns If a {@link WrongRegionException} has been observed. */
     boolean hasSeenWrongRegion() {
       return wrongRegion;
     }
@@ -635,9 +633,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       wrongRegion = true;
     }
 
-    /**
-     * @return If a {@link FailedSanityCheckException} has been observed.
-     */
+    /** Returns If a {@link FailedSanityCheckException} has been observed. */
     boolean hasSeenFailedSanityCheck() {
       return failedSanityCheck;
     }
@@ -649,9 +645,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       failedSanityCheck = true;
     }
 
-    /**
-     * @return If a {@link NoSuchColumnFamilyException} has been observed.
-     */
+    /** Returns If a {@link NoSuchColumnFamilyException} has been observed. */
     boolean hasSeenNoSuchFamily() {
       return wrongFamily;
     }
@@ -1173,9 +1167,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  /**
-   * @return Map of StoreFiles by column family
-   */
+  /** Returns Map of StoreFiles by column family */
   private NavigableMap<byte[], List<Path>> getStoreFiles() {
     NavigableMap<byte[], List<Path>> allStoreFiles = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (HStore store : stores.values()) {
@@ -1218,9 +1210,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  /**
-   * @return True if this region has references.
-   */
+  /** Returns True if this region has references. */
   public boolean hasReferences() {
     return stores.values().stream().anyMatch(HStore::hasReferences);
   }
@@ -1343,9 +1333,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.fs.getRegionInfo();
   }
 
-  /**
-   * @return Instance of {@link RegionServerServices} used by this HRegion. Can be null.
-   */
+  /** Returns Instance of {@link RegionServerServices} used by this HRegion. Can be null. */
   RegionServerServices getRegionServerServices() {
     return this.rsServices;
   }
@@ -1380,7 +1368,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return memStoreSizing.getOffHeapSize();
   }
 
-  /** @return store services for this region, to access services required by store level needs */
+  /** Returns store services for this region, to access services required by store level needs */
   public RegionServicesForStores getRegionServicesForStores() {
     return regionServicesForStores;
   }
@@ -1471,9 +1459,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return maxFlushedSeqId;
   }
 
-  /**
-   * @return readpoint considering given IsolationLevel. Pass {@code null} for default
-   */
+  /** Returns readpoint considering given IsolationLevel. Pass {@code null} for default */
   public long getReadPoint(IsolationLevel isolationLevel) {
     if (isolationLevel != null && isolationLevel == IsolationLevel.READ_UNCOMMITTED) {
       // This scan can read even uncommitted transactions
@@ -1954,9 +1940,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       });
   }
 
-  /**
-   * @return True if its worth doing a flush before we put up the close flag.
-   */
+  /** Returns True if its worth doing a flush before we put up the close flag. */
   private boolean worthPreFlushing() {
     return this.memStoreSizing.getDataSize()
         > this.conf.getLong("hbase.hregion.preclose.flush.size", 1024 * 1024 * 5);
@@ -1977,7 +1961,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     htableDescriptor = desc;
   }
 
-  /** @return WAL in use for this region */
+  /** Returns WAL in use for this region */
   public WAL getWAL() {
     return this.wal;
   }
@@ -2004,9 +1988,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.mobFileCache = mobFileCache;
   }
 
-  /**
-   * @return split policy for this region.
-   */
+  /** Returns split policy for this region. */
   RegionSplitPolicy getSplitPolicy() {
     return this.splitPolicy;
   }
@@ -2022,23 +2004,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.baseConf;
   }
 
-  /** @return {@link FileSystem} being used by this region */
+  /** Returns {@link FileSystem} being used by this region */
   public FileSystem getFilesystem() {
     return fs.getFileSystem();
   }
 
-  /** @return the {@link HRegionFileSystem} used by this region */
+  /** Returns the {@link HRegionFileSystem} used by this region */
   public HRegionFileSystem getRegionFileSystem() {
     return this.fs;
   }
 
-  /** @return the WAL {@link HRegionFileSystem} used by this region */
+  /** Returns the WAL {@link HRegionFileSystem} used by this region */
   HRegionWALFileSystem getRegionWALFileSystem() throws IOException {
     return new HRegionWALFileSystem(conf, getWalFileSystem(),
       CommonFSUtils.getWALTableDir(conf, htableDescriptor.getTableName()), fs.getRegionInfo());
   }
 
-  /** @return the WAL {@link FileSystem} being used by this region */
+  /** Returns the WAL {@link FileSystem} being used by this region */
   FileSystem getWalFileSystem() throws IOException {
     if (walFS == null) {
       walFS = CommonFSUtils.getWALFileSystem(conf);
@@ -2335,13 +2317,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       CANNOT_FLUSH
     }
 
-    /** @return the detailed result code */
+    /** Returns the detailed result code */
     Result getResult();
 
-    /** @return true if the memstores were flushed, else false */
+    /** Returns true if the memstores were flushed, else false */
     boolean isFlushSucceeded();
 
-    /** @return True if the flush requested a compaction, else false */
+    /** Returns True if the flush requested a compaction, else false */
     boolean isCompactionNeeded();
   }
 
@@ -2791,9 +2773,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  /**
-   * @return True if passed Set is all families in the region.
-   */
+  /** Returns True if passed Set is all families in the region. */
   private boolean isAllFamilies(Collection<HStore> families) {
     return families == null || this.stores.size() == families.size();
   }
@@ -4009,9 +3989,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    /**
-     * @return Get the long out of the passed in Cell
-     */
+    /** Returns Get the long out of the passed in Cell */
     private static long getLongValue(final Cell cell) throws DoNotRetryIOException {
       int len = cell.getValueLength();
       if (len != Bytes.SIZEOF_LONG) {
@@ -7485,9 +7463,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     });
   }
 
-  /**
-   * @return statistics about the current load of the region
-   */
+  /** Returns statistics about the current load of the region */
   public ClientProtos.RegionLoadStats getLoadStatistics() {
     if (!regionStatsEnabled) {
       return null;
@@ -7778,9 +7754,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       SequenceId.NO_SEQUENCE_ID);
   }
 
-  /**
-   * @return writeEntry associated with this append
-   */
+  /** Returns writeEntry associated with this append */
   private WriteEntry doWALAppend(WALEdit walEdit, Durability durability, List<UUID> clusterIds,
     long now, long nonceGroup, long nonce, long origLogSeqNum) throws IOException {
     Preconditions.checkArgument(walEdit != null && !walEdit.isEmpty(), "WALEdit is null or empty!");
@@ -8001,9 +7975,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
   }
 
-  /**
-   * @return The priority that this region should have in the compaction queue
-   */
+  /** Returns The priority that this region should have in the compaction queue */
   public int getCompactPriority() {
     if (conf.getBoolean(SPLIT_IGNORE_BLOCKING_ENABLED_KEY, false) && checkSplit().isPresent()) {
       // if a region should split, split it before compact
@@ -8013,7 +7985,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       .orElse(Store.NO_PRIORITY);
   }
 
-  /** @return the coprocessor host */
+  /** Returns the coprocessor host */
   public RegionCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
   }
@@ -8242,7 +8214,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return regionDurability.ordinal() > Durability.ASYNC_WAL.ordinal();
   }
 
-  /** @return the latest sequence number that was read from storage when this region was opened */
+  /** Returns the latest sequence number that was read from storage when this region was opened */
   public long getOpenSeqNum() {
     return this.openSeqNum;
   }

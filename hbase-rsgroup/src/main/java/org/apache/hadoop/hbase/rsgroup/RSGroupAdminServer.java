@@ -119,9 +119,7 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     return rsGroupInfo;
   }
 
-  /**
-   * @return List of Regions associated with this <code>server</code>.
-   */
+  /** Returns List of Regions associated with this <code>server</code>. */
   private List<RegionInfo> getRegions(final Address server) {
     LinkedList<RegionInfo> regions = new LinkedList<>();
     for (Map.Entry<RegionInfo, ServerName> el : master.getAssignmentManager().getRegionStates()

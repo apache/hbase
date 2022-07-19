@@ -58,8 +58,6 @@ public interface InlineBlockWriter {
    */
   BlockType getInlineBlockType();
 
-  /**
-   * @return true if inline blocks produced by this writer should be cached
-   */
+  /** Returns true if inline blocks produced by this writer should be cached */
   boolean getCacheOnWrite();
 }

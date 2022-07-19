@@ -497,9 +497,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     return (regionSplitLimit > server.getNumberOfOnlineRegions());
   }
 
-  /**
-   * @return the regionSplitLimit
-   */
+  /** Returns the regionSplitLimit */
   public int getRegionSplitLimit() {
     return this.regionSplitLimit;
   }
@@ -856,16 +854,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     this.conf.set(HBASE_REGION_SERVER_ENABLE_COMPACTION, String.valueOf(compactionsEnabled));
   }
 
-  /**
-   * @return the longCompactions thread pool executor
-   */
+  /** Returns the longCompactions thread pool executor */
   ThreadPoolExecutor getLongCompactions() {
     return longCompactions;
   }
 
-  /**
-   * @return the shortCompactions thread pool executor
-   */
+  /** Returns the shortCompactions thread pool executor */
   ThreadPoolExecutor getShortCompactions() {
     return shortCompactions;
   }

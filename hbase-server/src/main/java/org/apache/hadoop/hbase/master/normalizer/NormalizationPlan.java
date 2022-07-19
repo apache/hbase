@@ -32,8 +32,6 @@ public interface NormalizationPlan {
     NONE
   }
 
-  /**
-   * @return the type of this plan
-   */
+  /** Returns the type of this plan */
   PlanType getType();
 }

@@ -163,9 +163,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     return filter;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.SingleColumnValueExcludeFilter.Builder builder =

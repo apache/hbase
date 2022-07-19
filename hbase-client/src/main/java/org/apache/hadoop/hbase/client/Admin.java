@@ -112,9 +112,7 @@ public interface Admin extends Abortable, Closeable {
   @Override
   boolean isAborted();
 
-  /**
-   * @return Connection used by this object.
-   */
+  /** Returns Connection used by this object. */
   Connection getConnection();
 
   /**
@@ -1710,9 +1708,7 @@ public interface Admin extends Abortable, Closeable {
   List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName)
     throws IOException;
 
-  /**
-   * @return Configuration used by the instance.
-   */
+  /** Returns Configuration used by the instance. */
   Configuration getConfiguration();
 
   /**

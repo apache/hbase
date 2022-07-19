@@ -831,9 +831,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return queueStorage;
   }
 
-  /**
-   * @return String to use as a log prefix that contains current peerId.
-   */
+  /** Returns String to use as a log prefix that contains current peerId. */
   public String logPeerId() {
     return "peerId=" + this.getPeerId() + ",";
   }

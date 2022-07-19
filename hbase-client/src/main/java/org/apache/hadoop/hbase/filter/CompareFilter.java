@@ -113,9 +113,7 @@ public abstract class CompareFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
@@ -279,9 +277,7 @@ public abstract class CompareFilter extends FilterBase {
     return arguments;
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.CompareFilter convert() {
     FilterProtos.CompareFilter.Builder builder = FilterProtos.CompareFilter.newBuilder();
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.op.name());

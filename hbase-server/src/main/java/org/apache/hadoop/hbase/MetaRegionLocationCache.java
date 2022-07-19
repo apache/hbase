@@ -201,9 +201,7 @@ public class MetaRegionLocationCache extends ZKListener {
     cachedMetaLocations.put(replicaId, location);
   }
 
-  /**
-   * @return Optional list of HRegionLocations for meta replica(s), null if the cache is empty.
-   */
+  /** Returns Optional list of HRegionLocations for meta replica(s), null if the cache is empty. */
   public Optional<List<HRegionLocation>> getMetaRegionLocations() {
     ConcurrentNavigableMap<Integer, HRegionLocation> snapshot =
       cachedMetaLocations.tailMap(cachedMetaLocations.firstKey());

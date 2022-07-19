@@ -223,7 +223,7 @@ public class EncodedDataBlock {
     return getCompressedSize(comprAlgo, compressor, compressedBytes, 0, compressedBytes.length);
   }
 
-  /** @return encoded data with header */
+  /** Returns encoded data with header */
   private byte[] getEncodedData() {
     if (cachedEncodedData != null) {
       return cachedEncodedData;

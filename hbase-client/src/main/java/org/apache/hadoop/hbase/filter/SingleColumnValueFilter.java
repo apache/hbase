@@ -192,23 +192,17 @@ public class SingleColumnValueFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public org.apache.hadoop.hbase.filter.ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the family
-   */
+  /** Returns the family */
   public byte[] getFamily() {
     return columnFamily;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Returns the qualifier */
   public byte[] getQualifier() {
     return columnQualifier;
   }
@@ -356,9 +350,7 @@ public class SingleColumnValueFilter extends FilterBase {
     return builder.build();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     return convert().toByteArray();

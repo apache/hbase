@@ -67,6 +67,6 @@ public interface OperationQuota {
    */
   void addMutation(Mutation mutation);
 
-  /** @return the number of bytes available to read to avoid exceeding the quota */
+  /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
 }

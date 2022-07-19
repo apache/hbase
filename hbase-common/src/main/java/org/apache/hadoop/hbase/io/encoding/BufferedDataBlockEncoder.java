@@ -1001,9 +1001,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     abstract protected void decodeNext();
   }
 
-  /**
-   * @return unencoded size added
-   */
+  /** Returns unencoded size added */
   protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
     HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;

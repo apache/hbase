@@ -245,13 +245,11 @@ public interface ClusterConnection extends Connection {
   void clearCaches(final ServerName sn);
 
   /**
-   * @return Nonce generator for this ClusterConnection; may be null if disabled in configuration.
+   * Returns Nonce generator for this ClusterConnection; may be null if disabled in configuration.
    */
   NonceGenerator getNonceGenerator();
 
-  /**
-   * @return Default AsyncProcess associated with this connection.
-   */
+  /** Returns Default AsyncProcess associated with this connection. */
   AsyncProcess getAsyncProcess();
 
   /**
@@ -262,34 +260,22 @@ public interface ClusterConnection extends Connection {
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
 
-  /**
-   * @return Connection's RpcRetryingCallerFactory instance
-   */
+  /** Returns Connection's RpcRetryingCallerFactory instance */
   RpcRetryingCallerFactory getRpcRetryingCallerFactory();
 
-  /**
-   * @return Connection's RpcControllerFactory instance
-   */
+  /** Returns Connection's RpcControllerFactory instance */
   RpcControllerFactory getRpcControllerFactory();
 
-  /**
-   * @return a ConnectionConfiguration object holding parsed configuration values
-   */
+  /** Returns a ConnectionConfiguration object holding parsed configuration values */
   ConnectionConfiguration getConnectionConfiguration();
 
-  /**
-   * @return the current statistics tracker associated with this connection
-   */
+  /** Returns the current statistics tracker associated with this connection */
   ServerStatisticTracker getStatisticsTracker();
 
-  /**
-   * @return the configured client backoff policy
-   */
+  /** Returns the configured client backoff policy */
   ClientBackoffPolicy getBackoffPolicy();
 
-  /**
-   * @return the MetricsConnection instance associated with this connection.
-   */
+  /** Returns the MetricsConnection instance associated with this connection. */
   MetricsConnection getConnectionMetrics();
 
   /**

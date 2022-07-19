@@ -114,9 +114,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
     }
   }
 
-  /**
-   * @return {@link Connection} instance used by this Callable.
-   */
+  /** Returns {@link Connection} instance used by this Callable. */
   Connection getConnection() {
     return this.connection;
   }

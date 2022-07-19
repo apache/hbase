@@ -73,9 +73,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
     return result;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryComponentComparator.Builder builder =

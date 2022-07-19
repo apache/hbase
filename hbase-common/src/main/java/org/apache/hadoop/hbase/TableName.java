@@ -76,9 +76,7 @@ public final class TableName implements Comparable<TableName> {
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
 
-  /**
-   * @return True if <code>tn</code> is the hbase:meta table name.
-   */
+  /** Returns True if <code>tn</code> is the hbase:meta table name. */
   public static boolean isMetaTableName(final TableName tn) {
     return tn.equals(TableName.META_TABLE_NAME);
   }
@@ -254,9 +252,7 @@ public final class TableName implements Comparable<TableName> {
     return qualifierAsString;
   }
 
-  /**
-   * @return A pointer to TableName as String bytes.
-   */
+  /** Returns A pointer to TableName as String bytes. */
   public byte[] toBytes() {
     return name;
   }

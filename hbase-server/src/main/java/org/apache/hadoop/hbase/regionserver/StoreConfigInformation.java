@@ -29,16 +29,12 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface StoreConfigInformation {
-  /**
-   * @return Gets the Memstore flush size for the region that this store works with.
-   */
+  /** Returns Gets the Memstore flush size for the region that this store works with. */
   // TODO: Why is this in here? It should be in Store and it should return the Store flush size,
   // not the Regions. St.Ack
   long getMemStoreFlushSize();
 
-  /**
-   * @return Gets the cf-specific time-to-live for store files.
-   */
+  /** Returns Gets the cf-specific time-to-live for store files. */
   long getStoreFileTtl();
 
   /**

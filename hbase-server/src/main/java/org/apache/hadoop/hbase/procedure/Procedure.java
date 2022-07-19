@@ -161,7 +161,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * @return String of the procedure members both trying to enter the barrier and already in barrier
+   * Returns String of the procedure members both trying to enter the barrier and already in barrier
    */
   public String getStatus() {
     String waiting, done;

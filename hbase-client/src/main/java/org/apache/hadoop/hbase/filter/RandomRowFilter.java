@@ -44,9 +44,7 @@ public class RandomRowFilter extends FilterBase {
     this.chance = chance;
   }
 
-  /**
-   * @return The chance that a row gets included.
-   */
+  /** Returns The chance that a row gets included. */
   public float getChance() {
     return chance;
   }
@@ -107,9 +105,7 @@ public class RandomRowFilter extends FilterBase {
     filterOutRow = false;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.RandomRowFilter.Builder builder = FilterProtos.RandomRowFilter.newBuilder();
