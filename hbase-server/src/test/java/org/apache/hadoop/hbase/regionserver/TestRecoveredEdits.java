@@ -172,9 +172,7 @@ public class TestRecoveredEdits {
     LOG.info("Checked " + count + " edits made it in");
   }
 
-  /**
-   * @return Return how many edits seen.
-   */
+  /** Returns Return how many edits seen. */
   // Used by TestWALPlayer over in hbase-mapreduce too.
   public static int verifyAllEditsMadeItIn(final FileSystem fs, final Configuration conf,
     final Path edits, final HRegion region) throws IOException {

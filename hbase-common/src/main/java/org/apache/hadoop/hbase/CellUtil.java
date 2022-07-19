@@ -856,9 +856,7 @@ public final class CellUtil {
     return matchingFamily(left, fam) && matchingQualifier(left, qual);
   }
 
-  /**
-   * @return True if matching column family and the qualifier starts with <code>qual</code>
-   */
+  /** Returns True if matching column family and the qualifier starts with <code>qual</code> */
   public static boolean matchingColumnFamilyAndQualifierPrefix(final Cell left, final byte[] fam,
     final byte[] qual) {
     return matchingFamily(left, fam) && PrivateCellUtil.qualifierStartsWith(left, qual);
@@ -976,9 +974,7 @@ public final class CellUtil {
     return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
   }
 
-  /**
-   * @return True if this cell is a Put.
-   */
+  /** Returns True if this cell is a Put. */
   @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
     return cell.getTypeByte() == Type.Put.getCode();

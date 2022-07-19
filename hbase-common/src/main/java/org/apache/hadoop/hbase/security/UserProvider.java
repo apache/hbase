@@ -149,9 +149,7 @@ public class UserProvider extends BaseConfigurable {
     return user == null ? null : user.getName();
   }
 
-  /**
-   * @return <tt>true</tt> if security is enabled, <tt>false</tt> otherwise
-   */
+  /** Returns <tt>true</tt> if security is enabled, <tt>false</tt> otherwise */
   public boolean isHBaseSecurityEnabled() {
     return User.isHBaseSecurityEnabled(this.getConf());
   }

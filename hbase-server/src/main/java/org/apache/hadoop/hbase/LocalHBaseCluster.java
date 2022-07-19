@@ -247,9 +247,7 @@ public class LocalHBaseCluster {
     return regionThreads.get(serverNumber).getRegionServer();
   }
 
-  /**
-   * @return Read-only list of region server threads.
-   */
+  /** Returns Read-only list of region server threads. */
   public List<JVMClusterUtil.RegionServerThread> getRegionServers() {
     return Collections.unmodifiableList(this.regionThreads);
   }
@@ -268,9 +266,7 @@ public class LocalHBaseCluster {
     return liveServers;
   }
 
-  /**
-   * @return the Configuration used by this LocalHBaseCluster
-   */
+  /** Returns the Configuration used by this LocalHBaseCluster */
   public Configuration getConfiguration() {
     return this.conf;
   }
@@ -306,9 +302,7 @@ public class LocalHBaseCluster {
     return rst.getName();
   }
 
-  /**
-   * @return the HMaster thread
-   */
+  /** Returns the HMaster thread */
   public HMaster getMaster(int serverNumber) {
     return masterThreads.get(serverNumber).getMaster();
   }
@@ -328,9 +322,7 @@ public class LocalHBaseCluster {
     return null;
   }
 
-  /**
-   * @return Read-only list of master threads.
-   */
+  /** Returns Read-only list of master threads. */
   public List<JVMClusterUtil.MasterThread> getMasters() {
     return Collections.unmodifiableList(this.masterThreads);
   }

@@ -108,9 +108,7 @@ public class ColumnPrefixFilter extends FilterBase {
     return new ColumnPrefixFilter(columnPrefix);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnPrefixFilter.Builder builder = FilterProtos.ColumnPrefixFilter.newBuilder();

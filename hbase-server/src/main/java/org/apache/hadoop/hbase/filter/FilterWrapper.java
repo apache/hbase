@@ -45,9 +45,7 @@ final public class FilterWrapper extends Filter {
     this.filter = filter;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.FilterWrapper.Builder builder = FilterProtos.FilterWrapper.newBuilder();

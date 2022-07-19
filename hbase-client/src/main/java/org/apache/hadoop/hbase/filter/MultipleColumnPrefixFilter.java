@@ -122,9 +122,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return new MultipleColumnPrefixFilter(prefixes);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.MultipleColumnPrefixFilter.Builder builder =

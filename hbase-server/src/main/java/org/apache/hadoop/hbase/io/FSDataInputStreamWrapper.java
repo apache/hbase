@@ -186,9 +186,7 @@ public class FSDataInputStreamWrapper implements Closeable {
     readahead = 0;
   }
 
-  /**
-   * @return Whether we are presently using HBase checksum.
-   */
+  /** Returns Whether we are presently using HBase checksum. */
   public boolean shouldUseHBaseChecksum() {
     return this.useHBaseChecksum;
   }

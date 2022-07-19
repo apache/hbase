@@ -108,9 +108,7 @@ public class RegionServerSpaceQuotaManager {
     started = false;
   }
 
-  /**
-   * @return if the {@code Chore} has been started.
-   */
+  /** Returns if the {@code Chore} has been started. */
   public boolean isStarted() {
     return started;
   }

@@ -58,9 +58,7 @@ final class ClientIdGenerator {
     return id;
   }
 
-  /**
-   * @return PID of the current process, if it can be extracted from JVM name, or null.
-   */
+  /** Returns PID of the current process, if it can be extracted from JVM name, or null. */
   public static Long getPid() {
     String name = ManagementFactory.getRuntimeMXBean().getName();
     String[] nameParts = name.split("@");

@@ -410,9 +410,7 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return isMetaFile(p.getName());
   }
 
-  /**
-   * @return True if String ends in {@link #META_WAL_PROVIDER_ID}
-   */
+  /** Returns True if String ends in {@link #META_WAL_PROVIDER_ID} */
   public static boolean isMetaFile(String p) {
     return p != null && p.endsWith(META_WAL_PROVIDER_ID);
   }

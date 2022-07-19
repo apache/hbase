@@ -84,9 +84,7 @@ public class ColumnCountGetFilter extends FilterBase {
     return new ColumnCountGetFilter(limit);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.ColumnCountGetFilter.Builder builder =

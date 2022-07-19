@@ -44,9 +44,7 @@ public class MultiResponse extends AbstractResponse {
     super();
   }
 
-  /**
-   * @return Number of pairs in this container
-   */
+  /** Returns Number of pairs in this container */
   public int size() {
     int size = 0;
     for (RegionResult result : results.values()) {
@@ -68,9 +66,7 @@ public class MultiResponse extends AbstractResponse {
     exceptions.put(regionName, ie);
   }
 
-  /**
-   * @return the exception for the region, if any. Null otherwise.
-   */
+  /** Returns the exception for the region, if any. Null otherwise. */
   public Throwable getException(byte[] regionName) {
     return exceptions.get(regionName);
   }

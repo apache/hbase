@@ -106,9 +106,7 @@ public class RowFilter extends CompareFilter {
     return new RowFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.RowFilter.Builder builder = FilterProtos.RowFilter.newBuilder();

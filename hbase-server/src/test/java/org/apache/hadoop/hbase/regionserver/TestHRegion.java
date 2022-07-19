@@ -1740,9 +1740,7 @@ public class TestHRegion {
     metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
   }
 
-  /**
-   * @return syncs initial syncTimeNumOps
-   */
+  /** Returns syncs initial syncTimeNumOps */
   private long prepareRegionForBachPut(final Put[] puts, final MetricsWALSource source,
     boolean slop) throws IOException {
     this.region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);

@@ -80,9 +80,7 @@ public class HFileArchiver {
     // hidden ctor since this is just a util
   }
 
-  /**
-   * @return True if the Region exits in the filesystem.
-   */
+  /** Returns True if the Region exits in the filesystem. */
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
     throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
@@ -703,14 +701,10 @@ public class HFileArchiver {
      */
     abstract void close() throws IOException;
 
-    /**
-     * @return the name of the file (not the full fs path, just the individual file name)
-     */
+    /** Returns the name of the file (not the full fs path, just the individual file name) */
     abstract String getName();
 
-    /**
-     * @return the path to this file
-     */
+    /** Returns the path to this file */
     abstract Path getPath();
 
     /**
@@ -722,9 +716,7 @@ public class HFileArchiver {
       return CommonFSUtils.renameAndSetModifyTime(fs, p, dest);
     }
 
-    /**
-     * @return the {@link FileSystem} on which this file resides
-     */
+    /** Returns the {@link FileSystem} on which this file resides */
     public FileSystem getFileSystem() {
       return this.fs;
     }

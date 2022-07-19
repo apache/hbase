@@ -55,9 +55,7 @@ public class TableModel implements Serializable {
     this.name = name;
   }
 
-  /**
-   * @return the name
-   */
+  /** Returns the name */
   @XmlAttribute
   public String getName() {
     return name;

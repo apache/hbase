@@ -101,9 +101,7 @@ public interface HFileScanner extends Shipper, Closeable {
    */
   ByteBuffer getValue();
 
-  /**
-   * @return Instance of {@link org.apache.hadoop.hbase.Cell}.
-   */
+  /** Returns Instance of {@link org.apache.hadoop.hbase.Cell}. */
   Cell getCell();
 
   /**
@@ -124,9 +122,7 @@ public interface HFileScanner extends Shipper, Closeable {
   @Deprecated
   String getValueString();
 
-  /**
-   * @return Reader that underlies this Scanner instance.
-   */
+  /** Returns Reader that underlies this Scanner instance. */
   HFile.Reader getReader();
 
   /**
@@ -135,9 +131,7 @@ public interface HFileScanner extends Shipper, Closeable {
    */
   boolean isSeeked();
 
-  /**
-   * @return the next key in the index (the key to seek to the next block)
-   */
+  /** Returns the next key in the index (the key to seek to the next block) */
   Cell getNextIndexedKey();
 
   /**

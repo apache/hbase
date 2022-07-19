@@ -483,7 +483,7 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  /** @return Connection used by this object. */
+  /** Returns Connection used by this object. */
   @Override
   public Connection getConnection() {
     return connection;
@@ -3531,28 +3531,20 @@ public class HBaseAdmin implements Admin {
       return getDescription();
     }
 
-    /**
-     * @return the table name
-     */
+    /** Returns the table name */
     protected TableName getTableName() {
       return tableName;
     }
 
-    /**
-     * @return the table descriptor
-     */
+    /** Returns the table descriptor */
     protected TableDescriptor getTableDescriptor() throws IOException {
       return getAdmin().getDescriptor(getTableName());
     }
 
-    /**
-     * @return the operation type like CREATE, DELETE, DISABLE etc.
-     */
+    /** Returns the operation type like CREATE, DELETE, DISABLE etc. */
     public abstract String getOperationType();
 
-    /**
-     * @return a description of the operation
-     */
+    /** Returns a description of the operation */
     protected String getDescription() {
       return "Operation: " + getOperationType() + ", " + "Table Name: "
         + tableName.getNameWithNamespaceInclAsString() + ", procId: " + procId;
@@ -3696,16 +3688,12 @@ public class HBaseAdmin implements Admin {
       this.namespaceName = namespaceName;
     }
 
-    /**
-     * @return the namespace name
-     */
+    /** Returns the namespace name */
     protected String getNamespaceName() {
       return namespaceName;
     }
 
-    /**
-     * @return the operation type like CREATE_NAMESPACE, DELETE_NAMESPACE, etc.
-     */
+    /** Returns the operation type like CREATE_NAMESPACE, DELETE_NAMESPACE, etc. */
     public abstract String getOperationType();
 
     @Override

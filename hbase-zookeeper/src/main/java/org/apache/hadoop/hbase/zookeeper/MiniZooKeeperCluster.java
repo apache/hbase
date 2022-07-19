@@ -470,9 +470,7 @@ public class MiniZooKeeperCluster {
       : clientPortList.get(activeZKServerIndex);
   }
 
-  /**
-   * @return Address for this cluster instance.
-   */
+  /** Returns Address for this cluster instance. */
   public Address getAddress() {
     return Address.fromParts(HOST, getClientPort());
   }

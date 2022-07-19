@@ -332,9 +332,7 @@ public class RegionLoad implements RegionMetrics {
     return (int) metrics.getUncompressedStoreFileSize().get(Size.Unit.KILOBYTE);
   }
 
-  /**
-   * @return the data locality of region in the regionserver.
-   */
+  /** Returns the data locality of region in the regionserver. */
   @Override
   public float getDataLocality() {
     return metrics.getDataLocality();
@@ -355,9 +353,7 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getLastMajorCompactionTimestamp();
   }
 
-  /**
-   * @return the reference count for the stores of this region
-   */
+  /** Returns the reference count for the stores of this region */
   public int getStoreRefCount() {
     return metrics.getStoreRefCount();
   }

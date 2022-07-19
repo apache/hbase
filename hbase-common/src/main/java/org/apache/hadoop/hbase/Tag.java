@@ -46,19 +46,13 @@ public interface Tag {
    */
   public static final byte CUSTOM_TAG_TYPE_RANGE = (byte) 64;
 
-  /**
-   * @return the tag type
-   */
+  /** Returns the tag type */
   byte getType();
 
-  /**
-   * @return Offset of tag value within the backed buffer
-   */
+  /** Returns Offset of tag value within the backed buffer */
   int getValueOffset();
 
-  /**
-   * @return Length of tag value within the backed buffer
-   */
+  /** Returns Length of tag value within the backed buffer */
   int getValueLength();
 
   /**
@@ -73,9 +67,7 @@ public interface Tag {
    */
   byte[] getValueArray();
 
-  /**
-   * @return The {@link java.nio.ByteBuffer} containing the value bytes.
-   */
+  /** Returns The {@link java.nio.ByteBuffer} containing the value bytes. */
   ByteBuffer getValueByteBuffer();
 
   /**

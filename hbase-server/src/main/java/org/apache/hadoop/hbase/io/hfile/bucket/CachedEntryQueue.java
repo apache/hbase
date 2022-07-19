@@ -92,16 +92,12 @@ public class CachedEntryQueue {
     }
   }
 
-  /**
-   * @return The next element in this queue, or {@code null} if the queue is empty.
-   */
+  /** Returns The next element in this queue, or {@code null} if the queue is empty. */
   public Map.Entry<BlockCacheKey, BucketEntry> poll() {
     return queue.poll();
   }
 
-  /**
-   * @return The last element in this queue, or {@code null} if the queue is empty.
-   */
+  /** Returns The last element in this queue, or {@code null} if the queue is empty. */
   public Map.Entry<BlockCacheKey, BucketEntry> pollLast() {
     return queue.pollLast();
   }

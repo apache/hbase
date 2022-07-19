@@ -97,9 +97,7 @@ public class PageFilter extends FilterBase {
     return new PageFilter(pageSize);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.PageFilter.Builder builder = FilterProtos.PageFilter.newBuilder();

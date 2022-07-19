@@ -43,9 +43,7 @@ class ThriftServerRunner extends Thread implements Closeable {
     return this.thriftServer;
   }
 
-  /**
-   * @return Empty unless {@link #run()} threw an exception; if it did, access it here.
-   */
+  /** Returns Empty unless {@link #run()} threw an exception; if it did, access it here. */
   Exception getRunException() {
     return this.exception;
   }

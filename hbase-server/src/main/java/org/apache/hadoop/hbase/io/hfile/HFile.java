@@ -211,7 +211,7 @@ public final class HFile {
     /** Add an element to the file info map. */
     void appendFileInfo(byte[] key, byte[] value) throws IOException;
 
-    /** @return the path to this {@link HFile} */
+    /** Returns the path to this {@link HFile} */
     Path getPath();
 
     /**

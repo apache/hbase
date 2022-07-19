@@ -201,9 +201,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    */
   void abortCacheFlush(byte[] encodedRegionName);
 
-  /**
-   * @return Coprocessor host.
-   */
+  /** Returns Coprocessor host. */
   WALCoprocessorHost getCoprocessorHost();
 
   /**

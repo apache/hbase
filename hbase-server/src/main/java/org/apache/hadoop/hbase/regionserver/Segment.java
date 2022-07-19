@@ -130,9 +130,7 @@ public abstract class Segment implements MemStoreSizing {
     return Collections.singletonList(new SegmentScanner(this, readPoint));
   }
 
-  /**
-   * @return whether the segment has any cells
-   */
+  /** Returns whether the segment has any cells */
   public boolean isEmpty() {
     return getCellSet().isEmpty();
   }
@@ -287,9 +285,7 @@ public abstract class Segment implements MemStoreSizing {
     return getComparator().compareRows(left, right);
   }
 
-  /**
-   * @return a set of all cells in the segment
-   */
+  /** Returns a set of all cells in the segment */
   protected CellSet getCellSet() {
     return cellSet.get();
   }

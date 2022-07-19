@@ -54,9 +54,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
     return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryComparator.Builder builder =

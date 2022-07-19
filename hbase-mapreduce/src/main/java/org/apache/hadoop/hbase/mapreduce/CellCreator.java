@@ -120,9 +120,7 @@ public class CellCreator {
       qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, tags);
   }
 
-  /**
-   * @return Visibility expression resolver
-   */
+  /** Returns Visibility expression resolver */
   public VisibilityExpressionResolver getVisibilityExpressionResolver() {
     return this.visExpResolver;
   }

@@ -33,38 +33,26 @@ public interface ServerMetrics {
 
   ServerName getServerName();
 
-  /**
-   * @return the version number of a regionserver.
-   */
+  /** Returns the version number of a regionserver. */
   default int getVersionNumber() {
     return 0;
   }
 
-  /**
-   * @return the string type version of a regionserver.
-   */
+  /** Returns the string type version of a regionserver. */
   default String getVersion() {
     return "0.0.0";
   }
 
-  /**
-   * @return the number of requests per second.
-   */
+  /** Returns the number of requests per second. */
   long getRequestCountPerSecond();
 
-  /**
-   * @return total Number of requests from the start of the region server.
-   */
+  /** Returns total Number of requests from the start of the region server. */
   long getRequestCount();
 
-  /**
-   * @return the amount of used heap
-   */
+  /** Returns the amount of used heap */
   Size getUsedHeapSize();
 
-  /**
-   * @return the maximum allowable size of the heap
-   */
+  /** Returns the maximum allowable size of the heap */
   Size getMaxHeapSize();
 
   int getInfoServerPort();
@@ -87,14 +75,10 @@ public interface ServerMetrics {
   @Nullable
   ReplicationLoadSink getReplicationLoadSink();
 
-  /**
-   * @return region load metrics
-   */
+  /** Returns region load metrics */
   Map<byte[], RegionMetrics> getRegionMetrics();
 
-  /**
-   * @return metrics per user
-   */
+  /** Returns metrics per user */
   Map<byte[], UserMetrics> getUserMetrics();
 
   /**
@@ -103,14 +87,10 @@ public interface ServerMetrics {
    */
   Set<String> getCoprocessorNames();
 
-  /**
-   * @return the timestamp (server side) of generating this metrics
-   */
+  /** Returns the timestamp (server side) of generating this metrics */
   long getReportTimestamp();
 
-  /**
-   * @return the last timestamp (server side) of generating this metrics
-   */
+  /** Returns the last timestamp (server side) of generating this metrics */
   long getLastReportTimestamp();
 
   /**

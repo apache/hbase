@@ -104,7 +104,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * @return Return a short, printable name for this region (usually encoded name) for us logging.
+   * Returns Return a short, printable name for this region (usually encoded name) for us logging.
    */
   @Override
   public String getShortNameToLog() {
@@ -425,7 +425,7 @@ public class HRegionInfo implements RegionInfo {
     return RegionInfo.isEncodedRegionName(regionName);
   }
 
-  /** @return the regionId */
+  /** Returns the regionId */
   @Override
   public long getRegionId() {
     return regionId;
@@ -440,9 +440,7 @@ public class HRegionInfo implements RegionInfo {
     return regionName;
   }
 
-  /**
-   * @return Region name as a String for use in logging, etc.
-   */
+  /** Returns Region name as a String for use in logging, etc. */
   @Override
   public String getRegionNameAsString() {
     if (RegionInfo.hasEncodedName(this.regionName)) {
@@ -456,9 +454,7 @@ public class HRegionInfo implements RegionInfo {
     return Bytes.toStringBinary(this.regionName) + "." + this.getEncodedName();
   }
 
-  /**
-   * @return the encoded region name
-   */
+  /** Returns the encoded region name */
   @Override
   public synchronized String getEncodedName() {
     if (this.encodedName == null) {
@@ -475,17 +471,13 @@ public class HRegionInfo implements RegionInfo {
     return this.encodedNameAsBytes;
   }
 
-  /**
-   * @return the startKey
-   */
+  /** Returns the startKey */
   @Override
   public byte[] getStartKey() {
     return startKey;
   }
 
-  /**
-   * @return the endKey
-   */
+  /** Returns the endKey */
   @Override
   public byte[] getEndKey() {
     return endKey;
@@ -524,40 +516,30 @@ public class HRegionInfo implements RegionInfo {
     return firstKeyInRange && lastKeyInRange;
   }
 
-  /**
-   * @return true if the given row falls in this region.
-   */
+  /** Returns true if the given row falls in this region. */
   @Override
   public boolean containsRow(byte[] row) {
     return Bytes.compareTo(row, startKey) >= 0
       && (Bytes.compareTo(row, endKey) < 0 || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
-  /**
-   * @return true if this region is from hbase:meta
-   */
+  /** Returns true if this region is from hbase:meta */
   public boolean isMetaTable() {
     return isMetaRegion();
   }
 
-  /**
-   * @return true if this region is a meta region
-   */
+  /** Returns true if this region is a meta region */
   @Override
   public boolean isMetaRegion() {
     return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
   }
 
-  /**
-   * @return true if this region is from a system table
-   */
+  /** Returns true if this region is from a system table */
   public boolean isSystemTable() {
     return tableName.isSystemTable();
   }
 
-  /**
-   * @return true if has been split and has daughters.
-   */
+  /** Returns true if has been split and has daughters. */
   @Override
   public boolean isSplit() {
     return this.split;
@@ -570,9 +552,7 @@ public class HRegionInfo implements RegionInfo {
     this.split = split;
   }
 
-  /**
-   * @return true if this region is offline.
-   */
+  /** Returns true if this region is offline. */
   @Override
   public boolean isOffline() {
     return this.offLine;
@@ -587,9 +567,7 @@ public class HRegionInfo implements RegionInfo {
     this.offLine = offLine;
   }
 
-  /**
-   * @return true if this is a split parent region.
-   */
+  /** Returns true if this is a split parent region. */
   @Override
   public boolean isSplitParent() {
     if (!isSplit()) return false;

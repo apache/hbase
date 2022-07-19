@@ -105,9 +105,7 @@ public class LockAndQueue implements LockStatus {
   // try/release Shared/Exclusive lock
   // ======================================================================
 
-  /**
-   * @return whether we have succesfully acquired the shared lock.
-   */
+  /** Returns whether we have succesfully acquired the shared lock. */
   public boolean trySharedLock(Procedure<?> proc) {
     if (hasExclusiveLock() && !hasLockAccess(proc)) {
       return false;
@@ -119,9 +117,7 @@ public class LockAndQueue implements LockStatus {
     return true;
   }
 
-  /**
-   * @return whether we should wake the procedures waiting on the lock here.
-   */
+  /** Returns whether we should wake the procedures waiting on the lock here. */
   public boolean releaseSharedLock() {
     // hasExclusiveLock could be true, it usually means we acquire shared lock while we or our
     // parent have held the xlock. And since there is still an exclusive lock, we do not need to
@@ -137,9 +133,7 @@ public class LockAndQueue implements LockStatus {
     return true;
   }
 
-  /**
-   * @return whether we should wake the procedures waiting on the lock here.
-   */
+  /** Returns whether we should wake the procedures waiting on the lock here. */
   public boolean releaseExclusiveLock(Procedure<?> proc) {
     if (
       exclusiveLockOwnerProcedure == null

@@ -107,9 +107,7 @@ public class PrefixFilter extends FilterBase {
     return new PrefixFilter(prefix);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder = FilterProtos.PrefixFilter.newBuilder();

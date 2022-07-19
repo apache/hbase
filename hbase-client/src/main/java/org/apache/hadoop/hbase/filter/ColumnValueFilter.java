@@ -75,23 +75,17 @@ public class ColumnValueFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the column family
-   */
+  /** Returns the column family */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Returns the qualifier */
   public byte[] getQualifier() {
     return qualifier;
   }
@@ -161,9 +155,7 @@ public class ColumnValueFilter extends FilterBase {
     return new ColumnValueFilter(family, qualifier, operator, comparator);
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.ColumnValueFilter convert() {
     FilterProtos.ColumnValueFilter.Builder builder = FilterProtos.ColumnValueFilter.newBuilder();
 

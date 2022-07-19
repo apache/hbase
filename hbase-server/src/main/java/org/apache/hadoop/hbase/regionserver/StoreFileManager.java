@@ -154,9 +154,7 @@ public interface StoreFileManager {
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 
-  /**
-   * @return The store compaction priority.
-   */
+  /** Returns The store compaction priority. */
   int getStoreCompactionPriority();
 
   /**

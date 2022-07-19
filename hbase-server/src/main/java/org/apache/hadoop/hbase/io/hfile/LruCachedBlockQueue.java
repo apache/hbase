@@ -89,16 +89,12 @@ public class LruCachedBlockQueue implements HeapSize {
     }
   }
 
-  /**
-   * @return The next element in this queue, or {@code null} if the queue is empty.
-   */
+  /** Returns The next element in this queue, or {@code null} if the queue is empty. */
   public LruCachedBlock poll() {
     return queue.poll();
   }
 
-  /**
-   * @return The last element in this queue, or {@code null} if the queue is empty.
-   */
+  /** Returns The last element in this queue, or {@code null} if the queue is empty. */
   public LruCachedBlock pollLast() {
     return queue.pollLast();
   }

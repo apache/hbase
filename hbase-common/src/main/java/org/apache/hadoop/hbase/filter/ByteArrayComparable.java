@@ -46,9 +46,7 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
     return value;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   public abstract byte[] toByteArray();
 
   /**

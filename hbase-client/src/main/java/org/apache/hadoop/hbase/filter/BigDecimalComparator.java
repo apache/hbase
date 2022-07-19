@@ -72,9 +72,7 @@ public class BigDecimalComparator extends ByteArrayComparable {
     return this.bigDecimal.compareTo(that);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BigDecimalComparator.Builder builder =

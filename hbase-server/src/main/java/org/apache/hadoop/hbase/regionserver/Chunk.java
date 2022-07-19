@@ -171,9 +171,7 @@ public abstract class Chunk {
     }
   }
 
-  /**
-   * @return This chunk's backing data.
-   */
+  /** Returns This chunk's backing data. */
   ByteBuffer getData() {
     return this.data;
   }
