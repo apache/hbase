@@ -107,9 +107,7 @@ public class WhileMatchFilter extends FilterBase {
     return true;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.WhileMatchFilter.Builder builder = FilterProtos.WhileMatchFilter.newBuilder();

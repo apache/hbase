@@ -31,9 +31,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface RegionScanner extends InternalScanner {
-  /**
-   * @return The RegionInfo for this scanner.
-   */
+  /** Returns The RegionInfo for this scanner. */
   RegionInfo getRegionInfo();
 
   /**
@@ -54,9 +52,7 @@ public interface RegionScanner extends InternalScanner {
    */
   long getMaxResultSize();
 
-  /**
-   * @return The Scanner's MVCC readPt see {@link MultiVersionConcurrencyControl}
-   */
+  /** Returns The Scanner's MVCC readPt see {@link MultiVersionConcurrencyControl} */
   long getMvccReadPoint();
 
   /**

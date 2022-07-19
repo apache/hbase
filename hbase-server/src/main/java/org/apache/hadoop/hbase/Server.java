@@ -58,9 +58,7 @@ public interface Server extends Abortable, Stoppable {
    */
   ClusterConnection getClusterConnection();
 
-  /**
-   * @return The unique server name for this server.
-   */
+  /** Returns The unique server name for this server. */
   ServerName getServerName();
 
   /**
@@ -68,14 +66,10 @@ public interface Server extends Abortable, Stoppable {
    */
   CoordinatedStateManager getCoordinatedStateManager();
 
-  /**
-   * @return The {@link ChoreService} instance for this server
-   */
+  /** Returns The {@link ChoreService} instance for this server */
   ChoreService getChoreService();
 
-  /**
-   * @return Return the FileSystem object used (can return null!).
-   */
+  /** Returns Return the FileSystem object used (can return null!). */
   // TODO: Distinguish between "dataFs" and "walFs".
   default FileSystem getFileSystem() {
     // This default is pretty dodgy!
@@ -91,9 +85,7 @@ public interface Server extends Abortable, Stoppable {
     return fs;
   };
 
-  /**
-   * @return True is the server is Stopping
-   */
+  /** Returns True is the server is Stopping */
   // Note: This method is not part of the Stoppable Interface.
   default boolean isStopping() {
     return false;

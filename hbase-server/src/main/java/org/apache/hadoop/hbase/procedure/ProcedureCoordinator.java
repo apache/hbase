@@ -289,9 +289,7 @@ public class ProcedureCoordinator {
     proc.barrierReleasedByMember(member, dataFromMember);
   }
 
-  /**
-   * @return the rpcs implementation for all current procedures
-   */
+  /** Returns the rpcs implementation for all current procedures */
   ProcedureCoordinatorRpcs getRpcs() {
     return rpcs;
   }
@@ -306,9 +304,7 @@ public class ProcedureCoordinator {
     return procedures.get(name);
   }
 
-  /**
-   * @return Return set of all procedure names.
-   */
+  /** Returns Return set of all procedure names. */
   public Set<String> getProcedureNames() {
     return new HashSet<>(procedures.keySet());
   }

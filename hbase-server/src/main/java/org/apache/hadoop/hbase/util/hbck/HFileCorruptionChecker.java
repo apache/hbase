@@ -431,30 +431,22 @@ public class HFileCorruptionChecker {
     }
   }
 
-  /**
-   * @return the set of check failure file paths after checkTables is called.
-   */
+  /** Returns the set of check failure file paths after checkTables is called. */
   public Collection<Path> getFailures() {
     return new HashSet<>(failures);
   }
 
-  /**
-   * @return the set of corrupted file paths after checkTables is called.
-   */
+  /** Returns the set of corrupted file paths after checkTables is called. */
   public Collection<Path> getCorrupted() {
     return new HashSet<>(corrupted);
   }
 
-  /**
-   * @return number of hfiles checked in the last HfileCorruptionChecker run
-   */
+  /** Returns number of hfiles checked in the last HfileCorruptionChecker run */
   public int getHFilesChecked() {
     return hfilesChecked.get();
   }
 
-  /**
-   * @return the set of successfully quarantined paths after checkTables is called.
-   */
+  /** Returns the set of successfully quarantined paths after checkTables is called. */
   public Collection<Path> getQuarantined() {
     return new HashSet<>(quarantined);
   }
@@ -467,30 +459,22 @@ public class HFileCorruptionChecker {
     return new HashSet<>(missing);
   }
 
-  /**
-   * @return the set of check failure mob file paths after checkTables is called.
-   */
+  /** Returns the set of check failure mob file paths after checkTables is called. */
   public Collection<Path> getFailureMobFiles() {
     return new HashSet<>(failureMobFiles);
   }
 
-  /**
-   * @return the set of corrupted mob file paths after checkTables is called.
-   */
+  /** Returns the set of corrupted mob file paths after checkTables is called. */
   public Collection<Path> getCorruptedMobFiles() {
     return new HashSet<>(corruptedMobFiles);
   }
 
-  /**
-   * @return number of mob files checked in the last HfileCorruptionChecker run
-   */
+  /** Returns number of mob files checked in the last HfileCorruptionChecker run */
   public int getMobFilesChecked() {
     return mobFilesChecked.get();
   }
 
-  /**
-   * @return the set of successfully quarantined paths after checkTables is called.
-   */
+  /** Returns the set of successfully quarantined paths after checkTables is called. */
   public Collection<Path> getQuarantinedMobFiles() {
     return new HashSet<>(quarantinedMobFiles);
   }

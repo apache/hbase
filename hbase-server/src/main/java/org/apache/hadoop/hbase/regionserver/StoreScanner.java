@@ -986,9 +986,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Let the next() call handle re-creating and seeking
   }
 
-  /**
-   * @return if top of heap has changed (and KeyValueHeap has to try the next KV)
-   */
+  /** Returns if top of heap has changed (and KeyValueHeap has to try the next KV) */
   protected final boolean reopenAfterFlush() throws IOException {
     // here we can make sure that we have a Store instance so no null check on store.
     Cell lastTop = heap.peek();
@@ -1207,9 +1205,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     lazySeekEnabledGlobally = enable;
   }
 
-  /**
-   * @return The estimated number of KVs seen by this scanner (includes some skipped KVs).
-   */
+  /** Returns The estimated number of KVs seen by this scanner (includes some skipped KVs). */
   public long getEstimatedNumberOfKvsScanned() {
     return this.kvsScanned;
   }

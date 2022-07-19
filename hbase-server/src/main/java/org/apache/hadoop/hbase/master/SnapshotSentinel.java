@@ -37,9 +37,7 @@ public interface SnapshotSentinel {
    */
   boolean isFinished();
 
-  /**
-   * @return -1 if the snapshot is in progress, otherwise the completion timestamp.
-   */
+  /** Returns -1 if the snapshot is in progress, otherwise the completion timestamp. */
   long getCompletionTimestamp();
 
   /**
@@ -48,9 +46,7 @@ public interface SnapshotSentinel {
    */
   void cancel(String why);
 
-  /**
-   * @return the description of the snapshot being run
-   */
+  /** Returns the description of the snapshot being run */
   SnapshotDescription getSnapshot();
 
   /**

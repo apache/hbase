@@ -300,9 +300,7 @@ public class RestoreSnapshotHelper {
       return this.parentsMap;
     }
 
-    /**
-     * @return true if there're new regions
-     */
+    /** Returns true if there're new regions */
     public boolean hasRegionsToAdd() {
       return this.regionsToAdd != null && this.regionsToAdd.size() > 0;
     }
@@ -316,9 +314,7 @@ public class RestoreSnapshotHelper {
       return this.regionsToAdd;
     }
 
-    /**
-     * @return true if there're regions to restore
-     */
+    /** Returns true if there're regions to restore */
     public boolean hasRegionsToRestore() {
       return this.regionsToRestore != null && this.regionsToRestore.size() > 0;
     }
@@ -332,9 +328,7 @@ public class RestoreSnapshotHelper {
       return this.regionsToRestore;
     }
 
-    /**
-     * @return true if there're regions to remove
-     */
+    /** Returns true if there're regions to remove */
     public boolean hasRegionsToRemove() {
       return this.regionsToRemove != null && this.regionsToRemove.size() > 0;
     }
@@ -582,9 +576,7 @@ public class RestoreSnapshotHelper {
     }
   }
 
-  /**
-   * @return The set of files in the specified family directory.
-   */
+  /** Returns The set of files in the specified family directory. */
   private Set<String> getTableRegionFamilyFiles(final Path familyDir) throws IOException {
     FileStatus[] hfiles = CommonFSUtils.listStatus(fs, familyDir);
     if (hfiles == null) {
@@ -850,9 +842,7 @@ public class RestoreSnapshotHelper {
       .build();
   }
 
-  /**
-   * @return the set of the regions contained in the table
-   */
+  /** Returns the set of the regions contained in the table */
   private List<RegionInfo> getTableRegions() throws IOException {
     LOG.debug("get table regions: " + tableDir);
     FileStatus[] regionDirs =

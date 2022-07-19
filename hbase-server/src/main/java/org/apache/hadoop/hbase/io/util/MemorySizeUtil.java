@@ -153,9 +153,7 @@ public class MemorySizeUtil {
     return DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT;
   }
 
-  /**
-   * @return Pair of global memstore size and memory type(ie. on heap or off heap).
-   */
+  /** Returns Pair of global memstore size and memory type(ie. on heap or off heap). */
   public static Pair<Long, MemoryType> getGlobalMemStoreSize(Configuration conf) {
     long offheapMSGlobal = conf.getLong(OFFHEAP_MEMSTORE_SIZE_KEY, 0);// Size in MBs
     if (offheapMSGlobal > 0) {

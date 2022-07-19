@@ -145,30 +145,22 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     storeLock.writeLock().unlock();
   }
 
-  /**
-   * @return Compaction policy to use.
-   */
+  /** Returns Compaction policy to use. */
   public CompactionPolicy getCompactionPolicy() {
     return this.compactionPolicy;
   }
 
-  /**
-   * @return Compactor to use.
-   */
+  /** Returns Compactor to use. */
   public Compactor<?> getCompactor() {
     return this.compactor;
   }
 
-  /**
-   * @return Store file manager to use.
-   */
+  /** Returns Store file manager to use. */
   public StoreFileManager getStoreFileManager() {
     return this.storeFileManager;
   }
 
-  /**
-   * @return Store flusher to use.
-   */
+  /** Returns Store flusher to use. */
   public StoreFlusher getStoreFlusher() {
     return this.storeFlusher;
   }

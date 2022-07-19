@@ -1405,16 +1405,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
     }
 
-    /**
-     * @return Subset of the histograms' calculation.
-     */
+    /** Returns Subset of the histograms' calculation. */
     public String getShortLatencyReport() {
       return YammerHistogramUtils.getShortHistogramReport(this.latencyHistogram);
     }
 
-    /**
-     * @return Subset of the histograms' calculation.
-     */
+    /** Returns Subset of the histograms' calculation. */
     public String getShortValueSizeReport() {
       return YammerHistogramUtils.getShortHistogramReport(this.valueSizeHistogram);
     }

@@ -507,9 +507,7 @@ public class MasterRpcServices extends RSRpcServices implements MasterService.Bl
     return switchBalancer(b, BalanceSwitchMode.SYNC);
   }
 
-  /**
-   * @return list of blocking services and their security info classes that this server supports
-   */
+  /** Returns list of blocking services and their security info classes that this server supports */
   @Override
   protected List<BlockingServiceAndInterface> getServices() {
     List<BlockingServiceAndInterface> bssi = new ArrayList<>(5);

@@ -66,9 +66,7 @@ public class SubstringComparator extends ByteArrayComparable {
     return Bytes.toString(value, offset, length).toLowerCase(Locale.ROOT).contains(substr) ? 0 : 1;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.SubstringComparator.Builder builder =

@@ -63,9 +63,7 @@ public class NullComparator extends ByteArrayComparable {
     return value != null ? 1 : 0;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.NullComparator.Builder builder = ComparatorProtos.NullComparator.newBuilder();

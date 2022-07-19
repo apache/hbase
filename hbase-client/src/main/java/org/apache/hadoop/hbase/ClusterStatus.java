@@ -107,9 +107,7 @@ public class ClusterStatus implements ClusterMetrics {
     this.metrics = metrics;
   }
 
-  /**
-   * @return the names of region servers on the dead list
-   */
+  /** Returns the names of region servers on the dead list */
   @Override
   public List<ServerName> getDeadServerNames() {
     return metrics.getDeadServerNames();
@@ -187,9 +185,7 @@ public class ClusterStatus implements ClusterMetrics {
     return metrics.getRegionStatesInTransition();
   }
 
-  /**
-   * @return the HBase version string as reported by the HMaster
-   */
+  /** Returns the HBase version string as reported by the HMaster */
   public String getHBaseVersion() {
     return metrics.getHBaseVersion();
   }

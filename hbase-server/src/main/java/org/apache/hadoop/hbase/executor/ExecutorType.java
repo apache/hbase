@@ -56,9 +56,7 @@ public enum ExecutorType {
   ExecutorType(int value) {
   }
 
-  /**
-   * @return Conflation of the executor type and the passed {@code serverName}.
-   */
+  /** Returns Conflation of the executor type and the passed {@code serverName}. */
   String getExecutorName(String serverName) {
     return this.toString() + "-" + serverName.replace("%", "%%");
   }

@@ -69,9 +69,7 @@ public interface RawCell extends Cell {
     }
   }
 
-  /**
-   * @return A new cell which is having the extra tags also added to it.
-   */
+  /** Returns A new cell which is having the extra tags also added to it. */
   public static Cell createCell(Cell cell, List<Tag> tags) {
     return PrivateCellUtil.createCell(cell, tags);
   }

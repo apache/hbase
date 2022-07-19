@@ -304,9 +304,7 @@ public class MetaTableAccessor {
       regionInfo.getReplicaId());
   }
 
-  /**
-   * @return Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta.
-   */
+  /** Returns Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta. */
   public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
     throws IOException {
     Get get = new Get(getMetaKeyForRegion(ri));
@@ -433,9 +431,7 @@ public class MetaTableAccessor {
     return false;
   }
 
-  /**
-   * @return True if the column in <code>cell</code> matches the regex 'info:merge.*'.
-   */
+  /** Returns True if the column in <code>cell</code> matches the regex 'info:merge.*'. */
   private static boolean isMergeQualifierPrefix(Cell cell) {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
     return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY)
@@ -825,9 +821,7 @@ public class MetaTableAccessor {
     }
   }
 
-  /**
-   * @return Get closest metatable region row to passed <code>row</code>
-   */
+  /** Returns Get closest metatable region row to passed <code>row</code> */
   @NonNull
   private static RegionInfo getClosestRegionInfo(Connection connection,
     @NonNull final TableName tableName, @NonNull final byte[] row) throws IOException {
@@ -1228,9 +1222,7 @@ public class MetaTableAccessor {
 
     abstract void add(Result r);
 
-    /**
-     * @return Collected results; wait till visits complete to collect all possible results
-     */
+    /** Returns Collected results; wait till visits complete to collect all possible results */
     List<T> getResults() {
       return this.results;
     }

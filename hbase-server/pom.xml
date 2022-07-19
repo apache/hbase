@@ -1,4 +1,5 @@
-<project xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" xmlns="https://maven.apache.org/POM/4.0.0" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:ns0="https://www.w3.org/2001/XMLSchema-instance" ns0:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -453,23 +454,23 @@
             <phase>generate-sources</phase>
             <configuration>
               <target>
-                <property location="${project.build.directory}/hbase-webapps" name="build.webapps" />
-                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps" />
-                <property location="${project.build.directory}/generated-sources" name="generated.sources" />
-                <mkdir dir="${build.webapps}" />
+                <property location="${project.build.directory}/hbase-webapps" name="build.webapps"/>
+                <property location="${basedir}/src/main/resources/hbase-webapps" name="src.webapps"/>
+                <property location="${project.build.directory}/generated-sources" name="generated.sources"/>
+                <mkdir dir="${build.webapps}"/>
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp" />
-                    <exclude name="**/.*" />
-                    <exclude name="**/*~" />
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
                   </fileset>
                 </copy>
                 <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler" />
-                <mkdir dir="${build.webapps}/master/WEB-INF" />
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml" />
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF" />
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml" />
+                <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
+                <mkdir dir="${build.webapps}/master/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
               </target>
             </configuration>
           </execution>
@@ -595,12 +596,12 @@
                 <phase>compile</phase>
                 <configuration>
                   <target>
-                    <mkdir dir="${project.build.directory}/native" />
+                    <mkdir dir="${project.build.directory}/native"/>
                     <exec dir="${project.build.directory}/native" executable="cmake" failonerror="true">
-                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}" />
+                      <arg line="${basedir}/src/main/native -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
                     </exec>
                     <exec dir="${project.build.directory}/native" executable="make" failonerror="true">
-                      <arg line="VERBOSE=1" />
+                      <arg line="VERBOSE=1"/>
                     </exec>
                   </target>
                 </configuration>
@@ -900,7 +901,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore />
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>

@@ -105,9 +105,7 @@ public interface RowProcessor<S extends Message, T extends Message> {
    */
   void postProcess(HRegion region, WALEdit walEdit, boolean success) throws IOException;
 
-  /**
-   * @return The cluster ids that have the change.
-   */
+  /** Returns The cluster ids that have the change. */
   List<UUID> getClusterIds();
 
   /**
@@ -130,8 +128,6 @@ public interface RowProcessor<S extends Message, T extends Message> {
    */
   void initialize(S msg) throws IOException;
 
-  /**
-   * @return The {@link Durability} to use
-   */
+  /** Returns The {@link Durability} to use */
   Durability useDurability();
 }

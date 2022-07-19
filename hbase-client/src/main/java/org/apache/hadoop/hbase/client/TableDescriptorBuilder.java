@@ -1065,9 +1065,7 @@ public class TableDescriptorBuilder {
       return families.containsKey(familyName);
     }
 
-    /**
-     * @return Name of this table and then a map of all of the column family descriptors.
-     */
+    /** Returns Name of this table and then a map of all of the column family descriptors. */
     @Override
     public String toString() {
       StringBuilder s = new StringBuilder();
@@ -1090,9 +1088,7 @@ public class TableDescriptorBuilder {
       return s.toString();
     }
 
-    /**
-     * @return map of all table attributes formatted into string.
-     */
+    /** Returns map of all table attributes formatted into string. */
     public String toStringTableAttributes() {
       return getValues(true).toString();
     }
@@ -1202,9 +1198,7 @@ public class TableDescriptorBuilder {
       return false;
     }
 
-    /**
-     * @return hash code
-     */
+    /** Returns hash code */
     @Override
     public int hashCode() {
       int result = this.name.hashCode();
@@ -1252,9 +1246,7 @@ public class TableDescriptorBuilder {
       return setValue(REGION_REPLICATION_KEY, Integer.toString(regionReplication));
     }
 
-    /**
-     * @return true if the read-replicas memstore replication is enabled.
-     */
+    /** Returns true if the read-replicas memstore replication is enabled. */
     @Override
     public boolean hasRegionMemStoreReplication() {
       return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf,
@@ -1505,9 +1497,7 @@ public class TableDescriptorBuilder {
       return getOrDefault(OWNER_KEY, Function.identity(), null);
     }
 
-    /**
-     * @return the bytes in pb format
-     */
+    /** Returns the bytes in pb format */
     private byte[] toByteArray() {
       return ProtobufUtil.prependPBMagic(ProtobufUtil.toTableSchema(this).toByteArray());
     }

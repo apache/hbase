@@ -980,9 +980,7 @@ public class HRegionServer extends Thread
     }
   }
 
-  /**
-   * @return True if the cluster is up.
-   */
+  /** Returns True if the cluster is up. */
   @Override
   public boolean isClusterUp() {
     return this.masterless
@@ -1240,9 +1238,7 @@ public class HRegionServer extends Thread
     return allUserRegionsOffline;
   }
 
-  /**
-   * @return Current write count for all online regions.
-   */
+  /** Returns Current write count for all online regions. */
   private long getWriteRequestCount() {
     long writeCount = 0;
     for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
@@ -1976,9 +1972,7 @@ public class HRegionServer extends Thread
     }
   }
 
-  /**
-   * @return Master address tracker instance.
-   */
+  /** Returns Master address tracker instance. */
   public MasterAddressTracker getMasterAddressTracker() {
     return this.masterAddressTracker;
   }
@@ -2700,17 +2694,13 @@ public class HRegionServer extends Thread
     }
   }
 
-  /**
-   * @return Return the object that implements the replication source executorService.
-   */
+  /** Returns Return the object that implements the replication source executorService. */
   @InterfaceAudience.Private
   public ReplicationSourceService getReplicationSourceService() {
     return replicationSourceHandler;
   }
 
-  /**
-   * @return Return the object that implements the replication sink executorService.
-   */
+  /** Returns Return the object that implements the replication sink executorService. */
   ReplicationSinkService getReplicationSinkService() {
     return replicationSinkHandler;
   }
@@ -2922,14 +2912,12 @@ public class HRegionServer extends Thread
     }
   }
 
-  /** @return the info server */
+  /** Returns the info server */
   public InfoServer getInfoServer() {
     return infoServer;
   }
 
-  /**
-   * @return true if a stop has been requested.
-   */
+  /** Returns true if a stop has been requested. */
   @Override
   public boolean isStopped() {
     return this.stopped;
@@ -2998,14 +2986,12 @@ public class HRegionServer extends Thread
     return sortedRegions;
   }
 
-  /**
-   * @return time stamp in millis of when this region server was started
-   */
+  /** Returns time stamp in millis of when this region server was started */
   public long getStartcode() {
     return this.startcode;
   }
 
-  /** @return reference to FlushRequester */
+  /** Returns reference to FlushRequester */
   @Override
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
@@ -3021,9 +3007,7 @@ public class HRegionServer extends Thread
     return leaseManager;
   }
 
-  /**
-   * @return Return the rootDir.
-   */
+  /** Returns Return the rootDir. */
   protected Path getDataRootDir() {
     return dataRootDir;
   }
@@ -3033,23 +3017,17 @@ public class HRegionServer extends Thread
     return dataFs;
   }
 
-  /**
-   * @return {@code true} when the data file system is available, {@code false} otherwise.
-   */
+  /** Returns {@code true} when the data file system is available, {@code false} otherwise. */
   boolean isDataFileSystemOk() {
     return this.dataFsOk;
   }
 
-  /**
-   * @return Return the walRootDir.
-   */
+  /** Returns Return the walRootDir. */
   public Path getWALRootDir() {
     return walRootDir;
   }
 
-  /**
-   * @return Return the walFs.
-   */
+  /** Returns Return the walFs. */
   public FileSystem getWALFileSystem() {
     return walFs;
   }
@@ -3568,9 +3546,7 @@ public class HRegionServer extends Thread
     return org.apache.commons.lang3.StringUtils.isNotBlank(healthScriptLocation);
   }
 
-  /**
-   * @return the underlying {@link CompactSplit} for the servers
-   */
+  /** Returns the underlying {@link CompactSplit} for the servers */
   public CompactSplit getCompactSplitThread() {
     return this.compactSplitThread;
   }
@@ -3645,17 +3621,13 @@ public class HRegionServer extends Thread
     return rpcServices.getZkPermissionWatcher();
   }
 
-  /**
-   * @return : Returns the ConfigurationManager object for testing purposes.
-   */
+  /** Returns : Returns the ConfigurationManager object for testing purposes. */
   @InterfaceAudience.Private
   ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
 
-  /**
-   * @return Return table descriptors implementation.
-   */
+  /** Returns Return table descriptors implementation. */
   @Override
   public TableDescriptors getTableDescriptors() {
     return this.tableDescriptors;

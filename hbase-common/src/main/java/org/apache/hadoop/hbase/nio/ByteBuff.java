@@ -80,9 +80,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /******************************* Methods for ByteBuff **************************************/
 
-  /**
-   * @return this ByteBuff's current position
-   */
+  /** Returns this ByteBuff's current position */
   public abstract int position();
 
   /**
@@ -102,9 +100,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff moveBack(int len);
 
-  /**
-   * @return the total capacity of this ByteBuff.
-   */
+  /** Returns the total capacity of this ByteBuff. */
   public abstract int capacity();
 
   /**
@@ -263,19 +259,13 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff put(byte[] src);
 
-  /**
-   * @return true or false if the underlying BB support hasArray
-   */
+  /** Returns true or false if the underlying BB support hasArray */
   public abstract boolean hasArray();
 
-  /**
-   * @return the byte[] if the underlying BB has single BB and hasArray true
-   */
+  /** Returns the byte[] if the underlying BB has single BB and hasArray true */
   public abstract byte[] array();
 
-  /**
-   * @return the arrayOffset of the byte[] incase of a single BB backed ByteBuff
-   */
+  /** Returns the arrayOffset of the byte[] incase of a single BB backed ByteBuff */
   public abstract int arrayOffset();
 
   /**

@@ -230,9 +230,7 @@ public class Bytes implements Comparable<Bytes> {
     return this.length;
   }
 
-  /**
-   * @return the number of valid bytes in the buffer
-   */
+  /** Returns the number of valid bytes in the buffer */
   public int getLength() {
     if (this.bytes == null) {
       throw new IllegalStateException(

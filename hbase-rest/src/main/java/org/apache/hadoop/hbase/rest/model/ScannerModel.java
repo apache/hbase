@@ -644,39 +644,29 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     labels.add(label);
   }
 
-  /**
-   * @return true if a start row was specified
-   */
+  /** Returns true if a start row was specified */
   public boolean hasStartRow() {
     return !Bytes.equals(startRow, HConstants.EMPTY_START_ROW);
   }
 
-  /**
-   * @return start row
-   */
+  /** Returns start row */
   @XmlAttribute
   public byte[] getStartRow() {
     return startRow;
   }
 
-  /**
-   * @return true if an end row was specified
-   */
+  /** Returns true if an end row was specified */
   public boolean hasEndRow() {
     return !Bytes.equals(endRow, HConstants.EMPTY_END_ROW);
   }
 
-  /**
-   * @return end row
-   */
+  /** Returns end row */
   @XmlAttribute
   public byte[] getEndRow() {
     return endRow;
   }
 
-  /**
-   * @return list of columns of interest in column:qualifier format, or empty for all
-   */
+  /** Returns list of columns of interest in column:qualifier format, or empty for all */
   @XmlElement(name = "column")
   public List<byte[]> getColumns() {
     return columns;
@@ -687,57 +677,43 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     return labels;
   }
 
-  /**
-   * @return the number of cells to return in batch
-   */
+  /** Returns the number of cells to return in batch */
   @XmlAttribute
   public int getBatch() {
     return batch;
   }
 
-  /**
-   * @return the number of rows that the scanner to fetch at once
-   */
+  /** Returns the number of rows that the scanner to fetch at once */
   @XmlAttribute
   public int getCaching() {
     return caching;
   }
 
-  /**
-   * @return true if HFile blocks should be cached on the servers for this scan, false otherwise
-   */
+  /** Returns true if HFile blocks should be cached on the servers for this scan, false otherwise */
   @XmlAttribute
   public boolean getCacheBlocks() {
     return cacheBlocks;
   }
 
-  /**
-   * @return the lower bound on timestamps of items of interest
-   */
+  /** Returns the lower bound on timestamps of items of interest */
   @XmlAttribute
   public long getStartTime() {
     return startTime;
   }
 
-  /**
-   * @return the upper bound on timestamps of items of interest
-   */
+  /** Returns the upper bound on timestamps of items of interest */
   @XmlAttribute
   public long getEndTime() {
     return endTime;
   }
 
-  /**
-   * @return maximum number of versions to return
-   */
+  /** Returns maximum number of versions to return */
   @XmlAttribute
   public int getMaxVersions() {
     return maxVersions;
   }
 
-  /**
-   * @return the filter specification
-   */
+  /** Returns the filter specification */
   @XmlElement
   public String getFilter() {
     return filter;

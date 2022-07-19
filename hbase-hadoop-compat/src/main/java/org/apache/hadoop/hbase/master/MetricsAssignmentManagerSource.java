@@ -166,43 +166,27 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
    */
   void incrementOperationCounter();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for assign region operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for assign region operation */
   OperationMetrics getAssignMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for unassign region operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for unassign region operation */
   OperationMetrics getUnassignMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for move region operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for move region operation */
   OperationMetrics getMoveMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for reopen region operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for reopen region operation */
   OperationMetrics getReopenMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for open region request
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for open region request */
   OperationMetrics getOpenMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for close region request
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for close region request */
   OperationMetrics getCloseMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for split operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for split operation */
   OperationMetrics getSplitMetrics();
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for merge operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for merge operation */
   OperationMetrics getMergeMetrics();
 }

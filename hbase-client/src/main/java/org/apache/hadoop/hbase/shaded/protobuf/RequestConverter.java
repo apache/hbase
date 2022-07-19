@@ -842,9 +842,7 @@ public final class RequestConverter {
       ProtobufUtil.toMutationNoData(MutationType.APPEND, append, mutationBuilder, nonce)));
   }
 
-  /**
-   * @return whether or not the rowMutations has a Increment or Append
-   */
+  /** Returns whether or not the rowMutations has a Increment or Append */
   private static boolean buildNoDataRegionAction(final RowMutations rowMutations,
     final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)

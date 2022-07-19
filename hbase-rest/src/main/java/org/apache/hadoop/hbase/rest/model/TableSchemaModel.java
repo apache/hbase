@@ -136,26 +136,20 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     return columns.get(index);
   }
 
-  /**
-   * @return the table name
-   */
+  /** Returns the table name */
   @XmlAttribute
   public String getName() {
     return name;
   }
 
-  /**
-   * @return the map for holding unspecified (user) attributes
-   */
+  /** Returns the map for holding unspecified (user) attributes */
   @XmlAnyAttribute
   @JsonAnyGetter
   public Map<QName, Object> getAny() {
     return attrs;
   }
 
-  /**
-   * @return the columns
-   */
+  /** Returns the columns */
   @XmlElement(name = "ColumnSchema")
   public List<ColumnSchemaModel> getColumns() {
     return columns;
@@ -211,25 +205,19 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   // cannot be standard bean type getters and setters, otherwise this would
   // confuse JAXB
 
-  /**
-   * @return true if IS_META attribute exists and is truel
-   */
+  /** Returns true if IS_META attribute exists and is truel */
   public boolean __getIsMeta() {
     Object o = attrs.get(IS_META);
     return o != null && Boolean.parseBoolean(o.toString());
   }
 
-  /**
-   * @return true if IS_ROOT attribute exists and is truel
-   */
+  /** Returns true if IS_ROOT attribute exists and is truel */
   public boolean __getIsRoot() {
     Object o = attrs.get(IS_ROOT);
     return o != null && Boolean.parseBoolean(o.toString());
   }
 
-  /**
-   * @return true if READONLY attribute exists and is truel
-   */
+  /** Returns true if READONLY attribute exists and is truel */
   public boolean __getReadOnly() {
     Object o = attrs.get(READONLY);
     return o != null ? Boolean.parseBoolean(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
@@ -324,9 +312,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     return this;
   }
 
-  /**
-   * @return a table descriptor
-   */
+  /** Returns a table descriptor */
   @JsonIgnore
   public HTableDescriptor getTableDescriptor() {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getName()));

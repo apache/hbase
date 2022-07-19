@@ -221,9 +221,7 @@ public class HTableMultiplexer {
     return put(TableName.valueOf(tableName), put);
   }
 
-  /**
-   * @return the current HTableMultiplexerStatus
-   */
+  /** Returns the current HTableMultiplexerStatus */
   public HTableMultiplexerStatus getHTableMultiplexerStatus() {
     return new HTableMultiplexerStatus(serverToFlushWorkerMap);
   }

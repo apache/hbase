@@ -151,9 +151,7 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
-  /**
-   * @return whether to show HBase Configuration in servlet
-   */
+  /** Returns whether to show HBase Configuration in servlet */
   public static boolean isShowConfInServlet() {
     boolean isShowConf = false;
     try {

@@ -226,9 +226,7 @@ public class TestHFileDataBlockEncoder {
     }
   }
 
-  /**
-   * @return All possible data block encoding configurations
-   */
+  /** Returns All possible data block encoding configurations */
   @Parameters
   public static Collection<Object[]> getAllConfigurations() {
     List<Object[]> configurations = new ArrayList<>();

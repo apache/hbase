@@ -189,9 +189,7 @@ public class HTable implements Table {
     this.locator = new HRegionLocator(tableName, connection);
   }
 
-  /**
-   * @return maxKeyValueSize from configuration.
-   */
+  /** Returns maxKeyValueSize from configuration. */
   public static int getMaxKeyValueSize(Configuration conf) {
     return conf.getInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY, -1);
   }

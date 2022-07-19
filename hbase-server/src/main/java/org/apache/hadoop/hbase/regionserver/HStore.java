@@ -354,9 +354,7 @@ public class HStore
     return favoredNodes;
   }
 
-  /**
-   * @return MemStore Instance to use in this store.
-   */
+  /** Returns MemStore Instance to use in this store. */
   private MemStore getMemstore() {
     MemStore ms = null;
     // Check if in-memory-compaction configured. Note MemoryCompactionPolicy is an enum!
@@ -415,9 +413,7 @@ public class HStore
     return StoreEngine.create(store, conf, kvComparator);
   }
 
-  /**
-   * @return TTL in seconds of the specified family
-   */
+  /** Returns TTL in seconds of the specified family */
   public static long determineTTLFromFamily(final ColumnFamilyDescriptor family) {
     // HCD.getTimeToLive returns ttl in seconds. Convert to milliseconds.
     long ttl = family.getTimeToLive();
@@ -505,9 +501,7 @@ public class HStore
     return StoreUtils.getMaxMemStoreTSInList(this.getStorefiles());
   }
 
-  /**
-   * @return the data block encoder
-   */
+  /** Returns the data block encoder */
   public HFileDataBlockEncoder getDataBlockEncoder() {
     return dataBlockEncoder;
   }
@@ -597,9 +591,7 @@ public class HStore
     return memstore.timeOfOldestEdit();
   }
 
-  /**
-   * @return All store files.
-   */
+  /** Returns All store files. */
   @Override
   public Collection<HStoreFile> getStorefiles() {
     return this.storeEngine.getStoreFileManager().getStorefiles();
@@ -2439,9 +2431,7 @@ public class HStore
       .mapToInt(HStoreFile::getRefCount).sum();
   }
 
-  /**
-   * @return get maximum ref count of storeFile among all compacted HStore Files for the HStore
-   */
+  /** Returns get maximum ref count of storeFile among all compacted HStore Files for the HStore */
   public int getMaxCompactedStoreFileRefCount() {
     OptionalInt maxCompactedStoreFileRefCount = this.storeEngine.getStoreFileManager()
       .getCompactedfiles().stream().filter(sf -> sf.getReader() != null).filter(HStoreFile::isHFile)

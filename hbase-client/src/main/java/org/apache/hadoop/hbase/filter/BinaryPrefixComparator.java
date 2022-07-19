@@ -58,9 +58,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
     return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryPrefixComparator.Builder builder =

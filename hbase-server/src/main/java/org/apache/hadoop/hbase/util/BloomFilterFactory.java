@@ -96,41 +96,33 @@ public final class BloomFilterFactory {
   }
 
   /**
-   * @return true if general Bloom (Row or RowCol) filters are enabled in the given configuration
+   * Returns true if general Bloom (Row or RowCol) filters are enabled in the given configuration
    */
   public static boolean isGeneralBloomEnabled(Configuration conf) {
     return conf.getBoolean(IO_STOREFILE_BLOOM_ENABLED, true);
   }
 
-  /**
-   * @return true if Delete Family Bloom filters are enabled in the given configuration
-   */
+  /** Returns true if Delete Family Bloom filters are enabled in the given configuration */
   public static boolean isDeleteFamilyBloomEnabled(Configuration conf) {
     return conf.getBoolean(IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED, true);
   }
 
-  /**
-   * @return the Bloom filter error rate in the given configuration
-   */
+  /** Returns the Bloom filter error rate in the given configuration */
   public static float getErrorRate(Configuration conf) {
     return conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
   }
 
-  /**
-   * @return the value for Bloom filter max fold in the given configuration
-   */
+  /** Returns the value for Bloom filter max fold in the given configuration */
   public static int getMaxFold(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
   }
 
-  /** @return the compound Bloom filter block size from the configuration */
+  /** Returns the compound Bloom filter block size from the configuration */
   public static int getBloomBlockSize(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
   }
 
-  /**
-   * @return max key for the Bloom filter from the configuration
-   */
+  /** Returns max key for the Bloom filter from the configuration */
   public static int getMaxKeys(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS, 128 * 1000 * 1000);
   }

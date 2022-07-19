@@ -151,9 +151,7 @@ class AccessControlFilter extends FilterBase {
     this.currentVersions = 0;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     // no implementation, server-side use only

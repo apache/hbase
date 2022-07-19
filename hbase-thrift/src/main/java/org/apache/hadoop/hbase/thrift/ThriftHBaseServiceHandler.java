@@ -254,7 +254,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   }
 
   /**
-   * @return the list of regions in the given table, or an empty list if the table does not exist
+   * Returns the list of regions in the given table, or an empty list if the table does not exist
    */
   @Override
   public List<TRegionInfo> getTableRegions(ByteBuffer tableName) throws IOError {

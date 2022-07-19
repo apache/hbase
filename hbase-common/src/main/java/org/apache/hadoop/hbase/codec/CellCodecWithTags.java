@@ -101,9 +101,7 @@ public class CellCodecWithTags implements Codec {
         .setTags(tags).build();
     }
 
-    /**
-     * @return Byte array read from the stream. n
-     */
+    /** Returns Byte array read from the stream. n */
     private byte[] readByteArray(final InputStream in) throws IOException {
       byte[] intArray = new byte[Bytes.SIZEOF_INT];
       IOUtils.readFully(in, intArray);

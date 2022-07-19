@@ -22,9 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsUserAggregate {
 
-  /**
-   * @return return a singleton instance of MetricsUserAggregateSource or null in case of NoOp
-   */
+  /** Returns return a singleton instance of MetricsUserAggregateSource or null in case of NoOp */
   MetricsUserAggregateSource getSource();
 
   void updatePut(long t);

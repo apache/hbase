@@ -354,9 +354,7 @@ public abstract class Mutation extends OperationWithAttributes
     return this;
   }
 
-  /**
-   * @return the set of clusterIds that have consumed the mutation
-   */
+  /** Returns the set of clusterIds that have consumed the mutation */
   public List<UUID> getClusterIds() {
     List<UUID> clusterIds = new ArrayList<>();
     byte[] bytes = getAttribute(CONSUMED_CLUSTER_IDS);
@@ -379,9 +377,7 @@ public abstract class Mutation extends OperationWithAttributes
     return this;
   }
 
-  /**
-   * @return CellVisibility associated with cells in this Mutation. n
-   */
+  /** Returns CellVisibility associated with cells in this Mutation. n */
   public CellVisibility getCellVisibility() throws DeserializationException {
     byte[] cellVisibilityBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
     if (cellVisibilityBytes == null) return null;
@@ -437,16 +433,12 @@ public abstract class Mutation extends OperationWithAttributes
     return size;
   }
 
-  /**
-   * @return the number of different families
-   */
+  /** Returns the number of different families */
   public int numFamilies() {
     return getFamilyCellMap().size();
   }
 
-  /**
-   * @return Calculate what Mutation adds to class heap size.
-   */
+  /** Returns Calculate what Mutation adds to class heap size. */
   @Override
   public long heapSize() {
     long heapsize = MUTATION_OVERHEAD;
@@ -475,9 +467,7 @@ public abstract class Mutation extends OperationWithAttributes
     return ClassSize.align(heapsize);
   }
 
-  /**
-   * @return The serialized ACL for this operation, or null if none
-   */
+  /** Returns The serialized ACL for this operation, or null if none */
   public byte[] getACL() {
     return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
   }
@@ -527,9 +517,7 @@ public abstract class Mutation extends OperationWithAttributes
     return this;
   }
 
-  /**
-   * @return current value for returnResults
-   */
+  /** Returns current value for returnResults */
   // Used by Increment and Append only.
   @InterfaceAudience.Private
   protected boolean isReturnResults() {

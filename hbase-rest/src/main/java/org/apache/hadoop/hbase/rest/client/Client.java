@@ -211,9 +211,7 @@ public class Client {
   public void shutdown() {
   }
 
-  /**
-   * @return the wrapped HttpClient
-   */
+  /** Returns the wrapped HttpClient */
   public HttpClient getHttpClient() {
     return httpClient;
   }
@@ -393,9 +391,7 @@ public class Client {
     }
   }
 
-  /**
-   * @return the cluster definition
-   */
+  /** Returns the cluster definition */
   public Cluster getCluster() {
     return cluster;
   }

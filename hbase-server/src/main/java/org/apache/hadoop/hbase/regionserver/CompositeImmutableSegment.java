@@ -58,9 +58,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return segments.size();
   }
 
-  /**
-   * @return whether the segment has any cells
-   */
+  /** Returns whether the segment has any cells */
   @Override
   public boolean isEmpty() {
     for (ImmutableSegment s : segments) {
@@ -69,9 +67,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return true;
   }
 
-  /**
-   * @return number of cells in segment
-   */
+  /** Returns number of cells in segment */
   @Override
   public int getCellsCount() {
     int result = 0;
@@ -160,17 +156,13 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     return false;
   }
 
-  /**
-   * @return Sum of all cell sizes.
-   */
+  /** Returns Sum of all cell sizes. */
   @Override
   public long getDataSize() {
     return this.keySize;
   }
 
-  /**
-   * @return The heap size of this segment.
-   */
+  /** Returns The heap size of this segment. */
   @Override
   public long getHeapSize() {
     long result = 0;
@@ -224,9 +216,7 @@ public class CompositeImmutableSegment extends ImmutableSegment {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");
   }
 
-  /**
-   * @return a set of all cells in the segment
-   */
+  /** Returns a set of all cells in the segment */
   @Override
   protected CellSet getCellSet() {
     throw new IllegalStateException("Not supported by CompositeImmutableScanner");

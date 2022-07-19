@@ -36,34 +36,22 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 @InterfaceStability.Evolving
 public interface RpcCall extends RpcCallContext {
 
-  /**
-   * @return The service of this call.
-   */
+  /** Returns The service of this call. */
   BlockingService getService();
 
-  /**
-   * @return The service method.
-   */
+  /** Returns The service method. */
   MethodDescriptor getMethod();
 
-  /**
-   * @return The call parameter message.
-   */
+  /** Returns The call parameter message. */
   Message getParam();
 
-  /**
-   * @return The CellScanner that can carry input and result payload.
-   */
+  /** Returns The CellScanner that can carry input and result payload. */
   CellScanner getCellScanner();
 
-  /**
-   * @return The timestamp when the call is constructed.
-   */
+  /** Returns The timestamp when the call is constructed. */
   long getReceiveTime();
 
-  /**
-   * @return The time when the call starts to be executed.
-   */
+  /** Returns The time when the call starts to be executed. */
   long getStartTime();
 
   /**
@@ -71,14 +59,10 @@ public interface RpcCall extends RpcCallContext {
    */
   void setStartTime(long startTime);
 
-  /**
-   * @return The timeout of this call.
-   */
+  /** Returns The timeout of this call. */
   int getTimeout();
 
-  /**
-   * @return The Priority of this call.
-   */
+  /** Returns The Priority of this call. */
   int getPriority();
 
   /**
@@ -95,14 +79,10 @@ public interface RpcCall extends RpcCallContext {
    */
   long getSize();
 
-  /**
-   * @return The request header of this call.
-   */
+  /** Returns The request header of this call. */
   RequestHeader getHeader();
 
-  /**
-   * @return Port of remote address in this call
-   */
+  /** Returns Port of remote address in this call */
   int getRemotePort();
 
   /**
@@ -125,8 +105,6 @@ public interface RpcCall extends RpcCallContext {
    */
   void cleanup();
 
-  /**
-   * @return A short string format of this call without possibly lengthy params
-   */
+  /** Returns A short string format of this call without possibly lengthy params */
   String toShortString();
 }

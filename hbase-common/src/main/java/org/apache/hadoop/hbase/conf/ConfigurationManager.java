@@ -117,9 +117,7 @@ public class ConfigurationManager {
     }
   }
 
-  /**
-   * @return the number of observers.
-   */
+  /** Returns the number of observers. */
   public int getNumObservers() {
     synchronized (configurationObservers) {
       return configurationObservers.size();

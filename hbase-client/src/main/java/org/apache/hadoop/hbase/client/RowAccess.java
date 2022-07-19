@@ -26,13 +26,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface RowAccess<T> extends Iterable<T> {
-  /**
-   * @return true if there are no elements.
-   */
+  /** Returns true if there are no elements. */
   boolean isEmpty();
 
-  /**
-   * @return the number of elements in this list.
-   */
+  /** Returns the number of elements in this list. */
   int size();
 }

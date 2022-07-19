@@ -229,9 +229,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return plans;
   }
 
-  /**
-   * @return size of region in MB and if region is not found than -1
-   */
+  /** Returns size of region in MB and if region is not found than -1 */
   private long getRegionSizeMB(RegionInfo hri) {
     ServerName sn =
       masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);

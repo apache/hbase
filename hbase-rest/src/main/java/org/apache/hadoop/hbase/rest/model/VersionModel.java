@@ -74,41 +74,31 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
     if (jerseyVersion == null) jerseyVersion = "";
   }
 
-  /**
-   * @return the REST gateway version
-   */
+  /** Returns the REST gateway version */
   @XmlAttribute(name = "REST")
   public String getRESTVersion() {
     return restVersion;
   }
 
-  /**
-   * @return the JVM vendor and version
-   */
+  /** Returns the JVM vendor and version */
   @XmlAttribute(name = "JVM")
   public String getJVMVersion() {
     return jvmVersion;
   }
 
-  /**
-   * @return the OS name, version, and hardware architecture
-   */
+  /** Returns the OS name, version, and hardware architecture */
   @XmlAttribute(name = "OS")
   public String getOSVersion() {
     return osVersion;
   }
 
-  /**
-   * @return the servlet container version
-   */
+  /** Returns the servlet container version */
   @XmlAttribute(name = "Server")
   public String getServerVersion() {
     return serverVersion;
   }
 
-  /**
-   * @return the version of the embedded Jersey framework
-   */
+  /** Returns the version of the embedded Jersey framework */
   @XmlAttribute(name = "Jersey")
   public String getJerseyVersion() {
     return jerseyVersion;

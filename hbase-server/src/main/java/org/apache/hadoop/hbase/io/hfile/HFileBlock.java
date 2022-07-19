@@ -431,7 +431,7 @@ public class HFileBlock implements Cacheable {
     return this;
   }
 
-  /** @return get data block encoding id that was used to encode this block */
+  /** Returns get data block encoding id that was used to encode this block */
   short getDataBlockEncodingId() {
     if (blockType != BlockType.ENCODED_DATA) {
       throw new IllegalArgumentException("Querying encoder ID of a block " + "of type other than "
@@ -440,30 +440,22 @@ public class HFileBlock implements Cacheable {
     return buf.getShort(headerSize());
   }
 
-  /**
-   * @return the on-disk size of header + data part + checksum.
-   */
+  /** Returns the on-disk size of header + data part + checksum. */
   public int getOnDiskSizeWithHeader() {
     return onDiskSizeWithoutHeader + headerSize();
   }
 
-  /**
-   * @return the on-disk size of the data part + checksum (header excluded).
-   */
+  /** Returns the on-disk size of the data part + checksum (header excluded). */
   int getOnDiskSizeWithoutHeader() {
     return onDiskSizeWithoutHeader;
   }
 
-  /**
-   * @return the uncompressed size of data part (header and checksum excluded).
-   */
+  /** Returns the uncompressed size of data part (header and checksum excluded). */
   int getUncompressedSizeWithoutHeader() {
     return uncompressedSizeWithoutHeader;
   }
 
-  /**
-   * @return the offset of the previous block of the same type in the file, or -1 if unknown
-   */
+  /** Returns the offset of the previous block of the same type in the file, or -1 if unknown */
   long getPrevBlockOffset() {
     return prevBlockOffset;
   }
@@ -689,9 +681,7 @@ public class HFileBlock implements Cacheable {
     return offset;
   }
 
-  /**
-   * @return a byte stream reading the data + checksum of this block
-   */
+  /** Returns a byte stream reading the data + checksum of this block */
   DataInputStream getByteStream() {
     ByteBuff dup = this.buf.duplicate();
     dup.position(this.headerSize());
@@ -1077,7 +1067,7 @@ public class HFileBlock implements Cacheable {
       return baosInMemory.size();
     }
 
-    /** @return true if a block is being written */
+    /** Returns true if a block is being written */
     boolean isWriting() {
       return state == State.WRITING;
     }
@@ -1541,7 +1531,7 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * @return Check <code>onDiskSizeWithHeaderL</code> size is healthy and then return it as an int
+     * Returns Check <code>onDiskSizeWithHeaderL</code> size is healthy and then return it as an int
      */
     private static int checkAndGetSizeAsInt(final long onDiskSizeWithHeaderL, final int hdrSize)
       throws IOException {
@@ -1919,7 +1909,7 @@ public class HFileBlock implements Cacheable {
     return this.fileContext.getBytesPerChecksum();
   }
 
-  /** @return the size of data on disk + header. Excludes checksum. */
+  /** Returns the size of data on disk + header. Excludes checksum. */
   int getOnDiskDataSizeWithHeader() {
     return this.onDiskDataSizeWithHeader;
   }

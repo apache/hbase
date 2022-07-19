@@ -75,18 +75,14 @@ public abstract class Query extends OperationWithAttributes {
     return this;
   }
 
-  /**
-   * @return The authorizations this Query is associated with. n
-   */
+  /** Returns The authorizations this Query is associated with. n */
   public Authorizations getAuthorizations() throws DeserializationException {
     byte[] authorizationsBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
     if (authorizationsBytes == null) return null;
     return ProtobufUtil.toAuthorizations(authorizationsBytes);
   }
 
-  /**
-   * @return The serialized ACL for this operation, or null if none
-   */
+  /** Returns The serialized ACL for this operation, or null if none */
   public byte[] getACL() {
     return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
   }
@@ -220,9 +216,7 @@ public abstract class Query extends OperationWithAttributes {
     return this;
   }
 
-  /**
-   * @return A map of column families to time ranges
-   */
+  /** Returns A map of column families to time ranges */
   public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
     return this.colFamTimeRangeMap;
   }

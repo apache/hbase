@@ -202,9 +202,7 @@ class BitSetNode {
     return (modified[wordIndex] & (1L << bitmapIndex)) != 0;
   }
 
-  /**
-   * @return true, if all the procedures has been modified.
-   */
+  /** Returns true, if all the procedures has been modified. */
   public boolean isAllModified() {
     // TODO: cache the value
     for (int i = 0; i < modified.length; ++i) {
@@ -215,9 +213,7 @@ class BitSetNode {
     return true;
   }
 
-  /**
-   * @return all the active procedure ids in this bit set.
-   */
+  /** Returns all the active procedure ids in this bit set. */
   public long[] getActiveProcIds() {
     List<Long> procIds = new ArrayList<>();
     for (int wordIndex = 0; wordIndex < modified.length; wordIndex++) {
@@ -236,9 +232,7 @@ class BitSetNode {
     return procIds.stream().mapToLong(Long::longValue).toArray();
   }
 
-  /**
-   * @return true, if there are no active procedures in this BitSetNode, else false.
-   */
+  /** Returns true, if there are no active procedures in this BitSetNode, else false. */
   public boolean isEmpty() {
     // TODO: cache the value
     for (int i = 0; i < deleted.length; ++i) {
@@ -429,16 +423,12 @@ class BitSetNode {
   // ========================================================================
   // Helpers
   // ========================================================================
-  /**
-   * @return upper boundary (aligned to multiple of BITS_PER_WORD) of bitmap range x belongs to.
-   */
+  /** Returns upper boundary (aligned to multiple of BITS_PER_WORD) of bitmap range x belongs to. */
   private static long alignUp(final long x) {
     return (x + (BITS_PER_WORD - 1)) & -BITS_PER_WORD;
   }
 
-  /**
-   * @return lower boundary (aligned to multiple of BITS_PER_WORD) of bitmap range x belongs to.
-   */
+  /** Returns lower boundary (aligned to multiple of BITS_PER_WORD) of bitmap range x belongs to. */
   private static long alignDown(final long x) {
     return x & -BITS_PER_WORD;
   }

@@ -222,9 +222,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
     return getMonitor().shouldArchiveTable(tableName);
   }
 
-  /**
-   * @return the tracker for which tables should be archived.
-   */
+  /** Returns the tracker for which tables should be archived. */
   public final HFileArchiveTableMonitor getMonitor() {
     return this.monitor;
   }

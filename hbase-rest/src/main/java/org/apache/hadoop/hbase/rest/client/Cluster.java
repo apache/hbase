@@ -45,9 +45,7 @@ public class Cluster {
     this.nodes.addAll(nodes);
   }
 
-  /**
-   * @return true if no locations have been added, false otherwise
-   */
+  /** Returns true if no locations have been added, false otherwise */
   public boolean isEmpty() {
     return nodes.isEmpty();
   }

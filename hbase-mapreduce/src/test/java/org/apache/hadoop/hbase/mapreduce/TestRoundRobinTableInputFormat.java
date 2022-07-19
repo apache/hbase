@@ -77,9 +77,7 @@ public class TestRoundRobinTableInputFormat {
     }
   }
 
-  /**
-   * @return Splits made out of {@link #KEYS}. Splits are for five Servers. Length is ZERO!
-   */
+  /** Returns Splits made out of {@link #KEYS}. Splits are for five Servers. Length is ZERO! */
   private List<InputSplit> createSplits() {
     List<InputSplit> splits = new ArrayList<>(KEYS.length - 1);
     for (int i = 0; i < KEYS.length - 1; i++) {

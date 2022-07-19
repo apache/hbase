@@ -80,9 +80,7 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
     }
   }
 
-  /**
-   * @return Time we were cached at in nano seconds.
-   */
+  /** Returns Time we were cached at in nano seconds. */
   public long getCachedTime() {
     return this.cachedTime;
   }

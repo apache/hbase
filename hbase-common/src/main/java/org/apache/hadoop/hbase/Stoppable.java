@@ -30,8 +30,6 @@ public interface Stoppable {
    */
   void stop(String why);
 
-  /**
-   * @return True if {@link #stop(String)} has been closed.
-   */
+  /** Returns True if {@link #stop(String)} has been closed. */
   boolean isStopped();
 }

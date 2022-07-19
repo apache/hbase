@@ -678,16 +678,12 @@ public class ProcedureExecutor<TEnvironment> {
     return running.get();
   }
 
-  /**
-   * @return the current number of worker threads.
-   */
+  /** Returns the current number of worker threads. */
   public int getWorkerThreadCount() {
     return workerThreads.size();
   }
 
-  /**
-   * @return the core pool size settings.
-   */
+  /** Returns the core pool size settings. */
   public int getCorePoolSize() {
     return corePoolSize;
   }
@@ -1994,9 +1990,7 @@ public class ProcedureExecutor<TEnvironment> {
       return getName() + "(pid=" + (p == null ? Procedure.NO_PROC_ID : p.getProcId() + ")");
     }
 
-    /**
-     * @return the time since the current procedure is running
-     */
+    /** Returns the time since the current procedure is running */
     public long getCurrentRunTime() {
       return EnvironmentEdgeManager.currentTime() - executionStartTime.get();
     }

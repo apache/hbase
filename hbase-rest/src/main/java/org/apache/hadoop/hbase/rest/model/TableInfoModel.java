@@ -80,17 +80,13 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
     return regions.get(index);
   }
 
-  /**
-   * @return the table name
-   */
+  /** Returns the table name */
   @XmlAttribute
   public String getName() {
     return name;
   }
 
-  /**
-   * @return the regions
-   */
+  /** Returns the regions */
   @XmlElement(name = "Region")
   public List<TableRegionModel> getRegions() {
     return regions;
