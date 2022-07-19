@@ -62,9 +62,9 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
       StreamSlowMonitor monitor) throws IOException, CommonFSUtils.StreamLacksCapabilityException;
   }
 
-  private EventLoopGroup eventLoopGroup;
+  protected EventLoopGroup eventLoopGroup;
 
-  private Class<? extends Channel> channelClass;
+  protected Class<? extends Channel> channelClass;
 
   @Override
   protected AsyncFSWAL createWAL() throws IOException {

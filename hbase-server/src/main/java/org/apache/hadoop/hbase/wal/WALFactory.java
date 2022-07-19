@@ -505,4 +505,8 @@ public class WALFactory {
   public ExcludeDatanodeManager getExcludeDatanodeManager() {
     return excludeDatanodeManager;
   }
+
+  public String getFactoryId() {
+    return this.factoryId;
+  }
 }

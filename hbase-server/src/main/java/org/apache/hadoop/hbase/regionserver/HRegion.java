@@ -2863,7 +2863,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (sink != null && !writeFlushWalMarker) {
       /**
        * Here for replication to secondary region replica could use {@link FlushAction#CANNOT_FLUSH}
-       * to recover writeFlushWalMarker is false, we create {@link WALEdit} for
+       * to recover when writeFlushWalMarker is false, we create {@link WALEdit} for
        * {@link FlushDescriptor} and attach the {@link RegionReplicationSink#add} to the
        * flushOpSeqIdMVCCEntry,see HBASE-26960 for more details.
        */
@@ -8037,11 +8037,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
       WriteEntry writeEntry = walKey.getWriteEntry();
-      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit, writeEntry);
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, batchOp.durability);
       }
+      /**
+       * Here we attach the region replication action after the {@link HRegion#sync} is successful.
+       * If {@link HRegion#sync} throws exception,following
+       * {@link BatchOperation.writeMiniBatchOperationsToMemStore} will not be executed and we have
+       * no need to replicate to secondary replica.
+       */
+      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit, writeEntry);
       return writeEntry;
     } catch (IOException ioe) {
       if (walKey.getWriteEntry() != null) {
