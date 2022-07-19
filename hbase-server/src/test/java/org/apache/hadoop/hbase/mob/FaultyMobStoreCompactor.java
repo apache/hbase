@@ -246,9 +246,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                   mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
                   writer.append(c);
                 } else {
-                  throw new IOException(String.format("MOB cell did not contain a tablename "
+                  throw new IOException("MOB cell did not contain a tablename "
                     + "tag. should not be possible. see ref guide on mob troubleshooting. "
-                    + "store={} cell={}", getStoreInfo(), c));
+                    + "store=" + getStoreInfo() + " cell=" + c);
                 }
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
@@ -270,9 +270,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                     mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
                     writer.append(c);
                   } else {
-                    throw new IOException(String.format("MOB cell did not contain a tablename "
+                    throw new IOException("MOB cell did not contain a tablename "
                       + "tag. should not be possible. see ref guide on mob troubleshooting. "
-                      + "store={} cell={}", getStoreInfo(), c));
+                      + "store=" + getStoreInfo() + " cell=" + c);
                   }
                 }
               }
