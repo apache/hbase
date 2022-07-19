@@ -157,9 +157,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return delegatee.isMetaTable();
   }
 
-  /**
-   * @return Getter for fetching an unmodifiable map.
-   */
+  /** Returns Getter for fetching an unmodifiable map. */
   @Override
   public Map<Bytes, Bytes> getValues() {
     return delegatee.getValues();
@@ -512,9 +510,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return delegatee.toStringCustomizedValues();
   }
 
-  /**
-   * @return map of all table attributes formatted into string.
-   */
+  /** Returns map of all table attributes formatted into string. */
   public String toStringTableAttributes() {
     return delegatee.toStringTableAttributes();
   }
@@ -598,9 +594,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     return hasRegionMemStoreReplication();
   }
 
-  /**
-   * @return true if the read-replicas memstore replication is enabled.
-   */
+  /** Returns true if the read-replicas memstore replication is enabled. */
   @Override
   public boolean hasRegionMemStoreReplication() {
     return delegatee.hasRegionMemStoreReplication();

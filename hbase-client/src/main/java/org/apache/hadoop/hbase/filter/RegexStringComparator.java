@@ -145,9 +145,7 @@ public class RegexStringComparator extends ByteArrayComparable {
     return engine.compareTo(value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     return engine.toByteArray();

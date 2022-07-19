@@ -33,9 +33,7 @@ public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
   private Collection<HStore> regularStores = new HashSet<>();
   private Collection<HStore> sloppyStores = new HashSet<>();
 
-  /**
-   * @return the stores need to be flushed.
-   */
+  /** Returns the stores need to be flushed. */
   @Override
   public Collection<HStore> selectStoresToFlush() {
     Collection<HStore> specificStoresToFlush = new HashSet<>();

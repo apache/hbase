@@ -128,9 +128,7 @@ public class RegionPlacementMaintainer {
     }
   }
 
-  /**
-   * @return the new RegionAssignmentSnapshot n
-   */
+  /** Returns the new RegionAssignmentSnapshot n */
   public SnapshotOfRegionAssignmentFromMeta getRegionAssignmentSnapshot() throws IOException {
     SnapshotOfRegionAssignmentFromMeta currentAssignmentShapshot =
       new SnapshotOfRegionAssignmentFromMeta(ConnectionFactory.createConnection(conf));

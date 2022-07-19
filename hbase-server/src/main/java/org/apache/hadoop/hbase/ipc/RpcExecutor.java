@@ -335,9 +335,7 @@ public abstract class RpcExecutor {
       this.activeHandlerCount = activeHandlerCount;
     }
 
-    /**
-     * @return A {@link CallRunner} n
-     */
+    /** Returns A {@link CallRunner} n */
     protected CallRunner getCallRunner() throws InterruptedException {
       return this.q.take();
     }
@@ -398,9 +396,7 @@ public abstract class RpcExecutor {
   }
 
   public static abstract class QueueBalancer {
-    /**
-     * @return the index of the next queue to which a request should be inserted
-     */
+    /** Returns the index of the next queue to which a request should be inserted */
     public abstract int getNextQueue();
   }
 

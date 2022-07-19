@@ -77,9 +77,7 @@ public class ProtobufMagic {
     return compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
   }
 
-  /**
-   * @return Length of {@link #PB_MAGIC}
-   */
+  /** Returns Length of {@link #PB_MAGIC} */
   public static int lengthOfPBMagic() {
     return PB_MAGIC.length;
   }

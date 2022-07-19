@@ -139,14 +139,10 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    */
   protected abstract void initAfterCompression(String cellCodecClsName) throws IOException;
 
-  /**
-   * @return Whether compression is enabled for this log.
-   */
+  /** Returns Whether compression is enabled for this log. */
   protected abstract boolean hasCompression();
 
-  /**
-   * @return Whether tag compression is enabled for this log.
-   */
+  /** Returns Whether tag compression is enabled for this log. */
   protected abstract boolean hasTagCompression();
 
   /**

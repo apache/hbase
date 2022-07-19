@@ -61,84 +61,52 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface MasterServices extends Server {
-  /**
-   * @return the underlying snapshot manager
-   */
+  /** Returns the underlying snapshot manager */
   SnapshotManager getSnapshotManager();
 
-  /**
-   * @return the underlying MasterProcedureManagerHost
-   */
+  /** Returns the underlying MasterProcedureManagerHost */
   MasterProcedureManagerHost getMasterProcedureManagerHost();
 
-  /**
-   * @return Master's instance of {@link ClusterSchema}
-   */
+  /** Returns Master's instance of {@link ClusterSchema} */
   ClusterSchema getClusterSchema();
 
-  /**
-   * @return Master's instance of the {@link AssignmentManager}
-   */
+  /** Returns Master's instance of the {@link AssignmentManager} */
   AssignmentManager getAssignmentManager();
 
-  /**
-   * @return Master's filesystem {@link MasterFileSystem} utility class.
-   */
+  /** Returns Master's filesystem {@link MasterFileSystem} utility class. */
   MasterFileSystem getMasterFileSystem();
 
-  /**
-   * @return Master's WALs {@link MasterWalManager} utility class.
-   */
+  /** Returns Master's WALs {@link MasterWalManager} utility class. */
   MasterWalManager getMasterWalManager();
 
-  /**
-   * @return Master's {@link ServerManager} instance.
-   */
+  /** Returns Master's {@link ServerManager} instance. */
   ServerManager getServerManager();
 
-  /**
-   * @return Master's instance of {@link ExecutorService}
-   */
+  /** Returns Master's instance of {@link ExecutorService} */
   ExecutorService getExecutorService();
 
-  /**
-   * @return Master's instance of {@link TableStateManager}
-   */
+  /** Returns Master's instance of {@link TableStateManager} */
   TableStateManager getTableStateManager();
 
-  /**
-   * @return Master's instance of {@link MasterCoprocessorHost}
-   */
+  /** Returns Master's instance of {@link MasterCoprocessorHost} */
   MasterCoprocessorHost getMasterCoprocessorHost();
 
-  /**
-   * @return Master's instance of {@link MasterQuotaManager}
-   */
+  /** Returns Master's instance of {@link MasterQuotaManager} */
   MasterQuotaManager getMasterQuotaManager();
 
-  /**
-   * @return Master's instance of {@link RegionNormalizerManager}
-   */
+  /** Returns Master's instance of {@link RegionNormalizerManager} */
   RegionNormalizerManager getRegionNormalizerManager();
 
-  /**
-   * @return Master's instance of {@link CatalogJanitor}
-   */
+  /** Returns Master's instance of {@link CatalogJanitor} */
   CatalogJanitor getCatalogJanitor();
 
-  /**
-   * @return Master's instance of {@link ProcedureExecutor}
-   */
+  /** Returns Master's instance of {@link ProcedureExecutor} */
   ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
 
-  /**
-   * @return Tripped when Master has finished initialization.
-   */
+  /** Returns Tripped when Master has finished initialization. */
   public ProcedureEvent<?> getInitializedEvent();
 
-  /**
-   * @return Master's instance of {@link MetricsMaster}
-   */
+  /** Returns Master's instance of {@link MetricsMaster} */
   MetricsMaster getMasterMetrics();
 
   /**
@@ -247,9 +215,7 @@ public interface MasterServices extends Server {
   long splitRegion(final RegionInfo regionInfo, final byte[] splitRow, final long nonceGroup,
     final long nonce) throws IOException;
 
-  /**
-   * @return Return table descriptors implementation.
-   */
+  /** Returns Return table descriptors implementation. */
   TableDescriptors getTableDescriptors();
 
   /**
@@ -265,14 +231,10 @@ public interface MasterServices extends Server {
    */
   boolean registerService(Service instance);
 
-  /**
-   * @return true if master is the active one
-   */
+  /** Returns true if master is the active one */
   boolean isActiveMaster();
 
-  /**
-   * @return true if master is initialized
-   */
+  /** Returns true if master is initialized */
   boolean isInitialized();
 
   /**
@@ -335,16 +297,12 @@ public interface MasterServices extends Server {
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 
-  /**
-   * @return load balancer
-   */
+  /** Returns load balancer */
   public LoadBalancer getLoadBalancer();
 
   boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 
-  /**
-   * @return Favored Nodes Manager
-   */
+  /** Returns Favored Nodes Manager */
   public FavoredNodesManager getFavoredNodesManager();
 
   /**
@@ -403,9 +361,7 @@ public interface MasterServices extends Server {
   List<ReplicationPeerDescription> listReplicationPeers(String regex)
     throws ReplicationException, IOException;
 
-  /**
-   * @return {@link LockManager} to lock namespaces/tables/regions.
-   */
+  /** Returns {@link LockManager} to lock namespaces/tables/regions. */
   LockManager getLockManager();
 
   public String getRegionServerVersion(final ServerName sn);
@@ -418,26 +374,18 @@ public interface MasterServices extends Server {
 
   String getClientIdAuditPrefix();
 
-  /**
-   * @return True if cluster is up; false if cluster is not up (we are shutting down).
-   */
+  /** Returns True if cluster is up; false if cluster is not up (we are shutting down). */
   boolean isClusterUp();
 
-  /**
-   * @return return null if current is zk-based WAL splitting
-   */
+  /** Returns return null if current is zk-based WAL splitting */
   default SplitWALManager getSplitWALManager() {
     return null;
   }
 
-  /**
-   * @return the {@link AccessChecker}
-   */
+  /** Returns the {@link AccessChecker} */
   AccessChecker getAccessChecker();
 
-  /**
-   * @return the {@link ZKPermissionWatcher}
-   */
+  /** Returns the {@link ZKPermissionWatcher} */
   ZKPermissionWatcher getZKPermissionWatcher();
 
   /**

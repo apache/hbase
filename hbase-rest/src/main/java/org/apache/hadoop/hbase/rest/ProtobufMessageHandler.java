@@ -26,9 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface ProtobufMessageHandler {
-  /**
-   * @return the protobuf represention of the model
-   */
+  /** Returns the protobuf represention of the model */
   byte[] createProtobufOutput();
 
   /**

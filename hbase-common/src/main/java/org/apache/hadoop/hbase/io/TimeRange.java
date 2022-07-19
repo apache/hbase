@@ -162,16 +162,12 @@ public class TimeRange {
     }
   }
 
-  /**
-   * @return the smallest timestamp that should be considered
-   */
+  /** Returns the smallest timestamp that should be considered */
   public long getMin() {
     return minStamp;
   }
 
-  /**
-   * @return the biggest timestamp that should be considered
-   */
+  /** Returns the biggest timestamp that should be considered */
   public long getMax() {
     return maxStamp;
   }

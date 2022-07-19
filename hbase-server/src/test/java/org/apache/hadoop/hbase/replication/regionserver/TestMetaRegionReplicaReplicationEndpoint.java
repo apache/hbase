@@ -173,9 +173,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     }
   }
 
-  /**
-   * @return Whether the special meta region replica peer is enabled on <code>hrs</code>
-   */
+  /** Returns Whether the special meta region replica peer is enabled on <code>hrs</code> */
   private boolean isMetaRegionReplicaReplicationSource(HRegionServer hrs) {
     return hrs.getReplicationSourceService().getReplicationManager().catalogReplicationSource.get()
         != null;
@@ -352,9 +350,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     return results;
   }
 
-  /**
-   * @return All Regions for tableName including Replicas.
-   */
+  /** Returns All Regions for tableName including Replicas. */
   private Region[] getAllRegions(TableName tableName, int replication) {
     final Region[] regions = new Region[replication];
     for (int i = 0; i < NB_SERVERS; i++) {

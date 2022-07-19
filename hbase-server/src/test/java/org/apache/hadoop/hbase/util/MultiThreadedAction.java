@@ -267,7 +267,7 @@ public abstract class MultiThreadedAction {
     }
   }
 
-  /** @return the end key of the key range, exclusive */
+  /** Returns the end key of the key range, exclusive */
   public long getEndKey() {
     return endKey;
   }

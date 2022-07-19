@@ -257,9 +257,7 @@ public abstract class AbstractWALRoller<T extends Abortable> extends Thread impl
     return state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING;
   }
 
-  /**
-   * @return true if all WAL roll finished
-   */
+  /** Returns true if all WAL roll finished */
   public boolean walRollFinished() {
     return wals.values().stream().noneMatch(rc -> rc.needsRoll(System.currentTimeMillis()))
       && isWaiting();

@@ -253,22 +253,22 @@ public class StoreFileInfo {
     return this.reference;
   }
 
-  /** @return True if the store file is a Reference */
+  /** Returns True if the store file is a Reference */
   public boolean isReference() {
     return this.reference != null;
   }
 
-  /** @return True if the store file is a top Reference */
+  /** Returns True if the store file is a top Reference */
   public boolean isTopReference() {
     return this.reference != null && Reference.isTopFileRegion(this.reference.getFileRegion());
   }
 
-  /** @return True if the store file is a link */
+  /** Returns True if the store file is a link */
   public boolean isLink() {
     return this.link != null && this.reference == null;
   }
 
-  /** @return the HDFS block distribution */
+  /** Returns the HDFS block distribution */
   public HDFSBlocksDistribution getHDFSBlockDistribution() {
     return this.hdfsBlocksDistribution;
   }
@@ -399,17 +399,17 @@ public class StoreFileInfo {
     return status;
   }
 
-  /** @return The {@link Path} of the file */
+  /** Returns The {@link Path} of the file */
   public Path getPath() {
     return initialPath;
   }
 
-  /** @return The {@link FileStatus} of the file */
+  /** Returns The {@link FileStatus} of the file */
   public FileStatus getFileStatus() throws IOException {
     return getReferencedFileStatus(fs);
   }
 
-  /** @return Get the modification time of the file. */
+  /** Returns Get the modification time of the file. */
   public long getModificationTime() throws IOException {
     return getFileStatus().getModificationTime();
   }
@@ -467,9 +467,7 @@ public class StoreFileInfo {
     return m.matches() && m.groupCount() > 1;
   }
 
-  /**
-   * @return timestamp when this file was created (as returned by filesystem)
-   */
+  /** Returns timestamp when this file was created (as returned by filesystem) */
   public long getCreatedTimestamp() {
     return createdTimestamp;
   }

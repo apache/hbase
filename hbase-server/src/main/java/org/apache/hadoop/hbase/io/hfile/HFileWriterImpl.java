@@ -254,9 +254,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
   }
 
-  /**
-   * @return Path or null if we were passed a stream rather than a Path.
-   */
+  /** Returns Path or null if we were passed a stream rather than a Path. */
   @Override
   public Path getPath() {
     return path;

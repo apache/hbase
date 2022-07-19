@@ -214,9 +214,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    */
   boolean isRunning();
 
-  /**
-   * @return Return {@code true} is this service is STARTING (but not yet RUNNING).
-   */
+  /** Returns Return {@code true} is this service is STARTING (but not yet RUNNING). */
   boolean isStarting();
 
   /**

@@ -288,9 +288,7 @@ public class AuthResult {
       return Joiner.on(",").skipNulls().join(params);
     }
 
-    /**
-     * @return extra parameter key/value string
-     */
+    /** Returns extra parameter key/value string */
     private String concatenateExtraParams() {
       final StringBuilder sb = new StringBuilder();
       boolean first = true;

@@ -55,21 +55,15 @@ public interface RpcCallContext {
    */
   Optional<User> getRequestUser();
 
-  /**
-   * @return Current request's user name or not present if none ongoing.
-   */
+  /** Returns Current request's user name or not present if none ongoing. */
   default Optional<String> getRequestUserName() {
     return getRequestUser().map(User::getShortName);
   }
 
-  /**
-   * @return Address of remote client in this call
-   */
+  /** Returns Address of remote client in this call */
   InetAddress getRemoteAddress();
 
-  /**
-   * @return the client version info, or null if the information is not present
-   */
+  /** Returns the client version info, or null if the information is not present */
   VersionInfo getClientVersionInfo();
 
   /**

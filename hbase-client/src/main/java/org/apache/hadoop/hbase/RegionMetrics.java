@@ -28,58 +28,38 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface RegionMetrics {
 
-  /**
-   * @return the region name
-   */
+  /** Returns the region name */
   byte[] getRegionName();
 
-  /**
-   * @return the number of stores
-   */
+  /** Returns the number of stores */
   int getStoreCount();
 
-  /**
-   * @return the number of storefiles
-   */
+  /** Returns the number of storefiles */
   int getStoreFileCount();
 
-  /**
-   * @return the total size of the storefiles
-   */
+  /** Returns the total size of the storefiles */
   Size getStoreFileSize();
 
-  /**
-   * @return the memstore size
-   */
+  /** Returns the memstore size */
   Size getMemStoreSize();
 
-  /**
-   * @return the number of read requests made to region
-   */
+  /** Returns the number of read requests made to region */
   long getReadRequestCount();
 
-  /**
-   * @return the number of write requests made to region
-   */
+  /** Returns the number of write requests made to region */
   long getWriteRequestCount();
 
-  /**
-   * @return the number of write requests and read requests made to region
-   */
+  /** Returns the number of write requests and read requests made to region */
   default long getRequestCount() {
     return getReadRequestCount() + getWriteRequestCount();
   }
 
-  /**
-   * @return the region name as a string
-   */
+  /** Returns the region name as a string */
   default String getNameAsString() {
     return Bytes.toStringBinary(getRegionName());
   }
 
-  /**
-   * @return the number of filtered read requests made to region
-   */
+  /** Returns the number of filtered read requests made to region */
   long getFilteredReadRequestCount();
 
   /**
@@ -90,29 +70,19 @@ public interface RegionMetrics {
    */
   Size getStoreFileIndexSize();
 
-  /**
-   * @return The current total size of root-level indexes for the region
-   */
+  /** Returns The current total size of root-level indexes for the region */
   Size getStoreFileRootLevelIndexSize();
 
-  /**
-   * @return The total size of all index blocks, not just the root level
-   */
+  /** Returns The total size of all index blocks, not just the root level */
   Size getStoreFileUncompressedDataIndexSize();
 
-  /**
-   * @return The total size of all Bloom filter blocks, not just loaded into the block cache
-   */
+  /** Returns The total size of all Bloom filter blocks, not just loaded into the block cache */
   Size getBloomFilterSize();
 
-  /**
-   * @return the total number of cells in current compaction
-   */
+  /** Returns the total number of cells in current compaction */
   long getCompactingCellCount();
 
-  /**
-   * @return the number of already compacted kvs in current compaction
-   */
+  /** Returns the number of already compacted kvs in current compaction */
   long getCompactedCellCount();
 
   /**
@@ -121,29 +91,19 @@ public interface RegionMetrics {
    */
   long getCompletedSequenceId();
 
-  /**
-   * @return completed sequence id per store.
-   */
+  /** Returns completed sequence id per store. */
   Map<byte[], Long> getStoreSequenceId();
 
-  /**
-   * @return the uncompressed size of the storefiles
-   */
+  /** Returns the uncompressed size of the storefiles */
   Size getUncompressedStoreFileSize();
 
-  /**
-   * @return the data locality of region in the regionserver.
-   */
+  /** Returns the data locality of region in the regionserver. */
   float getDataLocality();
 
-  /**
-   * @return the timestamp of the oldest hfile for any store of this region.
-   */
+  /** Returns the timestamp of the oldest hfile for any store of this region. */
   long getLastMajorCompactionTimestamp();
 
-  /**
-   * @return the reference count for the stores of this region
-   */
+  /** Returns the reference count for the stores of this region */
   int getStoreRefCount();
 
   /**
@@ -158,9 +118,7 @@ public interface RegionMetrics {
    */
   float getDataLocalityForSsd();
 
-  /**
-   * @return the data at local weight of this region in the regionserver
-   */
+  /** Returns the data at local weight of this region in the regionserver */
   long getBlocksLocalWeight();
 
   /**
@@ -169,13 +127,9 @@ public interface RegionMetrics {
    */
   long getBlocksLocalWithSsdWeight();
 
-  /**
-   * @return the block total weight of this region
-   */
+  /** Returns the block total weight of this region */
   long getBlocksTotalWeight();
 
-  /**
-   * @return the compaction state of this region
-   */
+  /** Returns the compaction state of this region */
   CompactionState getCompactionState();
 }

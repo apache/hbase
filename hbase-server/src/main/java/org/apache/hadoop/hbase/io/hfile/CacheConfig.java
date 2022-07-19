@@ -255,9 +255,7 @@ public class CacheConfig {
       || (prefetchOnOpen && (category != BlockCategory.META && category != BlockCategory.UNKNOWN));
   }
 
-  /**
-   * @return true if blocks in this file should be flagged as in-memory
-   */
+  /** Returns true if blocks in this file should be flagged as in-memory */
   public boolean isInMemory() {
     return this.inMemory;
   }
@@ -320,15 +318,13 @@ public class CacheConfig {
     this.evictOnClose = evictOnClose;
   }
 
-  /**
-   * @return true if data blocks should be compressed in the cache, false if not
-   */
+  /** Returns true if data blocks should be compressed in the cache, false if not */
   public boolean shouldCacheDataCompressed() {
     return this.cacheDataOnRead && this.cacheDataCompressed;
   }
 
   /**
-   * @return true if this {@link BlockCategory} should be compressed in blockcache, false otherwise
+   * Returns true if this {@link BlockCategory} should be compressed in blockcache, false otherwise
    */
   public boolean shouldCacheCompressed(BlockCategory category) {
     switch (category) {
@@ -339,23 +335,17 @@ public class CacheConfig {
     }
   }
 
-  /**
-   * @return true if blocks should be prefetched into the cache on open, false if not
-   */
+  /** Returns true if blocks should be prefetched into the cache on open, false if not */
   public boolean shouldPrefetchOnOpen() {
     return this.prefetchOnOpen;
   }
 
-  /**
-   * @return true if blocks should be cached while writing during compaction, false if not
-   */
+  /** Returns true if blocks should be cached while writing during compaction, false if not */
   public boolean shouldCacheCompactedBlocksOnWrite() {
     return this.cacheCompactedDataOnWrite;
   }
 
-  /**
-   * @return total file size in bytes threshold for caching while writing during compaction
-   */
+  /** Returns total file size in bytes threshold for caching while writing during compaction */
   public long getCacheCompactedBlocksOnWriteThreshold() {
     return this.cacheCompactedDataOnWriteThreshold;
   }

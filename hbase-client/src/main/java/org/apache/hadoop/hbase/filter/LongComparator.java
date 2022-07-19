@@ -53,9 +53,7 @@ public class LongComparator extends ByteArrayComparable {
     return Long.compare(longValue, that);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.LongComparator.Builder builder = ComparatorProtos.LongComparator.newBuilder();

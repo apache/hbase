@@ -173,9 +173,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     }
   }
 
-  /**
-   * @return Calculate how long a single call took
-   */
+  /** Returns Calculate how long a single call took */
   private long singleCallDuration(final long expectedSleep) {
     return (EnvironmentEdgeManager.currentTime() - tracker.getStartTime()) + expectedSleep;
   }

@@ -152,13 +152,11 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   };
 
   /**
-   * @return Return a short, printable name for this region (usually encoded name) for us logging.
+   * Returns Return a short, printable name for this region (usually encoded name) for us logging.
    */
   String getShortNameToLog();
 
-  /**
-   * @return the regionId.
-   */
+  /** Returns the regionId. */
   long getRegionId();
 
   /**
@@ -167,44 +165,28 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   byte[] getRegionName();
 
-  /**
-   * @return Region name as a String for use in logging, etc.
-   */
+  /** Returns Region name as a String for use in logging, etc. */
   String getRegionNameAsString();
 
-  /**
-   * @return the encoded region name.
-   */
+  /** Returns the encoded region name. */
   String getEncodedName();
 
-  /**
-   * @return the encoded region name as an array of bytes.
-   */
+  /** Returns the encoded region name as an array of bytes. */
   byte[] getEncodedNameAsBytes();
 
-  /**
-   * @return the startKey.
-   */
+  /** Returns the startKey. */
   byte[] getStartKey();
 
-  /**
-   * @return the endKey.
-   */
+  /** Returns the endKey. */
   byte[] getEndKey();
 
-  /**
-   * @return current table name of the region
-   */
+  /** Returns current table name of the region */
   TableName getTable();
 
-  /**
-   * @return returns region replica id
-   */
+  /** Returns returns region replica id */
   int getReplicaId();
 
-  /**
-   * @return True if has been split and has daughters.
-   */
+  /** Returns True if has been split and has daughters. */
   boolean isSplit();
 
   /**
@@ -223,9 +205,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   @Deprecated
   boolean isSplitParent();
 
-  /**
-   * @return true if this region is a meta region.
-   */
+  /** Returns true if this region is a meta region. */
   boolean isMetaRegion();
 
   /**
@@ -236,9 +216,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey);
 
-  /**
-   * @return true if the given row falls in this region.
-   */
+  /** Returns true if the given row falls in this region. */
   boolean containsRow(byte[] row);
 
   /**
@@ -253,9 +231,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
       && (regionName[regionName.length - 1] == RegionInfo.ENC_SEPARATOR);
   }
 
-  /**
-   * @return the encodedName
-   */
+  /** Returns the encodedName */
   @InterfaceAudience.Private
   static String encodeRegionName(final byte[] regionName) {
     String encodedName;
@@ -355,7 +331,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
+   * Returns A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
    */
   @InterfaceAudience.Private
   static RegionInfo parseFromOrNull(final byte[] bytes) {
@@ -364,7 +340,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
+   * Returns A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
    */
   @InterfaceAudience.Private
   static RegionInfo parseFromOrNull(final byte[] bytes, int offset, int len) {
@@ -762,16 +738,12 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return ris;
   }
 
-  /**
-   * @return True if this is first Region in Table
-   */
+  /** Returns True if this is first Region in Table */
   default boolean isFirst() {
     return Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW);
   }
 
-  /**
-   * @return True if this is last Region in Table
-   */
+  /** Returns True if this is last Region in Table */
   default boolean isLast() {
     return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
   }
@@ -793,9 +765,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return getTable().equals(other.getTable()) && areAdjacent(this, other);
   }
 
-  /**
-   * @return True if RegionInfo is degenerate... if startKey > endKey.
-   */
+  /** Returns True if RegionInfo is degenerate... if startKey > endKey. */
   default boolean isDegenerate() {
     return !isLast() && Bytes.compareTo(getStartKey(), getEndKey()) > 0;
   }

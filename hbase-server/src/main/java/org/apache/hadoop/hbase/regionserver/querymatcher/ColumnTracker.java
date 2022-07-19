@@ -90,9 +90,7 @@ public interface ColumnTracker extends ShipperListener {
    */
   void reset();
 
-  /**
-   * @return <code>true</code> when done.
-   */
+  /** Returns <code>true</code> when done. */
   boolean done();
 
   /**

@@ -86,9 +86,7 @@ public class FavoredStochasticBalancer extends StochasticLoadBalancer
     setCandidateGenerators(fnPickers);
   }
 
-  /**
-   * @return any candidate generator in random
-   */
+  /** Returns any candidate generator in random */
   @Override
   protected CandidateGenerator getRandomGenerator() {
     return candidateGenerators.get(RANDOM.nextInt(candidateGenerators.size()));

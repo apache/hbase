@@ -68,9 +68,7 @@ public class CompactionProgress {
     this.totalCompactingKVs = this.currentCompactedKVs;
   }
 
-  /**
-   * @return the total compacting key values in currently running compaction
-   */
+  /** Returns the total compacting key values in currently running compaction */
   public long getTotalCompactingKVs() {
     if (totalCompactingKVs < currentCompactedKVs) {
       LOG.debug("totalCompactingKVs={} less than currentCompactedKVs={}", totalCompactingKVs,
@@ -80,16 +78,12 @@ public class CompactionProgress {
     return totalCompactingKVs;
   }
 
-  /**
-   * @return the completed count of key values in currently running compaction
-   */
+  /** Returns the completed count of key values in currently running compaction */
   public long getCurrentCompactedKvs() {
     return currentCompactedKVs;
   }
 
-  /**
-   * @return the total data size processed by the currently running compaction, in bytes
-   */
+  /** Returns the total data size processed by the currently running compaction, in bytes */
   public long getTotalCompactedSize() {
     return totalCompactedSize;
   }

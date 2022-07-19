@@ -68,14 +68,10 @@ public interface Cell extends HeapSize {
    */
   byte[] getRowArray();
 
-  /**
-   * @return Array index of first row byte
-   */
+  /** Returns Array index of first row byte */
   int getRowOffset();
 
-  /**
-   * @return Number of row bytes. Must be &lt; rowArray.length - offset.
-   */
+  /** Returns Number of row bytes. Must be &lt; rowArray.length - offset. */
   short getRowLength();
 
   // 2) Family
@@ -87,14 +83,10 @@ public interface Cell extends HeapSize {
    */
   byte[] getFamilyArray();
 
-  /**
-   * @return Array index of first family byte
-   */
+  /** Returns Array index of first family byte */
   int getFamilyOffset();
 
-  /**
-   * @return Number of family bytes. Must be &lt; familyArray.length - offset.
-   */
+  /** Returns Number of family bytes. Must be &lt; familyArray.length - offset. */
   byte getFamilyLength();
 
   // 3) Qualifier
@@ -105,14 +97,10 @@ public interface Cell extends HeapSize {
    */
   byte[] getQualifierArray();
 
-  /**
-   * @return Array index of first qualifier byte
-   */
+  /** Returns Array index of first qualifier byte */
   int getQualifierOffset();
 
-  /**
-   * @return Number of qualifier bytes. Must be &lt; qualifierArray.length - offset.
-   */
+  /** Returns Number of qualifier bytes. Must be &lt; qualifierArray.length - offset. */
   int getQualifierLength();
 
   // 4) Timestamp
@@ -154,19 +142,13 @@ public interface Cell extends HeapSize {
    */
   byte[] getValueArray();
 
-  /**
-   * @return Array index of first value byte
-   */
+  /** Returns Array index of first value byte */
   int getValueOffset();
 
-  /**
-   * @return Number of value bytes. Must be &lt; valueArray.length - offset.
-   */
+  /** Returns Number of value bytes. Must be &lt; valueArray.length - offset. */
   int getValueLength();
 
-  /**
-   * @return Serialized size (defaults to include tag length if has some tags).
-   */
+  /** Returns Serialized size (defaults to include tag length if has some tags). */
   int getSerializedSize();
 
   /**

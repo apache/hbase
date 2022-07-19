@@ -59,9 +59,7 @@ public enum ImplType {
     this.canSpecifyBindIP = canSpecifyBindIP;
   }
 
-  /**
-   * @return <code>-option</code>
-   */
+  /** Returns <code>-option</code> */
   @Override
   public String toString() {
     return "-" + option;

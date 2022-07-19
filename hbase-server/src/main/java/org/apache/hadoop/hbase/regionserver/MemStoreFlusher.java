@@ -284,23 +284,17 @@ class MemStoreFlusher implements FlushRequester {
     return true;
   }
 
-  /**
-   * @return Return memstore offheap size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore offheap size or null if <code>r</code> is null */
   private static long getMemStoreOffHeapSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreOffHeapSize();
   }
 
-  /**
-   * @return Return memstore heap size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore heap size or null if <code>r</code> is null */
   private static long getMemStoreHeapSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreHeapSize();
   }
 
-  /**
-   * @return Return memstore data size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore data size or null if <code>r</code> is null */
   private static long getMemStoreDataSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreDataSize();
   }

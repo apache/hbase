@@ -57,16 +57,12 @@ public class BitComparator extends ByteArrayComparable {
     this.bitOperator = bitOperator;
   }
 
-  /**
-   * @return the bitwise operator
-   */
+  /** Returns the bitwise operator */
   public BitwiseOp getOperator() {
     return bitOperator;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BitComparator.Builder builder = ComparatorProtos.BitComparator.newBuilder();

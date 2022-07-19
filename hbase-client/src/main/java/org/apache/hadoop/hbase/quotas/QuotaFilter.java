@@ -92,32 +92,32 @@ public class QuotaFilter {
     return this;
   }
 
-  /** @return true if the filter is empty */
+  /** Returns true if the filter is empty */
   public boolean isNull() {
     return !hasFilters;
   }
 
-  /** @return the QuotaType types that we want to filter one */
+  /** Returns the QuotaType types that we want to filter one */
   public Set<QuotaType> getTypeFilters() {
     return types;
   }
 
-  /** @return the Namespace filter regex */
+  /** Returns the Namespace filter regex */
   public String getNamespaceFilter() {
     return namespaceRegex;
   }
 
-  /** @return the Table filter regex */
+  /** Returns the Table filter regex */
   public String getTableFilter() {
     return tableRegex;
   }
 
-  /** @return the User filter regex */
+  /** Returns the User filter regex */
   public String getUserFilter() {
     return userRegex;
   }
 
-  /** @return the RegionServer filter regex */
+  /** Returns the RegionServer filter regex */
   public String getRegionServerFilter() {
     return regionServerRegex;
   }

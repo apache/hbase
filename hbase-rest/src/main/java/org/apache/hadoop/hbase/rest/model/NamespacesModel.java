@@ -67,9 +67,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
     }
   }
 
-  /**
-   * @return all namespaces
-   */
+  /** Returns all namespaces */
   public List<String> getNamespaces() {
     return namespaces;
   }

@@ -92,9 +92,7 @@ public class FamilyFilter extends CompareFilter {
     return new FamilyFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FamilyFilter.Builder builder = FilterProtos.FamilyFilter.newBuilder();

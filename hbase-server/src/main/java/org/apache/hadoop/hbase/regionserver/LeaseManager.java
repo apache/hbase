@@ -209,7 +209,7 @@ public class LeaseManager extends Thread {
       this.leaseName = name;
     }
 
-    /** @return name of lease */
+    /** Returns name of lease */
     public String getName() {
       return this.leaseName;
     }
@@ -229,12 +229,12 @@ public class LeaseManager extends Thread {
       this.expirationTime = 0;
     }
 
-    /** @return the lease name */
+    /** Returns the lease name */
     public String getLeaseName() {
       return leaseName;
     }
 
-    /** @return listener */
+    /** Returns listener */
     public LeaseListener getListener() {
       return this.listener;
     }

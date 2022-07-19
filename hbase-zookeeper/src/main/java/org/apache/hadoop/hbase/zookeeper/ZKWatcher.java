@@ -514,9 +514,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     return new ArrayList<>(listeners);
   }
 
-  /**
-   * @return The number of currently registered listeners
-   */
+  /** Returns The number of currently registered listeners */
   public int getNumberOfListeners() {
     return listeners.size();
   }

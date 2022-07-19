@@ -82,9 +82,7 @@ public class Response {
     this.stream = in;
   }
 
-  /**
-   * @return the HTTP response code
-   */
+  /** Returns the HTTP response code */
   public int getCode() {
     return code;
   }
@@ -97,9 +95,7 @@ public class Response {
     return this.stream;
   }
 
-  /**
-   * @return the HTTP response headers
-   */
+  /** Returns the HTTP response headers */
   public Header[] getHeaders() {
     return headers;
   }
@@ -113,23 +109,17 @@ public class Response {
     return null;
   }
 
-  /**
-   * @return the value of the Location header
-   */
+  /** Returns the value of the Location header */
   public String getLocation() {
     return getHeader("Location");
   }
 
-  /**
-   * @return true if a response body was sent
-   */
+  /** Returns true if a response body was sent */
   public boolean hasBody() {
     return body != null;
   }
 
-  /**
-   * @return the HTTP response body
-   */
+  /** Returns the HTTP response body */
   public byte[] getBody() {
     if (body == null) {
       try {

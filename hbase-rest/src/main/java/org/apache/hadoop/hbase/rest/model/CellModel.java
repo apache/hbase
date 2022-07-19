@@ -119,9 +119,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.value = value;
   }
 
-  /**
-   * @return the column
-   */
+  /** Returns the column */
   public byte[] getColumn() {
     return column;
   }
@@ -133,16 +131,12 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.column = column;
   }
 
-  /**
-   * @return true if the timestamp property has been specified by the user
-   */
+  /** Returns true if the timestamp property has been specified by the user */
   public boolean hasUserTimestamp() {
     return timestamp != HConstants.LATEST_TIMESTAMP;
   }
 
-  /**
-   * @return the timestamp
-   */
+  /** Returns the timestamp */
   public long getTimestamp() {
     return timestamp;
   }
@@ -154,9 +148,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.timestamp = timestamp;
   }
 
-  /**
-   * @return the value
-   */
+  /** Returns the value */
   public byte[] getValue() {
     return value;
   }

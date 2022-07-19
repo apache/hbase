@@ -331,9 +331,7 @@ public class FileLink {
     this.locations = locations.toArray(new Path[locations.size()]);
   }
 
-  /**
-   * @return the locations to look for the linked file.
-   */
+  /** Returns the locations to look for the linked file. */
   public Path[] getLocations() {
     return locations;
   }
@@ -350,9 +348,7 @@ public class FileLink {
     return str.toString();
   }
 
-  /**
-   * @return true if the file pointed by the link exists
-   */
+  /** Returns true if the file pointed by the link exists */
   public boolean exists(final FileSystem fs) throws IOException {
     for (int i = 0; i < locations.length; ++i) {
       if (fs.exists(locations[i])) {
@@ -362,9 +358,7 @@ public class FileLink {
     return false;
   }
 
-  /**
-   * @return the path of the first available link.
-   */
+  /** Returns the path of the first available link. */
   public Path getAvailablePath(FileSystem fs) throws IOException {
     for (int i = 0; i < locations.length; ++i) {
       if (fs.exists(locations[i])) {

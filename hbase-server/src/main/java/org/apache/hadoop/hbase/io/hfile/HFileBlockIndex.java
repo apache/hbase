@@ -508,9 +508,7 @@ public class HFileBlockIndex {
      */
     protected int searchTreeLevel;
 
-    /**
-     * @return true if the block index is empty.
-     */
+    /** Returns true if the block index is empty. */
     public abstract boolean isEmpty();
 
     /**
@@ -585,9 +583,7 @@ public class HFileBlockIndex {
       return blockDataSizes[i];
     }
 
-    /**
-     * @return the number of root-level blocks in this block index
-     */
+    /** Returns the number of root-level blocks in this block index */
     public int getRootBlockCount() {
       return rootCount;
     }
@@ -1111,16 +1107,12 @@ public class HFileBlockIndex {
       curFirstKey = null;
     }
 
-    /**
-     * @return how many block index entries there are in the root level
-     */
+    /** Returns how many block index entries there are in the root level */
     public final int getNumRootEntries() {
       return rootChunk.getNumEntries();
     }
 
-    /**
-     * @return the number of levels in this block index.
-     */
+    /** Returns the number of levels in this block index. */
     public int getNumLevels() {
       return numLevels;
     }
@@ -1462,9 +1454,7 @@ public class HFileBlockIndex {
       }
     }
 
-    /**
-     * @return the size of this chunk if stored in the non-root index block format
-     */
+    /** Returns the size of this chunk if stored in the non-root index block format */
     int getNonRootSize() {
       return Bytes.SIZEOF_INT // Number of entries
         + Bytes.SIZEOF_INT * (blockKeys.size() + 1) // Secondary index
@@ -1486,16 +1476,12 @@ public class HFileBlockIndex {
       }
     }
 
-    /**
-     * @return the size of this chunk if stored in the root index block format
-     */
+    /** Returns the size of this chunk if stored in the root index block format */
     int getRootSize() {
       return curTotalRootSize;
     }
 
-    /**
-     * @return the number of entries in this block index chunk
-     */
+    /** Returns the number of entries in this block index chunk */
     public int getNumEntries() {
       return blockKeys.size();
     }

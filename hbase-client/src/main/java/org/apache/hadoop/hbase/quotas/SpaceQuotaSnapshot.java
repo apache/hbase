@@ -74,9 +74,7 @@ public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
       return policy;
     }
 
-    /**
-     * @return {@code true} if the quota is being violated, {@code false} otherwise.
-     */
+    /** Returns {@code true} if the quota is being violated, {@code false} otherwise. */
     @Override
     public boolean isInViolation() {
       return inViolation;

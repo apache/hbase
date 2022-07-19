@@ -343,9 +343,7 @@ class ProcedureStoreTracker {
     this.partial = isPartial;
   }
 
-  /**
-   * @return true, if no procedure is active, else false.
-   */
+  /** Returns true, if no procedure is active, else false. */
   public boolean isEmpty() {
     for (Map.Entry<Long, BitSetNode> entry : map.entrySet()) {
       if (!entry.getValue().isEmpty()) {

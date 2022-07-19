@@ -38,9 +38,7 @@ public class StorageClusterVersionModel implements Serializable {
 
   private String version;
 
-  /**
-   * @return the storage cluster version
-   */
+  /** Returns the storage cluster version */
   @XmlAttribute(name = "Version")
   public String getVersion() {
     return version;

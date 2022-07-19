@@ -86,9 +86,7 @@ public class QualifierFilter extends CompareFilter {
     return new QualifierFilter(compareOp, comparator);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.QualifierFilter.Builder builder = FilterProtos.QualifierFilter.newBuilder();

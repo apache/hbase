@@ -99,23 +99,17 @@ public class RemoteWithExtrasException extends RemoteException {
     return ex;
   }
 
-  /**
-   * @return null if not set
-   */
+  /** Returns null if not set */
   public String getHostname() {
     return this.hostname;
   }
 
-  /**
-   * @return -1 if not set
-   */
+  /** Returns -1 if not set */
   public int getPort() {
     return this.port;
   }
 
-  /**
-   * @return True if origin exception was a do not retry type.
-   */
+  /** Returns True if origin exception was a do not retry type. */
   public boolean isDoNotRetry() {
     return this.doNotRetry;
   }

@@ -70,16 +70,12 @@ public abstract class AbstractTestShell {
     System.setProperty("jruby.native.verbose", "true");
   }
 
-  /**
-   * @return comma separated list of ruby script names for tests
-   */
+  /** Returns comma separated list of ruby script names for tests */
   protected String getIncludeList() {
     return "";
   }
 
-  /**
-   * @return comma separated list of ruby script names for tests to skip
-   */
+  /** Returns comma separated list of ruby script names for tests to skip */
   protected String getExcludeList() {
     return "";
   }

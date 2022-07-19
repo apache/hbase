@@ -127,14 +127,14 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * @return Return a short, printable name for this region (usually encoded name) for us logging.
+   * Returns Return a short, printable name for this region (usually encoded name) for us logging.
    */
   @Override
   public String getShortNameToLog() {
     return RegionInfo.prettyPrint(this.getEncodedName());
   }
 
-  /** @return the regionId */
+  /** Returns the regionId */
   @Override
   public long getRegionId() {
     return regionId;
@@ -149,15 +149,13 @@ class MutableRegionInfo implements RegionInfo {
     return regionName;
   }
 
-  /**
-   * @return Region name as a String for use in logging, etc.
-   */
+  /** Returns Region name as a String for use in logging, etc. */
   @Override
   public String getRegionNameAsString() {
     return RegionInfo.getRegionNameAsString(this, this.regionName);
   }
 
-  /** @return the encoded region name */
+  /** Returns the encoded region name */
   @Override
   public String getEncodedName() {
     return this.encodedName;
@@ -168,13 +166,13 @@ class MutableRegionInfo implements RegionInfo {
     return this.encodedNameAsBytes;
   }
 
-  /** @return the startKey */
+  /** Returns the startKey */
   @Override
   public byte[] getStartKey() {
     return startKey;
   }
 
-  /** @return the endKey */
+  /** Returns the endKey */
   @Override
   public byte[] getEndKey() {
     return endKey;
@@ -219,15 +217,13 @@ class MutableRegionInfo implements RegionInfo {
         || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY));
   }
 
-  /** @return true if this region is a meta region */
+  /** Returns true if this region is a meta region */
   @Override
   public boolean isMetaRegion() {
     return tableName.equals(TableName.META_TABLE_NAME);
   }
 
-  /**
-   * @return True if has been split and has daughters.
-   */
+  /** Returns True if has been split and has daughters. */
   @Override
   public boolean isSplit() {
     return this.split;

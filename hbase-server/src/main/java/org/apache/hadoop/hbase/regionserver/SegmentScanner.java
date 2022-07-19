@@ -280,9 +280,7 @@ public class SegmentScanner implements KeyValueScanner {
     throw new NotImplementedException("enforceSeek cannot be called on a SegmentScanner");
   }
 
-  /**
-   * @return true if this is a file scanner. Otherwise a memory scanner is assumed.
-   */
+  /** Returns true if this is a file scanner. Otherwise a memory scanner is assumed. */
   @Override
   public boolean isFileScanner() {
     return false;

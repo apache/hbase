@@ -93,9 +93,7 @@ class IPCUtil {
     return totalSize;
   }
 
-  /**
-   * @return Size on the wire when the two messages are written with writeDelimitedTo
-   */
+  /** Returns Size on the wire when the two messages are written with writeDelimitedTo */
   public static int getTotalSizeWhenWrittenDelimited(Message... messages) {
     int totalSize = 0;
     for (Message m : messages) {
@@ -146,9 +144,7 @@ class IPCUtil {
       : new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry);
   }
 
-  /**
-   * @return True if the exception is a fatal connection exception.
-   */
+  /** Returns True if the exception is a fatal connection exception. */
   static boolean isFatalConnectionException(final ExceptionResponse e) {
     return e.getExceptionClassName().equals(FatalConnectionException.class.getName());
   }

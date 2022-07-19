@@ -100,24 +100,16 @@ public interface MetricsRegionServerWrapper {
    */
   long getStoreFileSize();
 
-  /**
-   * @return Max age of store files hosted on this region server
-   */
+  /** Returns Max age of store files hosted on this region server */
   long getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files hosted on this region server
-   */
+  /** Returns Min age of store files hosted on this region server */
   long getMinStoreFileAge();
 
-  /**
-   * @return Average age of store files hosted on this region server
-   */
+  /** Returns Average age of store files hosted on this region server */
   long getAvgStoreFileAge();
 
-  /**
-   * @return Number of reference files on this region server
-   */
+  /** Returns Number of reference files on this region server */
   long getNumReferenceFiles();
 
   /**
@@ -477,43 +469,29 @@ public interface MetricsRegionServerWrapper {
    */
   double getMobFileCacheHitPercent();
 
-  /**
-   * @return Count of hedged read operations
-   */
+  /** Returns Count of hedged read operations */
   long getHedgedReadOps();
 
-  /**
-   * @return Count of times a hedged read beat out the primary read.
-   */
+  /** Returns Count of times a hedged read beat out the primary read. */
   long getHedgedReadWins();
 
-  /**
-   * @return Count of times a hedged read executes in current thread
-   */
+  /** Returns Count of times a hedged read executes in current thread */
   long getHedgedReadOpsInCurThread();
 
-  /**
-   * @return Number of total bytes read from HDFS.
-   */
+  /** Returns Number of total bytes read from HDFS. */
   long getTotalBytesRead();
 
-  /**
-   * @return Number of bytes read from the local HDFS DataNode.
-   */
+  /** Returns Number of bytes read from the local HDFS DataNode. */
   long getLocalBytesRead();
 
-  /**
-   * @return Number of bytes read locally through HDFS short circuit.
-   */
+  /** Returns Number of bytes read locally through HDFS short circuit. */
   long getShortCircuitBytesRead();
 
-  /**
-   * @return Number of bytes read locally through HDFS zero copy.
-   */
+  /** Returns Number of bytes read locally through HDFS zero copy. */
   long getZeroCopyBytesRead();
 
   /**
-   * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
+   * Returns Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
 

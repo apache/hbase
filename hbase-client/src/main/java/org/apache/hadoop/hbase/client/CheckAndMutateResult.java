@@ -32,16 +32,12 @@ public class CheckAndMutateResult {
     this.result = result;
   }
 
-  /**
-   * @return Whether the CheckAndMutate operation is successful or not
-   */
+  /** Returns Whether the CheckAndMutate operation is successful or not */
   public boolean isSuccess() {
     return success;
   }
 
-  /**
-   * @return It is used only for CheckAndMutate operations with Increment/Append. Otherwise null
-   */
+  /** Returns It is used only for CheckAndMutate operations with Increment/Append. Otherwise null */
   public Result getResult() {
     return result;
   }

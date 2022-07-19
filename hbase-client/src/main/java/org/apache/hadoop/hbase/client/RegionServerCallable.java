@@ -155,9 +155,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     }
   }
 
-  /**
-   * @return {@link ClusterConnection} instance used by this Callable.
-   */
+  /** Returns {@link ClusterConnection} instance used by this Callable. */
   protected ClusterConnection getConnection() {
     return (ClusterConnection) this.connection;
   }
@@ -200,9 +198,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
     return ConnectionUtils.getPauseTime(pause, tries);
   }
 
-  /**
-   * @return the HRegionInfo for the current region
-   */
+  /** Returns the HRegionInfo for the current region */
   public HRegionInfo getHRegionInfo() {
     if (this.location == null) {
       return null;

@@ -523,9 +523,7 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
-  /**
-   * @return cached region count, or -1 if quota manager is disabled or table status not found
-   */
+  /** Returns cached region count, or -1 if quota manager is disabled or table status not found */
   public int getRegionCountOfTable(TableName tName) throws IOException {
     if (initialized) {
       return namespaceQuotaManager.getRegionCountOfTable(tName);

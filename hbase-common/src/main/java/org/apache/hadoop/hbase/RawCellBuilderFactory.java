@@ -28,9 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
 public final class RawCellBuilderFactory {
 
-  /**
-   * @return the cell that is created
-   */
+  /** Returns the cell that is created */
   public static RawCellBuilder create() {
     return new KeyValueBuilder();
   }

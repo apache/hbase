@@ -239,9 +239,7 @@ public class CatalogJanitor extends ScheduledChore {
     return visitor.getReport();
   }
 
-  /**
-   * @return Returns last published Report that comes of last successful scan of hbase:meta.
-   */
+  /** Returns Returns last published Report that comes of last successful scan of hbase:meta. */
   public CatalogJanitorReport getLastReport() {
     return this.lastReport;
   }

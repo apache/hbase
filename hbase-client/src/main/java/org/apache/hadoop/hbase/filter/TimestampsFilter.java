@@ -77,9 +77,7 @@ public class TimestampsFilter extends FilterBase {
     init();
   }
 
-  /**
-   * @return the list of timestamps
-   */
+  /** Returns the list of timestamps */
   public List<Long> getTimestamps() {
     List<Long> list = new ArrayList<>(timestamps.size());
     list.addAll(timestamps);
@@ -165,9 +163,7 @@ public class TimestampsFilter extends FilterBase {
     return new TimestampsFilter(timestamps);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.TimestampsFilter.Builder builder = FilterProtos.TimestampsFilter.newBuilder();

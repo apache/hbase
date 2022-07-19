@@ -161,18 +161,14 @@ public class HBaseCommonTestingUtility {
     conf.set(propertyName, newDir.getAbsolutePath());
   }
 
-  /**
-   * @return True if we should delete testing dirs on exit.
-   */
+  /** Returns True if we should delete testing dirs on exit. */
   boolean deleteOnExit() {
     String v = System.getProperty("hbase.testing.preserve.testdir");
     // Let default be true, to delete on exit.
     return v == null ? true : !Boolean.parseBoolean(v);
   }
 
-  /**
-   * @return True if we removed the test dirs
-   */
+  /** Returns True if we removed the test dirs */
   public boolean cleanupTestDir() {
     if (deleteDir(this.dataTestDir)) {
       this.dataTestDir = null;

@@ -199,15 +199,13 @@ public abstract class RateLimiter {
     }
   }
 
-  /**
-   * @return estimate of the ms required to wait before being able to provide 1 resource.
-   */
+  /** Returns estimate of the ms required to wait before being able to provide 1 resource. */
   public long waitInterval() {
     return waitInterval(1);
   }
 
   /**
-   * @return estimate of the ms required to wait before being able to provide "amount" resources.
+   * Returns estimate of the ms required to wait before being able to provide "amount" resources.
    */
   public synchronized long waitInterval(final long amount) {
     // TODO Handle over quota?

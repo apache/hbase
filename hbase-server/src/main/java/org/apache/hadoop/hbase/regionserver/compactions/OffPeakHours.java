@@ -72,14 +72,10 @@ public abstract class OffPeakHours {
     return 0 <= hour && hour <= 23;
   }
 
-  /**
-   * @return whether {@code targetHour} is off-peak hour
-   */
+  /** Returns whether {@code targetHour} is off-peak hour */
   public abstract boolean isOffPeakHour(int targetHour);
 
-  /**
-   * @return whether it is off-peak hour
-   */
+  /** Returns whether it is off-peak hour */
   public abstract boolean isOffPeakHour();
 
   private static class OffPeakHoursImpl extends OffPeakHours {

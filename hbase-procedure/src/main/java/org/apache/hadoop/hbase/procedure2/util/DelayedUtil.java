@@ -74,9 +74,7 @@ public final class DelayedUtil {
     }
   };
 
-  /**
-   * @return null (if an interrupt) or an instance of E; resets interrupt on calling thread.
-   */
+  /** Returns null (if an interrupt) or an instance of E; resets interrupt on calling thread. */
   public static <E extends Delayed> E takeWithoutInterrupt(final DelayQueue<E> queue,
     final long timeout, final TimeUnit timeUnit) {
     try {
@@ -87,9 +85,7 @@ public final class DelayedUtil {
     }
   }
 
-  /**
-   * @return Time remaining as milliseconds.
-   */
+  /** Returns Time remaining as milliseconds. */
   public static long getRemainingTime(final TimeUnit resultUnit, final long timeout) {
     final long currentTime = EnvironmentEdgeManager.currentTime();
     if (currentTime >= timeout) {

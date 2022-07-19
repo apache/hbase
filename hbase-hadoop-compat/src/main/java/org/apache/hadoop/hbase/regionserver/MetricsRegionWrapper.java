@@ -75,24 +75,16 @@ public interface MetricsRegionWrapper {
    */
   long getFilteredReadRequestCount();
 
-  /**
-   * @return Max age of store files under this region
-   */
+  /** Returns Max age of store files under this region */
   long getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files under this region
-   */
+  /** Returns Min age of store files under this region */
   long getMinStoreFileAge();
 
-  /**
-   * @return Average age of store files under this region
-   */
+  /** Returns Average age of store files under this region */
   long getAvgStoreFileAge();
 
-  /**
-   * @return Number of reference files under this region
-   */
+  /** Returns Number of reference files under this region */
   long getNumReferenceFiles();
 
   /**
@@ -108,9 +100,7 @@ public interface MetricsRegionWrapper {
 
   long getNumCompactionsCompleted();
 
-  /**
-   * @return Age of the last major compaction
-   */
+  /** Returns Age of the last major compaction */
   long getLastMajorCompactionAge();
 
   /**
@@ -151,9 +141,7 @@ public interface MetricsRegionWrapper {
    */
   int getReplicaId();
 
-  /**
-   * @return the number of references active on the store
-   */
+  /** Returns the number of references active on the store */
   long getStoreRefCount();
 
   /**
@@ -162,14 +150,10 @@ public interface MetricsRegionWrapper {
    */
   long getMaxCompactedStoreFileRefCount();
 
-  /**
-   * @return the number of row reads completely on memstore per store
-   */
+  /** Returns the number of row reads completely on memstore per store */
   Map<String, Long> getMemstoreOnlyRowReadsCount();
 
-  /**
-   * @return the number of row reads on memstore and file per store
-   */
+  /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
 
 }

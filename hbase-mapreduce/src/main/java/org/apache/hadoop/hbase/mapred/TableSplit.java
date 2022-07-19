@@ -56,27 +56,27 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
     this(TableName.valueOf(tableName), startRow, endRow, location);
   }
 
-  /** @return table name */
+  /** Returns table name */
   public TableName getTable() {
     return this.m_tableName;
   }
 
-  /** @return table name */
+  /** Returns table name */
   public byte[] getTableName() {
     return this.m_tableName.getName();
   }
 
-  /** @return starting row key */
+  /** Returns starting row key */
   public byte[] getStartRow() {
     return this.m_startRow;
   }
 
-  /** @return end row key */
+  /** Returns end row key */
   public byte[] getEndRow() {
     return this.m_endRow;
   }
 
-  /** @return the region's hostname */
+  /** Returns the region's hostname */
   public String getRegionLocation() {
     return this.m_regionLocation;
   }

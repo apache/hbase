@@ -66,9 +66,7 @@ public class WindowMovingAverage extends MovingAverage {
     return oneRound;
   }
 
-  /**
-   * @return number of statistics
-   */
+  /** Returns number of statistics */
   protected int getNumberOfStatistics() {
     return lastN.length;
   }
@@ -85,9 +83,7 @@ public class WindowMovingAverage extends MovingAverage {
     return lastN[index];
   }
 
-  /**
-   * @return index of most recent
-   */
+  /** Returns index of most recent */
   protected int getMostRecentPosistion() {
     return mostRecent;
   }

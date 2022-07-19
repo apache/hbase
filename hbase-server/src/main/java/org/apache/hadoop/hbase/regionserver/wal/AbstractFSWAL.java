@@ -615,13 +615,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   // public only until class moves to o.a.h.h.wal
-  /** @return the number of rolled log files */
+  /** Returns the number of rolled log files */
   public int getNumRolledLogFiles() {
     return walFile2Props.size();
   }
 
   // public only until class moves to o.a.h.h.wal
-  /** @return the number of log files in use */
+  /** Returns the number of log files in use */
   public int getNumLogFiles() {
     // +1 for current use log
     return getNumRolledLogFiles() + 1;
@@ -861,7 +861,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   // public only until class moves to o.a.h.h.wal
-  /** @return the size of log files in use */
+  /** Returns the size of log files in use */
   public long getLogFileSize() {
     return this.totalLogSize.get();
   }
@@ -935,9 +935,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     LOG.info("Closed WAL: " + toString());
   }
 
-  /**
-   * @return number of WALs currently in the process of closing.
-   */
+  /** Returns number of WALs currently in the process of closing. */
   public int getInflightWALCloseCount() {
     return inflightWALClosures.size();
   }
@@ -1186,9 +1184,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected abstract boolean doCheckLogLowReplication();
 
-  /**
-   * @return true if we exceeded the slow sync roll threshold over the last check interval
-   */
+  /** Returns true if we exceeded the slow sync roll threshold over the last check interval */
   protected boolean doCheckSlowSync() {
     boolean result = false;
     long now = EnvironmentEdgeManager.currentTime();

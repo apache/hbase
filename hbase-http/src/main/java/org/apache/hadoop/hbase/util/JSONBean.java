@@ -124,9 +124,7 @@ public class JSONBean {
     };
   }
 
-  /**
-   * @return Return non-zero if failed to find bean. 0
-   */
+  /** Returns Return non-zero if failed to find bean. 0 */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
     String attribute, boolean description) throws IOException {
     LOG.debug("Listing beans for {}", qry);

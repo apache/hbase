@@ -47,9 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public interface CellScanner {
-  /**
-   * @return the current Cell which may be mutable
-   */
+  /** Returns the current Cell which may be mutable */
   Cell current();
 
   /**

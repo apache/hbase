@@ -51,7 +51,7 @@ public final class YammerHistogramUtils {
     }
   }
 
-  /** @return an abbreviated summary of {@code hist}. */
+  /** Returns an abbreviated summary of {@code hist}. */
   public static String getShortHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
     return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) + ", min="
@@ -61,7 +61,7 @@ public final class YammerHistogramUtils {
       + DOUBLE_FORMAT.format(sn.get99thPercentile());
   }
 
-  /** @return a summary of {@code hist}. */
+  /** Returns a summary of {@code hist}. */
   public static String getHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
     return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) + ", min="
@@ -76,7 +76,7 @@ public final class YammerHistogramUtils {
       + DOUBLE_FORMAT.format(sn.getValue(0.99999));
   }
 
-  /** @return pretty summary of {@code hist}. */
+  /** Returns pretty summary of {@code hist}. */
   public static String getPrettyHistogramReport(final Histogram h) {
     Snapshot sn = h.getSnapshot();
     return "Mean      = " + DOUBLE_FORMAT.format(sn.getMean()) + "\n" + "Min       = "

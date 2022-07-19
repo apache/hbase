@@ -69,7 +69,7 @@ public interface HFileDataBlockEncoder {
    */
   void saveMetadata(HFile.Writer writer) throws IOException;
 
-  /** @return the data block encoding */
+  /** Returns the data block encoding */
   DataBlockEncoding getDataBlockEncoding();
 
   /**

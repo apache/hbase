@@ -1517,9 +1517,7 @@ public class CanaryTool implements Tool, Canary {
       this.done = true;
     }
 
-    /**
-     * @return List of tables to use in test.
-     */
+    /** Returns List of tables to use in test. */
     private String[] generateMonitorTables(String[] monitorTargets) throws IOException {
       String[] returnTables = null;
 

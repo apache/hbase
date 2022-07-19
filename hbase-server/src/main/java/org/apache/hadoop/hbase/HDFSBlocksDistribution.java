@@ -71,23 +71,17 @@ public class HDFSBlocksDistribution {
       this.weightForSsd += weightForSsd;
     }
 
-    /**
-     * @return the host name
-     */
+    /** Returns the host name */
     public String getHost() {
       return host;
     }
 
-    /**
-     * @return the weight
-     */
+    /** Returns the weight */
     public long getWeight() {
       return weight;
     }
 
-    /**
-     * @return the weight for ssd
-     */
+    /** Returns the weight for ssd */
     public long getWeightForSsd() {
       return weightForSsd;
     }
@@ -186,9 +180,7 @@ public class HDFSBlocksDistribution {
     }
   }
 
-  /**
-   * @return the hosts and their weights
-   */
+  /** Returns the hosts and their weights */
   public Map<String, HostAndWeight> getHostAndWeights() {
     return this.hostAndWeights;
   }
@@ -209,9 +201,7 @@ public class HDFSBlocksDistribution {
     return weight;
   }
 
-  /**
-   * @return the sum of all unique blocks' weight
-   */
+  /** Returns the sum of all unique blocks' weight */
   public long getUniqueBlocksTotalWeight() {
     return uniqueBlocksTotalWeight;
   }

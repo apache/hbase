@@ -704,9 +704,7 @@ public abstract class TestReplicationSourceManager {
       }
     }
 
-    /**
-     * @return 1 when the map is not empty.
-     */
+    /** Returns 1 when the map is not empty. */
     private int isLogZnodesMapPopulated() {
       Collection<Set<String>> sets = logZnodesMap.values();
       if (sets.size() > 1) {

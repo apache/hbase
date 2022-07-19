@@ -203,7 +203,7 @@ public class Permission extends VersionedWritable {
     return raw.toString();
   }
 
-  /** @return the object version number */
+  /** Returns the object version number */
   @Override
   public byte getVersion() {
     return VERSION;

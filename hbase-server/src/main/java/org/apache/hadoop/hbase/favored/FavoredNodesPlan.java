@@ -71,9 +71,7 @@ public class FavoredNodesPlan {
     return favoredNodesMap.remove(region.getRegionNameAsString());
   }
 
-  /**
-   * @return the list of favored region server for this region based on the plan
-   */
+  /** Returns the list of favored region server for this region based on the plan */
   public List<ServerName> getFavoredNodes(RegionInfo region) {
     return favoredNodesMap.get(region.getRegionNameAsString());
   }
@@ -98,9 +96,7 @@ public class FavoredNodesPlan {
     return null;
   }
 
-  /**
-   * @return the mapping between each region to its favored region server list
-   */
+  /** Returns the mapping between each region to its favored region server list */
   public Map<String, List<ServerName>> getAssignmentMap() {
     // Make a deep copy so changes don't harm our copy of favoredNodesMap.
     return this.favoredNodesMap.entrySet().stream()

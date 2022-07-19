@@ -121,9 +121,7 @@ class FSWALEntry extends Entry {
     return this.regionInfo;
   }
 
-  /**
-   * @return The transaction id of this edit.
-   */
+  /** Returns The transaction id of this edit. */
   long getTxid() {
     return this.txid;
   }
@@ -145,9 +143,7 @@ class FSWALEntry extends Entry {
     return regionSequenceId;
   }
 
-  /**
-   * @return the family names which are effected by this edit.
-   */
+  /** Returns the family names which are effected by this edit. */
   Set<byte[]> getFamilyNames() {
     return familyNames;
   }

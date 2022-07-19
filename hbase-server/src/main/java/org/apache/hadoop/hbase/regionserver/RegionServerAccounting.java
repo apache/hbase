@@ -108,30 +108,22 @@ public class RegionServerAccounting {
     return this.globalMemStoreLimitLowMarkPercent;
   }
 
-  /**
-   * @return the global Memstore data size in the RegionServer
-   */
+  /** Returns the global Memstore data size in the RegionServer */
   public long getGlobalMemStoreDataSize() {
     return globalMemStoreDataSize.sum();
   }
 
-  /**
-   * @return the global memstore heap size in the RegionServer
-   */
+  /** Returns the global memstore heap size in the RegionServer */
   public long getGlobalMemStoreHeapSize() {
     return this.globalMemStoreHeapSize.sum();
   }
 
-  /**
-   * @return the global memstore heap size in the RegionServer
-   */
+  /** Returns the global memstore heap size in the RegionServer */
   public long getGlobalMemStoreOffHeapSize() {
     return this.globalMemStoreOffHeapSize.sum();
   }
 
-  /**
-   * @return the retained metrics of region's read and write requests count
-   */
+  /** Returns the retained metrics of region's read and write requests count */
   protected ConcurrentMap<String, Pair<Long, Long>> getRetainedRegionRWRequestsCnt() {
     return this.retainedRegionRWRequestsCnt;
   }
