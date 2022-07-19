@@ -738,6 +738,8 @@ public class BucketCache implements BlockCache, HeapSize {
       + cacheStats.getEvictedCount() + ", " + "evictedPerRun=" + cacheStats.evictedPerEviction()
       + ", " + "allocationFailCount=" + cacheStats.getAllocationFailCount());
     cacheStats.reset();
+
+    bucketAllocator.logDebugStatistics();
   }
 
   public long getRealCacheSize() {

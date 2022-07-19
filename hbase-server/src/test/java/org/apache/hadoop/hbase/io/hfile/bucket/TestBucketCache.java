@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -189,6 +190,8 @@ public class TestBucketCache {
       IndexStatistics indexStatistics = bucketSizeInfo.statistics();
       assertEquals("unexpected freeCount for " + bucketSizeInfo, 0, indexStatistics.freeCount());
     }
+
+    mAllocator.logDebugStatistics();
 
     for (long offset : allocations) {
       assertEquals(mAllocator.sizeOfAllocation(offset), mAllocator.freeBlock(offset));
@@ -674,7 +677,7 @@ public class TestBucketCache {
 
     // initialize an mocked ioengine.
     IOEngine ioEngine = Mockito.mock(IOEngine.class);
-    Mockito.when(ioEngine.usesSharedMemory()).thenReturn(false);
+    when(ioEngine.usesSharedMemory()).thenReturn(false);
     // Mockito.doNothing().when(ioEngine).write(Mockito.any(ByteBuffer.class), Mockito.anyLong());
     Mockito.doThrow(RuntimeException.class).when(ioEngine).write(Mockito.any(ByteBuffer.class),
       Mockito.anyLong());
