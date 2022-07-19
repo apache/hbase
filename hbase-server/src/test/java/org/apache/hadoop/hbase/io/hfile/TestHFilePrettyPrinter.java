@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.codahale.metrics.MetricRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
@@ -125,5 +126,60 @@ public class TestHFilePrettyPrinter {
     String result = new String(stream.toByteArray());
     String expectedResult = "Scanning -> " + fileNotInRootDir + "\n" + "Scanned kv count -> 1\n";
     assertEquals(expectedResult, result);
+  }
+
+  @Test
+  public void testHistograms() throws Exception {
+    Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
+    TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
+    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
+      fileNotInRootDir);
+
+    System.setOut(ps);
+    new HFilePrettyPrinter(conf).run(new String[] { "-s", "-d", String.valueOf(fileNotInRootDir) });
+    String result = stream.toString();
+    LOG.info(result);
+
+    // split out the output into sections based on the headers
+    String[] headers =
+      new String[] { "Key length", "Val length", "Row size (bytes)", "Row size (columns)" };
+    // for each section, there is a corresponding expected (count, range) pairs
+    int[][] expectations = new int[][] { new int[] { 0, 10, 1000, 50 }, new int[] { 0, 1, 1000, 3 },
+      new int[] { 0, 10, 1000, 50 }, new int[] { 1000, 1 }, };
+
+    for (int i = 0; i < headers.length - 1; i++) {
+      int idx = result.indexOf(headers[i]);
+      int nextIdx = result.indexOf(headers[i + 1]);
+
+      assertContainsRanges(result.substring(idx, nextIdx), expectations[i]);
+    }
+  }
+
+  private void assertContainsRanges(String result, int... rangeCountPairs) {
+    for (int i = 0; i < rangeCountPairs.length - 1; i += 2) {
+      String expected = rangeCountPairs[i] + " <= " + rangeCountPairs[i + 1];
+      assertTrue("expected:\n" + result + "\nto contain: '" + expected + "'",
+        result.contains(expected));
+    }
+  }
+
+  @Test
+  public void testKeyValueStats() {
+    HFilePrettyPrinter.KeyValueStats stats =
+      new HFilePrettyPrinter.KeyValueStats(new MetricRegistry(), "test");
+    long[] ranges = stats.getRanges();
+    for (long range : ranges) {
+      stats.update(range - 1, true);
+    }
+
+    assertEquals(ranges[ranges.length - 1] - 1, stats.getMax());
+    assertEquals(ranges[0] - 1, stats.getMin());
+
+    int total = 1;
+    for (long range : ranges) {
+      long val = stats.getCountAtOrBelow(range);
+      assertEquals(total++, val);
+    }
+
   }
 }
