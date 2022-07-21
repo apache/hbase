@@ -1151,28 +1151,21 @@ public class TestHStoreFile {
     Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
 
-    DataBlockEncoding dataBlockEncoderAlgo =
-      DataBlockEncoding.FAST_DIFF;
+    DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
 
     conf.setDouble("hbase.writer.unified.encoded.blocksize.ratio", 1);
 
     cacheConf = new CacheConfig(conf);
-    HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
-      .withChecksumType(CKTYPE)
-      .withBytesPerCheckSum(CKBYTES)
-      .withDataBlockEncoding(dataBlockEncoderAlgo)
-      .build();
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
-      .withFilePath(path)
-      .withMaxKeyCount(2000)
-      .withFileContext(meta)
-      .build();
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
     writeStoreFile(writer);
-    //writer.close();
 
-    HStoreFile storeFile = new HStoreFile(fs, writer.getPath(), conf,
-      cacheConf, BloomType.NONE, true);
+    HStoreFile storeFile =
+      new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
 
@@ -1180,27 +1173,21 @@ public class TestHStoreFile {
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
     assertEquals(dataBlockEncoderAlgo.name(), Bytes.toString(value));
 
-    HFile.Reader fReader = HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(),
-      true, conf);
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
 
     FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
     long fileSize = fs.getFileStatus(writer.getPath()).getLen();
-    FixedFileTrailer trailer =
-      FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-    long offset = trailer.getFirstDataBlockOffset(),
-      max = trailer.getLastDataBlockOffset();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
     HFileBlock block;
-    int blockCount = 0;
     while (offset <= max) {
       block = fReader.readBlock(offset, -1, /* cacheBlock */
-        false, /* pread */ false,
-        /* isCompaction */ false, /* updateCacheMetrics */
+        false, /* pread */ false, /* isCompaction */ false, /* updateCacheMetrics */
         false, null, null);
       offset += block.getOnDiskSizeWithHeader();
-      blockCount += 1;
       double diff = block.getOnDiskSizeWithHeader() - BLOCKSIZE_SMALL;
-      if(offset <= max)
-        assertTrue(diff >=0 && diff < (BLOCKSIZE_SMALL*0.05));
+      if (offset <= max) assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
     }
   }
 

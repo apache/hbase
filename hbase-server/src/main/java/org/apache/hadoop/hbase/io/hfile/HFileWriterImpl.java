@@ -173,8 +173,7 @@ public class HFileWriterImpl implements HFile.Writer {
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
     float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 0f);
-    this.encodedBlockSizeLimit = encodeBlockSizeRatio >0 ?
-      (int) (hFileContext.getBlocksize() * encodeBlockSizeRatio) : 0;
+    this.encodedBlockSizeLimit = (int) (hFileContext.getBlocksize() * encodeBlockSizeRatio);
 
     finishInit(conf);
     if (LOG.isTraceEnabled()) {
@@ -312,14 +311,14 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   protected void checkBlockBoundary() throws IOException {
     boolean shouldFinishBlock = false;
-    //This means hbase.writer.unified.encoded.blocksize.ratio was set to something different from 0
-    //and we should use the encoding ratio
-    if (encodedBlockSizeLimit > 0){
+    // This means hbase.writer.unified.encoded.blocksize.ratio was set to something different from 0
+    // and we should use the encoding ratio
+    if (encodedBlockSizeLimit > 0) {
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit;
     } else {
       shouldFinishBlock = blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
     }
-    if(shouldFinishBlock) {
+    if (shouldFinishBlock) {
       finishBlock();
       writeInlineBlocks(false);
       newBlock();
