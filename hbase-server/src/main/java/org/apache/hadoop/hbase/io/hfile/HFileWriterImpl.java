@@ -312,7 +312,7 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   protected void checkBlockBoundary() throws IOException {
     boolean shouldFinishBlock = false;
-    //This means hbase.writer.unified.encoded.blocksize.ratio was set to something different from 1
+    //This means hbase.writer.unified.encoded.blocksize.ratio was set to something different from 0
     //and we should use the encoding ratio
     if (encodedBlockSizeLimit > 0){
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit;
