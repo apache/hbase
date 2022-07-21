@@ -100,7 +100,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       RSGroupAdminEndpoint.class.getName() + "," + CPMasterObserver.class.getName());
     TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
     TEST_UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      NUM_SLAVES_BASE - 1);
+      NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     initialize();
   }
