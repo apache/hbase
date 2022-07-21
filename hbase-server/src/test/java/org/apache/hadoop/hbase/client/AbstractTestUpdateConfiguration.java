@@ -24,6 +24,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Base class to test Configuration Update logic. It wraps up things needed to test configuration
@@ -31,6 +33,8 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
  * file.
  */
 public abstract class AbstractTestUpdateConfiguration {
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestUpdateConfiguration.class);
+
   private static final String SERVER_CONFIG = "hbase-site.xml";
   private static final String OVERRIDE_SERVER_CONFIG = "override-hbase-site.xml";
   private static final String BACKUP_SERVER_CONFIG = "backup-hbase-site.xml";
@@ -90,7 +94,9 @@ public abstract class AbstractTestUpdateConfiguration {
    * using {@link #restoreHBaseSiteXML()}.
    * @throws IOException if an I/O error occurs
    */
-  protected void replaceHBaseSiteXML() throws IOException {
+  protected final void replaceHBaseSiteXML() throws IOException {
+    LOG.info("Replace hbase config {} with {}", configFileUnderTestDataDir,
+      overrideConfigFileUnderTestDataDir);
     // make a backup of hbase-site.xml
     Files.copy(configFileUnderTestDataDir, backupConfigFileUnderTestDataDir,
       StandardCopyOption.REPLACE_EXISTING);
@@ -104,7 +110,9 @@ public abstract class AbstractTestUpdateConfiguration {
    * {@link #replaceHBaseSiteXML()}.
    * @throws IOException if an I/O error occurs
    */
-  protected void restoreHBaseSiteXML() throws IOException {
+  protected final void restoreHBaseSiteXML() throws IOException {
+    LOG.info("Restore hbase config {} with {}", configFileUnderTestDataDir,
+      backupConfigFileUnderTestDataDir);
     // restore hbase-site.xml
     Files.copy(backupConfigFileUnderTestDataDir, configFileUnderTestDataDir,
       StandardCopyOption.REPLACE_EXISTING);

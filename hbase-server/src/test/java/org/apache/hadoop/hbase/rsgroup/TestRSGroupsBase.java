@@ -108,11 +108,11 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CPMasterObserver.class.getName());
     }
 
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE - 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE);
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.rpc.timeout", 100000);
 
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     initialize();
   }
 
@@ -303,9 +303,9 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   protected final void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, enable);
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      NUM_SLAVES_BASE - 1);
+      NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     initialize();
   }
