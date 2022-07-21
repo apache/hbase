@@ -251,7 +251,7 @@ public class TestBucketCache {
     };
     evictThread.start();
     cache.offsetLock.waitForWaiters(lockId, 1);
-    cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true);
+    cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true, true);
     assertEquals(0, cache.getBlockCount());
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
       new CacheTestUtils.ByteArrayCacheable(new byte[10]));
@@ -563,6 +563,56 @@ public class TestBucketCache {
       return ByteBuffAllocator.NONE;
     }, ByteBuffAllocator.HEAP);
     assertEquals(testValue, bucketEntry.offset());
+  }
+
+  @Test
+  public void testEvictionCount() throws InterruptedException {
+    int size = 100;
+    int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    ByteBuffer buf1 = ByteBuffer.allocate(size), buf2 = ByteBuffer.allocate(size);
+    HFileContext meta = new HFileContextBuilder().build();
+    ByteBuffAllocator allocator = ByteBuffAllocator.HEAP;
+    HFileBlock blockWithNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+      ByteBuff.wrap(buf1), HFileBlock.FILL_HEADER, -1, 52, -1, meta, allocator);
+    HFileBlock blockWithoutNextBlockMetadata = new HFileBlock(BlockType.DATA, size, size, -1,
+      ByteBuff.wrap(buf2), HFileBlock.FILL_HEADER, -1, -1, -1, meta, allocator);
+
+    BlockCacheKey key = new BlockCacheKey("testEvictionCount", 0);
+    ByteBuffer actualBuffer = ByteBuffer.allocate(length);
+    ByteBuffer block1Buffer = ByteBuffer.allocate(length);
+    ByteBuffer block2Buffer = ByteBuffer.allocate(length);
+    blockWithNextBlockMetadata.serialize(block1Buffer, true);
+    blockWithoutNextBlockMetadata.serialize(block2Buffer, true);
+
+    // Add blockWithNextBlockMetadata, expect blockWithNextBlockMetadata back.
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+      block1Buffer);
+
+    waitUntilFlushedToBucket(cache, key);
+
+    assertEquals(0, cache.getStats().getEvictionCount());
+
+    // evict call should return 1, but then eviction count be 0
+    assertEquals(1, cache.evictBlocksByHfileName("testEvictionCount"));
+    assertEquals(0, cache.getStats().getEvictionCount());
+
+    // add back
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+      block1Buffer);
+    waitUntilFlushedToBucket(cache, key);
+
+    // should not increment
+    assertTrue(cache.evictBlock(key));
+    assertEquals(0, cache.getStats().getEvictionCount());
+
+    // add back
+    CacheTestUtils.getBlockAndAssertEquals(cache, key, blockWithNextBlockMetadata, actualBuffer,
+      block1Buffer);
+    waitUntilFlushedToBucket(cache, key);
+
+    // should finally increment eviction count
+    cache.freeSpace("testing");
+    assertEquals(1, cache.getStats().getEvictionCount());
   }
 
   @Test
