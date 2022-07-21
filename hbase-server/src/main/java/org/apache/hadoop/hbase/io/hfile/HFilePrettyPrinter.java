@@ -732,7 +732,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * Simple reporter which collects registered histograms for printing to an output stream in
    * {@link #report()}.
    */
-  private static class SimpleReporter {
+  private static final class SimpleReporter {
     /**
      * Returns a new {@link Builder} for {@link SimpleReporter}.
      * @return a {@link Builder} instance for a {@link SimpleReporter}
