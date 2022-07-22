@@ -138,7 +138,7 @@ public class TestWALSyncTimeoutException {
       } catch (WALSyncTimeoutIOException e) {
         assertTrue(e != null);
       }
-      assertTrue(regions[0].getRegionServerServices().isAborted());
+      assertTrue(regions[0].getRSServices().isAborted());
       assertTrue(replicateCounter.get() == 0);
     } finally {
       Thread.currentThread().setName(oldThreadName);
@@ -205,6 +205,10 @@ public class TestWALSyncTimeoutException {
 
     public void setRegionReplicationSink(RegionReplicationSink regionReplicationSink) {
       this.regionReplicationSink = Optional.of(regionReplicationSink);
+    }
+
+    public RegionServerServices getRSServices() {
+      return this.rsServices;
     }
 
   }

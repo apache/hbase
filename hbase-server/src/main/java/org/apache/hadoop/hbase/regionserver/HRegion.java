@@ -1371,9 +1371,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Returns Instance of {@link RegionServerServices} used by this HRegion. Can be null.
    **/
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public RegionServerServices getRegionServerServices() {
+  RegionServerServices getRegionServerServices() {
     return this.rsServices;
   }
 
