@@ -650,12 +650,14 @@ public final class BucketAllocator {
     IndexStatistics[] stats = getIndexStatistics(total);
     LOG.debug("Bucket allocator statistics follow:");
     LOG.debug(
-      "  Free bytes={}; used bytes={}; total bytes={}; wasted bytes={}; fragmentation bytes={}; completelyFreeBuckets={}",
+      "  Free bytes={}; used bytes={}; total bytes={}; wasted bytes={}; fragmentation bytes={}; "
+        + "completelyFreeBuckets={}",
       total.freeBytes(), total.usedBytes(), total.totalBytes(), total.wastedBytes(),
       total.fragmentationBytes(), total.completelyFreeBuckets());
     for (IndexStatistics s : stats) {
       LOG.debug(
-        "  Object size {}; used={}; free={}; total={}; wasted bytes={}; fragmentation bytes={}, full buckets={}",
+        "  Object size {}; used={}; free={}; total={}; wasted bytes={}; fragmentation bytes={}, "
+          + "full buckets={}",
         s.itemSize(), s.usedCount(), s.freeCount(), s.totalCount(), s.wastedBytes(),
         s.fragmentationBytes(), s.fullBuckets());
     }
