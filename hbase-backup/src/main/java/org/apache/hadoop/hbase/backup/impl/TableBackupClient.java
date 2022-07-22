@@ -322,7 +322,7 @@ public abstract class TableBackupClient {
    * @return meta data dir
    */
   protected String obtainBackupMetaDataStr(BackupInfo backupInfo) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("type=" + backupInfo.getType() + ",tablelist=");
     for (TableName table : backupInfo.getTables()) {
       sb.append(table + ";");

@@ -63,12 +63,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+
 /**
  * A collection for methods used by multiple classes to backup HBase tables.
  */
 @InterfaceAudience.Private
 public final class BackupUtils {
-  protected static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
+  static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
   public static final int MILLISEC_IN_HOUR = 3600000;
 
@@ -136,9 +138,10 @@ public final class BackupUtils {
         // write a copy of descriptor to the target directory
         Path target = new Path(backupInfo.getTableBackupDir(table));
         FileSystem targetFs = target.getFileSystem(conf);
-        FSTableDescriptors descriptors =
-          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
-        descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        try (FSTableDescriptors descriptors =
+          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf))) {
+          descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        }
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
@@ -279,11 +282,12 @@ public final class BackupUtils {
     if (tables == null) {
       return null;
     }
-    String[] tableArray = tables.split(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
-
-    TableName[] ret = new TableName[tableArray.length];
-    for (int i = 0; i < tableArray.length; i++) {
-      ret[i] = TableName.valueOf(tableArray[i]);
+    List<String> list =
+      Splitter.onPattern(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND).splitToList(tables);
+    TableName[] ret = new TableName[list.size()];
+    int i = 0;
+    for (String table : list) {
+      ret[i++] = TableName.valueOf(table);
     }
     return ret;
   }
@@ -594,8 +598,10 @@ public final class BackupUtils {
       }
 
       private long getTimestamp(String backupId) {
-        String[] split = backupId.split("_");
-        return Long.parseLong(split[1]);
+        Iterator<String> i = Splitter.on('_').split(backupId).iterator();
+        // Skip the first entry
+        i.next();
+        return Long.parseLong(i.next());
       }
     });
     return infos;
@@ -734,7 +740,10 @@ public final class BackupUtils {
   public static String findMostRecentBackupId(String[] backupIds) {
     long recentTimestamp = Long.MIN_VALUE;
     for (String backupId : backupIds) {
-      long ts = Long.parseLong(backupId.split("_")[1]);
+      Iterator<String> i = Splitter.on('_').split(backupId).iterator();
+      // Skip the first entry
+      i.next();
+      long ts = Long.parseLong(i.next());
       if (ts > recentTimestamp) {
         recentTimestamp = ts;
       }
