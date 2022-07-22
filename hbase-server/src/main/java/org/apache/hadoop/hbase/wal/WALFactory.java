@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -504,5 +505,11 @@ public class WALFactory {
 
   public ExcludeDatanodeManager getExcludeDatanodeManager() {
     return excludeDatanodeManager;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public String getFactoryId() {
+    return this.factoryId;
   }
 }
