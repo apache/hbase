@@ -449,7 +449,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /** Returns the on-disk size of the data part + checksum (header excluded). */
-  public int getOnDiskSizeWithoutHeader() {
+  int getOnDiskSizeWithoutHeader() {
     return onDiskSizeWithoutHeader;
   }
 
