@@ -316,7 +316,8 @@ public class HFileWriterImpl implements HFile.Writer {
     if (encodedBlockSizeLimit > 0) {
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit;
     } else {
-      shouldFinishBlock = blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
+      shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= hFileContext.getBlocksize() ||
+        blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
     }
     if (shouldFinishBlock) {
       finishBlock();

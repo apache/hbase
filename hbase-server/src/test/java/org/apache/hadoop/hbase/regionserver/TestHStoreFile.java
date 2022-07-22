@@ -1187,7 +1187,9 @@ public class TestHStoreFile {
         false, null, null);
       offset += block.getOnDiskSizeWithHeader();
       double diff = block.getOnDiskSizeWithHeader() - BLOCKSIZE_SMALL;
-      if (offset <= max) assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
+      if (offset <= max) {
+        assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
+      }
     }
   }
 
