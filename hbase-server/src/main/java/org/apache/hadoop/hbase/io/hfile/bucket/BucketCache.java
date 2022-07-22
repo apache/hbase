@@ -580,7 +580,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * {@link BucketEntry#refCnt} becoming 0.
    */
   void freeBucketEntry(BucketEntry bucketEntry) {
-    bucketAllocator.freeBlock(bucketEntry.offset());
+    bucketAllocator.freeBlock(bucketEntry.offset(), bucketEntry.getLength());
     realCacheSize.add(-1 * bucketEntry.getLength());
   }
 
@@ -1121,8 +1121,9 @@ public class BucketCache implements BlockCache, HeapSize {
       checkIOErrorIsTolerated();
       // Since we failed sync, free the blocks in bucket allocator
       for (int i = 0; i < entries.size(); ++i) {
-        if (bucketEntries[i] != null) {
-          bucketAllocator.freeBlock(bucketEntries[i].offset());
+        BucketEntry bucketEntry = bucketEntries[i];
+        if (bucketEntry != null) {
+          bucketAllocator.freeBlock(bucketEntry.offset(), bucketEntry.getLength());
           bucketEntries[i] = null;
         }
       }
@@ -1540,7 +1541,7 @@ public class BucketCache implements BlockCache, HeapSize {
         succ = true;
       } finally {
         if (!succ) {
-          alloc.freeBlock(offset);
+          alloc.freeBlock(offset, len);
         }
       }
       realCacheSize.add(len);
