@@ -1370,7 +1370,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Returns Instance of {@link RegionServerServices} used by this HRegion. Can be null.
-   **/
+   */
   RegionServerServices getRegionServerServices() {
     return this.rsServices;
   }
