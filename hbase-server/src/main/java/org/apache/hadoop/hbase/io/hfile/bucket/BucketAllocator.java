@@ -168,14 +168,15 @@ public final class BucketAllocator {
     // Free bucket means it has space to allocate a block;
     // Completely free bucket means it has no block.
     private LinkedMap bucketList, freeBuckets, completelyFreeBuckets;
-    private LongAdder fragmentation;
+    // only modified under synchronization, but also read outside it.
+    private volatile long fragmentationBytes;
     private int sizeIndex;
 
     BucketSizeInfo(int sizeIndex) {
       bucketList = new LinkedMap();
       freeBuckets = new LinkedMap();
       completelyFreeBuckets = new LinkedMap();
-      fragmentation = new LongAdder();
+      fragmentationBytes = 0;
       this.sizeIndex = sizeIndex;
     }
 
@@ -195,7 +196,7 @@ public final class BucketAllocator {
      * Find a bucket to allocate a block
      * @return the offset in the IOEngine
      */
-    public long allocateBlock(int originalSize) {
+    public long allocateBlock(int blockSize) {
       Bucket b = null;
       if (freeBuckets.size() > 0) {
         // Use up an existing one first...
@@ -208,7 +209,9 @@ public final class BucketAllocator {
       if (b == null) return -1;
       long result = b.allocate();
       blockAllocated(b);
-      fragmentation.add(bucketSizes[sizeIndex] - originalSize);
+      if (blockSize < b.getItemAllocationSize()) {
+        fragmentationBytes += b.getItemAllocationSize() - blockSize;
+      }
       return result;
     }
 
@@ -244,7 +247,9 @@ public final class BucketAllocator {
       // else we shouldn't have anything to free...
       assert (!completelyFreeBuckets.containsKey(b));
       b.free(offset);
-      fragmentation.add(-1 * (bucketSizes[sizeIndex] - length));
+      if (length < b.getItemAllocationSize()) {
+        fragmentationBytes -= b.getItemAllocationSize() - length;
+      }
       if (!freeBuckets.containsKey(b)) freeBuckets.put(b, b);
       if (b.isCompletelyFree()) completelyFreeBuckets.put(b, b);
     }
@@ -268,7 +273,7 @@ public final class BucketAllocator {
       // non-trivial and worth tuning by choosing a more divisible object size.
       long wastedBytes = (bucketCapacity % bucketObjectSize) * (full + fillingBuckets);
       return new IndexStatistics(free, used, bucketObjectSize, full, completelyFreeBuckets.size(),
-        wastedBytes, fragmentation.sum());
+        wastedBytes, fragmentationBytes);
     }
 
     @Override
@@ -494,50 +499,117 @@ public final class BucketAllocator {
     return targetBucket.getItemAllocationSize();
   }
 
+  /**
+   * Statistics to give a glimpse into the distribution of BucketCache objects. Each configured
+   * bucket size, denoted by {@link BucketSizeInfo}, gets an IndexStatistic. A BucketSizeInfo
+   * allocates blocks of a configured size from claimed buckets. If you have a bucket size of 512k,
+   * the corresponding BucketSizeInfo will always allocate chunks of 512k at a time regardless of
+   * actual request.
+   * <p>
+   * Over time, as a BucketSizeInfo gets more allocations, it will claim more buckets from the total
+   * pool of completelyFreeBuckets. As blocks are freed from a BucketSizeInfo, those buckets may be
+   * returned to the completelyFreeBuckets pool.
+   * <p>
+   * The IndexStatistics help visualize how these buckets are currently distributed, through counts
+   * of items, bytes, and fullBuckets. Additionally, mismatches between block sizes and bucket sizes
+   * can manifest in inefficient cache usage. These typically manifest in three ways:
+   * <p>
+   * 1. Allocation failures, because block size is larger than max bucket size. These show up in
+   * logs and can be alleviated by adding larger bucket sizes if appropriate.<br>
+   * 2. Memory fragmentation, because blocks are typically smaller than the bucket size. See
+   * {@link #fragmentationBytes()} for details.<br>
+   * 3. Memory waste, because a bucket's itemSize is not a perfect divisor of bucketCapacity. see
+   * {@link #wastedBytes()} for details.<br>
+   */
   static class IndexStatistics {
     private long freeCount, usedCount, itemSize, totalCount, wastedBytes, fragmentationBytes;
     private int fullBuckets, completelyFreeBuckets;
 
+    /**
+     * How many more items can be allocated from the currently claimed blocks of this bucket size
+     */
     public long freeCount() {
       return freeCount;
     }
 
+    /**
+     * How many items are currently taking up space in this bucket size's buckets
+     */
     public long usedCount() {
       return usedCount;
     }
 
+    /**
+     * Combined {@link #freeCount()} + {@link #usedCount()}
+     */
     public long totalCount() {
       return totalCount;
     }
 
+    /**
+     * How many more bytes can be allocated from the currently claimed blocks of this bucket size
+     */
     public long freeBytes() {
       return freeCount * itemSize;
     }
 
+    /**
+     * How many bytes are currently taking up space in this bucket size's buckets Note: If your
+     * items are less than the bucket size of this bucket, the actual used bytes by items will be
+     * lower than this value. But since a bucket size can only allocate items of a single size, this
+     * value is the true number of used bytes. The difference will be counted in
+     * {@link #fragmentationBytes()}.
+     */
     public long usedBytes() {
       return usedCount * itemSize;
     }
 
+    /**
+     * Combined {@link #totalCount()} * {@link #itemSize()}
+     */
     public long totalBytes() {
       return totalCount * itemSize;
     }
 
+    /**
+     * This bucket size can only allocate items of this size, even if the requested allocation size
+     * is smaller. The rest goes towards {@link #fragmentationBytes()}.
+     */
     public long itemSize() {
       return itemSize;
     }
 
+    /**
+     * How many buckets have been completely filled by blocks for this bucket size. These buckets
+     * can't accept any more blocks unless some existing are freed.
+     */
     public int fullBuckets() {
       return fullBuckets;
     }
 
+    /**
+     * How many buckets are currently claimed by this bucket size but as yet totally unused. These
+     * buckets are available for reallocation to other bucket sizes if those fill up.
+     */
     public int completelyFreeBuckets() {
       return completelyFreeBuckets;
     }
 
+    /**
+     * If {@link #bucketCapacity} is not perfectly divisible by this {@link #itemSize()}, the
+     * remainder will be unusable by in buckets of this size. A high value here may be optimized by
+     * trying to choose bucket sizes which can better divide {@link #bucketCapacity}.
+     */
     public long wastedBytes() {
       return wastedBytes;
     }
 
+    /**
+     * Every time you allocate blocks in these buckets where the block size is less than the bucket
+     * size, fragmentation increases by that difference. You can reduce fragmentation by lowering
+     * the bucket size so that it is closer to the typical block size. This may have the consequence
+     * of bumping some blocks to the next larger bucket size, so experimentation may be needed.
+     */
     public long fragmentationBytes() {
       return fragmentationBytes;
     }

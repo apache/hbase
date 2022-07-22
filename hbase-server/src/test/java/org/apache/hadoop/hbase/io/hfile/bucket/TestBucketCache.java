@@ -190,6 +190,12 @@ public class TestBucketCache {
       BucketSizeInfo bucketSizeInfo = mAllocator.roundUpToBucketSizeInfo(blockSize);
       IndexStatistics indexStatistics = bucketSizeInfo.statistics();
       assertEquals("unexpected freeCount for " + bucketSizeInfo, 0, indexStatistics.freeCount());
+
+      // we know the block sizes above are multiples of 1024, but default bucket sizes give an
+      // additional 1024 on top of that so this counts towards fragmentation in our test
+      // real life may have worse fragmentation because blocks may not be perfectly sized to block
+      // size, given encoding/compression and large rows
+      assertEquals(1024 * indexStatistics.totalCount(), indexStatistics.fragmentationBytes());
     }
 
     mAllocator.logDebugStatistics();
