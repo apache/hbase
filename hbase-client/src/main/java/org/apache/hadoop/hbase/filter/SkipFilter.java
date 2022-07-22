@@ -105,6 +105,7 @@ public class SkipFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link SkipFilter}
    * @param pbBytes A pb serialized {@link SkipFilter} instance
    * @return An instance of {@link SkipFilter} made from <code>bytes</code> n * @see #toByteArray
    */
@@ -123,15 +124,17 @@ public class SkipFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof SkipFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof SkipFilter)) {
+      return false;
+    }
     SkipFilter other = (SkipFilter) o;
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }

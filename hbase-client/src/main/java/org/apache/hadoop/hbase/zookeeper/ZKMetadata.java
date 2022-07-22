@@ -54,7 +54,7 @@ public class ZKMetadata {
     pos = Bytes.putInt(newData, pos, idLength);
     pos = Bytes.putBytes(newData, pos, id, 0, id.length);
     pos = Bytes.putBytes(newData, pos, salt, 0, salt.length);
-    pos = Bytes.putBytes(newData, pos, data, 0, data.length);
+    Bytes.putBytes(newData, pos, data, 0, data.length);
     return newData;
   }
 

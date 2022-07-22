@@ -88,6 +88,7 @@ public class ColumnCountGetFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link ColumnCountGetFilter}
    * @param pbBytes A pb serialized {@link ColumnCountGetFilter} instance
    * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
    * @see #toByteArray
@@ -104,15 +105,17 @@ public class ColumnCountGetFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ColumnCountGetFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ColumnCountGetFilter)) {
+      return false;
+    }
     ColumnCountGetFilter other = (ColumnCountGetFilter) o;
     return this.getLimit() == other.getLimit();
   }

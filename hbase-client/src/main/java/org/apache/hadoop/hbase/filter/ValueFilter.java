@@ -78,6 +78,7 @@ public class ValueFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of {@link ValueFilter}
    * @param pbBytes A pb serialized {@link ValueFilter} instance
    * @return An instance of {@link ValueFilter} made from <code>bytes</code> n * @see #toByteArray
    */
@@ -102,14 +103,17 @@ public class ValueFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ValueFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ValueFilter)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(o);
   }
 

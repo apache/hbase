@@ -51,6 +51,7 @@ public class ClusterId {
   }
 
   /**
+   * Parse the serialized representation of the {@link ClusterId}
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
    * @return An instance of {@link ClusterId} made from <code>bytes</code> n * @see #toByteArray()
    */

@@ -168,10 +168,9 @@ public class ColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Parse protobuf bytes to a ColumnValueFilter
-   * @param pbBytes pbBytes
-   * @return a ColumnValueFilter
-   * @throws DeserializationException deserialization exception
+   * Parse a serialized representation of {@link ColumnValueFilter}
+   * @param pbBytes A pb serialized {@link ColumnValueFilter} instance
+   * @return An instance of {@link ColumnValueFilter} made from <code>bytes</code>
    */
   public static ColumnValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnValueFilter proto;
@@ -198,6 +197,10 @@ public class ColumnValueFilter extends FilterBase {
     return convert().toByteArray();
   }
 
+  /**
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
+   */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) {
@@ -205,7 +208,6 @@ public class ColumnValueFilter extends FilterBase {
     } else if (!(o instanceof ColumnValueFilter)) {
       return false;
     }
-
     ColumnValueFilter other = (ColumnValueFilter) o;
     return Bytes.equals(this.getFamily(), other.getFamily())
       && Bytes.equals(this.getQualifier(), other.getQualifier())

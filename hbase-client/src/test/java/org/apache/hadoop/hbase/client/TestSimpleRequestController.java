@@ -102,6 +102,7 @@ public class TestSimpleRequestController {
       new SimpleRequestController(conf);
       fail("The " + key + " must be bigger than zero");
     } catch (IllegalArgumentException e) {
+      // Expected
     }
   }
 
@@ -115,6 +116,7 @@ public class TestSimpleRequestController {
   }
 
   @Test
+  @SuppressWarnings("ArrayAsKeyOfSetOrMap")
   public void testTaskCheckerHost() throws IOException {
     final int maxTotalConcurrentTasks = 100;
     final int maxConcurrentTasksPerServer = 2;
@@ -277,6 +279,7 @@ public class TestSimpleRequestController {
   }
 
   @Test
+  @SuppressWarnings("ArrayAsKeyOfSetOrMap")
   public void testTaskCountChecker() throws InterruptedIOException {
     long heapSizeOfRow = 12345;
     int maxTotalConcurrentTasks = 100;
@@ -358,10 +361,8 @@ public class TestSimpleRequestController {
       try {
         barrier.await();
         controller.waitForMaximumCurrentTasks(max.get(), 123, 1, null);
-      } catch (InterruptedIOException e) {
+      } catch (InterruptedIOException | InterruptedException | BrokenBarrierException e) {
         Assert.fail(e.getMessage());
-      } catch (InterruptedException | BrokenBarrierException e) {
-        e.printStackTrace();
       }
     };
     // First test that our runnable thread only exits when tasks is zero.

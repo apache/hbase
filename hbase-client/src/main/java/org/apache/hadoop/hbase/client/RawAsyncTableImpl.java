@@ -776,7 +776,7 @@ class RawAsyncTableImpl implements AsyncTable<AdvancedScanResultConsumer> {
       int c = Bytes.compareTo(endKey, region.getEndKey());
       // 1. if the region contains endKey
       // 2. endKey is equal to the region's endKey and we do not want to include endKey.
-      return c < 0 || c == 0 && !endKeyInclusive;
+      return c < 0 || (c == 0 && !endKeyInclusive);
     }
   }
 

@@ -710,9 +710,9 @@ public class Scan extends Query {
   }
 
   /**
-   * @return true when the constructor of this scan understands that the results they will see may
-   *         only represent a partial portion of a row. The entire row would be retrieved by
-   *         subsequent calls to {@link ResultScanner#next()}
+   * Returns true when the constructor of this scan understands that the results they will see may
+   * only represent a partial portion of a row. The entire row would be retrieved by subsequent
+   * calls to {@link ResultScanner#next()}
    */
   public boolean getAllowPartialResults() {
     return allowPartialResults;

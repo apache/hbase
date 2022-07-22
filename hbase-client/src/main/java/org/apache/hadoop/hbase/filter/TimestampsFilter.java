@@ -167,6 +167,7 @@ public class TimestampsFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link TimestampsFilter}
    * @param pbBytes A pb serialized {@link TimestampsFilter} instance
    * @return An instance of {@link TimestampsFilter} made from <code>bytes</code>
    * @see #toByteArray
@@ -183,15 +184,17 @@ public class TimestampsFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof TimestampsFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof TimestampsFilter)) {
+      return false;
+    }
     TimestampsFilter other = (TimestampsFilter) o;
     return this.getTimestamps().equals(other.getTimestamps());
   }

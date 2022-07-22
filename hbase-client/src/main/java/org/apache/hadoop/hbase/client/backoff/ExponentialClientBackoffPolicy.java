@@ -21,8 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
@@ -32,8 +30,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ExponentialClientBackoffPolicy.class);
 
   private static final long ONE_MINUTE = 60 * 1000;
   public static final long DEFAULT_MAX_BACKOFF = 5 * ONE_MINUTE;

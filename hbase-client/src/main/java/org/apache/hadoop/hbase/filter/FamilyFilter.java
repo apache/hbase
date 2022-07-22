@@ -82,6 +82,7 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
+   * Parse the serialized representation of {@link FamilyFilter}
    * @param pbBytes A pb serialized {@link FamilyFilter} instance
    * @return An instance of {@link FamilyFilter} made from <code>bytes</code> n * @see #toByteArray
    */
@@ -106,14 +107,17 @@ public class FamilyFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FamilyFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FamilyFilter)) {
+      return false;
+    }
     FamilyFilter other = (FamilyFilter) o;
     return super.areSerializedFieldsEqual(other);
   }

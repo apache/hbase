@@ -67,13 +67,13 @@ public final class ClusterMetricsBuilder {
           .collect(Collectors.toList()))
         .addAllTableRegionStatesCount(metrics.getTableRegionStatesCount().entrySet().stream()
           .map(status -> ClusterStatusProtos.TableRegionStatesCount.newBuilder()
-            .setTableName(ProtobufUtil.toProtoTableName((status.getKey())))
+            .setTableName(ProtobufUtil.toProtoTableName(status.getKey()))
             .setRegionStatesCount(ProtobufUtil.toTableRegionStatesCount(status.getValue())).build())
           .collect(Collectors.toList()))
         .addAllDecommissionedServers(metrics.getDecommissionedServerNames().stream()
           .map(ProtobufUtil::toServerName).collect(Collectors.toList()));
     if (metrics.getMasterName() != null) {
-      builder.setMaster(ProtobufUtil.toServerName((metrics.getMasterName())));
+      builder.setMaster(ProtobufUtil.toServerName(metrics.getMasterName()));
     }
     if (metrics.getMasterTasks() != null) {
       builder.addAllMasterTasks(metrics.getMasterTasks().stream()

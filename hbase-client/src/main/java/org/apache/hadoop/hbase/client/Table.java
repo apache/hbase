@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -302,11 +301,13 @@ public interface Table extends Closeable {
   interface CheckAndMutateBuilder {
 
     /**
+     * Specify a column qualifer
      * @param qualifier column qualifier to check.
      */
     CheckAndMutateBuilder qualifier(byte[] qualifier);
 
     /**
+     * Specify a timerange
      * @param timeRange timeRange to check
      */
     CheckAndMutateBuilder timeRange(TimeRange timeRange);
@@ -325,24 +326,28 @@ public interface Table extends Closeable {
     }
 
     /**
+     * Check for match.
      * @param compareOp comparison operator to use
      * @param value     the expected value
      */
     CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
 
     /**
+     * Specify a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise.
      */
     boolean thenPut(Put put) throws IOException;
 
     /**
+     * Specify a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise.
      */
     boolean thenDelete(Delete delete) throws IOException;
 
     /**
+     * Specify a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise.
      */
@@ -379,23 +384,27 @@ public interface Table extends Closeable {
   interface CheckAndMutateWithFilterBuilder {
 
     /**
+     * Specify a timerange.
      * @param timeRange timeRange to check
      */
     CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange);
 
     /**
+     * Specify a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise.
      */
     boolean thenPut(Put put) throws IOException;
 
     /**
+     * Specify a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise.
      */
     boolean thenDelete(Delete delete) throws IOException;
 
     /**
+     * Specify a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise.
      */
@@ -660,7 +669,7 @@ public interface Table extends Closeable {
     final Map<byte[], R> results =
       Collections.synchronizedMap(new TreeMap<byte[], R>(Bytes.BYTES_COMPARATOR));
     batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
-      new Callback<R>() {
+      new Batch.Callback<R>() {
         @Override
         public void update(byte[] region, byte[] row, R result) {
           if (region != null) {

@@ -53,8 +53,8 @@ public interface RegionMetrics {
   public long getCpRequestCount();
 
   /**
-   * @return the number of write requests and read requests and coprocessor service requests made to
-   *         region
+   * Returns the number of write requests and read requests and coprocessor service requests made to
+   * region
    */
   default long getRequestCount() {
     return getReadRequestCount() + getWriteRequestCount() + getCpRequestCount();
@@ -113,8 +113,8 @@ public interface RegionMetrics {
   int getStoreRefCount();
 
   /**
-   * @return the max reference count for any store file among all compacted stores files of this
-   *         region
+   * Returns the max reference count for any store file among all compacted stores files of this
+   * region
    */
   int getMaxCompactedStoreFileRefCount();
 

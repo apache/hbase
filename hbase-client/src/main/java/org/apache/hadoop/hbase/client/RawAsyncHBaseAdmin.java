@@ -502,11 +502,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  @FunctionalInterface
-  private interface TableOperator {
-    CompletableFuture<Void> operate(TableName table);
-  }
-
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
@@ -1559,11 +1554,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
-        .action(((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
-          controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
-          (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null)))
-        .call(), (ret, err2) -> {
+      addListener(
+        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+          .action((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
+            controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
+            (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null))
+          .call(),
+        (ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
           } else {
@@ -1584,10 +1581,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       addListener(
         this.<Void> newMasterCaller().priority(regionInfo.getTable())
-          .action(((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
+          .action((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
             Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
-              (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
+              (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null))
           .call(),
         (ret, err2) -> {
           if (err2 != null) {
@@ -1608,14 +1605,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
-          .action(((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse,
-            Void> call(controller, stub,
-              RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
-              (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null)))
-          .call(),
-        (ret, err2) -> {
+      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        .action((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
+          controller, stub, RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
+          (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null))
+        .call(), (ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
           } else {
@@ -2236,7 +2230,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       listSnapshotsFuture = getCompletedSnapshots(tableNamePattern, snapshotNamePattern);
     }
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(listSnapshotsFuture, ((snapshotDescriptions, err) -> {
+    addListener(listSnapshotsFuture, (snapshotDescriptions, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;
@@ -2253,7 +2247,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.complete(v);
           }
         });
-    }));
+    });
     return future;
   }
 
@@ -4010,10 +4004,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> addRSGroup(String groupName) {
     return this.<Void> newMasterCaller()
-      .action(
-        ((controller, stub) -> this.<AddRSGroupRequest, AddRSGroupResponse, Void> call(controller,
-          stub, AddRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
-          (s, c, req, done) -> s.addRSGroup(c, req, done), resp -> null)))
+      .action((controller, stub) -> this.<AddRSGroupRequest, AddRSGroupResponse, Void> call(
+        controller, stub, AddRSGroupRequest.newBuilder().setRSGroupName(groupName).build(),
+        (s, c, req, done) -> s.addRSGroup(c, req, done), resp -> null))
       .call();
   }
 
@@ -4081,9 +4074,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Boolean> clearSlowLogsResponses(final ServerName serverName) {
     return this.<Boolean> newAdminCaller()
-      .action(((controller, stub) -> this.adminCall(controller, stub,
+      .action((controller, stub) -> this.adminCall(controller, stub,
         RequestConverter.buildClearSlowLogResponseRequest(),
-        AdminService.Interface::clearSlowLogsResponses, ProtobufUtil::toClearSlowLogPayload)))
+        AdminService.Interface::clearSlowLogsResponses, ProtobufUtil::toClearSlowLogPayload))
       .serverName(serverName).call();
   }
 
@@ -4124,15 +4117,14 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(Address hostPort) {
     return this.<RSGroupInfo> newMasterCaller()
-      .action(
-        ((controller, stub) -> this.<GetRSGroupInfoOfServerRequest, GetRSGroupInfoOfServerResponse,
-          RSGroupInfo> call(controller, stub, GetRSGroupInfoOfServerRequest.newBuilder()
+      .action((controller, stub) -> this.<GetRSGroupInfoOfServerRequest,
+        GetRSGroupInfoOfServerResponse, RSGroupInfo> call(controller, stub,
+          GetRSGroupInfoOfServerRequest.newBuilder()
             .setServer(HBaseProtos.ServerName.newBuilder().setHostName(hostPort.getHostname())
               .setPort(hostPort.getPort()).build())
-            .build(), (s, c, req, done) -> s.getRSGroupInfoOfServer(c, req, done),
-            resp -> resp.hasRSGroupInfo()
-              ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo())
-              : null)))
+            .build(),
+          (s, c, req, done) -> s.getRSGroupInfoOfServer(c, req, done),
+          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null))
       .call();
   }
 
@@ -4160,7 +4152,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         }
       });
     }
-    addListener(listTableDescriptors(new ArrayList<>(tables)), ((tableDescriptions, err) -> {
+    addListener(listTableDescriptors(new ArrayList<>(tables)), (tableDescriptions, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;
@@ -4184,40 +4176,40 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.complete(v);
           }
         });
-    }));
+    });
     return future;
   }
 
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(TableName table) {
     return this.<RSGroupInfo> newMasterCaller()
-      .action(((controller, stub) -> this.<GetRSGroupInfoOfTableRequest,
+      .action((controller, stub) -> this.<GetRSGroupInfoOfTableRequest,
         GetRSGroupInfoOfTableResponse, RSGroupInfo> call(controller, stub,
           GetRSGroupInfoOfTableRequest.newBuilder()
             .setTableName(ProtobufUtil.toProtoTableName(table)).build(),
           (s, c, req, done) -> s.getRSGroupInfoOfTable(c, req, done),
-          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
+          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null))
       .call();
   }
 
   @Override
   public CompletableFuture<RSGroupInfo> getRSGroup(String groupName) {
     return this.<RSGroupInfo> newMasterCaller()
-      .action(((controller, stub) -> this.<GetRSGroupInfoRequest, GetRSGroupInfoResponse,
+      .action((controller, stub) -> this.<GetRSGroupInfoRequest, GetRSGroupInfoResponse,
         RSGroupInfo> call(controller, stub,
           GetRSGroupInfoRequest.newBuilder().setRSGroupName(groupName).build(),
           (s, c, req, done) -> s.getRSGroupInfo(c, req, done),
-          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null)))
+          resp -> resp.hasRSGroupInfo() ? ProtobufUtil.toGroupInfo(resp.getRSGroupInfo()) : null))
       .call();
   }
 
   @Override
   public CompletableFuture<Void> renameRSGroup(String oldName, String newName) {
     return this.<Void> newMasterCaller()
-      .action(((controller, stub) -> this.<RenameRSGroupRequest, RenameRSGroupResponse, Void> call(
+      .action((controller, stub) -> this.<RenameRSGroupRequest, RenameRSGroupResponse, Void> call(
         controller, stub, RenameRSGroupRequest.newBuilder().setOldRsgroupName(oldName)
           .setNewRsgroupName(newName).build(),
-        (s, c, req, done) -> s.renameRSGroup(c, req, done), resp -> null)))
+        (s, c, req, done) -> s.renameRSGroup(c, req, done), resp -> null))
       .call();
   }
 
@@ -4231,9 +4223,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         NameStringPair.newBuilder().setName(e.getKey()).setValue(e.getValue()).build()));
     }
     return this.<Void> newMasterCaller()
-      .action(((controller, stub) -> this.<UpdateRSGroupConfigRequest, UpdateRSGroupConfigResponse,
+      .action((controller, stub) -> this.<UpdateRSGroupConfigRequest, UpdateRSGroupConfigResponse,
         Void> call(controller, stub, request.build(),
-          (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null)))
+          (s, c, req, done) -> s.updateRSGroupConfig(c, req, done), resp -> null))
       .call();
   }
 
@@ -4287,9 +4279,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> flushMasterStore() {
     FlushMasterStoreRequest.Builder request = FlushMasterStoreRequest.newBuilder();
     return this.<Void> newMasterCaller()
-      .action(((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
+      .action((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
         Void> call(controller, stub, request.build(),
-          (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null)))
+          (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
   }
 }

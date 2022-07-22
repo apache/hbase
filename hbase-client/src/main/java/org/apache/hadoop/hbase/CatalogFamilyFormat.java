@@ -349,8 +349,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
-   *         match the regex 'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
+   * match the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static Map<String, RegionInfo> getMergeRegionsWithName(Cell[] cells) {
@@ -376,8 +376,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match the regex
-   *         'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized regioninfo values taken from column values that match the regex
+   * 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static List<RegionInfo> getMergeRegions(Cell[] cells) {
@@ -386,8 +386,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return True if any merge regions present in <code>cells</code>; i.e. the column in
-   *         <code>cell</code> matches the regex 'info:merge.*'.
+   * Returns True if any merge regions present in <code>cells</code>; i.e. the column in
+   * <code>cell</code> matches the regex 'info:merge.*'.
    */
   public static boolean hasMergeRegions(Cell[] cells) {
     for (Cell cell : cells) {

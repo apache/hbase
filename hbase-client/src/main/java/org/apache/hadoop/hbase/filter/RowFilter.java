@@ -96,6 +96,7 @@ public class RowFilter extends CompareFilter {
   }
 
   /**
+   * Parse a serialized representation of {@link RowFilter}
    * @param pbBytes A pb serialized {@link RowFilter} instance
    * @return An instance of {@link RowFilter} made from <code>bytes</code> n * @see #toByteArray
    */
@@ -120,14 +121,17 @@ public class RowFilter extends CompareFilter {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof RowFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof RowFilter)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(o);
   }
 

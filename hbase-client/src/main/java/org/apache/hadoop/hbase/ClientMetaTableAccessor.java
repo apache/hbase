@@ -59,6 +59,7 @@ public final class ClientMetaTableAccessor {
   }
 
   @InterfaceAudience.Private
+  @SuppressWarnings("ImmutableEnumChecker")
   public enum QueryType {
     ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
     REGION(HConstants.CATALOG_FAMILY),
@@ -100,11 +101,7 @@ public final class ClientMetaTableAccessor {
     return future;
   }
 
-  /**
-   * Returns the HRegionLocation from meta for the given region n * @param regionName region we're
-   * looking for
-   * @return HRegionLocation for the given region
-   */
+  /** Returns the HRegionLocation from meta for the given region */
   public static CompletableFuture<Optional<HRegionLocation>>
     getRegionLocation(AsyncTable<?> metaTable, byte[] regionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
@@ -126,11 +123,7 @@ public final class ClientMetaTableAccessor {
     return future;
   }
 
-  /**
-   * Returns the HRegionLocation from meta for the given encoded region name n * @param
-   * encodedRegionName region we're looking for
-   * @return HRegionLocation for the given region
-   */
+  /** Returns the HRegionLocation from meta for the given encoded region name */
   public static CompletableFuture<Optional<HRegionLocation>>
     getRegionLocationWithEncodedName(AsyncTable<?> metaTable, byte[] encodedRegionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
@@ -167,8 +160,9 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Used to get all region locations for the specific table. n * @param tableName table we're
-   * looking for, can be null for getting all regions
+   * Used to get all region locations for the specific table
+   * @param metaTable scanner over meta table
+   * @param tableName table we're looking for, can be null for getting all regions
    * @return the list of region locations. The return value will be wrapped by a
    *         {@link CompletableFuture}.
    */
@@ -191,8 +185,9 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Used to get table regions' info and server. n * @param tableName table we're looking for, can
-   * be null for getting all regions
+   * Used to get table regions' info and server.
+   * @param metaTable                   scanner over meta table
+   * @param tableName                   table we're looking for, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
    * @return the list of regioninfos and server. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -221,9 +216,11 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Performs a scan of META table for given table. n * @param tableName table withing we scan
-   * @param type    scanned part of meta
-   * @param visitor Visitor invoked against each row
+   * Performs a scan of META table for given table.
+   * @param metaTable scanner over meta table
+   * @param tableName table within we scan
+   * @param type      scanned part of meta
+   * @param visitor   Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     TableName tableName, QueryType type, final Visitor visitor) {
@@ -232,11 +229,13 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Performs a scan of META table for given table. n * @param startRow Where to start the scan
-   * @param stopRow Where to stop the scan
-   * @param type    scanned part of meta
-   * @param maxRows maximum rows to return
-   * @param visitor Visitor invoked against each row
+   * Performs a scan of META table for given table.
+   * @param metaTable scanner over meta table
+   * @param startRow  Where to start the scan
+   * @param stopRow   Where to stop the scan
+   * @param type      scanned part of meta
+   * @param maxRows   maximum rows to return
+   * @param visitor   Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
@@ -456,19 +455,12 @@ public final class ClientMetaTableAccessor {
     return scan;
   }
 
-  /**
-   * Returns an HRegionLocationList extracted from the result.
-   * @return an HRegionLocationList containing all locations for the region range or null if we
-   *         can't deserialize the result.
-   */
+  /** Returns an HRegionLocationList extracted from the result. */
   private static Optional<RegionLocations> getRegionLocations(Result r) {
     return Optional.ofNullable(CatalogFamilyFormat.getRegionLocations(r));
   }
 
-  /**
-   * @param tableName table we're working with
-   * @return start row for scanning META according to query type
-   */
+  /** Returns start row for scanning META according to query type */
   public static byte[] getTableStartRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
       return null;
@@ -490,10 +482,7 @@ public final class ClientMetaTableAccessor {
     }
   }
 
-  /**
-   * @param tableName table we're working with
-   * @return stop row for scanning META according to query type
-   */
+  /** Returns stop row for scanning META according to query type */
   public static byte[] getTableStopRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
       return null;

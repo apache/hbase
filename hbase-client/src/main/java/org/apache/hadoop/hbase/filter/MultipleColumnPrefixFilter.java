@@ -128,9 +128,10 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link MultipleColumnPrefixFilter}
    * @param pbBytes A pb serialized {@link MultipleColumnPrefixFilter} instance
-   * @return An instance of {@link MultipleColumnPrefixFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link MultipleColumnPrefixFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static MultipleColumnPrefixFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -150,15 +151,17 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof MultipleColumnPrefixFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof MultipleColumnPrefixFilter)) {
+      return false;
+    }
     MultipleColumnPrefixFilter other = (MultipleColumnPrefixFilter) o;
     return this.sortedPrefixes.equals(other.sortedPrefixes);
   }

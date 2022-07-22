@@ -40,11 +40,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
  * {@link ColumnInterpreter#castToReturnType(Object)} which takes a &lt;T&gt; type and returns a
  * &lt;S&gt; type. The AggregateIm&gt;lementation uses PB messages to initialize the user's
  * ColumnInterpreter implementation, and for sending the responses back to AggregationClient.
- * @param T Cell value data type
- * @param S Promoted data type
- * @param P PB message that is used to transport initializer specific bytes
- * @param Q PB message that is used to transport Cell (&lt;T&gt;) instance
- * @param R PB message that is used to transport Promoted (&lt;S&gt;) instance
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving

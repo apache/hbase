@@ -141,11 +141,11 @@ public class TablePermission extends Permission {
       return false;
     }
 
-    if (family != null && !(CellUtil.matchingFamily(kv, family))) {
+    if (family != null && !CellUtil.matchingFamily(kv, family)) {
       return false;
     }
 
-    if (qualifier != null && !(CellUtil.matchingQualifier(kv, qualifier))) {
+    if (qualifier != null && !CellUtil.matchingQualifier(kv, qualifier)) {
       return false;
     }
 

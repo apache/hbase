@@ -67,7 +67,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
@@ -181,6 +180,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             try {
               BlockingRpcConnection.this.wait();
             } catch (InterruptedException e) {
+              // Restore interrupt status
+              Thread.currentThread().interrupt();
             }
             // check if we need to quit, so continue the main loop instead of fallback.
             continue;
@@ -333,6 +334,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       try {
         wait(Math.min(this.rpcClient.minIdleTimeBeforeClose, 1000));
       } catch (InterruptedException e) {
+        // Restore interrupt status
+        Thread.currentThread().interrupt();
       }
     }
   }
@@ -685,7 +688,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       } else {
         Message value = null;
         if (call.responseDefaultType != null) {
-          Builder builder = call.responseDefaultType.newBuilderForType();
+          Message.Builder builder = call.responseDefaultType.newBuilderForType();
           ProtobufUtil.mergeDelimitedFrom(builder, in);
           value = builder.build();
         }

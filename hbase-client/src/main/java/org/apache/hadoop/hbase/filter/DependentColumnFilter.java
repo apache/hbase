@@ -199,9 +199,10 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
+   * Parse a seralized representation of {@link DependentColumnFilter}
    * @param pbBytes A pb serialized {@link DependentColumnFilter} instance
-   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static DependentColumnFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -228,16 +229,19 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
    * corresponding fields in other. Used for testing.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof DependentColumnFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof DependentColumnFilter)) {
+      return false;
+    }
     DependentColumnFilter other = (DependentColumnFilter) o;
     return other != null && super.areSerializedFieldsEqual(other)
       && Bytes.equals(this.getFamily(), other.getFamily())

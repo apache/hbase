@@ -270,11 +270,11 @@ public class FilterListWithAND extends FilterListBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (!(obj instanceof FilterListWithAND)) {
-      return false;
-    }
     if (this == obj) {
       return true;
+    }
+    if (!(obj instanceof FilterListWithAND)) {
+      return false;
     }
     FilterListWithAND f = (FilterListWithAND) obj;
     return this.filters.equals(f.getFilters()) && this.seekHintFilters.equals(f.seekHintFilters);
