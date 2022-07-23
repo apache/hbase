@@ -132,9 +132,8 @@ public class TestWALSyncTimeoutException {
   }
 
   private HRegionForTest createTable() throws Exception {
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     HTU.getAdmin().createTable(tableDescriptor);
     HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(0);
     return (HRegionForTest) rs.getRegions(tableName).get(0);
@@ -152,7 +151,6 @@ public class TestWALSyncTimeoutException {
       RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
-
 
     public RegionServerServices getRSServices() {
       return this.rsServices;
