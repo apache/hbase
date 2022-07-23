@@ -24,9 +24,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Thrown when {@link WAL#sync} timeout.
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Private
 public class WALSyncTimeoutIOException extends HBaseIOException {
+
+  private static final long serialVersionUID = 5067699288291906985L;
 
   public WALSyncTimeoutIOException() {
     super();
