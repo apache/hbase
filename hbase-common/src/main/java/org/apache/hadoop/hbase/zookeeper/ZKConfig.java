@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 import org.apache.commons.validator.routines.InetAddressValidator;
@@ -25,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
@@ -192,27 +195,28 @@ public final class ZKConfig {
    * the described order n
    */
   public static ZKClusterKey transformClusterKey(String key) throws IOException {
-    String[] parts = key.split(":");
+    List<String> parts = Splitter.on(':').splitToList(key);
+    String[] partsArray = parts.toArray(new String[parts.size()]);
 
-    if (parts.length == 3) {
-      if (!parts[2].matches("/.*[^/]")) {
+    if (partsArray.length == 3) {
+      if (!partsArray[2].matches("/.*[^/]")) {
         throw new IOException("Cluster key passed " + key + " is invalid, the format should be:"
           + HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_CLIENT_PORT + ":"
           + HConstants.ZOOKEEPER_ZNODE_PARENT);
       }
-      return new ZKClusterKey(parts[0], Integer.parseInt(parts[1]), parts[2]);
+      return new ZKClusterKey(partsArray[0], Integer.parseInt(partsArray[1]), partsArray[2]);
     }
 
-    if (parts.length > 3) {
+    if (partsArray.length > 3) {
       // The quorum could contain client port in server:clientport format, try to transform more.
-      String zNodeParent = parts[parts.length - 1];
+      String zNodeParent = partsArray[partsArray.length - 1];
       if (!zNodeParent.matches("/.*[^/]")) {
         throw new IOException("Cluster key passed " + key + " is invalid, the format should be:"
           + HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_CLIENT_PORT + ":"
           + HConstants.ZOOKEEPER_ZNODE_PARENT);
       }
 
-      String clientPort = parts[parts.length - 2];
+      String clientPort = partsArray[partsArray.length - 2];
 
       // The first part length is the total length minus the lengths of other parts and minus 2 ":"
       int endQuorumIndex = key.length() - zNodeParent.length() - clientPort.length() - 2;
@@ -222,7 +226,7 @@ public final class ZKConfig {
       // The common case is that every server has its own client port specified - this means
       // that (total parts - the ZNodeParent part - the ClientPort part) is equal to
       // (the number of "," + 1) - "+ 1" because the last server has no ",".
-      if ((parts.length - 2) == (serverHosts.length + 1)) {
+      if ((partsArray.length - 2) == (serverHosts.length + 1)) {
         return new ZKClusterKey(quorumStringInput, Integer.parseInt(clientPort), zNodeParent);
       }
 

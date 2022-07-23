@@ -73,12 +73,10 @@ public class TestTableName {
       if (this == o) {
         return true;
       }
-      if (o == null || getClass() != o.getClass()) {
+      if (!(o instanceof Names)) {
         return false;
       }
-
       Names names = (Names) o;
-
       if (!ns.equals(names.ns)) {
         return false;
       }

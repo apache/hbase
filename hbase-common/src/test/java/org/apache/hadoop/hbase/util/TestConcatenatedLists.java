@@ -114,7 +114,6 @@ public class TestConcatenatedLists {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testManyMany() {
     ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addAllSublists(Arrays.asList(Arrays.asList(0L, 1L)));
@@ -148,6 +147,7 @@ public class TestConcatenatedLists {
       iter.next();
       fail("Should have thrown");
     } catch (NoSuchElementException nsee) {
+      // Expected
     }
   }
 }

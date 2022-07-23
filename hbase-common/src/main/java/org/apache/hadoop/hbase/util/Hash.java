@@ -94,7 +94,6 @@ public abstract class Hash {
 
   /**
    * Calculate a hash using bytes from HashKey and the provided seed value.
-   * @param <T>
    * @param hashKey key to extract the hash
    * @param initval the seed value
    * @return hash value

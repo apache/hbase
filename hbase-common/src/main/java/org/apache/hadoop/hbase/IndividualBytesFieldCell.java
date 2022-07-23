@@ -151,7 +151,7 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
     // If row is null or rLength is invalid, the constructor will reject it, by
     // {@link KeyValue#checkParameters()}, so it is safe to call rLength and make the type
     // conversion.
-    return (short) (rLength);
+    return (short) rLength;
   }
 
   // 2) Family
@@ -170,7 +170,7 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
   public byte getFamilyLength() {
     // If fLength is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
     // so it is safe to make the type conversion.
-    return (byte) (fLength);
+    return (byte) fLength;
   }
 
   // 3) Qualifier

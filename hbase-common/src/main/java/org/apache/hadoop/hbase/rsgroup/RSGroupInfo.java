@@ -64,6 +64,7 @@ public class RSGroupInfo {
   }
 
   /**
+   * Constructor
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information for a table will be
    *             stored in the configuration of a table so this will be removed.
    */
@@ -79,52 +80,37 @@ public class RSGroupInfo {
     this(src.name, src.servers, src.tables);
   }
 
-  /**
-   * Get group name.
-   */
+  /** Get group name. */
   public String getName() {
     return name;
   }
 
-  /**
-   * Adds the given server to the group.
-   */
+  /** Adds the given server to the group. */
   public void addServer(Address hostPort) {
     servers.add(hostPort);
   }
 
-  /**
-   * Adds the given servers to the group.
-   */
+  /** Adds the given servers to the group. */
   public void addAllServers(Collection<Address> hostPort) {
     servers.addAll(hostPort);
   }
 
-  /**
-   * @param hostPort hostPort of the server
-   * @return true, if a server with hostPort is found
-   */
+  /** Returns true if a server with hostPort is found */
   public boolean containsServer(Address hostPort) {
     return servers.contains(hostPort);
   }
 
-  /**
-   * Get list of servers.
-   */
+  /** Get list of servers. */
   public Set<Address> getServers() {
     return servers;
   }
 
-  /**
-   * Remove given server from the group.
-   */
+  /** Remove given server from the group. */
   public boolean removeServer(Address hostPort) {
     return servers.remove(hostPort);
   }
 
-  /**
-   * Getter for fetching an unmodifiable {@link #configuration} map.
-   */
+  /** Getter for fetching an unmodifiable {@link #configuration} map. */
   public Map<String, String> getConfiguration() {
     // shallow pointer copy
     return Collections.unmodifiableMap(configuration);
@@ -139,9 +125,7 @@ public class RSGroupInfo {
     configuration.put(key, Objects.requireNonNull(value));
   }
 
-  /**
-   * Remove a config setting represented by the key from the {@link #configuration} map
-   */
+  /** Remove a config setting represented by the key from the {@link #configuration} map */
   public void removeConfiguration(final String key) {
     configuration.remove(key);
   }
@@ -157,6 +141,7 @@ public class RSGroupInfo {
   }
 
   /**
+   * Add a table
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
    */
@@ -166,6 +151,7 @@ public class RSGroupInfo {
   }
 
   /**
+   * Add a collection of tables
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
    */
@@ -175,6 +161,7 @@ public class RSGroupInfo {
   }
 
   /**
+   * Check if the group contains a table
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
    */
@@ -184,6 +171,7 @@ public class RSGroupInfo {
   }
 
   /**
+   * Remove a table
    * @deprecated Since 3.0.0, will be removed in 4.0.0. The rsgroup information will be stored in
    *             the configuration of a table so this will be removed.
    */
@@ -215,12 +203,10 @@ public class RSGroupInfo {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof RSGroupInfo)) {
       return false;
     }
-
     RSGroupInfo rsGroupInfo = (RSGroupInfo) o;
-
     if (!name.equals(rsGroupInfo.name)) {
       return false;
     }
@@ -233,7 +219,6 @@ public class RSGroupInfo {
     if (!configuration.equals(rsGroupInfo.configuration)) {
       return false;
     }
-
     return true;
   }
 

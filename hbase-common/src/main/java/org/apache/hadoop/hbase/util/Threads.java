@@ -101,9 +101,7 @@ public class Threads {
     }
   }
 
-  /**
-   * @param t Waits on the passed thread to die dumping a threaddump every minute while its up. n
-   */
+  /** Waits on the passed thread to die dumping a threaddump every minute while its up. */
   public static void threadDumpingIsAlive(final Thread t) throws InterruptedException {
     if (t == null) {
       return;

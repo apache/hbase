@@ -21,7 +21,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -157,7 +156,7 @@ public class TestByteBufferUtils {
   static {
     SortedSet<Long> a = new TreeSet<>();
     for (int i = 0; i <= 63; ++i) {
-      long v = (-1L) << i;
+      long v = -1L << i;
       assertTrue(v < 0);
       addNumber(a, v);
       v = (1L << i) - 1;
@@ -202,7 +201,7 @@ public class TestByteBufferUtils {
    * Test copying to stream from buffer.
    */
   @Test
-  public void testMoveBufferToStream() {
+  public void testMoveBufferToStream() throws IOException {
     final int arrayOffset = 7;
     final int initialPosition = 10;
     final int endPadding = 5;
@@ -214,11 +213,7 @@ public class TestByteBufferUtils {
     assertEquals(0, buffer.position());
     buffer.position(initialPosition);
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    try {
-      ByteBufferUtils.moveBufferToStream(bos, buffer, array.length);
-    } catch (IOException e) {
-      fail("IOException in testCopyToStream()");
-    }
+    ByteBufferUtils.moveBufferToStream(bos, buffer, array.length);
     assertArrayEquals(array, bos.toByteArray());
     assertEquals(initialPosition + array.length, buffer.position());
   }
@@ -356,14 +351,10 @@ public class TestByteBufferUtils {
   // Utility methods invoked from test methods
 
   private void testCompressedInt(int value) throws IOException {
-    int parsedValue = 0;
-
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     ByteBufferUtils.putCompressedInt(bos, value);
-
     ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-    parsedValue = ByteBufferUtils.readCompressedInt(bis);
-
+    int parsedValue = ByteBufferUtils.readCompressedInt(bis);
     assertEquals(value, parsedValue);
   }
 
@@ -582,10 +573,9 @@ public class TestByteBufferUtils {
     assertTrue(result > 0);
     result = ByteBufferUtils.compareTo(bb3, 0, bb3.remaining(), b3, 0, b3.length);
     assertTrue(result < 0);
-
     byte[] b4 = Bytes.toBytes("123");
     ByteBuffer bb4 = ByteBuffer.allocate(10 + b4.length);
-    for (int i = 10; i < (bb4.capacity()); ++i) {
+    for (int i = 10; i < bb4.capacity(); ++i) {
       bb4.put(i, b4[i - 10]);
     }
     result = ByteBufferUtils.compareTo(b4, 0, b4.length, bb4, 10, b4.length);

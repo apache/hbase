@@ -87,6 +87,7 @@ public abstract class AbstractByteRange implements ByteRange {
   //
   // methods for managing the backing array and range viewport
   //
+
   @Override
   public byte[] getBytes() {
     return bytes;

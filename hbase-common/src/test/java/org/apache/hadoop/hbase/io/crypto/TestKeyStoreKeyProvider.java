@@ -37,8 +37,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestKeyStoreKeyProvider {
@@ -47,7 +45,6 @@ public class TestKeyStoreKeyProvider {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestKeyStoreKeyProvider.class);
   static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   static final String ALIAS = "test";
   static final String PASSWORD = "password";

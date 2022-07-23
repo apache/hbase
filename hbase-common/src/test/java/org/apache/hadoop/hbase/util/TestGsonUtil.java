@@ -38,6 +38,10 @@ public class TestGsonUtil {
   private static final Gson GSON = GsonUtil.createGson().create();
   private static final Gson DHE_GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
+  // This triggers error-prone: "[UnicodeEscape] Using unicode escape sequences for printable ASCII
+  // characters is obfuscated, and potentially dangerous."
+  // The UnicodeEscape warning cannot be disabled. Consider rewriting this test.
+
   @Test
   public void testDisableHtmlEscaping() {
     // enable html escaping, turn '=' into '\u003d'

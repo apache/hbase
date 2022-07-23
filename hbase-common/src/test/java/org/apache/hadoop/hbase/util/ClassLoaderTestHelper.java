@@ -132,8 +132,6 @@ public final class ClassLoaderTestHelper {
 
     // compile it by JavaCompiler
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    ArrayList<String> srcFileNames = new ArrayList<>(1);
-    srcFileNames.add(sourceCodeFile.toString());
     StandardJavaFileManager fm = compiler.getStandardFileManager(null, null, null);
     Iterable<? extends JavaFileObject> cu = fm.getJavaFileObjects(sourceCodeFile);
     List<String> options = new ArrayList<>(2);

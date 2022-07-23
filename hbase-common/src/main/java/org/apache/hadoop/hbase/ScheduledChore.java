@@ -79,6 +79,8 @@ public abstract class ScheduledChore implements Runnable {
   private final Stoppable stopper;
 
   /**
+   * Construct a ScheduledChore
+   * <p>
    * This constructor is for test only. It allows us to create an object and to call chore() on it.
    */
   @InterfaceAudience.Private
@@ -87,6 +89,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
+   * Construct a ScheduledChore
    * @param name    Name assigned to Chore. Useful for identification amongst chores of the same
    *                type
    * @param stopper When {@link Stoppable#isStopped()} is true, this chore will cancel and cleanup
@@ -97,6 +100,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
+   * Construct a ScheduledChore
    * @param name         Name assigned to Chore. Useful for identification amongst chores of the
    *                     same type
    * @param stopper      When {@link Stoppable#isStopped()} is true, this chore will cancel and
@@ -112,6 +116,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
+   * Construct a ScheduledChore
    * @param name         Name assigned to Chore. Useful for identification amongst chores of the
    *                     same type
    * @param stopper      When {@link Stoppable#isStopped()} is true, this chore will cancel and
@@ -132,9 +137,6 @@ public abstract class ScheduledChore implements Runnable {
     this.timeUnit = unit;
   }
 
-  /**
-   * @see java.lang.Runnable#run()
-   */
   @Override
   public void run() {
     updateTimeTrackingBeforeRun();
@@ -193,8 +195,8 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   /**
-   * @return How long in millis has it been since this chore last run. Useful for checking if the
-   *         chore has missed its scheduled start time by too large of a margin
+   * Return how long in millis has it been since this chore last run. Useful for checking if the
+   * chore has missed its scheduled start time by too large of a margin
    */
   synchronized long getTimeBetweenRuns() {
     return timeOfThisRun - timeOfLastRun;
@@ -212,10 +214,7 @@ public abstract class ScheduledChore implements Runnable {
     return 1.5 * timeUnit.toMillis(period);
   }
 
-  /**
-   * @param time in system millis
-   * @return true if time is earlier or equal to current milli time
-   */
+  /** Return true if time is earlier or equal to current time */
   private synchronized boolean isValidTime(final long time) {
     return time > 0 && time <= EnvironmentEdgeManager.currentTime();
   }
@@ -297,9 +296,7 @@ public abstract class ScheduledChore implements Runnable {
     chore();
   }
 
-  /**
-   * The task to execute on each scheduled execution of the Chore
-   */
+  /** The task to execute on each scheduled execution of the Chore */
   protected abstract void chore();
 
   /**
