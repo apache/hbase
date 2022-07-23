@@ -63,12 +63,12 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
   }
 
   /**
-   * Protected visible for used in tests.
+   * Protected visibility for used in tests.
    */
   protected EventLoopGroup eventLoopGroup;
 
   /**
-   * Protected visible for used in tests.
+   * Protected visibility for used in tests.
    */
   protected Class<? extends Channel> channelClass;
 
