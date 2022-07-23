@@ -22,10 +22,11 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -338,7 +338,7 @@ public class TestSecureExport {
       return null;
     };
     SecureTestUtil.verifyAllowed(putAction, getUserByLogin(USER_OWNER));
-    List<Pair<List<String>, Integer>> labelsAndRowCounts = new LinkedList<>();
+    List<Pair<List<String>, Integer>> labelsAndRowCounts = new ArrayList<>(5);
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(SECRET), 1));
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(PRIVATE, CONFIDENTIAL), 1));
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(TOPSECRET), 1));
@@ -389,11 +389,9 @@ public class TestSecureExport {
         try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
           Table table = conn.getTable(importHtd.getTableName());
           ResultScanner scanner = table.getScanner(scan)) {
-          int count = 0;
-          for (Result r : scanner) {
-            ++count;
-          }
-          assertEquals(rowCount, count);
+          MutableInt count = new MutableInt();
+          scanner.forEach((r) -> count.increment());
+          assertEquals(rowCount, count.intValue());
         }
         return null;
       };

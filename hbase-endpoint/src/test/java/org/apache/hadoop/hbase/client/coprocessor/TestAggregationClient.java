@@ -83,8 +83,7 @@ public class TestAggregationClient {
     try {
       client.rowCount(TABLE_NAME, new LongColumnInterpreter(), new Scan());
       fail("Expected IOException");
-    } catch (Throwable e) {
-      assertTrue(e instanceof IOException);
+    } catch (IOException e) {
       assertTrue(e.getMessage().contains("Connection not initialized"));
     }
 
