@@ -21,7 +21,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to calculate the hash {@link Hash} algorithms for Bloomfilters.
- * @param <T> the type of HashKey
  */
 @InterfaceAudience.Private
 public abstract class HashKey<T> {
@@ -31,9 +30,7 @@ public abstract class HashKey<T> {
     this.t = t;
   }
 
-  /**
-   * n * @return The byte at the given position in this HashKey
-   */
+  /** Return The byte at the given position in this HashKey */
   public abstract byte get(int pos);
 
   /** Returns The number of bytes in this HashKey */

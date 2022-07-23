@@ -41,8 +41,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface HeapSize {
   /**
-   * @return Approximate 'exclusive deep size' of implementing object. Includes count of payload and
-   *         hosting object sizings.
+   * Return the approximate 'exclusive deep size' of implementing object. Includes count of payload
+   * and hosting object sizings.
    */
   long heapSize();
 }

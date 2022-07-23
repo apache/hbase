@@ -578,9 +578,7 @@ public class MultiByteBuff extends ByteBuff {
 
   /**
    * Copies the specified number of bytes from this MBB's current position to the byte[]'s offset.
-   * Also advances the position of the MBB by the given length. n * @param offset within the current
-   * array
-   * @param length upto which the bytes to be copied
+   * Also advances the position of the MBB by the given length.
    */
   @Override
   public void get(byte[] dst, int offset, int length) {
@@ -878,23 +876,16 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   private static byte int0(int x) {
-    return (byte) (x);
+    return (byte) x;
   }
 
-  /**
-   * Copies from the given byte[] to this MBB n * @return this MBB
-   */
+  /** Copies from the given byte[] to this MBB */
   @Override
   public final MultiByteBuff put(byte[] src) {
     return put(src, 0, src.length);
   }
 
-  /**
-   * Copies from the given byte[] to this MBB n * @param offset the position in the byte array from
-   * which the copy should be done
-   * @param length the length upto which the copy should happen
-   * @return this MBB
-   */
+  /** Copies from the given byte[] to this MBB. */
   @Override
   public MultiByteBuff put(byte[] src, int offset, int length) {
     checkRefCount();
@@ -965,7 +956,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   private static byte long0(long x) {
-    return (byte) (x);
+    return (byte) x;
   }
 
   /**

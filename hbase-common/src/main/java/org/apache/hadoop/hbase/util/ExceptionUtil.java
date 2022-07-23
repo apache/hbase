@@ -46,9 +46,7 @@ public final class ExceptionUtil {
     return (t instanceof InterruptedIOException || t instanceof ClosedByInterruptException);
   }
 
-  /**
-   * @throws InterruptedIOException if t was an interruption. Does nothing otherwise.
-   */
+  /** Throw InterruptedIOException if t was an interruption, nothing otherwise. */
   public static void rethrowIfInterrupt(Throwable t) throws InterruptedIOException {
     InterruptedIOException iie = asInterrupt(t);
 

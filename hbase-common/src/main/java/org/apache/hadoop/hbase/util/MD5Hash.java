@@ -21,15 +21,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for MD5 MD5 hash produces a 128-bit digest.
  */
 @InterfaceAudience.Public
 public class MD5Hash {
-  private static final Logger LOG = LoggerFactory.getLogger(MD5Hash.class);
 
   /**
    * Given a byte array, returns in MD5 hash as a hex string. n * @return SHA1 hash as a 32

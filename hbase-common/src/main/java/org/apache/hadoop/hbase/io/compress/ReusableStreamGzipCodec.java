@@ -100,7 +100,7 @@ public class ReusableStreamGzipCodec extends GzipCodec {
             def.finish();
             while (!def.finished()) {
               int i = def.deflate(this.buf, 0, this.buf.length);
-              if ((def.finished()) && (i <= this.buf.length - TRAILER_SIZE)) {
+              if (def.finished() && (i <= this.buf.length - TRAILER_SIZE)) {
                 writeTrailer(this.buf, i);
                 i += TRAILER_SIZE;
                 out.write(this.buf, 0, i);

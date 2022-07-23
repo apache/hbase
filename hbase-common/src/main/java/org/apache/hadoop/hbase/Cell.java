@@ -106,15 +106,15 @@ public interface Cell extends HeapSize {
   // 4) Timestamp
 
   /**
-   * @return Long value representing time at which this cell was "Put" into the row. Typically
-   *         represents the time of insertion, but can be any value from 0 to Long.MAX_VALUE.
+   * Return a long value representing time at which this cell was "Put" into the row. Typically
+   * represents the time of insertion, but can be any value from 0 to Long.MAX_VALUE.
    */
   long getTimestamp();
 
   // 5) Type
 
   /**
-   * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
+   * Return the byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Use {@link #getType()}.
    */
   @Deprecated
@@ -160,7 +160,7 @@ public interface Cell extends HeapSize {
   byte[] getTagsArray();
 
   /**
-   * @return the first offset where the tags start in the Cell
+   * Return the first offset where the tags start in the Cell
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0. Tags are are now internal.
    */
   @Deprecated
