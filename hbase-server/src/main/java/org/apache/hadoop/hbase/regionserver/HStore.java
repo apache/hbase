@@ -1910,8 +1910,7 @@ public class HStore
    * across all of them.
    * @param readpoint readpoint below which we can safely remove duplicate KVs
    */
-  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing)
-    throws IOException {
+  public void upsert(Iterable<Cell> cells, long readpoint, MemStoreSizing memstoreSizing) {
     this.storeEngine.readLock();
     try {
       this.memstore.upsert(cells, readpoint, memstoreSizing);
