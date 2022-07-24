@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;

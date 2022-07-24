@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.regionserver.HRegion.warmupHRegion;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -55,7 +54,6 @@ import org.slf4j.LoggerFactory;
  * named for the method and does its stuff against that.
  */
 @Category({ MasterTests.class, LargeTests.class })
-@SuppressWarnings("deprecation")
 public class TestWarmupRegion {
 
   @ClassRule
@@ -67,7 +65,6 @@ public class TestWarmupRegion {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
-  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte[] VALUE = Bytes.toBytes("testValue");
   private static byte[] COLUMN = Bytes.toBytes("column");
   private static int numRows = 10000;
@@ -80,7 +77,6 @@ public class TestWarmupRegion {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
