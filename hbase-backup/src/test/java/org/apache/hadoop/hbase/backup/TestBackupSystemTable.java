@@ -109,10 +109,10 @@ public class TestBackupSystemTable {
 
   @Test
   public void testWriteReadBackupStartCode() throws IOException {
-    Long code = 100L;
+    long code = 100L;
     table.writeBackupStartCode(code, "root");
     String readCode = table.readBackupStartCode("root");
-    assertEquals(code, Long.valueOf(readCode));
+    assertEquals(code, Long.parseLong(readCode));
     cleanBackupTable();
   }
 
@@ -490,7 +490,7 @@ public class TestBackupSystemTable {
     for (int i = 0; i < size; i++) {
       list.add(createBackupInfo());
       // XXX Why do we need this sleep?
-      Thread.sleep(100);
+      Thread.sleep(10);
     }
     return list;
   }

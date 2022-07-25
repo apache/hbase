@@ -72,6 +72,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -1725,7 +1726,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val, StandardCharsets.UTF_8).split(",");
+      List<String> result = Splitter.on(',').splitToList(new String(val, StandardCharsets.UTF_8));
+      return result.toArray(new String[result.size()]);
     }
   }
 
@@ -1743,9 +1745,7 @@ public final class BackupSystemTable implements Closeable {
 
   static String getTableNameFromOrigBulkLoadRow(String rowStr) {
     // format is bulk : namespace : table : region : file
-    Iterator<String> i = Splitter.onPattern(BLK_LD_DELIM).split(rowStr).iterator();
-    i.next(); // Skip the first entry
-    return i.next();
+    return Iterators.get(Splitter.onPattern(BLK_LD_DELIM).split(rowStr).iterator(), 1);
   }
 
   static String getRegionNameFromOrigBulkLoadRow(String rowStr) {
@@ -1754,16 +1754,9 @@ public final class BackupSystemTable implements Closeable {
     Iterator<String> i = parts.iterator();
     String region;
     if (parts.size() == 4) {
-      // the table is in default namespace, get it from position 3
-      i.next(); // Skip the first entry
-      i.next(); // Skip the second entry
-      region = i.next();
+      region = Iterators.get(i, 3);
     } else {
-      // get region from position 4
-      i.next(); // Skip the first entry
-      i.next(); // Skip the second entry
-      i.next(); // Skip the third entry
-      region = i.next();
+      region = Iterators.get(i, 4);
     }
     LOG.debug("bulk row string " + rowStr + " region " + region);
     return region;
