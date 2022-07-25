@@ -36,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -119,6 +120,7 @@ public class HBTop extends Configured implements Tool {
         try {
           delay = Integer.parseInt(commandLine.getOptionValue("delay"));
         } catch (NumberFormatException ignored) {
+          delay = 0;
         }
 
         if (delay < 1) {
@@ -163,7 +165,7 @@ public class HBTop extends Configured implements Tool {
       }
 
       if (commandLine.hasOption("fields")) {
-        String[] fields = commandLine.getOptionValue("fields").split(",");
+        Iterable<String> fields = Splitter.on(',').split(commandLine.getOptionValue("fields"));
         initialFields = new ArrayList<>();
         for (String field : fields) {
           Optional<FieldInfo> fieldInfo = initialMode.getFieldInfos().stream()
@@ -177,7 +179,7 @@ public class HBTop extends Configured implements Tool {
       }
 
       if (commandLine.hasOption("filters")) {
-        String[] filters = commandLine.getOptionValue("filters").split(",");
+        Iterable<String> filters = Splitter.on(',').split(commandLine.getOptionValue("filters"));
         List<Field> fields = initialMode.getFieldInfos().stream().map(FieldInfo::getField)
           .collect(Collectors.toList());
         for (String filter : filters) {

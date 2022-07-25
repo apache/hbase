@@ -213,7 +213,9 @@ public class TerminalImpl implements Terminal {
 
       try {
         process.waitFor();
-      } catch (InterruptedException ignored) {
+      } catch (InterruptedException e) {
+        // Restore interrupt status
+        Thread.currentThread().interrupt();
       }
 
       int exitValue = process.exitValue();
