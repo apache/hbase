@@ -89,6 +89,7 @@ public class BinaryComponentComparator extends ByteArrayComparable {
    * Parse a serialized representation of {@link BinaryComponentComparator}
    * @param pbBytes A pb serialized {@link BinaryComponentComparator} instance
    * @return An instance of {@link BinaryComponentComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BinaryComponentComparator parseFrom(final byte[] pbBytes)

@@ -197,6 +197,7 @@ final public class FilterList extends FilterBase {
    * Parse a seralized representation of {@link FilterList}
    * @param pbBytes A pb serialized {@link FilterList} instance
    * @return An instance of {@link FilterList} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FilterList parseFrom(final byte[] pbBytes) throws DeserializationException {

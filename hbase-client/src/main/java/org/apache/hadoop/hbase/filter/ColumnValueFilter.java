@@ -171,6 +171,8 @@ public class ColumnValueFilter extends FilterBase {
    * Parse a serialized representation of {@link ColumnValueFilter}
    * @param pbBytes A pb serialized {@link ColumnValueFilter} instance
    * @return An instance of {@link ColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static ColumnValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnValueFilter proto;

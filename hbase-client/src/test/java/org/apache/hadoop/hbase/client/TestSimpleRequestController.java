@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -116,14 +117,13 @@ public class TestSimpleRequestController {
   }
 
   @Test
-  @SuppressWarnings("ArrayAsKeyOfSetOrMap")
   public void testTaskCheckerHost() throws IOException {
     final int maxTotalConcurrentTasks = 100;
     final int maxConcurrentTasksPerServer = 2;
     final int maxConcurrentTasksPerRegion = 1;
     final AtomicLong tasksInProgress = new AtomicLong(0);
     final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    final Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker countChecker =
       new SimpleRequestController.TaskCountChecker(maxTotalConcurrentTasks,
         maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion, tasksInProgress,
@@ -279,7 +279,6 @@ public class TestSimpleRequestController {
   }
 
   @Test
-  @SuppressWarnings("ArrayAsKeyOfSetOrMap")
   public void testTaskCountChecker() throws InterruptedIOException {
     long heapSizeOfRow = 12345;
     int maxTotalConcurrentTasks = 100;
@@ -287,7 +286,7 @@ public class TestSimpleRequestController {
     int maxConcurrentTasksPerRegion = 1;
     AtomicLong tasksInProgress = new AtomicLong(0);
     Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker checker = new SimpleRequestController.TaskCountChecker(
       maxTotalConcurrentTasks, maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion,
       tasksInProgress, taskCounterPerServer, taskCounterPerRegion);

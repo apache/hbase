@@ -107,7 +107,9 @@ public class SkipFilter extends FilterBase {
   /**
    * Parse a serialized representation of {@link SkipFilter}
    * @param pbBytes A pb serialized {@link SkipFilter} instance
-   * @return An instance of {@link SkipFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link SkipFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static SkipFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.SkipFilter proto;

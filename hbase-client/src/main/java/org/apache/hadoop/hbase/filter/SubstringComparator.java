@@ -78,8 +78,9 @@ public class SubstringComparator extends ByteArrayComparable {
   /**
    * Parse a serialized representation of {@link SubstringComparator}
    * @param pbBytes A pb serialized {@link SubstringComparator} instance
-   * @return An instance of {@link SubstringComparator} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link SubstringComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static SubstringComparator parseFrom(final byte[] pbBytes)
     throws DeserializationException {

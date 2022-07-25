@@ -103,6 +103,7 @@ public class PageFilter extends FilterBase {
    * Parse a serialized representation of {@link PageFilter}
    * @param pbBytes A pb serialized {@link PageFilter} instance
    * @return An instance of {@link PageFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static PageFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

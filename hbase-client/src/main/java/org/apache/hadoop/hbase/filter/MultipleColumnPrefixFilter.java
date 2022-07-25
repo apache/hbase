@@ -131,6 +131,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
    * Parse a serialized representation of {@link MultipleColumnPrefixFilter}
    * @param pbBytes A pb serialized {@link MultipleColumnPrefixFilter} instance
    * @return An instance of {@link MultipleColumnPrefixFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static MultipleColumnPrefixFilter parseFrom(final byte[] pbBytes)

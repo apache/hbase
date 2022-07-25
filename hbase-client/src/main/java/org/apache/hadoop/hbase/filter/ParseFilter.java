@@ -109,7 +109,6 @@ public class ParseFilter {
    * @param filterStringAsByteArray filter string given by the user
    * @return filter object we constructed
    */
-  @SuppressWarnings("JdkObsolete")
   public Filter parseFilterString(byte[] filterStringAsByteArray) throws CharacterCodingException {
     // stack for the operators and parenthesis
     Stack<ByteBuffer> operatorStack = new Stack<>();

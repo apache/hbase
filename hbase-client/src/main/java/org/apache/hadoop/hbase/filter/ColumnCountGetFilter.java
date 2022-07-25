@@ -91,6 +91,7 @@ public class ColumnCountGetFilter extends FilterBase {
    * Parse a serialized representation of {@link ColumnCountGetFilter}
    * @param pbBytes A pb serialized {@link ColumnCountGetFilter} instance
    * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static ColumnCountGetFilter parseFrom(final byte[] pbBytes)

@@ -200,7 +200,8 @@ public class MultiRowRangeFilter extends FilterBase {
    * Parse a serialized representation of {@link MultiRowRangeFilter}
    * @param pbBytes A pb serialized instance
    * @return An instance of {@link MultiRowRangeFilter}
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static MultiRowRangeFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -722,7 +723,7 @@ public class MultiRowRangeFilter extends FilterBase {
     /**
      * Gets the RowRange at the given offset.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
     public <T extends BasicRowRange> T get(int i) {
       return (T) ranges.get(i);
     }

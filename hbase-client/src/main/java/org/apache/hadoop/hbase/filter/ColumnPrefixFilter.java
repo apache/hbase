@@ -114,7 +114,7 @@ public class ColumnPrefixFilter extends FilterBase {
    * Parses a serialized representation of the {@link ColumnPrefixFilter}
    * @param pbBytes A pb serialized {@link ColumnPrefixFilter} instance
    * @return An instance of {@link ColumnPrefixFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static ColumnPrefixFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

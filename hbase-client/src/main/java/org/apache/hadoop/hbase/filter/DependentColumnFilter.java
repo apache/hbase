@@ -202,6 +202,7 @@ public class DependentColumnFilter extends CompareFilter {
    * Parse a seralized representation of {@link DependentColumnFilter}
    * @param pbBytes A pb serialized {@link DependentColumnFilter} instance
    * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static DependentColumnFilter parseFrom(final byte[] pbBytes)

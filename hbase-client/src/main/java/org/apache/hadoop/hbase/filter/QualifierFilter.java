@@ -79,7 +79,7 @@ public class QualifierFilter extends CompareFilter {
    * Parse a serialized representation of {@link QualifierFilter}
    * @param pbBytes A pb serialized {@link QualifierFilter} instance
    * @return An instance of {@link QualifierFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static QualifierFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

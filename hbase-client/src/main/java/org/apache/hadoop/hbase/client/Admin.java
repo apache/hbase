@@ -188,8 +188,8 @@ public interface Admin extends Abortable, Closeable {
    * Get a table descriptor.
    * @param tableName as a {@link TableName}
    * @return the tableDescriptor
-   * @throws org.apache.hadoop.hbase.TableNotFoundException if the table was not found
-   * @throws IOException                                    if a remote or network exception occurs
+   * @throws TableNotFoundException if the table was not found
+   * @throws IOException            if a remote or network exception occurs
    */
   TableDescriptor getDescriptor(TableName tableName) throws TableNotFoundException, IOException;
 
@@ -198,7 +198,7 @@ public interface Admin extends Abortable, Closeable {
    * @param desc table descriptor for table
    * @throws IllegalArgumentException                          if the table name is reserved
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -224,7 +224,7 @@ public interface Admin extends Abortable, Closeable {
    *                                                           occurs
    * @throws IllegalArgumentException                          if the table name is reserved
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -243,7 +243,7 @@ public interface Admin extends Abortable, Closeable {
    *                                                           split keys are repeated and if the
    *                                                           split key has empty byte array.
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -1343,10 +1343,8 @@ public interface Admin extends Abortable, Closeable {
    * this method returns. As a side effect of this call, the named region server may schedule store
    * flushes at the request of the wal.
    * @param serverName The servername of the regionserver.
-   * @throws IOException                                                      if a remote or network
-   *                                                                          exception occurs
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException if we failed to close
-   *                                                                          the WAL
+   * @throws IOException             if a remote or network exception occurs
+   * @throws FailedLogCloseException if we failed to close the WAL
    */
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 

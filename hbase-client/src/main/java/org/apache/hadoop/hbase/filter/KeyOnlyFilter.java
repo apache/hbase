@@ -105,6 +105,7 @@ public class KeyOnlyFilter extends FilterBase {
    * Parse a serialized representation of {@link KeyOnlyFilter}
    * @param pbBytes A pb serialized {@link KeyOnlyFilter} instance
    * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static KeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

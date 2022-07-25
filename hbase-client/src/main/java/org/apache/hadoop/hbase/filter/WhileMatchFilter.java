@@ -106,7 +106,7 @@ public class WhileMatchFilter extends FilterBase {
    * Parse a serialized representation of {@link WhileMatchFilter}
    * @param pbBytes A pb serialized {@link WhileMatchFilter} instance
    * @return An instance of {@link WhileMatchFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static WhileMatchFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

@@ -85,6 +85,7 @@ public class BigDecimalComparator extends ByteArrayComparable {
    * Parse a serialized representation of {@link BigDecimalComparator}
    * @param pbBytes A pb serialized {@link BigDecimalComparator} instance
    * @return An instance of {@link BigDecimalComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BigDecimalComparator parseFrom(final byte[] pbBytes)

@@ -65,7 +65,7 @@ public class LongComparator extends ByteArrayComparable {
    * Parses a serialized representation of {@link LongComparator}
    * @param pbBytes A pb serialized {@link LongComparator} instance
    * @return An instance of {@link LongComparator} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static LongComparator parseFrom(final byte[] pbBytes) throws DeserializationException {

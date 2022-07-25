@@ -161,6 +161,7 @@ public class ColumnPaginationFilter extends FilterBase {
    * Parse a serialized representation of {@link ColumnPaginationFilter}
    * @param pbBytes A pb serialized {@link ColumnPaginationFilter} instance
    * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static ColumnPaginationFilter parseFrom(final byte[] pbBytes)

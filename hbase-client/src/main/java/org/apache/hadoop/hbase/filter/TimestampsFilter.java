@@ -170,6 +170,7 @@ public class TimestampsFilter extends FilterBase {
    * Parse a serialized representation of {@link TimestampsFilter}
    * @param pbBytes A pb serialized {@link TimestampsFilter} instance
    * @return An instance of {@link TimestampsFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static TimestampsFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

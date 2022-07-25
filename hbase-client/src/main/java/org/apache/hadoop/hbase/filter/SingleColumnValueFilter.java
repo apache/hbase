@@ -287,6 +287,7 @@ public class SingleColumnValueFilter extends FilterBase {
    * Parse a serialized representation of {@link SingleColumnValueFilter}
    * @param pbBytes A pb serialized {@link SingleColumnValueFilter} instance
    * @return An instance of {@link SingleColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static SingleColumnValueFilter parseFrom(final byte[] pbBytes)

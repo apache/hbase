@@ -268,6 +268,7 @@ public class FuzzyRowFilter extends FilterBase {
    * Parse a serialized representation of {@link FuzzyRowFilter}
    * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
    * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FuzzyRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {

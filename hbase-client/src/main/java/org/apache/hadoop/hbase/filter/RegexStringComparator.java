@@ -155,6 +155,7 @@ public class RegexStringComparator extends ByteArrayComparable {
    * Parse a serialized representation of {@link RegexStringComparator}
    * @param pbBytes A pb serialized {@link RegexStringComparator} instance
    * @return An instance of {@link RegexStringComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static RegexStringComparator parseFrom(final byte[] pbBytes)

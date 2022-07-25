@@ -71,6 +71,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
    * Parse a serialized representation of {@link BinaryPrefixComparator}
    * @param pbBytes A pb serialized {@link BinaryPrefixComparator} instance
    * @return An instance of {@link BinaryPrefixComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BinaryPrefixComparator parseFrom(final byte[] pbBytes)

@@ -67,6 +67,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
    * Parse a serialized representation of {@link BinaryComparator}
    * @param pbBytes A pb serialized {@link BinaryComparator} instance
    * @return An instance of {@link BinaryComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BinaryComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
