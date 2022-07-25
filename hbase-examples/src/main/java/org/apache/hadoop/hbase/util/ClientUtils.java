@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -87,7 +86,7 @@ public final class ClientUtils {
     }
 
     StringBuilder rowStr = new StringBuilder();
-    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
+    for (Map.Entry<String, TCell> entry : sorted.entrySet()) {
       rowStr.append(entry.getKey());
       rowStr.append(" => ");
       rowStr.append(utf8(entry.getValue().value.array()));
@@ -98,11 +97,24 @@ public final class ClientUtils {
   }
 
   /**
-   * Helper to translate byte[]'s to UTF8 strings
-   * @param buf byte array buffer
+   * Helper to translate byte[]s to UTF8 strings
+   * @param buf byte array
    * @return UTF8 decoded string value
    */
   public static String utf8(final byte[] buf) {
+    try {
+      return Bytes.toString(buf);
+    } catch (IllegalArgumentException e) {
+      return "[INVALID UTF-8]";
+    }
+  }
+
+  /**
+   * Helper to translate byte[]s to UTF8 strings
+   * @param buf byte buffer
+   * @return UTF8 decoded string value
+   */
+  public static String utf8(final ByteBuffer buf) {
     try {
       return Bytes.toString(buf);
     } catch (IllegalArgumentException e) {

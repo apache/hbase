@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -97,10 +99,7 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
@@ -118,24 +117,18 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
       scanner = env.getRegion().getScanner(new Scan());
       List<Cell> results = new ArrayList<>();
       boolean hasMore = false;
-      long count = 0;
+      MutableLong count = new MutableLong();
       do {
         hasMore = scanner.next(results);
-        for (Cell kv : results) {
-          count++;
-        }
+        results.forEach((r) -> count.increment());
         results.clear();
       } while (hasMore);
-
-      response = CountResponse.newBuilder().setCount(count).build();
+      response = CountResponse.newBuilder().setCount(count.longValue()).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
