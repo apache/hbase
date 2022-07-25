@@ -506,6 +506,13 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getTotalStaticIndexSize())
       .addGauge(Interns.info(STATIC_BLOOM_SIZE, STATIC_BLOOM_SIZE_DESC),
         rsWrap.getTotalStaticBloomSize())
+      .addCounter(Interns.info(BLOOM_FILTER_REQUESTS_COUNT, BLOOM_FILTER_REQUESTS_COUNT_DESC),
+        rsWrap.getBloomFilterRequestsCount())
+      .addCounter(
+        Interns.info(BLOOM_FILTER_NEGATIVE_RESULTS_COUNT, BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC),
+        rsWrap.getBloomFilterNegativeResultsCount())
+      .addCounter(Interns.info(BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT,
+        BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC), rsWrap.getBloomFilterEligibleRequestsCount())
       .addGauge(Interns.info(NUMBER_OF_MUTATIONS_WITHOUT_WAL, NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC),
         rsWrap.getNumMutationsWithoutWAL())
       .addGauge(Interns.info(DATA_SIZE_WITHOUT_WAL, DATA_SIZE_WITHOUT_WAL_DESC),

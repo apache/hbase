@@ -97,6 +97,13 @@ public class TestMetricsTableAggregate {
     HELPER.assertGauge(pre + "avgStoreFileAge", 66, agg);
     HELPER.assertGauge(pre + "numReferenceFiles", 77, agg);
     HELPER.assertGauge(pre + "averageRegionSize", 88, agg);
+
+    HELPER.assertGauge(pre + "staticIndexSize", 101, agg);
+    HELPER.assertGauge(pre + "staticBloomSize", 111, agg);
+
+    HELPER.assertCounter(pre + "bloomFilterRequestsCount", 222, agg);
+    HELPER.assertCounter(pre + "bloomFilterNegativeResultsCount", 333, agg);
+    HELPER.assertCounter(pre + "bloomFilterEligibleRequestsCount", 444, agg);
   }
 
   @Test
