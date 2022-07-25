@@ -64,6 +64,7 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
   /**
    * Reports stochastic load balancer costs to JMX
    */
+  @Override
   public void updateStochasticCost(String tableName, String costFunctionName, String functionDesc,
     Double cost) {
     if (tableName == null || costFunctionName == null || cost == null) {

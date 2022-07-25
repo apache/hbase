@@ -33,7 +33,7 @@ public class HadoopShimsImpl implements HadoopShims {
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
    */
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   public <T, J> T createTestTaskAttemptContext(J job, String taskId) {
     Job j = (Job) job;
     return (T) new TaskAttemptContextImpl(j.getConfiguration(), TaskAttemptID.forName(taskId));

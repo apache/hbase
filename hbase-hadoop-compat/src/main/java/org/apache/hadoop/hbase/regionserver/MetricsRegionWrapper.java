@@ -116,14 +116,14 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsFailed();
 
   /**
-   * @return the total number of compactions that are currently queued(or being executed) at point
-   *         in time
+   * Returns the total number of compactions that are currently queued(or being executed) at point
+   * in time
    */
   long getNumCompactionsQueued();
 
   /**
-   * @return the total number of flushes currently queued(being executed) for this region at point
-   *         in time
+   * Returns the total number of flushes currently queued(being executed) for this region at point
+   * in time
    */
   long getNumFlushesQueued();
 
@@ -150,8 +150,8 @@ public interface MetricsRegionWrapper {
   long getStoreRefCount();
 
   /**
-   * @return the max number of references active on any store file among all compacted store files
-   *         that belong to this region
+   * Returns the max number of references active on any store file among all compacted store files
+   * that belong to this region
    */
   long getMaxCompactedStoreFileRefCount();
 

@@ -83,6 +83,7 @@ public class MetricsZooKeeperSourceImpl extends BaseSourceImpl implements Metric
       SYNC_OPERATION_LATENCY_DESC);
   }
 
+  @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     super.getMetrics(metricsCollector, all);
     clearZKExceptionMetrics();
