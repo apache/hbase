@@ -73,8 +73,8 @@ public class X509Util {
   public static final String TLS_CONFIG_CLR = CONFIG_PREFIX + "clr";
   public static final String TLS_CONFIG_OCSP = CONFIG_PREFIX + "ocsp";
 
-  public static String HBASE_CLIENT_NETTY_TLS_ENABLED = "hbase.client.netty.tls.enabled";
-  public static String HBASE_SERVER_NETTY_TLS_ENABLED = "hbase.server.netty.tls.enabled";
+  public static final String HBASE_CLIENT_NETTY_TLS_ENABLED = "hbase.client.netty.tls.enabled";
+  public static final String HBASE_SERVER_NETTY_TLS_ENABLED = "hbase.server.netty.tls.enabled";
 
   public static final String HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT =
     "hbase.server.netty.tls.supportplaintext";
