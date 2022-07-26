@@ -39,6 +39,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class BaseSourceImpl implements BaseSource, MetricsSource {
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private static enum DefaultMetricsSystemInitializer {
     INSTANCE;
 
@@ -121,6 +122,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   }
 
+  @Override
   public void init() {
     this.metricsRegistry.clearMetrics();
   }
@@ -130,6 +132,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param gaugeName gauge name
    * @param value     the new value of the gauge.
    */
+  @Override
   public void setGauge(String gaugeName, long value) {
     MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, value);
     gaugeInt.set(value);
@@ -140,6 +143,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param gaugeName The name of the gauge to increment.
    * @param delta     The amount to increment the gauge by.
    */
+  @Override
   public void incGauge(String gaugeName, long delta) {
     MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0L);
     gaugeInt.incr(delta);
@@ -150,6 +154,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param gaugeName The name of the gauge.
    * @param delta     the ammount to subtract from a gauge value.
    */
+  @Override
   public void decGauge(String gaugeName, long delta) {
     MutableGaugeLong gaugeInt = metricsRegistry.getGauge(gaugeName, 0L);
     gaugeInt.decr(delta);
@@ -160,6 +165,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * @param key   the name of the counter
    * @param delta the ammount to increment
    */
+  @Override
   public void incCounters(String key, long delta) {
     MutableFastCounter counter = metricsRegistry.getCounter(key, 0L);
     counter.incr(delta);
@@ -176,6 +182,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
    * Remove a named gauge.
    * @param key the key of the gauge to remove
    */
+  @Override
   public void removeMetric(String key) {
     metricsRegistry.removeMetric(key);
     JmxCacheBuster.clearJmxCache();
@@ -190,18 +197,22 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
     return metricsRegistry;
   }
 
+  @Override
   public String getMetricsContext() {
     return metricsContext;
   }
 
+  @Override
   public String getMetricsDescription() {
     return metricsDescription;
   }
 
+  @Override
   public String getMetricsJmxContext() {
     return metricsJmxContext;
   }
 
+  @Override
   public String getMetricsName() {
     return metricsName;
   }

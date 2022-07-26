@@ -24,10 +24,12 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MetricsMasterSourceFactoryImpl implements MetricsMasterSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   private static enum FactoryStorage {
     INSTANCE;
 
-    MetricsMasterSource masterSource;
+    private MetricsMasterSource masterSource;
   }
 
   @Override

@@ -24,8 +24,6 @@ import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods to interact with a job.
@@ -33,7 +31,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class JobUtil {
-  private static final Logger LOG = LoggerFactory.getLogger(JobUtil.class);
 
   protected JobUtil() {
     super();

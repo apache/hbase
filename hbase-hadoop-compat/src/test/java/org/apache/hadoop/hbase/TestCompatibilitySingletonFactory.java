@@ -41,7 +41,7 @@ public class TestCompatibilitySingletonFactory {
 
   private static final int ITERATIONS = 100000;
 
-  private class TestCompatibilitySingletonFactoryCallable implements Callable<String> {
+  private static class TestCompatibilitySingletonFactoryCallable implements Callable<String> {
 
     @Override
     public String call() throws Exception {

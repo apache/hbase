@@ -74,6 +74,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
@@ -350,8 +353,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
-          + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1] + this.tableNamePrefixPart2
-          + metricName, metricDesc), entry.getValue());
+          + Iterables
+            .get(Splitter.onPattern(MetricsTableWrapperAggregate.HASH).split(entry.getKey()), 1)
+          + this.tableNamePrefixPart2 + metricName, metricDesc), entry.getValue());
       }
     }
   }
@@ -371,11 +375,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof MetricsTableSourceImpl)) {
       return false;
     }
-
     return (compareTo((MetricsTableSourceImpl) o) == 0);
   }
 
