@@ -280,8 +280,8 @@ public interface TableDescriptor {
   boolean isReadOnly();
 
   /**
-   * @return Name of this table and then a map of all of the column family descriptors (with only
-   *         the non-default column family attributes)
+   * Returns Name of this table and then a map of all of the column family descriptors (with only
+   * the non-default column family attributes)
    */
   String toStringCustomizedValues();
 

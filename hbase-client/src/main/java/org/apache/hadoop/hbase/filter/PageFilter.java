@@ -106,8 +106,11 @@ public class PageFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link PageFilter}
    * @param pbBytes A pb serialized {@link PageFilter} instance
-   * @return An instance of {@link PageFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link PageFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static PageFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.PageFilter proto;
@@ -120,9 +123,8 @@ public class PageFilter extends FilterBase {
   }
 
   /**
-   * @param o other Filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {

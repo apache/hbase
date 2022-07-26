@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest.Builder;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
@@ -113,7 +113,7 @@ class SpaceLimitSettings extends QuotaSettings {
   }
 
   @Override
-  protected void setupSetQuotaRequest(Builder builder) {
+  protected void setupSetQuotaRequest(SetQuotaRequest.Builder builder) {
     // TableName/Namespace are serialized in QuotaSettings
     builder.setSpaceLimit(proto);
   }

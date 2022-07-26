@@ -116,9 +116,10 @@ public class PrefixFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link PrefixFilter}
    * @param pbBytes A pb serialized {@link PrefixFilter} instance
    * @return An instance of {@link PrefixFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static PrefixFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -132,15 +133,17 @@ public class PrefixFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof PrefixFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof PrefixFilter)) {
+      return false;
+    }
     PrefixFilter other = (PrefixFilter) o;
     return Bytes.equals(this.getPrefix(), other.getPrefix());
   }

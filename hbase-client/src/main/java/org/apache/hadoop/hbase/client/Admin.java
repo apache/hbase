@@ -116,6 +116,7 @@ public interface Admin extends Abortable, Closeable {
   Connection getConnection();
 
   /**
+   * Check if a table exists.
    * @param tableName Table to check.
    * @return <code>true</code> if table exists already.
    * @throws IOException if a remote or network exception occurs
@@ -280,8 +281,8 @@ public interface Admin extends Abortable, Closeable {
    * Get a table descriptor.
    * @param tableName as a {@link TableName}
    * @return the tableDescriptor
-   * @throws org.apache.hadoop.hbase.TableNotFoundException
-   * @throws IOException                                    if a remote or network exception occurs
+   * @throws TableNotFoundException if the table was not found
+   * @throws IOException            if a remote or network exception occurs
    */
   TableDescriptor getDescriptor(TableName tableName) throws TableNotFoundException, IOException;
 
@@ -290,7 +291,7 @@ public interface Admin extends Abortable, Closeable {
    * @param desc table descriptor for table
    * @throws IllegalArgumentException                          if the table name is reserved
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -316,7 +317,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException                                       if a remote or network exception
    *                                                           occurs
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -335,7 +336,7 @@ public interface Admin extends Abortable, Closeable {
    *                                                           split keys are repeated and if the
    *                                                           split key has empty byte array.
    * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException      if table already exists (If
+   * @throws TableExistsException                              if table already exists (If
    *                                                           concurrent threads, the table may
    *                                                           have been created between
    *                                                           test-for-existence and
@@ -574,6 +575,7 @@ public interface Admin extends Abortable, Closeable {
   HTableDescriptor[] disableTables(Pattern pattern) throws IOException;
 
   /**
+   * Check if a table is enabled.
    * @param tableName name of table to check
    * @return <code>true</code> if table is on-line
    * @throws IOException if a remote or network exception occurs
@@ -581,6 +583,7 @@ public interface Admin extends Abortable, Closeable {
   boolean isTableEnabled(TableName tableName) throws IOException;
 
   /**
+   * Check if a table is disabled.
    * @param tableName name of table to check
    * @return <code>true</code> if table is off-line
    * @throws IOException if a remote or network exception occurs
@@ -588,6 +591,7 @@ public interface Admin extends Abortable, Closeable {
   boolean isTableDisabled(TableName tableName) throws IOException;
 
   /**
+   * Check if a table is available.
    * @param tableName name of table to check
    * @return <code>true</code> if all regions of the table are available
    * @throws IOException if a remote or network exception occurs
@@ -1646,6 +1650,7 @@ public interface Admin extends Abortable, Closeable {
   ClusterMetrics getClusterMetrics(EnumSet<Option> options) throws IOException;
 
   /**
+   * Get the current active master.
    * @return current master server name
    * @throws IOException if a remote or network exception occurs
    */
@@ -1654,6 +1659,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Get a list of current backup masters.
    * @return current backup master list
    * @throws IOException if a remote or network exception occurs
    */
@@ -1662,6 +1668,7 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Get the live server list.
    * @return current live region servers list
    * @throws IOException if a remote or network exception occurs
    */
@@ -1772,7 +1779,7 @@ public interface Admin extends Abortable, Closeable {
    * Get a namespace descriptor by name.
    * @param name name of namespace descriptor
    * @return A descriptor
-   * @throws org.apache.hadoop.hbase.NamespaceNotFoundException
+   * @throws org.apache.hadoop.hbase.NamespaceNotFoundException if the namespace was not found
    * @throws IOException                                        if a remote or network exception
    *                                                            occurs
    */
@@ -1929,9 +1936,8 @@ public interface Admin extends Abortable, Closeable {
    * this method returns. As a side effect of this call, the named region server may schedule store
    * flushes at the request of the wal.
    * @param serverName The servername of the regionserver.
-   * @throws IOException                                                      if a remote or network
-   *                                                                          exception occurs
-   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
+   * @throws IOException             if a remote or network exception occurs
+   * @throws FailedLogCloseException if we failed to close the WAL
    */
   void rollWALWriter(ServerName serverName) throws IOException, FailedLogCloseException;
 

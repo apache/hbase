@@ -135,7 +135,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
    * Typically, you can use lambda expression to implement this interface as
    *
    * <pre>
-   * (c, s, d) -> s.xxx(c, your request here, d)
+   * (c, s, d) -&gt; s.xxx(c, your request here, d)
    * </pre>
    */
   @FunctionalInterface

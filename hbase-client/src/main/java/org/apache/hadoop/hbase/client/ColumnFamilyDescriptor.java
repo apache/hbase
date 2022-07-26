@@ -98,10 +98,7 @@ public interface ColumnFamilyDescriptor {
   /** Returns an unmodifiable map. */
   Map<String, String> getConfiguration();
 
-  /**
-   * @param key the key whose associated value is to be returned
-   * @return accessing the configuration value by key.
-   */
+  /** Returns accessing the configuration value by key. */
   String getConfigurationValue(String key);
 
   /** Returns replication factor set for this CF */
@@ -117,8 +114,8 @@ public interface ColumnFamilyDescriptor {
   String getEncryptionType();
 
   /**
-   * @return in-memory compaction policy if set for the cf. Returns null if no policy is set for for
-   *         this column family
+   * Returns in-memory compaction policy if set for the cf. Returns null if no policy is set for for
+   * this column family
    */
   MemoryCompactionPolicy getInMemoryCompaction();
 
@@ -163,32 +160,35 @@ public interface ColumnFamilyDescriptor {
   int getTimeToLive();
 
   /**
+   * Get a configuration value.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   Bytes getValue(Bytes key);
 
   /**
+   * Get a configuration value.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   String getValue(String key);
 
   /**
+   * Get a configuration value.
    * @param key The key.
    * @return A clone value. Null if no mapping for the key
    */
   byte[] getValue(byte[] key);
 
   /**
-   * It clone all bytes of all elements.
+   * Get all configuration values. It clone all bytes of all elements.
    * @return All values
    */
   Map<Bytes, Bytes> getValues();
 
   /**
-   * @return True if hfile DATA type blocks should be cached (You cannot disable caching of INDEX
-   *         and BLOOM type blocks).
+   * Returns True if hfile DATA type blocks should be cached (You cannot disable caching of INDEX
+   * and BLOOM type blocks).
    */
   boolean isBlockCacheEnabled();
 
@@ -202,8 +202,8 @@ public interface ColumnFamilyDescriptor {
   boolean isCacheIndexesOnWrite();
 
   /**
-   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
-   *         DataBlockEncoding is been used, this is having no effect.
+   * Returns Whether KV tags should be compressed along with DataBlockEncoding. When no
+   * DataBlockEncoding is been used, this is having no effect.
    */
   boolean isCompressTags();
 
@@ -211,8 +211,8 @@ public interface ColumnFamilyDescriptor {
   boolean isEvictBlocksOnClose();
 
   /**
-   * @return True if we are to favor keeping all values for this column family in the HRegionServer
-   *         cache.
+   * Returns True if we are to favor keeping all values for this column family in the HRegionServer
+   * cache.
    */
   boolean isInMemory();
 

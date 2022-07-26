@@ -97,6 +97,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for match
      * @param family    family to check
      * @param qualifier qualifier to check
      * @param compareOp comparison operator to use
@@ -113,6 +114,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for match
      * @param filter filter to check
      * @return the CheckAndMutate object
      */
@@ -122,6 +124,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Specify a timerange
      * @param timeRange time range to check
      * @return the CheckAndMutate object
      */
@@ -144,6 +147,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object
      * @param put data to put if check succeeds
      * @return a CheckAndMutate object
      */
@@ -157,6 +161,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object
      * @param delete data to delete if check succeeds
      * @return a CheckAndMutate object
      */
@@ -170,6 +175,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with an Increment to commit if the check succeeds.
      * @param increment data to increment if check succeeds
      * @return a CheckAndMutate object
      */
@@ -183,6 +189,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with an Append to commit if the check succeeds.
      * @param append data to append if check succeeds
      * @return a CheckAndMutate object
      */
@@ -196,6 +203,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with a RowMutations to commit if the check succeeds.
      * @param mutations mutations to perform if check succeeds
      * @return a CheckAndMutate object
      */

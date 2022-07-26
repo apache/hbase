@@ -27,20 +27,16 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Usually, it is just a simple lambda expression, like:
  *
  * <pre>
- * <code>
- * (stub, controller, rpcCallback) -> {
+ * (stub, controller, rpcCallback) -&gt; {
  *   XXXRequest request = ...; // prepare the request
  *   stub.xxx(controller, request, rpcCallback);
  * }
- * </code>
  * </pre>
  *
  * And if already have the {@code request}, the lambda expression will be:
  *
  * <pre>
- * <code>
- * (stub, controller, rpcCallback) -> stub.xxx(controller, request, rpcCallback)
- * </code>
+ * (stub, controller, rpcCallback) -&gt; stub.xxx(controller, request, rpcCallback)
  * </pre>
  *
  * @param <S> the type of the protobuf Service you want to call.

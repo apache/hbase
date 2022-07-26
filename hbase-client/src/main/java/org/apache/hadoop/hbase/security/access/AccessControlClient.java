@@ -29,12 +29,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.security.SecurityCapability;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -66,17 +62,17 @@ public class AccessControlClient {
       .contains(SecurityCapability.CELL_AUTHORIZATION);
   }
 
-  private static BlockingInterface getAccessControlServiceStub(Table ht) throws IOException {
-    CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
-    BlockingInterface protocol = AccessControlProtos.AccessControlService.newBlockingStub(service);
-    return protocol;
-  }
-
   /**
    * Grants permission on the specified table for the specified user
-   * @param connection The Connection instance to use nnnn * @param mergeExistingPermissions If set
-   *                   to false, later granted permissions will override previous granted
-   *                   permissions. otherwise, it'll merge with previous granted permissions. nn
+   * @param connection               The Connection instance to use
+   * @param tableName                the table name
+   * @param userName                 the user name
+   * @param family                   the column family
+   * @param qual                     the column qualifier
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *                                 previous granted permissions. otherwise, it'll merge with
+   *                                 previous granted permissions.
+   * @param actions                  the actions
    */
   private static void grant(Connection connection, final TableName tableName, final String userName,
     final byte[] family, final byte[] qual, boolean mergeExistingPermissions,
@@ -89,7 +85,12 @@ public class AccessControlClient {
   /**
    * Grants permission on the specified table for the specified user. If permissions for a specified
    * user exists, later granted permissions will override previous granted permissions.
-   * @param connection The Connection instance to use nnnnnn
+   * @param connection The Connection instance to use
+   * @param tableName  the table name
+   * @param userName   the user name
+   * @param family     the column family
+   * @param qual       the column qualifier
+   * @param actions    the actions
    */
   public static void grant(Connection connection, final TableName tableName, final String userName,
     final byte[] family, final byte[] qual, final Permission.Action... actions) throws Throwable {
@@ -97,9 +98,14 @@ public class AccessControlClient {
   }
 
   /**
-   * Grants permission on the specified namespace for the specified user. nnn * @param
-   * mergeExistingPermissions If set to false, later granted permissions will override previous
-   * granted permissions. otherwise, it'll merge with previous granted permissions. nn
+   * Grants permission on the specified namespace for the specified user.
+   * @param connection               The Connection instance to use
+   * @param namespace                the namespace
+   * @param userName                 the user name
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *                                 previous granted permissions. otherwise, it'll merge with
+   *                                 previous granted permissions.
+   * @param actions                  the actions
    */
   private static void grant(Connection connection, final String namespace, final String userName,
     boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {
@@ -112,7 +118,10 @@ public class AccessControlClient {
    * Grants permission on the specified namespace for the specified user. If permissions on the
    * specified namespace exists, later granted permissions will override previous granted
    * permissions.
-   * @param connection The Connection instance to use nnnn
+   * @param connection The Connection instance to use
+   * @param namespace  the namespace
+   * @param userName   the user name
+   * @param actions    the actions
    */
   public static void grant(Connection connection, final String namespace, final String userName,
     final Permission.Action... actions) throws Throwable {
@@ -120,9 +129,13 @@ public class AccessControlClient {
   }
 
   /**
-   * Grant global permissions for the specified user. nn * @param mergeExistingPermissions If set to
-   * false, later granted permissions will override previous granted permissions. otherwise, it'll
-   * merge with previous granted permissions. nn
+   * Grant global permissions for the specified user.
+   * @param connection               The Connection instance to use
+   * @param userName                 the user name
+   * @param mergeExistingPermissions If set to false, later granted permissions will override
+   *                                 previous granted permissions. otherwise, it'll merge with
+   *                                 previous granted permissions.
+   * @param actions                  the actions
    */
   private static void grant(Connection connection, final String userName,
     boolean mergeExistingPermissions, final Permission.Action... actions) throws Throwable {

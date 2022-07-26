@@ -183,6 +183,8 @@ public final class ReadOnlyZKClient implements Closeable {
               try {
                 zk.close();
               } catch (InterruptedException e) {
+                // Restore interrupt status
+                Thread.currentThread().interrupt();
               }
             }
             if (ZKTask.this.delay(retryIntervalMs, maxRetries)) {
@@ -303,6 +305,8 @@ public final class ReadOnlyZKClient implements Closeable {
       try {
         zookeeper.close();
       } catch (InterruptedException e) {
+        // Restore interrupt status
+        Thread.currentThread().interrupt();
       }
       zookeeper = null;
     }

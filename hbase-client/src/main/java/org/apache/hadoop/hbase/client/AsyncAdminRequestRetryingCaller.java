@@ -29,9 +29,6 @@ import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 
-/**
- * @since 2.0.0
- */
 @InterfaceAudience.Private
 public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
 

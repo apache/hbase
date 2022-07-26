@@ -88,6 +88,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
+   * Set the ACL for the operation.
    * @param user  User short name
    * @param perms Permissions for the user
    */
@@ -98,6 +99,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
+   * Set the ACL for the operation.
    * @param perms A map of permissions for a user or users
    */
   public Query setACL(Map<String, Permission> perms) {
@@ -159,9 +161,8 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * @return The isolation level of this query. If no isolation level was set for this query object,
-   *         then it returns READ_COMMITTED.
-   * @return The IsolationLevel for this query
+   * Returns The isolation level of this query. If no isolation level was set for this query object,
+   * then it returns READ_COMMITTED.
    */
   public IsolationLevel getIsolationLevel() {
     byte[] attr = getAttribute(ISOLATION_LEVEL);

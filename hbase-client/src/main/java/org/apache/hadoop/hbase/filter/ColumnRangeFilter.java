@@ -163,9 +163,11 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link ColumnRangeFilter}
    * @param pbBytes A pb serialized {@link ColumnRangeFilter} instance
-   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static ColumnRangeFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnRangeFilter proto;
@@ -181,9 +183,8 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   /**
-   * @param o filter to serialize.
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {

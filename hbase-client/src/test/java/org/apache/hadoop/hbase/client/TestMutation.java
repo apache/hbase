@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -51,7 +50,7 @@ public class TestMutation {
     byte[] family = Bytes.toBytes("CF-01");
 
     origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
-      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Type.Put)
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Cell.Type.Put)
       .setValue(Bytes.toBytes(100)).build());
     origin.addColumn(family, Bytes.toBytes("q0"), Bytes.toBytes("value"));
     origin.setTimeRange(100, 1000);
@@ -89,7 +88,7 @@ public class TestMutation {
     byte[] family = Bytes.toBytes("CF-01");
 
     origin.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(origin.getRow())
-      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Type.Delete).build());
+      .setFamily(family).setQualifier(Bytes.toBytes("q")).setType(Cell.Type.Delete).build());
     origin.addColumn(family, Bytes.toBytes("q0"));
     origin.addColumns(family, Bytes.toBytes("q1"));
     origin.addFamily(family);
@@ -187,10 +186,11 @@ public class TestMutation {
     Put put = new Put(row, true);
     put
       .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row).setFamily(family)
-        .setQualifier(qualifier0).setTimestamp(put.getTimestamp()).setType(Type.Put)
+        .setQualifier(qualifier0).setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
         .setValue(value0).build())
       .add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(row).setFamily(family)
-        .setQualifier(qualifier1).setTimestamp(ts1).setType(Type.Put).setValue(value1).build());
+        .setQualifier(qualifier1).setTimestamp(ts1).setType(Cell.Type.Put).setValue(value1)
+        .build());
 
     // Verify the cell of family:qualifier0
     Cell cell0 = put.get(family, qualifier0).get(0);

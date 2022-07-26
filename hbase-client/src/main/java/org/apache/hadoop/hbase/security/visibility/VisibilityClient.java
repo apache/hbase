@@ -153,7 +153,7 @@ public class VisibilityClient {
   }
 
   /**
-   * nn * @return labels, the given user is globally authorized for. n * @deprecated Use
+   * Returns labels, the given user is globally authorized for. n * @deprecated Use
    * {@link #getAuths(Connection,String)} instead.
    */
   @Deprecated
@@ -164,8 +164,10 @@ public class VisibilityClient {
   }
 
   /**
-   * @param connection the Connection instance to use. n * @return labels, the given user is
-   *                   globally authorized for. n
+   * Get the authorization for a given user
+   * @param connection the Connection instance to use
+   * @param user       the user
+   * @return labels the given user is globally authorized for
    */
   public static GetAuthsResponse getAuths(Connection connection, final String user)
     throws Throwable {
@@ -285,7 +287,7 @@ public class VisibilityClient {
             setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
             for (String auth : auths) {
               if (auth.length() > 0) {
-                setAuthReqBuilder.addAuth((ByteString.copyFromUtf8(auth)));
+                setAuthReqBuilder.addAuth(ByteString.copyFromUtf8(auth));
               }
             }
             if (setOrClear) {

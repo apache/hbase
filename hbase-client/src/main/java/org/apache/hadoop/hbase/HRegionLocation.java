@@ -110,8 +110,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   * @return String made of hostname and port formatted as per
-   *         {@link Addressing#createHostAndPortStr(String, int)}
+   * Returns String made of hostname and port formatted as per
+   * {@link Addressing#createHostAndPortStr(String, int)}
    */
   public String getHostnamePort() {
     return Addressing.createHostAndPortStr(this.getHostname(), this.getPort());

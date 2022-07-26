@@ -22,7 +22,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Provide a way to access the inner buffer. The purpose is to reduce the elapsed time to move a
  * large number of elements between collections.
- * @param <T>
  */
 @InterfaceAudience.Private
 public interface RowAccess<T> extends Iterable<T> {
