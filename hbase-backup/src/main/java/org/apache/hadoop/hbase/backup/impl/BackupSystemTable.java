@@ -1752,12 +1752,12 @@ public final class BackupSystemTable implements Closeable {
     // format is bulk : namespace : table : region : file
     List<String> parts = Splitter.onPattern(BLK_LD_DELIM).splitToList(rowStr);
     Iterator<String> i = parts.iterator();
-    String region;
+    int idx = 3;
     if (parts.size() == 4) {
-      region = Iterators.get(i, 3);
-    } else {
-      region = Iterators.get(i, 4);
+      // the table is in default namespace
+      idx = 2;
     }
+    String region = Iterators.get(i, idx);
     LOG.debug("bulk row string " + rowStr + " region " + region);
     return region;
   }
