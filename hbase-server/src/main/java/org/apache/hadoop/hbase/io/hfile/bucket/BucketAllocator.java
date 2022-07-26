@@ -168,12 +168,15 @@ public final class BucketAllocator {
     // Free bucket means it has space to allocate a block;
     // Completely free bucket means it has no block.
     private LinkedMap bucketList, freeBuckets, completelyFreeBuckets;
+    // only modified under synchronization, but also read outside it.
+    private volatile long fragmentationBytes;
     private int sizeIndex;
 
     BucketSizeInfo(int sizeIndex) {
       bucketList = new LinkedMap();
       freeBuckets = new LinkedMap();
       completelyFreeBuckets = new LinkedMap();
+      fragmentationBytes = 0;
       this.sizeIndex = sizeIndex;
     }
 
@@ -193,7 +196,7 @@ public final class BucketAllocator {
      * Find a bucket to allocate a block
      * @return the offset in the IOEngine
      */
-    public long allocateBlock() {
+    public long allocateBlock(int blockSize) {
       Bucket b = null;
       if (freeBuckets.size() > 0) {
         // Use up an existing one first...
@@ -206,6 +209,9 @@ public final class BucketAllocator {
       if (b == null) return -1;
       long result = b.allocate();
       blockAllocated(b);
+      if (blockSize < b.getItemAllocationSize()) {
+        fragmentationBytes += b.getItemAllocationSize() - blockSize;
+      }
       return result;
     }
 
@@ -236,23 +242,38 @@ public final class BucketAllocator {
       completelyFreeBuckets.remove(b);
     }
 
-    public void freeBlock(Bucket b, long offset) {
+    public void freeBlock(Bucket b, long offset, int length) {
       assert bucketList.containsKey(b);
       // else we shouldn't have anything to free...
       assert (!completelyFreeBuckets.containsKey(b));
       b.free(offset);
+      if (length < b.getItemAllocationSize()) {
+        fragmentationBytes -= b.getItemAllocationSize() - length;
+      }
       if (!freeBuckets.containsKey(b)) freeBuckets.put(b, b);
       if (b.isCompletelyFree()) completelyFreeBuckets.put(b, b);
     }
 
     public synchronized IndexStatistics statistics() {
       long free = 0, used = 0;
+      int full = 0;
       for (Object obj : bucketList.keySet()) {
         Bucket b = (Bucket) obj;
         free += b.freeCount();
         used += b.usedCount();
+        if (!b.hasFreeSpace()) {
+          full++;
+        }
       }
-      return new IndexStatistics(free, used, bucketSizes[sizeIndex]);
+      int bucketObjectSize = bucketSizes[sizeIndex];
+      // this is most likely to always be 1 or 0
+      int fillingBuckets = Math.max(0, freeBuckets.size() - completelyFreeBuckets.size());
+      // if bucket capacity is not perfectly divisible by a bucket's object size, there will
+      // be some left over per bucket. for some object sizes this may be large enough to be
+      // non-trivial and worth tuning by choosing a more divisible object size.
+      long wastedBytes = (bucketCapacity % bucketObjectSize) * (full + fillingBuckets);
+      return new IndexStatistics(free, used, bucketObjectSize, full, completelyFreeBuckets.size(),
+        wastedBytes, fragmentationBytes);
     }
 
     @Override
@@ -434,7 +455,7 @@ public final class BucketAllocator {
         + "; adjust BucketCache sizes " + BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY
         + " to accomodate if size seems reasonable and you want it cached.");
     }
-    long offset = bsi.allocateBlock();
+    long offset = bsi.allocateBlock(blockSize);
 
     // Ask caller to free up space and try again!
     if (offset < 0) throw new CacheFullException(blockSize, bsi.sizeIndex());
@@ -455,11 +476,11 @@ public final class BucketAllocator {
    * @param offset block's offset
    * @return size freed
    */
-  public synchronized int freeBlock(long offset) {
+  public synchronized int freeBlock(long offset, int length) {
     int bucketNo = (int) (offset / bucketCapacity);
     assert bucketNo >= 0 && bucketNo < buckets.length;
     Bucket targetBucket = buckets[bucketNo];
-    bucketSizeInfos[targetBucket.sizeIndex()].freeBlock(targetBucket, offset);
+    bucketSizeInfos[targetBucket.sizeIndex()].freeBlock(targetBucket, offset, length);
     usedSize -= targetBucket.getItemAllocationSize();
     return targetBucket.getItemAllocationSize();
   }
@@ -478,50 +499,141 @@ public final class BucketAllocator {
     return targetBucket.getItemAllocationSize();
   }
 
+  /**
+   * Statistics to give a glimpse into the distribution of BucketCache objects. Each configured
+   * bucket size, denoted by {@link BucketSizeInfo}, gets an IndexStatistic. A BucketSizeInfo
+   * allocates blocks of a configured size from claimed buckets. If you have a bucket size of 512k,
+   * the corresponding BucketSizeInfo will always allocate chunks of 512k at a time regardless of
+   * actual request.
+   * <p>
+   * Over time, as a BucketSizeInfo gets more allocations, it will claim more buckets from the total
+   * pool of completelyFreeBuckets. As blocks are freed from a BucketSizeInfo, those buckets may be
+   * returned to the completelyFreeBuckets pool.
+   * <p>
+   * The IndexStatistics help visualize how these buckets are currently distributed, through counts
+   * of items, bytes, and fullBuckets. Additionally, mismatches between block sizes and bucket sizes
+   * can manifest in inefficient cache usage. These typically manifest in three ways:
+   * <p>
+   * 1. Allocation failures, because block size is larger than max bucket size. These show up in
+   * logs and can be alleviated by adding larger bucket sizes if appropriate.<br>
+   * 2. Memory fragmentation, because blocks are typically smaller than the bucket size. See
+   * {@link #fragmentationBytes()} for details.<br>
+   * 3. Memory waste, because a bucket's itemSize is not a perfect divisor of bucketCapacity. see
+   * {@link #wastedBytes()} for details.<br>
+   */
   static class IndexStatistics {
-    private long freeCount, usedCount, itemSize, totalCount;
+    private long freeCount, usedCount, itemSize, totalCount, wastedBytes, fragmentationBytes;
+    private int fullBuckets, completelyFreeBuckets;
 
+    /**
+     * How many more items can be allocated from the currently claimed blocks of this bucket size
+     */
     public long freeCount() {
       return freeCount;
     }
 
+    /**
+     * How many items are currently taking up space in this bucket size's buckets
+     */
     public long usedCount() {
       return usedCount;
     }
 
+    /**
+     * Combined {@link #freeCount()} + {@link #usedCount()}
+     */
     public long totalCount() {
       return totalCount;
     }
 
+    /**
+     * How many more bytes can be allocated from the currently claimed blocks of this bucket size
+     */
     public long freeBytes() {
       return freeCount * itemSize;
     }
 
+    /**
+     * How many bytes are currently taking up space in this bucket size's buckets Note: If your
+     * items are less than the bucket size of this bucket, the actual used bytes by items will be
+     * lower than this value. But since a bucket size can only allocate items of a single size, this
+     * value is the true number of used bytes. The difference will be counted in
+     * {@link #fragmentationBytes()}.
+     */
     public long usedBytes() {
       return usedCount * itemSize;
     }
 
+    /**
+     * Combined {@link #totalCount()} * {@link #itemSize()}
+     */
     public long totalBytes() {
       return totalCount * itemSize;
     }
 
+    /**
+     * This bucket size can only allocate items of this size, even if the requested allocation size
+     * is smaller. The rest goes towards {@link #fragmentationBytes()}.
+     */
     public long itemSize() {
       return itemSize;
     }
 
-    public IndexStatistics(long free, long used, long itemSize) {
-      setTo(free, used, itemSize);
+    /**
+     * How many buckets have been completely filled by blocks for this bucket size. These buckets
+     * can't accept any more blocks unless some existing are freed.
+     */
+    public int fullBuckets() {
+      return fullBuckets;
+    }
+
+    /**
+     * How many buckets are currently claimed by this bucket size but as yet totally unused. These
+     * buckets are available for reallocation to other bucket sizes if those fill up.
+     */
+    public int completelyFreeBuckets() {
+      return completelyFreeBuckets;
+    }
+
+    /**
+     * If {@link #bucketCapacity} is not perfectly divisible by this {@link #itemSize()}, the
+     * remainder will be unusable by in buckets of this size. A high value here may be optimized by
+     * trying to choose bucket sizes which can better divide {@link #bucketCapacity}.
+     */
+    public long wastedBytes() {
+      return wastedBytes;
+    }
+
+    /**
+     * Every time you allocate blocks in these buckets where the block size is less than the bucket
+     * size, fragmentation increases by that difference. You can reduce fragmentation by lowering
+     * the bucket size so that it is closer to the typical block size. This may have the consequence
+     * of bumping some blocks to the next larger bucket size, so experimentation may be needed.
+     */
+    public long fragmentationBytes() {
+      return fragmentationBytes;
+    }
+
+    public IndexStatistics(long free, long used, long itemSize, int fullBuckets,
+      int completelyFreeBuckets, long wastedBytes, long fragmentationBytes) {
+      setTo(free, used, itemSize, fullBuckets, completelyFreeBuckets, wastedBytes,
+        fragmentationBytes);
     }
 
     public IndexStatistics() {
-      setTo(-1, -1, 0);
+      setTo(-1, -1, 0, 0, 0, 0, 0);
     }
 
-    public void setTo(long free, long used, long itemSize) {
+    public void setTo(long free, long used, long itemSize, int fullBuckets,
+      int completelyFreeBuckets, long wastedBytes, long fragmentationBytes) {
       this.itemSize = itemSize;
       this.freeCount = free;
       this.usedCount = used;
       this.totalCount = free + used;
+      this.fullBuckets = fullBuckets;
+      this.completelyFreeBuckets = completelyFreeBuckets;
+      this.wastedBytes = wastedBytes;
+      this.fragmentationBytes = fragmentationBytes;
     }
   }
 
@@ -529,26 +641,43 @@ public final class BucketAllocator {
     return this.buckets;
   }
 
-  void logStatistics() {
+  void logDebugStatistics() {
+    if (!LOG.isDebugEnabled()) {
+      return;
+    }
+
     IndexStatistics total = new IndexStatistics();
     IndexStatistics[] stats = getIndexStatistics(total);
-    LOG.info("Bucket allocator statistics follow:\n");
-    LOG.info("  Free bytes=" + total.freeBytes() + "+; used bytes=" + total.usedBytes()
-      + "; total bytes=" + total.totalBytes());
+    LOG.debug("Bucket allocator statistics follow:");
+    LOG.debug(
+      "  Free bytes={}; used bytes={}; total bytes={}; wasted bytes={}; fragmentation bytes={}; "
+        + "completelyFreeBuckets={}",
+      total.freeBytes(), total.usedBytes(), total.totalBytes(), total.wastedBytes(),
+      total.fragmentationBytes(), total.completelyFreeBuckets());
     for (IndexStatistics s : stats) {
-      LOG.info("  Object size " + s.itemSize() + " used=" + s.usedCount() + "; free="
-        + s.freeCount() + "; total=" + s.totalCount());
+      LOG.debug(
+        "  Object size {}; used={}; free={}; total={}; wasted bytes={}; fragmentation bytes={}, "
+          + "full buckets={}",
+        s.itemSize(), s.usedCount(), s.freeCount(), s.totalCount(), s.wastedBytes(),
+        s.fragmentationBytes(), s.fullBuckets());
     }
   }
 
   IndexStatistics[] getIndexStatistics(IndexStatistics grandTotal) {
     IndexStatistics[] stats = getIndexStatistics();
-    long totalfree = 0, totalused = 0;
+    long totalfree = 0, totalused = 0, totalWasted = 0, totalFragmented = 0;
+    int fullBuckets = 0, completelyFreeBuckets = 0;
+
     for (IndexStatistics stat : stats) {
       totalfree += stat.freeBytes();
       totalused += stat.usedBytes();
+      totalWasted += stat.wastedBytes();
+      totalFragmented += stat.fragmentationBytes();
+      fullBuckets += stat.fullBuckets();
+      completelyFreeBuckets += stat.completelyFreeBuckets();
     }
-    grandTotal.setTo(totalfree, totalused, 1);
+    grandTotal.setTo(totalfree, totalused, 1, fullBuckets, completelyFreeBuckets, totalWasted,
+      totalFragmented);
     return stats;
   }
 
@@ -557,13 +686,6 @@ public final class BucketAllocator {
     for (int i = 0; i < stats.length; ++i)
       stats[i] = bucketSizeInfos[i].statistics();
     return stats;
-  }
-
-  public long freeBlock(long freeList[]) {
-    long sz = 0;
-    for (int i = 0; i < freeList.length; ++i)
-      sz += freeBlock(freeList[i]);
-    return sz;
   }
 
   public int getBucketIndex(long offset) {
