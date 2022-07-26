@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -28,6 +29,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
@@ -217,6 +220,28 @@ class SimpleRpcServerResponder extends Thread {
     }
   }
 
+  private BufferChain wrapWithSasl(HBaseSaslRpcServer saslServer, BufferChain bc)
+    throws IOException {
+    // Looks like no way around this; saslserver wants a byte array. I have to make it one.
+    // THIS IS A BIG UGLY COPY.
+    byte[] responseBytes = bc.getBytes();
+    byte[] token;
+    // synchronization may be needed since there can be multiple Handler
+    // threads using saslServer or Crypto AES to wrap responses.
+    synchronized (saslServer) {
+      token = saslServer.wrap(responseBytes, 0, responseBytes.length);
+    }
+    if (SimpleRpcServer.LOG.isTraceEnabled()) {
+      SimpleRpcServer.LOG
+        .trace("Adding saslServer wrapped token of size " + token.length + " as call response.");
+    }
+
+    ByteBuffer[] responseBufs = new ByteBuffer[2];
+    responseBufs[0] = ByteBuffer.wrap(Bytes.toBytes(token.length));
+    responseBufs[1] = ByteBuffer.wrap(token);
+    return new BufferChain(responseBufs);
+  }
+
   /**
    * Process the response for this call. You need to have the lock on
    * {@link org.apache.hadoop.hbase.ipc.SimpleServerRpcConnection#responseWriteLock}
@@ -226,6 +251,9 @@ class SimpleRpcServerResponder extends Thread {
     throws IOException {
     boolean error = true;
     BufferChain buf = resp.getResponse();
+    if (conn.useWrap) {
+      buf = wrapWithSasl(conn.saslServer, buf);
+    }
     try {
       // Send as much data as we can in the non-blocking fashion
       long numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);

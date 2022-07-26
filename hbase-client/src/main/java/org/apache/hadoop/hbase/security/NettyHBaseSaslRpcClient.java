@@ -52,9 +52,9 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
       return;
     }
     // add wrap and unwrap handlers to pipeline.
-    p.addFirst(new SaslWrapHandler(saslClient),
+    p.addFirst(new SaslWrapHandler(saslClient::wrap),
       new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
-      new SaslUnwrapHandler(saslClient));
+      new SaslUnwrapHandler(saslClient::unwrap));
   }
 
   public String getSaslQOP() {

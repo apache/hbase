@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.nio.ByteBuffer;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -25,6 +26,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
  * Handle connection preamble.
@@ -32,6 +34,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
  */
 @InterfaceAudience.Private
 class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf> {
+
+  static final String DECODER_NAME = "preambleDecoder";
 
   private final NettyRpcServer rpcServer;
 
@@ -50,12 +54,29 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
       return;
     }
     ChannelPipeline p = ctx.pipeline();
-    ((NettyRpcFrameDecoder) p.get("frameDecoder")).setConnection(conn);
-    ((NettyRpcServerRequestDecoder) p.get("decoder")).setConnection(conn);
+    if (conn.useSasl) {
+      LengthFieldBasedFrameDecoder decoder =
+        new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4);
+      decoder.setSingleDecode(true);
+      p.addLast(NettyHBaseSaslRpcServerHandler.DECODER_NAME, decoder);
+      p.addLast(new NettyHBaseSaslRpcServerHandler(rpcServer, conn));
+    } else {
+      conn.setupDecoder();
+    }
+    // add first and then remove, so the single decode decoder will pass the remaining bytes to the
+    // handler above.
     p.remove(this);
-    p.remove("preambleDecoder");
+    p.remove(DECODER_NAME);
   }
 
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    NettyRpcServer.LOG.warn("Connection {}; caught unexpected downstream exception.",
+      ctx.channel().remoteAddress(), cause);
+    NettyFutureUtils.safeClose(ctx);
+  }
+
+  // will be overridden in tests
   protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
     return new NettyServerRpcConnection(rpcServer, channel);
   }
