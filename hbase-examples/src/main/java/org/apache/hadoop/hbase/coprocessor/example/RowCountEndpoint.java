@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -117,13 +117,13 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
       scanner = env.getRegion().getScanner(new Scan());
       List<Cell> results = new ArrayList<>();
       boolean hasMore = false;
-      MutableLong count = new MutableLong();
+      long count = 0;
       do {
         hasMore = scanner.next(results);
-        results.forEach((r) -> count.increment());
+        count += Iterables.size(results);
         results.clear();
       } while (hasMore);
-      response = CountResponse.newBuilder().setCount(count.longValue()).build();
+      response = CountResponse.newBuilder().setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
